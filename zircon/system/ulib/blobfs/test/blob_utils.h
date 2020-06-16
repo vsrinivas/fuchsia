@@ -7,6 +7,7 @@
 
 #include <lib/fdio/io.h>
 
+#include <cstring>
 #include <memory>
 #include <string>
 
@@ -35,6 +36,10 @@ int StreamAll(T func, int fd, U* buf, size_t max) {
   }
   return 0;
 }
+
+// Fills the provided buffer with a single character |C|.
+template <char C>
+void CharFill(char* data, size_t length) { memset(data, C, length); }
 
 // Fills the provided buffer with random data. The contents of the buffer are
 // repeatable for any iteration of the test, provided that srand() is seeded with

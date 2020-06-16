@@ -606,6 +606,31 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
 
 void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
+  const zx::vmo& vmo = data_mapping_.vmo();
+  if (vmo.is_valid()) {
+    zx_info_vmo_t info;
+    zx_status_t info_status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+    if (info_status == ZX_OK) {
+      if (info.num_children > 0) {
+        // A clone was added at some point since the asynchronous HandleNoClones call was enqueued.
+        // Re-arm the watcher, and return.
+        //
+        // clone_watcher_ is level triggered, so even if there are no clones now (since the call to
+        // get_info), HandleNoClones will still be enqueued.
+        //
+        // No new clones can be added during this function, since clones are added on the main
+        // dispatch thread which is currently running this function. If blobfs becomes
+        // multi-threaded, locking will be necessary here.
+        clone_watcher_.set_object(vmo.get());
+        clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
+        clone_watcher_.Begin(blobfs_->dispatcher());
+        return;
+      }
+    } else {
+      FS_TRACE_WARN("Failed to get_info for vmo (%s); unable to verify VMO has no clones.\n",
+                    zx_status_get_string(info_status));
+    }
+  }
   if (!tearing_down_) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);

@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fdio/fd.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/fd.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -32,6 +32,7 @@
 namespace {
 
 using blobfs::BlobInfo;
+using blobfs::CharFill;
 using blobfs::GenerateBlob;
 using blobfs::GenerateRandomBlob;
 using blobfs::StreamAll;
@@ -1441,6 +1442,81 @@ TEST_F(BlobfsTestWithFvm, FailedWrite) {
 
   // Force journal replay.
   Remount();
+}
+
+struct CloneThreadArgs {
+  const BlobInfo* info = nullptr;
+  std::atomic_bool done{false};
+};
+
+void CloneThread(CloneThreadArgs* args) {
+  while (!args->done) {
+    fbl::unique_fd fd(open(args->info->path, O_RDONLY));
+    ASSERT_TRUE(fd);
+    void* addr = mmap(NULL, args->info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+    ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
+    // Explicitly close |fd| before unmapping.
+    fd.reset();
+    // Yielding before unmapping significantly improves the ability of this test to detect bugs
+    // (e.g. fxb/53882) by increasing the length of time that the file is closed but still has a
+    // VMO clone.
+    zx_nanosleep(0);
+    ASSERT_EQ(0, munmap(addr, args->info->size_data));
+  }
+}
+
+// This test ensures that blobfs' lifecycle management correctly deals with a highly volatile
+// number of VMO clones (which blobfs has special logic to handle, preventing the in-memory
+// blob from being discarded while there are active clones).
+// See fxb/53882 for background on this test case.
+void RunVmoCloneWatchingTest(const RamDisk* disk) {
+  if (!disk) {
+    return;
+  }
+
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_NO_FAILURES(GenerateBlob(CharFill<'A'>, kMountPath, 4096, &info));
+
+  {
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+  }
+
+  struct CloneThreadArgs thread_args {
+    .info = info.get(),
+  };
+  std::thread clone_thread(CloneThread, &thread_args);
+
+  constexpr int kIterations = 1000;
+  for (int i = 0; i < kIterations; ++i) {
+    fbl::unique_fd fd(open(info->path, O_RDONLY));
+    ASSERT_TRUE(fd);
+    void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+    ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
+    fd.reset();
+
+    // Ensure that the contents read out from the VMO match expectations.
+    // If the blob is destroyed while there are still active clones, and paging is enabled, future
+    // reads for uncommitted sections of the VMO will be full of zeroes (this is the kernel's
+    // behavior when the pager source is detached from a pager-backed VMO), which would fail this
+    // assertion.
+    char* ptr = static_cast<char*>(addr);
+    for (size_t j = 0; j < info->size_data; ++j) {
+      ASSERT_EQ(ptr[j], 'A');
+    }
+    ASSERT_EQ(0, munmap(addr, info->size_data));
+  }
+
+  thread_args.done = true;
+  clone_thread.join();
+}
+
+TEST_F(BlobfsTest, VmoCloneWatchingTest) {
+  ASSERT_NO_FAILURES(RunVmoCloneWatchingTest(environment_->ramdisk()));
+}
+
+TEST_F(BlobfsTestWithFvm, VmoCloneWatchingTest) {
+  ASSERT_NO_FAILURES(RunVmoCloneWatchingTest(environment_->ramdisk()));
 }
 
 }  // namespace
