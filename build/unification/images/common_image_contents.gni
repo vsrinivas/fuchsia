@@ -226,7 +226,6 @@ common_image_contents = [
   "//src/zircon/testing/mutex_pi_exerciser",
   "//zircon/system/uapp/kstress",
   "//zircon/system/uapp/dd",
-  "//zircon/system/uapp/lz4",
   "//zircon/system/uapp/syscall-check",
   "//zircon/system/uapp/trace-benchmark",
   "//zircon/system/uapp/trace-example",
