@@ -22,7 +22,7 @@ async fn test_list() {
         command: "list",
         golden_basename: list_test,
         args: [],
-        with_retries
+        test_opts: [ "with_retries" ]
     );
 }
 
@@ -33,7 +33,7 @@ async fn test_list_no_duplicates() {
         command: "list",
         golden_basename: list_no_dups,
         args: [],
-        with_retries
+        test_opts: [ "with_retries" ]
     );
 }
 
@@ -90,7 +90,7 @@ async fn test_selectors() {
             "selectors-test2/basic_component.cmx:root",
             "selectors-test3/test_component.cmx"
         ],
-        with_retries
+        test_opts: [ "with_retries" ]
     );
 }
 
@@ -149,8 +149,15 @@ async fn inspect_vmo_file_directly() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_no_selectors() {
-    let result = utils::execute_command(&["show"]).await;
-    assert_matches!(result, Err(Error::InvalidArguments(_)));
+    let (_env, _app) = utils::start_basic_component("show-all-test").await.expect("create comp 1");
+    let (_env2, _app2) =
+        utils::start_basic_component("show-all-test2").await.expect("create comp 2");
+    assert_command!(
+        command: "show",
+        golden_basename: show_all_test,
+        args: [],
+        test_opts: [ "with_retries", "remove_observer" ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -166,7 +173,7 @@ async fn show_test() {
             "show-test2/basic_component.cmx:root:iquery",
             "show-test3/basic_component.cmx"
         ],
-        with_retries
+        test_opts: [ "with_retries" ]
     );
 }
 

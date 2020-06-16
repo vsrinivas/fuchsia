@@ -1,0 +1,26 @@
+[
+  {
+    "moniker": "show-all-test/basic_component.cmx",
+    "payload": {
+      "root": {
+        "fuchsia.inspect.Health": {
+          "start_timestamp_nanos": "TIMESTAMP",
+          "status": "OK"
+        },
+        "iquery": "rocks"
+      }
+    }
+  },
+  {
+    "moniker": "show-all-test2/basic_component.cmx",
+    "payload": {
+      "root": {
+        "fuchsia.inspect.Health": {
+          "start_timestamp_nanos": "TIMESTAMP",
+          "status": "OK"
+        },
+        "iquery": "rocks"
+      }
+    }
+  }
+]

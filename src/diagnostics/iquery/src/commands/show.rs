@@ -26,7 +26,8 @@ pub struct ShowCommand {
     pub manifest_name: Option<String>,
 
     #[argh(positional)]
-    /// component or tree selectors for which the selectors should be queried. Minimum: 1.
+    /// component or tree selectors for which the selectors should be queried. If no selectors are
+    /// provided, inspect data for the whole system will be returned.
     pub selectors: Vec<String>,
 }
 
@@ -58,10 +59,6 @@ impl Command for ShowCommand {
     type Result = Vec<ShowCommandResultItem>;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        if self.selectors.is_empty() {
-            return Err(Error::invalid_arguments("Expected 1 or more selectors. Got zero."));
-        }
-
         // TODO(fxbug.dev/45458): support filtering per manifest name.
         let mut results = utils::fetch_data(&self.selectors)
             .await?
