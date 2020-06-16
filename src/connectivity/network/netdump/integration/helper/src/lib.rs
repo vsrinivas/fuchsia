@@ -18,7 +18,7 @@ use {
     fuchsia_zircon as zx,
     futures::{
         future::{self, Either},
-        Future, FutureExt, StreamExt, TryFutureExt,
+        Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
     },
     net_types::ip::IpVersion,
     std::boxed::Box,
@@ -355,18 +355,15 @@ pub fn send_udp_packets<'a>(
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let buf: Vec<u8> = std::iter::repeat(0).take(payload_size_octets).collect();
     async move {
-        futures::future::try_join_all(
-            std::iter::repeat(())
-                .take(count)
-                .map(|()| {
-                    socket
-                        .send_to(&buf, addr_rx)
-                        .map_ok(|_: usize| ())
-                        .map(|result| result.context("socket send"))
-                })
-                .collect::<Vec<_>>(),
-        )
-        .map_ok(|_: Vec<()>| ())
-        .await
+        futures::stream::repeat(())
+            .map(Ok)
+            .take(count)
+            .try_for_each_concurrent(None, |()| {
+                socket
+                    .send_to(&buf, addr_rx)
+                    .map_ok(|_: usize| ())
+                    .map(|result| result.context("socket send"))
+            })
+            .await
     }
 }
