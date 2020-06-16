@@ -190,7 +190,7 @@ common_image_contents = [
   "//src/bringup/bin/miscsvc",
   "//src/bringup/bin/netsvc:device-name-provider",
   "//src/bringup/bin/netsvc",
-  "//zircon/system/core/ptysvc",
+  "//src/bringup/bin/ptysvc",
   "//zircon/system/core/pwrbtn-monitor",
   "//zircon/system/core/svchost",
   "//zircon/system/core/sysinfo",

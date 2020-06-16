@@ -67,7 +67,7 @@ common_test_contents = [
   "//src/bringup/bin/console:console-test",
   "//src/bringup/bin/netsvc:netsvc-stress-test",
   "//src/bringup/bin/netsvc:netsvc-test",
-  "//zircon/system/core/ptysvc:ptysvc-test",
+  "//src/bringup/bin/ptysvc:ptysvc-test",
   "//zircon/system/core/svchost:crashsvc-test",
   "//src/storage/bin/blobfs",
   "//src/storage/bin/minfs",
