@@ -4,12 +4,15 @@
 
 #include <lib/dma-buffer/buffer.h>
 #include <lib/fake-object/object.h>
+#include <lib/zx/status.h>
+#include <lib/zx/vmo.h>
 
 #include <map>
 
+#include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
-namespace dma_buffer {
+namespace {
 
 const zx::bti kFakeBti(42);
 
@@ -23,117 +26,162 @@ struct VmoMetadata {
   bool contiguous = false;
 };
 
-struct SyscallState {
-  std::map<zx_handle_t, VmoMetadata> vmos;
-  uint64_t current_phys = 0;
-};
+class VmoWrapper : public fake_object::Object {
+ public:
+  explicit VmoWrapper(zx::vmo vmo) : vmo_(std::move(vmo)) {}
+  virtual fake_object::HandleType type() const final { return fake_object::HandleType::CUSTOM; }
+  zx::unowned_vmo vmo() { return vmo_.borrow(); }
+  VmoMetadata& metadata() { return metadata_; }
 
-static SyscallState syscall_state;
+ private:
+  zx::vmo vmo_;
+  VmoMetadata metadata_ = {};
+};
 
 extern "C" {
 zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32_t alignment_log2,
                                      zx_handle_t* out) {
-  zx_status_t status = zx_vmo_create(size, 0, out);
+  zx::vmo vmo = {};
+  zx_status_t status = REAL_SYSCALL(zx_vmo_create)(size, 0, vmo.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
-  VmoMetadata meta;
-  meta.alignment_log2 = alignment_log2;
-  meta.bti_handle = bti_handle;
-  meta.size = size;
-  syscall_state.vmos[*out] = meta;
-  return ZX_OK;
+
+  auto vmo_wrapper = fbl::AdoptRef(new VmoWrapper(std::move(vmo)));
+  vmo_wrapper->metadata().alignment_log2 = alignment_log2;
+  vmo_wrapper->metadata().bti_handle = bti_handle;
+  vmo_wrapper->metadata().size = size;
+  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(vmo_wrapper));
+  if (add_res.is_ok()) {
+    *out = add_res.value();
+  }
+  return add_res.status_value();
 }
 
 zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out) {
-  zx_status_t status = REAL_SYSCALL(zx_vmo_create)(size, options, out);
+  zx::vmo vmo = {};
+  zx_status_t status = REAL_SYSCALL(zx_vmo_create)(size, 0, vmo.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
-  VmoMetadata meta;
-  meta.size = size;
-  syscall_state.vmos[*out] = meta;
-  return ZX_OK;
+
+  auto vmo_wrapper = fbl::AdoptRef(new VmoWrapper(std::move(vmo)));
+  vmo_wrapper->metadata().size = size;
+  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(vmo_wrapper));
+  if (add_res.is_ok()) {
+    *out = add_res.value();
+  }
+  return add_res.status_value();
 }
 
-zx_status_t zx_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vmar_offset,
-                        zx_handle_t vmo, uint64_t vmo_offset, uint64_t len,
+zx_status_t zx_vmar_map(zx_handle_t vmar_handle, zx_vm_option_t options, uint64_t vmar_offset,
+                        zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t len,
                         zx_vaddr_t* mapped_addr) {
-  auto record = syscall_state.vmos.find(vmo);
-  zx_status_t status =
-      REAL_SYSCALL(zx_vmar_map)(handle, options, vmar_offset, vmo, vmo_offset, len, mapped_addr);
-  if (record != syscall_state.vmos.end()) {
-    record->second.virt = reinterpret_cast<void*>(*mapped_addr);
+  zx::status get_res = fake_object::FakeHandleTable().Get(vmo_handle);
+  if (!get_res.is_ok()) {
+    return get_res.status_value();
+  }
+  auto vmo = fbl::RefPtr<VmoWrapper>::Downcast(std::move(get_res.value()));
+
+  zx_status_t status = REAL_SYSCALL(zx_vmar_map)(vmar_handle, options, vmar_offset,
+                                                 vmo->vmo()->get(), vmo_offset, len, mapped_addr);
+  if (status == ZX_OK) {
+    vmo->metadata().virt = reinterpret_cast<void*>(*mapped_addr);
   }
   return status;
 }
 
 zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) {
-  syscall_state.vmos[handle].cache_policy = cache_policy;
+  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  if (!get_res.is_ok()) {
+    return get_res.status_value();
+  }
+  auto vmo = fbl::RefPtr<VmoWrapper>::Downcast(std::move(get_res.value()));
+  vmo->metadata().cache_policy = cache_policy;
   return ZX_OK;
 }
 
-zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo, uint64_t offset,
-                       uint64_t size, zx_paddr_t* addrs, size_t addrs_count, zx_handle_t* out) {
+zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo_handle,
+                       uint64_t offset, uint64_t size, zx_paddr_t* addrs, size_t addrs_count,
+                       zx_handle_t* out) {
+  static uint64_t current_phys = 0;
+  static fbl::Mutex phys_lock;
+
   if (bti_handle != kFakeBti.get()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  syscall_state.vmos[vmo].start_phys = syscall_state.current_phys;
-  *addrs = syscall_state.current_phys;
-  syscall_state.current_phys += syscall_state.vmos[vmo].size;
+
+  zx::status get_res = fake_object::FakeHandleTable().Get(vmo_handle);
+  if (!get_res.is_ok()) {
+    return get_res.status_value();
+  }
+  auto vmo = fbl::RefPtr<VmoWrapper>::Downcast(std::move(get_res.value()));
+
+  fbl::AutoLock lock(&phys_lock);
+  vmo->metadata().start_phys = current_phys;
+  *addrs = current_phys;
+  current_phys += vmo->metadata().size;
   *out = ZX_HANDLE_INVALID;
   return ZX_OK;
 }
+}  // extern "C"
 
-zx_status_t zx_handle_close(zx_handle_t handle) {
-  auto record = syscall_state.vmos.find(handle);
-  if (record == syscall_state.vmos.end()) {
-    return REAL_SYSCALL(zx_handle_close)(handle);
-  }
-  syscall_state.vmos.erase(record);
-  return ZX_OK;
-}
-}
+}  // namespace
 
+namespace dma_buffer {
 TEST(DmaBufferTests, InitWithCacheEnabled) {
   std::unique_ptr<ContiguousBuffer> buffer;
+  const size_t size = ZX_PAGE_SIZE * 4;
+  const size_t alignment = 2;
   auto factory = CreateBufferFactory();
-  ASSERT_OK(factory->CreateContiguous(kFakeBti, ZX_PAGE_SIZE * 4, 2, &buffer));
-  auto& state = syscall_state.vmos.begin()->second;
-  ASSERT_EQ(state.alignment_log2, 2);
-  ASSERT_EQ(state.bti_handle, kFakeBti.get());
-  ASSERT_EQ(state.cache_policy, 0);
-  ASSERT_EQ(state.size, ZX_PAGE_SIZE * 4);
-  ASSERT_EQ(buffer->virt(), state.virt);
-  ASSERT_EQ(buffer->size(), state.size);
-  ASSERT_EQ(buffer->phys(), state.start_phys);
+  ASSERT_OK(factory->CreateContiguous(kFakeBti, size, alignment, &buffer));
+  auto test_f = [&buffer](fake_object::Object* obj) -> bool {
+    auto vmo = static_cast<VmoWrapper*>(obj);
+    ZX_ASSERT(vmo->metadata().alignment_log2 == alignment);
+    ZX_ASSERT(vmo->metadata().bti_handle == kFakeBti.get());
+    ZX_ASSERT(vmo->metadata().cache_policy == 0);
+    ZX_ASSERT(vmo->metadata().size == size);
+    ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
+    ZX_ASSERT(buffer->size() == vmo->metadata().size);
+    ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
+    return false;
+  };
+  fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
 }
 
 TEST(DmaBufferTests, InitWithCacheDisabled) {
   std::unique_ptr<PagedBuffer> buffer;
   auto factory = CreateBufferFactory();
   ASSERT_OK(factory->CreatePaged(kFakeBti, ZX_PAGE_SIZE, false, &buffer));
-  auto& state = syscall_state.vmos.begin()->second;
-  ASSERT_EQ(state.alignment_log2, 0);
-  ASSERT_EQ(state.cache_policy, ZX_CACHE_POLICY_UNCACHED_DEVICE);
-  ASSERT_EQ(state.size, ZX_PAGE_SIZE);
-  ASSERT_EQ(buffer->virt(), state.virt);
-  ASSERT_EQ(buffer->size(), state.size);
-  ASSERT_EQ(buffer->phys()[0], state.start_phys);
+  auto test_f = [&buffer](fake_object::Object* object) -> bool {
+    auto vmo = static_cast<VmoWrapper*>(object);
+    ZX_ASSERT(vmo->metadata().alignment_log2 == 0);
+    ZX_ASSERT(vmo->metadata().cache_policy == ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    ZX_ASSERT(vmo->metadata().size == ZX_PAGE_SIZE);
+    ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
+    ZX_ASSERT(buffer->size() == vmo->metadata().size);
+    ZX_ASSERT(buffer->phys()[0] == vmo->metadata().start_phys);
+    return false;
+  };
+  fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
 }
 
 TEST(DmaBufferTests, InitCachedMultiPageBuffer) {
   std::unique_ptr<ContiguousBuffer> buffer;
   auto factory = CreateBufferFactory();
   ASSERT_OK(factory->CreateContiguous(kFakeBti, ZX_PAGE_SIZE * 4, 0, &buffer));
-  auto& state = syscall_state.vmos.begin()->second;
-  ASSERT_EQ(state.alignment_log2, 0);
-  ASSERT_EQ(state.cache_policy, 0);
-  ASSERT_EQ(state.bti_handle, kFakeBti.get());
-  ASSERT_EQ(state.size, ZX_PAGE_SIZE * 4);
-  ASSERT_EQ(buffer->virt(), state.virt);
-  ASSERT_EQ(buffer->size(), state.size);
-  ASSERT_EQ(buffer->phys(), state.start_phys);
+  auto test_f = [&buffer](fake_object::Object* object) -> bool {
+    auto vmo = static_cast<VmoWrapper*>(object);
+    ZX_ASSERT(vmo->metadata().alignment_log2 == 0);
+    ZX_ASSERT(vmo->metadata().cache_policy == 0);
+    ZX_ASSERT(vmo->metadata().bti_handle == kFakeBti.get());
+    ZX_ASSERT(vmo->metadata().size == ZX_PAGE_SIZE * 4);
+    ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
+    ZX_ASSERT(buffer->size() == vmo->metadata().size);
+    ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
+    return false;
+  };
+  fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
 }
 
 }  // namespace dma_buffer
