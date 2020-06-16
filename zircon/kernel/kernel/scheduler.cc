@@ -565,9 +565,9 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   //
   // Threads may be created and resumed before the thread init level. Work around
   // an empty active mask by assuming the current cpu is scheduleable.
-  const cpu_mask_t available_mask =
-      active_mask != 0 ? thread->scheduler_state_.GetEffectiveCpuMask(active_mask) :
-      current_cpu_mask;
+  const cpu_mask_t available_mask = active_mask != 0
+                                        ? thread->scheduler_state_.GetEffectiveCpuMask(active_mask)
+                                        : current_cpu_mask;
   DEBUG_ASSERT_MSG(available_mask != 0,
                    "thread=%s affinity=%#x soft_affinity=%#x active=%#x "
                    "idle=%#x arch_ints_disabled=%d",
@@ -578,14 +578,14 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   LOCAL_KTRACE(KTRACE_DETAILED, "target_mask: online,active", mp_get_online_mask(), active_mask);
 
 #if !DISABLE_PERIODIC_LOAD_BALANCER
-  //TODO(edcoyne): When we drop the define refactor this unify these functions.
+  // TODO(edcoyne): When we drop the define refactor this unify these functions.
   if (IsFairThread(thread)) {
     const cpu_num_t target_cpu = load_balancer::FindTargetCpu(thread);
 
     SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name_, target_cpu);
     trace.End(target_cpu, available_mask);
     return target_cpu;
-  } // deadline threads will follow the old path for now.
+  }  // deadline threads will follow the old path for now.
 #endif
 
   const cpu_mask_t last_cpu_mask = cpu_num_to_mask(thread->scheduler_state_.last_cpu_);
@@ -1212,7 +1212,8 @@ bool Scheduler::Unblock(list_node* list) {
 
   cpu_mask_t cpus_to_reschedule_mask = 0;
   Thread* thread;
-  while ((thread = list_remove_tail_type(list, Thread, wait_queue_state_.queue_node_)) != nullptr) {
+  while ((thread = list_remove_tail_type(list, Thread, wait_queue_state_.sublist_node_)) !=
+         nullptr) {
     DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
     DEBUG_ASSERT(!thread->IsIdle());
 

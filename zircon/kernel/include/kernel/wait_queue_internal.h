@@ -134,8 +134,8 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
     Thread* next;
 
     while (true) {
-      next = list_peek_head_type(&queue_head->wait_queue_state_.queue_node_, Thread,
-                                 wait_queue_state_.queue_node_);
+      next = list_peek_head_type(&queue_head->wait_queue_state_.sublist_, Thread,
+                                 wait_queue_state_.sublist_node_);
 
       if (!visit_thread(queue_head)) {
         return false;
@@ -159,9 +159,9 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
     DEBUG_ASSERT(next);
     do {
       Thread* t = next;
-      next =
-          list_next_type(&queue_head->wait_queue_state_.queue_node_,
-                         &t->wait_queue_state_.queue_node_, Thread, wait_queue_state_.queue_node_);
+      next = list_next_type(&queue_head->wait_queue_state_.sublist_,
+                            &t->wait_queue_state_.sublist_node_, Thread,
+                            wait_queue_state_.sublist_node_);
 
       if (!visit_thread(t)) {
         return false;
@@ -174,8 +174,7 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
   Thread* last_queue_head = nullptr;
   Thread* queue_head;
 
-  list_for_every_entry (&private_heads_, queue_head, Thread,
-                        wait_queue_state_.wait_queue_heads_node_) {
+  list_for_every_entry (&private_heads_, queue_head, Thread, wait_queue_state_.heads_node_) {
     if ((last_queue_head != nullptr) && !consider_queue(last_queue_head)) {
       return;
     }

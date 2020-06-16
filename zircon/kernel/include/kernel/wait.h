@@ -44,11 +44,28 @@ struct WaitQueueState {
   WaitQueueState(const WaitQueueState&) = delete;
   WaitQueueState& operator=(const WaitQueueState&) = delete;
 
-  bool IsHead() const { return list_in_list(&wait_queue_heads_node_); }
-  bool InWaitQueue() const { return list_in_list(&queue_node_); }
+  bool IsHead() const { return list_in_list(&heads_node_); }
+  bool InWaitQueue() const { return IsHead() || list_in_list(&sublist_node_); }
 
-  struct list_node queue_node_;
-  struct list_node wait_queue_heads_node_;
+  // Any given thread is either a WaitQueue head (in which case
+  // sublist_ is in use, and may be non-empty), or not (in which case
+  // sublist_node_ is used).
+
+  // The Thread's position in a WaitQueue sublist. If active, this
+  // Thread is under some queue head (another Thread of the same
+  // priority).
+  //
+  // This storage is also used for Scheduler::Unblock()ing multiple
+  // Threads from a WaitQueue at once.
+  struct list_node sublist_node_ = LIST_INITIAL_CLEARED_VALUE;
+
+  // The Thread's sublist. This is only used when the Thread is a
+  // WaitQueue head (and so, when IsHead() is true).
+  struct list_node sublist_ = LIST_INITIAL_VALUE(sublist_);
+
+  // The Thread's position in a WaitQueue heads list. If active, this
+  // Thread is a WaitQueue head (and so, IsHead() is true).
+  struct list_node heads_node_ = LIST_INITIAL_CLEARED_VALUE;
 };
 
 // Encapsulation of the data structure backing the wait queue.
