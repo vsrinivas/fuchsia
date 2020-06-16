@@ -168,7 +168,7 @@ wlanif_set_keys_req AuthTest::CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
   set_key_descriptor key_des = {.key_list = key};
   key_des.key_count = key_count;
   key_des.key_id = kDefaultKeyIndex;
-  memcpy(key_des.address, kDefaultBssid.byte, WLAN_ETH_ALEN);
+  memcpy(key_des.address, kDefaultBssid.byte, ETH_ALEN);
   key_des.cipher_suite_type = cipher_suite;
 
   wlanif_set_keys_req set_keys_req = {};

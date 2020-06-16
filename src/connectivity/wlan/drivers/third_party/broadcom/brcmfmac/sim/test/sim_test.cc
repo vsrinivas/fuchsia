@@ -123,7 +123,7 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
       .has_init_mac_addr = mac_addr ? true : false,
   };
   if (mac_addr)
-    memcpy(req.init_mac_addr, mac_addr.value().byte, WLAN_ETH_ALEN);
+    memcpy(req.init_mac_addr, mac_addr.value().byte, ETH_ALEN);
 
   if ((status = device_->WlanphyImplCreateIface(&req, &sim_ifc->iface_id_)) != ZX_OK) {
     return status;

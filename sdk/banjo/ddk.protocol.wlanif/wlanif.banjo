@@ -7,6 +7,7 @@ library ddk.protocol.wlanif;
 using ddk.hw.wlan.ieee80211;
 using ddk.hw.wlan.wlaninfo;
 using ddk.protocol.ethernet;
+using ddk.protocol.ethernet.mac;
 using ddk.protocol.wlan.info;
 using zx;
 
@@ -23,12 +24,10 @@ struct WlanifSsid {
     array<uint8>:WLAN_MAX_SSID_LEN data;
 };
 
-const usize WLAN_ETH_ALEN = 6;
-
 struct WlanifScanReq {
     uint64 txn_id;
     ddk.protocol.wlan.info.WlanBssType bss_type;
-    array<uint8>:WLAN_ETH_ALEN bssid;
+    array<uint8>:MAC_ARRAY_LENGTH bssid;
     WlanifSsid ssid;
     WlanScanType scan_type;
     uint32 probe_delay;
@@ -45,7 +44,7 @@ const uint32 WLAN_RSNE_MAX_LEN = 255;
 const uint32 WLAN_VIE_MAX_LEN = 510;  // max length for two elements (WPA and WSC)
 
 struct WlanifBssDescription {
-    array<uint8>:WLAN_ETH_ALEN bssid;
+    array<uint8>:MAC_ARRAY_LENGTH bssid;
     WlanifSsid ssid;
     ddk.protocol.wlan.info.WlanBssType bss_type;
     uint32 beacon_period;
@@ -88,13 +87,13 @@ enum WlanAuthType : uint8 {
 };
 
 struct WlanifAuthReq {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthType auth_type;
     uint32 auth_failure_timeout;
 };
 
 struct WlanifAuthInd {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthType auth_type;
 };
 
@@ -168,12 +167,12 @@ enum WlanDeauthReason : uint16 {
 };
 
 struct WlanifDeauthReq {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanDeauthReason reason_code;
 };
 
 struct WlanifAssocReq {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     usize rsne_len;
     array<uint8>:WLAN_RSNE_MAX_LEN rsne;
     usize vendor_ie_len;
@@ -181,7 +180,7 @@ struct WlanifAssocReq {
 };
 
 struct WlanifAssocInd {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     uint16 listen_interval;
     WlanifSsid ssid;
     usize rsne_len;
@@ -191,12 +190,12 @@ struct WlanifAssocInd {
 };
 
 struct WlanifDisassocReq {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     uint16 reason_code;
 };
 
 struct WlanifResetReq {
-    array<uint8>:WLAN_ETH_ALEN sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH sta_address;
     bool set_default_mib;
 };
 
@@ -220,7 +219,7 @@ struct SetKeyDescriptor {
     vector<uint8> key;
     uint16 key_id;
     ddk.protocol.wlan.info.WlanKeyType key_type;
-    array<uint8>:WLAN_ETH_ALEN address;
+    array<uint8>:MAC_ARRAY_LENGTH address;
     uint64 rsc;
     array<uint8>:3 cipher_suite_oui;
     uint8 cipher_suite_type;
@@ -236,7 +235,7 @@ struct WlanifSetKeysReq {
 struct DeleteKeyDescriptor {
     uint16 key_id;
     ddk.protocol.wlan.info.WlanKeyType key_type;
-    array<uint8>:WLAN_ETH_ALEN address;
+    array<uint8>:MAC_ARRAY_LENGTH address;
 };
 
 struct WlanifDelKeysReq {
@@ -245,8 +244,8 @@ struct WlanifDelKeysReq {
 };
 
 struct WlanifEapolReq {
-    array<uint8>:WLAN_ETH_ALEN src_addr;
-    array<uint8>:WLAN_ETH_ALEN dst_addr;
+    array<uint8>:MAC_ARRAY_LENGTH src_addr;
+    array<uint8>:MAC_ARRAY_LENGTH dst_addr;
     vector<uint8> data;
 };
 
@@ -318,22 +317,22 @@ enum WlanAuthResult : uint8 {
 };
 
 struct WlanifAuthConfirm {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthType auth_type;
     WlanAuthResult result_code;
 };
 
 struct WlanifAuthResp {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthResult result_code;
 };
 
 struct WlanifDeauthConfirm {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
 };
 
 struct WlanifDeauthIndication {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanDeauthReason reason_code;
 };
 
@@ -355,7 +354,7 @@ struct WlanifAssocConfirm {
 };
 
 struct WlanifAssocResp {
-    array<uint8>:WLAN_ETH_ALEN peer_sta_address;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanAssocResult result_code;
     uint16 association_id;
 };
@@ -365,7 +364,7 @@ struct WlanifDisassocConfirm {
 };
 
 struct WlanifDisassocIndication {
-    array<uint8>:WLAN_ETH_ALEN PeerStaAddress;
+    array<uint8>:MAC_ARRAY_LENGTH PeerStaAddress;
     WlanDeauthReason reason_code;
 };
 
@@ -405,8 +404,8 @@ struct WlanifSignalReportIndication {
 };
 
 struct WlanifEapolIndication {
-    array<uint8>:WLAN_ETH_ALEN src_addr;
-    array<uint8>:WLAN_ETH_ALEN dst_addr;
+    array<uint8>:MAC_ARRAY_LENGTH src_addr;
+    array<uint8>:MAC_ARRAY_LENGTH dst_addr;
     vector<uint8> data;
 };
 
@@ -432,7 +431,7 @@ enum WlanifFeature : uint32 {
 };
 
 struct WlanifQueryInfo {
-    array<uint8>:WLAN_ETH_ALEN mac_addr;
+    array<uint8>:MAC_ARRAY_LENGTH mac_addr;
     /// WLAN_MAC_ROLE_*
     ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
     /// WLANIF_FEATURE_*

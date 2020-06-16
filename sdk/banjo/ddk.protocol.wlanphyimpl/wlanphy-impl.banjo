@@ -5,9 +5,8 @@
 library ddk.protocol.wlanphyimpl;
 
 using ddk.hw.wlan.wlaninfo;
+using ddk.protocol.ethernet.mac;
 using zx;
-
-const usize WLAN_ETH_ALEN = 6;
 
 /// Parameters to create an interface.
 struct WlanphyImplCreateIfaceReq {
@@ -22,7 +21,7 @@ struct WlanphyImplCreateIfaceReq {
     bool has_init_mac_addr;
 
     /// The initial mac address set from configuration layer.
-    array<uint8>:WLAN_ETH_ALEN init_mac_addr;
+    array<uint8>:MAC_ARRAY_LENGTH init_mac_addr;
 };
 
 /// Info about this WLAN PHY.

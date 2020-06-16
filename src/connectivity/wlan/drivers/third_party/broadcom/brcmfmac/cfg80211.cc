@@ -398,7 +398,7 @@ static bool brcmf_is_apmode(struct brcmf_cfg80211_vif* vif) {
   return iftype == WLAN_INFO_MAC_ROLE_AP;
 }
 
-static bool brcmf_is_existing_macaddr(brcmf_pub* drvr, const uint8_t mac_addr[WLAN_ETH_ALEN],
+static bool brcmf_is_existing_macaddr(brcmf_pub* drvr, const uint8_t mac_addr[ETH_ALEN],
                                       bool is_ap) {
   if (is_ap) {
     for (uint16_t i = 0; i < BRCMF_MAX_IFS; i++) {
@@ -3238,14 +3238,14 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
 
 /*For now this function should always be called when adding iface*/
 zx_status_t brcmf_set_iface_macaddr(bool is_ap, net_device* ndev,
-                                    const uint8_t mac_addr[WLAN_ETH_ALEN]) {
+                                    const uint8_t mac_addr[ETH_ALEN]) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   int32_t fw_err = 0;
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter");
   // If the existing mac_addr of this iface is the same as it is, just return success.
-  if (!memcmp(ifp->mac_addr, mac_addr, WLAN_ETH_ALEN)) {
+  if (!memcmp(ifp->mac_addr, mac_addr, ETH_ALEN)) {
     return ZX_OK;
   }
 

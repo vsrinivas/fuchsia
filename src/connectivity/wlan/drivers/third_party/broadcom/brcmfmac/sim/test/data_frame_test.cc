@@ -404,8 +404,8 @@ void DataFrameTest::Tx(std::vector<uint8_t>& ethFrame) {
 void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
                                    const std::vector<uint8_t>& eapol) {
   wlanif_eapol_req eapol_req = {};
-  memcpy(eapol_req.dst_addr, dstAddr.byte, WLAN_ETH_ALEN);
-  memcpy(eapol_req.src_addr, srcAddr.byte, WLAN_ETH_ALEN);
+  memcpy(eapol_req.dst_addr, dstAddr.byte, ETH_ALEN);
+  memcpy(eapol_req.src_addr, srcAddr.byte, ETH_ALEN);
   eapol_req.data_list = eapol.data();
   eapol_req.data_count = eapol.size();
   client_ifc_.if_impl_ops_->eapol_req(client_ifc_.if_impl_ctx_, &eapol_req);

@@ -10,6 +10,7 @@ banjo("ddk.protocol.wlanif") {
     "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/ddk.protocol.ethernet",
+    "//sdk/banjo/ddk.protocol.ethernet.mac",
     "//sdk/banjo/ddk.protocol.wlan.info",
   ]
 }
