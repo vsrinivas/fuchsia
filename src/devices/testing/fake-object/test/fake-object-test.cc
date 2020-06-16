@@ -19,11 +19,11 @@
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
-namespace {
+namespace fake_object {
 
 class FakeObject : public zxtest::Test {
  protected:
-  void TearDown() final { FakeHandleTable().Clear(); }
+  void TearDown() final { fake_object::FakeHandleTable().Clear(); }
 };
 
 // By default a base |Object| should return ZX_ERR_NOT_SUPPORTED for
@@ -88,7 +88,7 @@ TEST_F(FakeObject, DuplicateHandle) {
   // Duplicate the handle, make sure it is valid and the same object:
   zx_handle_t obj_dup = ZX_HANDLE_INVALID;
   EXPECT_OK(zx_handle_duplicate(obj.value(), 0, &obj_dup));
-  EXPECT_EQ(2, FakeHandleTable().size());
+  EXPECT_EQ(2, fake_object::FakeHandleTable().size());
   zx::status obj_koid = fake_object_get_koid(obj.value());
   zx::status obj_dup_koid = fake_object_get_koid(obj_dup);
   EXPECT_OK(obj_koid.status_value());
@@ -97,7 +97,7 @@ TEST_F(FakeObject, DuplicateHandle) {
 
   EXPECT_OK(zx_handle_close(obj.value()));
   EXPECT_OK(zx_handle_close(obj_dup));
-  EXPECT_EQ(0u, FakeHandleTable().size());
+  EXPECT_EQ(0u, fake_object::FakeHandleTable().size());
 }
 
 TEST_F(FakeObject, DuplicateRealHandle) {
@@ -123,11 +123,11 @@ TEST_F(FakeObject, ReplaceHandle) {
   zx::status<zx_koid_t> original_koid = fake_object_get_koid(obj.value());
   EXPECT_OK(original_koid.status_value());
   EXPECT_OK(zx_handle_replace(obj.value(), 0, &obj_repl_hnd));
-  EXPECT_STATUS(FakeHandleTable().Get(obj.value()).status_value(), ZX_ERR_NOT_FOUND);
+  EXPECT_STATUS(fake_object::FakeHandleTable().Get(obj.value()).status_value(), ZX_ERR_NOT_FOUND);
   EXPECT_EQ(original_koid, fake_object_get_koid(obj_repl_hnd));
 
   EXPECT_OK(zx_handle_close(obj_repl_hnd));
-  EXPECT_EQ(0u, FakeHandleTable().size());
+  EXPECT_EQ(0u, fake_object::FakeHandleTable().size());
 }
 
 TEST_F(FakeObject, ReplaceRealHandle) {
@@ -144,15 +144,15 @@ TEST_F(FakeObject, HandleClose) {
   zx::status<zx_handle_t> obj = fake_object_create();
   EXPECT_OK(obj.status_value());
   EXPECT_NE(obj.value(), ZX_HANDLE_INVALID);
-  EXPECT_EQ(1u, FakeHandleTable().size());
+  EXPECT_EQ(1u, fake_object::FakeHandleTable().size());
 
   EXPECT_OK(zx_handle_close(obj.value()));
-  EXPECT_EQ(0u, FakeHandleTable().size());
+  EXPECT_EQ(0u, fake_object::FakeHandleTable().size());
 }
 
 TEST(FakeObject, HandleCloseMany) {
   // Ensure other test state was cleaned up.
-  ASSERT_EQ(0, FakeHandleTable().size());
+  ASSERT_EQ(0, fake_object::FakeHandleTable().size());
   std::array<zx_handle_t, 4> handles = {ZX_HANDLE_INVALID};
 
   zx::status<zx_handle_t> obj_res = fake_object_create();
@@ -233,4 +233,4 @@ TEST_F(FakeObject, ForEach) {
   }
 }  // namespace
 
-}  // namespace
+}  // namespace fake_object

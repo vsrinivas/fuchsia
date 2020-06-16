@@ -25,11 +25,11 @@
 #define PAGE_SIZE_SHIFT 12
 
 namespace {
-class Bti final : public Object {
+class Bti final : public fake_object::Object {
  public:
   virtual ~Bti() = default;
 
-  static zx_status_t Create(fbl::RefPtr<Object>* out) {
+  static zx_status_t Create(fbl::RefPtr<fake_object::Object>* out) {
     *out = fbl::AdoptRef(new Bti());
     return ZX_OK;
   }
@@ -37,17 +37,18 @@ class Bti final : public Object {
   zx_status_t get_info(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                        size_t* actual_count, size_t* avail_count) override;
 
-  HandleType type() const final { return HandleType::BTI; }
+  fake_object::HandleType type() const final { return fake_object::HandleType::BTI; }
 
  private:
   Bti() = default;
 };
 
-class Pmt final : public Object {
+class Pmt final : public fake_object::Object {
  public:
   virtual ~Pmt() = default;
 
-  static zx_status_t Create(zx::vmo vmo, uint64_t offset, uint64_t size, fbl::RefPtr<Object>* out) {
+  static zx_status_t Create(zx::vmo vmo, uint64_t offset, uint64_t size,
+                            fbl::RefPtr<fake_object::Object>* out) {
     fbl::RefPtr<Pmt> pmt(fbl::AdoptRef(new Pmt(std::move(vmo), offset, size)));
     // These lines exist because currently offset_ and size_ are unused, and
     // GCC and Clang disagree about whether or not marking them as unused is acceptable.
@@ -57,7 +58,7 @@ class Pmt final : public Object {
     return ZX_OK;
   }
 
-  HandleType type() const final { return HandleType::PMT; }
+  fake_object::HandleType type() const final { return fake_object::HandleType::PMT; }
 
  private:
   Pmt(zx::vmo vmo, uint64_t offset, uint64_t size)
@@ -73,13 +74,13 @@ class Pmt final : public Object {
 // Implements fake-bti's version of |zx_object_get_info|.
 zx_status_t Bti::get_info(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                           size_t* actual_count, size_t* avail_count) {
-  zx::status status = FakeHandleTable().Get(handle);
+  zx::status status = fake_object::FakeHandleTable().Get(handle);
   if (!status.is_ok()) {
     printf("fake_bti_get_info: Failed to find handle %u\n", handle);
     return status.status_value();
   }
-  fbl::RefPtr<Object> obj = std::move(status.value());
-  if (obj->type() == HandleType::BTI) {
+  fbl::RefPtr<fake_object::Object> obj = std::move(status.value());
+  if (obj->type() == fake_object::HandleType::BTI) {
     switch (topic) {
       case ZX_INFO_BTI: {
         if (avail_count) {
@@ -112,13 +113,13 @@ zx_status_t Bti::get_info(zx_handle_t handle, uint32_t topic, void* buffer, size
 
 __EXPORT
 zx_status_t fake_bti_create(zx_handle_t* out) {
-  fbl::RefPtr<Object> new_bti;
+  fbl::RefPtr<fake_object::Object> new_bti;
   zx_status_t status = Bti::Create(&new_bti);
   if (status != ZX_OK) {
     return status;
   }
 
-  zx::status add_status = FakeHandleTable().Add(std::move(new_bti));
+  zx::status add_status = fake_object::FakeHandleTable().Add(std::move(new_bti));
   if (add_status.is_ok()) {
     *out = add_status.value();
   }
@@ -130,8 +131,8 @@ zx_status_t fake_bti_create(zx_handle_t* out) {
 __EXPORT
 zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo, uint64_t offset,
                        uint64_t size, zx_paddr_t* addrs, size_t addrs_count, zx_handle_t* out) {
-  zx::status status = FakeHandleTable().Get(bti_handle);
-  ZX_ASSERT_MSG(status.is_ok() && status.value()->type() == HandleType::BTI,
+  zx::status status = fake_object::FakeHandleTable().Get(bti_handle);
+  ZX_ASSERT_MSG(status.is_ok() && status.value()->type() == fake_object::HandleType::BTI,
                 "fake bti_pin: Bad handle %u\n", bti_handle);
   fbl::RefPtr<Bti> bti_obj = fbl::RefPtr<Bti>::Downcast(std::move(status.value()));
 
@@ -211,13 +212,13 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
     addrs[i] = FAKE_BTI_PHYS_ADDR;
   }
 
-  fbl::RefPtr<Object> new_pmt;
+  fbl::RefPtr<fake_object::Object> new_pmt;
   zx_status_t pmt_status = Pmt::Create(std::move(vmo_clone), offset, size, &new_pmt);
   if (pmt_status != ZX_OK) {
     return pmt_status;
   }
 
-  zx::status add_status = FakeHandleTable().Add(std::move(new_pmt));
+  zx::status add_status = fake_object::FakeHandleTable().Add(std::move(new_pmt));
   if (add_status.is_ok()) {
     *out = add_status.value();
   }
@@ -227,18 +228,18 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
 
 __EXPORT
 zx_status_t zx_bti_release_quarantine(zx_handle_t handle) {
-  zx::status status = FakeHandleTable().Get(handle);
-  ZX_ASSERT_MSG(status.is_ok() && status.value()->type() == HandleType::BTI,
+  zx::status status = fake_object::FakeHandleTable().Get(handle);
+  ZX_ASSERT_MSG(status.is_ok() && status.value()->type() == fake_object::HandleType::BTI,
                 "fake bti_release_quarantine: Bad handle %u\n", handle);
   return ZX_OK;
 }
 
 __EXPORT
 zx_status_t zx_pmt_unpin(zx_handle_t handle) {
-  zx::status get_status = FakeHandleTable().Get(handle);
-  ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == HandleType::PMT,
+  zx::status get_status = fake_object::FakeHandleTable().Get(handle);
+  ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == fake_object::HandleType::PMT,
                 "fake pmt_unpin: Bad handle %u\n", handle);
-  zx::status remove_status = FakeHandleTable().Remove(handle);
+  zx::status remove_status = fake_object::FakeHandleTable().Remove(handle);
   ZX_ASSERT_MSG(remove_status.is_ok(), "fake pmt_unpin: Failed to remove handle %u: %s\n", handle,
                 zx_status_get_string(remove_status.status_value()));
   return ZX_OK;
@@ -261,9 +262,9 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
   }
 
   // Make sure this is a valid fake bti:
-  fbl::RefPtr<Object> bti_obj;
-  zx::status get_status = FakeHandleTable().Get(bti_handle);
-  ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == HandleType::BTI,
+  fbl::RefPtr<fake_object::Object> bti_obj;
+  zx::status get_status = fake_object::FakeHandleTable().Get(bti_handle);
+  ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == fake_object::HandleType::BTI,
                 "fake bti_pin: Bad handle %u\n", bti_handle);
 
   // For this fake implementation, just create a normal vmo:

@@ -30,7 +30,7 @@ namespace {
 // range. Only shared resources are permitted at this time to reduce complexity
 // as exclusive resources are not needed for most test purposes. It is not permitted
 // to create a |root| resource through this interface.
-class Resource final : public Object {
+class Resource final : public fake_object::Object {
  public:
   virtual ~Resource() = default;
 
@@ -44,7 +44,7 @@ class Resource final : public Object {
   zx_status_t get_info(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                        size_t* actual_count, size_t* avail_count) override;
 
-  HandleType type() const final { return HandleType::RESOURCE; }
+  fake_object::HandleType type() const final { return fake_object::HandleType::RESOURCE; }
   zx_paddr_t base() const { return base_; }
   size_t size() const { return size_; }
   zx_rsrc_kind_t kind() const { return kind_; }
@@ -76,22 +76,25 @@ bool exclusive_region_overlaps(zx_rsrc_kind_t kind, zx_paddr_t new_rsrc_base,
                                size_t new_rsrc_size) {
   bool overlaps = false;
   zx_paddr_t new_rsrc_end = new_rsrc_base + new_rsrc_size;
-  FakeHandleTable().ForEach(HandleType::RESOURCE, [&](Object* obj) -> bool {
-    auto* rsrc = static_cast<Resource*>(obj);
-    // In the case of exclusive resources we need to ensure the new resource does not
-    // overlap with existing exclusive ranges.
-    if (rsrc->kind() == kind && rsrc->is_exclusive()) {
-      zx_paddr_t rsrc_end = rsrc->base() + rsrc->size();
-      // If we overlap from the base side of the resource
-      if ((new_rsrc_base <= rsrc->base() && new_rsrc_end > rsrc->base()) ||
-          // If we start inside the existing resource
-          (new_rsrc_base >= rsrc->base() && new_rsrc_base <= rsrc_end)) {
-        overlaps = true;
-        return false;
-      }
-    }
-    return true;
-  });
+  fake_object::FakeHandleTable().ForEach(
+      fake_object::HandleType::RESOURCE, [&](fake_object::Object* obj) -> bool {
+        auto* rsrc = static_cast<Resource*>(obj);
+        // In the case of exclusive resources we need to ensure the new resource does not
+        // overlap with existing exclusive ranges.
+        if (rsrc->kind() == kind && rsrc->is_exclusive()) {
+          zx_paddr_t rsrc_end = rsrc->base() + rsrc->size();
+          // If we overlap from the base side of the resource
+          if ((new_rsrc_base <= rsrc->base() && new_rsrc_end > rsrc->base()) ||
+              // If we start inside the existing resource
+              (new_rsrc_base >= rsrc->base() && new_rsrc_base < rsrc_end)) {
+            ftracef("new [ %#lx - %#lx ] existing [ %#lx - %#lx ]\n", new_rsrc_base,
+                    new_rsrc_base + new_rsrc_size, rsrc->base(), rsrc_end);
+            overlaps = true;
+            return false;
+          }
+        }
+        return true;
+      });
   return overlaps;
 }
 
@@ -129,7 +132,7 @@ __EXPORT
 zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64_t base,
                                size_t size, const char* name, size_t name_size,
                                zx_handle_t* resource_out) {
-  zx::status get_res = FakeHandleTable().Get(parent_rsrc);
+  zx::status get_res = fake_object::FakeHandleTable().Get(parent_rsrc);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -153,9 +156,9 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  fbl::RefPtr<Object> new_res;
+  fbl::RefPtr<fake_object::Object> new_res;
   ZX_ASSERT(Resource::Create(base, size, kind, flags, name, name_size, &new_res) == ZX_OK);
-  zx::status add_res = FakeHandleTable().Add(std::move(new_res));
+  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(new_res));
   if (add_res.is_ok()) {
     *resource_out = add_res.value();
   }
@@ -168,7 +171,7 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64
 __EXPORT
 zx_status_t zx_vmo_create_physical(zx_handle_t handle, zx_paddr_t paddr, size_t size,
                                    zx_handle_t* out) {
-  zx::status get_res = FakeHandleTable().Get(handle);
+  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -185,7 +188,7 @@ zx_status_t zx_vmo_create_physical(zx_handle_t handle, zx_paddr_t paddr, size_t 
 // needs IO permissions then more work will need to be done getting them real
 // resources to allwow it.
 zx_status_t ioport_syscall_common(zx_handle_t handle, uint16_t io_addr, uint32_t len) {
-  zx::status get_res = FakeHandleTable().Get(handle);
+  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -219,10 +222,10 @@ zx_status_t zx_ioports_release(zx_handle_t resource, uint16_t io_addr, uint32_t 
 __EXPORT
 zx_status_t fake_root_resource_create(zx_handle_t* out) {
   std::array<char, ZX_MAX_NAME_LEN> name = {"FAKE ROOT"};
-  fbl::RefPtr<Object> new_res;
+  fbl::RefPtr<fake_object::Object> new_res;
   ZX_ASSERT(Resource::Create(0, 0, ZX_RSRC_KIND_ROOT, 0, name.data(), name.size(), &new_res) ==
             ZX_OK);
-  zx::status add_res = FakeHandleTable().Add(std::move(new_res));
+  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(new_res));
   if (add_res.is_ok()) {
     *out = add_res.value();
   }

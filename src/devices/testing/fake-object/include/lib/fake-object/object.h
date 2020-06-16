@@ -29,6 +29,8 @@
 #define ftracef(...) ;
 #endif
 
+namespace fake_object {
+
 enum class HandleType : uint32_t {
   BASE,  // A non-derived object, used for tests and assertions.
   BTI,
@@ -36,6 +38,7 @@ enum class HandleType : uint32_t {
   MSI_INTERRUPT,
   PMT,
   RESOURCE,
+  CUSTOM,  // For local tests that are not providing a fake-* lib
 };
 
 class Object : public fbl::RefCounted<Object> {
@@ -134,7 +137,7 @@ class HandleTable {
   // |cb| must NOT attempt to acquire the lock, so this method is not suitable
   // for internal methods.
   template <typename ObjectCallback>
-  void ForEach(HandleType type, const ObjectCallback&& cb) __TA_EXCLUDES(lock_) {
+  void ForEach(HandleType type, const ObjectCallback cb) __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
     for (const auto& obj : handles_) {
       if (obj && obj->type() == type) {
@@ -203,11 +206,14 @@ zx::status<zx_handle_t> fake_object_create();
 zx::status<zx_koid_t> fake_object_get_koid(zx_handle_t);
 
 void* FindRealSyscall(const char* name);
-#define REAL_SYSCALL(name)                                             \
-  ([]() {                                                              \
-    static const auto real_syscall =                                   \
-        reinterpret_cast<decltype(name)*>(FindRealSyscall("_" #name)); \
-    return real_syscall;                                               \
+
+}  // namespace fake_object
+
+#define REAL_SYSCALL(name)                                                          \
+  ([]() {                                                                           \
+    static const auto real_syscall =                                                \
+        reinterpret_cast<decltype(name)*>(fake_object::FindRealSyscall("_" #name)); \
+    return real_syscall;                                                            \
   }())
 
 #endif  // SRC_DEVICES_TESTING_FAKE_OBJECT_INCLUDE_LIB_FAKE_OBJECT_OBJECT_H_

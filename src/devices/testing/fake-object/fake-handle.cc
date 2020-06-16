@@ -9,6 +9,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
+namespace fake_object {
+
 zx::status<fbl::RefPtr<Object>> HandleTable::GetLocked(zx_handle_t handle) {
   zx::status status = HandleToIndex(handle);
   if (!status.is_ok() || status.value() >= handles_.size() || !handles_[status.value()]) {
@@ -92,3 +94,5 @@ void HandleTable::Dump() {
     printf("\n");
   }
 }
+
+}  // namespace fake_object

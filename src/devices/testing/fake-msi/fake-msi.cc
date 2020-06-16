@@ -24,7 +24,7 @@
 #include <fbl/ref_ptr.h>
 
 namespace {
-class MsiAllocation final : public Object {
+class MsiAllocation final : public fake_object::Object {
  public:
   using MsiId = uint32_t;
 
@@ -34,7 +34,7 @@ class MsiAllocation final : public Object {
     ZX_ASSERT_MSG(!ids_in_use_, "FakeMsi %p still has reservations during deconstruction: %#x",
                   this, ids_in_use_);
   }
-  HandleType type() const final { return HandleType::MSI_ALLOCATION; }
+  fake_object::HandleType type() const final { return fake_object::HandleType::MSI_ALLOCATION; }
   zx_status_t get_info(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                        size_t* actual_count, size_t* avail_count) final;
 
@@ -75,7 +75,7 @@ class MsiAllocation final : public Object {
   mutable fbl::Mutex lock_;
 };  // namespace
 
-class MsiInterrupt : public Object {
+class MsiInterrupt : public fake_object::Object {
  public:
   explicit MsiInterrupt(zx::interrupt interrupt, fbl::RefPtr<MsiAllocation> allocation,
                         MsiAllocation::MsiId msi_id)
@@ -83,7 +83,7 @@ class MsiInterrupt : public Object {
     allocation_->ReserveId(msi_id_);
   }
   ~MsiInterrupt() { allocation_->ReleaseId(msi_id_); }
-  HandleType type() const final { return HandleType::MSI_INTERRUPT; }
+  fake_object::HandleType type() const final { return fake_object::HandleType::MSI_INTERRUPT; }
   zx_handle_t interrupt() { return interrupt_.get(); }
 
  private:
@@ -119,8 +119,8 @@ constexpr size_t MsiCapabilitySize = 24u;
 // Fake syscall implementations
 __EXPORT
 zx_status_t zx_msi_allocate(zx_handle_t root, uint32_t count, zx_handle_t* msi_out) {
-  fbl::RefPtr<Object> new_msi = fbl::AdoptRef(new MsiAllocation(count));
-  if (auto res = FakeHandleTable().Add(std::move(new_msi)); res.is_ok()) {
+  fbl::RefPtr<fake_object::Object> new_msi = fbl::AdoptRef(new MsiAllocation(count));
+  if (auto res = fake_object::FakeHandleTable().Add(std::move(new_msi)); res.is_ok()) {
     *msi_out = res.value();
     return ZX_OK;
   } else {
@@ -131,12 +131,12 @@ zx_status_t zx_msi_allocate(zx_handle_t root, uint32_t count, zx_handle_t* msi_o
 __EXPORT
 zx_status_t zx_msi_create(zx_handle_t msi_handle, uint32_t options, uint32_t msi_id,
                           zx_handle_t vmo_hnd, size_t cap_offset, zx_handle_t* out) {
-  zx::status get_res = FakeHandleTable().Get(msi_handle);
+  zx::status get_res = fake_object::FakeHandleTable().Get(msi_handle);
   if (!get_res.is_ok()) {
     return ZX_ERR_BAD_HANDLE;
   }
 
-  if (get_res->type() != HandleType::MSI_ALLOCATION) {
+  if (get_res->type() != fake_object::HandleType::MSI_ALLOCATION) {
     return ZX_ERR_WRONG_TYPE;
   }
   auto msi = fbl::RefPtr<MsiAllocation>::Downcast(std::move(get_res.value()));
@@ -162,9 +162,9 @@ zx_status_t zx_msi_create(zx_handle_t msi_handle, uint32_t options, uint32_t msi
   zx::interrupt interrupt;
   ZX_ASSERT(zx::interrupt::create(*zx::unowned_resource(ZX_HANDLE_INVALID), /*src_num=*/0,
                                   ZX_INTERRUPT_VIRTUAL, &interrupt) == ZX_OK);
-  fbl::RefPtr<Object> new_interrupt =
+  fbl::RefPtr<fake_object::Object> new_interrupt =
       fbl::AdoptRef(new MsiInterrupt(std::move(interrupt), std::move(msi), msi_id));
-  zx::status<zx_handle_t> add_res = FakeHandleTable().Add(std::move(new_interrupt));
+  zx::status<zx_handle_t> add_res = fake_object::FakeHandleTable().Add(std::move(new_interrupt));
   if (add_res.is_ok()) {
     *out = add_res.value();
   }
@@ -172,7 +172,7 @@ zx_status_t zx_msi_create(zx_handle_t msi_handle, uint32_t options, uint32_t msi
 }
 
 zx_status_t zx_interrupt_wait(zx_handle_t handle, zx_time_t* out_timestamp) {
-  if (auto res = FakeHandleTable().Get(handle); res.is_ok()) {
+  if (auto res = fake_object::FakeHandleTable().Get(handle); res.is_ok()) {
     auto interrupt = fbl::RefPtr<MsiInterrupt>::Downcast(res.value());
     return REAL_SYSCALL(zx_interrupt_wait)(interrupt->interrupt(), out_timestamp);
   } else {
