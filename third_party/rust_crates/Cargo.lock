@@ -753,6 +753,7 @@ dependencies = [
  "matches 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "maybe-owned 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 2.3.3",
+ "nix 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom 5.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom_locate 2.0.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
