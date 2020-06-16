@@ -64,7 +64,7 @@ class FactoryResetTest : public Test {
  public:
   // Create an IsolatedDevmgr that can load device drivers such as fvm,
   // zxcrypt, etc.
-  void SetUp() {
+  void SetUp() override {
     devmgr_.reset(new IsolatedDevmgr());
     auto args = IsolatedDevmgr::DefaultArgs();
     args.disable_block_watcher = true;
@@ -76,6 +76,10 @@ class FactoryResetTest : public Test {
     CreateRamdisk();
     CreateFvmPartition();
     CreateZxcrypt();
+  }
+
+  void TearDown() override {
+    ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK);
   }
 
   bool PartitionHasFormat(disk_format_t format) {

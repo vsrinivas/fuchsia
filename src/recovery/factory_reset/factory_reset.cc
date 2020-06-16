@@ -103,9 +103,11 @@ zx_status_t FactoryReset::Shred() const {
     }
     zx_status_t status = ShredBlockDevice(std::move(block_fd), kNumZxcryptSuperblocks);
     if (status != ZX_OK) {
+      closedir(dir);
       return status;
     }
   }
+  closedir(dir);
   return ZX_OK;
 }
 
