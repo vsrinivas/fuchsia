@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.netemul.internal;
+using fuchsia.hardware.network;
+using fuchsia.device;
+
+/// A Network Device instance which also implements `fuchsia.device/Controller`.
+///
+/// Netemul's network devices implement this protocol instead of just
+/// `fuchsia.hardware.network/DeviceInstance` as network devices are backed
+/// by network-tun, which does not provide `fuchsia.device/Controller`.
+/// We provide a fake implementation so netemul-backed devfs looks similar to
+/// the real one. Note, clients expect that both the device-specific protocol
+/// and `fuchsia.device/Controller` are served on the same channel.
+protocol NetworkDeviceInstance {
+    compose fuchsia.device.Controller;
+    compose fuchsia.hardware.network.DeviceInstance;
+};

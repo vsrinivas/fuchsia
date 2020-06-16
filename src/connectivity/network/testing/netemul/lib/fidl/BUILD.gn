@@ -4,6 +4,16 @@
 
 import("//build/fidl/fidl.gni")
 
+fidl("internal") {
+  name = "fuchsia.netemul.internal"
+  sources = [ "internal.fidl" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.device",
+    "//sdk/fidl/fuchsia.hardware.network",
+  ]
+}
+
 fidl("network") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [

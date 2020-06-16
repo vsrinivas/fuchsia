@@ -5,6 +5,7 @@
 #include "endpoint.h"
 
 #include <fcntl.h>
+#include <fuchsia/netemul/internal/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -18,10 +19,13 @@
 #include "ethernet_client.h"
 #include "ethertap_client.h"
 #include "network_context.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 namespace netemul {
 
 namespace impl {
+
+static const char kNetworkDeviceFakeTopoPathRoot[] = "/netemul";
 
 class EndpointImpl : public data::Consumer {
  public:
@@ -179,12 +183,15 @@ class EthertapImpl : public EndpointImpl {
   std::unique_ptr<EthertapClient> ethertap_;
 };
 
-class NetworkDeviceImpl : public EndpointImpl, public fuchsia::hardware::network::DeviceInstance {
+class NetworkDeviceImpl : public EndpointImpl,
+                          public fuchsia::netemul::internal::NetworkDeviceInstance {
  public:
   explicit NetworkDeviceImpl(Endpoint::Config config) : EndpointImpl(std::move(config)) {}
 
   zx_status_t Setup(const std::string& name, bool start_online,
                     const NetworkContext& context) override {
+    device_name_ = name;
+
     auto tun_ctl = context.ConnectNetworkTun().BindSync();
     if (!tun_ctl.is_bound()) {
       return ZX_ERR_INTERNAL;
@@ -227,7 +234,8 @@ class NetworkDeviceImpl : public EndpointImpl, public fuchsia::hardware::network
 
   void ServeDevice(zx::channel req) override {
     instance_bindings_.AddBinding(
-        this, fidl::InterfaceRequest<fuchsia::hardware::network::DeviceInstance>(std::move(req)));
+        this,
+        fidl::InterfaceRequest<fuchsia::netemul::internal::NetworkDeviceInstance>(std::move(req)));
   }
 
   void Consume(const void* data, size_t len) override {
@@ -245,6 +253,8 @@ class NetworkDeviceImpl : public EndpointImpl, public fuchsia::hardware::network
       }
     });
   }
+
+  /* fuchsia.hardware.network/DeviceInstance */
 
   void GetDevice(::fidl::InterfaceRequest<fuchsia::hardware::network::Device> device) override {
     if (!tun_device_.is_bound()) {
@@ -266,6 +276,107 @@ class NetworkDeviceImpl : public EndpointImpl, public fuchsia::hardware::network
     tun_device_->ConnectProtocols(std::move(protos));
   }
 
+  /* fuchsia.device/Controller */
+
+  void Bind(std::string driver, BindCallback callback) override {
+    callback(fuchsia::device::Controller_Bind_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+
+  void Rebind(std::string driver, RebindCallback callback) override {
+    callback(fuchsia::device::Controller_Rebind_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+
+  void UnbindChildren(UnbindChildrenCallback callback) override {
+    callback(fuchsia::device::Controller_UnbindChildren_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+
+  void ScheduleUnbind(ScheduleUnbindCallback callback) override {
+    callback(fuchsia::device::Controller_ScheduleUnbind_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+
+  void GetDriverName(GetDriverNameCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED, "");
+  }
+
+  void GetDeviceName(GetDeviceNameCallback callback) override { callback(""); }
+
+  // Returns a fake topological path.
+  //
+  // Network devices in netemul are backed by network-tun, which does not provide
+  // fuchsia.device/Controller. We provide a fake implementation so netemul-backed
+  // devfs looks similar to the real one.
+  //
+  // This method is only implemented so network managers can successfully query
+  // a device's topological path.
+  void GetTopologicalPath(GetTopologicalPathCallback callback) override {
+    std::vector<std::string> parts = {kNetworkDeviceFakeTopoPathRoot, device_name_};
+    callback(fuchsia::device::Controller_GetTopologicalPath_Result::WithResponse(
+        fuchsia::device::Controller_GetTopologicalPath_Response(fxl::JoinStrings(parts, "/"))));
+  }
+
+  void GetEventHandle(GetEventHandleCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED, zx::event());
+  }
+
+  void GetDriverLogFlags(GetDriverLogFlagsCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED, 0);
+  }
+
+  void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
+                         SetDriverLogFlagsCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void RunCompatibilityTests(int64_t hook_wait_time,
+                             RunCompatibilityTestsCallback callback) override {
+    callback(0);
+  }
+
+  void GetDevicePowerCaps(GetDevicePowerCapsCallback callback) override {
+    callback(fuchsia::device::Controller_GetDevicePowerCaps_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+
+  void GetCurrentPerformanceState(GetCurrentPerformanceStateCallback callback) override {
+    callback(0);
+  }
+
+  void GetDevicePerformanceStates(GetDevicePerformanceStatesCallback callback) override {
+    callback(std::array<fuchsia::device::DevicePerformanceStateInfo,
+                        fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>(),
+             ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void UpdatePowerStateMapping(std::array<fuchsia::device::SystemPowerStateInfo, 7> mapping,
+                               UpdatePowerStateMappingCallback callback) override {
+    callback(
+        fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+
+  void GetPowerStateMapping(GetPowerStateMappingCallback callback) override {
+    callback(
+        fuchsia::device::Controller_GetPowerStateMapping_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+
+  void Suspend(fuchsia::device::DevicePowerState requested_state,
+               SuspendCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED, fuchsia::device::DevicePowerState());
+  }
+
+  void Resume(ResumeCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED, fuchsia::device::DevicePowerState(), 0);
+  }
+
+  void SetPerformanceState(uint32_t requested_state,
+                           SetPerformanceStateCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED, 0);
+  }
+
+  void ConfigureAutoSuspend(bool enable,
+                            fuchsia::device::DevicePowerState requested_deepest_sleep_state,
+                            ConfigureAutoSuspendCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED);
+  }
+
  private:
   void ListenForFrames() {
     if (!tun_device_.is_bound()) {
@@ -284,8 +395,9 @@ class NetworkDeviceImpl : public EndpointImpl, public fuchsia::hardware::network
     });
   }
 
+  std::string device_name_;
   fuchsia::net::tun::DevicePtr tun_device_;
-  fidl::BindingSet<fuchsia::hardware::network::DeviceInstance> instance_bindings_;
+  fidl::BindingSet<fuchsia::netemul::internal::NetworkDeviceInstance> instance_bindings_;
 };
 
 std::unique_ptr<EndpointImpl> MakeImpl(Endpoint::Config config) {

@@ -55,6 +55,7 @@ source_set("network_service") {
   ]
 
   public_deps = [
+    "//src/connectivity/network/testing/netemul/lib/fidl:internal",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
     "//src/connectivity/network/tun/fidl",
   ]
