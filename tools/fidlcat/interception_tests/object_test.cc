@@ -1159,7 +1159,7 @@ OBJECT_GET_INFO_VMO_DISPLAY_TEST(
     "\x1B[34mZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE | ZX_INFO_VMO_CONTIGUOUS\x1B[0m\n"
     "        committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
     "        handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
-    "        cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: \x1B[31mZX_CACHE_POLICY_CACHED\x1B[0m\n"
+    "        cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
     "      }\n");
 
 #define OBJECT_GET_INFO_SOCKET_DISPLAY_TEST_CONTENT(result, expected)                             \
@@ -1479,7 +1479,7 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "          committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
     "          handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
     "          cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
-    "\x1B[31mZX_CACHE_POLICY_CACHED\x1B[0m\n"
+    "\x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
     "        },\n"
     "        {\n"
     "          koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m5242\x1B[0m\n"
@@ -1494,7 +1494,7 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "          committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
     "          handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
     "          cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
-    "\x1B[31mZX_CACHE_POLICY_CACHED\x1B[0m\n"
+    "\x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
     "        }\n"
     "      }\n");
 

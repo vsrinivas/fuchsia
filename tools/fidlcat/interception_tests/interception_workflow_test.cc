@@ -515,7 +515,10 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_channel_read",
                                     "zx_channel_read_etc",
                                     "zx_channel_write",
+                                    "zx_clock_adjust",
+                                    "zx_clock_get",
                                     "zx_clock_get_monotonic",
+                                    "zx_deadline_after",
                                     "zx_debuglog_create",
                                     "zx_event_create",
                                     "zx_eventpair_create",
@@ -561,10 +564,12 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_ticks_get",
                                     "zx_ticks_per_second",
                                     "zx_timer_cancel",
+                                    "zx_timer_create",
                                     "zx_vcpu_interrupt",
                                     "zx_vmar_destroy",
                                     "zx_vmo_get_size",
                                     "zx_vmo_replace_as_executable",
+                                    "zx_vmo_set_cache_policy",
                                     "zx_vmo_set_size"};
   ASSERT_EQ(expected, actual);
 }
@@ -584,11 +589,8 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
                                     "processargs_extract_handles",
                                     "zx_bti_pin",
                                     "zx_cache_flush",
-                                    "zx_clock_adjust",
-                                    "zx_clock_get",
                                     "zx_cprng_add_entropy",
                                     "zx_cprng_draw",
-                                    "zx_deadline_after",
                                     "zx_debug_read",
                                     "zx_debug_send_command",
                                     "zx_debug_write",
@@ -654,7 +656,6 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
                                     "zx_thread_read_state",
                                     "zx_thread_start",
                                     "zx_thread_write_state",
-                                    "zx_timer_create",
                                     "zx_timer_set",
                                     "zx_vcpu_create",
                                     "zx_vcpu_read_state",
@@ -671,7 +672,6 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
                                     "zx_vmo_create_physical",
                                     "zx_vmo_op_range",
                                     "zx_vmo_read",
-                                    "zx_vmo_set_cache_policy",
                                     "zx_vmo_write"};
   ASSERT_EQ(expected, actual);
 }

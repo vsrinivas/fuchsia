@@ -263,6 +263,8 @@ std::string Int64Type::Name() const {
   switch (kind_) {
     case Kind::kDecimal:
       return "int64";
+    case Kind::kDuration:
+      return "zx.duration";
     case Kind::kTime:
       return "zx.time";
   }
@@ -282,7 +284,16 @@ void Int64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         }
         printer << absolute << ResetColor;
         break;
+      case Kind::kDuration:
+        if (negative) {
+          absolute = -absolute;
+        }
+        printer.DisplayDuration(static_cast<zx_duration_t>(absolute));
+        break;
       case Kind::kTime:
+        if (negative) {
+          absolute = -absolute;
+        }
         printer.DisplayTime(static_cast<zx_time_t>(absolute));
         break;
     }
@@ -335,7 +346,19 @@ void Uint16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
 
 void Uint16Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint16Type(this); }
 
-std::string Uint32Type::Name() const { return "uint32"; }
+std::string Uint32Type::Name() const {
+  switch (kind_) {
+    case Kind::kDecimal:
+    case Kind::kHexaDecimal:
+      return "uint32";
+    case Kind::kBtiPerm:
+      return "zx.bti_perm";
+    case Kind::kCachePolicy:
+      return "zx.cache_policy";
+    case Kind::kClock:
+      return "zx.clock";
+  }
+}
 
 void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   uint64_t absolute;
@@ -350,6 +373,15 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kHexaDecimal:
         printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        break;
+      case Kind::kBtiPerm:
+        printer.DisplayBtiPerm(absolute);
+        break;
+      case Kind::kCachePolicy:
+        printer.DisplayCachePolicy(absolute);
+        break;
+      case Kind::kClock:
+        printer.DisplayClock(absolute);
         break;
     }
   }

@@ -2064,19 +2064,13 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       break;
     }
     case SyscallType::kBtiPerm:
-      printer << fidl_codec::Blue;
-      BtiPermName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayBtiPerm(value);
       break;
     case SyscallType::kCachePolicy:
-      printer << fidl_codec::Red;
-      CachePolicyName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayCachePolicy(value);
       break;
     case SyscallType::kClock:
-      printer << fidl_codec::Red;
-      ClockName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayClock(value);
       break;
     case SyscallType::kExceptionChannelType:
       printer << fidl_codec::Blue;

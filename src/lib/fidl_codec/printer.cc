@@ -49,11 +49,111 @@ void PrettyPrinter::DisplayHandle(const zx_handle_info_t& handle) {
   fidl_codec::DisplayHandle(handle, *this);
 }
 
+#define BtiPermNameCase(name)      \
+  if ((perm & (name)) == (name)) { \
+    *this << separator << #name;   \
+    separator = " | ";             \
+  }
+
+void PrettyPrinter::DisplayBtiPerm(uint32_t perm) {
+  if (perm == 0) {
+    *this << Red << "0" << ResetColor;
+    return;
+  }
+
+  *this << Blue;
+  const char* separator = "";
+  BtiPermNameCase(ZX_BTI_PERM_READ);
+  BtiPermNameCase(ZX_BTI_PERM_WRITE);
+  BtiPermNameCase(ZX_BTI_PERM_EXECUTE);
+  BtiPermNameCase(ZX_BTI_COMPRESS);
+  BtiPermNameCase(ZX_BTI_CONTIGUOUS);
+  *this << ResetColor;
+}
+
+#define CachePolicyNameCase(name)         \
+  case name:                              \
+    *this << Blue << #name << ResetColor; \
+    return
+
+void PrettyPrinter::DisplayCachePolicy(uint32_t cache_policy) {
+  switch (cache_policy) {
+    CachePolicyNameCase(ZX_CACHE_POLICY_CACHED);
+    CachePolicyNameCase(ZX_CACHE_POLICY_UNCACHED);
+    CachePolicyNameCase(ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    CachePolicyNameCase(ZX_CACHE_POLICY_WRITE_COMBINING);
+    default:
+      *this << Red << cache_policy << ResetColor;
+      return;
+  }
+}
+
+#define ClockNameCase(name)               \
+  case name:                              \
+    *this << Blue << #name << ResetColor; \
+    return
+
+void PrettyPrinter::DisplayClock(zx_clock_t clock) {
+  switch (clock) {
+    ClockNameCase(ZX_CLOCK_MONOTONIC);
+    ClockNameCase(ZX_CLOCK_UTC);
+    ClockNameCase(ZX_CLOCK_THREAD);
+    default:
+      *this << Red << clock << ResetColor;
+      return;
+  }
+}
+
+void PrettyPrinter::DisplayDuration(zx_duration_t duration_ns) {
+  if (duration_ns == ZX_TIME_INFINITE) {
+    *this << Blue << "ZX_TIME_INFINITE" << ResetColor;
+    return;
+  }
+  if (duration_ns == ZX_TIME_INFINITE_PAST) {
+    *this << Blue << "ZX_TIME_INFINITE_PAST" << ResetColor;
+    return;
+  }
+  *this << Blue;
+  if (duration_ns < 0) {
+    *this << '-';
+    duration_ns = -duration_ns;
+  }
+  const char* separator = "";
+  int64_t nanoseconds = duration_ns % kOneBillion;
+  int64_t seconds = duration_ns / kOneBillion;
+  if (seconds != 0) {
+    int64_t minutes = seconds / kSecondsPerMinute;
+    if (minutes != 0) {
+      int64_t hours = minutes / kMinutesPerHour;
+      if (hours != 0) {
+        int64_t days = hours / kHoursPerDay;
+        if (days != 0) {
+          *this << days << " days";
+          separator = ", ";
+        }
+        *this << separator << (hours % kHoursPerDay) << " hours";
+        separator = ", ";
+      }
+      *this << separator << (minutes % kMinutesPerHour) << " minutes";
+      separator = ", ";
+    }
+    *this << separator << (seconds % kSecondsPerMinute) << " seconds";
+    if (nanoseconds != 0) {
+      *this << " and " << nanoseconds << " nano seconds";
+    }
+  } else if (nanoseconds != 0) {
+    *this << nanoseconds << " nano seconds";
+  } else {
+    *this << "0 seconds";
+  }
+  *this << ResetColor;
+}
+
 void PrettyPrinter::DisplayTime(zx_time_t time_ns) {
   if (time_ns == ZX_TIME_INFINITE) {
-    (*this) << fidl_codec::Blue << "ZX_TIME_INFINITE" << fidl_codec::ResetColor;
+    (*this) << Blue << "ZX_TIME_INFINITE" << ResetColor;
   } else if (time_ns == ZX_TIME_INFINITE_PAST) {
-    (*this) << fidl_codec::Blue << "ZX_TIME_INFINITE_PAST" << fidl_codec::ResetColor;
+    (*this) << Blue << "ZX_TIME_INFINITE_PAST" << ResetColor;
   } else {
     // Gets the time in seconds.
     time_t value = time_ns / kOneBillion;
@@ -62,11 +162,11 @@ void PrettyPrinter::DisplayTime(zx_time_t time_ns) {
       char buffer[100];
       strftime(buffer, sizeof(buffer), "%c", &tm);
       // And now, displays the nano seconds.
-      (*this) << fidl_codec::Blue << buffer << " and ";
+      (*this) << Blue << buffer << " and ";
       snprintf(buffer, sizeof(buffer), "%09" PRId64, time_ns % kOneBillion);
-      (*this) << buffer << " ns" << fidl_codec::ResetColor;
+      (*this) << buffer << " ns" << ResetColor;
     } else {
-      (*this) << fidl_codec::Red << "unknown time" << fidl_codec::ResetColor;
+      (*this) << Red << "unknown time" << ResetColor;
     }
   }
 }

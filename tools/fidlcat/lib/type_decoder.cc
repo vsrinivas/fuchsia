@@ -25,58 +25,6 @@
 
 namespace fidlcat {
 
-#define BtiPermNameCase(name)      \
-  if ((perm & (name)) == (name)) { \
-    printer << separator << #name; \
-    separator = " | ";             \
-  }
-
-void BtiPermName(uint32_t perm, fidl_codec::PrettyPrinter& printer) {
-  if (perm == 0) {
-    printer << "0";
-    return;
-  }
-  const char* separator = "";
-  BtiPermNameCase(ZX_BTI_PERM_READ);
-  BtiPermNameCase(ZX_BTI_PERM_WRITE);
-  BtiPermNameCase(ZX_BTI_PERM_EXECUTE);
-  BtiPermNameCase(ZX_BTI_COMPRESS);
-  BtiPermNameCase(ZX_BTI_CONTIGUOUS);
-}
-
-#define CachePolicyNameCase(name) \
-  case name:                      \
-    printer << #name;             \
-    return
-
-void CachePolicyName(uint32_t cache_policy, fidl_codec::PrettyPrinter& printer) {
-  switch (cache_policy) {
-    CachePolicyNameCase(ZX_CACHE_POLICY_CACHED);
-    CachePolicyNameCase(ZX_CACHE_POLICY_UNCACHED);
-    CachePolicyNameCase(ZX_CACHE_POLICY_UNCACHED_DEVICE);
-    CachePolicyNameCase(ZX_CACHE_POLICY_WRITE_COMBINING);
-    default:
-      printer << cache_policy;
-      return;
-  }
-}
-
-#define ClockNameCase(name) \
-  case name:                \
-    printer << #name;       \
-    return
-
-void ClockName(zx_clock_t clock, fidl_codec::PrettyPrinter& printer) {
-  switch (clock) {
-    ClockNameCase(ZX_CLOCK_MONOTONIC);
-    ClockNameCase(ZX_CLOCK_UTC);
-    ClockNameCase(ZX_CLOCK_THREAD);
-    default:
-      printer << clock;
-      return;
-  }
-}
-
 #define ExceptionChannelTypeNameCase(name) \
   case name:                               \
     printer << #name;                      \

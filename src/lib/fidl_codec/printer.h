@@ -22,6 +22,10 @@ namespace fidl_codec {
 constexpr int kTabSize = 2;
 constexpr uint64_t kOneBillion = 1'000'000'000L;
 
+#define kSecondsPerMinute 60
+#define kMinutesPerHour 60
+#define kHoursPerDay 24
+
 struct Colors {
   Colors(const char* new_reset, const char* new_red, const char* new_green, const char* new_blue,
          const char* new_white_on_magenta, const char* new_yellow_background)
@@ -66,6 +70,18 @@ class PrettyPrinter {
   // Displays a handle. This allows the caller to also display some infered data we have inferered
   // for this handle (if any).
   virtual void DisplayHandle(const zx_handle_info_t& handle);
+
+  // Displays a bti perm.
+  void DisplayBtiPerm(uint32_t perm);
+
+  // Displays a cache policy.
+  void DisplayCachePolicy(uint32_t cache_policy);
+
+  // void Displays a clock.
+  void DisplayClock(zx_clock_t clock);
+
+  // Displays a duration.
+  void DisplayDuration(zx_duration_t duration_ns);
 
   // Displays a time.
   void DisplayTime(zx_time_t time_ns);

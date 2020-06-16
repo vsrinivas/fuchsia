@@ -279,7 +279,7 @@ VMO_SET_CACHE_POLICY_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_set_cache_policy("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: \x1B[31mZX_CACHE_POLICY_CACHED\x1B[0m)\n"
+    "cache_policy:\x1B[32mzx.cache_policy\x1B[0m: \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmo_replace_as_executable tests.

@@ -51,7 +51,7 @@ TIMER_CREATE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_timer_create("
     "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-    "clock_id:\x1B[32mclock\x1B[0m: \x1B[31mZX_CLOCK_MONOTONIC\x1B[0m)\n"
+    "clock_id:\x1B[32mzx.clock\x1B[0m: \x1B[34mZX_CLOCK_MONOTONIC\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_timer_set tests.

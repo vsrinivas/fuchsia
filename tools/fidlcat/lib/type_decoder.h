@@ -22,10 +22,6 @@
 
 namespace fidlcat {
 
-#define kSecondsPerMinute 60
-#define kMinutesPerHour 60
-#define kHoursPerDay 24
-
 constexpr int kCharactersPerByte = 2;
 
 // Types for syscall arguments.
@@ -118,9 +114,6 @@ enum class SyscallReturnType {
   kUint64,
 };
 
-void BtiPermName(uint32_t perm, fidl_codec::PrettyPrinter& printer);
-void CachePolicyName(uint32_t cache_policy, fidl_codec::PrettyPrinter& printer);
-void ClockName(zx_clock_t clock, fidl_codec::PrettyPrinter& printer);
 void ExceptionChannelTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
 void ExceptionStateName(uint32_t state, fidl_codec::PrettyPrinter& printer);
 void FeatureKindName(uint32_t feature_kind, fidl_codec::PrettyPrinter& printer);
@@ -171,49 +164,7 @@ class DisplayDuration {
 
 inline fidl_codec::PrettyPrinter& operator<<(fidl_codec::PrettyPrinter& printer,
                                              const DisplayDuration& duration) {
-  if (duration.duration_ns() == ZX_TIME_INFINITE) {
-    printer << fidl_codec::Blue << "ZX_TIME_INFINITE" << fidl_codec::ResetColor;
-    return printer;
-  }
-  if (duration.duration_ns() == ZX_TIME_INFINITE_PAST) {
-    printer << fidl_codec::Blue << "ZX_TIME_INFINITE_PAST" << fidl_codec::ResetColor;
-    return printer;
-  }
-  int64_t duration_ns = duration.duration_ns();
-  printer << fidl_codec::Blue;
-  if (duration_ns < 0) {
-    printer << '-';
-    duration_ns = -duration_ns;
-  }
-  const char* separator = "";
-  int64_t nanoseconds = duration_ns % fidl_codec::kOneBillion;
-  int64_t seconds = duration_ns / fidl_codec::kOneBillion;
-  if (seconds != 0) {
-    int64_t minutes = seconds / kSecondsPerMinute;
-    if (minutes != 0) {
-      int64_t hours = minutes / kMinutesPerHour;
-      if (hours != 0) {
-        int64_t days = hours / kHoursPerDay;
-        if (days != 0) {
-          printer << days << " days";
-          separator = ", ";
-        }
-        printer << separator << (hours % kHoursPerDay) << " hours";
-        separator = ", ";
-      }
-      printer << separator << (minutes % kMinutesPerHour) << " minutes";
-      separator = ", ";
-    }
-    printer << separator << (seconds % kSecondsPerMinute) << " seconds";
-    if (nanoseconds != 0) {
-      printer << " and " << nanoseconds << " nano seconds";
-    }
-  } else if (nanoseconds != 0) {
-    printer << nanoseconds << " nano seconds";
-  } else {
-    printer << "0 seconds";
-  }
-  printer << fidl_codec::ResetColor;
+  printer.DisplayDuration(duration.duration_ns());
   return printer;
 }
 

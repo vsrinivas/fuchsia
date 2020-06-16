@@ -46,7 +46,7 @@ CLOCK_ADJUST_DISPLAY_TEST(ZxClockAdjust, ZX_OK,
                           "\n"
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_adjust("
                           "handle:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
-                          "clock_id:\x1B[32mclock\x1B[0m: \x1B[31mZX_CLOCK_UTC\x1B[0m, "
+                          "clock_id:\x1B[32mzx.clock\x1B[0m: \x1B[34mZX_CLOCK_UTC\x1B[0m, "
                           "offset:\x1B[32mint64\x1B[0m: \x1B[34m10\x1B[0m)\n"
                           "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -76,8 +76,8 @@ CLOCK_GET_DISPLAY_TEST(
     ClockExpected(kClockGetTestValue / fidl_codec::kOneBillion,
                   "\n"
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_get("
-                  "clock_id:\x1B[32mclock\x1B[0m: \x1B[31mZX_CLOCK_UTC\x1B[0m)\n"
-                  "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mtime\x1B[0m:"
+                  "clock_id:\x1B[32mzx.clock\x1B[0m: \x1B[34mZX_CLOCK_UTC\x1B[0m)\n"
+                  "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mzx.time\x1B[0m:"
                   " \x1B[34m%c and 533042989 ns\x1B[0m)\n")
         .c_str());
 
@@ -138,7 +138,7 @@ DEADLINE_AFTER_DISPLAY_TEST(
     ClockExpected(kDeadlineAfterTestValue / fidl_codec::kOneBillion,
                   "\n"
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_deadline_after("
-                  "nanoseconds:\x1B[32mduration\x1B[0m: \x1B[34m1000 nano seconds\x1B[0m)\n"
+                  "nanoseconds:\x1B[32mzx.duration\x1B[0m: \x1B[34m1000 nano seconds\x1B[0m)\n"
                   "  -> \x1B[32mtime\x1B[0m: \x1B[34m%c and 533042989 ns\x1B[0m\n")
         .c_str());
 
@@ -146,7 +146,7 @@ DEADLINE_AFTER_DISPLAY_TEST(
     ZxDeadlineAfterInfinite, ZX_TIME_INFINITE, ZX_TIME_INFINITE,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_deadline_after("
-    "nanoseconds:\x1B[32mduration\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "nanoseconds:\x1B[32mzx.duration\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
     "  -> \x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m\n");
 
 }  // namespace fidlcat

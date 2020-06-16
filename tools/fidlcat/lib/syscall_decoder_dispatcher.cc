@@ -73,6 +73,14 @@ std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kHexaDecimal);
     case SyscallType::kHandle:
       return std::make_unique<fidl_codec::HandleType>();
+    case SyscallType::kBtiPerm:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kBtiPerm);
+    case SyscallType::kCachePolicy:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kCachePolicy);
+    case SyscallType::kClock:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kClock);
+    case SyscallType::kDuration:
+      return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kDuration);
     case SyscallType::kTime:
       return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kTime);
     default:
