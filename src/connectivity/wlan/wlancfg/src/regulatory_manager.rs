@@ -8,14 +8,17 @@ use {
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherProxy,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, SetCountryRequest},
     fuchsia_zircon::ok as zx_ok,
-    futures::lock::Mutex,
+    futures::{
+        lock::Mutex,
+        stream::{self, StreamExt, TryStreamExt},
+    },
     std::sync::Arc,
 };
 
 pub(crate) struct RegulatoryManager<P: PhyManagerApi> {
     regulatory_service: RegulatoryRegionWatcherProxy,
     device_service: DeviceServiceProxy,
-    _phy_manager: Arc<Mutex<P>>,
+    phy_manager: Arc<Mutex<P>>,
 }
 
 const REGION_CODE_LEN: usize = 2;
@@ -26,7 +29,7 @@ impl<P: PhyManagerApi> RegulatoryManager<P> {
         device_service: DeviceServiceProxy,
         phy_manager: Arc<Mutex<P>>,
     ) -> Self {
-        RegulatoryManager { regulatory_service, device_service, _phy_manager: phy_manager }
+        RegulatoryManager { regulatory_service, device_service, phy_manager }
     }
 
     pub async fn run(&self) -> Result<(), Error> {
@@ -42,16 +45,24 @@ impl<P: PhyManagerApi> RegulatoryManager<P> {
 
             // TODO(46413): Stop clients and APs using IfaceManager.
 
-            let _ = zx_ok(
-                // TODO(46413): Get actual PHY IDs from PhyManager, instead of hard-coding 0.
-                self.device_service
-                    .set_country(&mut SetCountryRequest { phy_id: 0u16, alpha2: region_array })
-                    .await
-                    .context("failed to set_country() due to FIDL error")?,
-            )
-            .context("failed to set_country() due to service error")?;
+            let phy_ids = self.phy_manager.lock().await.get_phy_ids();
+            let _ = stream::iter(phy_ids)
+                .map(|phy_id| Ok(phy_id))
+                .try_for_each(|phy_id| async move {
+                    self.device_service
+                        .set_country(&mut SetCountryRequest { phy_id, alpha2: region_array })
+                        .await
+                        .context("failed to set_country() due to FIDL error")
+                        .and_then(|service_status| {
+                            zx_ok(service_status)
+                                .context("failed to set_country() due to service error")
+                        })
+                })
+                .await?;
 
             // TODO(46413): Resume clients using IfaceManager.
+
+            // TODO(49634): Have new PHYs respect current country.
         }
     }
 }
@@ -287,6 +298,121 @@ mod tests {
             assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"CA" });
             device_service_responder.send(ZX_OK).expect("failed to send device service response");
         }
+    }
+
+    #[test]
+    fn propagates_single_update_to_multiple_phys() {
+        let mut context = TestContext::new(StubPhyManager { phy_ids: vec![0, 1] });
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        let (request_params, device_service_responder) = assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Ready(Some(Ok(
+                DeviceServiceRequest::SetCountry{req, responder}))) => (req, responder)
+        );
+        assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"US" });
+        device_service_responder.send(ZX_OK).expect("failed to send device service response");
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        let (request_params, device_service_responder) = assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Ready(Some(Ok(
+                DeviceServiceRequest::SetCountry{req, responder}))) => (req, responder)
+        );
+        assert_eq!(request_params, SetCountryRequest { phy_id: 1, alpha2: *b"US" });
+        device_service_responder.send(ZX_OK).expect("failed to send device service response");
+    }
+
+    #[test]
+    fn keeps_running_after_update_with_empty_phy_list() {
+        let mut context = TestContext::new(StubPhyManager { phy_ids: Vec::new() });
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+    }
+
+    #[test]
+    fn does_not_send_device_service_request_when_phy_list_is_empty() {
+        let mut context = TestContext::new(StubPhyManager { phy_ids: Vec::new() });
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+
+        // Drive the RegulatoryManager until stalled, then verify that RegulatoryManager did not
+        // send a request to the DeviceService. Note that we deliberately ignore the status of
+        // `regulatory_fut`, as that is validated in the
+        // `keeps_running_after_update_with_empty_phy_list` test above.
+        let _ = context.executor.run_until_stalled(&mut regulatory_fut);
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Pending
+        );
+    }
+
+    #[test]
+    fn does_not_attempt_to_configure_second_phy_when_first_fails_to_configure() {
+        let mut context = TestContext::new(StubPhyManager { phy_ids: vec![0, 1] });
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        let device_service_responder = assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Ready(Some(Ok(
+                DeviceServiceRequest::SetCountry{req: _, responder}))) => responder
+        );
+        device_service_responder
+            .send(ZX_ERR_NOT_FOUND)
+            .expect("failed to send device service response");
+
+        // Drive the RegulatoryManager until stalled, then verify that RegulatoryManager did not
+        // send a new request to the DeviceService. Note that we deliberately ignore the status of
+        // `regulatory_fut`, as that is validated in the
+        // `returns_error_when_region_code_with_valid_length_is_rejected_by_device_service` test
+        // above.
+        let _ = context.executor.run_until_stalled(&mut regulatory_fut).is_pending();
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Pending
+        );
     }
 
     struct StubPhyManager {
