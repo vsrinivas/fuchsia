@@ -11,6 +11,9 @@ mod legacy;
 mod mode_management;
 mod util;
 
+#[cfg(test)]
+mod regulatory_manager;
+
 use {
     crate::{
         client::{

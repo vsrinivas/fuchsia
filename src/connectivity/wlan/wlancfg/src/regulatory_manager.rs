@@ -1,0 +1,279 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    anyhow::{bail, Context, Error},
+    fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherProxy,
+    fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, SetCountryRequest},
+    fuchsia_zircon::ok as zx_ok,
+};
+
+pub struct RegulatoryManager {
+    regulatory_service: RegulatoryRegionWatcherProxy,
+    device_service: DeviceServiceProxy,
+}
+
+const REGION_CODE_LEN: usize = 2;
+
+impl RegulatoryManager {
+    pub fn new(
+        regulatory_service: RegulatoryRegionWatcherProxy,
+        device_service: DeviceServiceProxy,
+    ) -> Self {
+        RegulatoryManager { regulatory_service, device_service }
+    }
+
+    pub async fn run(&self) -> Result<(), Error> {
+        loop {
+            let region_string =
+                self.regulatory_service.get_update().await.context("failed to get_update()")?;
+
+            let mut region_array = [0u8; REGION_CODE_LEN];
+            if region_string.len() != region_array.len() {
+                bail!("Region code {:?} does not have length {}", region_string, REGION_CODE_LEN);
+            }
+            region_array.copy_from_slice(region_string.as_bytes());
+
+            // TODO(46413): Stop clients and APs using IfaceManager.
+
+            let _ = zx_ok(
+                // TODO(46413): Get actual PHY IDs from PhyManager, instead of hard-coding 0.
+                self.device_service
+                    .set_country(&mut SetCountryRequest { phy_id: 0u16, alpha2: region_array })
+                    .await
+                    .context("failed to set_country() due to FIDL error")?,
+            )
+            .context("failed to set_country() due to service error")?;
+
+            // TODO(46413): Resume clients using IfaceManager.
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::{RegulatoryManager, SetCountryRequest},
+        fidl::endpoints::create_proxy,
+        fidl_fuchsia_location_namedplace::{
+            RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherRequest,
+            RegulatoryRegionWatcherRequestStream,
+        },
+        fidl_fuchsia_wlan_device_service::{
+            DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream,
+        },
+        fuchsia_async as fasync,
+        fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
+        futures::{stream::StreamExt, task::Poll},
+        pin_utils::pin_mut,
+        wlan_common::assert_variant,
+    };
+
+    /// Holds all of the boilerplate required for testing RegulatoryManager.
+    struct TestContext {
+        executor: fasync::Executor,
+        regulatory_manager: RegulatoryManager,
+        device_service_requests: DeviceServiceRequestStream,
+        regulatory_region_requests: RegulatoryRegionWatcherRequestStream,
+    }
+
+    impl TestContext {
+        fn new() -> Self {
+            let executor = fasync::Executor::new().expect("failed to create an executor");
+            let (device_service_proxy, device_server_channel) =
+                create_proxy::<DeviceServiceMarker>()
+                    .expect("failed to create DeviceService proxy");
+            let (regulatory_region_proxy, regulatory_region_server_channel) =
+                create_proxy::<RegulatoryRegionWatcherMarker>()
+                    .expect("failed to create RegulatoryRegionWatcher proxy");
+            let regulatory_manager =
+                RegulatoryManager::new(regulatory_region_proxy, device_service_proxy);
+            let device_service_requests =
+                device_server_channel.into_stream().expect("failed to create DeviceService stream");
+            let regulatory_region_requests = regulatory_region_server_channel
+                .into_stream()
+                .expect("failed to create RegulatoryRegionWatcher stream");
+            TestContext {
+                executor,
+                regulatory_manager,
+                device_service_requests,
+                regulatory_region_requests,
+            }
+        }
+    }
+
+    #[test]
+    fn returns_error_on_short_region_code() {
+        let mut context = TestContext::new();
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        responder.send("U").expect("failed to send response");
+        assert_variant!(
+            context.executor.run_until_stalled(&mut regulatory_fut),
+            Poll::Ready(Err(_))
+        );
+    }
+
+    #[test]
+    fn returns_error_on_long_region_code() {
+        let mut context = TestContext::new();
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        responder.send("USA").expect("failed to send response");
+        assert_variant!(
+            context.executor.run_until_stalled(&mut regulatory_fut),
+            Poll::Ready(Err(_))
+        );
+    }
+
+    #[test]
+    fn propagates_update_to_device_service_on_region_code_with_valid_length() {
+        let mut context = TestContext::new();
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        let (request_params, device_service_responder) = assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Ready(Some(Ok(
+                DeviceServiceRequest::SetCountry{req, responder}))) => (req, responder)
+        );
+        assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"US" });
+        device_service_responder.send(ZX_OK).expect("failed to send device service response");
+    }
+
+    #[test]
+    fn does_not_propagate_invalid_length_region_code_to_device_service() {
+        let mut context = TestContext::new();
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("U").expect("failed to send region response");
+
+        // Drive the RegulatoryManager until stalled, then verify that RegulatoryManager did not
+        // send a request to the DeviceService. Note that we deliberately ignore the state of
+        // `regulatory_fut`, as that is validated in the `returns_error_on_*` tests above.
+        let _ = context.executor.run_until_stalled(&mut regulatory_fut);
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Pending
+        );
+    }
+
+    #[test]
+    fn returns_error_when_region_code_with_valid_length_is_rejected_by_device_service() {
+        let mut context = TestContext::new();
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+
+        // Drive the RegulatoryManager until stalled, then reply to the `DeviceServiceRequest`, and
+        // validate handling of the reply. Note that we deliberately ignore the state of
+        // `regulatory_fut`, as that is validated in the
+        // `propagates_request_on_region_code_with_valid_length` test above.
+        let _ = context.executor.run_until_stalled(&mut regulatory_fut);
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        let device_service_responder = assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry{req: _, responder}))) => responder
+        );
+        device_service_responder
+            .send(ZX_ERR_NOT_FOUND)
+            .expect("failed to send device service response");
+        assert_variant!(
+            context.executor.run_until_stalled(&mut regulatory_fut),
+            Poll::Ready(Err(_))
+        );
+    }
+
+    #[test]
+    fn propagates_multiple_valid_region_code_updates_to_device_service() {
+        let mut context = TestContext::new();
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+
+        // Receive first `RegulatoryRegionWatcher` update, and propagate it to `DeviceService`.
+        {
+            assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+            let region_request_fut = &mut context.regulatory_region_requests.next();
+            let region_responder = assert_variant!(
+                context.executor.run_until_stalled(region_request_fut),
+                Poll::Ready(Some(Ok(
+                    RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            );
+            region_responder.send("US").expect("failed to send region response");
+            assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+            let device_service_request_fut = &mut context.device_service_requests.next();
+            let (request_params, device_service_responder) = assert_variant!(
+                context.executor.run_until_stalled(device_service_request_fut),
+                Poll::Ready(Some(Ok(
+                    DeviceServiceRequest::SetCountry{req, responder}))) => (req, responder)
+            );
+            assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"US" });
+            device_service_responder.send(ZX_OK).expect("failed to send device service response");
+        }
+
+        // Receive second `RegulatoryRegionWatcher` update, and propagate it to `DeviceService`.
+        {
+            assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+            let region_request_fut = &mut context.regulatory_region_requests.next();
+            let region_responder = assert_variant!(
+                context.executor.run_until_stalled(region_request_fut),
+                Poll::Ready(Some(Ok(
+                    RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            );
+            region_responder.send("CA").expect("failed to send region response");
+            assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+            let device_service_request_fut = &mut context.device_service_requests.next();
+            let (request_params, device_service_responder) = assert_variant!(
+                context.executor.run_until_stalled(device_service_request_fut),
+                Poll::Ready(Some(Ok(
+                    DeviceServiceRequest::SetCountry{req, responder}))) => (req, responder)
+            );
+            assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"CA" });
+            device_service_responder.send(ZX_OK).expect("failed to send device service response");
+        }
+    }
+}
