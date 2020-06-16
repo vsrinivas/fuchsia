@@ -42,6 +42,20 @@ struct Packet : fbl::DoublyLinkedListable<fbl::RefPtr<Packet>>, fbl::RefCounted<
   fbl::Array<unsigned char> data;
 };
 
+class FakeTimer : public ums::WaiterInterface {
+ public:
+  zx_status_t Wait(sync_completion_t* completion, zx_duration_t duration) override {
+    return timeout_handler_(completion, duration);
+  }
+
+  void set_timeout_handler(fit::function<zx_status_t(sync_completion_t*, zx_duration_t)> handler) {
+    timeout_handler_ = std::move(handler);
+  }
+
+ private:
+  fit::function<zx_status_t(sync_completion_t*, zx_duration_t)> timeout_handler_;
+};
+
 struct Context {
   Context* parent;
   ums::UmsBlockDevice* block_device;
@@ -432,7 +446,18 @@ TEST(Ums, TestRead) {
   Binder bind;
   Context parent_dev;
   usb_protocol_ops_t ops;
-  ums::UsbMassStorageDevice dev(reinterpret_cast<zx_device_t*>(&parent_dev));
+  auto timer = fbl::MakeRefCounted<FakeTimer>();
+  bool has_zero_duration = false;
+  timer->set_timeout_handler([&](sync_completion_t* completion, zx_duration_t duration) {
+    if (duration == 0) {
+      has_zero_duration = true;
+    }
+    if (duration == ZX_TIME_INFINITE) {
+      return sync_completion_wait(completion, duration);
+    }
+    return ZX_OK;
+  });
+  ums::UsbMassStorageDevice dev(timer, reinterpret_cast<zx_device_t*>(&parent_dev));
   Setup(&parent_dev, &dev, &ops);
   zx_handle_t vmo;
   uint64_t size;
@@ -466,6 +491,7 @@ TEST(Ums, TestRead) {
   // Unbind
   dev.DdkUnbindDeprecated();
   EXPECT_EQ(4, parent_dev.block_devs);
+  ASSERT_FALSE(has_zero_duration);
 }
 
 // This test validates the write functionality on multiple LUNS
@@ -475,7 +501,18 @@ TEST(Ums, TestWrite) {
   Binder bind;
   Context parent_dev;
   usb_protocol_ops_t ops;
-  ums::UsbMassStorageDevice dev(reinterpret_cast<zx_device_t*>(&parent_dev));
+  auto timer = fbl::MakeRefCounted<FakeTimer>();
+  bool has_zero_duration = false;
+  timer->set_timeout_handler([&](sync_completion_t* completion, zx_duration_t duration) {
+    if (duration == 0) {
+      has_zero_duration = true;
+    }
+    if (duration == ZX_TIME_INFINITE) {
+      return sync_completion_wait(completion, duration);
+    }
+    return ZX_OK;
+  });
+  ums::UsbMassStorageDevice dev(timer, reinterpret_cast<zx_device_t*>(&parent_dev));
   Setup(&parent_dev, &dev, &ops);
   zx_handle_t vmo;
   uint64_t size;
@@ -514,6 +551,7 @@ TEST(Ums, TestWrite) {
   }
   // Unbind
   dev.DdkUnbindDeprecated();
+  ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
 
@@ -523,7 +561,20 @@ TEST(Ums, TestFlush) {
   // Setup
   Binder bind;
   Context parent_dev;
-  ums::UsbMassStorageDevice dev(reinterpret_cast<zx_device_t*>(&parent_dev));
+  auto timer = fbl::MakeRefCounted<FakeTimer>();
+  bool has_zero_duration = false;
+  timer->set_timeout_handler([&](sync_completion_t* completion, zx_duration_t duration) {
+    if (duration == 0) {
+      has_zero_duration = true;
+    }
+    // Wait for the sync_completion_t if given an infinite timeout
+    // (infinite timeouts are used for synchronization)
+    if (duration == ZX_TIME_INFINITE) {
+      return sync_completion_wait(completion, duration);
+    }
+    return ZX_OK;
+  });
+  ums::UsbMassStorageDevice dev(timer, reinterpret_cast<zx_device_t*>(&parent_dev));
   usb_protocol_ops_t ops;
   Setup(&parent_dev, &dev, &ops);
 
@@ -543,6 +594,7 @@ TEST(Ums, TestFlush) {
   }
   // Unbind
   dev.DdkUnbindDeprecated();
+  ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
 }
 

@@ -38,6 +38,15 @@ namespace ums {
 
 class UmsBlockDevice;
 
+// Abstract waiter class for waiting on a sync_completion_t.
+// This is necessary to allow injection of a timer by a test
+// into the UsbMassStorageDevice class, allowing for a simulated clock.
+class WaiterInterface : public fbl::RefCounted<WaiterInterface> {
+ public:
+  virtual zx_status_t Wait(sync_completion_t* completion, zx_duration_t duration) = 0;
+  virtual ~WaiterInterface() = default;
+};
+
 // struct representing a block device for a logical unit
 struct Transaction {
   void Complete(zx_status_t status) {
@@ -65,7 +74,9 @@ struct UsbRequestContext {
 using MassStorageDeviceType = ddk::Device<UsbMassStorageDevice, ddk::UnbindableDeprecated>;
 class UsbMassStorageDevice : public MassStorageDeviceType {
  public:
-  explicit UsbMassStorageDevice(zx_device_t* parent = nullptr) : MassStorageDeviceType(parent) {}
+  explicit UsbMassStorageDevice(fbl::RefPtr<WaiterInterface> waiter,
+                                zx_device_t* parent = nullptr)
+      : MassStorageDeviceType(parent), waiter_(waiter) {}
 
   ~UsbMassStorageDevice() {}
 
@@ -152,6 +163,8 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   thrd_t worker_thread_;
 
   std::atomic_size_t pending_requests_ = 0;
+
+  fbl::RefPtr<WaiterInterface> waiter_;
 
   bool dead_;
 

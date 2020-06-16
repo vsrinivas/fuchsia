@@ -38,6 +38,13 @@ void ReqComplete(void* ctx, usb_request_t* req) {
 
 namespace ums {
 
+class WaiterImpl : public WaiterInterface {
+ public:
+  zx_status_t Wait(sync_completion_t* completion, zx_duration_t duration) {
+    return sync_completion_wait(completion, duration);
+  }
+};
+
 void UsbMassStorageDevice::QueueTransaction(Transaction* txn) {
   {
     fbl::AutoLock l(&txn_lock_);
@@ -81,7 +88,7 @@ void UsbMassStorageDevice::DdkUnbindDeprecated() {
   }
   // Wait for remaining requests to complete
   while (pending_requests_.load()) {
-    sync_completion_wait(&txn_completion_, ZX_SEC(1));
+    waiter_->Wait(&txn_completion_, ZX_SEC(1));
   }
   DdkRemoveDeprecated();
 }
@@ -312,7 +319,7 @@ void UsbMassStorageDevice::SendCbw(uint8_t lun, uint32_t transfer_length, uint8_
       .ctx = &completion,
   };
   RequestQueue(req, &complete);
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  waiter_->Wait(&completion, ZX_TIME_INFINITE);
 }
 
 zx_status_t UsbMassStorageDevice::ReadCsw(uint32_t* out_residue) {
@@ -324,7 +331,7 @@ zx_status_t UsbMassStorageDevice::ReadCsw(uint32_t* out_residue) {
 
   usb_request_t* csw_request = csw_req_;
   RequestQueue(csw_request, &complete);
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  waiter_->Wait(&completion, ZX_TIME_INFINITE);
   csw_status_t csw_error = VerifyCsw(csw_request, out_residue);
 
   if (csw_error == CSW_SUCCESS) {
@@ -518,7 +525,7 @@ zx_status_t UsbMassStorageDevice::DataTransfer(Transaction* txn, zx_off_t offset
       .ctx = &completion,
   };
   RequestQueue(req, &complete);
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  waiter_->Wait(&completion, ZX_TIME_INFINITE);
 
   status = req->response.status;
   if (status == ZX_OK && req->response.actual != length) {
@@ -790,11 +797,7 @@ int UsbMassStorageDevice::WorkerThread() {
   ums::Transaction* current_txn = nullptr;
   while (1) {
     if (wait) {
-      if (is_test_mode_) {
-        status = sync_completion_wait(&txn_completion_, ZX_SEC(1));
-      } else {
-        status = sync_completion_wait(&txn_completion_, ZX_SEC(0));
-      }
+      status = waiter_->Wait(&txn_completion_, ZX_SEC(1));
       if (list_is_empty(&queued_txns_) && !dead_) {
         if (CheckLunsReady() != ZX_OK) {
           return status;
@@ -894,7 +897,8 @@ int UsbMassStorageDevice::WorkerThread() {
 
 static zx_status_t bind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker checker;
-  UsbMassStorageDevice* device(new (&checker) UsbMassStorageDevice(parent));
+  UsbMassStorageDevice* device(
+      new (&checker) UsbMassStorageDevice(fbl::MakeRefCounted<WaiterImpl>(), parent));
   if (!checker.check()) {
     return ZX_ERR_NO_MEMORY;
   }
