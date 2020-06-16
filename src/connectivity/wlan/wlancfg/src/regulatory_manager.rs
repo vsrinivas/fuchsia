@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::mode_management::phy_manager::PhyManagerApi,
+    crate::mode_management::{iface_manager::IfaceManagerApi, phy_manager::PhyManagerApi},
     anyhow::{bail, Context, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherProxy,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, SetCountryRequest},
@@ -15,21 +15,28 @@ use {
     std::sync::Arc,
 };
 
-pub(crate) struct RegulatoryManager<P: PhyManagerApi> {
+pub(crate) struct RegulatoryManager<I: IfaceManagerApi, P: PhyManagerApi> {
     regulatory_service: RegulatoryRegionWatcherProxy,
     device_service: DeviceServiceProxy,
     phy_manager: Arc<Mutex<P>>,
+    _iface_manager: Arc<Mutex<I>>,
 }
 
 const REGION_CODE_LEN: usize = 2;
 
-impl<P: PhyManagerApi> RegulatoryManager<P> {
+impl<I: IfaceManagerApi, P: PhyManagerApi> RegulatoryManager<I, P> {
     pub fn new(
         regulatory_service: RegulatoryRegionWatcherProxy,
         device_service: DeviceServiceProxy,
         phy_manager: Arc<Mutex<P>>,
+        iface_manager: Arc<Mutex<I>>,
     ) -> Self {
-        RegulatoryManager { regulatory_service, device_service, phy_manager }
+        RegulatoryManager {
+            regulatory_service,
+            device_service,
+            phy_manager,
+            _iface_manager: iface_manager,
+        }
     }
 
     pub async fn run(&self) -> Result<(), Error> {
@@ -70,8 +77,12 @@ impl<P: PhyManagerApi> RegulatoryManager<P> {
 #[cfg(test)]
 mod tests {
     use {
-        super::{Arc, Mutex, PhyManagerApi, RegulatoryManager, SetCountryRequest},
-        crate::mode_management::phy_manager::PhyManagerError,
+        super::{Arc, IfaceManagerApi, Mutex, PhyManagerApi, RegulatoryManager, SetCountryRequest},
+        crate::{
+            access_point::state_machine as ap_fsm, client::state_machine as client_fsm,
+            mode_management::phy_manager::PhyManagerError,
+        },
+        anyhow::Error,
         async_trait::async_trait,
         eui48::MacAddress,
         fidl::endpoints::create_proxy,
@@ -84,7 +95,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
-        futures::{stream::StreamExt, task::Poll},
+        futures::{channel::oneshot, stream::StreamExt, task::Poll},
         pin_utils::pin_mut,
         std::unimplemented,
         wlan_common::assert_variant,
@@ -93,13 +104,13 @@ mod tests {
     /// Holds all of the boilerplate required for testing RegulatoryManager.
     struct TestContext {
         executor: fasync::Executor,
-        regulatory_manager: RegulatoryManager<StubPhyManager>,
+        regulatory_manager: RegulatoryManager<StubIfaceManager, StubPhyManager>,
         device_service_requests: DeviceServiceRequestStream,
         regulatory_region_requests: RegulatoryRegionWatcherRequestStream,
     }
 
     impl TestContext {
-        fn new(phy_manager: StubPhyManager) -> Self {
+        fn new(phy_manager: StubPhyManager, iface_manager: StubIfaceManager) -> Self {
             let executor = fasync::Executor::new().expect("failed to create an executor");
             let (device_service_proxy, device_server_channel) =
                 create_proxy::<DeviceServiceMarker>()
@@ -111,6 +122,7 @@ mod tests {
                 regulatory_region_proxy,
                 device_service_proxy,
                 Arc::new(Mutex::new(phy_manager)),
+                Arc::new(Mutex::new(iface_manager)),
             );
             let device_service_requests =
                 device_server_channel.into_stream().expect("failed to create DeviceService stream");
@@ -128,7 +140,7 @@ mod tests {
 
     #[test]
     fn returns_error_on_short_region_code() {
-        let mut context = TestContext::new(make_default_stub_phy_manager());
+        let mut context = TestContext::new(make_default_stub_phy_manager(), StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -147,7 +159,7 @@ mod tests {
 
     #[test]
     fn returns_error_on_long_region_code() {
-        let mut context = TestContext::new(make_default_stub_phy_manager());
+        let mut context = TestContext::new(make_default_stub_phy_manager(), StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -166,7 +178,7 @@ mod tests {
 
     #[test]
     fn propagates_update_to_device_service_on_region_code_with_valid_length() {
-        let mut context = TestContext::new(make_default_stub_phy_manager());
+        let mut context = TestContext::new(make_default_stub_phy_manager(), StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -191,7 +203,7 @@ mod tests {
 
     #[test]
     fn does_not_propagate_invalid_length_region_code_to_device_service() {
-        let mut context = TestContext::new(make_default_stub_phy_manager());
+        let mut context = TestContext::new(make_default_stub_phy_manager(), StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -216,7 +228,7 @@ mod tests {
 
     #[test]
     fn returns_error_when_region_code_with_valid_length_is_rejected_by_device_service() {
-        let mut context = TestContext::new(make_default_stub_phy_manager());
+        let mut context = TestContext::new(make_default_stub_phy_manager(), StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -249,7 +261,7 @@ mod tests {
 
     #[test]
     fn propagates_multiple_valid_region_code_updates_to_device_service() {
-        let mut context = TestContext::new(make_default_stub_phy_manager());
+        let mut context = TestContext::new(make_default_stub_phy_manager(), StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
 
@@ -302,7 +314,8 @@ mod tests {
 
     #[test]
     fn propagates_single_update_to_multiple_phys() {
-        let mut context = TestContext::new(StubPhyManager { phy_ids: vec![0, 1] });
+        let mut context =
+            TestContext::new(StubPhyManager { phy_ids: vec![0, 1] }, StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -337,7 +350,8 @@ mod tests {
 
     #[test]
     fn keeps_running_after_update_with_empty_phy_list() {
-        let mut context = TestContext::new(StubPhyManager { phy_ids: Vec::new() });
+        let mut context =
+            TestContext::new(StubPhyManager { phy_ids: Vec::new() }, StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -353,7 +367,8 @@ mod tests {
 
     #[test]
     fn does_not_send_device_service_request_when_phy_list_is_empty() {
-        let mut context = TestContext::new(StubPhyManager { phy_ids: Vec::new() });
+        let mut context =
+            TestContext::new(StubPhyManager { phy_ids: Vec::new() }, StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -379,7 +394,8 @@ mod tests {
 
     #[test]
     fn does_not_attempt_to_configure_second_phy_when_first_fails_to_configure() {
-        let mut context = TestContext::new(StubPhyManager { phy_ids: vec![0, 1] });
+        let mut context =
+            TestContext::new(StubPhyManager { phy_ids: vec![0, 1] }, StubIfaceManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -472,6 +488,64 @@ mod tests {
 
         fn get_phy_ids(&self) -> Vec<u16> {
             self.phy_ids.clone()
+        }
+    }
+
+    struct StubIfaceManager;
+
+    #[async_trait]
+    impl IfaceManagerApi for StubIfaceManager {
+        async fn disconnect(
+            &mut self,
+            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+        ) -> Result<(), Error> {
+            unimplemented!();
+        }
+
+        async fn connect(
+            &mut self,
+            _connect_req: client_fsm::ConnectRequest,
+        ) -> Result<oneshot::Receiver<()>, Error> {
+            unimplemented!();
+        }
+
+        fn record_idle_client(&mut self, _iface_id: u16) {
+            unimplemented!();
+        }
+
+        fn has_idle_client(&self) -> bool {
+            unimplemented!();
+        }
+
+        async fn scan(
+            &mut self,
+            _timeout: u8,
+            _scan_type: fidl_fuchsia_wlan_common::ScanType,
+        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+            unimplemented!();
+        }
+
+        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+            unimplemented!();
+        }
+
+        async fn start_client_connections(&mut self) -> Result<(), Error> {
+            unimplemented!();
+        }
+
+        async fn start_ap(
+            &mut self,
+            _config: ap_fsm::ApConfig,
+        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+            unimplemented!();
+        }
+
+        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+            unimplemented!();
+        }
+
+        async fn stop_all_aps(&mut self) -> Result<(), Error> {
+            unimplemented!();
         }
     }
 }
