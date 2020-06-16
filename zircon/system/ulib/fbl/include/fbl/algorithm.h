@@ -12,9 +12,6 @@
 
 namespace fbl {
 
-using std::max;
-using std::min;
-
 // is_pow2
 //
 // Test to see if an unsigned integer type is an exact power of two or

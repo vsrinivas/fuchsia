@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string.h>
-
-#include <new>
-#include <atomic>
 #include <string.h>
-
 #include <zircon/assert.h>
+
+#include <atomic>
+#include <new>
+
 #include <fbl/algorithm.h>
+#include <fbl/string.h>
 
 namespace fbl {
 namespace {
@@ -43,7 +43,7 @@ void String::clear() {
 }
 
 int String::compare(const String& other) const {
-  size_t len = min(length(), other.length());
+  size_t len = std::min(length(), other.length());
   int retval = memcmp(data(), other.data(), len);
   if (retval == 0) {
     if (length() == other.length()) {

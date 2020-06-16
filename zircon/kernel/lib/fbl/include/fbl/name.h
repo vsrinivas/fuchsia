@@ -12,9 +12,9 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
+#include <ktl/algorithm.h>
 
 namespace fbl {
 
@@ -44,7 +44,7 @@ class Name {
     memset(out_name, 0, out_len);
     if (out_len > 0u) {
       AutoSpinLock lock(&lock_);
-      strlcpy(out_name, name_, min(out_len, Size));
+      strlcpy(out_name, name_, ktl::min(out_len, Size));
     }
   }
 

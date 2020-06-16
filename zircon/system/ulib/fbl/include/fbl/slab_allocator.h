@@ -7,6 +7,7 @@
 
 #include <zircon/compiler.h>
 
+#include <algorithm>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -350,7 +351,7 @@ class SAObjCounter<true> {
       return;
     }
     ++obj_count_;
-    max_obj_count_ = max(obj_count_, max_obj_count_);
+    max_obj_count_ = std::max(obj_count_, max_obj_count_);
   }
   void Dec() { --obj_count_; }
   void ResetMaxObjCount() { max_obj_count_ = obj_count_; }
@@ -451,7 +452,7 @@ class SlabAllocatorBase {
   SlabAllocatorBase(size_t slab_size, size_t alloc_size, size_t alloc_alignment,
                     size_t initial_slab_used, size_t max_slabs, bool alloc_initial)
       : slab_size_(slab_size),
-        slab_alignment_(max(alignof(Slab), alloc_alignment)),
+        slab_alignment_(std::max(alignof(Slab), alloc_alignment)),
         slab_storage_limit_(slab_size - SlabOverhead + initial_slab_used),
         alloc_size_(alloc_size),
         initial_slab_used_(initial_slab_used),
@@ -561,8 +562,8 @@ class SlabAllocator : public SlabAllocatorBase {
 
  protected:
   static constexpr size_t SLAB_SIZE = SATraits::SLAB_SIZE;
-  static constexpr size_t AllocSize = max(sizeof(FreeListEntry), sizeof(ObjType));
-  static constexpr size_t AllocAlign = max(alignof(FreeListEntry), alignof(ObjType));
+  static constexpr size_t AllocSize = std::max(sizeof(FreeListEntry), sizeof(ObjType));
+  static constexpr size_t AllocAlign = std::max(alignof(FreeListEntry), alignof(ObjType));
 
   static_assert(AllocAlign > 0, "Alignment requirements cannot be zero!");
   static_assert(!(AllocSize % AllocAlign),
