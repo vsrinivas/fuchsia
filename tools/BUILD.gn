@@ -51,6 +51,7 @@ group("infratools") {
 
   foreach(toolchain, toolchains) {
     public_deps += [
+      "//tools/affected_builders($toolchain)",
       "//tools/artifactory($toolchain)",
       "//tools/bootserver($toolchain)",
       "//tools/botanist($toolchain)",
