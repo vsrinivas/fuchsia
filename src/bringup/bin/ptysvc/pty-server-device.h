@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_PTYSVC_PTY_SERVER_CONNECTION_H_
-#define ZIRCON_SYSTEM_CORE_PTYSVC_PTY_SERVER_CONNECTION_H_
+#ifndef SRC_BRINGUP_BIN_PTYSVC_PTY_SERVER_DEVICE_H_
+#define SRC_BRINGUP_BIN_PTYSVC_PTY_SERVER_DEVICE_H_
 
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -57,4 +57,4 @@ class PtyServerDevice : public ::llcpp::fuchsia::hardware::pty::Device::Interfac
   fbl::RefPtr<PtyServer> server_;
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_PTYSVC_PTY_SERVER_CONNECTION_H_
+#endif  // SRC_BRINGUP_BIN_PTYSVC_PTY_SERVER_DEVICE_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_CONNECTION_H_
-#define ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_CONNECTION_H_
+#ifndef SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_DEVICE_H_
+#define SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_DEVICE_H_
 
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -15,7 +15,7 @@
 
 #include "pty-client.h"
 
-class PtyClientDevice: public ::llcpp::fuchsia::hardware::pty::Device::Interface {
+class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::Interface {
  public:
   explicit PtyClientDevice(fbl::RefPtr<PtyClient> client) : client_(std::move(client)) {}
 
@@ -57,4 +57,4 @@ class PtyClientDevice: public ::llcpp::fuchsia::hardware::pty::Device::Interface
   fbl::RefPtr<PtyClient> client_;
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_CONNECTION_H_
+#endif  // SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_DEVICE_H_

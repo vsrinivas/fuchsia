@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_H_
-#define ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_H_
+#ifndef SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_H_
+#define SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
@@ -104,4 +104,4 @@ class PtyClient : public fbl::RefCounted<PtyClient>,
   Fifo rx_fifo_;
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_H_
+#endif  // SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_H_

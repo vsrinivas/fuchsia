@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_PTYSVC_PTY_SERVER_H_
-#define ZIRCON_SYSTEM_CORE_PTYSVC_PTY_SERVER_H_
+#ifndef SRC_BRINGUP_BIN_PTYSVC_PTY_SERVER_H_
+#define SRC_BRINGUP_BIN_PTYSVC_PTY_SERVER_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/zx/eventpair.h>
@@ -102,4 +102,4 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
   WindowSize size_ = {};
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_PTYSVC_PTY_SERVER_H_
+#endif  // SRC_BRINGUP_BIN_PTYSVC_PTY_SERVER_H_

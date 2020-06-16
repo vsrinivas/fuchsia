@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_VNODE_H_
-#define ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_VNODE_H_
+#ifndef SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_VNODE_H_
+#define SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_VNODE_H_
 
 #include <lib/fs-pty/service.h>
 
@@ -27,4 +27,4 @@ class PtyClientVnode : public PtyClientVnodeBase {
   }
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_PTYSVC_PTY_CLIENT_VNODE_H_
+#endif  // SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_VNODE_H_

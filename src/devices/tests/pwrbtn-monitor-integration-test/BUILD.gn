@@ -45,7 +45,7 @@ test_package("pwrbtn-monitor-integration-test") {
   deps = [
     ":mock_services",
     ":test_driver",
-    "//zircon/system/core/pwrbtn-monitor",
+    "//src/bringup/bin/pwrbtn-monitor",
   ]
   v2_tests = [
     {
