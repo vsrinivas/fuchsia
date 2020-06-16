@@ -34,8 +34,7 @@ namespace fake_object {
 enum class HandleType : uint32_t {
   BASE,  // A non-derived object, used for tests and assertions.
   BTI,
-  MSI_ALLOCATION,
-  MSI_INTERRUPT,
+  MSI,
   PMT,
   RESOURCE,
   CUSTOM,  // For local tests that are not providing a fake-* lib
