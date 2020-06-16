@@ -201,7 +201,6 @@ class AgentContextImpl::StopCall : public Operation<bool> {
     agent_context_impl_->agent_.Unbind();
     agent_context_impl_->agent_context_bindings_.CloseAll();
     agent_context_impl_->agent_controller_bindings_.CloseAll();
-    agent_context_impl_->token_manager_bindings_.CloseAll();
     agent_context_impl_->app_client_.reset();
   }
 
@@ -229,7 +228,6 @@ class AgentContextImpl::OnAppErrorCall : public Operation<> {
     agent_context_impl_->state_ = State::TERMINATED;
     agent_context_impl_->agent_.Unbind();
     agent_context_impl_->agent_context_bindings_.CloseAll();
-    agent_context_impl_->token_manager_bindings_.CloseAll();
     agent_context_impl_->app_client_.reset();
 
     if (agent_context_impl_->session_restart_on_crash_controller_) {
@@ -322,52 +320,6 @@ void AgentContextImpl::NewAgentConnection(
 void AgentContextImpl::GetComponentContext(
     fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
   component_context_impl_.Connect(std::move(request));
-}
-
-void AgentContextImpl::GetTokenManager(
-    fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) {
-  token_manager_bindings_.AddBinding(this, std::move(request));
-}
-
-void AgentContextImpl::Authorize(
-    fuchsia::auth::AppConfig app_config,
-    fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext> auth_ui_context,
-    std::vector<::std::string> app_scopes, fidl::StringPtr user_profile_id,
-    fidl::StringPtr auth_code, AuthorizeCallback callback) {
-  FX_LOGS(ERROR) << "AgentContextImpl::Authorize() not supported from agent "
-                 << "context";
-  callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
-}
-
-void AgentContextImpl::GetAccessToken(fuchsia::auth::AppConfig app_config,
-                                      std::string user_profile_id,
-                                      std::vector<::std::string> app_scopes,
-                                      GetAccessTokenCallback callback) {
-  FX_LOGS(ERROR) << "AgentContextImpl::GetAccessToken() not supported from "
-                 << "agent context";
-  callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
-}
-
-void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config, std::string user_profile_id,
-                                  fidl::StringPtr audience, GetIdTokenCallback callback) {
-  FX_LOGS(ERROR) << "AgentContextImpl::GetIdToken() not supported from agent "
-                 << "context";
-  callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
-}
-
-void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
-                                       std::string user_profile_id, bool force,
-                                       DeleteAllTokensCallback callback) {
-  FX_LOGS(ERROR) << "AgentContextImpl::DeleteAllTokens() not supported from "
-                 << "agent context";
-  callback(fuchsia::auth::Status::INVALID_REQUEST);
-}
-
-void AgentContextImpl::ListProfileIds(fuchsia::auth::AppConfig app_config,
-                                      ListProfileIdsCallback callback) {
-  FX_LOGS(ERROR) << "AgentContextImpl::ListProfileIds() not supported from "
-                 << "agent context";
-  callback(fuchsia::auth::Status::INVALID_REQUEST, {});
 }
 
 void AgentContextImpl::StopAgentIfIdle() {

@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_SESSION_CONTEXT_IMPL_H_
 #define SRC_MODULAR_BIN_BASEMGR_SESSION_CONTEXT_IMPL_H_
 
-#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>

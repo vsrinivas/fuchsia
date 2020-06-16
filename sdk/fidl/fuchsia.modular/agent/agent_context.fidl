@@ -4,16 +4,10 @@
 
 library fuchsia.modular;
 
-using fuchsia.auth;
-
 /// An instance of this service is exposed to agents in their namespace.
 [Discoverable]
 protocol AgentContext {
     /// DEPRECATED: ComponentContext is now available in the
     /// namespace/environment for Modules.
     GetComponentContext(request<ComponentContext> request);
-
-    /// The auth token manager this Agent may use for accessing external services.
-    [Transitional]
-    GetTokenManager(request<fuchsia.auth.TokenManager> request);
 };

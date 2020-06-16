@@ -9,7 +9,6 @@ sdk://docs/open_source
 sdk://docs/vulkan_license
 sdk://fidl/fuchsia.accessibility.gesture
 sdk://fidl/fuchsia.accessibility.semantics
-sdk://fidl/fuchsia.auth
 sdk://fidl/fuchsia.auth.oldtokens
 sdk://fidl/fuchsia.bluetooth
 sdk://fidl/fuchsia.bluetooth.a2dp

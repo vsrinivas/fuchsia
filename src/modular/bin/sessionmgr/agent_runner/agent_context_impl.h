@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_CONTEXT_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_CONTEXT_IMPL_H_
 
-#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -40,8 +39,7 @@ struct AgentContextInfo {
 // this agent (identified for now by the agent's URL) are routed to this
 // class. This class manages all AgentControllers associated with this agent.
 class AgentContextImpl : fuchsia::modular::AgentContext,
-                         fuchsia::modular::AgentController,
-                         fuchsia::auth::TokenManager {
+                         fuchsia::modular::AgentController {
  public:
   // Starts the agent specified in |agent_config| and provides it:
   //  1) AgentContext service
@@ -102,31 +100,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // |fuchsia::modular::AgentContext|
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
-  // |fuchsia::modular::AgentContext|
-  void GetTokenManager(fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) override;
-
-  // |fuchsia::auth::TokenManager|
-  void Authorize(fuchsia::auth::AppConfig app_config,
-                 fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext> auth_ui_context,
-                 std::vector<::std::string> app_scopes, fidl::StringPtr user_profile_id,
-                 fidl::StringPtr auth_code, AuthorizeCallback callback) override;
-
-  // |fuchsia::auth::TokenManager|
-  void GetAccessToken(fuchsia::auth::AppConfig app_config, std::string user_profile_id,
-                      std::vector<::std::string> app_scopes,
-                      GetAccessTokenCallback callback) override;
-
-  // |fuchsia::auth::TokenManager|
-  void GetIdToken(fuchsia::auth::AppConfig app_config, std::string user_profile_id,
-                  fidl::StringPtr audience, GetIdTokenCallback callback) override;
-
-  // |fuchsia::auth::TokenManager|
-  void DeleteAllTokens(fuchsia::auth::AppConfig app_config, std::string user_profile_id, bool force,
-                       DeleteAllTokensCallback callback) override;
-
-  // |fuchsia::auth::TokenManager|
-  void ListProfileIds(fuchsia::auth::AppConfig app_config,
-                      ListProfileIdsCallback callback) override;
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
@@ -155,7 +128,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   fuchsia::modular::AgentPtr agent_;
   fidl::BindingSet<fuchsia::modular::AgentContext> agent_context_bindings_;
   fidl::BindingSet<fuchsia::modular::AgentController> agent_controller_bindings_;
-  fidl::BindingSet<fuchsia::auth::TokenManager> token_manager_bindings_;
 
   // The names of services published by the agent in its outgoing directory.
   std::set<std::string> agent_outgoing_services_;

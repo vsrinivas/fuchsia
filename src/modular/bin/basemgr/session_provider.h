@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_SESSION_PROVIDER_H_
 #define SRC_MODULAR_BIN_BASEMGR_SESSION_PROVIDER_H_
 
-#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
