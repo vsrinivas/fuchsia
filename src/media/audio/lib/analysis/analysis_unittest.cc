@@ -391,7 +391,7 @@ TEST(AnalysisHelpers, IFFT) {
 // MeasureAudioFreq function accepts buffer of audio data, length and the frequency at which to
 // analyze audio. It returns magnitude of signal at that frequency, and combined (root-sum-square)
 // magnitude of all OTHER frequencies. For inputs of magnitude 3 and 4, their combination equals 5.
-TEST(AnalysisHelpers, MeasureAudioFreq_32) {
+TEST(AnalysisHelpers, MeasureAudioFreqs_32) {
   auto format = Format::Create(fuchsia::media::AudioStreamType{
                                    .sample_format = ASF::SIGNED_24_IN_32,
                                    .channels = 1,
@@ -399,20 +399,65 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
                                })
                     .take_value();
 
+  const double kTotalMagAll = std::sqrt(9 + 16 + 36);
+
+  // Sum of waves:
+  //   { 3,  3,  3,  3}   freq=0, mag=3, phase=0
+  //   {-4,  0,  4,  0}   freq=1, mag=4, phase=pi
+  //   { 6, -6,  6, -6}   freq=2, mag=6, phase=0
   AudioBuffer<ASF::SIGNED_24_IN_32> reals(format, 4);
-  reals.samples() = {5, -3, 13, -3};  // cos freq 0,1,2; mag 3,4,6; phase 0,pi,0
-  double magn_signal = -54.32;        // will be overwritten
-  double magn_other = 42.0;           // will be overwritten
+  reals.samples() = {5, -3, 13, -3};
 
-  MeasureAudioFreq(AudioBufferSlice(&reals), 0, &magn_signal);
-  EXPECT_DOUBLE_EQ(3.0, magn_signal);
+  AudioFreqResult r;
+  r = MeasureAudioFreqs(AudioBufferSlice(&reals), {0});
+  EXPECT_EQ(1u, r.magnitudes.size());
+  EXPECT_EQ(1u, r.phases.size());
+  EXPECT_DOUBLE_EQ(0, r.phases[0]);
+  EXPECT_DOUBLE_EQ(3.0, r.magnitudes[0]);
+  EXPECT_DOUBLE_EQ(3.0, r.total_magn_signal);
 
-  MeasureAudioFreq(AudioBufferSlice(&reals), 1, &magn_signal, &magn_other);
-  EXPECT_DOUBLE_EQ(4.0, magn_signal);
+  r = MeasureAudioFreqs(AudioBufferSlice(&reals), {1});
+  EXPECT_EQ(1u, r.magnitudes.size());
+  EXPECT_EQ(1u, r.phases.size());
+  EXPECT_DOUBLE_EQ(M_PI, r.phases[1]);
+  EXPECT_DOUBLE_EQ(4.0, r.magnitudes[1]);
+  EXPECT_DOUBLE_EQ(4.0, r.total_magn_signal);
 
-  MeasureAudioFreq(AudioBufferSlice(&reals), 2, &magn_signal, &magn_other);
-  EXPECT_DOUBLE_EQ(6.0, magn_signal);
-  EXPECT_DOUBLE_EQ(5.0, magn_other);
+  r = MeasureAudioFreqs(AudioBufferSlice(&reals), {2});
+  EXPECT_EQ(1u, r.magnitudes.size());
+  EXPECT_EQ(1u, r.phases.size());
+  EXPECT_DOUBLE_EQ(0, r.phases[0]);
+  EXPECT_DOUBLE_EQ(6.0, r.magnitudes[2]);
+  EXPECT_DOUBLE_EQ(6.0, r.total_magn_signal);
+  EXPECT_DOUBLE_EQ(5.0, r.total_magn_other);
+
+  r = MeasureAudioFreqs(AudioBufferSlice(&reals), {0, 1});
+  EXPECT_EQ(2u, r.magnitudes.size());
+  EXPECT_EQ(2u, r.phases.size());
+  EXPECT_DOUBLE_EQ(0, r.phases[0]);
+  EXPECT_DOUBLE_EQ(M_PI, r.phases[1]);
+  EXPECT_DOUBLE_EQ(3.0, r.magnitudes[0]);
+  EXPECT_DOUBLE_EQ(4.0, r.magnitudes[1]);
+  EXPECT_DOUBLE_EQ(5.0, r.total_magn_signal);
+  EXPECT_DOUBLE_EQ(6.0, r.total_magn_other);
+
+  r = MeasureAudioFreqs(AudioBufferSlice(&reals), {0, 1, 2});
+  EXPECT_EQ(3u, r.magnitudes.size());
+  EXPECT_EQ(3u, r.phases.size());
+  EXPECT_DOUBLE_EQ(0, r.phases[0]);
+  EXPECT_DOUBLE_EQ(M_PI, r.phases[1]);
+  EXPECT_DOUBLE_EQ(0, r.phases[2]);
+  EXPECT_DOUBLE_EQ(3.0, r.magnitudes[0]);
+  EXPECT_DOUBLE_EQ(4.0, r.magnitudes[1]);
+  EXPECT_DOUBLE_EQ(6.0, r.magnitudes[2]);
+  EXPECT_DOUBLE_EQ(kTotalMagAll, r.total_magn_signal);
+  EXPECT_DOUBLE_EQ(0, r.total_magn_other);
+
+  r = MeasureAudioFreqs(AudioBufferSlice(&reals), {});
+  EXPECT_EQ(0u, r.magnitudes.size());
+  EXPECT_EQ(0u, r.phases.size());
+  EXPECT_DOUBLE_EQ(0, r.total_magn_signal);
+  EXPECT_DOUBLE_EQ(kTotalMagAll, r.total_magn_other);
 }
 
 // Test float-based MeasureAudioFreq (only needed to validate OutputProducer).
@@ -427,18 +472,26 @@ TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
 
   AudioBuffer<ASF::FLOAT> reals(format, 4);
   reals.samples() = {-7.0f, 9.0f, 1.0f, 9.0f};
-  double magn_signal = -54.32;
-  double magn_other = 42.0;
 
-  MeasureAudioFreq(AudioBufferSlice(&reals), 0, &magn_signal);
-  EXPECT_DOUBLE_EQ(3.0, magn_signal);
+  AudioFreqResult r;
+  r = MeasureAudioFreq(AudioBufferSlice(&reals), 0);
+  EXPECT_EQ(1u, r.magnitudes.size());
+  EXPECT_EQ(1u, r.phases.size());
+  EXPECT_DOUBLE_EQ(3.0, r.magnitudes[0]);
+  EXPECT_DOUBLE_EQ(3.0, r.total_magn_signal);
 
-  MeasureAudioFreq(AudioBufferSlice(&reals), 1, &magn_signal, &magn_other);
-  EXPECT_DOUBLE_EQ(4.0, magn_signal);
+  r = MeasureAudioFreq(AudioBufferSlice(&reals), 1);
+  EXPECT_EQ(1u, r.magnitudes.size());
+  EXPECT_EQ(1u, r.phases.size());
+  EXPECT_DOUBLE_EQ(4.0, r.magnitudes[1]);
+  EXPECT_DOUBLE_EQ(4.0, r.total_magn_signal);
 
-  MeasureAudioFreq(AudioBufferSlice(&reals), 2, &magn_signal, &magn_other);
-  EXPECT_DOUBLE_EQ(6.0, magn_signal);  // Magnitude is absolute value (ignore phase)
-  EXPECT_DOUBLE_EQ(5.0, magn_other);
+  r = MeasureAudioFreq(AudioBufferSlice(&reals), 2);
+  EXPECT_EQ(1u, r.magnitudes.size());
+  EXPECT_EQ(1u, r.phases.size());
+  EXPECT_DOUBLE_EQ(6.0, r.magnitudes[2]);
+  EXPECT_DOUBLE_EQ(6.0, r.total_magn_signal);  // Magnitude is absolute value (ignore phase)
+  EXPECT_DOUBLE_EQ(5.0, r.total_magn_other);
 }
 
 }  // namespace media::audio

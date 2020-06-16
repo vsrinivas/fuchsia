@@ -35,12 +35,9 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other;
-  MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq, &magn_signal,
-                   &magn_other);
-
-  *level_db = Gain::DoubleToDb(magn_signal);
-  *sinad_db = Gain::DoubleToDb(magn_signal / magn_other);
+  auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
+  *level_db = Gain::DoubleToDb(result.total_magn_signal);
+  *sinad_db = Gain::DoubleToDb(result.total_magn_signal / result.total_magn_other);
 }
 
 // Measure dynamic range at two gain settings: less than 1.0 by the smallest
@@ -142,12 +139,10 @@ TEST(DynamicRange, MonoToStereo) {
   }
 
   // Only need to analyze left side, since we verified that right is identical.
-  double magn_left_signal, magn_left_other, level_left_db, sinad_left_db;
-  MeasureAudioFreq(AudioBufferSlice(&left), FrequencySet::kReferenceFreq, &magn_left_signal,
-                   &magn_left_other);
-
-  level_left_db = Gain::DoubleToDb(magn_left_signal);
-  sinad_left_db = Gain::DoubleToDb(magn_left_signal / magn_left_other);
+  auto left_result = MeasureAudioFreq(AudioBufferSlice(&left), FrequencySet::kReferenceFreq);
+  auto level_left_db = Gain::DoubleToDb(left_result.total_magn_signal);
+  auto sinad_left_db =
+      Gain::DoubleToDb(left_result.total_magn_signal / left_result.total_magn_other);
 
   EXPECT_NEAR(level_left_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
   AudioResult::LevelToleranceSourceFloat =
@@ -189,12 +184,11 @@ TEST(DynamicRange, StereoToMono) {
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other;
-  MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq, &magn_signal,
-                   &magn_other);
+  auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
 
-  AudioResult::LevelStereoMono = Gain::DoubleToDb(magn_signal);
-  AudioResult::FloorStereoMono = Gain::DoubleToDb(kFullScaleFloatAccumAmplitude / magn_other);
+  AudioResult::LevelStereoMono = Gain::DoubleToDb(result.total_magn_signal);
+  AudioResult::FloorStereoMono =
+      Gain::DoubleToDb(kFullScaleFloatAccumAmplitude / result.total_magn_other);
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
@@ -258,12 +252,10 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other;
-  MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq, &magn_signal,
-                   &magn_other);
+  auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
 
-  *level_mix_db = Gain::DoubleToDb(magn_signal / expected_amplitude);
-  *sinad_mix_db = Gain::DoubleToDb(expected_amplitude / magn_other);
+  *level_mix_db = Gain::DoubleToDb(result.total_magn_signal / expected_amplitude);
+  *sinad_mix_db = Gain::DoubleToDb(expected_amplitude / result.total_magn_other);
 }
 
 // Test our mix level and noise floor, when accumulating 8-bit sources.

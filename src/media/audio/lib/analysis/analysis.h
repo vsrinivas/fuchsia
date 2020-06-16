@@ -7,6 +7,8 @@
 
 #include <zircon/types.h>
 
+#include <unordered_map>
+
 #include "src/media/audio/lib/format/audio_buffer.h"
 
 namespace media::audio {
@@ -40,6 +42,19 @@ void InverseFFT(double* real, double* imag, uint32_t buf_size);
 
 }  // namespace internal
 
+struct AudioFreqResult {
+  // Mapping from frequency -> magnitude, for each requested frequency.
+  std::unordered_map<size_t, double> magnitudes;
+  // Phase in radians, for each requested frequency.
+  std::unordered_map<size_t, double> phases;
+  // Total magnitude over all requested frequencies.
+  // Magnitude is the root-sum-of-squares of the magnitude at all requested frequencies.
+  double total_magn_signal;
+  // Total magnitude over all other frequencies.
+  // Magnitude is the root-sum-of-squares of the magnitude at all other frequencies.
+  double total_magn_other;
+};
+
 // For the given audio buffer, analyze contents and return the magnitude (and phase) at the given
 // frequency. Also return magnitude of all other content. Useful for frequency response and
 // signal-to-noise. Internally uses an FFT, so slice.NumFrames() must be a power-of-two. The format
@@ -48,8 +63,15 @@ void InverseFFT(double* real, double* imag, uint32_t buf_size);
 // |freq| is the number of **complete sinusoidal periods** that should perfectly fit into the
 // buffer.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-void MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq, double* magn_signal,
-                      double* magn_other = nullptr, double* phase_signal = nullptr);
+AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice, std::vector<size_t> freqs);
+
+// Shorthand that analyzes a single frequency.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+AudioFreqResult MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq) {
+  auto result = MeasureAudioFreqs(slice, {freq});
+  FX_DCHECK(result.total_magn_signal == result.magnitudes[freq]);
+  return result;
+}
 
 // Compute the root-mean-square (RMS) energy of a slice. This is a measure of loudness.
 template <fuchsia::media::AudioSampleFormat SampleFormat>

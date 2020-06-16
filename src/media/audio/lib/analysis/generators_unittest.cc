@@ -56,4 +56,11 @@ TEST(GeneratorsTest, GenerateCosine_Float) {
   EXPECT_THAT(got.samples(), Pointwise(FloatEq(), (std::vector<float>{1.0f, 0.5f, 1.0f, 1.5f})));
 }
 
+TEST(GeneratorsTest, PadToNearestPower2) {
+  auto format = Format::Create<ASF::UNSIGNED_8>(1, 48000).take_value();
+  auto unpadded = GenerateSequentialAudio(format, 6);
+  auto got = PadToNearestPower2(AudioBufferSlice(&unpadded));
+  EXPECT_EQ(got.samples(), (std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 0x80, 0x80}));
+}
+
 }  // namespace media::audio

@@ -63,16 +63,14 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(frac_src_frames));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other;
-  MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq, &magn_signal,
-                   &magn_other);
+  auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
 
   // Convert Signal-to-Noise-And-Distortion (SINAD) to decibels
   // We can directly compare 'signal' and 'other', regardless of source format.
-  *sinad_db = Gain::DoubleToDb(magn_signal / magn_other);
+  *sinad_db = Gain::DoubleToDb(result.total_magn_signal / result.total_magn_other);
 
   // All sources (8-bit, 16-bit, ...) are normalized to float in accum buffer.
-  return Gain::DoubleToDb(magn_signal / expected_amplitude);
+  return Gain::DoubleToDb(result.total_magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine from 8-bit source.
@@ -145,15 +143,13 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   output_producer->ProduceOutput(&accum.samples()[0], &dest.samples()[0], kFreqTestBufSize);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other;
-  MeasureAudioFreq(AudioBufferSlice(&dest), FrequencySet::kReferenceFreq, &magn_signal,
-                   &magn_other);
+  auto result = MeasureAudioFreq(AudioBufferSlice(&dest), FrequencySet::kReferenceFreq);
 
   // Convert Signal-to-Noise-And-Distortion (SINAD) to decibels.
   // We can directly compare 'signal' and 'other', regardless of output format.
-  *sinad_db = Gain::DoubleToDb(magn_signal / magn_other);
+  *sinad_db = Gain::DoubleToDb(result.total_magn_signal / result.total_magn_other);
 
-  return Gain::DoubleToDb(magn_signal / expected_amplitude);
+  return Gain::DoubleToDb(result.total_magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine, to an 8-bit output.
@@ -328,20 +324,23 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     // resamplers with larger positive filter widths (they exposed the bug); address this now.
     mixer->Reset();
 
-    // Copy results to double[], for high-resolution frequency analysis (FFT).
-    double magn_signal = -INFINITY, magn_other = INFINITY;
-    MeasureAudioFreq(AudioBufferSlice(&accum), frequency_to_measure, &magn_signal, &magn_other,
-                     &phase_rad[freq_idx]);
+    // Is this source frequency beyond the Nyquist limit for our destination frame rate?
+    const bool out_of_band = (frequency_to_measure * 2 >= num_dest_frames);
+    auto result = out_of_band ? MeasureAudioFreqs(AudioBufferSlice(&accum), {})
+                              : MeasureAudioFreqs(AudioBufferSlice(&accum), {frequency_to_measure});
 
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
-    if (frequency_to_measure * 2 >= num_dest_frames) {
+    if (out_of_band) {
       // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
-      auto magn_total = std::sqrt(magn_signal * magn_signal + magn_other * magn_other);
-      sinad_db[freq_idx] = -Gain::DoubleToDb(magn_total);
+      // This is equivalent to Gain::DoubleToDb(1.0 / result.total_magn_other).
+      sinad_db[freq_idx] = -Gain::DoubleToDb(result.total_magn_other);
     } else {
-      // This frequency is in-band -- capture its level as well as the magnitude of all else.
+      // This frequency is in-band -- capture its level/phase and the magnitude of all else.
+      auto magn_signal = result.magnitudes[frequency_to_measure];
+      auto magn_other = result.total_magn_other;
       level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
       sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+      phase_rad[freq_idx] = result.phases[frequency_to_measure];
     }
   }
 }
@@ -1396,20 +1395,23 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
       mono.samples()[i] = accum.samples()[i * num_chans + idx];
     }
 
-    // Copy results to double[], for high-resolution frequency analysis (FFT).
-    double magn_signal = -INFINITY, magn_other = INFINITY;
-    MeasureAudioFreq(AudioBufferSlice(&mono), frequency_to_measure, &magn_signal, &magn_other,
-                     &phase_rad[freq_idx]);
+    // Is this source frequency beyond the Nyquist limit for our destination frame rate?
+    const bool out_of_band = (frequency_to_measure * 2 >= num_dest_frames);
+    auto result = out_of_band ? MeasureAudioFreqs(AudioBufferSlice(&mono), {})
+                              : MeasureAudioFreqs(AudioBufferSlice(&mono), {frequency_to_measure});
 
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
-    if (frequency_to_measure * 2 >= num_dest_frames) {
+    if (out_of_band) {
       // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
-      auto magn_total = std::sqrt(magn_signal * magn_signal + magn_other * magn_other);
-      sinad_db[freq_idx] = -Gain::DoubleToDb(magn_total);
+      // This is equivalent to Gain::DoubleToDb(1.0 / result.total_magn_other).
+      sinad_db[freq_idx] = -Gain::DoubleToDb(result.total_magn_other);
     } else {
-      // This frequency is in-band -- capture its level as well as the magnitude of all else.
+      // This frequency is in-band -- capture its level/phase and the magnitude of all else.
+      auto magn_signal = result.magnitudes[frequency_to_measure];
+      auto magn_other = result.total_magn_other;
       level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
       sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+      phase_rad[freq_idx] = result.phases[frequency_to_measure];
     }
   }
 }

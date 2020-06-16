@@ -6,6 +6,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <iomanip>
+#include <unordered_set>
 #include <vector>
 
 #include <fbl/algorithm.h>
@@ -232,14 +233,12 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
 // length). Also return the magnitude of all other content. Useful for frequency response and
 // signal-to-noise. Internally uses an FFT, so slice.NumFrames() must be a power-of-two.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-void MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq, double* magn_signal,
-                      double* magn_other, double* phase_signal) {
+AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice, std::vector<size_t> freqs) {
   FX_DCHECK(fbl::is_pow2(slice.NumFrames()));
   FX_CHECK(slice.format().channels() == 1);
 
   const size_t buf_size = slice.NumFrames();
   const size_t buf_sz_2 = buf_size >> 1;
-  const bool freq_out_of_range = (freq > buf_sz_2);
 
   // Copy input to double buffer, before doing a high-res FFT (freq-analysis). Note that we set
   // imags[] to zero: MeasureAudioFreq retrieves a REAL (not Complex) FFT for the data, the return
@@ -273,38 +272,34 @@ void MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq, double*
   reals[buf_sz_2] /= buf_size;  // we divide the real and imag values by
   imags[buf_sz_2] /= buf_size;  // buf_size instead of buf_sz_2.
 
-  // Calculate magnitude of primary signal (even if out-of-range aliased back!)
-  if (freq_out_of_range) {
-    while (freq > buf_size) {
-      freq -= buf_size;
-    }
-    while (freq > buf_sz_2) {
-      freq = buf_size - freq;
-    }
+  AudioFreqResult out;
+
+  // Calculate magnitude and phase of primary signal.
+  double sum_sq_magn_signal = 0.0;
+  for (auto freq : freqs) {
+    FX_CHECK(freq <= buf_sz_2);
+    auto mag2 = reals[freq] * reals[freq] + imags[freq] * imags[freq];
+    sum_sq_magn_signal += mag2;
+    out.magnitudes[freq] = std::sqrt(mag2);
+    out.phases[freq] = internal::GetPhase(reals[freq], imags[freq]);
   }
-  *magn_signal = std::sqrt(reals[freq] * reals[freq] + imags[freq] * imags[freq]);
+  out.total_magn_signal = std::sqrt(sum_sq_magn_signal);
 
   // Calculate magnitude of all other frequencies
-  if (magn_other) {
-    double sum_sq_magn_other = 0.0;
-    for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
-      if (bin != freq || freq_out_of_range) {
-        sum_sq_magn_other += (reals[bin] * reals[bin] + imags[bin] * imags[bin]);
-      }
+  double sum_sq_magn_other = 0.0;
+  for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
+    if (std::find(freqs.begin(), freqs.end(), bin) == freqs.end()) {
+      sum_sq_magn_other += (reals[bin] * reals[bin] + imags[bin] * imags[bin]);
     }
-    *magn_other = std::sqrt(sum_sq_magn_other);
   }
+  out.total_magn_other = std::sqrt(sum_sq_magn_other);
 
-  // Calculate phase of primary signal
-  if (phase_signal) {
-    *phase_signal = internal::GetPhase(reals[freq], imags[freq]);
-  }
+  return out;
 }
 
 // Explicitly instantiate all possible implementations.
-#define INSTANTIATE(T)                                                                           \
-  template void MeasureAudioFreq<T>(AudioBufferSlice<T> slice, size_t freq, double* magn_signal, \
-                                    double* magn_other, double* phase_signal);
+#define INSTANTIATE(T) \
+  template AudioFreqResult MeasureAudioFreqs<T>(AudioBufferSlice<T>, std::vector<size_t>);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 

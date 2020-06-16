@@ -107,6 +107,20 @@ AudioBuffer<SampleFormat> LoadWavFile(const std::string& file_name) {
   return out;
 }
 
+// Copy the given slice to a buffer that is padded with silence up to the nearest power-of-2.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+AudioBuffer<SampleFormat> PadToNearestPower2(AudioBufferSlice<SampleFormat> in) {
+  size_t pow2 = 1;
+  while (pow2 < in.NumFrames()) {
+    pow2 <<= 1;
+  }
+  AudioBuffer<SampleFormat> buf(in.format(), pow2);
+  std::copy(in.buf()->samples().begin(), in.buf()->samples().end(), buf.samples().begin());
+  std::fill(buf.samples().begin() + in.NumSamples(), buf.samples().end(),
+            SampleFormatTraits<SampleFormat>::kSilentValue);
+  return buf;
+}
+
 }  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_LIB_ANALYSIS_GENERATORS_H_
