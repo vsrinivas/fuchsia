@@ -5,6 +5,7 @@
 use crate::agent;
 use crate::message::base::{Audience, MessengerType};
 use crate::message_hub_definition;
+use crate::switchboard::base::SettingType;
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -18,6 +19,7 @@ pub enum Payload {
 pub enum Event {
     Custom(&'static str),
     Earcon(earcon::Event),
+    Restore(restore::Event),
 }
 
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
@@ -39,6 +41,16 @@ pub mod earcon {
     }
 }
 
+pub mod restore {
+    use super::*;
+
+    #[derive(PartialEq, Clone, Debug, Eq, Hash)]
+    pub enum Event {
+        // Indicates that the setting type does nothing for a call to restore.
+        NoOp(SettingType),
+    }
+}
+
 // The Event message hub should be used to capture events not normally exposed
 // through other communication. For example, actions that happen within agents
 // are generally not reported back. Events that are useful for diagnostics and
@@ -47,7 +59,7 @@ message_hub_definition!(Payload, Address);
 
 /// Publisher is a helper for producing logs. It simplifies message creation for
 /// each event and associates an address with these messages at construction.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Publisher {
     messenger: message::Messenger,
 }

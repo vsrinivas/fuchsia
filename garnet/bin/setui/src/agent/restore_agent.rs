@@ -7,6 +7,7 @@ use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Life
 /// external sources to the last known value. It is invoked during startup.
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
+use crate::internal::event::{restore, Event, Publisher};
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessageEvent};
 use crate::switchboard::base::{SettingRequest, SwitchboardError};
@@ -22,18 +23,24 @@ blueprint_definition!(
 #[derive(Debug)]
 pub struct RestoreAgent {
     switchboard_messenger: switchboard::message::Messenger,
+    event_publisher: Publisher,
 }
 
 impl RestoreAgent {
     async fn create(mut context: Context) {
-        let messenger_result = context.create_switchboard_messenger().await;
-
-        if messenger_result.is_err() {
-            fx_log_err!("RestoreAgent: could not acquire switchboard messenger");
+        let messenger = if let Ok(messenger) = context.create_switchboard_messenger().await {
+            messenger
+        } else {
+            context.get_publisher().send_event(Event::Custom(
+                "Could not acquire switchboard messenger in RestoreAgent",
+            ));
             return;
-        }
+        };
 
-        let mut agent = RestoreAgent { switchboard_messenger: messenger_result.unwrap() };
+        let mut agent = RestoreAgent {
+            switchboard_messenger: messenger,
+            event_publisher: context.get_publisher(),
+        };
 
         fasync::spawn(async move {
             while let Some(event) = context.receptor.next().await {
@@ -70,7 +77,8 @@ impl RestoreAgent {
                                 setting_type,
                                 request: _,
                             }) => {
-                                fx_log_info!("setting does not support restore:{:?}", setting_type);
+                                self.event_publisher
+                                    .send_event(Event::Restore(restore::Event::NoOp(setting_type)));
                                 continue;
                             }
                             Err(SwitchboardError::UnhandledType { setting_type }) => {
