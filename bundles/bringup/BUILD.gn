@@ -68,6 +68,7 @@ group("tests") {
     "//zircon/system/ulib/hwreg/test:libhwreg-package",
     "//zircon/system/ulib/id_allocator/test:id-allocator-package",
     "//zircon/system/ulib/image-format/test:image-format-test-package",
+    "//zircon/system/ulib/inet6/test:inet6-test-package",
     "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-package",
     "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-package",
     "//zircon/system/ulib/launchpad/test:launchpad-package",

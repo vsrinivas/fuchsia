@@ -126,7 +126,7 @@ struct ndp_n_hdr {
 
 // Formats an IP6 address into the provided buffer (which must be
 // at least IP6TOAMAX bytes in size), and returns the buffer address.
-char* ip6toa(char* _out, void* ip6addr);
+char* ip6toa(char* _out, const void* ip6addr);
 #define IP6TOAMAX 40
 
 // provided by inet6.c

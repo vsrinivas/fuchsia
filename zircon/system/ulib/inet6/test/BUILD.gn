@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":inet6-test" ]
+}
+
+test("inet6-test") {
+  output_name = "inet6-test-test"
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [ "inet6_test.cc" ]
+  deps = [
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/inet6",
+  ]
+}
+
+unittest_package("inet6-test-package") {
+  package_name = "inet6-test"
+  deps = [ ":inet6-test" ]
+
+  tests = [
+    {
+      name = "inet6-test-test"
+    },
+  ]
+}

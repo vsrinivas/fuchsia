@@ -226,7 +226,8 @@ typedef struct {
   uint8_t data[0];
 } udp_pkt_t;
 
-static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* saddr, const ip6_addr_t* daddr, size_t length, uint8_t type) {
+static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* saddr, const ip6_addr_t* daddr, size_t length,
+                     uint8_t type) {
   mac_addr_t dmac;
 
   if (resolve_ip6(&dmac, daddr))
@@ -283,8 +284,8 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
 
 #define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
 
-static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* saddr, const ip6_addr_t* daddr,
-                              bool block) {
+static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* saddr,
+                              const ip6_addr_t* daddr, bool block) {
   if (length > ICMP6_MAX_PAYLOAD)
     return ZX_ERR_INVALID_ARGS;
   eth_buffer_t* ethbuf;
@@ -325,19 +326,19 @@ void send_router_advertisement() {
   // single prefix, if you want to do more look at the spec and extend.
   static struct {
     icmp6_hdr_t hdr;
-    uint8_t hop_limit; // 0 means this router has no opinion.
+    uint8_t hop_limit;  // 0 means this router has no opinion.
     uint8_t autoconf_flags;
-    uint16_t router_lifetime_ms; // 0 means don't use this router.
-    uint32_t reachable_time_ms; // 0 means this router has no opinion.
-    uint32_t retransmit_timer_ms; // 0 means this router has no opinion.
-    uint8_t option_type; // We are using a prefix option of 3
-    uint8_t option_length; // length is units of 8 bytes (for some reason).
-    uint8_t prefix_length; // valid bits of prefix.
+    uint16_t router_lifetime_ms;   // 0 means don't use this router.
+    uint32_t reachable_time_ms;    // 0 means this router has no opinion.
+    uint32_t retransmit_timer_ms;  // 0 means this router has no opinion.
+    uint8_t option_type;           // We are using a prefix option of 3
+    uint8_t option_length;         // length is units of 8 bytes (for some reason).
+    uint8_t prefix_length;         // valid bits of prefix.
     uint8_t prefix_flags;
     uint32_t prefix_lifetime_s;
     uint32_t prefix_pref_lifetime_s;
-    uint32_t reserved ;
-    uint8_t prefix[16]; // prefix for all devices on this link to communicate.
+    uint32_t reserved;
+    uint8_t prefix[16];  // prefix for all devices on this link to communicate.
   } __attribute__((packed)) msg;
 
   memset(&msg, 0, sizeof(msg));
@@ -345,19 +346,20 @@ void send_router_advertisement() {
   msg.hdr.type = ICMP6_NDP_R_ADVERTISE;
   msg.hdr.code = 0;
   msg.hdr.checksum = 0;
-  msg.option_type = 3; // Prefix option.
-  msg.option_length = 4; // From spec, length is in 64bit units.
-  msg.prefix_length = 64; // 64 leading bits of address are all we care about.
-  msg.prefix_flags = 0b11000000; // valid on this link and used for autoconf.
-  msg.prefix_lifetime_s = 0xFFFFFFFF; // valid while this link is up.
-  msg.prefix_pref_lifetime_s = 0xFFFFFFFF; // preferred while this link is up.
+  msg.option_type = 3;                      // Prefix option.
+  msg.option_length = 4;                    // From spec, length is in 64bit units.
+  msg.prefix_length = 64;                   // 64 leading bits of address are all we care about.
+  msg.prefix_flags = 0b11000000;            // valid on this link and used for autoconf.
+  msg.prefix_lifetime_s = 0xFFFFFFFF;       // valid while this link is up.
+  msg.prefix_pref_lifetime_s = 0xFFFFFFFF;  // preferred while this link is up.
 
   // Copy first 8 bytes (64bits) as our prefix, rest will be 0.
   memcpy(msg.prefix, &ula_ip6_addr, 8);
 
   // We need to send this on the link-local address because nothing is talking
   // to the ula address yet.
-  zx_status_t status = icmp6_send(&msg, sizeof(msg), (void*)&ll_ip6_addr, (void*)&ip6_ll_all_nodes, false);
+  zx_status_t status =
+      icmp6_send(&msg, sizeof(msg), (void*)&ll_ip6_addr, (void*)&ip6_ll_all_nodes, false);
   if (status == ZX_ERR_SHOULD_WAIT) {
     printf("inet6: No buffers available, dropping RA\n");
   } else if (status < 0) {
@@ -572,58 +574,58 @@ void eth_recv(void* _data, size_t len) {
   }
 }
 
-char* ip6toa(char* _out, void* ip6addr) {
-  const uint8_t* x = ip6addr;
-  const uint8_t* end = x + 16;
+char* ip6toa(char* _out, const void* ip6addr) {
+  // Encode our address using the scheme laid out in RFC 1884 section 2.2
+  //
+  // Basically, we have eight 16 bit words in RAM (in network byte order, aka
+  // big endian) which need to be rendered in hex with ':'s separating each
+  // word.  Once per encoding, we may choose to replace a run of 0s with "::"
+  // instead of the run.  This implementation will always replace the first run,
+  // it will not make any effort to find and replace the longest run.
+  const size_t kIPv6AddrWords = 8;
+
+  const uint16_t* addr = ip6addr;
   char* out = _out;
-  uint16_t n;
+  size_t i = 0;
 
-  n = (x[0] << 8) | x[1];
-  while ((n == 0) && (x < end)) {
-    x += 2;
-    n = (x[0] << 8) | x[1];
-  }
+  // Start by encoding while keeping on the lookout for any zeros.
+  for (; i < kIPv6AddrWords; ++i) {
+    // Have we found some zeros?  If so, skip the run, replace it with a "::"
+    // instead.  There is no need to do any potential endian flipping here as
+    // zero is always zero, regardless of endianness.
+    if (addr[i] == 0) {
+      while ((++i < kIPv6AddrWords) && (addr[i] == 0)) {
+      }
 
-  if ((end - x) < 16) {
-    if (end == x) {
-      // all 0s - special case
-      sprintf(out, "::");
-      return _out;
+      // If the address ends with a 0-run, then emit the full :: token and we
+      // are finished.
+      if (i == kIPv6AddrWords) {
+        sprintf(out, "::");
+        return _out;
+      }
+
+      // There are still words to be encoded, emit a single ':' and then move
+      // onto phase 2 (post-0-run encoding).
+      *(out++) = ':';
+      break;
     }
-    // we consumed some number of leading 0s
-    out += sprintf(out, ":");
-    while (x < end) {
-      out += sprintf(out, ":%x", n);
-      x += 2;
-      n = (x[0] << 8) | x[1];
+
+    // Skip the ':' separator if this is the first word in the sequence.
+    if (i != 0) {
+      *(out++) = ':';
     }
-    return _out;
+
+    // Output the word, skipping leading zeros to save space.
+    out += sprintf(out, "%x", ntohs(addr[i]));
   }
 
-  while (x < (end - 2)) {
-    out += sprintf(out, "%x:", n);
-    x += 2;
-    n = (x[0] << 8) | x[1];
-    if (n == 0)
-      goto middle_zeros;
+  // Phase 2 of processing.  At this point, we no longer need to look for any
+  // zero runs since we have already spent our "::" token.  Also, there is no
+  // need to worry about being the first word in the sequence, so we can
+  // unconditionally separate words with ":".
+  for (; i < kIPv6AddrWords; ++i) {
+    out += sprintf(out, ":%x", ntohs(addr[i]));
   }
-  out += sprintf(out, "%x", n);
-  return _out;
 
-middle_zeros:
-  while ((n == 0) && (x < end)) {
-    x += 2;
-    n = (x[0] << 8) | x[1];
-  }
-  if (x == end) {
-    out += sprintf(out, ":");
-    return _out;
-  }
-  out += sprintf(out, ":%x", n);
-  while (x < (end - 2)) {
-    x += 2;
-    n = (x[0] << 8) | x[1];
-    out += sprintf(out, ":%x", n);
-  }
   return _out;
 }
