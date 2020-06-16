@@ -16,12 +16,7 @@ use crate::{
     },
     request_builder::{self, RequestBuilder, RequestParams},
     storage::{Storage, StorageExt},
-    time::{
-        system_time_conversion::{
-            checked_system_time_to_micros_from_epoch, micros_from_epoch_to_system_time,
-        },
-        TimeSource, Timer,
-    },
+    time::{TimeSource, Timer},
 };
 
 #[cfg(test)]
@@ -54,6 +49,8 @@ pub use observer::{InstallProgress, StateMachineEvent};
 const LAST_CHECK_TIME: &str = "last_check_time";
 const INSTALL_PLAN_ID: &str = "install_plan_id";
 const UPDATE_FIRST_SEEN_TIME: &str = "update_first_seen_time";
+const UPDATE_FINISH_TIME: &str = "update_finish_time";
+const TARGET_VERSION: &str = "target_version";
 const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
@@ -273,8 +270,50 @@ where
             return;
         }
 
+        let state_machine_start_monotonic_time = self.time_source.now_in_monotonic();
+
+        let mut should_report_waited_for_reboot_duration = false;
+
+        let update_finish_time = {
+            let storage = self.storage_ref.lock().await;
+            let update_finish_time = storage.get_time(UPDATE_FINISH_TIME).await;
+            if update_finish_time.is_some() {
+                if let Some(target_version) = storage.get_string(TARGET_VERSION).await {
+                    if target_version == self.config.os.version {
+                        should_report_waited_for_reboot_duration = true;
+                    }
+                }
+            }
+            update_finish_time
+        };
+
         loop {
             info!("Initial context: {:?}", self.context);
+
+            if should_report_waited_for_reboot_duration {
+                let now = self.time_source.now();
+                // If `update_finish_time` is in the future we don't have correct time, try again
+                // on the next loop.
+                if let Ok(update_finish_time_to_now) =
+                    now.wall_duration_since(update_finish_time.unwrap())
+                {
+                    // It might take a while for us to get here, but we only want to report the
+                    // time from update finish to state machine start after reboot, so we subtract
+                    // the duration since then using monotonic time.
+                    let waited_for_reboot_duration = update_finish_time_to_now
+                        - now.mono.duration_since(state_machine_start_monotonic_time);
+                    info!("Waited {} seconds for reboot.", waited_for_reboot_duration.as_secs());
+                    self.report_metrics(Metrics::WaitedForRebootDuration(
+                        waited_for_reboot_duration,
+                    ));
+                    should_report_waited_for_reboot_duration = false;
+
+                    let mut storage = self.storage_ref.lock().await;
+                    storage.remove_or_log(UPDATE_FINISH_TIME).await;
+                    storage.remove_or_log(TARGET_VERSION).await;
+                    storage.commit_or_log().await;
+                }
+            }
 
             // Get the timing parameters for the next update check
             let check_timing: CheckTiming = self.update_next_update_time(&mut co).await;
@@ -333,21 +372,17 @@ where
         let storage_ref = self.storage_ref.clone();
         let mut storage = storage_ref.lock().await;
         let now = self.time_source.now();
-        if let Some(last_check_time) = storage.get_int(LAST_CHECK_TIME).await {
-            match now.wall_duration_since(micros_from_epoch_to_system_time(last_check_time)) {
+        if let Some(last_check_time) = storage.get_time(LAST_CHECK_TIME).await {
+            match now.wall_duration_since(last_check_time) {
                 Ok(duration) => self.report_metrics(Metrics::UpdateCheckInterval(duration)),
                 Err(e) => warn!("Last check time is in the future: {}", e),
             }
         }
-        if let Err(e) =
-            storage.set_option_int(LAST_CHECK_TIME, now.checked_to_micros_since_epoch()).await
-        {
+        if let Err(e) = storage.set_time(LAST_CHECK_TIME, now).await {
             error!("Unable to persist {}: {}", LAST_CHECK_TIME, e);
             return;
         }
-        if let Err(e) = storage.commit().await {
-            error!("Unable to commit persisted data: {}", e);
-        }
+        storage.commit_or_log().await;
     }
 
     /// Perform update check and handle the result, including updating the update check context
@@ -448,9 +483,7 @@ where
         let mut storage = storage_ref.lock().await;
         let attempts = storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await.unwrap_or(0) + 1;
         if success {
-            if let Err(e) = storage.remove(CONSECUTIVE_FAILED_UPDATE_CHECKS).await {
-                error!("Unable to remove {}: {}", CONSECUTIVE_FAILED_UPDATE_CHECKS, e);
-            }
+            storage.remove_or_log(CONSECUTIVE_FAILED_UPDATE_CHECKS).await;
             self.report_metrics(Metrics::AttemptsToSucceed(attempts as u64));
         } else {
             if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, attempts).await {
@@ -465,9 +498,7 @@ where
         self.context.persist(&mut *storage).await;
         self.app_set.persist(&mut *storage).await;
 
-        if let Err(e) = storage.commit().await {
-            error!("Unable to commit persisted data: {}", e);
-        }
+        storage.commit_or_log().await;
     }
 
     /// This function constructs the chain of async futures needed to perform all of the async tasks
@@ -711,7 +742,27 @@ where
                 }
                 Err(e) => warn!("Update first seen time is in the future: {}", e),
             }
-
+            {
+                let mut storage = self.storage_ref.lock().await;
+                if let Err(e) = storage.set_time(UPDATE_FINISH_TIME, update_finish_time).await {
+                    error!("Unable to persist {}: {}", UPDATE_FINISH_TIME, e);
+                }
+                let target_version = response
+                    .apps
+                    .iter()
+                    .nth(0)
+                    .and_then(|app| app.update_check.as_ref())
+                    .and_then(|update_check| update_check.manifest.as_ref())
+                    .map(|manifest| manifest.version.as_str())
+                    .unwrap_or_else(|| {
+                        error!("Target version string not found in Omaha response.");
+                        "UNKNOWN"
+                    });
+                if let Err(e) = storage.set_string(TARGET_VERSION, target_version).await {
+                    error!("Unable to persist {}: {}", TARGET_VERSION, e);
+                }
+                storage.commit_or_log().await;
+            }
             self.set_state(State::WaitingForReboot, co).await;
             Ok(Self::make_response(response, update_check::Action::Updated))
         }
@@ -877,11 +928,7 @@ where
         let previous_id = storage.get_string(INSTALL_PLAN_ID).await;
         if let Some(previous_id) = previous_id {
             if previous_id == install_plan_id {
-                return storage
-                    .get_int(UPDATE_FIRST_SEEN_TIME)
-                    .await
-                    .map(micros_from_epoch_to_system_time)
-                    .unwrap_or(now);
+                return storage.get_time(UPDATE_FIRST_SEEN_TIME).await.unwrap_or(now);
             }
         }
         // Update INSTALL_PLAN_ID and UPDATE_FIRST_SEEN_TIME for new update.
@@ -889,17 +936,12 @@ where
             error!("Unable to persist {}: {}", INSTALL_PLAN_ID, e);
             return now;
         }
-        if let Err(e) = storage
-            .set_option_int(UPDATE_FIRST_SEEN_TIME, checked_system_time_to_micros_from_epoch(now))
-            .await
-        {
+        if let Err(e) = storage.set_time(UPDATE_FIRST_SEEN_TIME, now).await {
             error!("Unable to persist {}: {}", UPDATE_FIRST_SEEN_TIME, e);
             let _ = storage.remove(INSTALL_PLAN_ID).await;
             return now;
         }
-        if let Err(e) = storage.commit().await {
-            error!("Unable to commit persisted data: {}", e);
-        }
+        storage.commit_or_log().await;
         now
     }
 }
@@ -960,7 +1002,9 @@ mod tests {
     use crate::{
         common::{
             App, CheckOptions, PersistedApp, ProtocolState, UpdateCheckSchedule, UserCounting,
+            Version,
         },
+        configuration::Updater,
         http_request::mock::MockHttpRequest,
         installer::{
             stub::{StubInstallErrors, StubInstaller, StubPlan},
@@ -968,7 +1012,7 @@ mod tests {
         },
         metrics::MockMetricsReporter,
         policy::{MockPolicyEngine, StubPolicyEngine},
-        protocol::{response, Cohort},
+        protocol::{request::OS, response, Cohort},
         storage::MemStorage,
         time::{
             timers::{BlockingTimer, MockTimer, RequestedWait},
@@ -1616,13 +1660,10 @@ mod tests {
     fn test_load_last_update_time() {
         block_on(async {
             let mut storage = MemStorage::new();
-            let mock_time = MockTimeSource::new_from_now();
-            let last_update_time = mock_time.now() - Duration::from_secs(999);
-            let stored_time = last_update_time.checked_to_micros_since_epoch().unwrap();
-            // The expected time is to account for the loss of precision in the conversions.
-            // (nanos to micros)
-            let expected_time = PartialComplexTime::from_micros_since_epoch(stored_time);
-            storage.set_int(LAST_UPDATE_TIME, stored_time).await.unwrap();
+            let mut mock_time = MockTimeSource::new_from_now();
+            mock_time.truncate_submicrosecond_walltime();
+            let last_update_time = mock_time.now_in_walltime() - Duration::from_secs(999);
+            storage.set_time(LAST_UPDATE_TIME, last_update_time).await.unwrap();
 
             let state_machine = StateMachineBuilder::new_stub()
                 .policy_engine(StubPolicyEngine::new(&mock_time))
@@ -1630,7 +1671,10 @@ mod tests {
                 .build()
                 .await;
 
-            assert_eq!(state_machine.context.schedule.last_update_time.unwrap(), expected_time);
+            assert_eq!(
+                state_machine.context.schedule.last_update_time.unwrap(),
+                PartialComplexTime::Wall(last_update_time)
+            );
         });
     }
 
@@ -1687,10 +1731,8 @@ mod tests {
     fn test_report_check_interval() {
         block_on(async {
             let mut mock_time = MockTimeSource::new_from_now();
-            // Conversion from ComplexTime to i64 microseconds, necessary for a change in precision
-            // as the Time structs have nanosecond precision.
+            mock_time.truncate_submicrosecond_walltime();
             let start_time = mock_time.now();
-            let start_time_i64_micros = start_time.checked_to_micros_since_epoch().unwrap();
             let mut state_machine = StateMachineBuilder::new_stub()
                 .policy_engine(StubPolicyEngine::new(mock_time.clone()))
                 .metrics_reporter(MockMetricsReporter::new())
@@ -1703,7 +1745,7 @@ mod tests {
             assert!(state_machine.metrics_reporter.metrics.is_empty());
             {
                 let storage = state_machine.storage_ref.lock().await;
-                assert_eq!(storage.get_int(LAST_CHECK_TIME).await.unwrap(), start_time_i64_micros);
+                assert_eq!(storage.get_time(LAST_CHECK_TIME).await.unwrap(), start_time.wall);
                 assert_eq!(storage.len(), 1);
                 assert!(storage.committed());
             }
@@ -1711,21 +1753,16 @@ mod tests {
             let duration = Duration::from_micros(999999);
             mock_time.advance(duration);
 
-            // The calculated duration will have components smaller than 1ms, which need to be
-            // accounted for (since the time isn't ever at 0ns)
             let later_time = mock_time.now();
-            let later_time_i64_micros = later_time.checked_to_micros_since_epoch().unwrap();
-            let start_time_from_i64 = micros_from_epoch_to_system_time(start_time_i64_micros);
-            let calculated_duration = later_time.wall_duration_since(start_time_from_i64).unwrap();
 
             state_machine.report_check_interval().await;
 
             assert_eq!(
                 state_machine.metrics_reporter.metrics,
-                vec![Metrics::UpdateCheckInterval(calculated_duration)]
+                vec![Metrics::UpdateCheckInterval(duration)]
             );
             let storage = state_machine.storage_ref.lock().await;
-            assert_eq!(storage.get_int(LAST_CHECK_TIME).await.unwrap(), later_time_i64_micros);
+            assert_eq!(storage.get_time(LAST_CHECK_TIME).await.unwrap(), later_time.wall);
             assert_eq!(storage.len(), 1);
             assert!(storage.committed());
         });
@@ -1814,20 +1851,17 @@ mod tests {
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
-            let mock_time = MockTimeSource::new_from_now();
+            let mut mock_time = MockTimeSource::new_from_now();
+            mock_time.truncate_submicrosecond_walltime();
             let now = mock_time.now();
 
             let update_completed_time = now + INSTALL_DURATION;
             let expected_update_duration = update_completed_time.wall_duration_since(now).unwrap();
 
             let first_seen_time = now - Duration::from_micros(100000000);
-            let first_seen_time_i64_micros =
-                first_seen_time.checked_to_micros_since_epoch().unwrap();
-            let first_seen_time_from_i64 =
-                micros_from_epoch_to_system_time(first_seen_time_i64_micros);
 
             let expected_duration_since_first_seen =
-                update_completed_time.wall_duration_since(first_seen_time_from_i64).unwrap();
+                update_completed_time.wall_duration_since(first_seen_time).unwrap();
 
             let mut state_machine = StateMachineBuilder::new_stub()
                 .http(http)
@@ -1841,7 +1875,7 @@ mod tests {
             {
                 let mut storage = storage.lock().await;
                 storage.set_string(INSTALL_PLAN_ID, "").await.unwrap();
-                storage.set_int(UPDATE_FIRST_SEEN_TIME, first_seen_time_i64_micros).await.unwrap();
+                storage.set_time(UPDATE_FIRST_SEEN_TIME, first_seen_time).await.unwrap();
                 storage.commit().await.unwrap();
             }
 
@@ -1911,22 +1945,25 @@ mod tests {
             let mut state_machine =
                 StateMachineBuilder::new_stub().storage(Rc::clone(&storage)).build().await;
 
-            let now = micros_from_epoch_to_system_time(123456789);
+            let mut mock_time = MockTimeSource::new_from_now();
+            mock_time.truncate_submicrosecond_walltime();
+            let now = mock_time.now_in_walltime();
             assert_eq!(state_machine.record_update_first_seen_time("id", now).await, now);
             {
                 let storage = storage.lock().await;
                 assert_eq!(storage.get_string(INSTALL_PLAN_ID).await, Some("id".to_string()));
-                assert_eq!(storage.get_int(UPDATE_FIRST_SEEN_TIME).await, Some(123456789));
+                assert_eq!(storage.get_time(UPDATE_FIRST_SEEN_TIME).await, Some(now));
                 assert_eq!(storage.len(), 2);
                 assert!(storage.committed());
             }
 
-            let now2 = now + Duration::from_secs(1000);
+            mock_time.advance(Duration::from_secs(1000));
+            let now2 = mock_time.now_in_walltime();
             assert_eq!(state_machine.record_update_first_seen_time("id", now2).await, now);
             {
                 let storage = storage.lock().await;
                 assert_eq!(storage.get_string(INSTALL_PLAN_ID).await, Some("id".to_string()));
-                assert_eq!(storage.get_int(UPDATE_FIRST_SEEN_TIME).await, Some(123456789));
+                assert_eq!(storage.get_time(UPDATE_FIRST_SEEN_TIME).await, Some(now));
                 assert_eq!(storage.len(), 2);
                 assert!(storage.committed());
             }
@@ -1934,7 +1971,7 @@ mod tests {
             {
                 let storage = storage.lock().await;
                 assert_eq!(storage.get_string(INSTALL_PLAN_ID).await, Some("id2".to_string()));
-                assert_eq!(storage.get_int(UPDATE_FIRST_SEEN_TIME).await, Some(1123456789));
+                assert_eq!(storage.get_time(UPDATE_FIRST_SEEN_TIME).await, Some(now2));
                 assert_eq!(storage.len(), 2);
                 assert!(storage.committed());
             }
@@ -2314,5 +2351,94 @@ mod tests {
                 .await;
             assert_eq!(progresses, [0.0, 0.3, 0.9, 1.0]);
         });
+    }
+
+    #[test]
+    fn test_report_waited_for_reboot_duration() {
+        let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
+
+        let response = json!({"response": {
+            "server": "prod",
+            "protocol": "3.0",
+            "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "updatecheck": {
+                "status": "ok",
+                "manifest": {
+                    "version": "1.2.3.5",
+                    "actions": {
+                        "action": [],
+                    },
+                    "packages": {
+                        "package": [],
+                    },
+                }
+            }
+            }],
+        }});
+        let response = serde_json::to_vec(&response).unwrap();
+        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let mut mock_time = MockTimeSource::new_from_now();
+        mock_time.truncate_submicrosecond_walltime();
+        let storage = Rc::new(Mutex::new(MemStorage::new()));
+
+        // Do one update.
+        assert_matches!(
+            pool.run_until(
+                StateMachineBuilder::new_stub()
+                    .http(http)
+                    .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                    .storage(Rc::clone(&storage))
+                    .oneshot()
+            ),
+            Ok(_)
+        );
+
+        mock_time.advance(Duration::from_secs(999));
+
+        // Execute state machine `run()`, simulating that we already rebooted.
+        let config = Config {
+            updater: Updater { name: "updater".to_string(), version: Version::from([0, 1]) },
+            os: OS { version: "1.2.3.5".to_string(), ..OS::default() },
+            service_url: "http://example.com/".to_string(),
+        };
+        let metrics_reporter = Rc::new(RefCell::new(MockMetricsReporter::new()));
+        let (_ctl, state_machine) = pool.run_until(
+            StateMachineBuilder::new_stub()
+                .config(config)
+                .metrics_reporter(Rc::clone(&metrics_reporter))
+                .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                .storage(Rc::clone(&storage))
+                .timer(MockTimer::new())
+                .start(),
+        );
+
+        // Move state machine forward using observer.
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+        pool.run_until_stalled();
+
+        assert_eq!(
+            metrics_reporter
+                .borrow()
+                .metrics
+                .iter()
+                .filter(|m| match m {
+                    Metrics::WaitedForRebootDuration(_) => true,
+                    _ => false,
+                })
+                .collect::<Vec<_>>(),
+            vec![&Metrics::WaitedForRebootDuration(Duration::from_secs(999))]
+        );
+
+        // Verify that storage is cleaned up.
+        pool.run_until(async {
+            let storage = storage.lock().await;
+            assert_eq!(storage.get_time(UPDATE_FINISH_TIME).await, None);
+            assert_eq!(storage.get_string(TARGET_VERSION).await, None);
+            assert!(storage.committed());
+        })
     }
 }

@@ -120,8 +120,7 @@ impl Storage for MemStorage {
         future::ready(Ok(())).boxed()
     }
 
-    /// Set a value to be stored in the backing store.  The implementation should cache the value
-    /// until the |commit()| fn is called, and then persist all cached values at that time.
+    /// Persist all cached values to storage.
     fn commit(&mut self) -> BoxFuture<'_, Result<(), Self::Error>> {
         self.committed = true;
         future::ready(Ok(())).boxed()
@@ -152,6 +151,11 @@ mod tests {
     #[test]
     fn test_set_get_remove_bool() {
         block_on(do_test_set_get_remove_bool(&mut MemStorage::new()));
+    }
+
+    #[test]
+    fn test_set_get_remove_time() {
+        block_on(do_test_set_get_remove_time(&mut MemStorage::new()));
     }
 
     #[test]

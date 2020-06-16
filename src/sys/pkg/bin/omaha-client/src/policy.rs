@@ -552,15 +552,13 @@ mod tests {
     /// while on the previous build's backstop time.
     #[test]
     fn test_compute_next_update_time_at_startup_with_past_last_update_time() {
-        let mock_time = MockTimeSource::new_from_now();
+        let mut mock_time = MockTimeSource::new_from_now();
+        mock_time.truncate_submicrosecond_walltime();
         let now = mock_time.now();
         // The current context:
         //   - the last update was far in the past (a bit over a day)
-        //   - persisted times will not have monotonic components, or sub-millisecond precision.
-        let last_update_time = now - Duration::from_secs(100000);
-        let last_update_time_persisted = last_update_time.checked_to_micros_since_epoch().unwrap();
-        let last_update_time =
-            PartialComplexTime::from_micros_since_epoch(last_update_time_persisted);
+        //   - persisted times will not have monotonic components.
+        let last_update_time = PartialComplexTime::Wall(now.wall - Duration::from_secs(100000));
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
@@ -605,15 +603,13 @@ mod tests {
     /// startup case for most boots of a device.
     #[test]
     fn test_compute_next_update_time_at_startup_with_future_last_update_time() {
-        let mock_time = MockTimeSource::new_from_now();
+        let mut mock_time = MockTimeSource::new_from_now();
+        mock_time.truncate_submicrosecond_walltime();
         let now = mock_time.now();
         // The current context:
         //   - the last update was far in the future (a bit over 12 days)
-        //   - persisted times will not have monotonic components, or sub-millisecond precision.
-        let last_update_time = now + Duration::from_secs(1000000);
-        let last_update_time_persisted = last_update_time.checked_to_micros_since_epoch().unwrap();
-        let last_update_time =
-            PartialComplexTime::from_micros_since_epoch(last_update_time_persisted);
+        //   - persisted times will not have monotonic components.
+        let last_update_time = PartialComplexTime::Wall(now.wall - Duration::from_secs(100000));
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"

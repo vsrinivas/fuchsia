@@ -218,6 +218,12 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_set_get_remove_time() {
+        let mut storage = Stash::new("test_set_get_remove_time").await;
+        do_test_set_get_remove_time(&mut storage).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_return_none_for_wrong_value_type() {
         let mut storage = Stash::new("test_return_none_for_wrong_value_type").await;
         do_return_none_for_wrong_value_type(&mut storage).await;

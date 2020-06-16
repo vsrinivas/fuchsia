@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::future::BoxFuture;
+use crate::time::system_time_conversion::{
+    checked_system_time_to_micros_from_epoch, micros_from_epoch_to_system_time,
+};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
+use log::error;
+use std::time::SystemTime;
 
 mod memory;
 pub use memory::MemStorage;
@@ -84,17 +89,13 @@ pub trait Storage {
     /// If there is no value for the key, this should return without error.
     fn remove<'a>(&'a mut self, key: &'a str) -> BoxFuture<'_, Result<(), Self::Error>>;
 
-    /// Set a value to be stored in the backing store.  The implementation should cache the value
-    /// until the |commit()| fn is called, and then persist all cached values at that time.
+    /// Persist all cached values to storage.
     fn commit(&mut self) -> BoxFuture<'_, Result<(), Self::Error>>;
 }
 
 /// Extension trait that adds some features to Storage that can be implemented using the base
 /// `Storage` implementation.
-pub trait StorageExt<T>
-where
-    T: Storage,
-{
+pub trait StorageExt: Storage {
     /// Set an Option<i64> to be stored in the backing store.  The implementation should cache the
     /// value until the |commit()| fn is called, and then persist all cached values at that time.
     /// If the Option is None, the implementation should call |remove()| for the key.
@@ -102,27 +103,42 @@ where
         &'a mut self,
         key: &'a str,
         value: Option<i64>,
-    ) -> BoxFuture<'_, Result<(), T::Error>>;
-}
-
-impl<T> StorageExt<T> for T
-where
-    T: Storage,
-{
-    /// Set an Option<i64> to be stored in the backing store.  The implementation should cache the
-    /// value until the |commit()| fn is called, and then persist all cached values at that time.
-    /// If the Option is None, the implementation should call |remove()| for the key.
-    fn set_option_int<'a>(
-        &'a mut self,
-        key: &'a str,
-        value: Option<i64>,
-    ) -> BoxFuture<'_, Result<(), T::Error>> {
+    ) -> BoxFuture<'_, Result<(), Self::Error>> {
         match value {
             Some(value) => self.set_int(key, value),
             None => self.remove(key),
         }
     }
+
+    /// Get a SystemTime from the backing store.  Returns None if there is no value for the given
+    /// key, or if the value for the key has a different type.
+    fn get_time<'a>(&'a self, key: &'a str) -> BoxFuture<'_, Option<SystemTime>> {
+        self.get_int(key).map(|option| option.map(micros_from_epoch_to_system_time)).boxed()
+    }
+
+    /// Set a SystemTime to be stored in the backing store.  The implementation should cache the
+    /// value until the |commit()| fn is called, and then persist all cached values at that time.
+    /// Note that submicrosecond will be dropped.
+    fn set_time<'a>(
+        &'a mut self,
+        key: &'a str,
+        value: impl Into<SystemTime>,
+    ) -> BoxFuture<'_, Result<(), Self::Error>> {
+        self.set_option_int(key, checked_system_time_to_micros_from_epoch(value.into()))
+    }
+
+    /// Remove the value for |key| from the backing store, log an error message on error.
+    fn remove_or_log<'a>(&'a mut self, key: &'a str) -> BoxFuture<'_, ()> {
+        self.remove(key).unwrap_or_else(move |e| error!("Unable to remove {}: {}", key, e)).boxed()
+    }
+
+    /// Persist all cached values to storage, log an error message on error.
+    fn commit_or_log(&mut self) -> BoxFuture<'_, ()> {
+        self.commit().unwrap_or_else(|e| error!("Unable to commit persisted data: {}", e)).boxed()
+    }
 }
+
+impl<T> StorageExt for T where T: Storage {}
 
 /// The storage::tests module contains test vectors that implementations of the Storage trait should
 /// pass.  These can be called with a Storage implementation as part of a test.
@@ -132,6 +148,7 @@ where
 pub mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use std::time::Duration;
 
     /// These are tests for verifying that a given Storage implementation acts as expected.
 
@@ -197,6 +214,24 @@ pub mod tests {
         storage.remove("some bool key").await.unwrap();
         storage.commit().await.unwrap();
         assert_eq!(None, storage.get_bool("some bool key").await);
+    }
+
+    /// Test that the implementation stores, retrieves, and clears bool values correctly.
+    pub async fn do_test_set_get_remove_time<S: Storage>(storage: &mut S) {
+        assert_eq!(None, storage.get_time("some time key").await);
+
+        storage.set_time("some time key", SystemTime::UNIX_EPOCH).await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some(SystemTime::UNIX_EPOCH), storage.get_time("some time key").await);
+
+        let time = SystemTime::UNIX_EPOCH + Duration::from_secs(1234);
+        storage.set_time("some time key", time).await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some(time), storage.get_time("some time key").await);
+
+        storage.remove("some time key").await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(None, storage.get_time("some time key").await);
     }
 
     /// Test that the implementation returns None for a mismatch between value types

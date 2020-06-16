@@ -24,7 +24,7 @@ use omaha_client::{
     common::{AppSet, CheckOptions},
     protocol::request::InstallSource,
     state_machine::{self, StartUpdateCheckResponse, StateMachineGone},
-    storage::Storage,
+    storage::{Storage, StorageExt},
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -374,9 +374,7 @@ where
                     let mut storage = storage_ref.lock().await;
                     app_set.set_target_channel(Some(channel)).await;
                     app_set.persist(&mut *storage).await;
-                    if let Err(e) = storage.commit().await {
-                        error!("Unable to commit target channel change: {}", e);
-                    }
+                    storage.commit_or_log().await;
                 }
                 let app_vec = app_set.to_vec().await;
                 server.borrow().apps_node.set(&app_vec);

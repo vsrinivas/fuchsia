@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use std::time::Duration;
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 #[cfg(test)]
 mod mock;
@@ -58,5 +58,14 @@ where
 {
     fn report_metrics(&mut self, metrics: Metrics) -> Result<(), Error> {
         (*self).report_metrics(metrics)
+    }
+}
+
+impl<T> MetricsReporter for Rc<RefCell<T>>
+where
+    T: MetricsReporter,
+{
+    fn report_metrics(&mut self, metrics: Metrics) -> Result<(), Error> {
+        self.borrow_mut().report_metrics(metrics)
     }
 }

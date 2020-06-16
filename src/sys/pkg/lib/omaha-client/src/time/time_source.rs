@@ -100,6 +100,14 @@ impl MockTimeSource {
         let mut borrowed_time = self.time.borrow_mut();
         *borrowed_time += duration;
     }
+
+    /// Truncate the submicrosecond part of the walltime in mock time source.
+    /// This is useful for tests that involves storing time in storage, which will lose
+    /// submicrosecond precision.
+    pub fn truncate_submicrosecond_walltime(&mut self) {
+        let mut borrowed_time = self.time.borrow_mut();
+        *borrowed_time = borrowed_time.truncate_submicrosecond_walltime();
+    }
 }
 
 #[cfg(test)]

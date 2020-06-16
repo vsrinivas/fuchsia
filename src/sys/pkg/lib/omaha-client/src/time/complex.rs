@@ -65,8 +65,21 @@ pub mod complex_time_impls {
     #[cfg(test)]
     mod tests {
         use super::super::super::PartialComplexTime;
+        use super::super::system_time_conversion;
         use super::*;
         use std::time::{Duration, Instant, SystemTime};
+
+        #[test]
+        fn test_truncate_submicrosecond_walltime() {
+            let time = ComplexTime { wall: SystemTime::now(), mono: Instant::now() };
+            assert_eq!(
+                time.truncate_submicrosecond_walltime().wall,
+                system_time_conversion::micros_from_epoch_to_system_time(
+                    system_time_conversion::checked_system_time_to_micros_from_epoch(time.wall)
+                        .unwrap()
+                )
+            );
+        }
 
         #[test]
         fn test_wall_duration_since() {

@@ -78,23 +78,29 @@ pub use complex::system_time_conversion;
 /// This is a complete `ComplexTime`, which has values on both the wall clock timeline and the
 /// monotonic clock timeline.
 ///
-/// It is not neccessarily intended that both values refer to the same moment.  They can, or they
+/// It is not necessarily intended that both values refer to the same moment.  They can, or they
 /// can refer to a time on each clock's respective timeline, e.g. for use with the `Timer` trait.
 ///
 /// The `ComplexTime` type implements all the standard math operations in `std::ops` that are
 /// implemented for both `std::time::SystemTime` and `std::time::Instant`.  Like those
-/// implemetnations, it will panic on overflow.
+/// implementations, it will panic on overflow.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ComplexTime {
     pub wall: SystemTime,
     pub mono: Instant,
 }
 impl ComplexTime {
-    /// Convert the SystemTime component of the ComplexTime into i64 microseconds from the UNIX
-    /// Epoch.  Provides coverage over +/- approx 30,000 years from 1970-01-01 UTC.
-    /// Returns None on overflow (instead of panicking)
-    pub fn checked_to_micros_since_epoch(&self) -> Option<i64> {
-        system_time_conversion::checked_system_time_to_micros_from_epoch(self.wall)
+    /// Truncate the submicrosecond part of the walltime.
+    pub fn truncate_submicrosecond_walltime(&self) -> ComplexTime {
+        let nanos_in_one_micro = Duration::from_micros(1).as_nanos();
+        let submicrosecond_nanos = match self.wall_duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(duration) => duration.as_nanos() % nanos_in_one_micro,
+            Err(e) => nanos_in_one_micro - e.duration().as_nanos() % nanos_in_one_micro,
+        };
+        ComplexTime {
+            wall: self.wall - Duration::from_nanos(submicrosecond_nanos as u64),
+            mono: self.mono,
+        }
     }
     /// Compute the Duration since the given SystemTime, for the SystemTime component of this
     /// ComplexTime.  If this ComplexTime's SystemTime is before the given time, the Duration

@@ -34,10 +34,8 @@ pub struct Context {
 impl Context {
     /// Load and initialize update check context from persistent storage.
     pub async fn load(storage: &impl Storage) -> Self {
-        let last_update_time = storage
-            .get_int(LAST_UPDATE_TIME)
-            .await
-            .map(PartialComplexTime::from_micros_since_epoch);
+        let last_update_time =
+            storage.get_time(LAST_UPDATE_TIME).await.map(PartialComplexTime::Wall);
         let server_dictated_poll_interval = storage
             .get_int(SERVER_DICTATED_POLL_INTERVAL)
             .await
