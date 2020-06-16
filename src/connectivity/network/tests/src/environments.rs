@@ -619,6 +619,14 @@ impl<'a> std::ops::Deref for TestFakeEndpoint<'a> {
     }
 }
 
+impl<'a> TestFakeEndpoint<'a> {
+    pub fn frame_stream(
+        &self,
+    ) -> impl futures::Stream<Item = std::result::Result<(Vec<u8>, u64), fidl::Error>> + '_ {
+        futures::stream::try_unfold(&self.endpoint, |ep| ep.read().map_ok(move |r| Some((r, ep))))
+    }
+}
+
 impl<'a> TestEndpoint<'a> {
     /// Gets access to this device's virtual Ethernet device.
     ///

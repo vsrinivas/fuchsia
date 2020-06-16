@@ -8,6 +8,7 @@
 use {
     anyhow::{format_err, Context, Error},
     fuchsia_async::{self as fasync, net::UdpSocket},
+    futures::{StreamExt as _, TryFutureExt as _, TryStreamExt as _},
     helper::*,
     net_types::ip::IpVersion,
     packet::BufferView,
@@ -291,11 +292,13 @@ fn pcapng_fake_packets_test(env: &mut TestEnvironment) -> Result<(), Error> {
         .insert_pcapng_dump_to_stdout()
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE);
     let fake_ep = env.create_fake_endpoint()?;
-    let send_fake_packets = || {
-        for () in std::iter::repeat(()).take(PACKET_COUNT) {
-            let () = fake_ep.write(FAKE_DATA.as_bytes())?;
-        }
-        Ok(futures::future::ok(()))
+    let send_fake_packets = move || {
+        Ok(futures::stream::repeat(())
+            .take(PACKET_COUNT)
+            .map(Ok)
+            .try_for_each_concurrent(None, move |()| {
+                fake_ep.write(FAKE_DATA.as_bytes()).map_err(anyhow::Error::from)
+            }))
     };
 
     let output = env.run_test_case(args.into(), send_fake_packets, DEFAULT_DUMPFILE)?;

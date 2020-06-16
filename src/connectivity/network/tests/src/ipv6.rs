@@ -7,7 +7,6 @@ use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack as net_stack;
-use fidl_fuchsia_netemul_network as netemul_network;
 use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_sys as sys;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
@@ -108,7 +107,7 @@ where
 /// Given the source and destination MAC and IP addresses, NDP message and
 /// options, the full NDP packet (including IPv6 and Ethernet headers) will be
 /// transmitted to the fake endpoint's network.
-pub(super) fn write_ndp_message<
+pub(super) async fn write_ndp_message<
     B: ByteSlice + Debug,
     M: IcmpMessage<net_types_ip::Ipv6, B, Code = IcmpUnusedCode> + Debug,
 >(
@@ -128,7 +127,7 @@ pub(super) fn write_ndp_message<
         .serialize_vec_outer()
         .map_err(|e| anyhow::anyhow!("failed to serialize NDP packet: {:?}", e))?
         .unwrap_b();
-    let () = ep.write(ser.as_ref())?;
+    let () = ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")?;
     Ok(())
 }
 
@@ -245,8 +244,9 @@ async fn sends_router_solicitations<E: Endpoint>(name: &str) -> Result {
         };
 
         let ret = fake_ep
-            .take_event_stream()
-            .try_filter_map(|netemul_network::FakeEndpointEvent::OnData { data }| {
+            .frame_stream()
+            .try_filter_map(|(data, dropped)| {
+                assert_eq!(dropped, 0);
                 let mut observed_slls = Vec::new();
                 future::ok(
                     parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
@@ -342,8 +342,9 @@ async fn slaac_with_privacy_extensions<E: Endpoint>(name: &str) -> Result {
     //
     // The first RS should be sent immediately.
     let () = fake_ep
-        .take_event_stream()
-        .try_filter_map(|netemul_network::FakeEndpointEvent::OnData { data }| {
+        .frame_stream()
+        .try_filter_map(|(data, dropped)| {
+            assert_eq!(dropped, 0);
             future::ok(
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
                     net_types_ip::Ipv6,
@@ -388,7 +389,9 @@ async fn slaac_with_privacy_extensions<E: Endpoint>(name: &str) -> Result {
         ra,
         &options,
         &fake_ep,
-    )?;
+    )
+    .await
+    .context("failed to write NDP message")?;
 
     // Wait for the SLAAC addresses to be generated.
     //
@@ -456,8 +459,9 @@ async fn add_address_for_dad<
 
     // The first DAD message should be sent immediately.
     let ret = fake_ep
-        .take_event_stream()
-        .try_filter_map(|netemul_network::FakeEndpointEvent::OnData { data }| {
+        .frame_stream()
+        .try_filter_map(|(data, dropped)| {
+            assert_eq!(dropped, 0);
             future::ok(
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
                     net_types_ip::Ipv6,
@@ -542,7 +546,9 @@ async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
             NeighborSolicitation::new(ipv6_consts::LINK_LOCAL_ADDR),
             &[],
             fake_ep,
-        )?;
+        )
+        .await
+        .context("failed to write NDP message")?;
 
         check_address_failed_dad(iface).await
     }
@@ -563,7 +569,9 @@ async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
             ),
             &[NdpOption::TargetLinkLayerAddress(&eth_consts::MAC_ADDR.bytes())],
             fake_ep,
-        )?;
+        )
+        .await
+        .context("failed to write NDP message")?;
 
         check_address_failed_dad(iface).await
     }

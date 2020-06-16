@@ -13,6 +13,7 @@
 #include <vector>
 
 static constexpr netemul::EthernetConfig eth_config = {.nbufs = 256, .buff_size = 2048};
+static constexpr uint64_t kMaxPendingWrites = 1024;
 
 NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping)
     : NetstackIntermediary(std::move(mac_network_mapping),
@@ -22,7 +23,8 @@ NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping,
                                            std::unique_ptr<sys::ComponentContext> context)
     : mac_network_mapping_(std::move(mac_network_mapping)),
       context_(std::move(context)),
-      executor_(async_get_default_dispatcher()) {
+      executor_(async_get_default_dispatcher()),
+      pending_writes_(0) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
@@ -89,13 +91,10 @@ void NetstackIntermediary::AddEthernetDevice(
             // The FakeEndpoint's OnData method fires when new data is observed
             // on the netemul virtual network.
             auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-            fake_ep.events().OnData = [this, index](std::vector<uint8_t> data) {
-              auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-              eth_client->Send(data.data(), data.size());
-            };
             fake_ep.set_error_handler([](zx_status_t status) {
               FX_LOGS(INFO) << "FakeEndpoint encountered error: " << zx_status_get_string(status);
             });
+            ReadGuestEp(index);
 
             // EthernetClient's DataCallback fires when the guest is trying to
             // write to the netemul virtual network.
@@ -103,7 +102,11 @@ void NetstackIntermediary::AddEthernetDevice(
               auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
               std::vector<uint8_t> input_data(static_cast<const uint8_t*>(data),
                                               static_cast<const uint8_t*>(data) + len);
-              fake_ep->Write(std::move(input_data));
+              // Don't enqueue too many write requests.
+              if (pending_writes_ < kMaxPendingWrites) {
+                pending_writes_++;
+                fake_ep->Write(std::move(input_data), [this]() { pending_writes_--; });
+              }
             });
             eth_client->SetPeerClosedCallback(
                 [] { FX_LOGS(INFO) << "EthernetClient peer closed."; });
@@ -152,4 +155,13 @@ fit::promise<> NetstackIntermediary::SetupEthClient(
                     });
 
   return bridge.consumer.promise();
+}
+
+void NetstackIntermediary::ReadGuestEp(size_t index) {
+  auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
+  fake_ep->Read([this, index](std::vector<uint8_t> data, uint64_t _dropped) {
+    auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
+    eth_client->Send(data.data(), data.size());
+    ReadGuestEp(index);
+  });
 }

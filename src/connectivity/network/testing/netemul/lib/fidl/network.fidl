@@ -85,10 +85,17 @@ protocol EndpointManager {
 
 /// Fake endpoint can be added to a network to snoop or inject packets.
 protocol FakeEndpoint {
-    /// Write Data packet to network.
-    Write(vector<uint8> data);
-    /// Called when network receives a data packet.
-    -> OnData(vector<uint8> data);
+    /// Writes a frame to the network.
+    Write(vector<uint8>:MAX data) -> ();
+    /// Reads a single frame from the network.
+    ///
+    /// Blocks until new data is available to be read. FakeEndpoint will keep a limited amount of
+    /// frames to be read, dropping the oldest ones if the data is not fetched fast enough. The
+    /// number of dropped frames since the last call to `Read` is returned in `dropped_frames`.
+    ///
+    /// Issuing a second `Read` request when the first one is still pending will cause the channel
+    /// to be closed with `ZX_ERR_BAD_STATE`.
+    Read() -> (vector<uint8>:MAX data, uint64 dropped_frames);
 };
 
 /// Virtual network.

@@ -63,12 +63,18 @@ class NetWatcher {
 
   void Watch(const std::string& name,
              fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint> ep) {
-    auto id = dump_.AddInterface(name);
-    ep.events().OnData = [this, id](std::vector<uint8_t> data) {
-      got_data_ = true;
-      dump_.WritePacket(&data[0], data.size(), id);
-    };
+    uint32_t id = dump_.AddInterface(name);
+    size_t index = fake_eps_.size();
     fake_eps_.push_back(std::move(ep));
+    ReadEp(index, id);
+  }
+
+  void ReadEp(size_t index, uint32_t id) {
+    fake_eps_[index]->Read([this, index, id](std::vector<uint8_t> data, uint64_t _dropped) {
+      got_data_ = true;
+      dump_.WritePacket(data.data(), data.size(), id);
+      ReadEp(index, id);
+    });
   }
 
   bool HasData() const { return got_data_; }

@@ -162,7 +162,9 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
         ra,
         &options,
         &fake_ep,
-    )?;
+    )
+    .await
+    .context("failed to write NDP message")?;
 
     // Start the network manager on the client.
     //

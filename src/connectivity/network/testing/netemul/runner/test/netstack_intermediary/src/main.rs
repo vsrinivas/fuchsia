@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context as _, Error},
     ethernet,
     fidl_fuchsia_netemul_network::{
-        EndpointManagerMarker, FakeEndpointEvent, FakeEndpointMarker, NetworkContextMarker,
-        NetworkManagerMarker,
+        EndpointManagerMarker, FakeEndpointMarker, NetworkContextMarker, NetworkManagerMarker,
     },
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
@@ -84,26 +83,20 @@ async fn run_mock_guest(
     let bus = open_bus(&ep_name)?;
     bus.wait_for_clients(&mut vec![server_name.as_str()].drain(..), 0).await?;
 
-    fake_ep.write(echo_string.as_bytes())?;
+    fake_ep.write(echo_string.as_bytes()).await.context("write failed")?;
 
     println!("To Server: {}", echo_string);
 
-    let mut ep_events = fake_ep.take_event_stream();
-    while let Some(event) = ep_events.try_next().await? {
-        match event {
-            FakeEndpointEvent::OnData { data } => {
-                let server_string = str::from_utf8(&data)?;
-                assert!(
-                    echo_string == server_string,
-                    "Server reply ({}) did not match client message ({})",
-                    server_string,
-                    echo_string
-                );
-                println!("From Server: {}", server_string);
-                break;
-            }
-        }
-    }
+    let (data, dropped_frames) = fake_ep.read().await.context("read failed")?;
+    assert_eq!(dropped_frames, 0);
+    let server_string = str::from_utf8(&data)?;
+    assert!(
+        echo_string == server_string,
+        "Server reply ({}) did not match client message ({})",
+        server_string,
+        echo_string
+    );
+    println!("From Server: {}", server_string);
 
     Ok(())
 }

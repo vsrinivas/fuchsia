@@ -5,7 +5,7 @@
 use ::fidl;
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
-use futures::{FutureExt as _, TryStreamExt as _};
+use futures::TryStreamExt as _;
 use net_declare::{fidl_ip, std_ip};
 use netstack_testing_macros::variants_test;
 
@@ -569,7 +569,7 @@ async fn test_close_data_race<E: Endpoint>(name: &str) -> Result {
         .context("failed to create socket")?;
 
         // Keep sending data until writing to the socket fails.
-        let data_fut = async {
+        let io_fut = async {
             loop {
                 match sock
                     .send_to(&[1u8, 2, 3, 4], std::net::SocketAddr::new(MCAST_ADDR, 1234))
@@ -589,6 +589,7 @@ async fn test_close_data_race<E: Endpoint>(name: &str) -> Result {
                     // We don't care that it's a valid frame, only that it excites
                     // the rx path.
                     .write(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+                    .await
                     .context("failed to send frame on fake_ep")?;
 
                 // Wait on a short timer to avoid too much log noise when
@@ -597,28 +598,6 @@ async fn test_close_data_race<E: Endpoint>(name: &str) -> Result {
                     fuchsia_zircon::Duration::from_micros(10),
                 ))
                 .await;
-            }
-        }
-        .fuse();
-        pin_utils::pin_mut!(data_fut);
-
-        let mut ep_event_stream = fake_ep.take_event_stream();
-
-        // We need to constantly observe the fake endpoint's event stream to
-        // consume messages from netemul, otherwise all the packets sent by
-        // Netstack will accumulate on the fake endpoint. We run a separate
-        // select from data_fut so we run independently from send_to and the
-        // cooldown timer.
-        let io_fut = async {
-            loop {
-                futures::select! {
-                  r = data_fut => break r,
-                  e = ep_event_stream.try_next() => {
-                      // Just sanitize for errors, we don't care about the frames.
-                      let _event = e.context("fake ep event stream failure")?
-                         .ok_or_else(|| anyhow::anyhow!("fake ep event stream ended unexpectedly"))?;
-                  }
-                }
             }
         };
 

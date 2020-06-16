@@ -664,20 +664,80 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
   fidl::InterfacePtr<FFakeEndpoint> fake_ep;
   ASSERT_OK(net->CreateFakeEndpoint(fake_ep.NewRequest()));
   ASSERT_TRUE(fake_ep.is_bound());
-  // install on data callback:
-  fake_ep.events().OnData = [&ok, &test_buff2](std::vector<uint8_t> data) {
-    ASSERT_EQ(TEST_BUF_SIZE, data.size());
-    ASSERT_EQ(0, memcmp(data.data(), test_buff2.data(), data.size()));
-    ok = true;
-  };
+
   for (int i = 0; i < 3; i++) {
     // send buff 2 from eth endpoint:
     eth1.Send(test_buff2.data(), test_buff2.size());
+    // Read the next frame.
+    fake_ep->Read([&ok, &test_buff2](std::vector<uint8_t> data, uint64_t dropped) {
+      EXPECT_EQ(dropped, 0u);
+      ASSERT_EQ(TEST_BUF_SIZE, data.size());
+      ASSERT_EQ(0, memcmp(data.data(), test_buff2.data(), data.size()));
+      ok = true;
+    });
     WAIT_FOR_OK_AND_RESET(ok);
     // send buff 1 from fake endpoint:
-    fake_ep->Write(test_buff1);
+    fake_ep->Write(test_buff1, []() {});
     WAIT_FOR_OK_AND_RESET(ok);
   }
+}
+
+TEST_F(NetworkServiceTest, FakeEndpointsDropFrames) {
+  const char* netname = "mynet";
+  StartServices();
+
+  // Create a network.
+  fidl::SynchronousInterfacePtr<FNetwork> net;
+  CreateNetwork(netname, &net);
+
+  // Create a pair of fake endpoints.
+  fidl::SynchronousInterfacePtr<FFakeEndpoint> fake_ep_1;
+  ASSERT_OK(net->CreateFakeEndpoint(fake_ep_1.NewRequest()));
+  ASSERT_TRUE(fake_ep_1.is_bound());
+  fidl::SynchronousInterfacePtr<FFakeEndpoint> fake_ep_2;
+  ASSERT_OK(net->CreateFakeEndpoint(fake_ep_2.NewRequest()));
+  ASSERT_TRUE(fake_ep_2.is_bound());
+
+  constexpr uint64_t kDropCount = 10;
+
+  // Write something on the EP we'll be doing the read on to make sure it's installed because
+  // CreateFakeEndpoint is pipelined.
+  ASSERT_OK(fake_ep_2->Write({0xAA}));
+
+  for (uint64_t i = 0; i < FakeEndpoint::kMaxPendingFrames + kDropCount; i++) {
+    ASSERT_OK(fake_ep_1->Write({static_cast<uint8_t>(i), 2, 3}));
+  }
+  std::vector<uint8_t> o_data;
+  uint64_t o_dropped;
+  ASSERT_OK(fake_ep_2->Read(&o_data, &o_dropped));
+  // Check that the expected number of frames was dropped.
+  ASSERT_EQ(o_dropped, kDropCount);
+}
+
+TEST_F(NetworkServiceTest, FakeEndpointDisallowsMultipleReads) {
+  const char* netname = "mynet";
+  StartServices();
+
+  // Create a network.
+  fidl::SynchronousInterfacePtr<FNetwork> net;
+  CreateNetwork(netname, &net);
+
+  // Create a fake endpoint.
+  fidl::InterfacePtr<FFakeEndpoint> fake_ep;
+  ASSERT_OK(net->CreateFakeEndpoint(fake_ep.NewRequest()));
+  ASSERT_TRUE(fake_ep.is_bound());
+  bool errored = false;
+  fake_ep.set_error_handler([&errored](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE);
+    errored = true;
+  });
+  // Read twice and expect the error to occur.
+  for (int i = 0; i < 2; i++) {
+    fake_ep->Read([](std::vector<uint8_t> data, uint64_t dropped) {
+      FAIL() << "There should be no data to read";
+    });
+  }
+  WAIT_FOR_OK(errored);
 }
 
 TEST_F(NetworkServiceTest, NetworkContext) {
@@ -959,8 +1019,8 @@ TEST_F(NetworkServiceTest, NetWatcher) {
 
   constexpr uint32_t packet_count = 10;
   for (uint32_t i = 0; i < packet_count; i++) {
-    auto ptr = reinterpret_cast<const uint8_t*>(&i);
-    fe_in->Write(std::vector<uint8_t>(ptr, ptr + sizeof(i)));
+    auto* ptr = reinterpret_cast<const uint8_t*>(&i);
+    fe_in->Write(std::vector<uint8_t>(ptr, ptr + sizeof(i)), []() {});
   }
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(

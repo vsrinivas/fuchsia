@@ -83,6 +83,8 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
       std::string network_name);
   fit::promise<> SetupEthClient(const std::unique_ptr<netemul::EthernetClient>& eth_client);
 
+  void ReadGuestEp(size_t index);
+
   std::vector<NetworkBinding> guest_client_endpoints_;
   NetworkMap mac_network_mapping_;
 
@@ -91,6 +93,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   fit::scope scope_;
 
   fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
+  uint64_t pending_writes_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(NetstackIntermediary);
 };
