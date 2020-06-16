@@ -27,7 +27,7 @@ void main(List<String> args) {
       final body = jsonDecode(await utf8.decoder.bind(req).join());
       expect(body['method'], 'launch_facade.Launch');
       expect(body['params'], {
-        'url': 'fake_url',
+        'url': 'fuchsia-pkg://fuchsia.com/fake_url#meta/fake_url.cmx',
         'arguments': ['--arg1=arg1value', '--arg2=arg2value']
       });
       req.response.write(
@@ -42,12 +42,13 @@ void main(List<String> args) {
         completion(equals('Success')));
   });
 
-  test('call Launch with no arg', () {
+  test('call Launch with no arg and component name', () {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
       expect(body['method'], 'launch_facade.Launch');
-      expect(body['params'], {'url': 'fake_url'});
+      expect(body['params'],
+          {'url': 'fuchsia-pkg://fuchsia.com/fake_url#meta/fake_url.cmx'});
       req.response.write(
           jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       await req.response.close();
@@ -56,5 +57,25 @@ void main(List<String> args) {
     fakeServer.listen(handler);
 
     expect(Launch(sl4f).launch('fake_url'), completion(equals('Success')));
+  });
+
+  test('call Launch with packge url', () {
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'launch_facade.Launch');
+      expect(body['params'],
+          {'url': 'fuchsia-pkg://fuchsia.com/fake_url#meta/fake_url.cmx'});
+      req.response.write(
+          jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    expect(
+        Launch(sl4f)
+            .launch('fuchsia-pkg://fuchsia.com/fake_url#meta/fake_url.cmx'),
+        completion(equals('Success')));
   });
 }

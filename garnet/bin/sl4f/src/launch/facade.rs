@@ -27,23 +27,25 @@ impl LaunchFacade {
     /// Parse component url and return app created by launch function
     /// # Arguments
     /// * `args`: will be parsed to LaunchRequest
-    /// * `url`: url of the component
+    /// * `url`: full url of the component
     /// * `arguments`: optional arguments for the component
     async fn create_launch_app(&self, args: Value) -> Result<client::App, Error> {
         let tag = "LaunchFacade::create_launch_app";
         let req: LaunchRequest = from_value(args)?;
-        // Building the component url from the name of component.
+        // check if it's full url
         let component_url = match req.url {
             Some(x) => {
+                if !x.starts_with("fuchsia-pkg") {
+                    return Err(format_err!("Need full component url to launch"));
+                }
                 fx_log_info!(
                     "Executing Launch {} in Launch Facade with arguments {:?}.",
                     x,
                     req.arguments
                 );
-                let url = format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", x, x).to_string();
-                url
+                x
             }
-            None => return Err(format_err!("Need component url to launch")),
+            None => return Err(format_err!("Need full component url to launch")),
         };
 
         let launcher = match client::launcher() {

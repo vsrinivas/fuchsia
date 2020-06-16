@@ -4,18 +4,26 @@
 
 import 'sl4f_client.dart';
 
-/// Allows controlling a Modular session and its components.
+/// Launches components through sl4f
 class Launch {
   final Sl4f _sl4f;
 
   Launch(this._sl4f);
 
+  /// Launches components through sl4f, can be the component name or the full url of the componenet
   Future<dynamic> launch(String url, [List<String> args]) async {
+    var packageUrl = url;
+    if (!url.startsWith('fuchsia-pkg')) {
+      packageUrl = 'fuchsia-pkg://fuchsia.com/$url#meta/$url.cmx';
+    }
     if (args != null && args.isNotEmpty) {
-      return await _sl4f
-          .request('launch_facade.Launch', {'url': url, 'arguments': args});
+      final result = await _sl4f.request(
+          'launch_facade.Launch', {'url': packageUrl, 'arguments': args});
+      return result;
     } else {
-      return await _sl4f.request('launch_facade.Launch', {'url': url});
+      final result =
+          await _sl4f.request('launch_facade.Launch', {'url': packageUrl});
+      return result;
     }
   }
 }
