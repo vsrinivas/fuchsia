@@ -136,10 +136,9 @@ func (cmd *ZedbootCommand) runAgainstTargets(ctx context.Context, devices []devi
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	errs := make(chan error)
+	serial := devices[0].Serial()
 
-	if serial := devices[0].Serial(); serial != nil && cmd.serialLogFile != "" {
-		defer serial.Close()
-
+	if serial != nil && cmd.serialLogFile != "" {
 		// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
 		// arm64 devices should already be enabling kernel.serial at compile time.
 		cmdlineArgs = append(cmdlineArgs, "kernel.serial=legacy")
@@ -158,8 +157,11 @@ func (cmd *ZedbootCommand) runAgainstTargets(ctx context.Context, devices []devi
 			return fmt.Errorf("failed to tail zedboot dlog: %v", err)
 		}
 		go func() {
-			if _, err := io.Copy(serialLog, serial); err != nil {
-				errs <- fmt.Errorf("failed to write serial log: %v", err)
+			for {
+				if _, err := io.Copy(serialLog, serial); err != nil {
+					errs <- fmt.Errorf("failed to write serial log: %v", err)
+					return
+				}
 			}
 		}()
 	}
@@ -172,6 +174,9 @@ func (cmd *ZedbootCommand) runAgainstTargets(ctx context.Context, devices []devi
 		})
 	}
 	if err := eg.Wait(); err != nil {
+		if serial != nil && cmd.serialLogFile != "" {
+			serial.Close()
+		}
 		return err
 	}
 
@@ -184,8 +189,15 @@ func (cmd *ZedbootCommand) runAgainstTargets(ctx context.Context, devices []devi
 
 	select {
 	case err := <-errs:
+		if serial != nil && cmd.serialLogFile != "" {
+			serial.Close()
+		}
 		return err
 	case <-ctx.Done():
+		if serial != nil && cmd.serialLogFile != "" {
+			serial.Close()
+			<-errs
+		}
 		return nil
 	}
 }
