@@ -24,11 +24,11 @@ static const struct FidlCodedArray Array6_5uint8Table __attribute__((unused)) = 
 
 
 static const struct FidlXUnionField Fields44test_fidl_unionsandwich_UnionSize8Alignment4[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize8Alignment4Table = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields44test_fidl_unionsandwich_UnionSize8Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlXUnionField Fields55test_fidl_unionsandwich_UnionSize8Alignment4NullableRef[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize8Alignment4NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields55test_fidl_unionsandwich_UnionSize8Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructField Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4[] = {
@@ -39,11 +39,11 @@ static const struct FidlStructField Fields52test_fidl_unionsandwich_SandwichUnio
 const struct FidlCodedStruct test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = {.tag=kFidlTypeStruct, .fields=Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4, .field_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize8Alignment4"};
 
 static const struct FidlXUnionField Fields45test_fidl_unionsandwich_UnionSize36Alignment4[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array32_5uint8Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array32_5uint8Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize36Alignment4Table = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields45test_fidl_unionsandwich_UnionSize36Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize36Alignment4NullableRef[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array32_5uint8Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array32_5uint8Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize36Alignment4NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize36Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4[] = {
@@ -54,11 +54,11 @@ static const struct FidlStructField Fields53test_fidl_unionsandwich_SandwichUnio
 const struct FidlCodedStruct test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = {.tag=kFidlTypeStruct, .fields=Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4, .field_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize36Alignment4"};
 
 static const struct FidlXUnionField Fields45test_fidl_unionsandwich_UnionSize12Alignment4[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array6_5uint8Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array6_5uint8Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize12Alignment4Table = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields45test_fidl_unionsandwich_UnionSize12Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize12Alignment4NullableRef[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array6_5uint8Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&Array6_5uint8Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize12Alignment4NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize12Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4[] = {
@@ -71,11 +71,11 @@ const struct FidlCodedStruct test_fidl_unionsandwich_SandwichUnionSize12Alignmen
 const struct FidlCodedStruct test_fidl_unionsandwich_StructSize16Alignment8Table = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.fidl.unionsandwich/StructSize16Alignment8"};
 
 static const struct FidlXUnionField Fields45test_fidl_unionsandwich_UnionSize24Alignment8[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_fidl_unionsandwich_StructSize16Alignment8Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_fidl_unionsandwich_StructSize16Alignment8Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize24Alignment8Table = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields45test_fidl_unionsandwich_UnionSize24Alignment8, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict};
 static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize24Alignment8NullableRef[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_fidl_unionsandwich_StructSize16Alignment8Table), .ordinal=1u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_fidl_unionsandwich_StructSize16Alignment8Table)}
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize24Alignment8NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize24Alignment8NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8[] = {

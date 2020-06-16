@@ -474,22 +474,16 @@ Result Walker<VisitorImpl>::WalkXUnion(const FidlCodedXUnion* coded_xunion,
     return Result::kContinue;
   }
 
-  // Find coding table corresponding to the ordinal via linear search
-  const FidlXUnionField* known_field = nullptr;
-  for (size_t i = 0; i < coded_xunion->field_count; i++) {
-    const FidlXUnionField* field = &coded_xunion->fields[i];
-    if (field->ordinal == xunion->tag) {
-      known_field = field;
-      break;
-    }
+  const fidl_type_t* payload_type = nullptr;
+  if (xunion->tag <= coded_xunion->field_count) {
+    payload_type = coded_xunion->fields[xunion->tag - 1].type;
   }
-  if (!known_field && coded_xunion->strictness == kFidlStrictness_Strict) {
+  if (payload_type == nullptr && coded_xunion->strictness == kFidlStrictness_Strict) {
     visitor_->OnError("strict xunion has unknown ordinal");
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
 
   // Make sure we don't process a malformed envelope
-  const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
   auto status = visitor_->EnterEnvelope(envelope_pos, envelope_ptr, payload_type);
   FIDL_STATUS_GUARD(status);
   // Skip empty envelopes

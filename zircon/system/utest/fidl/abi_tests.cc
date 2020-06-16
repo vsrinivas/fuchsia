@@ -50,7 +50,7 @@ static_assert(sizeof(struct FidlCodedHandle) == 12, "");
 
 static_assert(sizeof(struct FidlStructField) == 16, "");
 static_assert(sizeof(struct FidlTableField) == 16, "");
-static_assert(sizeof(struct FidlXUnionField) == 16, "");
+static_assert(sizeof(struct FidlXUnionField) == 8, "");
 
 }  // namespace
 }  // namespace fidl

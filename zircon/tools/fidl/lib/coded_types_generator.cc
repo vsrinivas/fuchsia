@@ -308,14 +308,16 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
             if (!members.emplace(member.ordinal->value).second) {
               assert(false && "Duplicate ordinal found in table generation");
             }
-            if (!member.maybe_used)
-              continue;
-
-            const auto* coded_member_type =
-                CompileType(member.maybe_used->type_ctor->type,
-                            coded::CodingContext::kInsideEnvelope, wire_format);
-            coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
-            nullable_coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
+            if (member.maybe_used) {
+              const auto* coded_member_type =
+                  CompileType(member.maybe_used->type_ctor->type,
+                              coded::CodingContext::kInsideEnvelope, wire_format);
+              coded_xunion->fields.emplace_back(coded_member_type);
+              nullable_coded_xunion->fields.emplace_back(coded_member_type);
+            } else {
+              coded_xunion->fields.emplace_back(nullptr);
+              nullable_coded_xunion->fields.emplace_back(nullptr);
+            }
           }
           break;
         }

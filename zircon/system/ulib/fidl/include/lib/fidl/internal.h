@@ -87,7 +87,6 @@ struct FidlTableField {
 
 struct FidlXUnionField {
   const fidl_type_t* type;
-  uint32_t ordinal;
 };
 
 // TODO(fxb/42793): Consider starting enum values for FidlTypeTag from 1, not 0.
@@ -251,6 +250,7 @@ struct FidlCodedXUnion FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlNullability nullable;
   const FidlStrictness strictness;
   const uint32_t field_count;
+  // The fields are in ordinal order, with ordinal 1 at index 0.
   const struct FidlXUnionField* const fields;
   const char* name;  // may be nullptr if omitted at compile time
 

@@ -625,19 +625,20 @@ union MyUnion {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
 
   auto coded_union = static_cast<const fidl::coded::XUnionType*>(type);
-  ASSERT_EQ(2, coded_union->fields.size());
+  ASSERT_EQ(3, coded_union->fields.size());
 
   auto union_field0 = coded_union->fields.at(0);
-  EXPECT_EQ(1, union_field0.ordinal);
   ASSERT_NONNULL(union_field0.type);
   auto union_field0_struct = static_cast<const fidl::coded::StructType*>(union_field0.type);
   EXPECT_STR_EQ("example/First", union_field0_struct->qname.c_str());
 
   auto union_field1 = coded_union->fields.at(1);
-  ASSERT_EQ(3, union_field1.ordinal);
-  ASSERT_NONNULL(union_field1.type);
-  auto union_field1_struct = static_cast<const fidl::coded::StructType*>(union_field1.type);
-  EXPECT_STR_EQ("example/Second", union_field1_struct->qname.c_str());
+  ASSERT_NULL(union_field1.type);
+
+  auto union_field2 = coded_union->fields.at(2);
+  ASSERT_NONNULL(union_field2.type);
+  auto union_field2_struct = static_cast<const fidl::coded::StructType*>(union_field2.type);
+  EXPECT_STR_EQ("example/Second", union_field2_struct->qname.c_str());
 
   END_TEST;
 }

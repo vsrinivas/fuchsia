@@ -405,8 +405,6 @@ void TablesGenerator::Generate(const coded::TableField& field) {
 void TablesGenerator::Generate(const coded::XUnionField& field) {
   Emit(&tables_file_, "/*FidlXUnionField*/{.type=");
   Generate(field.type);
-  Emit(&tables_file_, ", .ordinal=");
-  Emit(&tables_file_, field.ordinal);
   Emit(&tables_file_, "}");
 }
 
