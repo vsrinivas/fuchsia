@@ -244,7 +244,7 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
   return st;
 }
 
-static zx_status_t pci_op_map_interrupt(void* ctx, int32_t which_irq, zx_handle_t* out_handle) {
+static zx_status_t pci_op_map_interrupt(void* ctx, uint32_t which_irq, zx_handle_t* out_handle) {
   if (!out_handle) {
     return ZX_ERR_INVALID_ARGS;
   }

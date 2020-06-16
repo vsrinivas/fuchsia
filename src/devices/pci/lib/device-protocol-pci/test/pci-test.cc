@@ -32,7 +32,7 @@ class FakePci : public ddk::PciProtocol<FakePci> {
   }
   zx_status_t PciEnableBusMaster(bool enable) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PciResetDevice() { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PciMapInterrupt(zx_status_t which_irq, zx::interrupt* out_handle) {
+  zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {

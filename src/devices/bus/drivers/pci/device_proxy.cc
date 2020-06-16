@@ -141,7 +141,7 @@ zx_status_t DeviceProxy::PciEnableBusMaster(bool enable) {
 
 zx_status_t DeviceProxy::PciResetDevice() { DEVICE_PROXY_UNIMPLEMENTED; }
 
-zx_status_t DeviceProxy::PciMapInterrupt(zx_status_t which_irq, zx::interrupt* out_handle) {
+zx_status_t DeviceProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
   DEVICE_PROXY_UNIMPLEMENTED;
 }
 
