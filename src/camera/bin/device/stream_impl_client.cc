@@ -131,10 +131,6 @@ void StreamImpl::Client::WatchOrientation(WatchOrientationCallback callback) {
 }
 
 void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
-  if (stream_.max_camping_buffers_ == 0) {
-    FX_LOGS(INFO) << Messages::kNoCampingBuffers;
-  }
-
   if (frame_callback_) {
     FX_LOGS(INFO) << "Client called GetNextFrame while a previous call was still pending.";
     CloseConnection(ZX_ERR_BAD_STATE);
