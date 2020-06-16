@@ -158,8 +158,10 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         fx: fuchsiaLocator.fx,
         os: 'linux',
-        path: '/asdf',
-        name: '//host/test',
+        path: 'host_x64/path',
+        // In practice, host tests have identical paths and names, but we
+        // differentiate them here to verify both are matchable.
+        name: 'host_x64/name',
       ),
     ];
 
@@ -185,23 +187,26 @@ void main() {
     test('when the --exact flag is passed for a test name', () {
       // --exact correctly catches exact name matches
       ParsedManifest parsedManifest =
-          parseFromArgs(args: ['//host/test', '--exact']);
+          parseFromArgs(args: ['host_x64/name', '--exact']);
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.name, '//host/test');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'host_x64/name');
 
       // --exact kills partial name matches
-      parsedManifest = parseFromArgs(args: ['//host', '--exact']);
+      parsedManifest = parseFromArgs(args: ['host_x64', '--exact']);
       expect(parsedManifest.testBundles, hasLength(0));
     });
 
     test('when the --exact flag is passed for a test path', () {
       // --exact correctly catches exact path matches
-      ParsedManifest parsedManifest = parseFromArgs(args: ['/asdf', '--exact']);
+      ParsedManifest parsedManifest =
+          parseFromArgs(args: ['host_x64/path', '--exact']);
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.path, '/asdf');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.path, 'host_x64/path');
 
       // --exact kills partial path matches
-      parsedManifest = parseFromArgs(args: ['asdf', '--exact']);
+      parsedManifest = parseFromArgs(args: ['host_x64', '--exact']);
       expect(parsedManifest.testBundles, hasLength(0));
     });
 
@@ -219,9 +224,10 @@ void main() {
     });
 
     test('when the -h flag is passed', () {
-      ParsedManifest parsedManifest = parseFromArgs(args: ['//host/test']);
+      ParsedManifest parsedManifest = parseFromArgs(args: ['host_x64/name']);
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.name, '//host/test');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'host_x64/name');
     });
 
     test('when the -d flag is passed', () {
@@ -334,9 +340,13 @@ void main() {
         testsConfig: testsConfig,
       );
 
-      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles, hasLength(2));
       expect(
         parsedManifest.testBundles[0].testDefinition.name,
+        'host_x64/name',
+      );
+      expect(
+        parsedManifest.testBundles[1].testDefinition.name,
         'awesome host test',
       );
     });
@@ -368,7 +378,13 @@ void main() {
         testsConfig: testsConfig,
       );
 
-      expect(parsedManifest.testBundles, hasLength(0));
+      expect(parsedManifest.testBundles, hasLength(1));
+    });
+    test('when the ends of paths are supplied', () {
+      ParsedManifest parsedManifest = parseFromArgs(args: ['path']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(
+          parsedManifest.testBundles[0].testDefinition.path, 'host_x64/path');
     });
   });
 
