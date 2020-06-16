@@ -34,6 +34,8 @@ toc:
   path: /docs/contribute/governance/fidl/ftp/ftp-015.md
 - title: "FTP-016: No Optional Strings or Vectors"
   path: /docs/contribute/governance/fidl/ftp/ftp-016.md
+- title: "FTP-017: Box<Knox>"
+  path: /docs/contribute/governance/fidl/ftp/ftp-017.md
 - title: "FTP-020: Interface Ordinal Hashing"
   path: /docs/contribute/governance/fidl/ftp/ftp-020.md
 - title: "FTP-021: Soft Transitions for Methods Add / Remove"

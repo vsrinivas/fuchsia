@@ -51,6 +51,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-036](ftp/ftp-036.md) | 2019-03-07 | 2019-03-14 | Update to Struct Declarations
 [FTP-042](ftp/ftp-042.md) | 2019-04-01 | 2019-04-01 | Non Nullable Types &mdash; Poisson d'Avril
 [FTP-045](ftp/ftp-045.md) | 2018-12-26 | 2019-05-29 | Zero-Size Empty Structs: &infin;% more efficient
+[FTP-017](ftp/ftp-017.md) | 2018-09-27 | 2020-06-17 | Box<Knox>
 
 ## Process
 
