@@ -2,24 +2,35 @@
 Checks: >
   -*,
   bugprone-*,
+
   clang-diagnostic-*,
   -clang-diagnostic-unused-command-line-argument,
+
   google-*,
   -google-runtime-references,
+
   misc-*,
   -misc-noexcept*,
+  -misc-unused-parameters,
+
   modernize-*,
+  -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,
-  -modernize-use-nodiscard,
   -modernize-raw-string-literal,
   -modernize-return-braced-init-list,
+  -modernize-use-auto,
   -modernize-use-equals-delete,
+  -modernize-use-nodiscard,
   -modernize-use-trailing-return-type,
+
   performance-*,
   readability-*,
   -readability-implicit-bool-conversion,
   -readability-isolate-declaration,
+  -readability-magic-numbers,
+  -readability-qualified-auto,
   -readability-uppercase-literal-suffix,
+
 WarningsAsErrors: false
 AnalyzeTemporaryDtors: false
 FormatStyle:     file
