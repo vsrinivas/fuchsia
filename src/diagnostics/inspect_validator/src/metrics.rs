@@ -159,7 +159,6 @@ impl Metrics {
             | BlockType::Reserved
             | BlockType::NodeValue
             | BlockType::Free
-            | BlockType::Extent
             | BlockType::BufferValue
             | BlockType::Tombstone
             | BlockType::LinkValue => 0,
@@ -170,6 +169,7 @@ impl Metrics {
 
             BlockType::ArrayValue => NUMERIC_TYPE_SIZE * block.array_slots()?,
             BlockType::Name => block.name_length()?,
+            BlockType::Extent => block.extent_contents()?.len(),
         };
 
         let header_bytes = match block_type {

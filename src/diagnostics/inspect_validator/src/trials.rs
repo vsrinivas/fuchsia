@@ -32,6 +32,7 @@ pub fn real_trials() -> Vec<Trial> {
         double_histogram_ops_trial(),
         deletions_trial(),
         lazy_nodes_trial(),
+        repeated_names(),
     ]
 }
 
@@ -354,6 +355,21 @@ fn basic_double() -> Trial {
             add_number!(id: 5, value: Number::DoubleT(std::f64::MAX / 10_f64)),
             delete_property!(id: 5),
         ])],
+    }
+}
+
+fn repeated_names() -> Trial {
+    let mut actions = vec![create_node!(parent: ROOT_ID, id: 1, name: "measurements")];
+
+    for i in 100..120 {
+        actions.push(create_node!(parent: 1, id: i, name: format!("{}", i)));
+        actions.push(create_numeric_property!(parent: i, id: i + 1000, name: "count", value: Number::UintT(i as u64 * 2)));
+        actions.push(create_numeric_property!(parent: i, id: i + 2000, name: "time_spent", value: Number::UintT(i as u64 * 1000 + 10)));
+    }
+
+    Trial {
+        name: "Many repeated names".into(),
+        steps: vec![Step::WithMetrics(actions, "Many repeated names".into())],
     }
 }
 
