@@ -714,7 +714,7 @@ built-in flow control since the client naturally limits the rate at which the
 server produces data and avoids getting overwhelmed by messages pushed from the
 server.
 
-#### Delay responses using hanging gets
+#### Delay responses using hanging gets {#hanging-get}
 
 A simple way to implement a pull-based protocol is to "park a callback" with the
 server using the _hanging get pattern_:
@@ -738,6 +738,12 @@ For example, a server might implement the hanging get pattern for some mutable
 state foo using a "dirty" bit for each client. It would initialize this bit to
 true, clear it on each `WatchFoo` response, and set it on each change of foo.
 The server would only respond to a `WatchFoo` message when the dirty bit is set.
+
+Note: When consuming an API that provides hanging gets, be mindful of dropping
+pending requests, since the server implementation of the protocol is often
+stateful and can't be notified of dropped requests. This is especially easy to
+get wrong in Rust, see [Rust hanging get patterns][rust-hanging-get] for
+examples.
 
 #### Throttle push using acknowledgements
 
@@ -1423,3 +1429,4 @@ protocol.
 <!-- xrefs -->
 [ftp-025]: /docs/contribute/governance/fidl/ftp/ftp-025.md
 [locale-passing-example]: /garnet/examples/intl/wisdom/
+[rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md
