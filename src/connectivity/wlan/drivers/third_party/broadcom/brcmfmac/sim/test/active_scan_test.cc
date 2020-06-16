@@ -22,6 +22,19 @@ struct ApInfo {
   bool probe_resp_seen_ = false;
 };
 
+struct ClientIfc : public SimInterface {
+  void OnScanResult(const wlanif_scan_result_t* result) override;
+  void OnScanEnd(const wlanif_scan_end_t* end) override;
+
+  // Txn ID for the current scan
+  uint64_t scan_txn_id_ = 0;
+
+  // Result of the previous scan
+  wlan_scan_result_t scan_result_code_ = ZX_OK;
+
+  std::list<wlanif_scan_result> scan_results_;
+};
+
 class ActiveScanTest : public SimTest {
  public:
   static constexpr zx::duration kBeaconInterval = zx::msec(100);
@@ -32,30 +45,23 @@ class ActiveScanTest : public SimTest {
   void StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
                    const wlan_channel_t& chan, zx::duration beacon_interval = kBeaconInterval);
 
-  // Event handlers
-  void EndSimulation();
   void StartScan(const wlanif_scan_req_t* req);
+  void VerifyScanResults();
+  void EndSimulation();
 
   bool all_aps_seen_ = false;
-
-  // SME standin functions
-  void OnScanResult(const wlanif_scan_result_t* result);
-  void OnScanEnd(const wlanif_scan_end_t* end);
 
   void GetFirmwareMac();
   void GetFirwarePfnMac();
 
-  // Txn ID for the current scan
-  uint64_t scan_txn_id_ = 0;
-  wlan_scan_result_t expect_scan_result;
+ protected:
+  // This is the interface we will use for our single client interface
+  ClientIfc client_ifc_;
 
  private:
   // StationIfc methods
   void Rx(std::shared_ptr<const simulation::SimFrame> frame,
           std::shared_ptr<const simulation::WlanRxInfo> info) override;
-
-  // This is the interface we will use for our single client interface
-  SimInterface client_ifc_;
 
   // All simulated APs
   std::list<std::unique_ptr<ApInfo>> aps_;
@@ -64,26 +70,19 @@ class ActiveScanTest : public SimTest {
   common::MacAddr sim_fw_mac_;
   common::MacAddr last_pfn_mac_ = common::kZeroMac;
   std::optional<common::MacAddr> sim_fw_pfn_mac_;
-
-  // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 };
 
-wlanif_impl_ifc_protocol_ops_t ActiveScanTest::sme_ops_ = {
-    .on_scan_result =
-        [](void* cookie, const wlanif_scan_result_t* result) {
-          static_cast<ActiveScanTest*>(cookie)->OnScanResult(result);
-        },
-    .on_scan_end =
-        [](void* cookie, const wlanif_scan_end_t* end) {
-          static_cast<ActiveScanTest*>(cookie)->OnScanEnd(end);
-        },
-};
+void ClientIfc::OnScanResult(const wlanif_scan_result_t* result) {
+  ASSERT_NE(result, nullptr);
+  EXPECT_EQ(scan_txn_id_, result->txn_id);
+  scan_results_.emplace_back(*result);
+}
+
+void ClientIfc::OnScanEnd(const wlanif_scan_end_t* end) { scan_result_code_ = end->code; }
 
 void ActiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 }
 
 void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
@@ -121,63 +120,37 @@ void ActiveScanTest::GetFirwarePfnMac() {
     sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
 }
 
-void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
-                        std::shared_ptr<const simulation::WlanRxInfo> info) {
-  GetFirwarePfnMac();
+void ActiveScanTest::VerifyScanResults() {
+  for (auto result : client_ifc_.scan_results_) {
+    int matches_seen = 0;
 
-  ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
+    for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
+      common::MacAddr mac_addr = (*ap_info)->ap_.GetBssid();
+      ASSERT_EQ(sizeof(result.bss.bssid), sizeof(mac_addr.byte));
+      if (!std::memcmp(result.bss.bssid, mac_addr.byte, sizeof(mac_addr.byte))) {
+        (*ap_info)->probe_resp_seen_ = true;
+        matches_seen++;
 
-  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
+        // Verify SSID
+        wlan_ssid_t ssid_info = (*ap_info)->ap_.GetSsid();
+        EXPECT_EQ(result.bss.ssid.len, ssid_info.len);
+        ASSERT_LE(ssid_info.len, sizeof(ssid_info.ssid));
+        EXPECT_EQ(memcmp(result.bss.ssid.data, ssid_info.ssid, ssid_info.len), 0);
 
-  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_REQ) {
-    // When a probe request is sent out, the src mac address should not be real mac address.
-    auto probe_req = std::static_pointer_cast<const simulation::SimProbeReqFrame>(mgmt_frame);
-    EXPECT_NE(probe_req->src_addr_, sim_fw_mac_);
-    EXPECT_EQ(probe_req->src_addr_, *sim_fw_pfn_mac_);
-  }
+        // Verify channel
+        wlan_channel_t channel = (*ap_info)->ap_.GetChannel();
+        EXPECT_EQ(result.bss.chan.primary, channel.primary);
+        EXPECT_EQ(result.bss.chan.cbw, channel.cbw);
+        EXPECT_EQ(result.bss.chan.secondary80, channel.secondary80);
 
-  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP) {
-    auto probe_resp = std::static_pointer_cast<const simulation::SimProbeRespFrame>(mgmt_frame);
-    EXPECT_NE(probe_resp->dst_addr_, sim_fw_mac_);
-    EXPECT_EQ(probe_resp->dst_addr_, *sim_fw_pfn_mac_);
-  }
-}
-
-void ActiveScanTest::OnScanResult(const wlanif_scan_result_t* result) {
-  int matches_seen = 0;
-  ASSERT_NE(result, nullptr);
-  EXPECT_EQ(scan_txn_id_, result->txn_id);
-
-  for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
-    common::MacAddr mac_addr = (*ap_info)->ap_.GetBssid();
-    ASSERT_EQ(sizeof(result->bss.bssid), sizeof(mac_addr.byte));
-    if (!std::memcmp(result->bss.bssid, mac_addr.byte, sizeof(mac_addr.byte))) {
-      (*ap_info)->probe_resp_seen_ = true;
-      matches_seen++;
-
-      // Verify SSID
-      wlan_ssid_t ssid_info = (*ap_info)->ap_.GetSsid();
-      EXPECT_EQ(result->bss.ssid.len, ssid_info.len);
-      ASSERT_LE(ssid_info.len, sizeof(ssid_info.ssid));
-      EXPECT_EQ(memcmp(result->bss.ssid.data, ssid_info.ssid, ssid_info.len), 0);
-
-      // Verify channel
-      wlan_channel_t channel = (*ap_info)->ap_.GetChannel();
-      EXPECT_EQ(result->bss.chan.primary, channel.primary);
-      EXPECT_EQ(result->bss.chan.cbw, channel.cbw);
-      EXPECT_EQ(result->bss.chan.secondary80, channel.secondary80);
-
-      // Verify has RSSI value
-      ASSERT_LT(result->bss.rssi_dbm, 0);
+        // Verify has RSSI value
+        ASSERT_LT(result.bss.rssi_dbm, 0);
+      }
     }
+
+    // There should be exactly one AP per result.
+    EXPECT_EQ(matches_seen, 1);
   }
-
-  // There should be exactly one AP per result.
-  EXPECT_EQ(matches_seen, 1);
-}
-
-void ActiveScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
-  EXPECT_EQ(expect_scan_result, end->code);
 
   for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
     if ((*ap_info)->probe_resp_seen_ == false) {
@@ -200,6 +173,28 @@ void ActiveScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
   all_aps_seen_ = true;
 }
 
+void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                        std::shared_ptr<const simulation::WlanRxInfo> info) {
+  GetFirwarePfnMac();
+
+  ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
+
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
+
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_REQ) {
+    // When a probe request is sent out, the src mac address should not be real mac address.
+    auto probe_req = std::static_pointer_cast<const simulation::SimProbeReqFrame>(mgmt_frame);
+    EXPECT_NE(probe_req->src_addr_, sim_fw_mac_);
+    EXPECT_EQ(probe_req->src_addr_, *sim_fw_pfn_mac_);
+  }
+
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP) {
+    auto probe_resp = std::static_pointer_cast<const simulation::SimProbeRespFrame>(mgmt_frame);
+    EXPECT_NE(probe_resp->dst_addr_, sim_fw_mac_);
+    EXPECT_EQ(probe_resp->dst_addr_, *sim_fw_pfn_mac_);
+  }
+}
+
 // AP 1&2 on channel 2.
 constexpr wlan_channel_t kDefaultChannel1 = {
     .primary = 2, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
@@ -216,7 +211,6 @@ const common::MacAddr kAp3Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbe});
 
 // This test case might fail in a very low possibility because it's random.
 TEST_F(ActiveScanTest, RandomMacThreeAps) {
-  expect_scan_result = ZX_OK;
   // Start time and end time of this test case
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(10);
@@ -232,7 +226,7 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
   GetFirmwareMac();
 
   wlanif_scan_req_t req = {
-      .txn_id = ++scan_txn_id_,
+      .txn_id = ++client_ifc_.scan_txn_id_,
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .num_channels = 5,
@@ -253,11 +247,12 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
 
   env_->Run();
 
+  VerifyScanResults();
   EXPECT_EQ(all_aps_seen_, true);
+  EXPECT_EQ(client_ifc_.scan_result_code_, ZX_OK);
 }
 
 TEST_F(ActiveScanTest, ScanTwice) {
-  expect_scan_result = ZX_OK;
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(10);
 
@@ -266,7 +261,7 @@ TEST_F(ActiveScanTest, ScanTwice) {
   GetFirmwareMac();
 
   wlanif_scan_req_t req = {
-      .txn_id = ++scan_txn_id_,
+      .txn_id = ++client_ifc_.scan_txn_id_,
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .num_channels = 5,
@@ -282,6 +277,8 @@ TEST_F(ActiveScanTest, ScanTwice) {
 
   env_->Run();
 
+  VerifyScanResults();
+
   scan_handler = std::make_unique<std::function<void()>>();
   *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req);
   env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
@@ -291,13 +288,14 @@ TEST_F(ActiveScanTest, ScanTwice) {
   env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
 
   env_->Run();
+
+  VerifyScanResults();
+  EXPECT_EQ(client_ifc_.scan_result_code_, ZX_OK);
 }
 
 // This test is to verify brcmfmac driver will return an error when an invalid ssid list
 // is indicated in active scan test request.
 TEST_F(ActiveScanTest, OverSizeSsid) {
-  expect_scan_result = WLAN_SCAN_RESULT_INTERNAL_ERROR;
-
   constexpr zx::duration kFirstScanStartTime = zx::sec(1);
   constexpr zx::duration kSecondScanStartTime = zx::sec(2);
   constexpr zx::duration kDefaultTestDuration = zx::sec(10);
@@ -319,7 +317,7 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
 
   // Case contains over-size ssid in ssid field of request.
   wlanif_scan_req_t req_break_ssid = {
-      .txn_id = ++scan_txn_id_,
+      .txn_id = ++client_ifc_.scan_txn_id_,
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
       .ssid = invalid_scan_ssid,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
@@ -331,7 +329,7 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
   };
 
   // Case contains over-size ssid in ssid_list in request.
-  wlanif_scan_req_t req_break_ssid_list = {.txn_id = ++scan_txn_id_,
+  wlanif_scan_req_t req_break_ssid_list = {.txn_id = ++client_ifc_.scan_txn_id_,
                                            .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
                                            .scan_type = WLAN_SCAN_TYPE_ACTIVE,
                                            .num_channels = 5,
@@ -355,5 +353,9 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
   env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
 
   env_->Run();
+
+  VerifyScanResults();
+  EXPECT_EQ(client_ifc_.scan_result_code_, WLAN_SCAN_RESULT_INTERNAL_ERROR);
 }
+
 }  // namespace wlan::brcmfmac
