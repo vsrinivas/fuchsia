@@ -340,6 +340,13 @@ void Client::DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _comple
   layers_.erase(layer_id);
 }
 
+void Client::ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
+                              ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
+                              ImportGammaTableCompleter::Sync _completer) {}
+
+void Client::ReleaseGammaTable(uint64_t gamma_table_id,
+                               ReleaseGammaTableCompleter::Sync _completer) {}
+
 void Client::SetDisplayMode(uint64_t display_id, fhd::Mode mode,
                             SetDisplayModeCompleter::Sync _completer) {
   auto config = configs_.find(display_id);
@@ -428,6 +435,9 @@ void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> 
   config->pending_.layer_count = static_cast<int32_t>(layer_ids.count());
   pending_config_valid_ = false;
 }
+
+void Client::SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
+                                  SetDisplayGammaTableCompleter::Sync _completer) {}
 
 void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_config,
                                    SetLayerPrimaryConfigCompleter::Sync /*_completer*/) {

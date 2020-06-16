@@ -40,9 +40,9 @@
 #include "id-map.h"
 #include "image.h"
 #include "layer.h"
-#include "lib/fidl/llcpp/server.h"
 #include "lib/fidl-async/cpp/bind.h"
 #include "lib/fidl/llcpp/array.h"
+#include "lib/fidl/llcpp/server.h"
 
 namespace display {
 
@@ -133,12 +133,19 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) override;
   void CreateLayer(CreateLayerCompleter::Sync _completer) override;
   void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) override;
+  void ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
+                        ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
+                        ImportGammaTableCompleter::Sync _completer) override;
+  void ReleaseGammaTable(uint64_t gamma_table_id,
+                         ReleaseGammaTableCompleter::Sync _completer) override;
   void SetDisplayMode(uint64_t display_id, llcpp::fuchsia::hardware::display::Mode mode,
                       SetDisplayModeCompleter::Sync _completer) override;
   void SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
                                  ::fidl::Array<float, 9> coefficients,
                                  ::fidl::Array<float, 3> postoffsets,
                                  SetDisplayColorConversionCompleter::Sync _completer) override;
+  void SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
+                            SetDisplayGammaTableCompleter::Sync _completer) override;
   void SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
                         SetDisplayLayersCompleter::Sync _completer) override;
   void SetLayerPrimaryConfig(uint64_t layer_id,

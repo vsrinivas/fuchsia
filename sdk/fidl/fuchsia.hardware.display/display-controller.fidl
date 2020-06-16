@@ -153,6 +153,11 @@ enum ClientCompositionOpcode : uint8 {
     CLIENT_COLOR_CONVERSION = 6;
     // The client should apply the alpha itself.
     CLIENT_ALPHA = 7;
+    // The client cannot control the display gamma, and must accept
+    // the uncalibrated output. Clients are expected to produce linear
+    // buffers, and as such they cannot perform software gamma
+    // correction.
+    CLIENT_GAMMA = 8;
 };
 
 enum ConfigResult : uint32 {
@@ -170,7 +175,11 @@ enum ConfigResult : uint32 {
 };
 
 struct ClientCompositionOp {
+    /// display_id and layer_id uniquely identify the subject of the
+    /// opcode.
     uint64 display_id;
+    /// layer_id is 0 for whole-display issues like unsupported color
+    /// conversion and gamma tables.
     uint64 layer_id;
     ClientCompositionOpcode opcode;
 };
@@ -284,6 +293,31 @@ protocol Controller {
     // It is illegal to destroy a layer which does not exist or which is in use.
     DestroyLayer(uint64 layer_id);
 
+    /// Import a gamma table for display calibration.
+    ///
+    /// Each array is a quantized representation of the gamma curve for a single
+    /// color channel. An input luminance in [0.0, 1.0] is mapped to an index
+    /// between 0-255, and the value in the array is used as the output
+    /// luminance. Rounding behavior is hardware-specific, and most often it
+    /// will floor(input * 255.0), requiring an input luminance of 1.0 to get
+    /// the max output luminance.
+    ///
+    /// It is an error to use output luminances outside of [0.0, 1.0]. Hardware
+    /// drivers may either clamp such values or disconnect a client that
+    /// provides invalid tables.
+    ImportGammaTable(uint64 gamma_table_id,
+                     array<float32>:256 r,
+                     array<float32>:256 g,
+                     array<float32>:256 b);
+
+    /// Release an imported gamma table.
+    ///
+    /// Subsequent calls to SetDisplayGammaTable cannot reference this
+    /// table. It is legal to re-use the gamma_table_id after making
+    /// this call. Releasing a table while it is set on a display is
+    /// safe, and will not modify the output of the display.
+    ReleaseGammaTable(uint64 gamma_table_id);
+
     // Sets the display mode for the given display.
     //
     // It is illegal to pass a display mode which was not part of the display's Info.
@@ -308,13 +342,19 @@ protocol Controller {
     // (-1, 1) exclusive as confirmed by CheckConfig API. Values outside this range will be
     // rejected.
     //
-    // Clients are encouraged to use the CheckConfig API to confirm support for correction
-    // corection and to validate their color correction input values.
-    //
+    // Clients are encouraged to use the CheckConfig API to confirm support for correction and to
+    // validate their color correction input values.
     SetDisplayColorConversion(uint64 display_id,
                               array<float32>:3 preoffsets,
                               array<float32>:9 coefficients,
                               array<float32>:3 postoffsets);
+
+    /// Set the gamma correction table for a display.
+    ///
+    /// gamma_table_id must be a table registered with ImportGammaTable. It is
+    /// safe to release a gamma table after using it here, and will not modify
+    /// display output.
+    SetDisplayGammaTable(uint64 display_id, uint64 gamma_table_id);
 
     // Sets which layers are on a display. The list is in increasing z-order.
     //

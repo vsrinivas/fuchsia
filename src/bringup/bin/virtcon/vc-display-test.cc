@@ -72,6 +72,18 @@ class StubDisplayController : public fhd::Controller::Interface {
   void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) override {
     layers_.remove_if([layer_id](uint64_t layer) { return (layer == layer_id); });
   }
+
+  void ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
+                        ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
+                        ImportGammaTableCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void ReleaseGammaTable(uint64_t gamma_table_id,
+                         ReleaseGammaTableCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
   void SetDisplayMode(uint64_t display_id, fhd::Mode mode,
                       SetDisplayModeCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
@@ -80,6 +92,11 @@ class StubDisplayController : public fhd::Controller::Interface {
                                  ::fidl::Array<float, 9> coefficients,
                                  ::fidl::Array<float, 3> postoffsets,
                                  SetDisplayColorConversionCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  void SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
+                            SetDisplayGammaTableCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
