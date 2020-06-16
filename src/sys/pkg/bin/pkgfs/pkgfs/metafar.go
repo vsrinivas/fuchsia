@@ -9,7 +9,9 @@ import (
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 
+	"syscall"
 	"syscall/zx"
+	"syscall/zx/fdio"
 	zxio "syscall/zx/io"
 
 	"thinfs/fs"
@@ -225,7 +227,14 @@ type metaFarFile struct {
 
 	off  int64
 	path string
-	vmo  *zx.VMO
+	// VMO representing this file's view of the archive.
+	vmo *zx.VMO
+
+	// VMO representing the blob backing this entire archive.
+	// TODO(52938): It would be more efficient to cache this VMO for all files
+	// within the same meta far to avoid calling GetBuffer() on the same blob
+	// for multiple files.
+	backingBlobVMO *zx.VMO
 }
 
 func newMetaFarFile(blob string, fs *Filesystem, path string) (*metaFarFile, error) {
@@ -248,12 +257,16 @@ func newMetaFarFile(blob string, fs *Filesystem, path string) (*metaFarFile, err
 		0,
 		path,
 		nil,
+		nil,
 	}, nil
 }
 
 func (f *metaFarFile) Close() error {
 	if f.vmo != nil {
 		f.vmo.Close()
+	}
+	if f.backingBlobVMO != nil {
+		f.backingBlobVMO.Close()
 	}
 	f.fr.Close()
 	return nil
@@ -277,6 +290,7 @@ func (f *metaFarFile) Dup() (fs.File, error) {
 		er,
 		0,
 		f.path,
+		nil,
 		nil,
 	}, nil
 }
@@ -319,23 +333,40 @@ func (f *metaFarFile) Stat() (int64, time.Time, time.Time, error) {
 	return int64(f.er.Length), time.Time{}, time.Time{}, nil
 }
 
+func (mf *metaFarFile) getBackingBlobVMO() (*zx.VMO, error) {
+	if mf.backingBlobVMO != nil {
+		return mf.backingBlobVMO, nil
+	}
+	f, err := mf.fs.blobfs.Open(mf.blob)
+	if err != nil {
+		return nil, err
+	}
+
+	fdioFile := syscall.FDIOForFD(int(f.Fd())).(*fdio.File)
+	flags := zxio.VmoFlagRead
+	_, buffer, err := fdioFile.GetBuffer(flags)
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	mf.backingBlobVMO = &buffer.Vmo
+	return mf.backingBlobVMO, nil
+}
+
 func (f *metaFarFile) GetBuffer(flags uint32) (*mem.Buffer, error) {
 	size := f.er.Length
 	if f.vmo == nil {
-		// TODO(52938): This could be implemented more efficiently by creating a
-		// child VMO of the blob's VMO with the VM_SLICE_CHILD_NO_WRITE option.
-		// The FAR format ensures each file will be at a 4KB offset into the
-		// containing blob.
-		vmo, err := zx.NewVMO(size, zx.VMOOption(0))
+		parentVmo, err := f.getBackingBlobVMO()
 		if err != nil {
-			return nil, fs.ErrNoSpace
-		}
-		buf := make([]byte, size)
-		n, err := f.er.ReadAt(buf, 0)
-		if n != int(size) {
 			return nil, fs.ErrIO
 		}
-		err = vmo.Write(buf, 0)
+		// All entries in a FAR are at 4096 byte offsets from the start of the
+		// file and are zero padded up to the next 4096 byte boundary:
+		// https://fuchsia.dev/fuchsia-src/concepts/source_code/archive_format#content_chunk
+		offset := f.er.Offset
+		options := zx.VMOChildOption(zx.VMOChildOptionSnapshotAtLeastOnWrite | zx.VMOChildOptionNoWrite)
+
+		vmo, err := parentVmo.CreateChild(options, offset, size)
 		if err != nil {
 			return nil, fs.ErrIO
 		}

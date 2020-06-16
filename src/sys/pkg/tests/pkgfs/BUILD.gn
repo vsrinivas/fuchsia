@@ -27,6 +27,29 @@ test_package("pkgfs-mmap-tests") {
       manifest = "meta/pkgfs_meta_mmap_test.cmx"
     },
   ]
+
+  meta = [
+    {
+      path = "meta/zero_byte_file"
+      dest = "zero_byte_file"
+    },
+    {
+      path = "meta/one_byte_file"
+      dest = "one_byte_file"
+    },
+    {
+      path = "meta/4095_byte_file"
+      dest = "4095_byte_file"
+    },
+    {
+      path = "meta/4096_byte_file"
+      dest = "4096_byte_file"
+    },
+    {
+      path = "meta/4097_byte_file"
+      dest = "4097_byte_file"
+    },
+  ]
 }
 
 group("tests") {
