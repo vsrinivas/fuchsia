@@ -19,6 +19,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.exception",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",

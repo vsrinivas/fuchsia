@@ -60,12 +60,15 @@ fxl::WeakPtr<ExceptionBroker> ExceptionBroker::GetWeakPtr() { return weak_factor
 
 namespace {
 
-fuchsia::feedback::CrashReport CreateCrashReport(const std::string& process_name,
+fuchsia::feedback::CrashReport CreateCrashReport(const std::optional<std::string> component_url,
+                                                 const std::string& process_name,
                                                  zx::vmo minidump_vmo) {
   using namespace fuchsia::feedback;
 
   CrashReport crash_report;
-  crash_report.set_program_name(process_name);
+  const std::string program_name =
+      (component_url.has_value()) ? component_url.value() : process_name;
+  crash_report.set_program_name(program_name.substr(0, fuchsia::feedback::MAX_PROGRAM_NAME_LENGTH));
 
   NativeCrashReport native_crash_report;
 
@@ -79,6 +82,10 @@ fuchsia::feedback::CrashReport CreateCrashReport(const std::string& process_name
   }
 
   crash_report.set_specific_report(SpecificCrashReport::WithNative(std::move(native_crash_report)));
+  crash_report.mutable_annotations()->push_back(Annotation{
+      .key = "crash.process.name",
+      .value = process_name,
+  });
 
   return crash_report;
 }
@@ -121,6 +128,70 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
 // ExceptionBroker implementation ------------------------------------------------------------------
 
 void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
+  uint64_t id = next_connection_id_++;
+  process_exceptions_[id] = std::move(process_exception);
+
+  auto& exception = process_exceptions_[id];
+
+  if (!exception.has_info()) {
+    FileCrashReport(id, std::nullopt);
+    return;
+  }
+
+  auto introspect_ptr = services_->Connect<fuchsia::sys::internal::Introspect>();
+  introspect_connections_[id] = std::move(introspect_ptr);
+
+  auto& introspect = introspect_connections_[id];
+
+  introspect.set_error_handler([id, broker = GetWeakPtr()](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.sys.internal.Introspect";
+
+    // If the broker is not there anymore, there is nothing more we can do.
+    if (!broker)
+      return;
+
+    broker->FileCrashReport(id, std::nullopt);
+
+    // Remove the connection after we have filed the crash report. The connection must be removed at
+    // the end of the function because the InterfacePtr that owns the lambda is destroyed when the
+    // connection is removed.
+    broker->introspect_connections_.erase(id);
+  });
+
+  using fuchsia::sys::internal::Introspect_FindComponentByProcessKoid_Result;
+  introspect->FindComponentByProcessKoid(
+      exception.info().process_koid,
+      [id, broker = GetWeakPtr()](Introspect_FindComponentByProcessKoid_Result result) {
+        // If the broker is not there anymore, there is nothing more we can do.
+        if (!broker)
+          return;
+
+        // TODO(54196): Add the realm path as an annotation as a slash-joined list of strings.
+        std::optional<std::string> component_url = std::nullopt;
+        if (result.is_err()) {
+          FX_PLOGS(ERROR, result.err()) << "Failed FindComponentByProcessKoid";
+        } else if (!result.response().component_info.has_component_url()) {
+          FX_LOGS(ERROR) << "Did not receive a component url";
+        } else {
+          component_url = result.response().component_info.component_url();
+        }
+
+        broker->FileCrashReport(id, component_url);
+
+        // Remove the connection after we have filed the crash report. The connection must be
+        // removed at the end of the function because the InterfacePtr that owns the lambda, and the
+        // reference to |broker|, is destroyed when the connection is removed.
+        broker->introspect_connections_.erase(id);
+      });
+}
+
+void ExceptionBroker::FileCrashReport(uint64_t id, std::optional<std::string> component_url) {
+  if (process_exceptions_.find(id) == process_exceptions_.end()) {
+    return;
+  }
+
+  auto& process_exception = process_exceptions_[id];
+
   std::string process_name;
   zx::vmo minidump_vmo = GenerateMinidumpVMO(process_exception.exception(), &process_name);
 
@@ -128,12 +199,11 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
   process_exception.mutable_exception()->reset();
 
   // Create a new connection to the crash reporter and keep track of it.
-  uint64_t id = next_connection_id_++;
   auto crash_reporter_ptr = services_->Connect<fuchsia::feedback::CrashReporter>();
-  connections_[id] = std::move(crash_reporter_ptr);
+  crash_reporter_connections_[id] = std::move(crash_reporter_ptr);
 
   // Get the ref to the crash reporter.
-  auto& crash_reporter = connections_[id];
+  auto& crash_reporter = crash_reporter_connections_[id];
 
   crash_reporter.set_error_handler([id, broker = GetWeakPtr()](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.feedback.CrashReporter";
@@ -142,22 +212,34 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
     if (!broker)
       return;
 
-    // Remove the connection.
-    broker->connections_.erase(id);
+    broker->process_exceptions_.erase(id);
+
+    // Remove the connection after we have removed the exception. The connection must be
+    // removed at the end of the function because the InterfacePtr that owns the lambda, and the
+    // reference to |broker|, is destroyed when the connection is removed.
+    broker->crash_reporter_connections_.erase(id);
   });
 
-  fuchsia::feedback::CrashReport report = CreateCrashReport(process_name, std::move(minidump_vmo));
-  crash_reporter->File(std::move(report), [id, process_name, broker = GetWeakPtr()](
+  const std::string program_name =
+      (component_url.has_value()) ? component_url.value() : process_name;
+
+  fuchsia::feedback::CrashReport report =
+      CreateCrashReport(component_url, process_name, std::move(minidump_vmo));
+  crash_reporter->File(std::move(report), [id, program_name, broker = GetWeakPtr()](
                                               fuchsia::feedback::CrashReporter_File_Result result) {
     if (result.is_err())
-      FX_PLOGS(ERROR, result.err()) << "Error filing crash report for " << process_name;
+      FX_PLOGS(ERROR, result.err()) << "Error filing crash report for " << program_name;
 
     // If the broker is not there anymore, there is nothing more we can do.
     if (!broker)
       return;
 
-    // Remove the connection.
-    broker->connections_.erase(id);
+    broker->process_exceptions_.erase(id);
+
+    // Remove the connection after we have removed the exception. The connection must be
+    // removed at the end of the function because the InterfacePtr that owns the lambda, and the
+    // reference to |broker|, is destroyed when the connection is removed.
+    broker->crash_reporter_connections_.erase(id);
   });
 }
 

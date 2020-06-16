@@ -5,7 +5,10 @@
                 "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx",
                 "fuchsia.exception.ProcessLimbo": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake-crash-reporter#meta/fake_crash_reporter.cmx"
-            }
+            },
+            "system-services": [
+                "fuchsia.sys.internal.Introspect"
+            ]
         }
     },
     "program": {
@@ -16,7 +19,8 @@
             "fuchsia.exception.Handler",
             "fuchsia.exception.ProcessLimbo",
             "fuchsia.logger.LogSink",
-            "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.internal.Introspect"
         ]
     }
 }

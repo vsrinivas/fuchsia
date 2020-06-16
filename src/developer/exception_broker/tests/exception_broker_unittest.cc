@@ -4,6 +4,7 @@
 #include "src/developer/exception_broker/exception_broker.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -64,6 +65,38 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
   fidl::BindingSet<fuchsia::feedback::CrashReporter> bindings_;
 };
 
+class StubIntrospect : public fuchsia::sys::internal::Introspect {
+ public:
+  void FindComponentByProcessKoid(uint64_t process_koid,
+                                  FindComponentByProcessKoidCallback callback) {
+    using namespace fuchsia::sys::internal;
+    if (pids_to_component_urls_.find(process_koid) == pids_to_component_urls_.end()) {
+      callback(Introspect_FindComponentByProcessKoid_Result::WithErr(ZX_ERR_NOT_FOUND));
+    } else {
+      SourceIdentity source_identity;
+      source_identity.set_component_url(pids_to_component_urls_[process_koid]);
+
+      callback(Introspect_FindComponentByProcessKoid_Result::WithResponse(
+          Introspect_FindComponentByProcessKoid_Response(std::move(source_identity))));
+    }
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::sys::internal::Introspect> GetHandler() {
+    return [this](fidl::InterfaceRequest<fuchsia::sys::internal::Introspect> request) {
+      bindings_.AddBinding(this, std::move(request));
+    };
+  }
+
+  void AddProcessKoidToComponentUrl(uint64_t process_koid, std::string component_url) {
+    pids_to_component_urls_[process_koid] = component_url;
+  }
+
+ private:
+  std::map<uint64_t, std::string> pids_to_component_urls_;
+
+  fidl::BindingSet<fuchsia::sys::internal::Introspect> bindings_;
+};
+
 // Test Setup --------------------------------------------------------------------------------------
 //
 // Necessary elements for a fidl test to run. The ServiceDirectoryProvider is meant to mock the
@@ -74,6 +107,7 @@ struct TestContext {
   async::Loop loop;
   sys::testing::ServiceDirectoryProvider services;
   std::unique_ptr<StubCrashReporter> crash_reporter;
+  std::unique_ptr<StubIntrospect> introspect;
 };
 
 std::unique_ptr<TestContext> CreateTestContext() {
@@ -81,6 +115,7 @@ std::unique_ptr<TestContext> CreateTestContext() {
       .loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread),
       .services = sys::testing::ServiceDirectoryProvider{},
       .crash_reporter = std::make_unique<StubCrashReporter>(),
+      .introspect = std::make_unique<StubIntrospect>(),
   });
 
   return context;
@@ -120,7 +155,8 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
 
 // Utilities ---------------------------------------------------------------------------------------
 
-inline void ValidateReport(const fuchsia::feedback::CrashReport& report, bool validate_minidump) {
+inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
+                           const std::string& program_name, bool validate_minidump) {
   ASSERT_TRUE(report.has_program_name());
 
   ASSERT_TRUE(report.has_specific_report());
@@ -129,13 +165,22 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report, bool va
   ASSERT_TRUE(specific_report.is_native());
   const fuchsia::feedback::NativeCrashReport& native_report = specific_report.native();
 
+  if (validate_minidump) {
+    ASSERT_TRUE(report.has_annotations());
+    ASSERT_EQ(report.annotations().size(), 1u);
+
+    const fuchsia::feedback::Annotation& annotation = report.annotations().front();
+    EXPECT_EQ(annotation.key, "crash.process.name");
+    EXPECT_EQ(annotation.value, "crasher");
+  }
+
   // If the broker could not get a minidump, it will not send a mem buffer.
   if (!validate_minidump) {
     ASSERT_FALSE(native_report.has_minidump());
     return;
   }
 
-  EXPECT_EQ(report.program_name(), "crasher");
+  EXPECT_EQ(report.program_name(), program_name);
 
   ASSERT_TRUE(native_report.has_minidump());
   const zx::vmo& minidump_vmo = native_report.minidump().vmo;
@@ -163,8 +208,9 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report, bool va
 TEST(ExceptionBroker, CallingMultipleExceptions) {
   auto test_context = CreateTestContext();
 
-  // We add the service we're injecting.
+  // We add the services we're injecting.
   test_context->services.AddService(test_context->crash_reporter->GetHandler());
+  test_context->services.AddService(test_context->introspect->GetHandler());
 
   auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
                                         test_context->services.service_directory());
@@ -182,6 +228,15 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   infos[1] = ExceptionContextToExceptionInfo(excps[1]);
   infos[2] = ExceptionContextToExceptionInfo(excps[2]);
 
+  std::string component_urls[2];
+  component_urls[0] = "component_url_1";
+  component_urls[1] = "component_url_2";
+
+  for (size_t i = 0; i < 2; ++i) {
+    test_context->introspect->AddProcessKoidToComponentUrl(infos[i].process_koid,
+                                                           component_urls[i]);
+  }
+
   // It's not easy to pass array references to lambdas.
   bool cb_call0 = false;
   bool cb_call1 = false;
@@ -191,7 +246,7 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
 
   // There should be many connections opened.
-  ASSERT_EQ(broker->connections().size(), 3u);
+  ASSERT_EQ(broker->introspect_connections().size(), 3u);
 
   // We wait until the crash reporter has received all exceptions.
   RunUntil(test_context.get(),
@@ -202,12 +257,12 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   EXPECT_TRUE(cb_call2);
 
   // All connections should be killed now.
-  EXPECT_EQ(broker->connections().size(), 0u);
+  EXPECT_EQ(broker->introspect_connections().size(), 0u);
 
   auto& reports = test_context->crash_reporter->reports();
-  ValidateReport(reports[0], true);
-  ValidateReport(reports[1], true);
-  ValidateReport(reports[2], true);
+  ValidateReport(reports[0], "component_url_1", true);
+  ValidateReport(reports[1], "component_url_2", true);
+  ValidateReport(reports[2], "crasher", true);
 
   // Process limbo should be empty.
   ASSERT_EQ(broker->limbo_manager().limbo().size(), 0u);
@@ -220,7 +275,39 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   excps[2].job.kill();
 }
 
-TEST(ExceptionBroker, NoConnection) {
+TEST(ExceptionBroker, NoIntrospectConnection) {
+  auto test_context = CreateTestContext();
+
+  // We add the services we're injecting.
+  test_context->services.AddService(test_context->crash_reporter->GetHandler());
+
+  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
+                                        test_context->services.service_directory());
+  ASSERT_TRUE(broker);
+
+  // Create the exception.
+  ExceptionContext exception;
+  ASSERT_TRUE(RetrieveExceptionContext(&exception));
+  ExceptionInfo info = ExceptionContextToExceptionInfo(exception);
+
+  bool called = false;
+  broker->OnException(std::move(exception.exception), info, [&called]() { called = true; });
+
+  // There should be an outgoing connection.
+  ASSERT_EQ(broker->introspect_connections().size(), 1u);
+
+  // We wait until the crash reporter has received all exceptions.
+  RunUntil(test_context.get(),
+           [&test_context]() { return test_context->crash_reporter->reports().size() == 1u; });
+  ASSERT_TRUE(called);
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exception.job.kill();
+}
+
+TEST(ExceptionBroker, NoCrashReporterConnection) {
   // We don't inject a stub service. This will make connecting to the service fail.
   auto test_context = CreateTestContext();
 
@@ -237,9 +324,10 @@ TEST(ExceptionBroker, NoConnection) {
   broker->OnException(std::move(exception.exception), info, [&called]() { called = true; });
 
   // There should be an outgoing connection.
-  ASSERT_EQ(broker->connections().size(), 1u);
+  ASSERT_EQ(broker->introspect_connections().size(), 1u);
 
-  RunUntil(test_context.get(), [&broker]() { return broker->connections().empty(); });
+  RunUntil(test_context.get(),
+           [&broker]() { return broker->crash_reporter_connections().empty(); });
   ASSERT_TRUE(called);
 
   // The stub shouldn't be called.
@@ -267,14 +355,14 @@ TEST(ExceptionBroker, GettingInvalidVMO) {
   ExceptionInfo info = {};
   broker->OnException({}, info, [&called]() { called = true; });
 
-  ASSERT_EQ(broker->connections().size(), 1u);
-  RunUntil(test_context.get(), [&broker]() { return broker->connections().empty(); });
+  ASSERT_EQ(broker->introspect_connections().size(), 1u);
+  RunUntil(test_context.get(),
+           [&test_context]() { return test_context->crash_reporter->reports().size() == 1u; });
   ASSERT_TRUE(called);
 
-  ASSERT_EQ(test_context->crash_reporter->reports().size(), 1u);
   auto& report = test_context->crash_reporter->reports().front();
 
-  ValidateReport(report, false);
+  ValidateReport(report, "crasher", false);
 }
 
 }  // namespace

@@ -8,7 +8,8 @@
         ],
         "services": [
             "fuchsia.feedback.CrashReporter",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.internal.Introspect"
         ]
     }
 }

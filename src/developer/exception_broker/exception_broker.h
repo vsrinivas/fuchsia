@@ -6,8 +6,11 @@
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
+
+#include <optional>
 
 #include "src/developer/exception_broker/process_limbo_manager.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -34,8 +37,13 @@ class ExceptionBroker : public fuchsia::exception::Handler {
 
   fxl::WeakPtr<ExceptionBroker> GetWeakPtr();
 
-  const std::map<uint64_t, fuchsia::feedback::CrashReporterPtr>& connections() const {
-    return connections_;
+  const std::map<uint64_t, fuchsia::feedback::CrashReporterPtr>& crash_reporter_connections()
+      const {
+    return crash_reporter_connections_;
+  }
+
+  const std::map<uint64_t, fuchsia::sys::internal::IntrospectPtr>& introspect_connections() const {
+    return introspect_connections_;
   }
 
   ProcessLimboManager& limbo_manager() { return limbo_manager_; }
@@ -43,6 +51,7 @@ class ExceptionBroker : public fuchsia::exception::Handler {
 
  private:
   void FileCrashReport(fuchsia::exception::ProcessException);  // |use_limbo_| == false.
+  void FileCrashReport(uint64_t id, std::optional<std::string> component_url);
 
   ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services);
 
@@ -51,7 +60,9 @@ class ExceptionBroker : public fuchsia::exception::Handler {
   // As we create a new connection each time an exception is passed on to us, we need to
   // keep track of all the current outstanding connections.
   // These will be deleted as soon as the call returns or fails.
-  std::map<uint64_t, fuchsia::feedback::CrashReporterPtr> connections_;
+  std::map<uint64_t, fuchsia::exception::ProcessException> process_exceptions_;
+  std::map<uint64_t, fuchsia::feedback::CrashReporterPtr> crash_reporter_connections_;
+  std::map<uint64_t, fuchsia::sys::internal::IntrospectPtr> introspect_connections_;
   uint64_t next_connection_id_ = 1;
 
   ProcessLimboManager limbo_manager_;
