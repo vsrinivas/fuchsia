@@ -33,6 +33,7 @@ TEST(FormatDetectionTest, TestInvalidGptIgnored) {
   ASSERT_NO_FATAL_FAILURES(CreateEmptyRamdisk(std::move(vmo), &client));
   int fd = ramdisk_get_block_fd(client);
   ASSERT_EQ(detect_disk_format(fd), DISK_FORMAT_UNKNOWN);
+  ASSERT_EQ(ramdisk_destroy(client), ZX_OK);
 }
 
 TEST(FormatDetectionTest, TestGptWithUnusualBlockSize) {
@@ -44,5 +45,6 @@ TEST(FormatDetectionTest, TestGptWithUnusualBlockSize) {
 
   int fd = ramdisk_get_block_fd(client);
   ASSERT_EQ(detect_disk_format(fd), DISK_FORMAT_GPT);
+  ASSERT_EQ(ramdisk_destroy(client), ZX_OK);
 }
 }  // namespace
