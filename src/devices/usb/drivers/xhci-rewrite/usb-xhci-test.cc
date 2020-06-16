@@ -65,9 +65,9 @@ struct FakeTRB : TRB {
   zx_paddr_t prev = 0;
 };
 
-class FakeDevice : public ddk::PDevProtocol<FakeDevice>, public ddk::PciProtocol<FakeDevice> {
+class FakeDevice : public ddk::PDevProtocol<FakeDevice> {
  public:
-  FakeDevice() : pdev_({&pdev_protocol_ops_, this}), pci_({&pci_protocol_ops_, this}) {
+  FakeDevice() : pdev_({&pdev_protocol_ops_, this}) {
     constexpr auto kHcsParams2 = 2;
     constexpr auto kHccParams1 = 4;
     constexpr auto kXecp = 320;
@@ -208,7 +208,6 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice>, public ddk::PciProtocol
   }
 
   const pdev_protocol_t* pdev() const { return &pdev_; }
-  const pci_protocol_t* pci() const { return &pci_; }
 
   zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     out_mmio->offset = reinterpret_cast<size_t>(this);
@@ -236,61 +235,6 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice>, public ddk::PciProtocol
 
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
 
-  zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciEnableBusMaster(bool enable) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciResetDevice() { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciMapInterrupt(zx_status_t which_irq, zx::interrupt* out_handle) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciGetDeviceInfo(zx_pcie_device_info_t* out_into) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciConfigWrite8(uint16_t offset, uint8_t value) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciConfigWrite16(uint16_t offset, uint16_t value) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciGetAuxdata(const char* args, void* out_data_buffer, size_t data_size,
-                            size_t* out_data_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti) { return ZX_ERR_NOT_SUPPORTED; }
-
   void SetDoorbellCallback(fit::function<void(uint8_t, uint8_t)> callback) {
     doorbell_callback_ = std::move(callback);
   }
@@ -301,7 +245,6 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice>, public ddk::PciProtocol
   ddk_fake::FakeMmioReg regs_[2048];
   std::optional<ddk_fake::FakeMmioRegRegion> region_;
   pdev_protocol_t pdev_;
-  pci_protocol_t pci_;
   zx::interrupt irq_;
   zx::unowned_interrupt irq_signaller_;
   bool driver_owned_controller_ = false;
