@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "//src/bringup/bin/sysinfo:sysinfo-test",  # This is a package.
     "//src/bringup/tests/bootfs_test",  # This is a package.
     "//src/connectivity/ethernet/tests/ethernet:ethernet-package",
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",
@@ -34,7 +35,6 @@ group("tests") {
     "//src/media/audio/lib/simple-audio-stream/tests:sa-unittest-package",
     "//src/security/zxcrypt/tests:zxcrypt-package",
     "//src/ui/input/tests/hid:hid-package",
-    "//zircon/system/core/sysinfo:sysinfo-test",  # This is a package.
     "//zircon/system/ulib/abs_clock/test:abs-clock-test-package",
     "//zircon/system/ulib/affine/test:affine-package",
     "//zircon/system/ulib/async-loop/test:async-loop-package",

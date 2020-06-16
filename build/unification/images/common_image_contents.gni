@@ -193,7 +193,7 @@ common_image_contents = [
   "//src/bringup/bin/ptysvc",
   "//src/bringup/bin/pwrbtn-monitor",
   "//zircon/system/core/svchost",
-  "//zircon/system/core/sysinfo",
+  "//src/bringup/bin/sysinfo",
   "//src/storage/bin/blobfs",
   "//src/developer/feedback/bin/crasher",
   "//zircon/system/uapp/dd",
