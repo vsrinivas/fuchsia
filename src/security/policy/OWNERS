@@ -7,7 +7,6 @@ benwright@google.com
 bryanhenry@google.com
 dkrahn@google.com
 jln@google.com
-jseibert@google.com
 zarvox@google.com
 
 per-file build_info_allowlist_* = file: /src/sys/appmgr/OWNERS
