@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
-#define ZIRCON_SYSTEM_CORE_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
+#ifndef SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
+#define SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
 
 #include <lib/zx/job.h>
 #include <threads.h>
@@ -29,4 +29,4 @@
 // The caller is responsible for either detaching or joining the thread.
 zx_status_t start_crashsvc(zx::job root_job, zx_handle_t exception_handler_svc, thrd_t* thread);
 
-#endif  // ZIRCON_SYSTEM_CORE_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
+#endif  // SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_

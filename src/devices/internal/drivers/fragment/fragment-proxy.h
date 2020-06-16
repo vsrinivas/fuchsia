@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_PROXY_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_PROXY_H_
+#ifndef SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_FRAGMENT_PROXY_H_
+#define SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_FRAGMENT_PROXY_H_
 
 #include <lib/zx/channel.h>
 
@@ -150,4 +150,4 @@ class FragmentProxy : public FragmentProxyBase,
 
 }  // namespace fragment
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_PROXY_H_
+#endif  // SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_FRAGMENT_PROXY_H_

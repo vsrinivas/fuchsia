@@ -275,7 +275,7 @@ initially shown:
 ![Figure: Composite hardware device using proxies](composite-proxy.png)
 
 The fragments are bound to an internal driver (located in the
-[//zircon/system/core/devmgr/fragment][fragment] directory).
+[//src/devices/internal/drivers/fragment][fragment] directory).
 
 The driver handles proxying across process boundaries if necessary.
 This proxying uses the `DEVICE_ADD_MUST_ISOLATE` mechanism (introduced
@@ -302,15 +302,15 @@ messages to the normal device, and modify the `fragment.so` driver to
 service those messages appropriately.
 
 The fragment proxy is implemented in
-[/zircon/system/core/devmgr/fragment/fragment-proxy.cc][fragment-proxy.cc], and
+[/src/devices/internal/drivers/fragment/fragment-proxy.cc][fragment-proxy.cc], and
 the other half in
-[/zircon/system/core/devmgr/fragment/fragment.cc][fragment.cc].
+[/src/devices/internal/drivers/fragment/fragment.cc][fragment.cc].
 
 <!-- xrefs -->
 
-[fragment-proxy.cc]: /zircon/system/core/devmgr/fragment/fragment-proxy.cc
-[fragment.cc]: /zircon/system/core/devmgr/fragment/fragment.cc
-[fragment]: /zircon/system/core/devmgr/fragment/
+[fragment-proxy.cc]: /src/devices/internal/drivers/fragment/fragment-proxy.cc
+[fragment.cc]: /src/devices/internal/drivers/fragment/fragment.cc
+[fragment]: /src/devices/internal/drivers/fragment/
 [composite.banjo]: /zircon/system/banjo/ddk.protocol.composite/composite.banjo
 [driver.h]: /src/lib/ddk/include/ddk/driver.h
 [isolate]: driver-development.md#isolate-devices

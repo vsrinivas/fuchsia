@@ -104,8 +104,8 @@ zbi_input("integration-test-deps") {
     "//src/bringup/bin/netsvc:device-name-provider",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/svchost",
-    "//zircon/system/core/devmgr/fragment",
-    "//zircon/system/core/devmgr/fragment:fragment.proxy",
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/internal/drivers/fragment:fragment.proxy",
   ]
 }
 
