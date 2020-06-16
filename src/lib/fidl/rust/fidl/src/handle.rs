@@ -74,7 +74,7 @@ pub mod non_fuchsia_handles {
         borrow::BorrowMut,
         collections::VecDeque,
         pin::Pin,
-        sync::atomic::{AtomicU64, Ordering},
+        sync::atomic::{AtomicU64, AtomicUsize, Ordering},
         task::{Context, Poll, Waker},
     };
 
@@ -117,7 +117,7 @@ pub mod non_fuchsia_handles {
             if self.is_invalid() {
                 FidlHdlType::Invalid
             } else {
-                let (_, ty, _) = unpack_handle(self.as_handle_ref().0);
+                let (_, _, ty, _) = unpack_handle(self.as_handle_ref().0);
                 match ty {
                     FidlHandleType::Channel => FidlHdlType::Channel,
                     FidlHandleType::StreamSocket => FidlHdlType::Socket,
@@ -140,11 +140,15 @@ pub mod non_fuchsia_handles {
             if self.is_invalid() {
                 (0, 0)
             } else {
-                let (slot, ty, side) = unpack_handle(self.as_handle_ref().0);
+                let (shard, slot, ty, side) = unpack_handle(self.as_handle_ref().0);
                 let koid_left = match ty {
-                    FidlHandleType::Channel => CHANNELS.lock()[slot].koid_left,
-                    FidlHandleType::StreamSocket => STREAM_SOCKETS.lock()[slot].koid_left,
-                    FidlHandleType::DatagramSocket => DATAGRAM_SOCKETS.lock()[slot].koid_left,
+                    FidlHandleType::Channel => CHANNELS.shards[shard].lock()[slot].koid_left,
+                    FidlHandleType::StreamSocket => {
+                        STREAM_SOCKETS.shards[shard].lock()[slot].koid_left
+                    }
+                    FidlHandleType::DatagramSocket => {
+                        DATAGRAM_SOCKETS.shards[shard].lock()[slot].koid_left
+                    }
                 };
                 match side {
                     Side::Left => (koid_left, koid_left + 1),
@@ -297,9 +301,9 @@ pub mod non_fuchsia_handles {
         /// Create a channel, resulting in a pair of `Channel` objects representing both
         /// sides of the channel. Messages written into one maybe read from the opposite.
         pub fn create() -> Result<(Channel, Channel), zx_status::Status> {
-            let slot = new_handle_slot(&CHANNELS);
-            let left = pack_handle(slot, FidlHandleType::Channel, Side::Left);
-            let right = pack_handle(slot, FidlHandleType::Channel, Side::Right);
+            let (shard, slot) = CHANNELS.new_handle_slot();
+            let left = pack_handle(shard, slot, FidlHandleType::Channel, Side::Left);
+            let right = pack_handle(shard, slot, FidlHandleType::Channel, Side::Right);
             Ok((Channel(left), Channel(right)))
         }
 
@@ -327,9 +331,9 @@ pub mod non_fuchsia_handles {
             bytes: &mut Vec<u8>,
             handles: &mut Vec<Handle>,
         ) -> Poll<Result<(), zx_status::Status>> {
-            let (slot, ty, side) = unpack_handle(self.0);
+            let (shard, slot, ty, side) = unpack_handle(self.0);
             assert_eq!(ty, FidlHandleType::Channel);
-            let obj = &mut CHANNELS.lock()[slot];
+            let obj = &mut CHANNELS.shards[shard].lock()[slot];
             if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
                 std::mem::swap(bytes, &mut msg.bytes);
                 std::mem::swap(handles, &mut msg.handles);
@@ -349,9 +353,9 @@ pub mod non_fuchsia_handles {
             handles: &mut Vec<Handle>,
         ) -> Result<(), zx_status::Status> {
             let bytes = bytes.to_vec();
-            let (slot, ty, side) = unpack_handle(self.0);
+            let (shard, slot, ty, side) = unpack_handle(self.0);
             assert_eq!(ty, FidlHandleType::Channel);
-            let obj = &mut CHANNELS.lock()[slot];
+            let obj = &mut CHANNELS.shards[shard].lock()[slot];
             if !obj.liveness.is_open() {
                 return Err(zx_status::Status::PEER_CLOSED);
             }
@@ -462,15 +466,16 @@ pub mod non_fuchsia_handles {
         pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
             match sock_opts {
                 SocketOpts::STREAM => {
-                    let slot = new_handle_slot(&STREAM_SOCKETS);
-                    let left = pack_handle(slot, FidlHandleType::StreamSocket, Side::Left);
-                    let right = pack_handle(slot, FidlHandleType::StreamSocket, Side::Right);
+                    let (shard, slot) = STREAM_SOCKETS.new_handle_slot();
+                    let left = pack_handle(shard, slot, FidlHandleType::StreamSocket, Side::Left);
+                    let right = pack_handle(shard, slot, FidlHandleType::StreamSocket, Side::Right);
                     Ok((Socket(left), Socket(right)))
                 }
                 SocketOpts::DATAGRAM => {
-                    let slot = new_handle_slot(&DATAGRAM_SOCKETS);
-                    let left = pack_handle(slot, FidlHandleType::DatagramSocket, Side::Left);
-                    let right = pack_handle(slot, FidlHandleType::DatagramSocket, Side::Right);
+                    let (shard, slot) = DATAGRAM_SOCKETS.new_handle_slot();
+                    let left = pack_handle(shard, slot, FidlHandleType::DatagramSocket, Side::Left);
+                    let right =
+                        pack_handle(shard, slot, FidlHandleType::DatagramSocket, Side::Right);
                     Ok((Socket(left), Socket(right)))
                 }
             }
@@ -479,10 +484,10 @@ pub mod non_fuchsia_handles {
         /// Write the given bytes into the socket.
         /// Return value (on success) is number of bytes actually written.
         pub fn write(&self, bytes: &[u8]) -> Result<usize, zx_status::Status> {
-            let (slot, ty, side) = unpack_handle(self.0);
+            let (shard, slot, ty, side) = unpack_handle(self.0);
             match ty {
                 FidlHandleType::StreamSocket => {
-                    let obj = &mut STREAM_SOCKETS.lock()[slot];
+                    let obj = &mut STREAM_SOCKETS.shards[shard].lock()[slot];
                     if !obj.liveness.is_open() {
                         return Err(zx_status::Status::PEER_CLOSED);
                     }
@@ -490,7 +495,7 @@ pub mod non_fuchsia_handles {
                     obj.wakers.side_mut(side).take().map(|w| w.wake());
                 }
                 FidlHandleType::DatagramSocket => {
-                    let obj = &mut DATAGRAM_SOCKETS.lock()[slot];
+                    let obj = &mut DATAGRAM_SOCKETS.shards[shard].lock()[slot];
                     if !obj.liveness.is_open() {
                         return Err(zx_status::Status::PEER_CLOSED);
                     }
@@ -504,14 +509,14 @@ pub mod non_fuchsia_handles {
 
         /// Return how many bytes are buffered in the socket
         pub fn outstanding_read_bytes(&self) -> Result<usize, zx_status::Status> {
-            let (slot, ty, side) = unpack_handle(self.0);
+            let (shard, slot, ty, side) = unpack_handle(self.0);
             let (len, open) = match ty {
                 FidlHandleType::StreamSocket => {
-                    let obj = &STREAM_SOCKETS.lock()[slot];
+                    let obj = &STREAM_SOCKETS.shards[shard].lock()[slot];
                     (obj.q.side(side.opposite()).len(), obj.liveness.is_open())
                 }
                 FidlHandleType::DatagramSocket => {
-                    let obj = &DATAGRAM_SOCKETS.lock()[slot];
+                    let obj = &DATAGRAM_SOCKETS.shards[shard].lock()[slot];
                     (
                         obj.q.side(side.opposite()).front().map(|frame| frame.len()).unwrap_or(0),
                         obj.liveness.is_open(),
@@ -533,10 +538,10 @@ pub mod non_fuchsia_handles {
             bytes: &mut [u8],
             ctx: &mut Context<'_>,
         ) -> Poll<Result<usize, zx_status::Status>> {
-            let (slot, ty, side) = unpack_handle(self.0);
+            let (shard, slot, ty, side) = unpack_handle(self.0);
             match ty {
                 FidlHandleType::StreamSocket => {
-                    let obj = &mut STREAM_SOCKETS.lock()[slot];
+                    let obj = &mut STREAM_SOCKETS.shards[shard].lock()[slot];
                     if bytes.is_empty() {
                         if obj.liveness.is_open() {
                             return Poll::Ready(Ok(0));
@@ -560,7 +565,7 @@ pub mod non_fuchsia_handles {
                     Poll::Ready(Ok(copy_bytes))
                 }
                 FidlHandleType::DatagramSocket => {
-                    let obj = &mut DATAGRAM_SOCKETS.lock()[slot];
+                    let obj = &mut DATAGRAM_SOCKETS.shards[shard].lock()[slot];
                     if let Some(frame) = obj.q.side_mut(side.opposite()).pop_front() {
                         let n = std::cmp::min(bytes.len(), frame.len());
                         bytes[..n].clone_from_slice(&frame[..n]);
@@ -862,27 +867,45 @@ pub mod non_fuchsia_handles {
         koid_left: u64,
     }
 
-    type HandleTable<T> = Mutex<Slab<FidlHandle<T>>>;
+    const SHARD_COUNT: usize = 16;
+
+    struct HandleTable<T> {
+        shards: [Mutex<Slab<FidlHandle<T>>>; SHARD_COUNT],
+        next_shard: AtomicUsize,
+    }
 
     lazy_static::lazy_static! {
-        static ref CHANNELS: HandleTable<ChannelMessage> = Mutex::new(Slab::new());
-        static ref STREAM_SOCKETS: HandleTable<u8> = Mutex::new(Slab::new());
-        static ref DATAGRAM_SOCKETS: HandleTable<Vec<u8>> = Mutex::new(Slab::new());
+        static ref CHANNELS: HandleTable<ChannelMessage> = Default::default();
+        static ref STREAM_SOCKETS: HandleTable<u8> = Default::default();
+        static ref DATAGRAM_SOCKETS: HandleTable<Vec<u8>> = Default::default();
     }
 
     static NEXT_KOID: AtomicU64 = AtomicU64::new(1);
 
-    fn new_handle_slot<T>(tbl: &HandleTable<T>) -> usize {
-        let mut h = tbl.lock();
-        h.insert(FidlHandle {
-            q: Default::default(),
-            wakers: Default::default(),
-            liveness: Liveness::Open,
-            koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
-        })
+    impl<T> Default for HandleTable<T> {
+        fn default() -> Self {
+            Self { shards: Default::default(), next_shard: Default::default() }
+        }
     }
 
-    fn pack_handle(slot: usize, ty: FidlHandleType, side: Side) -> u32 {
+    impl<T> HandleTable<T> {
+        fn new_handle_slot(&self) -> (usize, usize) {
+            let shard = self.next_shard.fetch_add(1, Ordering::Relaxed) & 15;
+            let mut h = self.shards[shard].lock();
+            (
+                shard,
+                h.insert(FidlHandle {
+                    q: Default::default(),
+                    wakers: Default::default(),
+                    liveness: Liveness::Open,
+                    koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
+                }),
+            )
+        }
+    }
+
+    fn pack_handle(shard: usize, slot: usize, ty: FidlHandleType, side: Side) -> u32 {
+        assert!(shard <= SHARD_COUNT);
         let side_bit = match side {
             Side::Left => 0,
             Side::Right => 1,
@@ -892,11 +915,12 @@ pub mod non_fuchsia_handles {
             FidlHandleType::StreamSocket => 1,
             FidlHandleType::DatagramSocket => 2,
         };
+        let shard_bits = shard as u32;
         let slot_bits = slot as u32;
-        (slot_bits << 3) | (ty_bits << 1) | side_bit
+        (slot_bits << 7) | (shard_bits << 3) | (ty_bits << 1) | side_bit
     }
 
-    fn unpack_handle(handle: u32) -> (usize, FidlHandleType, Side) {
+    fn unpack_handle(handle: u32) -> (usize, usize, FidlHandleType, Side) {
         let side = if handle & 1 == 0 { Side::Left } else { Side::Right };
         let ty = match (handle >> 1) & 0x3 {
             0 => FidlHandleType::Channel,
@@ -904,12 +928,13 @@ pub mod non_fuchsia_handles {
             2 => FidlHandleType::DatagramSocket,
             x => panic!("Bad handle type {}", x),
         };
-        let slot = (handle >> 3) as usize;
-        (slot, ty, side)
+        let shard = ((handle >> 3) & 15) as usize;
+        let slot = (handle >> 7) as usize;
+        (shard, slot, ty, side)
     }
 
-    fn close_in_table<T>(tbl: &HandleTable<T>, slot: usize, side: Side) {
-        let mut tbl = tbl.lock();
+    fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side) {
+        let mut tbl = tbl.shards[shard].lock();
         let h = &mut tbl[slot];
         match h.liveness.close(side) {
             None => {
@@ -927,11 +952,11 @@ pub mod non_fuchsia_handles {
         if hdl == INVALID_HANDLE {
             return;
         }
-        let (slot, ty, side) = unpack_handle(hdl);
+        let (shard, slot, ty, side) = unpack_handle(hdl);
         match ty {
-            FidlHandleType::Channel => close_in_table(&CHANNELS, slot, side),
-            FidlHandleType::StreamSocket => close_in_table(&STREAM_SOCKETS, slot, side),
-            FidlHandleType::DatagramSocket => close_in_table(&DATAGRAM_SOCKETS, slot, side),
+            FidlHandleType::Channel => close_in_table(&CHANNELS, shard, slot, side),
+            FidlHandleType::StreamSocket => close_in_table(&STREAM_SOCKETS, shard, slot, side),
+            FidlHandleType::DatagramSocket => close_in_table(&DATAGRAM_SOCKETS, shard, slot, side),
         }
     }
 }
