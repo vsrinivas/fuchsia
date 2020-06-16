@@ -42,6 +42,24 @@ const ether_arp kSampleArpReq = {.ea_hdr = {.ar_hrd = htons(ETH_P_802_3),
 
 const std::vector<uint8_t> kDummyData = {0, 1, 2, 3, 4};
 
+struct GenericIfc : public SimInterface {
+  void OnAssocConf(const wlanif_assoc_confirm_t* resp) override;
+  void OnAssocInd(const wlanif_assoc_ind_t* ind) override;
+  void OnAuthConf(const wlanif_auth_confirm_t* resp) override;
+  void OnDataRecv(const void* frame, size_t frame_size, uint32_t flags) override;
+  void OnJoinConf(const wlanif_join_confirm_t* resp) override;
+  void OnStartConf(const wlanif_start_confirm_t* resp) override;
+  void OnStopConf(const wlanif_stop_confirm_t* resp) override;
+
+  // Have we completed associating our client interface with a fake AP?
+  bool assoc_complete_ = false;
+
+  unsigned int arp_frames_received_ = 0;
+  unsigned int non_arp_frames_received_ = 0;
+
+  bool assoc_ind_recv_ = false;
+};
+
 class ArpTest : public SimTest {
  public:
   static constexpr zx::duration kTestDuration = zx::sec(100);
@@ -68,83 +86,75 @@ class ArpTest : public SimTest {
 
   // Client association handlers
   void StartAssoc();
-  void OnJoinConf(const wlanif_join_confirm_t* resp);
-  void OnAuthConf(const wlanif_auth_confirm_t* resp);
-  void OnAssocConf(const wlanif_assoc_confirm_t* resp);
 
   // Frame processing
   void ScheduleTx(const common::MacAddr& dstAddr, const common::MacAddr& srcAddr,
                   const std::vector<uint8_t>& ethFrame, zx::duration when);
   void ScheduleArpFrameTx(zx::duration when, bool expect_rx);
   void ScheduleNonArpFrameTx(zx::duration when);
-  void OnDataRecv(const uint8_t* frame, size_t frame_size);
   static std::vector<uint8_t> CreateEthernetFrame(common::MacAddr dstAddr, common::MacAddr srcAddr,
                                                   uint16_t ethType, const uint8_t* ethBody,
                                                   size_t ethBodySize);
 
  protected:
   simulation::WlanTxInfo tx_info_ = {.channel = kDefaultChannel};
-  unsigned int arp_frames_received_ = 0;
-  unsigned int non_arp_frames_received_ = 0;
-
-  // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
-
-  // Interface handlers
-  void OnAssocInd(const wlanif_assoc_ind_t* ind);
 
   std::vector<uint8_t> ethFrame;
-  SimInterface sim_ifc_;
-  bool assoc_ind_recv_ = false;
-
-  // Have we completed associating our client interface with a fake AP?
-  bool assoc_complete_ = false;
+  GenericIfc sim_ifc_;
 };
 
-wlanif_impl_ifc_protocol_ops_t ArpTest::sme_ops_ = {
-    // SME operations
-    .on_scan_result = [](void* ctx, const wlanif_scan_result_t* result) {},
-    .on_scan_end = [](void* ctx, const wlanif_scan_end_t* end) {},
-    .join_conf =
-        [](void* ctx, const wlanif_join_confirm_t* resp) {
-          static_cast<ArpTest*>(ctx)->OnJoinConf(resp);
-        },
-    .auth_conf =
-        [](void* ctx, const wlanif_auth_confirm_t* resp) {
-          static_cast<ArpTest*>(ctx)->OnAuthConf(resp);
-        },
-    .auth_ind = [](void* ctx, const wlanif_auth_ind_t* resp) {},
-    .deauth_conf = [](void* ctx, const wlanif_deauth_confirm_t* resp) {},
-    .deauth_ind = [](void* ctx, const wlanif_deauth_indication_t* ind) {},
-    .assoc_conf =
-        [](void* ctx, const wlanif_assoc_confirm_t* resp) {
-          static_cast<ArpTest*>(ctx)->OnAssocConf(resp);
-        },
-    .assoc_ind = [](void* ctx,
-                    const wlanif_assoc_ind_t* ind) { static_cast<ArpTest*>(ctx)->OnAssocInd(ind); },
-    .disassoc_conf = [](void* ctx, const wlanif_disassoc_confirm_t* resp) {},
-    .disassoc_ind = [](void* ctx, const wlanif_disassoc_indication_t* ind) {},
-    .start_conf =
-        [](void* ctx, const wlanif_start_confirm_t* resp) {
-          ASSERT_EQ(resp->result_code, WLAN_START_RESULT_SUCCESS);
-        },
-    .stop_conf =
-        [](void* ctx, const wlanif_stop_confirm_t* resp) {
-          ASSERT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
-        },
-    .eapol_conf = [](void* ctx, const wlanif_eapol_confirm_t* resp) {},
-    .on_channel_switch = [](void* ctx, const wlanif_channel_switch_info_t* ind) {},
-    .signal_report = [](void* ctx, const wlanif_signal_report_indication_t* ind) {},
-    .eapol_ind = [](void* ctx, const wlanif_eapol_indication_t* ind) {},
-    .stats_query_resp = [](void* ctx, const wlanif_stats_query_response_t* resp) {},
-    .relay_captured_frame = [](void* ctx, const wlanif_captured_frame_result_t* result) {},
-    .data_recv =
-        [](void* ctx, const void* data, size_t data_size, uint32_t flags) {
-          static_cast<ArpTest*>(ctx)->OnDataRecv(static_cast<const uint8_t*>(data), data_size);
-        },
-};
+void GenericIfc::OnAssocConf(const wlanif_assoc_confirm_t* resp) { assoc_complete_ = true; }
+
+void GenericIfc::OnAssocInd(const wlanif_assoc_ind_t* ind) {
+  ASSERT_EQ(std::memcmp(ind->peer_sta_address, kTheirMac.byte, ETH_ALEN), 0);
+  assoc_ind_recv_ = true;
+}
+
+void GenericIfc::OnAuthConf(const wlanif_auth_confirm_t* resp) {
+  // Send assoc request
+  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
+  memcpy(assoc_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
+  if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
+}
+
+void GenericIfc::OnDataRecv(const void* frame, size_t size, uint32_t flags) {
+  const uint8_t* frame_bytes = reinterpret_cast<const uint8_t*>(frame);
+
+  // For this test only, assume anything that is the right size is an ARP frame
+  if (size != sizeof(ethhdr) + sizeof(ether_arp)) {
+    non_arp_frames_received_++;
+    ASSERT_EQ(size, sizeof(ethhdr) + kDummyData.size());
+    EXPECT_EQ(memcmp(kDummyData.data(), &frame_bytes[sizeof(ethhdr)], kDummyData.size()), 0);
+    return;
+  }
+
+  arp_frames_received_++;
+
+  const ethhdr* eth_hdr = reinterpret_cast<const ethhdr*>(frame_bytes);
+  EXPECT_EQ(memcmp(eth_hdr->h_dest, common::kBcastMac.byte, ETH_ALEN), 0);
+  EXPECT_EQ(memcmp(eth_hdr->h_source, kTheirMac.byte, ETH_ALEN), 0);
+  EXPECT_EQ(ntohs(eth_hdr->h_proto), ETH_P_ARP);
+
+  const ether_arp* arp_hdr = reinterpret_cast<const ether_arp*>(frame_bytes + sizeof(ethhdr));
+  EXPECT_EQ(memcmp(arp_hdr, &kSampleArpReq, sizeof(ether_arp)), 0);
+}
+
+void GenericIfc::OnJoinConf(const wlanif_join_confirm_t* resp) {
+  // Send auth request
+  wlanif_auth_req_t auth_req;
+  std::memcpy(auth_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
+  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
+  if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
+}
+
+void GenericIfc::OnStartConf(const wlanif_start_confirm_t* resp) {
+  ASSERT_EQ(resp->result_code, WLAN_START_RESULT_SUCCESS);
+}
+
+void GenericIfc::OnStopConf(const wlanif_stop_confirm_t* resp) {
+  ASSERT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
+}
 
 void ArpTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
 
@@ -202,11 +212,6 @@ zx_status_t ArpTest::StopSoftAP() {
   return ZX_OK;
 }
 
-void ArpTest::OnAssocInd(const wlanif_assoc_ind_t* ind) {
-  ASSERT_EQ(std::memcmp(ind->peer_sta_address, kTheirMac.byte, ETH_ALEN), 0);
-  assoc_ind_recv_ = true;
-}
-
 void ArpTest::TxAssocReq() {
   // Get the mac address of the SoftAP
   const common::MacAddr mac(kTheirMac);
@@ -217,7 +222,7 @@ void ArpTest::TxAssocReq() {
 void ArpTest::VerifyAssoc() {
   // Verify the event indications were received and
   // the number of clients
-  ASSERT_EQ(assoc_ind_recv_, true);
+  ASSERT_EQ(sim_ifc_.assoc_ind_recv_, true);
   brcmf_simdev* sim = device_->GetSim();
   uint16_t num_clients = sim->sim_fw->GetNumClients(sim_ifc_.iface_id_);
   ASSERT_EQ(num_clients, 1U);
@@ -243,27 +248,6 @@ void ArpTest::Tx(const std::vector<uint8_t>& ethFrame) {
   env_->Tx(dataFrame, kDefaultTxInfo, this);
 }
 
-void ArpTest::OnDataRecv(const uint8_t* frame, size_t size) {
-  // For this test only, assume anything that is the right size is an ARP frame
-  if (size != sizeof(ethhdr) + sizeof(ether_arp)) {
-    non_arp_frames_received_++;
-    ASSERT_EQ(size, sizeof(ethhdr) + kDummyData.size());
-    EXPECT_EQ(memcmp(kDummyData.data(), &frame[sizeof(ethhdr)], kDummyData.size()), 0);
-    return;
-  }
-
-  arp_frames_received_++;
-
-  const ethhdr* eth_hdr = reinterpret_cast<const ethhdr*>(frame);
-  EXPECT_EQ(memcmp(eth_hdr->h_dest, common::kBcastMac.byte, ETH_ALEN), 0);
-  EXPECT_EQ(memcmp(eth_hdr->h_source, kTheirMac.byte, ETH_ALEN), 0);
-  EXPECT_EQ(ntohs(eth_hdr->h_proto), ETH_P_ARP);
-
-  const ether_arp* arp_hdr = reinterpret_cast<const ether_arp*>(frame + sizeof(ethhdr));
-  EXPECT_EQ(memcmp(arp_hdr, &kSampleArpReq, sizeof(ether_arp)), 0);
-}
-
-// Schedule the transmission of an ARP frame
 void ArpTest::ScheduleArpFrameTx(zx::duration when, bool expect_rx) {
   ether_arp arp_frame = kSampleArpReq;
 
@@ -295,29 +279,11 @@ void ArpTest::StartAssoc() {
   sim_ifc_.if_impl_ops_->join_req(sim_ifc_.if_impl_ctx_, &join_req);
 }
 
-void ArpTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
-  // Send auth request
-  wlanif_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
-  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  sim_ifc_.if_impl_ops_->auth_req(sim_ifc_.if_impl_ctx_, &auth_req);
-}
-
-void ArpTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
-  // Send assoc request
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
-  sim_ifc_.if_impl_ops_->assoc_req(sim_ifc_.if_impl_ctx_, &assoc_req);
-}
-
-void ArpTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) { assoc_complete_ = true; }
-
 // Verify that an ARP frame received by an AP interface is not offloaded, even after multicast
 // promiscuous mode is enabled.
 TEST_F(ArpTest, SoftApArpOffload) {
   Init();
-  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &sim_ifc_, &sme_protocol_, kOurMac),
+  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &sim_ifc_, std::nullopt, kOurMac),
             ZX_OK);
   EXPECT_EQ(StartSoftAP(), ZX_OK);
 
@@ -341,17 +307,17 @@ TEST_F(ArpTest, SoftApArpOffload) {
   env_->Run(kTestDuration);
 
   // Verify that no ARP frames were offloaded
-  EXPECT_EQ(arp_frames_received_, 2U);
+  EXPECT_EQ(sim_ifc_.arp_frames_received_, 2U);
 
   // Verify that no non-ARP frames were suppressed
-  EXPECT_EQ(non_arp_frames_received_, 2U);
+  EXPECT_EQ(sim_ifc_.non_arp_frames_received_, 2U);
 }
 
 // On a client interface, we expect all ARP frames to be offloaded to firmware, regardless of
 // the multicast promiscuous setting.
 TEST_F(ArpTest, ClientArpOffload) {
   Init();
-  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, &sme_protocol_, kOurMac),
+  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac),
             ZX_OK);
 
   // Start a fake AP
@@ -373,13 +339,13 @@ TEST_F(ArpTest, ClientArpOffload) {
   env_->Run(kTestDuration);
 
   // Verify that we completed the association process
-  EXPECT_EQ(assoc_complete_, true);
+  EXPECT_EQ(sim_ifc_.assoc_complete_, true);
 
   // Verify that all ARP frames were offloaded
-  EXPECT_EQ(arp_frames_received_, 0U);
+  EXPECT_EQ(sim_ifc_.arp_frames_received_, 0U);
 
   // Verify that no non-ARP frames were suppressed
-  EXPECT_EQ(non_arp_frames_received_, 2U);
+  EXPECT_EQ(sim_ifc_.non_arp_frames_received_, 2U);
 }
 
 }  // namespace wlan::brcmfmac

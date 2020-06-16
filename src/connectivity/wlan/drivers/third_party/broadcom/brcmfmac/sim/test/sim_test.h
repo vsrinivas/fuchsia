@@ -86,9 +86,10 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
  protected:
   // Create a new interface on the simulated device, providing the specified role and function
   // callbacks
-  zx_status_t StartInterface(wlan_info_mac_role_t role, SimInterface* sim_ifc,
-                             std::optional<const wlanif_impl_ifc_protocol*> sme_protocol,
-                             std::optional<common::MacAddr> mac_addr = std::nullopt);
+  zx_status_t StartInterface(
+      wlan_info_mac_role_t role, SimInterface* sim_ifc,
+      std::optional<const wlanif_impl_ifc_protocol*> sme_protocol = std::nullopt,
+      std::optional<common::MacAddr> mac_addr = std::nullopt);
 
   // Fake device manager
   std::shared_ptr<simulation::FakeDevMgr> dev_mgr_;
