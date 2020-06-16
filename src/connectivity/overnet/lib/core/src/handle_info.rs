@@ -39,11 +39,8 @@ pub(crate) fn handle_info(hdl: HandleRef<'_>) -> Result<HandleInfo, Error> {
         }
         fidl::FidlHdlType::Invalid => bail!("Unsupported handle type"),
     };
-    Ok(HandleInfo {
-        handle_type,
-        this_handle_key: hdl.emulated_koid(),
-        pair_handle_key: hdl.related().emulated_koid(),
-    })
+    let (this_handle_key, pair_handle_key) = hdl.emulated_koid_pair();
+    Ok(HandleInfo { handle_type, this_handle_key, pair_handle_key })
 }
 
 #[cfg(target_os = "fuchsia")]
