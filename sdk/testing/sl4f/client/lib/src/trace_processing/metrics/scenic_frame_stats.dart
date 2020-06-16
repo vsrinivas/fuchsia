@@ -42,7 +42,7 @@ _Results _scenicFrameStats(Model model) {
     final followingEvents = filterEventsTyped<DurationEvent>(
         getFollowingEvents(durationEvent),
         category: 'gfx',
-        name: 'DisplaySwapchain::OnFrameRendered');
+        name: 'Display::Fence::OnReady');
     if (followingEvents.isEmpty) {
       return null;
     }

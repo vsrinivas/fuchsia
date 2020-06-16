@@ -420,9 +420,9 @@ void main(List<String> args) {
     final model = createModelFromJsonString(scenicTraceJsonString);
     final results = scenicFrameStatsMetricsProcessor(model, {});
 
-    expect(computeMean(results[0].values), _closeTo(4.405753983333));
-    expect(computeMean(results[1].values), _closeTo(6.072069499999));
-    expect(computeMean(results[2].values), _closeTo(4.072828216666666));
+    expect(computeMean(results[0].values), _closeTo(1.254430254));
+    expect(computeMean(results[1].values), _closeTo(3.649910802));
+    expect(computeMean(results[2].values), _closeTo(0.849043290));
   });
 
   test('Scenic frame stats metric (no connected frames edge case)', () async {
