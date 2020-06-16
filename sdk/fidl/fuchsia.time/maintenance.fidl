@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.time;
+
+/// Provides access to a UTC clock for the purposes of
+/// keeping it up-to-date with external time sources.
+///
+/// The client does not own the UTC clock, but is given
+/// a lease in order to keep the time synchronized.
+[Discoverable]
+protocol Maintenance {
+    /// Retrieve a UTC clock handle with write rights.
+    GetWritableUtcClock() -> (handle<clock> utc_clock);
+};

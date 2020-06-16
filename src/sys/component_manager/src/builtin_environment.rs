@@ -14,6 +14,7 @@ use {
             root_resource::RootResource,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
             system_controller::SystemController,
+            time::UtcTimeMaintainer,
             vmex::VmexService,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
@@ -52,7 +53,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::*},
     fuchsia_runtime::{take_startup_handle, HandleType},
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::{channel::oneshot, prelude::*},
     log::info,
     std::{
@@ -60,6 +61,9 @@ use {
         sync::{Arc, Weak},
     },
 };
+
+// Re-export so that the component_manager binary can see it.
+pub use crate::builtin::time::create_and_start_utc_clock;
 
 // TODO(viktard): Merge Arguments, RuntimeConfig and root_component_url from ModelParams
 #[derive(Default)]
@@ -71,6 +75,7 @@ pub struct BuiltinEnvironmentBuilder {
     // This is used to initialize fuchsia_base_pkg_resolver's Model reference. Resolvers must
     // be created to construct the Model.
     model_for_resolver: Option<oneshot::Sender<Weak<Model>>>,
+    utc_clock: Option<Arc<Clock>>,
 }
 
 impl BuiltinEnvironmentBuilder {
@@ -85,6 +90,11 @@ impl BuiltinEnvironmentBuilder {
 
     pub fn set_config(mut self, config: RuntimeConfig) -> Self {
         self.config = Some(config);
+        self
+    }
+
+    pub fn set_utc_clock(mut self, clock: Arc<Clock>) -> Self {
+        self.utc_clock = Some(clock);
         self
     }
 
@@ -195,7 +205,7 @@ impl BuiltinEnvironmentBuilder {
             })
             .collect();
 
-        Ok(BuiltinEnvironment::new(model, args, config, builtin_runners).await?)
+        Ok(BuiltinEnvironment::new(model, args, config, builtin_runners, self.utc_clock).await?)
     }
 
     /// Checks if the appmgr loader service is available through our namespace and connects to it if
@@ -218,6 +228,8 @@ impl BuiltinEnvironmentBuilder {
 /// The available built-in capabilities depends on the configuration provided in Arguments:
 /// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
 ///   is available.
+/// * If [Arguments::maintain_utc_clock] is true, a fuchsia.time.Maintenance service is
+///   available.
 pub struct BuiltinEnvironment {
     pub model: Arc<Model>,
 
@@ -231,6 +243,7 @@ pub struct BuiltinEnvironment {
     pub write_only_log: Option<Arc<WriteOnlyLog>>,
     pub root_resource: Option<Arc<RootResource>>,
     pub system_controller: Arc<SystemController>,
+    pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
     pub vmex_service: Option<Arc<VmexService>>,
 
     pub work_scheduler: Arc<WorkScheduler>,
@@ -252,6 +265,7 @@ impl BuiltinEnvironment {
         args: Arguments,
         config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
+        utc_clock: Option<Arc<Clock>>,
     ) -> Result<BuiltinEnvironment, ModelError> {
         // Set up ProcessLauncher if available.
         let process_launcher = if args.use_builtin_process_launcher {
@@ -315,6 +329,15 @@ impl BuiltinEnvironment {
         if let Some(write_only_log) = write_only_log.as_ref() {
             model.root_realm.hooks.install(write_only_log.hooks()).await;
         }
+
+        // Register the UTC time maintainer.
+        let utc_time_maintainer = if let Some(clock) = utc_clock {
+            let utc_time_maintainer = Arc::new(UtcTimeMaintainer::new(clock));
+            model.root_realm.hooks.install(utc_time_maintainer.hooks()).await;
+            Some(utc_time_maintainer)
+        } else {
+            None
+        };
 
         // Set up the Vmex service.
         let vmex_service = root_resource_handle.as_ref().map(|handle| {
@@ -415,8 +438,8 @@ impl BuiltinEnvironment {
             write_only_log,
             root_resource,
             system_controller,
+            utc_time_maintainer,
             vmex_service,
-
             work_scheduler,
             realm_capability_host,
             hub,

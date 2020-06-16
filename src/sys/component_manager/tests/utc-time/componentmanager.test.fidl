@@ -1,0 +1,23 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library componentmanager.test;
+
+union TestOutcome {
+    1: SuccessOutcome success;
+    2: FailedOutcome failed;
+};
+
+struct SuccessOutcome {
+    int64 backstop_nanos;
+};
+
+struct FailedOutcome {
+    string message;
+};
+
+[Discoverable]
+protocol TestOutcomeReport {
+    Report(TestOutcome outcome);
+};

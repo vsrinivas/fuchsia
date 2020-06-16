@@ -23,6 +23,7 @@ group("tests") {
     "routing:tests",
     "security_policy:tests",
     "storage:storage_integration_test",
+    "utc-time:tests",
     "work_scheduler:work_scheduler_integration_test",
   ]
 }

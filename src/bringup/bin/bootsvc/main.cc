@@ -183,7 +183,8 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
         "fuchsia-boot:///#meta/root.cm,"
         "--config-file,"
         "/boot/config/component_manager,"
-        "--use-builtin-process-launcher";
+        "--use-builtin-process-launcher,"
+        "--maintain-utc-clock";
   }
 
   // Split the bootsvc.next value into 1 or more arguments using ',' as a

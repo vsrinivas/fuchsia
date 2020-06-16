@@ -8,7 +8,9 @@
 use {
     anyhow::{Context as _, Error},
     component_manager_lib::{
-        builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
+        builtin_environment::{
+            create_and_start_utc_clock, BuiltinEnvironment, BuiltinEnvironmentBuilder,
+        },
         config::RuntimeConfig,
         elf_runner::ElfRunner,
         klog,
@@ -100,17 +102,26 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
         Err(err) => panic!("Failed to load runtime config: {}", err),
     };
 
+    // Create a UTC clock if required.
+    let utc_clock = if args.maintain_utc_clock {
+        Some(Arc::new(create_and_start_utc_clock().await.context("failed to create UTC clock")?))
+    } else {
+        None
+    };
+
     // Create an ELF runner for the root component.
     let runner = Arc::new(ElfRunner::new(&args));
 
     let root_url = args.root_component_url.clone();
-    let builtin_environment = BuiltinEnvironmentBuilder::new()
+    let mut builtin_environment_builder = BuiltinEnvironmentBuilder::new()
         .set_args(args)
         .set_config(config)
         .add_runner("elf".into(), runner)
-        .add_available_resolvers_from_namespace()?
-        .build()
-        .await?;
+        .add_available_resolvers_from_namespace()?;
+    if let Some(utc_clock) = utc_clock {
+        builtin_environment_builder = builtin_environment_builder.set_utc_clock(utc_clock);
+    }
+    let builtin_environment = builtin_environment_builder.build().await?;
     builtin_environment.bind_service_fs_to_out().await?;
 
     let root_moniker = AbsoluteMoniker::root();

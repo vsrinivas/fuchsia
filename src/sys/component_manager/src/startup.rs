@@ -20,6 +20,11 @@ pub struct Arguments {
     // has to use the fuchsia.process.Launcher service provided through its namespace instead.
     pub use_builtin_process_launcher: bool,
 
+    /// If true, component_manager will maintain a UTC kernel clock and vend write handles through
+    /// an instance of `fuchsia.time.Maintenance`. This flag should only be used with the top-level
+    /// component_manager.
+    pub maintain_utc_clock: bool,
+
     /// If true, component manager will be in debug mode. In this mode, the BlockingEventSource FIDL
     /// service will be exposed via the ServiceFs directory (usually the out dir). ComponentManager
     /// will not start until it is resumed by the BlockingEventSource FIDL API.
@@ -52,6 +57,8 @@ impl Arguments {
         while let Some(arg) = iter.next() {
             if arg == "--use-builtin-process-launcher" {
                 args.use_builtin_process_launcher = true;
+            } else if arg == "--maintain-utc-clock" {
+                args.maintain_utc_clock = true;
             } else if arg == "--debug" {
                 args.debug = true;
             } else if arg == "--config-file" {
@@ -89,7 +96,9 @@ impl Arguments {
             "Usage: {} [options] <root-component-url>\n\
              Options:\n\
              --use-builtin-process-launcher   Provide and use a built-in implementation of\n\
-             fuchsia.process.Launcher\n",
+             fuchsia.process.Launcher\n
+             --maintain-utc-clock             Create and vend a UTC kernel clock through a\n\
+             built-in implementation of fuchsia.time.Maintenance\n",
             std::env::args().next().unwrap_or("component_manager".to_string())
         )
     }
@@ -106,6 +115,7 @@ mod tests {
         let unknown_flag = || "--unknown".to_string();
         let use_builtin_launcher = || "--use-builtin-process-launcher".to_string();
         let debug = || "--debug".to_string();
+        let maintain_utc_clock = || "--maintain-utc-clock".to_string();
 
         // Zero or multiple positional arguments is an error; must be exactly one URL.
         assert!(Arguments::new(vec![]).is_err());
@@ -154,7 +164,23 @@ mod tests {
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
                 debug: true,
-                config_file: None,
+                ..Default::default()
+            }
+        );
+        assert_eq!(
+            Arguments::new(vec![
+                dummy_url(),
+                use_builtin_launcher(),
+                debug(),
+                maintain_utc_clock()
+            ])
+            .expect("Unexpected error with option"),
+            Arguments {
+                use_builtin_process_launcher: true,
+                root_component_url: dummy_url(),
+                debug: true,
+                maintain_utc_clock: true,
+                ..Default::default()
             }
         );
 
