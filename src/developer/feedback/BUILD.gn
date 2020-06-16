@@ -12,6 +12,7 @@ group("feedback") {
     ":tests",
     "bugreport",
     "crash_reports:crash-reports",
+    "crasher",
     "feedback_data:feedback_agent",
     "last_reboot:last-reboot",
   ]
