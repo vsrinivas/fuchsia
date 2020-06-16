@@ -13,7 +13,7 @@
 #include <memory>
 #include <utility>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 __BEGIN_CDECLS
 
@@ -48,7 +48,7 @@ class Fixture {
 
   zx_status_t error_status() const { return error_status_; }
 
-  bool CreateLogger() {
+  void CreateLogger() {
     ASSERT_NE(pipe2(pipefd_, O_NONBLOCK), -1, "");
     zx::channel local, remote;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
@@ -56,14 +56,13 @@ class Fixture {
     ASSERT_EQ(ZX_OK, logger_->Begin(loop_.dispatcher()));
     logger_handle_.reset(local.release());
     logger_->set_error_handler([this](zx_status_t status) { error_status_ = status; });
-    return true;
   }
 
   void ResetLoggerHandle() { logger_handle_.reset(); }
 
   void ResetSocket() { socket_.reset(); }
 
-  bool ConnectToLogger() {
+  void ConnectToLogger() {
     ASSERT_TRUE(logger_handle_);
     zx::socket local, remote;
     ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -75,10 +74,9 @@ class Fixture {
     ASSERT_EQ(ZX_OK, logger_handle_.write(0, &req, sizeof(req), handles, 1));
     loop_.RunUntilIdle();
     socket_.reset(local.release());
-    return true;
   }
 
-  bool InitSyslog(const char** tags, size_t ntags) {
+  void InitSyslog(const char** tags, size_t ntags) {
     ASSERT_TRUE(socket_);
     fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                  .console_fd = -1,
@@ -87,14 +85,12 @@ class Fixture {
                                  .num_tags = ntags};
 
     ASSERT_EQ(ZX_OK, fx_log_reconfigure(&config));
-    return true;
   }
 
-  bool FullSetup() {
-    ASSERT_TRUE(CreateLogger());
-    ASSERT_TRUE(ConnectToLogger());
-    ASSERT_TRUE(InitSyslog(nullptr, 0));
-    return true;
+  void FullSetup() {
+    ASSERT_NO_FATAL_FAILURES(CreateLogger());
+    ASSERT_NO_FATAL_FAILURES(ConnectToLogger());
+    ASSERT_NO_FATAL_FAILURES(InitSyslog(nullptr, 0));
   }
 
   void RunLoop() {
@@ -119,125 +115,97 @@ class Fixture {
   int pipefd_[2];
 };
 
-bool TestLogSimple(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLogSimple) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.FullSetup());
+  ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
   FX_LOG(INFO, nullptr, "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "test_message\n"), out);
-  END_TEST;
+  ASSERT_TRUE(ends_with(out, "test_message\n"), "%s", out);
 }
 
-bool TestLogMultipleMsgs(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLogMultipleMsgs) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.FullSetup());
+  ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
   FX_LOG(INFO, nullptr, "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "INFO: test_message\n"), out);
+  ASSERT_TRUE(ends_with(out, "INFO: test_message\n"), "%s", out);
   FX_LOG(INFO, nullptr, "test_message2");
   fixture.RunLoop();
   out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "INFO: test_message2\n"), out);
-  END_TEST;
+  ASSERT_TRUE(ends_with(out, "INFO: test_message2\n"), "%s", out);
 }
 
-bool TestLogWithTag(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLogWithTag) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.FullSetup());
+  ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
   FX_LOG(INFO, "tag", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[tag] INFO: test_message\n"), out);
-  END_TEST;
+  ASSERT_TRUE(ends_with(out, "[tag] INFO: test_message\n"), "%s", out);
 }
 
-bool TestLogWithMultipleTags(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLogWithMultipleTags) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.CreateLogger());
-  ASSERT_TRUE(fixture.ConnectToLogger());
+  ASSERT_NO_FATAL_FAILURES(fixture.CreateLogger());
+  ASSERT_NO_FATAL_FAILURES(fixture.ConnectToLogger());
   const char* gtags[] = {"gtag1", "gtag2"};
-  ASSERT_TRUE(fixture.InitSyslog(gtags, 2));
+  ASSERT_NO_FATAL_FAILURES(fixture.InitSyslog(gtags, 2));
   FX_LOG(INFO, "tag", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[gtag1, gtag2, tag] INFO: test_message\n"), out);
-  END_TEST;
+  ASSERT_TRUE(ends_with(out, "[gtag1, gtag2, tag] INFO: test_message\n"), "%s", out);
 }
 
-bool TestLogSeverity(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLogSeverity) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.FullSetup());
+  ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
   FX_LOG(INFO, "", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[] INFO: test_message\n"), out);
+  ASSERT_TRUE(ends_with(out, "[] INFO: test_message\n"), "%s", out);
 
   FX_LOG(WARNING, "", "test_message");
   fixture.RunLoop();
   out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[] WARNING: test_message\n"), out);
+  ASSERT_TRUE(ends_with(out, "[] WARNING: test_message\n"), "%s", out);
 
   FX_LOG(ERROR, "", "test_message");
   fixture.RunLoop();
   out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[] ERROR: test_message\n"), out);
-
-  END_TEST;
+  ASSERT_TRUE(ends_with(out, "[] ERROR: test_message\n"), "%s", out);
 }
 
-bool TestLogWhenLoggerHandleDies(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLogWhenLoggerHandleDies) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.FullSetup());
+  ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
   fixture.ResetLoggerHandle();
   fixture.RunLoop();
   FX_LOG(INFO, "tag", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[tag] INFO: test_message\n"), out);
+  ASSERT_TRUE(ends_with(out, "[tag] INFO: test_message\n"), "%s", out);
   ASSERT_EQ(ZX_OK, fixture.error_status());
-  END_TEST;
 }
 
-bool TestLoggerDiesWithSocket(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLoggerDiesWithSocket) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.CreateLogger());
-  ASSERT_TRUE(fixture.ConnectToLogger());
+  ASSERT_NO_FATAL_FAILURES(fixture.CreateLogger());
+  ASSERT_NO_FATAL_FAILURES(fixture.ConnectToLogger());
   fixture.ResetSocket();
   fixture.RunLoop();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, fixture.error_status());
-  END_TEST;
 }
 
-bool TestLoggerDiesWithChannelWhenNoConnectCalled(void) {
-  BEGIN_TEST;
+TEST(LoggerTests, TestLoggerDiesWithChannelWhenNoConnectCalled) {
   Fixture fixture;
-  ASSERT_TRUE(fixture.CreateLogger());
+  ASSERT_NO_FATAL_FAILURES(fixture.CreateLogger());
   fixture.RunLoop();
   ASSERT_EQ(ZX_OK, fixture.error_status());
   fixture.ResetLoggerHandle();
   fixture.RunLoop();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, fixture.error_status());
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(logger_tests)
-RUN_TEST(TestLogSimple)
-RUN_TEST(TestLogSeverity)
-RUN_TEST(TestLogMultipleMsgs)
-RUN_TEST(TestLogWithTag)
-RUN_TEST(TestLogWithMultipleTags)
-RUN_TEST(TestLogWhenLoggerHandleDies)
-RUN_TEST(TestLoggerDiesWithSocket)
-RUN_TEST(TestLoggerDiesWithChannelWhenNoConnectCalled)
-END_TEST_CASE(logger_tests)
