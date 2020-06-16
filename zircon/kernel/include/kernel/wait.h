@@ -95,6 +95,22 @@ struct WaitQueueCollection {
 
   // These are morally private. Eventually, Thread will not be required to be POD, and we can make
   // it so.
+
+  // Insert |new_head| by making inserting it in |private_heads_|,
+  // before the list_node at |before| (which may be an element of the
+  // list or the list itself).
+  inline void InsertQueueHead(Thread* new_head, list_node* before);
+
+  // Insert |thread| by appending it to |sublist|.
+  inline void InsertIntoSublist(Thread* thread, list_node* sublist);
+
+  // Remove |thread| from this collection, which must be a queue head.
+  inline void RemoveQueueHead(Thread* thread);
+
+  // Remove |thread| from this collection, which must be on a sublist
+  // and not a queue head.
+  inline void RemoveFromSublist(Thread* thread);
+
   int private_count_ = 0;
   struct list_node private_heads_ = LIST_INITIAL_VALUE(private_heads_);
 };

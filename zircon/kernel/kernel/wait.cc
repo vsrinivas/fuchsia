@@ -132,38 +132,65 @@ const Thread* WaitQueueCollection::Peek() const {
   return list_peek_head_type(&private_heads_, Thread, wait_queue_state_.wait_queue_heads_node_);
 }
 
+void WaitQueueCollection::InsertQueueHead(Thread* new_head, list_node* before) {
+  // Turn |queue_node_| into a sublist.
+  list_initialize(&new_head->wait_queue_state_.queue_node_);
+
+  auto* heads_node = &new_head->wait_queue_state_.wait_queue_heads_node_;
+  list_add_before(before, heads_node);
+}
+
+void WaitQueueCollection::InsertIntoSublist(Thread* thread, list_node* sublist) {
+  list_add_tail(sublist, &thread->wait_queue_state_.queue_node_);
+  list_clear_node(&thread->wait_queue_state_.wait_queue_heads_node_);
+}
+
+void WaitQueueCollection::RemoveQueueHead(Thread* thread) {
+  // If there are other threads in Thread's sublist, the first will become the new queue head.
+  Thread* newhead = list_peek_head_type(&thread->wait_queue_state_.queue_node_, Thread,
+                                        wait_queue_state_.queue_node_);
+
+  // Now that we have the potential new queue head, we can manipulate Thread's sublist.
+  list_delete(&thread->wait_queue_state_.queue_node_);
+
+  if (newhead == nullptr) {
+    list_delete(&thread->wait_queue_state_.wait_queue_heads_node_);
+  } else {
+    // Patch in the new head into the queue head list.
+    list_replace_node(&thread->wait_queue_state_.wait_queue_heads_node_,
+                      &newhead->wait_queue_state_.wait_queue_heads_node_);
+  }
+}
+
+void WaitQueueCollection::RemoveFromSublist(Thread* thread) {
+  list_delete(&thread->wait_queue_state_.queue_node_);
+}
+
 void WaitQueueCollection::Insert(Thread* thread) {
   // Regardless of the state of the collection, the count goes up one.
   ++private_count_;
 
-  if (likely(list_is_empty(&private_heads_))) {
-    // We're the first thread.
-    list_initialize(&thread->wait_queue_state_.queue_node_);
-    list_add_head(&private_heads_, &thread->wait_queue_state_.wait_queue_heads_node_);
-  } else {
+  if (unlikely(!list_is_empty(&private_heads_))) {
     const int pri = thread->scheduler_state_.effective_priority();
 
     // Walk through the sorted list of wait queue heads.
     Thread* head;
     list_for_every_entry (&private_heads_, head, Thread, wait_queue_state_.wait_queue_heads_node_) {
       if (pri > head->scheduler_state_.effective_priority()) {
-        // Insert ourself here as a new queue head.
-        list_initialize(&thread->wait_queue_state_.queue_node_);
-        list_add_before(&head->wait_queue_state_.wait_queue_heads_node_,
-                        &thread->wait_queue_state_.wait_queue_heads_node_);
+        // Insert ourself here as a new queue head, before |head|.
+        InsertQueueHead(thread, &head->wait_queue_state_.wait_queue_heads_node_);
         return;
       } else if (head->scheduler_state_.effective_priority() == pri) {
         // Same priority, add ourself to the tail of this queue.
-        list_add_tail(&head->wait_queue_state_.queue_node_, &thread->wait_queue_state_.queue_node_);
-        list_clear_node(&thread->wait_queue_state_.wait_queue_heads_node_);
+        InsertIntoSublist(thread, &head->wait_queue_state_.queue_node_);
         return;
       }
     }
-
-    // We walked off the end, so add ourself as a new queue head at the end.
-    list_initialize(&thread->wait_queue_state_.queue_node_);
-    list_add_tail(&private_heads_, &thread->wait_queue_state_.wait_queue_heads_node_);
   }
+
+  // We're the first thread, or we walked off the end, so add ourself
+  // as a new queue head at the end.
+  InsertQueueHead(thread, &private_heads_);
 }
 
 void WaitQueueCollection::Remove(Thread* thread) {
@@ -172,25 +199,10 @@ void WaitQueueCollection::Remove(Thread* thread) {
 
   if (!thread->wait_queue_state_.IsHead()) {
     // We're just in a queue, not a head.
-    list_delete(&thread->wait_queue_state_.queue_node_);
+    RemoveFromSublist(thread);
   } else {
     // We're the head of a queue.
-
-    // Are there any nodes in the queue for this priority?
-    if (list_is_empty(&thread->wait_queue_state_.queue_node_)) {
-      // No, remove ourself from the queue list.
-      list_delete(&thread->wait_queue_state_.wait_queue_heads_node_);
-      list_clear_node(&thread->wait_queue_state_.queue_node_);
-    } else {
-      // There are other threads in this list, make the next thread in the queue the head.
-      Thread* newhead = list_peek_head_type(&thread->wait_queue_state_.queue_node_, Thread,
-                                            wait_queue_state_.queue_node_);
-      list_delete(&thread->wait_queue_state_.queue_node_);
-
-      // Patch in the new head into the queue head list.
-      list_replace_node(&thread->wait_queue_state_.wait_queue_heads_node_,
-                        &newhead->wait_queue_state_.wait_queue_heads_node_);
-    }
+    RemoveQueueHead(thread);
   }
 }
 
