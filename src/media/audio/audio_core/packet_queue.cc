@@ -200,11 +200,11 @@ void PacketQueue::ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
                     << underflow_msec << " ms";
 
     } else if ((kUnderflowTraceInterval > 0) && (underflow_count % kUnderflowTraceInterval == 0)) {
-      FX_VLOGS(TRACE) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                      << kUnderflowErrorInterval << "): source-start 0x" << std::hex
-                      << frac_source_start.raw_value() << " missed mix-point 0x"
-                      << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
-                      << underflow_msec << " ms";
+      FX_LOGS(TRACE) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
+                     << kUnderflowErrorInterval << "): source-start 0x" << std::hex
+                     << frac_source_start.raw_value() << " missed mix-point 0x"
+                     << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                     << underflow_msec << " ms";
     }
   }
 }
@@ -235,17 +235,17 @@ void PacketQueue::ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_o
                       << dest_mix_offset << " mix (output) frames";
       } else if ((kUnderflowTraceInterval > 0) &&
                  (partial_underflow_count % kUnderflowTraceInterval == 0)) {
-        FX_VLOGS(TRACE) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
-                        << kUnderflowTraceInterval << "): shifted by "
-                        << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                        << abs(frac_source_offset.raw_value()) << " source subframes and "
-                        << std::dec << dest_mix_offset << " mix (output) frames";
+        FX_LOGS(TRACE) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
+                       << kUnderflowTraceInterval << "): shifted by "
+                       << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+                       << abs(frac_source_offset.raw_value()) << " source subframes and "
+                       << std::dec << dest_mix_offset << " mix (output) frames";
       }
     }
   } else {
     if constexpr (kLogUnderflow) {
-      FX_VLOGS(TRACE) << "shifted " << dest_mix_offset
-                      << " mix (output) frames to align with source packet";
+      FX_LOGS(TRACE) << "shifted " << dest_mix_offset
+                     << " mix (output) frames to align with source packet";
     }
   }
 }

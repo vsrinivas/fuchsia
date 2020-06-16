@@ -30,8 +30,7 @@ static int StartAudioCore() {
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
 #endif
 
-  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
-  Logging::Init(FX_LOG_INFO, {"audio_core"});
+  syslog::SetLogSettings({.min_log_level = FX_LOG_INFO}, {"audio_core"});
 
   FX_LOGS(INFO) << "AudioCore starting up";
 

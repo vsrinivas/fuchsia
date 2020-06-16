@@ -41,7 +41,7 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 
 void RouteGraph::AddDevice(AudioDevice* device) {
   TRACE_DURATION("audio", "RouteGraph::AddDevice");
-  AUD_VLOG(TRACE) << "Added device to route graph: " << device;
+  AUDIO_LOG(DEBUG) << "Added device to route graph: " << device;
 
   devices_.push_front(device);
   UpdateGraphForDeviceChange();
@@ -49,7 +49,7 @@ void RouteGraph::AddDevice(AudioDevice* device) {
 
 void RouteGraph::RemoveDevice(AudioDevice* device) {
   TRACE_DURATION("audio", "RouteGraph::RemoveDevice");
-  AUD_VLOG(TRACE) << "Removing device from graph: " << device;
+  AUDIO_LOG(DEBUG) << "Removing device from graph: " << device;
 
   auto it = std::find(devices_.begin(), devices_.end(), device);
   if (it == devices_.end()) {
@@ -65,7 +65,7 @@ void RouteGraph::AddRenderer(std::shared_ptr<AudioObject> renderer) {
   TRACE_DURATION("audio", "RouteGraph::AddRenderer");
   FX_DCHECK(throttle_output_);
   FX_DCHECK(renderer->is_audio_renderer());
-  AUD_VLOG(TRACE) << "Adding renderer route graph: " << renderer.get();
+  AUDIO_LOG(DEBUG) << "Adding renderer route graph: " << renderer.get();
 
   renderers_.insert({renderer.get(), RoutableOwnedObject{std::move(renderer), {}}});
 }
@@ -73,7 +73,7 @@ void RouteGraph::AddRenderer(std::shared_ptr<AudioObject> renderer) {
 void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingProfile profile) {
   TRACE_DURATION("audio", "RouteGraph::SetRendererRoutingProfile");
   FX_DCHECK(renderer.is_audio_renderer());
-  AUD_VLOG(TRACE) << "Setting renderer route profile: " << &renderer;
+  AUDIO_LOG(DEBUG) << "Setting renderer route profile: " << &renderer;
 
   auto it = renderers_.find(&renderer);
   if (it == renderers_.end()) {
@@ -107,11 +107,11 @@ void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingP
 void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
   TRACE_DURATION("audio", "RouteGraph::RemoveRenderer");
   FX_DCHECK(renderer.is_audio_renderer());
-  AUD_VLOG(TRACE) << "Removing renderer from route graph: " << &renderer;
+  AUDIO_LOG(DEBUG) << "Removing renderer from route graph: " << &renderer;
 
   auto it = renderers_.find(&renderer);
   if (it == renderers_.end()) {
-    AUD_VLOG(TRACE) << "Renderer " << &renderer << " was not present in graph.";
+    AUDIO_LOG(DEBUG) << "Renderer " << &renderer << " was not present in graph.";
     return;
   }
 
@@ -122,7 +122,7 @@ void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
 void RouteGraph::AddCapturer(std::shared_ptr<AudioObject> capturer) {
   TRACE_DURATION("audio", "RouteGraph::AddCapturer");
   FX_DCHECK(capturer->is_audio_capturer());
-  AUD_VLOG(TRACE) << "Adding capturer to route graph: " << capturer.get();
+  AUDIO_LOG(DEBUG) << "Adding capturer to route graph: " << capturer.get();
 
   capturers_.insert({capturer.get(), RoutableOwnedObject{std::move(capturer), {}}});
 }
@@ -130,7 +130,7 @@ void RouteGraph::AddCapturer(std::shared_ptr<AudioObject> capturer) {
 void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingProfile profile) {
   TRACE_DURATION("audio", "RouteGraph::SetCapturerRoutingProfile");
   FX_DCHECK(capturer.is_audio_capturer());
-  AUD_VLOG(TRACE) << "Setting capturer route profile: " << &capturer;
+  AUDIO_LOG(DEBUG) << "Setting capturer route profile: " << &capturer;
 
   auto it = capturers_.find(&capturer);
   if (it == capturers_.end()) {
@@ -164,11 +164,11 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
 void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
   TRACE_DURATION("audio", "RouteGraph::RemoveCapturer");
   FX_DCHECK(capturer.is_audio_capturer());
-  AUD_VLOG(TRACE) << "Removing capturer from route graph: " << &capturer;
+  AUDIO_LOG(DEBUG) << "Removing capturer from route graph: " << &capturer;
 
   auto it = capturers_.find(&capturer);
   if (it == capturers_.end()) {
-    AUD_VLOG(TRACE) << "Capturer " << &capturer << " was not present in graph.";
+    AUDIO_LOG(DEBUG) << "Capturer " << &capturer << " was not present in graph.";
     return;
   }
 

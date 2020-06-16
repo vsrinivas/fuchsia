@@ -21,30 +21,30 @@ PositionManager::PositionManager(uint32_t num_src_chans, uint32_t num_dest_chans
 }
 
 void PositionManager::Display(const PositionManager& pos_mgr, uint32_t frac_bits) {
-  FX_VLOGS(TRACE) << "Channels: src " << pos_mgr.num_src_chans_ << ", dest "
-                  << pos_mgr.num_dest_chans_ << ".          Width: pos 0x" << std::hex
-                  << pos_mgr.positive_width_ << ", neg 0x" << pos_mgr.negative_width_;
+  FX_LOGS(TRACE) << "Channels: src " << pos_mgr.num_src_chans_ << ", dest "
+                 << pos_mgr.num_dest_chans_ << ".          Width: pos 0x" << std::hex
+                 << pos_mgr.positive_width_ << ", neg 0x" << pos_mgr.negative_width_;
 
-  FX_VLOGS(TRACE) << "Source:   len 0x" << std::hex << pos_mgr.frac_src_frames_ << " (" << std::dec
-                  << (pos_mgr.frac_src_frames_ >> frac_bits) << "), end 0x" << std::hex
-                  << pos_mgr.frac_src_end_ << " (" << std::dec
-                  << (pos_mgr.frac_src_end_ >> frac_bits) << "), min_frames 0x" << std::hex
-                  << pos_mgr.min_frac_src_frames_ << ". Dest: len 0x" << pos_mgr.dest_frames_;
+  FX_LOGS(TRACE) << "Source:   len 0x" << std::hex << pos_mgr.frac_src_frames_ << " (" << std::dec
+                 << (pos_mgr.frac_src_frames_ >> frac_bits) << "), end 0x" << std::hex
+                 << pos_mgr.frac_src_end_ << " (" << std::dec
+                 << (pos_mgr.frac_src_end_ >> frac_bits) << "), min_frames 0x" << std::hex
+                 << pos_mgr.min_frac_src_frames_ << ". Dest: len 0x" << pos_mgr.dest_frames_;
 
-  FX_VLOGS(TRACE) << "Rate:     step_size 0x" << std::hex << pos_mgr.step_size_ << ", rate_mod "
-                  << std::dec << pos_mgr.rate_modulo_ << ", denom " << pos_mgr.denominator_
-                  << ", using_mod " << pos_mgr.using_modulo_;
+  FX_LOGS(TRACE) << "Rate:     step_size 0x" << std::hex << pos_mgr.step_size_ << ", rate_mod "
+                 << std::dec << pos_mgr.rate_modulo_ << ", denom " << pos_mgr.denominator_
+                 << ", using_mod " << pos_mgr.using_modulo_;
 
   DisplayUpdate(pos_mgr, frac_bits);
 }
 
 void PositionManager::DisplayUpdate(const PositionManager& pos_mgr, uint32_t frac_bits) {
   const auto frac_mask = (1u << frac_bits) - 1u;
-  FX_VLOGS(TRACE) << "Position: frac_src_offset " << std::hex
-                  << (pos_mgr.frac_src_offset_ < 0 ? "-" : " ") << "0x"
-                  << std::abs(pos_mgr.frac_src_offset_ >> frac_bits) << ":"
-                  << (pos_mgr.frac_src_offset_ & frac_mask) << ", dest_offset 0x"
-                  << pos_mgr.dest_offset_ << ", src_pos_mod 0x" << pos_mgr.src_pos_modulo_;
+  FX_LOGS(TRACE) << "Position: frac_src_offset " << std::hex
+                 << (pos_mgr.frac_src_offset_ < 0 ? "-" : " ") << "0x"
+                 << std::abs(pos_mgr.frac_src_offset_ >> frac_bits) << ":"
+                 << (pos_mgr.frac_src_offset_ & frac_mask) << ", dest_offset 0x"
+                 << pos_mgr.dest_offset_ << ", src_pos_mod 0x" << pos_mgr.src_pos_modulo_;
 }
 
 void PositionManager::SetSourceValues(const void* src_void, uint32_t frac_src_frames,

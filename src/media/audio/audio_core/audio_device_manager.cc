@@ -361,7 +361,7 @@ void AudioDeviceManager::AddDeviceByVersion(zx::channel device_channel, std::str
 void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::string device_name,
                                             bool is_input) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel");
-  AUD_VLOG(TRACE) << " adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
+  AUDIO_LOG(DEBUG) << " adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
 
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;
@@ -387,7 +387,7 @@ void AudioDeviceManager::AddDeviceByChannel2(
     std::string device_name, bool is_input,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel2");
-  AUD_VLOG(TRACE) << " adding2 " << (is_input ? "input" : "output") << " '" << device_name << "'";
+  AUDIO_LOG(DEBUG) << " adding2 " << (is_input ? "input" : "output") << " '" << device_name << "'";
 
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;

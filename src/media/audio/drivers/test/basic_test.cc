@@ -47,7 +47,7 @@ void BasicTest::RequestStreamProperties() {
                     stream_props_.unique_id()[10], stream_props_.unique_id()[11],
                     stream_props_.unique_id()[12], stream_props_.unique_id()[13],
                     stream_props_.unique_id()[14], stream_props_.unique_id()[15]);
-      AUD_VLOG(TRACE) << "Received unique_id " << id_buf;
+      AUDIO_LOG(DEBUG) << "Received unique_id " << id_buf;
     }
 
     ASSERT_TRUE(stream_props_.has_is_input());
@@ -78,10 +78,10 @@ void BasicTest::RequestStreamProperties() {
     ASSERT_TRUE(stream_props_.has_plug_detect_capabilities());
 
     if (stream_props_.has_manufacturer()) {
-      AUD_VLOG(TRACE) << "Received manufacturer " << stream_props_.manufacturer();
+      AUDIO_LOG(DEBUG) << "Received manufacturer " << stream_props_.manufacturer();
     }
     if (stream_props_.has_product()) {
-      AUD_VLOG(TRACE) << "Received product " << stream_props_.product();
+      AUDIO_LOG(DEBUG) << "Received product " << stream_props_.product();
     }
 
     ASSERT_TRUE(stream_props_.has_clock_domain());
@@ -97,7 +97,7 @@ void BasicTest::RequestGain() {
   // audio driver interface definition that the driver will reply to the first watch request, we
   // can get the gain state by issuing a watch FIDL call.
   stream_config()->WatchGainState([this](fuchsia::hardware::audio::GainState gain_state) {
-    AUD_VLOG(TRACE) << "Received gain " << gain_state.gain_db();
+    AUDIO_LOG(DEBUG) << "Received gain " << gain_state.gain_db();
 
     gain_state_ = std::move(gain_state);
 
@@ -143,7 +143,7 @@ void BasicTest::RequestSetGain() {
 
   fuchsia::hardware::audio::GainState gain_state;
   EXPECT_EQ(set_gain_state_.Clone(&gain_state), ZX_OK);
-  AUD_VLOG(TRACE) << "Sent gain " << gain_state.gain_db();
+  AUDIO_LOG(DEBUG) << "Sent gain " << gain_state.gain_db();
   stream_config()->SetGain(std::move(gain_state));
 }
 
@@ -159,7 +159,7 @@ void BasicTest::RequestPlugDetect() {
     EXPECT_TRUE(plug_state_.has_plug_state_time());
     EXPECT_LT(plug_state_.plug_state_time(), zx::clock::get_monotonic().get());
 
-    AUD_VLOG(TRACE) << "Plug_state_time: " << plug_state_.plug_state_time();
+    AUDIO_LOG(DEBUG) << "Plug_state_time: " << plug_state_.plug_state_time();
     received_plug_detect_ = true;
   });
   RunLoopUntil([this]() { return received_plug_detect_; });

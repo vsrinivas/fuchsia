@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include "lib/syslog/cpp/log_settings.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/media/audio/audio_core/mixer/test/audio_performance.h"
@@ -19,8 +20,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
-  media::audio::Logging::Init(FX_LOG_INFO, {"audio_core_mixer_test"});
+  syslog::SetTags({"audio_core_mixer_test"});
 
   // --full     Measure across the full frequency spectrum; display full results in tabular format.
   // --no-recap Do not display summary fidelity results.

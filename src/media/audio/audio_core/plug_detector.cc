@@ -70,8 +70,8 @@ class PlugDetectorImpl : public PlugDetector {
       if (watcher != nullptr) {
         watchers_.emplace_back(std::move(watcher));
       } else {
-        AUD_VLOG(TRACE) << "PlugDetectorImpl failed to create DeviceWatcher for \"" << devnode.path
-                        << "\".";
+        AUDIO_LOG(DEBUG) << "PlugDetectorImpl failed to create DeviceWatcher for \"" << devnode.path
+                         << "\".";
       }
     }
 

@@ -47,7 +47,7 @@ void AudioCoreImpl::Shutdown() {
 void AudioCoreImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) {
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioRenderer");
-  AUD_VLOG(TRACE);
+  AUDIO_LOG(DEBUG);
 
   context_.route_graph().AddRenderer(
       AudioRenderer::Create(std::move(audio_renderer_request), &context_));
@@ -70,7 +70,7 @@ void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
 void AudioCoreImpl::CreateAudioCapturer(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioCapturer");
-  AUD_VLOG(TRACE);
+  AUDIO_LOG(DEBUG);
 
   auto configuration = loopback ? fuchsia::media::AudioCapturerConfiguration::WithLoopback(
                                       fuchsia::media::LoopbackAudioCapturerConfiguration())
@@ -84,8 +84,8 @@ void AudioCoreImpl::CreateAudioCapturer(
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,
                                        float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
-  AUD_VLOG(TRACE) << " (render_usage: " << static_cast<int>(render_usage) << ", " << gain_db
-                  << " dB)";
+  AUDIO_LOG(DEBUG) << " (render_usage: " << static_cast<int>(render_usage) << ", " << gain_db
+                   << " dB)";
   context_.volume_manager().SetUsageGain(
       fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)), gain_db);
 }
@@ -93,8 +93,8 @@ void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_u
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage,
                                         float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
-  AUD_VLOG(TRACE) << " (capture_usage: " << static_cast<int>(capture_usage) << ", " << gain_db
-                  << " dB)";
+  AUDIO_LOG(DEBUG) << " (capture_usage: " << static_cast<int>(capture_usage) << ", " << gain_db
+                   << " dB)";
   context_.volume_manager().SetUsageGain(
       fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)), gain_db);
 }

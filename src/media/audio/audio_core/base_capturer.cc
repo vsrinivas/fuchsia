@@ -228,9 +228,9 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   REPORT(AddingCapturerPayloadBuffer(*this, id, payload_buf_size));
 
   payload_buf_frames_ = static_cast<uint32_t>(payload_buf_size / format_.bytes_per_frame());
-  AUD_VLOG_OBJ(TRACE, this) << "payload buf -- size:" << payload_buf_size
-                            << ", frames:" << payload_buf_frames_
-                            << ", bytes/frame:" << format_.bytes_per_frame();
+  AUDIO_LOG_OBJ(DEBUG, this) << "payload buf -- size:" << payload_buf_size
+                             << ", frames:" << payload_buf_frames_
+                             << ", bytes/frame:" << format_.bytes_per_frame();
 
   // Map the VMO into our process.
   res = payload_buf_.Map(payload_buf_vmo, /*offset=*/0, payload_buf_size,
@@ -504,8 +504,8 @@ void BaseCapturer::RecomputeMinFenceTime() {
       });
 
   if (min_fence_time_ != cur_min_fence_time) {
-    FX_VLOGS(TRACE) << "Changing min_fence_time_ (ns) from " << min_fence_time_.get() << " to "
-                    << cur_min_fence_time.get();
+    FX_LOGS(TRACE) << "Changing min_fence_time_ (ns) from " << min_fence_time_.get() << " to "
+                   << cur_min_fence_time.get();
 
     REPORT(SettingCapturerMinFenceTime(*this, cur_min_fence_time));
     min_fence_time_ = cur_min_fence_time;
@@ -779,7 +779,7 @@ void BaseCapturer::OverflowOccurred(FractionalFrames<int64_t> frac_source_start,
 
     } else if ((kCaptureOverflowTraceInterval > 0) &&
                (overflow_count % kCaptureOverflowTraceInterval == 0)) {
-      FX_VLOGS(TRACE) << stream.str();
+      FX_LOGS(TRACE) << stream.str();
     }
   }
 }
@@ -810,13 +810,13 @@ void BaseCapturer::PartialOverflowOccurred(FractionalFrames<int64_t> frac_source
         FX_LOGS(INFO) << stream.str();
       } else if ((kCaptureOverflowTraceInterval > 0) &&
                  (partial_overflow_count % kCaptureOverflowTraceInterval == 0)) {
-        FX_VLOGS(TRACE) << stream.str();
+        FX_LOGS(TRACE) << stream.str();
       }
     }
   } else {
     if constexpr (kLogCaptureOverflow) {
-      FX_VLOGS(TRACE) << "Slipping by " << dest_mix_offset
-                      << " mix (capture) frames to align with source region";
+      FX_LOGS(TRACE) << "Slipping by " << dest_mix_offset
+                     << " mix (capture) frames to align with source region";
     }
   }
 }
@@ -989,15 +989,15 @@ void BaseCapturer::FinishBuffers(const PcbList& finished_buffers) {
     REPORT(SendingCapturerPacket(*this, pkt));
 
     if (finished_buffer.cbk != nullptr) {
-      AUD_VLOG_OBJ(SPEW, this) << "Sync -mode -- payload size:" << pkt.payload_size
-                               << " bytes, offset:" << pkt.payload_offset
-                               << " bytes, flags:" << pkt.flags << ", pts:" << pkt.pts;
+      AUDIO_LOG_OBJ(TRACE, this) << "Sync -mode -- payload size:" << pkt.payload_size
+                                 << " bytes, offset:" << pkt.payload_offset
+                                 << " bytes, flags:" << pkt.flags << ", pts:" << pkt.pts;
 
       finished_buffer.cbk(pkt);
     } else {
-      AUD_VLOG_OBJ(SPEW, this) << "Async-mode -- payload size:" << pkt.payload_size
-                               << " bytes, offset:" << pkt.payload_offset
-                               << " bytes, flags:" << pkt.flags << ", pts:" << pkt.pts;
+      AUDIO_LOG_OBJ(TRACE, this) << "Async-mode -- payload size:" << pkt.payload_size
+                                 << " bytes, offset:" << pkt.payload_offset
+                                 << " bytes, flags:" << pkt.flags << ", pts:" << pkt.pts;
 
       binding_.events().OnPacketProduced(pkt);
     }
@@ -1057,7 +1057,7 @@ void BaseCapturer::EstablishDefaultReferenceClock() {
 // Regardless of the source of the reference clock, we can duplicate and return it here.
 void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
   TRACE_DURATION("audio", "BaseCapturer::GetReferenceClock");
-  AUD_VLOG_OBJ(TRACE, this);
+  AUDIO_LOG_OBJ(DEBUG, this);
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 

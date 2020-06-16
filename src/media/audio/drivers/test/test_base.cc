@@ -59,7 +59,7 @@ void TestBase::EnumerateDevices() {
     auto watcher = fsl::DeviceWatcher::CreateWithIdleCallback(
         devnode.path,
         [this](int dir_fd, const std::string& filename) {
-          AUD_VLOG(TRACE) << "'" << filename << "' dir_fd " << dir_fd;
+          AUDIO_LOG(DEBUG) << "'" << filename << "' dir_fd " << dir_fd;
           this->AddDevice(dir_fd, filename);
         },
         [&enumeration_done]() { enumeration_done = true; });
@@ -139,8 +139,8 @@ void TestBase::AddDevice(int dir_fd, const std::string& name) {
 
   auto channel = stream_config.TakeChannel();
   stream_channels_.push_back(zx::unowned_channel(channel.get()));
-  AUD_VLOG(TRACE) << "Successfully opened devnode '" << name << "' for audio "
-                  << ((device_type_ == DeviceType::Input) ? "input" : "output");
+  AUDIO_LOG(DEBUG) << "Successfully opened devnode '" << name << "' for audio "
+                   << ((device_type_ == DeviceType::Input) ? "input" : "output");
 
   stream_config_ =
       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(std::move(channel)).Bind();

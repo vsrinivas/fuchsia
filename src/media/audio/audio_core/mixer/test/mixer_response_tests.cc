@@ -299,9 +299,9 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
 
     int32_t expected_frac_src_offset = frac_src_frames;
     if (dest_offset < dest_frames) {
-      AUD_VLOG(SPEW) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
-                     << dest_offset << ", frac_src_frames " << std::hex << frac_src_frames
-                     << ", frac_src_offset " << frac_src_offset;
+      AUDIO_LOG(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames
+                       << ", dest_offset " << dest_offset << ", frac_src_frames " << std::hex
+                       << frac_src_frames << ", frac_src_offset " << frac_src_offset;
       ASSERT_GE(frac_src_offset, 0);
       EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width().raw_value(),
                 frac_src_frames)
@@ -1346,9 +1346,9 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   }
   int32_t expected_frac_src_offset = frac_src_frames;
   if (dest_offset < dest_frames) {
-    AUD_LOG(WARNING) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
-                     << dest_offset << ", frac_src_frames " << std::hex << frac_src_frames
-                     << ", frac_src_offset " << frac_src_offset;
+    AUDIO_LOG(WARNING) << "Performing wraparound mix: dest_frames " << dest_frames
+                       << ", dest_offset " << dest_offset << ", frac_src_frames " << std::hex
+                       << frac_src_frames << ", frac_src_offset " << frac_src_offset;
     ASSERT_GE(frac_src_offset, 0);
     EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width().raw_value(),
               frac_src_frames)

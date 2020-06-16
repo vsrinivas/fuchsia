@@ -180,7 +180,7 @@ zx_status_t AudioDriverV2::GetDriverInfo() {
     }
 
     clock_domain_ = props.clock_domain();
-    AUD_VLOG(TRACE) << "Received clock domain " << clock_domain_;
+    AUDIO_LOG(DEBUG) << "Received clock domain " << clock_domain_;
 
     auto res = OnDriverInfoFetched(kDriverInfoHasUniqueId | kDriverInfoHasMfrStr |
                                    kDriverInfoHasProdStr | kDriverInfoHasClockDomain);
@@ -325,9 +325,9 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
   ring_buffer_fidl_->GetProperties([this](fuchsia::hardware::audio::RingBufferProperties props) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     external_delay_ = zx::nsec(props.external_delay());
-    AUD_VLOG(TRACE) << "Received external delay " << external_delay_.get();
+    AUDIO_LOG(DEBUG) << "Received external delay " << external_delay_.get();
     uint32_t fifo_depth_bytes = props.fifo_depth();
-    AUD_VLOG(TRACE) << "Received fifo depth " << fifo_depth_bytes;
+    AUDIO_LOG(DEBUG) << "Received fifo depth " << fifo_depth_bytes;
 
     auto format = GetFormat();
     auto bytes_per_frame = format->bytes_per_frame();
@@ -337,7 +337,7 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
     fifo_depth_duration_ =
         zx::nsec(TimelineRate::Scale(fifo_depth_frames_, ZX_SEC(1), frames_per_second));
 
-    AUD_VLOG(TRACE) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
+    AUDIO_LOG(DEBUG) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
 
     // Figure out how many frames we need in our ring buffer.
     int64_t min_frames_64 = TimelineRate::Scale(min_ring_buffer_duration_.to_nsecs(),
@@ -361,10 +361,10 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
       return;
     }
 
-    AUD_VLOG_OBJ(TRACE, this) << "for audio " << (owner_->is_input() ? "input" : "output")
-                              << " -- fifo_depth_bytes:" << fifo_depth_bytes
-                              << ", fifo_depth_frames:" << fifo_depth_frames_
-                              << ", bytes_per_frame:" << bytes_per_frame;
+    AUDIO_LOG_OBJ(DEBUG, this) << "for audio " << (owner_->is_input() ? "input" : "output")
+                               << " -- fifo_depth_bytes:" << fifo_depth_bytes
+                               << ", fifo_depth_frames:" << fifo_depth_frames_
+                               << ", bytes_per_frame:" << bytes_per_frame;
 
     state_ = State::Configuring_GettingRingBuffer;
 
@@ -435,19 +435,19 @@ void AudioDriverV2::RestartWatchClockRecovery() {
         if constexpr (kLogPositionNotifications) {
           if ((kPositionNotificationInfoInterval > 0) &&
               (position_notification_count_ % kPositionNotificationInfoInterval == 0)) {
-            AUD_LOG_OBJ(INFO, this)
+            AUDIO_LOG_OBJ(INFO, this)
                 << (kEnablePositionNotifications ? "Notification" : "Unsolicited notification")
                 << " (1/" << kPositionNotificationInfoInterval << ") Time:" << info.timestamp
                 << ", Pos:" << std::setw(6) << info.position;
           } else if ((kPositionNotificationTraceInterval > 0) &&
                      (position_notification_count_ % kPositionNotificationTraceInterval == 0)) {
-            AUD_VLOG_OBJ(TRACE, this)
+            AUDIO_LOG_OBJ(DEBUG, this)
                 << (kEnablePositionNotifications ? "Notification" : "Unsolicited notification")
                 << " (1/" << kPositionNotificationTraceInterval << ") Time:" << info.timestamp
                 << ",  Pos:" << std::setw(6) << info.position;
           } else if ((kPositionNotificationSpewInterval > 0) &&
                      (position_notification_count_ % kPositionNotificationSpewInterval == 0)) {
-            AUD_VLOG_OBJ(SPEW, this)
+            AUDIO_LOG_OBJ(TRACE, this)
                 << (kEnablePositionNotifications ? "Notification" : "Unsolicited notification")
                 << " (1/" << kPositionNotificationSpewInterval << ") Time:" << info.timestamp
                 << ", Pos:" << std::setw(6) << info.position;

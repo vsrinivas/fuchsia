@@ -15,8 +15,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
-  media::audio::Logging::Init(FX_LOG_INFO, {"audio_driver_test"});
+  syslog::SetTags({"audio_driver_test"});
 
   // --admin   Validate driver commands that require the privileged channel, such as SetFormat.
   //

@@ -259,8 +259,8 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
     }
     token_to_unique_id_[info.token_id] = id;
     devices_[id].info = info;
-    AUD_VLOG(TRACE) << "Output device (token = " << info.token_id << ", id = " << id
-                    << ") has been added";
+    AUDIO_LOG(DEBUG) << "Output device (token = " << info.token_id << ", id = " << id
+                     << ") has been added";
   };
 
   audio_dev_enum_.events().OnDeviceRemoved = [this](uint64_t token) {
@@ -281,12 +281,12 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
       FAIL() << "Device has not been added " << id;
     }
     devices_[id].info->gain_info = gain_info;
-    AUD_VLOG(TRACE) << "Our output device (" << id << ") changed gain: " << gain_info.gain_db
-                    << " dB, "
-                    << (((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
-                         fuchsia::media::AudioGainInfoFlags::MUTE)
-                            ? "MUTE"
-                            : "UNMUTE");
+    AUDIO_LOG(DEBUG) << "Our output device (" << id << ") changed gain: " << gain_info.gain_db
+                     << " dB, "
+                     << (((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                          fuchsia::media::AudioGainInfoFlags::MUTE)
+                             ? "MUTE"
+                             : "UNMUTE");
   };
 
   audio_dev_enum_.events().OnDefaultDeviceChanged = [this](uint64_t old_default_token,
@@ -346,8 +346,8 @@ void HermeticAudioTest::OnDefaultDeviceChanged(uint64_t old_default_token,
       << "Default device changed from " << old_default_token << " to unknown device "
       << new_default_token;
 
-  AUD_VLOG(TRACE) << "Default output device changed from " << old_default_token << " to "
-                  << new_default_token;
+  AUDIO_LOG(DEBUG) << "Default output device changed from " << old_default_token << " to "
+                   << new_default_token;
 
   if (old_default_token != 0) {
     auto id = token_to_unique_id_[old_default_token];

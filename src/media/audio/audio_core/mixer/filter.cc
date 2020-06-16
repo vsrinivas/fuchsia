@@ -173,7 +173,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
     auto sinc_theta = sin_theta / theta;
 
     if constexpr (kEnableVerboseDebugging) {
-      FX_VLOGS(SPEW) << "Sinc[" << std::hex << idx << "] -- Factors 1:" << idx_over_frac_one
+      FX_LOGS(TRACE) << "Sinc[" << std::hex << idx << "] -- Factors 1:" << idx_over_frac_one
                      << ", 2:" << theta << ", 3:" << sin_theta << ", 4:" << sinc_theta;
     }
 
@@ -187,7 +187,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
     auto raised_cosine = cos_pi_frac_width * 0.5 + 0.5;
 
     if constexpr (kEnableVerboseDebugging) {
-      FX_VLOGS(SPEW) << "VonHann window[" << std::hex << idx
+      FX_LOGS(TRACE) << "VonHann window[" << std::hex << idx
                      << "] -- Fraction of width:" << fraction_width
                      << ", PI * fraction_width:" << pi_fraction_width
                      << ", COS(PI * fraction_width):" << cos_pi_frac_width

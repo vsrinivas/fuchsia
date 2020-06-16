@@ -173,7 +173,7 @@ void AdminTest::RequestBuffer(uint32_t min_ring_buffer_frames, uint32_t notifica
                                              ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER),
             ZX_OK);
 
-  AUD_VLOG(TRACE) << "Mapping size: " << ring_buffer_frames_ * frame_size_;
+  AUDIO_LOG(DEBUG) << "Mapping size: " << ring_buffer_frames_ * frame_size_;
 }
 
 // Request that the driver start the ring buffer engine, responding with the start_time.
@@ -226,8 +226,8 @@ void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
 
           ++position_notification_count_;
 
-          AUD_VLOG(TRACE) << "Position: " << position_info_.position
-                          << ", notification_count: " << position_notification_count_;
+          AUDIO_LOG(DEBUG) << "Position: " << position_info_.position
+                           << ", notification_count: " << position_notification_count_;
         });
     return position_notification_count_ >= count;
   });
@@ -243,17 +243,17 @@ void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
   auto expected_time = ns_per_notification.get() * count;
   auto max_allowed_time = ns_per_notification.get() * (count + 2) - 1;
 
-  AUD_VLOG(TRACE) << "Timestamp delta from min/ideal/max: " << std::setw(10)
-                  << (min_allowed_time - timestamp_duration) << " : " << std::setw(10)
-                  << (expected_time - timestamp_duration) << " : " << std::setw(10)
-                  << (max_allowed_time - timestamp_duration);
+  AUDIO_LOG(DEBUG) << "Timestamp delta from min/ideal/max: " << std::setw(10)
+                   << (min_allowed_time - timestamp_duration) << " : " << std::setw(10)
+                   << (expected_time - timestamp_duration) << " : " << std::setw(10)
+                   << (max_allowed_time - timestamp_duration);
   EXPECT_GE(timestamp_duration, min_allowed_time);
   EXPECT_LE(timestamp_duration, max_allowed_time);
 
-  AUD_VLOG(TRACE) << "Observed delta from min/ideal/max : " << std::setw(10)
-                  << (min_allowed_time - observed_duration) << " : " << std::setw(10)
-                  << (expected_time - observed_duration) << " : " << std::setw(10)
-                  << (max_allowed_time - observed_duration);
+  AUDIO_LOG(DEBUG) << "Observed delta from min/ideal/max : " << std::setw(10)
+                   << (min_allowed_time - observed_duration) << " : " << std::setw(10)
+                   << (expected_time - observed_duration) << " : " << std::setw(10)
+                   << (max_allowed_time - observed_duration);
   EXPECT_GT(observed_duration, min_allowed_time);
 }
 

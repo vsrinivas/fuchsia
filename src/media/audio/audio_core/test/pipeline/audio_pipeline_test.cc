@@ -99,7 +99,7 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   auto received_discard_all_callback = false;
   renderer_->renderer()->DiscardAllPackets(CompletionCallback([&received_discard_all_callback]() {
     received_discard_all_callback = true;
-    AUD_VLOG(TRACE) << "DiscardAllPackets #1 complete";
+    AUDIO_LOG(DEBUG) << "DiscardAllPackets #1 complete";
   }));
   RunLoopUntil([this, &received_discard_all_callback]() {
     return (error_occurred_ || received_discard_all_callback);

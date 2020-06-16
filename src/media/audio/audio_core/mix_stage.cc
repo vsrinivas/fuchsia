@@ -288,7 +288,7 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
   if (source_buffer.end() == source_buffer.start()) {
-    AUD_VLOG(TRACE) << " skipping an empty packet!";
+    AUDIO_LOG(DEBUG) << " skipping an empty packet!";
     return true;
   }
 
@@ -417,10 +417,10 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
       cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, stream_gain_db);
     }
     FX_DCHECK(dest_offset <= dest_frames_left);
-    AUD_VLOG_OBJ(SPEW, this) << " consumed from " << std::hex << std::setw(8)
-                             << prev_frac_source_offset.raw_value() << " to " << std::setw(8)
-                             << frac_source_offset.raw_value() << ", of " << std::setw(8)
-                             << source_buffer.length().raw_value();
+    AUDIO_LOG_OBJ(TRACE, this) << " consumed from " << std::hex << std::setw(8)
+                               << prev_frac_source_offset.raw_value() << " to " << std::setw(8)
+                               << frac_source_offset.raw_value() << ", of " << std::setw(8)
+                               << source_buffer.length().raw_value();
 
     // If src is ramping, advance by delta of dest_offset
     if (ramping) {

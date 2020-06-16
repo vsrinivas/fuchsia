@@ -79,22 +79,22 @@ class ChannelStrip {
 // declared static, used for debugging purposes only
 // Log the contents of the channel strip, channel by channel.
 inline void ChannelStrip::Display(const ChannelStrip& channels) {
-  FX_VLOGS(TRACE) << "ChannelStrip: chans " << channels.num_channels_ << ", len 0x" << std::hex
-                  << channels.len_;
+  FX_LOGS(TRACE) << "ChannelStrip: chans " << channels.num_channels_ << ", len 0x" << std::hex
+                 << channels.len_;
 
   for (auto chan = 0u; chan < channels.num_channels_; ++chan) {
-    FX_VLOGS(TRACE) << "           channel " << chan;
+    FX_LOGS(TRACE) << "           channel " << chan;
     char str[256];
     str[0] = 0;
     int n = 0;
     for (auto idx = 0u; idx < channels.len_; ++idx) {
       if (idx % 16 == 0) {
-        FX_VLOGS(TRACE) << str;
+        FX_LOGS(TRACE) << str;
         n = sprintf(str, "[%4x]  ", idx);
       }
       n += sprintf(str + n, "%6.03f ", channels.data_[chan][idx]);
     }
-    FX_VLOGS(TRACE) << str;
+    FX_LOGS(TRACE) << str;
   }
 }
 

@@ -81,7 +81,7 @@ constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | Z
 // if the client-submitted clock has insufficient rights (and strip off other rights such as WRITE).
 void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
   TRACE_DURATION("audio", "AudioCapturer::SetReferenceClock");
-  AUD_VLOG_OBJ(TRACE, this);
+  AUDIO_LOG_OBJ(DEBUG, this);
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 

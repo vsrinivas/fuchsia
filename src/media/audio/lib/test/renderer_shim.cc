@@ -23,7 +23,7 @@ void RendererShimImpl::WatchEvents() {
   renderer_->EnableMinLeadTimeEvents(true);
   renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
     received_min_lead_time_ = true;
-    AUD_VLOG(TRACE) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
+    AUDIO_LOG(DEBUG) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
     min_lead_time_ = min_lead_time_nsec;
   };
 }
@@ -46,9 +46,9 @@ void RendererShimImpl::SendPackets(size_t num_packets, int64_t initial_pts) {
     packet.payload_size = num_packet_bytes();
     packet.pts = initial_pts + (packet_num * num_packet_frames());
 
-    AUD_VLOG(TRACE) << " sending pkt " << packet_num << " " << packet.pts;
+    AUDIO_LOG(DEBUG) << " sending pkt " << packet_num << " " << packet.pts;
     renderer_->SendPacket(packet, [this, packet_num]() {
-      AUD_VLOG(TRACE) << " return: pkt " << packet_num;
+      AUDIO_LOG(DEBUG) << " return: pkt " << packet_num;
       received_packet_num_ = packet_num;
     });
   }
