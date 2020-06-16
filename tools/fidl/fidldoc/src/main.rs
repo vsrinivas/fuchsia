@@ -296,6 +296,11 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
         }
     }
 
+    // Sort declarations inside each package
+    fidl_json_map.par_iter_mut().for_each(|(_, package_fidl_json)| {
+        package_fidl_json.sort_declarations();
+    });
+
     Ok(FidlJsonPackageData { declarations, fidl_json_map })
 }
 
