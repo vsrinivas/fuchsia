@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
   name = "dns"
@@ -23,19 +23,11 @@ rustc_library("lib") {
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
   ]
-
-  test_deps = []
 }
 
-test_package("dns-tests") {
+fuchsia_unittest_package("dns-tests") {
+  manifest = "meta/dns_lib_test.cmx"
   deps = [ ":lib_test" ]
-
-  tests = [
-    {
-      name = "dns_lib_test"
-      environments = [ emu_env ]
-    },
-  ]
 }
 
 rustc_binary("bin") {
@@ -67,30 +59,19 @@ rustc_binary("bin") {
   test_deps = [ "//src/connectivity/lib/net-declare" ]
 }
 
-package("dns-resolver") {
-  deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "dns_resolver"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/dns-resolver.cmx")
-      dest = "dns-resolver.cmx"
-    },
-  ]
+fuchsia_unittest_package("dns-resolver-tests") {
+  executable_name = "dns_resolver_bin_test"
+  deps = [ ":bin_test" ]
 }
 
-unittest_package("dns-resolver-tests") {
-  deps = [ ":bin_test" ]
+fuchsia_component("component") {
+  component_name = "dns-resolver"
+  manifest = "meta/dns-resolver.cmx"
+  deps = [ ":bin" ]
+}
 
-  tests = [
-    {
-      name = "dns_resolver_bin_test"
-      environments = [ emu_env ]
-    },
-  ]
+fuchsia_package("dns-resolver") {
+  deps = [ ":component" ]
 }
 
 group("tests") {

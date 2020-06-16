@@ -37,7 +37,7 @@ impl NetstackVersion {
                 "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx"
             }
             NetstackVersion::Netstack3 => {
-                fuchsia_component::fuchsia_single_component_package_url!("netstack3")
+                "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack3.cmx"
             }
         }
     }
@@ -84,9 +84,9 @@ impl KnownServices {
             KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                            "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                          fuchsia_component::fuchsia_single_component_package_url!("dhcpd-testing")),
+                                          "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpd.cmx"),
             KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                            fuchsia_component::fuchsia_single_component_package_url!("dns-resolver"))
+                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx")
         }
     }
 
@@ -159,6 +159,16 @@ impl Netstack for Netstack3 {
 pub trait Manager: Copy + Clone {
     /// The Fuchsia package URL to the component.
     const PKG_URL: &'static str;
+
+    /// Default arguments that should be passed to the component when run under a test
+    /// environment.
+    const TESTING_ARGS: &'static [&'static str];
+
+    /// Returns `TESTING_ARGS` as a type that [`fuchsia_component::client::launch`]
+    /// accepts.
+    fn testing_args() -> Option<Vec<String>> {
+        Some(Self::TESTING_ARGS.iter().cloned().map(String::from).collect())
+    }
 }
 
 /// Uninstantiable type that represents NetCfg's implementation of a network manager.
@@ -168,7 +178,10 @@ pub enum NetCfg {}
 impl Manager for NetCfg {
     // Note, netcfg.cmx must never be used in a Netemul environment as it breaks
     // hermeticity.
-    const PKG_URL: &'static str = "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg_netemul.cmx";
+    const PKG_URL: &'static str =
+        "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netcfg-netemul.cmx";
+    // Specify an empty config file for NetCfg when it is run in netemul.
+    const TESTING_ARGS: &'static [&'static str] = &["--config-data", "netcfg/empty.json"];
 }
 
 /// Uninstantiable type that represents NetworkManager's implementation of a network manager.
@@ -179,7 +192,8 @@ impl Manager for NetworkManager {
     // Note, network-manager.cmx must never be used in a Netemul environment as it breaks
     // hermeticity.
     const PKG_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/network-manager#meta/network-manager-netemul.cmx";
+        "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/network-manager-netemul.cmx";
+    const TESTING_ARGS: &'static [&'static str] = &[];
 }
 
 /// A test sandbox backed by a [`netemul_sandbox::SandboxProxy`].

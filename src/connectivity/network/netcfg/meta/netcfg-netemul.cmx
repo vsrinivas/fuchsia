@@ -3,9 +3,7 @@
         "args": [
             "--min-severity",
             "DEBUG",
-            "--netemul",
-            "--config-data",
-            "empty.json"
+            "--netemul"
         ],
         "binary": "bin/netcfg"
     },

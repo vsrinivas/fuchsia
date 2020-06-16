@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "features": [
+            "config-data",
             "isolated-persistent-storage"
         ],
         "services": [

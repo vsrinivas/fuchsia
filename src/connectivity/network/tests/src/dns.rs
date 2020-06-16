@@ -89,7 +89,7 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
                     // it programatically. For now, the constants defined in this
                     // test reflect the ones defined in test_config.json.
                     "--config",
-                    "/pkg/data/test_config.json",
+                    "/config/data/dhcpd-testing/test_config.json",
                 ]),
                 KnownServices::SecureStash.into_launch_service(),
             ],
@@ -172,8 +172,9 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
     // configure the DNS resolver accordingly.
     let launcher =
         client_environment.get_launcher().context("failed to create launcher for client env")?;
-    let mut netmgr = fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), None)
-        .context("launch the network manager")?;
+    let mut netmgr =
+        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
+            .context("launch the network manager")?;
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = vec![

@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,10 +6,5 @@ import("//build/config.gni")
 
 config_data("config") {
   for_pkg = "sysmgr"
-  sources = [ "netstack.config" ]
-}
-
-config_data("dns") {
-  for_pkg = "sysmgr"
-  sources = [ "netstack_dns.config" ]
+  sources = [ "network_manager.config" ]
 }

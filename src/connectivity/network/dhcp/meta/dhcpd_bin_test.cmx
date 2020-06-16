@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/dhcpd_bin_test"
+        "binary": "bin/dhcpd_bin_test"
     },
     "sandbox": {
         "services": [

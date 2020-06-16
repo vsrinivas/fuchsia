@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/netstack_integration_test"
+        "binary": "bin/netstack_integration_test"
     },
     "sandbox": {
         "services": [

@@ -31,7 +31,7 @@ use {
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
 const BUF_SZ: usize = 1024;
-const DEFAULT_CONFIG_PATH: &str = "/pkg/data/config.json";
+const DEFAULT_CONFIG_PATH: &str = "/config/data/config.json";
 /// The rate in seconds at which expiration DHCP leases are recycled back into the managed address
 /// pool. The current value of 5 is meant to facilitate manual testing.
 // TODO(atait): Replace with Duration type after it has been updated to const fn.

@@ -3,10 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "network_manager"
@@ -40,112 +38,108 @@ rustc_binary("bin") {
   ]
 }
 
-package("network-manager") {
+resource("device-schema") {
+  sources = [ "data/device_schema.json" ]
+  outputs = [ "data/device_schema.json" ]
+}
+
+fuchsia_component("component") {
+  component_name = "network-manager"
+  manifest = "meta/network-manager.cmx"
   deps = [
     ":bin",
-    "core:lib",
-  ]
-
-  binaries = [
-    {
-      name = "network_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/network-manager.cmx")
-      dest = "network-manager.cmx"
-    },
-    {
-      path = rebase_path("meta/network-manager-netemul.cmx")
-      dest = "network-manager-netemul.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("data/device_schema.json")
-      dest = "device_schema.json"
-    },
+    ":device-schema",
   ]
 }
 
-config_data("config_default") {
-  for_pkg = "network-manager"
-  sources = [ rebase_path("config/default.json") ]
-  outputs = [ "factory_config.json" ]
-}
-
-config_data("config_no_ssh_over_wlan") {
-  for_pkg = "network-manager"
-  sources = [ rebase_path("config/no_ssh_over_wlan.json") ]
-  outputs = [ "factory_config.json" ]
-}
-
-config_data("config_toulouse") {
-  for_pkg = "network-manager"
-  sources = [ rebase_path("config/toulouse.json") ]
-  outputs = [ "factory_config.json" ]
-}
-
-test_package("network-manager-tests") {
+fuchsia_component("component-netemul") {
+  testonly = true
+  component_name = "network-manager-netemul"
+  manifest = "meta/network-manager-netemul.cmx"
   deps = [
-    ":bin_test",
-    "core:lib_test",
-    "core/interface:lib_test",
-  ]
-
-  tests = [
-    {
-      name = "network_manager_bin_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "network_manager_core_lib_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "network_manager_core_interface_lib_test"
-      environments = [ emu_env ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("testdata/invalid_empty.json")
-      dest = "invalid_factory_configs/invalid_empty.json"
-    },
-    {
-      path = rebase_path("testdata/valid_empty.json")
-      dest = "valid_factory_configs/valid_empty.json"
-    },
-    {
-      path = rebase_path("testdata/valid_factory_config.json")
-      dest = "valid_factory_configs/valid_factory_config.json"
-    },
-    {
-      path = rebase_path("data/device_schema.json")
-      dest = "device_schema.json"
-    },
-    {
-      path = rebase_path("config/toulouse.json")
-      dest = "valid_factory_configs/toulouse.json"
-    },
-    {
-      path = rebase_path("config/default.json")
-      dest = "valid_factory_configs/config.json"
-    },
-    {
-      path = rebase_path("config/no_ssh_over_wlan.json")
-      dest = "valid_factory_configs/no_ssh_over_wlan.json"
-    },
+    ":bin",
+    ":device-schema",
   ]
 }
 
-config_data("network_manager_sysmgr_config") {
-  for_pkg = "sysmgr"
-  sources = [ rebase_path("config/network_manager.sysmgr_config") ]
+fuchsia_package("network-manager") {
+  deps = [ ":component" ]
+}
+
+config_data("config-default") {
+  for_pkg = "network-manager"
+  sources = [ "config/default.json" ]
+  outputs = [ "factory_config.json" ]
+}
+
+config_data("config-no-ssh-over-wlan") {
+  for_pkg = "network-manager"
+  sources = [ "config/no_ssh_over_wlan.json" ]
+  outputs = [ "factory_config.json" ]
+}
+
+config_data("config-toulouse") {
+  for_pkg = "network-manager"
+  sources = [ "config/toulouse.json" ]
+  outputs = [ "factory_config.json" ]
+}
+
+fuchsia_component("bin-test") {
+  component_name = "network-manager-bin-test"
+  testonly = true
+  manifest = "meta/network-manager-bin-test.cmx"
+  deps = [ ":bin_test" ]
+}
+
+resource("valid-factory-configs") {
+  testonly = true
+  sources = [
+    "config/no_ssh_over_wlan.json",
+    "config/toulouse.json",
+    "testdata/valid_empty.json",
+    "testdata/valid_factory_config.json",
+  ]
+  outputs = [ "data/valid_factory_configs/{{source_file_part}}" ]
+}
+
+resource("default-valid-factory-configs") {
+  testonly = true
+  sources = [ "config/default.json" ]
+  outputs = [ "data/valid_factory_configs/config.json" ]
+}
+
+resource("invalid-factory-configs") {
+  testonly = true
+  sources = [ "testdata/invalid_empty.json" ]
+  outputs = [ "data/invalid_factory_configs/{{source_file_part}}" ]
+}
+
+fuchsia_component("core-lib-test") {
+  component_name = "network-manager-core-lib-test"
+  testonly = true
+  manifest = "meta/network-manager-core-lib-test.cmx"
+  deps = [
+    ":default-valid-factory-configs",
+    ":device-schema",
+    ":invalid-factory-configs",
+    ":valid-factory-configs",
+    "core:lib_test",
+  ]
+}
+
+fuchsia_component("core-interface-lib-test") {
+  component_name = "network-manager-core-interface-lib-test"
+  testonly = true
+  manifest = "meta/network-manager-core-interface-lib-test.cmx"
+  deps = [ "core/interface:lib_test" ]
+}
+
+fuchsia_test_package("network-manager-tests") {
+  test_components = [
+    ":bin-test",
+    ":core-lib-test",
+    ":core-interface-lib-test",
+  ]
 }
 
 group("tests") {

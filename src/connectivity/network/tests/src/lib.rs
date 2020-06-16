@@ -42,7 +42,7 @@ const ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seco
 const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
 
 /// The path to the default configuration file for DHCP server.
-const DHCP_SERVER_DEFAULT_CONFIG_PATH: &str = "/pkg/data/default_config.json";
+const DHCP_SERVER_DEFAULT_CONFIG_PATH: &str = "/config/data/dhcpd-testing/default_config.json";
 
 /// Returns when an interface is up or when `timeout` elapses.
 async fn wait_for_interface_up<

@@ -3,16 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-
-declare_args() {
-  netcfg_autostart = true
-}
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
+  name = "netcfg"
   with_unit_tests = true
   edition = "2018"
 
@@ -51,65 +46,43 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
-
-  name = "netcfg"
 }
 
-package("netcfg") {
+fuchsia_component("component") {
+  component_name = "netcfg"
+  manifest = "meta/netcfg.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "netcfg"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/netcfg.cmx")
-      dest = "netcfg.cmx"
-    },
-    {
-      path = rebase_path("meta/netcfg_netemul.cmx")
-      dest = "netcfg_netemul.cmx"
-    },
-  ]
 }
 
-config_data("config_default") {
+fuchsia_component("component-netemul") {
+  component_name = "netcfg-netemul"
+  testonly = true
+  manifest = "meta/netcfg-netemul.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("netcfg") {
+  deps = [ ":component" ]
+}
+
+config_data("config-default") {
   for_pkg = "netcfg"
-  sources = [ rebase_path("config/default.json") ]
+  sources = [ "config/default.json" ]
   outputs = [ "default.json" ]
 }
 
-config_data("config_empty") {
+config_data("config-no-ssh-over-wlan") {
   for_pkg = "netcfg"
-  sources = [ rebase_path("config/empty.json") ]
-  outputs = [ "empty.json" ]
-}
-
-config_data("config_no_ssh_over_wlan") {
-  for_pkg = "netcfg"
-  sources = [ rebase_path("config/no_ssh_over_wlan.json") ]
+  sources = [ "config/no_ssh_over_wlan.json" ]
   outputs = [ "default.json" ]
 }
 
-if (netcfg_autostart) {
-  config_data("config") {
-    for_pkg = "sysmgr"
-    sources = [ "netcfg.config" ]
-  }
-} else {
-  group("config") {
-  }
-}
-
-test_package("netcfg_tests") {
+fuchsia_unittest_package("netcfg-tests") {
+  executable_name = "netcfg_bin_test"
   deps = [ ":bin_test" ]
-  tests = [
-    {
-      name = "netcfg_bin_test"
-      dest = "netcfg_bin_test"
-      environments = basic_envs
-    },
-  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netcfg-tests" ]
 }

@@ -2,27 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/config/fuchsia/zircon_images.gni")
 import("//build/rust/rustc_macro.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
   deps = [
+    ":netstack-integration-tests",
     ":netstack_bsdsocket_c_api_test($host_toolchain)",
     ":netstack_c_api_tests",
     ":netstack_external_network_test_client($host_toolchain)",
     ":netstack_if_nameindex_test($host_toolchain)",
-    ":netstack_integration_tests",
     "benchmarks",
     "integration:tests",
   ]
 }
 
-rustc_test("netstack_integration_test") {
+rustc_test("netstack_integration_test_bin") {
+  name = "netstack_integration_test"
   edition = "2018"
 
   deps = [
@@ -81,7 +84,8 @@ rustc_macro("netstack_testing_macros") {
   ]
 }
 
-rustc_test("netstack_cobalt_integration_test") {
+rustc_test("netstack_cobalt_integration_test_bin") {
+  name = "netstack_cobalt_integration_test"
   edition = "2018"
   source_root = "src/cobalt.rs"
   deps = [
@@ -98,6 +102,23 @@ rustc_test("netstack_cobalt_integration_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
   ]
+}
+
+fuchsia_component("netstack_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_integration_test.cmx"
+  deps = [
+    ":netstack_integration_test_bin",
+
+    # netemul is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul",
+  ]
+}
+
+fuchsia_component("netstack_cobalt_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_cobalt_integration_test.cmx"
+  deps = [ ":netstack_cobalt_integration_test_bin" ]
 }
 
 zircon_extras_manifest("device_name_provider_manifest") {
@@ -117,62 +138,70 @@ package("device_name_provider") {
   ]
 }
 
+fuchsia_test_package("netstack-integration-tests-inner") {
+  package_name = "netstack-integration-tests"
+  test_components = [
+    ":netstack_cobalt_integration_test",
+    ":netstack_integration_test",
+  ]
+  deps = [
+    # dhcpd is used to test DHCP address acquisition.
+    ":dhcpd-testing-configs",
+    "//src/connectivity/network/dhcp:component",
+
+    # dns_resolver integration with netstack is tested.
+    "//src/connectivity/network/dns:component",
+
+    # netcfg integration with netstack is tested.
+    ":netcfg-netemul-config",
+    "//src/connectivity/network/netcfg:component-netemul",
+
+    # netstack3 is under test.
+    "//src/connectivity/network/netstack3:component",
+
+    # network_manager integration with netstack is tested.
+    "//src/connectivity/management/network-manager:component-netemul",
+  ]
+}
+
+config_data("dhcpd-testing-configs") {
+  testonly = true
+  for_pkg = "netstack-integration-tests"
+  sources = [
+    "//src/connectivity/network/dhcp/data/bound_device_test_config_eth2.json",
+    "//src/connectivity/network/dhcp/data/bound_device_test_config_eth3.json",
+    "//src/connectivity/network/dhcp/data/default_config.json",
+    "//src/connectivity/network/dhcp/data/test_config.json",
+  ]
+  outputs = [ "dhcpd-testing/{{source_file_part}}" ]
+}
+
+config_data("netcfg-netemul-config") {
+  testonly = true
+  for_pkg = "netstack-integration-tests"
+  sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
+  outputs = [ "netcfg/empty.json" ]
+}
+
 # This target contains the test package netstack_integration_tests and the
 # dependencies needed in the image/universe to run the tests within it.
 # There's currently no way to express a dependency between packages in the build
 # system, so we aggregate all the dependencies in this group target.
 # See bug 36293 for more details.
-group("netstack_integration_tests") {
+group("netstack-integration-tests") {
   testonly = true
+
   deps = [
-    ":netstack_integration_tests_inner",
+    ":netstack-integration-tests-inner",
 
     # device_name_provider provides fuchsia.device.NameProvider.
     ":device_name_provider",
 
-    # dhcpd is used to test DHCP address acquisition.
-    "//src/connectivity/network/dhcp:dhcpd-testing",
-
-    # netstack{,3} is under test.
+    # netstack is under test.
     "//src/connectivity/network/netstack",
-    "//src/connectivity/network/netstack3",
-
-    # netemul is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul",
 
     # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
     "//src/cobalt/bin/testing/mock_cobalt",
-
-    # dns_resolver integration with netstack is tested.
-    "//src/connectivity/network/dns:dns-resolver",
-
-    # network_manager integration with netstack is tested.
-    "//src/connectivity/management/network-manager",
-
-    # netcfg integration with netstack is tested.
-    "//src/connectivity/network/netcfg",
-    "//src/connectivity/network/netcfg:config_empty",
-  ]
-}
-
-test_package("netstack_integration_tests_inner") {
-  package_name = "netstack_integration_tests"
-  deps = [
-    ":netstack_cobalt_integration_test",
-    ":netstack_integration_test",
-  ]
-
-  visibility = [ ":*" ]
-
-  tests = [
-    {
-      name = "netstack_cobalt_integration_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_integration_test"
-      environments = [ emu_env ]
-    },
   ]
 }
 

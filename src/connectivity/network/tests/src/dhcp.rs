@@ -62,7 +62,7 @@ async fn acquire_dhcp<E: Endpoint>(name: &str) -> Result {
                 },
             ],
         }],
-        &["/pkg/data/test_config.json"],
+        &["/config/data/dhcpd-testing/test_config.json"],
         3,
     )
     .await
@@ -92,7 +92,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>(name: &str) -> Result
                 },
             ],
         }],
-        &["/pkg/data/bound_device_test_config_eth2.json"],
+        &["/config/data/dhcpd-testing/bound_device_test_config_eth2.json"],
         1,
     )
     .await
@@ -145,8 +145,8 @@ async fn acquire_dhcp_with_multiple_network<E: Endpoint>(name: &str) -> Result {
             },
         ],
         &[
-            "/pkg/data/bound_device_test_config_eth2.json",
-            "/pkg/data/bound_device_test_config_eth3.json",
+            "/config/data/dhcpd-testing/bound_device_test_config_eth2.json",
+            "/config/data/dhcpd-testing/bound_device_test_config_eth3.json",
         ],
         1,
     )

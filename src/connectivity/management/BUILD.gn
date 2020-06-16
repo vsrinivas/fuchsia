@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  netcfg_autostart = true
+}
+
 group("management") {
   testonly = true
   deps = [
@@ -15,10 +19,11 @@ group("management") {
 # TODO(49379): Remove when updating the network_config_* rules
 # below.
 group("netcfg") {
-  deps = [
-    "//src/connectivity/network/netcfg",
-    "//src/connectivity/network/netcfg:config",
-  ]
+  deps = [ "//src/connectivity/network/netcfg" ]
+
+  if (netcfg_autostart) {
+    deps += [ "//src/connectivity/network/netcfg/sysmgr:config" ]
+  }
 }
 
 group("network_config_default") {
@@ -26,7 +31,7 @@ group("network_config_default") {
   # once we've migrated off of netcfg and onto Network Manager.
   deps = [
     ":netcfg",
-    "//src/connectivity/network/netcfg:config_default",
+    "//src/connectivity/network/netcfg:config-default",
   ]
 }
 
@@ -35,7 +40,7 @@ group("network_config_no_ssh_over_wlan") {
   # once we've migrated off of netcfg and onto Network Manager.
   deps = [
     ":netcfg",
-    "//src/connectivity/network/netcfg:config_no_ssh_over_wlan",
+    "//src/connectivity/network/netcfg:config-no-ssh-over-wlan",
   ]
 }
 

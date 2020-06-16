@@ -14,22 +14,22 @@ group("config") {
   if (use_netstack3) {
     deps = [
       "netstack3",
-      "netstack3/config",
+      "netstack3/sysmgr:config",
     ]
   } else {
     deps = [
       "netstack",
-      "netstack/config",
+      "netstack/sysmgr:config",
     ]
   }
 
   if (use_dns_resolver) {
     deps += [
       "dns:dns-resolver",
-      "dns/config",
+      "dns/sysmgr:config",
     ]
   } else if (!use_netstack3) {
-    deps += [ "netstack/config:dns" ]
+    deps += [ "netstack/sysmgr:config-dns" ]
   }
 }
 
@@ -45,7 +45,7 @@ group("tests") {
     "lib:tests",
     "mdns:tests",
     "net-cli:net-cli-tests",
-    "netcfg:netcfg_tests",
+    "netcfg:tests",
     "netdump:tests",
     "netstack:tests",
     "netstack3:tests",

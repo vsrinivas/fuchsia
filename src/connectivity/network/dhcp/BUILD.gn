@@ -2,11 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
   name = "dhcp"
@@ -37,15 +36,9 @@ rustc_library("lib") {
   test_deps = [ "//src/connectivity/lib/net-declare" ]
 }
 
-test_package("dhcp-tests") {
+fuchsia_unittest_package("dhcp-tests") {
+  manifest = "meta/dhcp_lib_test.cmx"
   deps = [ ":lib_test" ]
-
-  tests = [
-    {
-      name = "dhcp_lib_test"
-      environments = [ emu_env ]
-    },
-  ]
 }
 
 rustc_binary("bin") {
@@ -81,76 +74,32 @@ rustc_binary("bin") {
   ]
 }
 
-package("dhcpd") {
-  deps = [ ":bin" ]
-  meta = [
-    {
-      path = rebase_path("meta/dhcpd.cmx")
-      dest = "dhcpd.cmx"
-    },
-  ]
-  resources = [
-    {
-      path = rebase_path("data/default_config.json")
-      dest = "config.json"
-    },
-  ]
-  binaries = [
-    {
-      name = "dhcpd"
-    },
-  ]
-}
-
-package("dhcpd-testing") {
-  testonly = true
-  deps = [ ":bin" ]
-  meta = [
-    {
-      path = rebase_path("meta/dhcpd.cmx")
-      dest = "dhcpd-testing.cmx"
-    },
-  ]
-  resources = [
-    {
-      path = rebase_path("data/default_config.json")
-      dest = "default_config.json"
-    },
-    {
-      path = rebase_path("data/test_config.json")
-      dest = "test_config.json"
-    },
-    {
-      path = rebase_path("data/bound_device_test_config_eth2.json")
-      dest = "bound_device_test_config_eth2.json"
-    },
-    {
-      path = rebase_path("data/bound_device_test_config_eth3.json")
-      dest = "bound_device_test_config_eth3.json"
-    },
-  ]
-  binaries = [
-    {
-      name = "dhcpd"
-    },
-  ]
-}
-
-test_package("dhcpd-tests") {
+fuchsia_unittest_package("dhcpd-tests") {
+  manifest = "meta/dhcpd_bin_test.cmx"
   deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      name = "dhcpd_bin_test"
-      environments = [ emu_env ]
-    },
-  ]
+config_data("config-default") {
+  for_pkg = "dhcpd"
+  sources = [ "data/default_config.json" ]
+  outputs = [ "config.json" ]
+}
+
+fuchsia_component("component") {
+  component_name = "dhcpd"
+  manifest = "meta/dhcpd.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("dhcpd") {
+  deps = [ ":component" ]
 }
 
 group("dhcp") {
   public_deps = [
+    ":config-default",
     ":dhcpd",
-    "//src/connectivity/network/dhcp/config",
+    "sysmgr:config",
   ]
 }
 
@@ -159,5 +108,31 @@ group("tests") {
   deps = [
     ":dhcp-tests",
     ":dhcpd-tests",
+  ]
+}
+
+config_data("configs-testing") {
+  testonly = true
+  for_pkg = "dhcpd-testing"
+  sources = [
+    "data/default_config.json",
+    "data/test_config.json",
+  ]
+  outputs = [ "{{source_file_part}}" ]
+}
+
+fuchsia_package("package-testing") {
+  testonly = true
+  package_name = "dhcpd-testing"
+  deps = [ ":component" ]
+}
+
+# Used by dhcpd-cli tests. Ideally we use fuchsia_component but dhcpd-cli
+# is a shell binary which is not yet supported.
+group("dhcpd-testing") {
+  testonly = true
+  deps = [
+    ":configs-testing",
+    ":package-testing",
   ]
 }

@@ -34,9 +34,12 @@ async fn test_oir() -> Result {
 
     // Start the network manager.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netmgr =
-        fuchsia_component::client::launch(&launcher, NetCfg::PKG_URL.to_string(), None)
-            .context("launch the network manager")?;
+    let mut netmgr = fuchsia_component::client::launch(
+        &launcher,
+        NetCfg::PKG_URL.to_string(),
+        NetCfg::testing_args(),
+    )
+    .context("launch the network manager")?;
 
     // Add a device to the environment.
     let endpoint = sandbox.create_endpoint::<Ethernet, _>(name).await.context("create endpoint")?;
@@ -332,9 +335,12 @@ async fn test_wlan_ap_dhcp_server() -> Result {
 
     // Start NetCfg.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netcfg =
-        fuchsia_component::client::launch(&launcher, NetCfg::PKG_URL.to_string(), None)
-            .context("launch netcfg")?;
+    let mut netcfg = fuchsia_component::client::launch(
+        &launcher,
+        NetCfg::PKG_URL.to_string(),
+        NetCfg::testing_args(),
+    )
+    .context("launch netcfg")?;
     let mut wait_for_netcfg_fut = netcfg.wait().fuse();
 
     // Add a WLAN AP, make sure the DHCP server gets configurd and starts or stops when the

@@ -11,7 +11,7 @@
         }
     },
     "program": {
-        "binary": "test/netstack_cobalt_integration_test"
+        "binary": "bin/netstack_cobalt_integration_test"
     },
     "sandbox": {
         "services": [

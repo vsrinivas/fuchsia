@@ -23,8 +23,9 @@ async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) 
     let mut netstack_builder = AppBuilder::new(fuchsia_single_component_package_url!("netstack"));
     let mut stash_builder =
         AppBuilder::new("fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx");
-    let mut dhcpd_builder = AppBuilder::new(fuchsia_single_component_package_url!("dhcpd-testing"))
-        .args(vec!["--config".to_string(), format!("/pkg/data/{}.json", config)]);
+    let mut dhcpd_builder =
+        AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-testing#meta/dhcpd.cmx")
+            .args(vec!["--config".to_string(), format!("/config/data/{}.json", config)]);
 
     fs.add_proxy_service_to::<fidl_fuchsia_stash::SecureStoreMarker, _>(
         stash_builder
