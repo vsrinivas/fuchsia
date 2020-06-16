@@ -2,22 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("lib") {
   name = "affected_builders_lib"
   with_unit_tests = true
-  edition = "2018"
 
-  visibility = [ "//tools/affected_builders/*" ]
+  visibility = [ "//tools/*" ]
 
-  deps = [ "//third_party/rust_crates:argh" ]
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
 }
 
 rustc_binary("affected_builders") {
   name = "affected_builders"
-  edition = "2018"
+  with_unit_tests = true
 
   deps = [ ":lib" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":affected_builders_test",
+    ":lib_test",
+  ]
 }
