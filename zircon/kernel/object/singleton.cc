@@ -6,8 +6,7 @@
 
 // This file defines:
 // * Initialization code for kernel/object module
-// * Singleton instances and global locks
-// * Helper functions
+// * Singleton instances
 
 #include <inttypes.h>
 #include <lib/cmdline.h>
@@ -36,11 +35,11 @@ fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
 
 void StartRootJobObserver() { gExecutor.StartRootJobObserver(); }
 
-static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void object_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
   Handle::Init();
   PortDispatcher::Init();
 
   gExecutor.Init();
 }
 
-LK_INIT_HOOK(libobject, object_glue_init, LK_INIT_LEVEL_THREADING)
+LK_INIT_HOOK(libobject, object_init, LK_INIT_LEVEL_THREADING)
