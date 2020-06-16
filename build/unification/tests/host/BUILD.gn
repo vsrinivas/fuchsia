@@ -119,7 +119,7 @@ group("migrated-tests") {
     "//zircon/system/utest/fs-host",
   #------------------
   #------------------
-    "//zircon/system/utest/fvm-host",
+    "//zircon/system/ulib/fvm-host:fvm-host-test",
   #------------------
     "//zircon/system/ulib/fdio/test/host",
   #------------------

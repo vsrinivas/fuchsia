@@ -12,6 +12,7 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/test.gni")
 import("//build/unification/zx_library.gni")
 
 zx_library("fvm-host") {
@@ -63,5 +64,29 @@ zx_library("fvm-host") {
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/minfs",
+  ]
+}
+
+test("fvm-host-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [ "fvm-host-test.cc" ]
+  deps = [
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/fvm-host",
   ]
 }
