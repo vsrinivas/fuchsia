@@ -10,7 +10,7 @@ group("tests") {
 }
 
 zx_library("fake-resource") {
-  sdk = "shared"
+  sdk = "static"
   sdk_headers = [ "lib/fake-resource/resource.h" ]
   testonly = true
   shared = true
