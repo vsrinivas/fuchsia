@@ -47,21 +47,49 @@ void main() {
   });
   group('fx wrapper', () {
     test('successfully returns process output', () async {
-      var fx = Fx.mock(MockProcess(stdout: 'specific output\n'));
+      var fx = Fx.mock(
+        MockProcess(stdout: 'specific output\n'),
+        FxEnv(
+          envReader: EnvReader(
+            overrides: {'FUCHSIA_DIR': '/whatever'},
+          ),
+        ),
+      );
       expect(await fx.getSubCommandOutput('whatever'), 'specific output');
     });
     test('successfully returns special characters', () async {
-      var fx = Fx.mock(MockProcess(stdout: '❌'));
+      var fx = Fx.mock(
+        MockProcess(stdout: '❌'),
+        FxEnv(
+          envReader: EnvReader(
+            overrides: {'FUCHSIA_DIR': '/whatever'},
+          ),
+        ),
+      );
       expect(await fx.getSubCommandOutput('whatever'), '❌');
     });
     test('leaves trailing newlines', () async {
-      var fx = Fx.mock(MockProcess(stdout: 'with newline\n'));
+      var fx = Fx.mock(
+        MockProcess(stdout: 'with newline\n'),
+        FxEnv(
+          envReader: EnvReader(
+            overrides: {'FUCHSIA_DIR': '/whatever'},
+          ),
+        ),
+      );
       expect(
           await fx.getSubCommandOutput('whatever', shouldTrimTrailing: false),
           'with newline\n');
     });
     test('raises exp on failed command', () {
-      var fx = Fx.mock(MockProcess(exitCode: 1));
+      var fx = Fx.mock(
+        MockProcess(exitCode: 1),
+        FxEnv(
+          envReader: EnvReader(
+            overrides: {'FUCHSIA_DIR': '/whatever'},
+          ),
+        ),
+      );
       expect(() => fx.getDeviceName(),
           throwsA(TypeMatcher<FailedProcessException>()));
     });

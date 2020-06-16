@@ -31,8 +31,9 @@ class Fx {
   })  : rootLocator = rootLocator ?? FxEnv(),
         _processLauncher = ProcessLauncher(processStarter: processStarter);
 
-  factory Fx.mock(Process process) => Fx(
+  factory Fx.mock(Process process, [FxEnv rootLocator]) => Fx(
         processStarter: returnGivenProcess(process),
+        rootLocator: rootLocator,
       );
 
   Future<String> getDeviceName() async {
@@ -44,6 +45,23 @@ class Fx {
       await getSubCommandOutput('is-package-server-running');
     } on FailedProcessException {
       return false;
+    }
+    return true;
+  }
+
+  Future<bool> updateIfInBase(
+    Iterable<String> testNames, {
+    int batchSize = 50,
+  }) async {
+    final testNamesIterator = ListIterator<String>.from(testNames);
+    while (testNamesIterator.isNotEmpty) {
+      final result = await runFxSubCommand(
+        'update-if-in-base',
+        args: testNamesIterator.take(batchSize),
+      );
+      if (result.exitCode != 0) {
+        return false;
+      }
     }
     return true;
   }
