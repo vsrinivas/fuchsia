@@ -46,34 +46,37 @@ Fuchsia devices or emulators must have one of the following CPU architectures to
 
 ## Testing on a Fuchsia compatible device
 
-Note: This guide assumes a `x64` Fuchsia compatible device. For Fuchsia compatible ARM devices replace `x64` with `arm64` and `generic-x64`  and `generic-arm64` or other compatible image name in the instructions below. For a full list of available images [install gsutil](https://cloud.google.com/storage/docs/gsutil_install) and run: `gsutil ls gs://fuchsia/development/$(gsutil cat gs://fuchsia/development/LATEST_LINUX)/images`
+Note: This guide assumes a `x64` Fuchsia compatible device. For Fuchsia compatible ARM devices
+replace `x64` with `arm64` and `generic-x64`  and `generic-arm64` or other compatible image name in
+the instructions below. For a full list of available images [install gsutil](https://cloud.google.com/storage/docs/gsutil_install)
+and run: `gsutil ls gs://fuchsia/development/$(gsutil cat gs://fuchsia/development/LATEST_LINUX)/images`
 
 1. Setup your device and install Zedboot:
    Find the instructions for your device (e.g. a [NUC](/docs/development/hardware/intel_nuc.md) or [Pixelbook](/docs/development/hardware/pixelbook.md))
    to setup and install Zedboot on your device.
 
-1. Create Ninja build files for the samples:
+1. From the `samples` directory, create Ninja build files for the samples by running the following command:
 
    ```shell
-   buildtools/gn gen out/generic-x64 --args='target_os="fuchsia" target_cpu="x64"'
+   buildtools/linux64/gn gen out/generic-x64 --args='target_os="fuchsia" target_cpu="x64"'
    ```
 
 1. Build the samples by executing the Ninja build files you created in the previous step:
 
    ```shell
-   buildtools/ninja -C out/generic-x64
+   buildtools/linux64/ninja -C out/generic-x64
    ```
 
 1. Make sure your Fuchsia device is booted to Zedboot and connected to your host machine the pave your device:
 
    ```shell
-   third_party/fuchsia-sdk/bin/fpave.sh --image=generic-x64
+   third_party/fuchsia-sdk/bin/fpave.sh --image generic-x64
    ```
 
 1. Start a package server from your host machine:
 
    ```shell
-   third_party/fuchsia-sdk/bin/fserve.sh --image=generic-x64
+   third_party/fuchsia-sdk/bin/fserve.sh --image generic-x64
    ```
 
 1. To publish your packages open another another terminal window and run:
@@ -95,7 +98,7 @@ Note: This guide assumes a `x64` Fuchsia compatible device. For Fuchsia compatib
     1. Once SSHed into the device, run the hello world component on the device:
 
        ```shell
-       run fuchsia-pkg://fuchsia.com/hello_far#meta/hello_far.cmx
+       run fuchsia-pkg://fuchsia.com/hello_world#meta/hello_world.cmx
        ```
 
     1. Run the rot13 server:
