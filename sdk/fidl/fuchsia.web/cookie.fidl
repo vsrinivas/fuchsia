@@ -4,7 +4,10 @@
 
 library fuchsia.web;
 
-using CookieName = string;
+// RFC6265 specifies that implementations must support at least 4096 of data
+// per-cookie (including name, value & attributes) but does not specify an
+// upper-bound on their size.
+using CookieName = string:MAX;
 
 /// Provides methods for monitoring and accessing browser cookie state.
 protocol CookieManager {
@@ -31,18 +34,22 @@ protocol CookieManager {
 /// Used to iterator over a set of cookies, or a stream of changes to cookies.
 protocol CookiesIterator {
     /// Fetches the next batch of cookies, or of changes to cookies.
-    GetNext() -> (vector<Cookie> changed_cookies);
+    /// RFC6265 does not specify an upper-bound on the number of cookies which
+    /// may be stored.
+    GetNext() -> (vector<Cookie>:MAX changed_cookies);
 };
 
 table CookieId {
-    /// The name of the cookie. An arbitrary string defined by the website.
+    /// An RFC2616 "token" chosen by the site to identify the cookie.
     1: CookieName name;
 
-    /// Specifies the host that is allowed to receive the cookie.
-    2: string domain;
+    /// The RFC1034 "subdomain" to which this cookie is scoped.
+    /// e.g. "example.com" allows access from all *.example.com sub-domains.
+    2: string:MAX_HOST_LENGTH domain;
 
-    /// Specifies the URL path prefix which is required to receive the cookie.
-    3: string path;
+    /// The URL "path" prefix to which this cookie is scoped.
+    /// e.g. "/" allows access from all paths.
+    3: string:MAX_URL_LENGTH path;
 };
 
 table Cookie {
@@ -50,5 +57,5 @@ table Cookie {
     1: CookieId id;
 
     /// The cookie value.
-    2: string value;
+    2: string:MAX value;
 };

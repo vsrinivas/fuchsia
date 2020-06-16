@@ -75,8 +75,9 @@ table LoadUrlParams {
     /// available otherwise. For example, autoplay will work only when this flag is set to true.
     3: bool was_user_activated;
 
-    /// Custom HTTP headers.
-    4: vector<fuchsia.net.http.Header> headers;
+    /// Custom HTTP headers. RFC7540 does not specify a limit on the number nor
+    /// size of headers.
+    4: vector<fuchsia.net.http.Header>:MAX headers;
 };
 
 /// Contains information about the [`fuchsia.web.Frame`]'s navigation state.
@@ -84,8 +85,9 @@ table NavigationState {
     /// The page's URL.
     1: Url url;
 
-    /// The user-visible page title.
-    2: string title;
+    /// The user-visible page title. While W3C style recommendation is that HTML
+    /// TITLE tags not exceed 64 characters in length, there is no actual limit.
+    2: string:MAX title;
 
     /// Indicates whether this was a navigation to an error page.
     3: PageType page_type;

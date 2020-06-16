@@ -186,11 +186,9 @@ protocol Context {
     CreateFrame(request<Frame> frame);
 
     /// Similar to [`fuchsia.web.Context/CreateFrame`], with extra parameters.
-    [Transitional]
     CreateFrameWithParams(CreateFrameParams params, request<Frame> frame);
 
     /// Used to observe cookies for sites hosted under this Context.
-    [Transitional]
     GetCookieManager(request<CookieManager> manager);
 
     /// Waits until debugging is available on one or more Frames, and returns the DevTools port

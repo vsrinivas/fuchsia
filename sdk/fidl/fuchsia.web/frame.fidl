@@ -127,18 +127,15 @@ protocol Frame {
     /// Enables headless rendering of the Frame.
     /// This is used when content depends on layout and/or animation events firing normally.
     /// May only be used on a Context created with the `HEADLESS` feature flag.
-    [Transitional]
     EnableHeadlessRendering();
 
     /// Stops headless rendering of the Frame.
     /// May only be used on a Context created with the `HEADLESS` feature flag.
-    [Transitional]
     DisableHeadlessRendering();
 
     /// Returns a [`fuchsia.media.sessions2.Player`] interface through which media (i.e.
     /// video/audio) playback in the frame may be observed, and/or controlled. Only one
     /// [`fuchsia.media.sessions2.Player`] may be active at a time, for each [`fuchsia.web.Frame`].
-    [Transitional]
     GetMediaPlayer(request<fuchsia.media.sessions2.Player> player);
 
     /// Returns an interface through which the [`fuchsia.web.Frame`] may be navigated to a desired
@@ -164,16 +161,15 @@ protocol Frame {
     /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
     /// - `INVALID_ORIGIN`: The [`fuchsia.web.Frame`]'s current URL does not match any of the
     ///    values in `origins` or `origins` is an empty vector.
-    // TODO(crbug.com/900391): Investigate if we can run the scripts in isolated JS worlds.
     ExecuteJavaScript(
-        vector<Url> origins,
+        vector<Url>:MAX origins,
         fuchsia.mem.Buffer script)
         -> (fuchsia.mem.Buffer result) error FrameError;
 
     /// Variant of [`fuchsia.web.Frame/ExecuteJavaScript`] which executes the supplied script
     /// without returning a result.
     ExecuteJavaScriptNoResult(
-        vector<Url> origins,
+        vector<Url>:MAX origins,
         fuchsia.mem.Buffer script)
         -> () error FrameError;
 
@@ -196,7 +192,7 @@ protocol Frame {
     /// - `INVALID_ORIGIN`: `origins` is an empty vector.
     AddBeforeLoadJavaScript(
         uint64 id,
-        vector<Url> origins,
+        vector<Url>:MAX origins,
         fuchsia.mem.Buffer script)
         -> () error FrameError;
 
@@ -246,7 +242,6 @@ protocol Frame {
     /// Enables or disables the processing of the specified `types` of user inputs.
     /// `enable` specifies whether to enable or disable the specified `types`.
     /// All input types are enabled by default.
-    [Transitional]
     ConfigureInputTypes(InputTypes types, AllowInputState allow);
 
     /// Sets the listener for handling popup frame opened by web content. If no listener is
@@ -269,19 +264,16 @@ protocol Frame {
     /// specified value is not applied retroactively to audio streams that were started before this
     /// message is processed. If the caller needs to ensure the value is applied to all streams it
     /// should call this method before [`fuchsia.web.Frame/GetNavigationController`].
-    [Transitional]
     SetMediaSessionId(uint64 session_id);
 
     /// Overrides the dimensions reported to web content. The devicePixelRatio reported to
     /// web content will be adjusted in response to changes in the pixel size of the View,
     /// rather than changing the size reported to the content. Call with null `web_dips` to
     /// remove any prior forced content dimensions.
-    [Transitional]
     ForceContentDimensions(fuchsia.ui.gfx.vec2? web_dips);
 
     /// Sets the permission state for the specified `permission` and `web_origin`. By default, all
     /// permissions are denied.
-    [Transitional]
     SetPermissionState(PermissionDescriptor permission,
                        Url web_origin,
                        PermissionState state);
@@ -299,12 +291,10 @@ protocol Frame {
     /// Any elements that have begun fetching or loading media resources for the current source
     /// before media loading was blocked will continue to fetch, load, and start playback as
     /// appropriate. This includes calls to `play()` even after media loading is blocked.
-    [Transitional]
     SetBlockMediaLoading(bool blocked);
 
     /// Returns the amount of private (non-shared) physical memory used by the Frame's main
     /// document. The returned size might not reflect the memory usage of embedded iframes.
-    [Transitional]
     GetPrivateMemorySize() -> (uint64 size_bytes);
 };
 
@@ -314,11 +304,11 @@ table WebMessage {
 
     /// Optional list of objects transferred into the [`fuchsia.web.MessagePort`] from the FIDL
     /// client.
-    2: vector<IncomingTransferable> incoming_transfer;
+    2: vector<IncomingTransferable>:MAX incoming_transfer;
 
     /// Optional list of objects transferred out of the [`fuchsia.web.MessagePort`] to the FIDL
     /// client.
-    3: vector<OutgoingTransferable> outgoing_transfer;
+    3: vector<OutgoingTransferable>:MAX outgoing_transfer;
 };
 
 flexible union OutgoingTransferable {
