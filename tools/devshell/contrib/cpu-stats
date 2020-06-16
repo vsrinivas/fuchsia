@@ -11,12 +11,17 @@ from collections import defaultdict
 from datetime import timedelta
 import json
 from math import sqrt
-import numpy as np
 import os
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import zipfile
+
+try:
+  import numpy as np
+except ModuleNotFoundError:
+  print('You need numpy installed.\nRun: pip3 install numpy', file=sys.stderr)
+  sys.exit(1)
 
 MIN_MEASUREMENTS_FOR_CROSS_CORRELATION = 5
 
