@@ -48,19 +48,22 @@ TEST(ImageFormat, LinearComparison_V2_LLCPP) {
 }
 
 TEST(ImageFormat, LinearComparison_V1_LLCPP) {
-  sysmem_v1::PixelFormat plain;
-  plain.type = sysmem_v1::PixelFormatType::BGRA32;
-  plain.has_format_modifier = false;
+  sysmem_v1::PixelFormat plain = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = false,
+  };
 
-  sysmem_v1::PixelFormat linear;
-  linear.type = sysmem_v1::PixelFormatType::BGRA32;
-  linear.has_format_modifier = true;
-  linear.format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR;
+  sysmem_v1::PixelFormat linear = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+  };
 
-  sysmem_v1::PixelFormat x_tiled;
-  x_tiled.type = sysmem_v1::PixelFormatType::BGRA32;
-  x_tiled.has_format_modifier = true;
-  x_tiled.format_modifier.value = sysmem_v1::FORMAT_MODIFIER_INTEL_I915_X_TILED;
+  sysmem_v1::PixelFormat x_tiled = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+  };
 
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(plain, plain));
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(linear, linear));
@@ -73,19 +76,22 @@ TEST(ImageFormat, LinearComparison_V1_LLCPP) {
 }
 
 TEST(ImageFormat, LinearComparison_V1_C) {
-  fuchsia_sysmem_PixelFormat plain = {};
-  plain.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  plain.has_format_modifier = false;
+  fuchsia_sysmem_PixelFormat plain = {
+      .type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .has_format_modifier = false,
+  };
 
-  fuchsia_sysmem_PixelFormat linear = {};
-  linear.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  linear.has_format_modifier = true;
-  linear.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+  fuchsia_sysmem_PixelFormat linear = {
+      .type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+  };
 
-  fuchsia_sysmem_PixelFormat x_tiled = {};
-  x_tiled.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  x_tiled.has_format_modifier = true;
-  x_tiled.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED;
+  fuchsia_sysmem_PixelFormat x_tiled = {
+      .type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
+  };
 
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(plain, plain));
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(linear, linear));
@@ -120,16 +126,18 @@ TEST(ImageFormat, LinearRowBytes_V2_LLCPP) {
 }
 
 TEST(ImageFormat, LinearRowBytes_V1_LLCPP) {
-  sysmem_v1::PixelFormat linear;
-  linear.type = sysmem_v1::PixelFormatType::BGRA32;
-  linear.has_format_modifier = true;
-  linear.format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR;
-  sysmem_v1::ImageFormatConstraints constraints;
-  constraints.pixel_format = linear;
-  constraints.min_coded_width = 12;
-  constraints.max_coded_width = 100;
-  constraints.bytes_per_row_divisor = 4 * 8;
-  constraints.max_bytes_per_row = 100000;
+  sysmem_v1::PixelFormat linear = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+  };
+  sysmem_v1::ImageFormatConstraints constraints = {
+      .pixel_format = linear,
+      .min_coded_width = 12,
+      .max_coded_width = 100,
+      .max_bytes_per_row = 100000,
+      .bytes_per_row_divisor = 4 * 8,
+  };
 
   uint32_t row_bytes;
   EXPECT_TRUE(ImageFormatMinimumRowBytes(constraints, 17, &row_bytes));
@@ -140,16 +148,18 @@ TEST(ImageFormat, LinearRowBytes_V1_LLCPP) {
 }
 
 TEST(ImageFormat, LinearRowBytes_V1_C) {
-  fuchsia_sysmem_PixelFormat linear = {};
-  linear.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  linear.has_format_modifier = true;
-  linear.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
-  fuchsia_sysmem_ImageFormatConstraints constraints = {};
-  constraints.pixel_format = linear;
-  constraints.min_coded_width = 12;
-  constraints.max_coded_width = 100;
-  constraints.bytes_per_row_divisor = 4 * 8;
-  constraints.max_bytes_per_row = 100000;
+  fuchsia_sysmem_PixelFormat linear = {
+      .type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+  };
+  fuchsia_sysmem_ImageFormatConstraints constraints = {
+      .pixel_format = linear,
+      .min_coded_width = 12,
+      .max_coded_width = 100,
+      .max_bytes_per_row = 100000,
+      .bytes_per_row_divisor = 4 * 8,
+  };
 
   uint32_t row_bytes;
   EXPECT_TRUE(ImageFormatMinimumRowBytes(&constraints, 17, &row_bytes));
@@ -248,10 +258,11 @@ TEST(ImageFormat, ZxPixelFormat_V1_LLCPP) {
     EXPECT_LT(0u, ImageFormatBitsPerPixel(sysmem_format));
   }
 
-  sysmem_v1::PixelFormat other_format;
-  other_format.type = sysmem_v1::PixelFormatType::BGRA32;
-  other_format.has_format_modifier = true;
-  other_format.format_modifier.value = sysmem_v1::FORMAT_MODIFIER_INTEL_I915_X_TILED;
+  sysmem_v1::PixelFormat other_format = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+  };
 
   zx_pixel_format_t back_format;
   EXPECT_FALSE(ImageFormatConvertSysmemToZx(other_format, &back_format));
@@ -294,10 +305,11 @@ TEST(ImageFormat, ZxPixelFormat_V1_C) {
     EXPECT_LT(0u, ImageFormatBitsPerPixel(&sysmem_format));
   }
 
-  fuchsia_sysmem_PixelFormat other_format;
-  other_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  other_format.has_format_modifier = true;
-  other_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED;
+  fuchsia_sysmem_PixelFormat other_format = {
+      .type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
+  };
 
   zx_pixel_format_t back_format;
   EXPECT_FALSE(ImageFormatConvertSysmemToZx(&other_format, &back_format));
@@ -362,18 +374,20 @@ TEST(ImageFormat, PlaneByteOffset_V2_LLCPP) {
 }
 
 TEST(ImageFormat, PlaneByteOffset_V1_LLCPP) {
-  sysmem_v1::PixelFormat linear;
-  linear.type = sysmem_v1::PixelFormatType::BGRA32;
-  linear.has_format_modifier = true;
-  linear.format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR;
-  sysmem_v1::ImageFormatConstraints constraints;
-  constraints.pixel_format = linear;
-  constraints.min_coded_width = 12;
-  constraints.max_coded_width = 100;
-  constraints.min_coded_height = 12;
-  constraints.max_coded_height = 100;
-  constraints.bytes_per_row_divisor = 4 * 8;
-  constraints.max_bytes_per_row = 100000;
+  sysmem_v1::PixelFormat linear = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+  };
+  sysmem_v1::ImageFormatConstraints constraints = {
+      .pixel_format = linear,
+      .min_coded_width = 12,
+      .max_coded_width = 100,
+      .min_coded_height = 12,
+      .max_coded_height = 100,
+      .max_bytes_per_row = 100000,
+      .bytes_per_row_divisor = 4 * 8,
+  };
 
   auto image_format_result = ImageConstraintsToFormat(constraints, 18, 17);
   EXPECT_TRUE(image_format_result.is_ok());
@@ -412,18 +426,20 @@ TEST(ImageFormat, PlaneByteOffset_V1_LLCPP) {
 }
 
 TEST(ImageFormat, PlaneByteOffset_V1_C) {
-  fuchsia_sysmem_PixelFormat linear = {};
-  linear.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  linear.has_format_modifier = true;
-  linear.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
-  fuchsia_sysmem_ImageFormatConstraints constraints = {};
-  constraints.pixel_format = linear;
-  constraints.min_coded_width = 12;
-  constraints.max_coded_width = 100;
-  constraints.min_coded_height = 12;
-  constraints.max_coded_height = 100;
-  constraints.bytes_per_row_divisor = 4 * 8;
-  constraints.max_bytes_per_row = 100000;
+  fuchsia_sysmem_PixelFormat linear = {
+      .type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+  };
+  fuchsia_sysmem_ImageFormatConstraints constraints = {
+      .pixel_format = linear,
+      .min_coded_width = 12,
+      .max_coded_width = 100,
+      .min_coded_height = 12,
+      .max_coded_height = 100,
+      .max_bytes_per_row = 100000,
+      .bytes_per_row_divisor = 4 * 8,
+  };
 
   fuchsia_sysmem_ImageFormat_2 image_format;
   EXPECT_TRUE(ImageConstraintsToFormat(&constraints, 18, 17, &image_format));
@@ -507,10 +523,11 @@ TEST(ImageFormat, TransactionEliminationFormats_V2_LLCPP) {
 }
 
 TEST(ImageFormat, TransactionEliminationFormats_V1_LLCPP) {
-  sysmem_v1::PixelFormat format;
-  format.type = sysmem_v1::PixelFormatType::BGRA32;
-  format.has_format_modifier = true;
-  format.format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR;
+  sysmem_v1::PixelFormat format = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+  };
   EXPECT_TRUE(image_format::FormatCompatibleWithProtectedMemory(format));
   EXPECT_TRUE(ImageFormatCompatibleWithProtectedMemory(format));
 
@@ -518,14 +535,15 @@ TEST(ImageFormat, TransactionEliminationFormats_V1_LLCPP) {
   EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
   EXPECT_FALSE(ImageFormatCompatibleWithProtectedMemory(format));
 
-  sysmem_v1::ImageFormatConstraints constraints = {};
-  constraints.pixel_format = format;
-  constraints.min_coded_width = 12;
-  constraints.max_coded_width = 100;
-  constraints.min_coded_height = 12;
-  constraints.max_coded_height = 100;
-  constraints.bytes_per_row_divisor = 4 * 8;
-  constraints.max_bytes_per_row = 100000;
+  sysmem_v1::ImageFormatConstraints constraints = {
+      .pixel_format = format,
+      .min_coded_width = 12,
+      .max_coded_width = 100,
+      .min_coded_height = 12,
+      .max_coded_height = 100,
+      .max_bytes_per_row = 100000,
+      .bytes_per_row_divisor = 4 * 8,
+  };
 
   auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
   EXPECT_TRUE(optional_format);
@@ -594,21 +612,23 @@ TEST(ImageFormat, BasicSizes_V1_LLCPP) {
   constexpr uint32_t kHeight = 128;
   constexpr uint32_t kStride = 256;
 
-  sysmem_v1::ImageFormat_2 image_format_bgra32;
-  image_format_bgra32.pixel_format.type = sysmem_v1::PixelFormatType::BGRA32;
-  image_format_bgra32.coded_width = kWidth;
-  image_format_bgra32.coded_height = kHeight;
-  image_format_bgra32.bytes_per_row = kStride;
+  sysmem_v1::ImageFormat_2 image_format_bgra32 = {
+      .pixel_format.type = sysmem_v1::PixelFormatType::BGRA32,
+      .coded_width = kWidth,
+      .coded_height = kHeight,
+      .bytes_per_row = kStride,
+  };
   EXPECT_EQ(kHeight * kStride, ImageFormatImageSize(image_format_bgra32));
   EXPECT_EQ(1, ImageFormatCodedWidthMinDivisor(image_format_bgra32.pixel_format));
   EXPECT_EQ(1, ImageFormatCodedHeightMinDivisor(image_format_bgra32.pixel_format));
   EXPECT_EQ(4, ImageFormatSampleAlignment(image_format_bgra32.pixel_format));
 
-  sysmem_v1::ImageFormat_2 image_format_nv12;
-  image_format_nv12.pixel_format.type = sysmem_v1::PixelFormatType::NV12;
-  image_format_nv12.coded_width = kWidth;
-  image_format_nv12.coded_height = kHeight;
-  image_format_nv12.bytes_per_row = kStride;
+  sysmem_v1::ImageFormat_2 image_format_nv12 = {
+      .pixel_format.type = sysmem_v1::PixelFormatType::NV12,
+      .coded_width = kWidth,
+      .coded_height = kHeight,
+      .bytes_per_row = kStride,
+  };
   EXPECT_EQ(kHeight * kStride * 3 / 2, ImageFormatImageSize(image_format_nv12));
   EXPECT_EQ(2, ImageFormatCodedWidthMinDivisor(image_format_nv12.pixel_format));
   EXPECT_EQ(2, ImageFormatCodedHeightMinDivisor(image_format_nv12.pixel_format));
@@ -620,21 +640,23 @@ TEST(ImageFormat, BasicSizes_V1_C) {
   constexpr uint32_t kHeight = 128;
   constexpr uint32_t kStride = 256;
 
-  fuchsia_sysmem_ImageFormat_2 image_format_bgra32{};
-  image_format_bgra32.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  image_format_bgra32.coded_width = kWidth;
-  image_format_bgra32.coded_height = kHeight;
-  image_format_bgra32.bytes_per_row = kStride;
+  fuchsia_sysmem_ImageFormat_2 image_format_bgra32 = {
+      .pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .coded_width = kWidth,
+      .coded_height = kHeight,
+      .bytes_per_row = kStride,
+  };
   EXPECT_EQ(kHeight * kStride, ImageFormatImageSize(&image_format_bgra32));
   EXPECT_EQ(1, ImageFormatCodedWidthMinDivisor(&image_format_bgra32.pixel_format));
   EXPECT_EQ(1, ImageFormatCodedHeightMinDivisor(&image_format_bgra32.pixel_format));
   EXPECT_EQ(4, ImageFormatSampleAlignment(&image_format_bgra32.pixel_format));
 
-  fuchsia_sysmem_ImageFormat_2 image_format_nv12{};
-  image_format_nv12.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
-  image_format_nv12.coded_width = kWidth;
-  image_format_nv12.coded_height = kHeight;
-  image_format_nv12.bytes_per_row = kStride;
+  fuchsia_sysmem_ImageFormat_2 image_format_nv12{
+      .pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12,
+      .coded_width = kWidth,
+      .coded_height = kHeight,
+      .bytes_per_row = kStride,
+  };
   EXPECT_EQ(kHeight * kStride * 3 / 2, ImageFormatImageSize(&image_format_nv12));
   EXPECT_EQ(2, ImageFormatCodedWidthMinDivisor(&image_format_nv12.pixel_format));
   EXPECT_EQ(2, ImageFormatCodedHeightMinDivisor(&image_format_nv12.pixel_format));
@@ -642,22 +664,23 @@ TEST(ImageFormat, BasicSizes_V1_C) {
 }
 
 TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
-  sysmem_v1::PixelFormat format;
-  format.type = sysmem_v1::PixelFormatType::BGRA32;
-  format.has_format_modifier = true;
-  format.format_modifier.value =
-      sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE;
+  sysmem_v1::PixelFormat format = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
+  };
 
   EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
 
-  sysmem_v1::ImageFormatConstraints constraints = {};
-  constraints.pixel_format = format;
-  constraints.min_coded_width = 12;
-  constraints.max_coded_width = 100;
-  constraints.min_coded_height = 12;
-  constraints.max_coded_height = 100;
-  constraints.bytes_per_row_divisor = 4 * 8;
-  constraints.max_bytes_per_row = 100000;
+  sysmem_v1::ImageFormatConstraints constraints = {
+      .pixel_format = format,
+      .min_coded_width = 12,
+      .max_coded_width = 100,
+      .min_coded_height = 12,
+      .max_coded_height = 100,
+      .max_bytes_per_row = 100000,
+      .bytes_per_row_divisor = 4 * 8,
+  };
 
   auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
   EXPECT_TRUE(optional_format);
