@@ -35,8 +35,7 @@ class DisplayControllerListener {
   // invalid.
   DisplayControllerListener(
       zx::channel device_channel,
-      std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller,
-      zx_handle_t controller_handle);
+      std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller);
   ~DisplayControllerListener();
 
   // If any of the channels gets disconnected, |on_invalid| is invoked and this object becomes

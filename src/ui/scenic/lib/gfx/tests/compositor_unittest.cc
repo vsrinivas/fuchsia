@@ -90,8 +90,10 @@ TEST_F(CompositorTest, Validation) {
   ChannelPair device_channel = CreateChannelPair();
   ChannelPair controller_channel = CreateChannelPair();
 
-  display_manager()->BindDefaultDisplayController(std::move(device_channel.client),
-                                                  std::move(controller_channel.client));
+  display_manager()->BindDefaultDisplayController(
+      fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
+          std::move(controller_channel.client)),
+      std::move(device_channel.client));
 
   std::array<float, 3> preoffsets = {0, 0, 0};
   std::array<float, 9> matrix = {0.3, 0.6, 0.1, 0.3, 0.6, 0.1, 0.3, 0.6, 0.1};

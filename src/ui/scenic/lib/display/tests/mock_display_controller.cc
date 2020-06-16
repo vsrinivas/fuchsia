@@ -22,11 +22,10 @@ DisplayControllerObjects CreateMockDisplayController() {
   controller_objs.mock->Bind(std::move(device_channel_server),
                              std::move(controller_channel_server));
 
-  zx_handle_t controller_handle = controller_channel_client.get();
   controller_objs.interface_ptr = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
   controller_objs.interface_ptr->Bind(std::move(controller_channel_client));
   controller_objs.listener = std::make_unique<DisplayControllerListener>(
-      std::move(device_channel_client), controller_objs.interface_ptr, controller_handle);
+      std::move(device_channel_client), controller_objs.interface_ptr);
 
   return controller_objs;
 }

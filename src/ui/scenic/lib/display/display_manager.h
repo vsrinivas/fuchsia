@@ -5,6 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_MANAGER_H_
 #define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_MANAGER_H_
 
+#include <fuchsia/hardware/display/cpp/fidl.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
@@ -22,7 +24,9 @@ class DisplayManager {
   // Waits for the default display to become available then invokes the callback.
   void WaitForDefaultDisplayController(fit::closure display_available_cb);
 
-  void BindDefaultDisplayController(zx::channel dc_device, zx::channel dc_channel);
+  void BindDefaultDisplayController(
+      fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller,
+      zx::channel dc_device);
 
   // Gets information about the default display.
   // May return null if there isn't one.

@@ -18,18 +18,19 @@ void DisplayManager::WaitForDefaultDisplayController(fit::closure display_availa
   display_available_cb_ = std::move(display_available_cb);
 
   dc_watcher_.WaitForDisplayController([this](zx::channel dc_device, zx::channel dc_channel) {
-    BindDefaultDisplayController(std::move(dc_device), std::move(dc_channel));
+    BindDefaultDisplayController(
+        fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(std::move(dc_channel)),
+        std::move(dc_device));
   });
 }
 
-void DisplayManager::BindDefaultDisplayController(zx::channel dc_device, zx::channel dc_channel) {
-  // TODO(36549): Don't need to pass |dc_channel_handle| as a separate arg when
-  // SynchronousInterfacePtr gets a channel() getter.
-  zx_handle_t dc_channel_handle = dc_channel.get();
+void DisplayManager::BindDefaultDisplayController(
+    fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller,
+    zx::channel dc_device) {
   default_display_controller_ = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
-  default_display_controller_->Bind(std::move(dc_channel));
+  default_display_controller_->Bind(std::move(controller));
   default_display_controller_listener_ = std::make_shared<display::DisplayControllerListener>(
-      std::move(dc_device), default_display_controller_, dc_channel_handle);
+      std::move(dc_device), default_display_controller_);
   default_display_controller_listener_->InitializeCallbacks(
       /*on_invalid_cb=*/nullptr, fit::bind_member(this, &DisplayManager::OnDisplaysChanged),
       fit::bind_member(this, &DisplayManager::OnClientOwnershipChange));

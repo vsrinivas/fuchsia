@@ -43,11 +43,10 @@ class DisplayControllerListenerTest : public gtest::TestLoopFixture {
     mock_display_controller_->Bind(std::move(device_channel.server),
                                    std::move(controller_channel.server));
 
-    zx_handle_t controller_handle = controller_channel.client.get();
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     controller->Bind(std::move(controller_channel.client));
-    display_controller_listener_ = std::make_unique<DisplayControllerListener>(
-        std::move(device_channel.client), controller, controller_handle);
+    display_controller_listener_ =
+        std::make_unique<DisplayControllerListener>(std::move(device_channel.client), controller);
   }
 
   DisplayControllerListener* display_controller_listener() {
@@ -73,11 +72,9 @@ TEST_F(DisplayControllerListenerBasicTest, ConstructorArgs) {
     ChannelPair device_channel = CreateChannelPair();
     ChannelPair controller_channel = CreateChannelPair();
 
-    zx_handle_t controller_handle = controller_channel.client.get();
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     controller->Bind(std::move(controller_channel.client));
-    DisplayControllerListener listener(std::move(device_channel.client), controller,
-                                       controller_handle);
+    DisplayControllerListener listener(std::move(device_channel.client), controller);
 
     EXPECT_TRUE(listener.valid());
   }
@@ -86,10 +83,9 @@ TEST_F(DisplayControllerListenerBasicTest, ConstructorArgs) {
     zx::channel empty_channel;  // Invalid device.
     ChannelPair controller_channel = CreateChannelPair();
 
-    zx_handle_t controller_handle = controller_channel.client.get();
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     controller->Bind(std::move(controller_channel.client));
-    DisplayControllerListener listener(std::move(empty_channel), controller, controller_handle);
+    DisplayControllerListener listener(std::move(empty_channel), controller);
     EXPECT_FALSE(listener.valid());
   }
 
@@ -97,24 +93,19 @@ TEST_F(DisplayControllerListenerBasicTest, ConstructorArgs) {
     ChannelPair device_channel = CreateChannelPair();
     ChannelPair controller_channel = CreateChannelPair();
 
-    zx_handle_t controller_handle = controller_channel.client.get();
     // Unbound controller.
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
-    DisplayControllerListener listener(std::move(device_channel.client), controller,
-                                       controller_handle);
+    DisplayControllerListener listener(std::move(device_channel.client), controller);
 
     EXPECT_FALSE(listener.valid());
   }
 
   {
     ChannelPair device_channel = CreateChannelPair();
-    zx::channel empty_channel;  // Invalid controller.
 
-    zx_handle_t controller_handle = empty_channel.get();
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
-    controller->Bind(std::move(empty_channel));
-    DisplayControllerListener listener(std::move(device_channel.client), controller,
-                                       controller_handle);
+    controller->Bind(zx::channel());
+    DisplayControllerListener listener(std::move(device_channel.client), controller);
 
     EXPECT_FALSE(listener.valid());
   }

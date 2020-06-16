@@ -83,8 +83,11 @@ TEST_F(DisplaySwapchainMockTest, AcknowledgeVsync) {
   auto controller_channel = CreateChannelPair();
   auto device_channel = CreateChannelPair();
 
-  display_manager()->BindDefaultDisplayController(std::move(device_channel.client),
-                                                  std::move(controller_channel.client));
+  display_manager()->BindDefaultDisplayController(
+      fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
+          std::move(controller_channel.client)),
+      std::move(device_channel.client));
+
   display_manager()->SetDefaultDisplayForTests(
       std::make_shared<display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight));
 

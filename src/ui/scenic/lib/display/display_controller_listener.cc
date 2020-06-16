@@ -13,10 +13,9 @@ namespace display {
 
 DisplayControllerListener::DisplayControllerListener(
     zx::channel device_channel,
-    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller,
-    zx_handle_t controller_channel)
+    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller)
     : controller_(std::move(controller)),
-      controller_channel_handle_(controller_channel),
+      controller_channel_handle_(controller_->unowned_channel()->get()),
       device_channel_(std::move(device_channel)) {
   valid_ = device_channel_.is_valid() && controller_channel_handle_ != 0 && controller_->is_bound();
   if (valid_) {
