@@ -3,25 +3,30 @@
 // found in the LICENSE file.
 
 use {
+    crate::mode_management::phy_manager::PhyManagerApi,
     anyhow::{bail, Context, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherProxy,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, SetCountryRequest},
     fuchsia_zircon::ok as zx_ok,
+    futures::lock::Mutex,
+    std::sync::Arc,
 };
 
-pub struct RegulatoryManager {
+pub(crate) struct RegulatoryManager<P: PhyManagerApi> {
     regulatory_service: RegulatoryRegionWatcherProxy,
     device_service: DeviceServiceProxy,
+    _phy_manager: Arc<Mutex<P>>,
 }
 
 const REGION_CODE_LEN: usize = 2;
 
-impl RegulatoryManager {
+impl<P: PhyManagerApi> RegulatoryManager<P> {
     pub fn new(
         regulatory_service: RegulatoryRegionWatcherProxy,
         device_service: DeviceServiceProxy,
+        phy_manager: Arc<Mutex<P>>,
     ) -> Self {
-        RegulatoryManager { regulatory_service, device_service }
+        RegulatoryManager { regulatory_service, device_service, _phy_manager: phy_manager }
     }
 
     pub async fn run(&self) -> Result<(), Error> {
@@ -54,7 +59,10 @@ impl RegulatoryManager {
 #[cfg(test)]
 mod tests {
     use {
-        super::{RegulatoryManager, SetCountryRequest},
+        super::{Arc, Mutex, PhyManagerApi, RegulatoryManager, SetCountryRequest},
+        crate::mode_management::phy_manager::PhyManagerError,
+        async_trait::async_trait,
+        eui48::MacAddress,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_location_namedplace::{
             RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherRequest,
@@ -67,19 +75,20 @@ mod tests {
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
         futures::{stream::StreamExt, task::Poll},
         pin_utils::pin_mut,
+        std::unimplemented,
         wlan_common::assert_variant,
     };
 
     /// Holds all of the boilerplate required for testing RegulatoryManager.
     struct TestContext {
         executor: fasync::Executor,
-        regulatory_manager: RegulatoryManager,
+        regulatory_manager: RegulatoryManager<StubPhyManager>,
         device_service_requests: DeviceServiceRequestStream,
         regulatory_region_requests: RegulatoryRegionWatcherRequestStream,
     }
 
     impl TestContext {
-        fn new() -> Self {
+        fn new(phy_manager: StubPhyManager) -> Self {
             let executor = fasync::Executor::new().expect("failed to create an executor");
             let (device_service_proxy, device_server_channel) =
                 create_proxy::<DeviceServiceMarker>()
@@ -87,14 +96,17 @@ mod tests {
             let (regulatory_region_proxy, regulatory_region_server_channel) =
                 create_proxy::<RegulatoryRegionWatcherMarker>()
                     .expect("failed to create RegulatoryRegionWatcher proxy");
-            let regulatory_manager =
-                RegulatoryManager::new(regulatory_region_proxy, device_service_proxy);
+            let regulatory_manager = RegulatoryManager::new(
+                regulatory_region_proxy,
+                device_service_proxy,
+                Arc::new(Mutex::new(phy_manager)),
+            );
             let device_service_requests =
                 device_server_channel.into_stream().expect("failed to create DeviceService stream");
             let regulatory_region_requests = regulatory_region_server_channel
                 .into_stream()
                 .expect("failed to create RegulatoryRegionWatcher stream");
-            TestContext {
+            Self {
                 executor,
                 regulatory_manager,
                 device_service_requests,
@@ -105,7 +117,7 @@ mod tests {
 
     #[test]
     fn returns_error_on_short_region_code() {
-        let mut context = TestContext::new();
+        let mut context = TestContext::new(StubPhyManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -124,7 +136,7 @@ mod tests {
 
     #[test]
     fn returns_error_on_long_region_code() {
-        let mut context = TestContext::new();
+        let mut context = TestContext::new(StubPhyManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -143,7 +155,7 @@ mod tests {
 
     #[test]
     fn propagates_update_to_device_service_on_region_code_with_valid_length() {
-        let mut context = TestContext::new();
+        let mut context = TestContext::new(StubPhyManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -168,7 +180,7 @@ mod tests {
 
     #[test]
     fn does_not_propagate_invalid_length_region_code_to_device_service() {
-        let mut context = TestContext::new();
+        let mut context = TestContext::new(StubPhyManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -193,7 +205,7 @@ mod tests {
 
     #[test]
     fn returns_error_when_region_code_with_valid_length_is_rejected_by_device_service() {
-        let mut context = TestContext::new();
+        let mut context = TestContext::new(StubPhyManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -226,7 +238,7 @@ mod tests {
 
     #[test]
     fn propagates_multiple_valid_region_code_updates_to_device_service() {
-        let mut context = TestContext::new();
+        let mut context = TestContext::new(StubPhyManager {});
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
 
@@ -274,6 +286,55 @@ mod tests {
             );
             assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"CA" });
             device_service_responder.send(ZX_OK).expect("failed to send device service response");
+        }
+    }
+
+    struct StubPhyManager;
+
+    #[async_trait]
+    impl PhyManagerApi for StubPhyManager {
+        async fn add_phy(&mut self, _phy_id: u16) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
+        fn remove_phy(&mut self, _phy_id: u16) {
+            unimplemented!();
+        }
+
+        async fn on_iface_added(&mut self, _iface_id: u16) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
+        fn on_iface_removed(&mut self, _iface_id: u16) {
+            unimplemented!();
+        }
+
+        async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
+        async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
+        fn get_client(&mut self) -> Option<u16> {
+            unimplemented!();
+        }
+
+        async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError> {
+            unimplemented!();
+        }
+
+        async fn destroy_ap_iface(&mut self, _iface_id: u16) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
+        async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError> {
+            unimplemented!();
+        }
+
+        fn suggest_ap_mac(&mut self, _mac: MacAddress) {
+            unimplemented!();
         }
     }
 }
