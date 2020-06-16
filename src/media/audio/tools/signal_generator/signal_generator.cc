@@ -402,12 +402,15 @@ void MediaApp::InitializeAudibleRenderer() {
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
+  // To indicate we want a reference clock OTHER than the default, we'll call SetReferenceClock().
   if (clock_type_ != ClockType::Default) {
     zx::clock reference_clock_to_set;
 
     if (clock_type_ == ClockType::Optimal) {
+      // To select the Optimal clock maintained by audio_core, we effectively SetRefClock(NULL).
       reference_clock_to_set = zx::clock(ZX_HANDLE_INVALID);
     } else {
+      // For Monotonic and Custom, we create and rights-reduce a clock to send to SetRefClock().
       zx_status_t status;
       zx::clock::update_args args;
       args.reset();
@@ -415,7 +418,6 @@ void MediaApp::InitializeAudibleRenderer() {
         args.set_rate_adjust(clock_rate_adjustment_);
       }
 
-      // In both Monotonic and Custom cases, we create, reduce rights, then send to SetRefClock().
       if (clock_type_ == ClockType::Monotonic) {
         // This clock is already started, in lock-step with CLOCK_MONOTONIC.
         reference_clock_to_set = audio::clock::AdjustableCloneOfMonotonic();
@@ -447,7 +449,6 @@ void MediaApp::InitializeAudibleRenderer() {
 
     audio_renderer_->SetReferenceClock(std::move(reference_clock_to_set));
   }
-  // we retrieve the reference clock later in GetClockAndStart
 
   audio_renderer_->SetUsage(usage_);
 
@@ -671,7 +672,7 @@ void MediaApp::AdvancePinkNoiseFrame() {
   }
 }
 
-// Calculate and retrieve the new pink-noise sample value for this channel
+// Calculate and retrieve the new pink-noise sample value for this channel.
 double MediaApp::NextPinkNoiseSample(uint32_t chan) {
   //
   // First, shift our previous inputs and outputs into the past, by one frame
@@ -682,8 +683,9 @@ double MediaApp::NextPinkNoiseSample(uint32_t chan) {
   // (both [chan][0] values are now stale, but we overwrite them immediately)
 
   //
-  // Second, generate the initial white-noise input
+  // Second, generate the initial white-noise input, boosting to normalize the result.
   input_history_[chan][0] = drand48() * 2.0 - 1.0;
+  input_history_[chan][0] *= kPinkNoiseSignalBoostFactor;
 
   //
   // Finally, apply the filter to {input + cached input/output values} to get the new output val.

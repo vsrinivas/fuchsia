@@ -218,12 +218,19 @@ class MediaApp {
 
   bool verbose_ = false;
 
+  // To produce pink noise, we first generate white noise then run it through a "pinking" filter to
+  // progressively attenuate high frequencies.
+  //
   // This 4-stage feedforward/feedback filter attenuates by 1/f to convert white noise to pink.
   static constexpr double kFeedFwd[] = {0.049922035, -0.095993537, 0.050612699, -0.004408786};
   static constexpr double kFeedBack[] = {1, -2.494956002, 2.017265875, -0.522189400};
   typedef double HistoryBuffer[4];
   std::unique_ptr<HistoryBuffer[]> input_history_;
   std::unique_ptr<HistoryBuffer[]> output_history_;
+  // The above filtering produces a signal with an average min/max of approx [-0.20, +0.20], only
+  // very rarely exceeding [-0.24,0.24]. To normalize the pink-noise signal (making its loudness for
+  // a given amplitude closer to that of white noise), we boost our source white-noise signal by 4x.
+  static constexpr double kPinkNoiseSignalBoostFactor = 4.0;
 
   bool ultrasound_ = false;
 };
