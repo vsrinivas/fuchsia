@@ -1826,7 +1826,10 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       pmm_free_page(insert.ReleasePage());
       return status;
     }
-    if (p == vm_get_zero_page() && !page_source_) {
+    // Interpret a software fault as an explicit desire to have potential zero pages and don't
+    // consider them for cleaning, this is an optimization.
+    // We explicitly must *not* place pages from a page_source_ into the zero scanning queue.
+    if (p == vm_get_zero_page() && !page_source_ && !(pf_flags & VMM_PF_FLAG_SW_FAULT)) {
       pmm_page_queues()->MoveToUnswappableZeroFork(res_page, this, offset);
     }
 

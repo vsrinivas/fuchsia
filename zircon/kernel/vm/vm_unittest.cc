@@ -1923,61 +1923,6 @@ static bool vmo_move_pages_on_access_test() {
   END_TEST;
 }
 
-static bool vmo_dedupe_zero_page() {
-  BEGIN_TEST;
-  // test that a zero page gets removed
-
-  AutoVmScannerDisable scanner_disable;
-
-  fbl::RefPtr<VmObject> vmo;
-  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE * 3, &vmo);
-  EXPECT_EQ(ZX_OK, status);
-  uint64_t val = 0;
-
-  status = vmo->Read(&val, 0, sizeof(val));
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(0u, val);
-
-  status = vmo->Write(&val, PAGE_SIZE, sizeof(val));
-  EXPECT_EQ(ZX_OK, status);
-
-  val = 42;
-  status = vmo->Write(&val, PAGE_SIZE * 2, sizeof(val));
-  EXPECT_EQ(ZX_OK, status);
-
-  // We should have two committed pages, as the first read should not have committed.
-  EXPECT_EQ(2u, vmo->AttributedPages());
-
-  // Both pages should be specifically in the unswappable zero fork list.
-  EXPECT_TRUE(PagesInUnswappableZeroForkQueue(vmo.get(), PAGE_SIZE, PAGE_SIZE * 2));
-
-  // Trigger the zero page scanner to process everything.
-  scanner_do_zero_scan(UINT64_MAX);
-
-  // One of our pages should have been deduped, and so we should only have 1 committed page.
-  EXPECT_EQ(1u, vmo->AttributedPages());
-
-  // If we now make the page zero again the scanner will not pick it up.
-  val = 0;
-  status = vmo->Write(&val, PAGE_SIZE * 2, sizeof(val));
-  EXPECT_EQ(ZX_OK, status);
-
-  scanner_do_zero_scan(UINT64_MAX);
-  EXPECT_EQ(1u, vmo->AttributedPages());
-
-  // To prove we really had a zero page, manually ask the vmo to attempt a dedupe.
-  vm_page_t* page = nullptr;
-  paddr_t paddr;
-  status = vmo->GetPage(PAGE_SIZE * 2, 0, nullptr, nullptr, &page, &paddr);
-  EXPECT_EQ(ZX_OK, status);
-  bool result = VmObjectPaged::AsVmObjectPaged(vmo)->DedupZeroPage(page, PAGE_SIZE * 2);
-  EXPECT_TRUE(result);
-
-  EXPECT_EQ(0u, vmo->AttributedPages());
-
-  END_TEST;
-}
-
 static bool vmo_eviction_test() {
   BEGIN_TEST;
   // Disable the page scanner as this test would be flaky if our pages get evicted by someone else.
@@ -3267,7 +3212,6 @@ VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
-VM_UNITTEST(vmo_dedupe_zero_page)
 VM_UNITTEST(vmo_eviction_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
