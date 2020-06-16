@@ -11,7 +11,7 @@ use {
             events::{
                 error::EventsError,
                 event::SyncMode,
-                registry::{EventRegistry, SubscriptionOptions, SubscriptionType},
+                registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
                 serve::serve_event_source_sync,
                 stream::EventStream,
             },
@@ -56,13 +56,14 @@ impl EventSource {
         registry: Weak<EventRegistry>,
     ) -> Result<Self, ModelError> {
         // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
-        let resolve_instance_event_stream =
-            Arc::new(Mutex::new(if options.sync_mode == SyncMode::Async {
-                None
-            } else {
+        let resolve_instance_event_stream = Arc::new(Mutex::new(match options.sync_mode {
+            SyncMode::Async => None,
+            SyncMode::Sync => {
                 let registry = registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
                 Some(registry.subscribe(&options, vec![EventType::Resolved.into()]).await?)
-            }));
+            }
+        }));
+
         Ok(Self { registry, model, options, resolve_instance_event_stream })
     }
 
@@ -71,8 +72,12 @@ impl EventSource {
         registry: Weak<EventRegistry>,
         sync_mode: SyncMode,
     ) -> Result<Self, ModelError> {
-        Self::new(model, SubscriptionOptions::new(SubscriptionType::Debug, sync_mode), registry)
-            .await
+        Self::new(
+            model,
+            SubscriptionOptions::new(SubscriptionType::AboveRoot, sync_mode, ExecutionMode::Debug),
+            registry,
+        )
+        .await
     }
 
     /// Drops the `Resolved` event stream, thereby permitting components within the

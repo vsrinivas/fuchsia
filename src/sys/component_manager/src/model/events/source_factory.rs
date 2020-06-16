@@ -9,7 +9,7 @@ use {
             error::ModelError,
             events::{
                 event::SyncMode,
-                registry::{EventRegistry, SubscriptionOptions, SubscriptionType},
+                registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
                 source::EventSource,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -47,11 +47,22 @@ pub struct EventSourceFactory {
 
     /// Tracks the event source used by each component identified with the given `moniker`.
     event_source_registry: Mutex<HashMap<AbsoluteMoniker, EventSource>>,
+
+    execution_mode: ExecutionMode,
 }
 
 impl EventSourceFactory {
-    pub fn new(model: Weak<Model>, event_registry: Weak<EventRegistry>) -> Self {
-        Self { model, event_registry, event_source_registry: Mutex::new(HashMap::new()) }
+    pub fn new(
+        model: Weak<Model>,
+        event_registry: Weak<EventRegistry>,
+        execution_mode: ExecutionMode,
+    ) -> Self {
+        Self {
+            model,
+            event_registry,
+            event_source_registry: Mutex::new(HashMap::new()),
+            execution_mode,
+        }
     }
 
     /// Creates the subscription to the required events.
@@ -81,7 +92,11 @@ impl EventSourceFactory {
     ) -> Result<EventSource, ModelError> {
         EventSource::new(
             self.model.clone(),
-            SubscriptionOptions::new(SubscriptionType::Normal(target_moniker), sync_mode),
+            SubscriptionOptions::new(
+                SubscriptionType::Component(target_moniker),
+                sync_mode,
+                self.execution_mode.clone(),
+            ),
             self.event_registry.clone(),
         )
         .await
@@ -266,6 +281,7 @@ mod tests {
         let event_source_factory = Arc::new(EventSourceFactory::new(
             Arc::downgrade(&model),
             Arc::downgrade(&event_registry),
+            ExecutionMode::Production,
         ));
 
         let hooks = Hooks::new(None);
@@ -295,6 +311,7 @@ mod tests {
         let event_source_factory = Arc::new(EventSourceFactory::new(
             Arc::downgrade(&model),
             Arc::downgrade(&event_registry),
+            ExecutionMode::Production,
         ));
 
         let target: AbsoluteMoniker = vec!["a:0"].into();

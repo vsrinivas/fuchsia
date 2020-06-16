@@ -26,8 +26,11 @@ use {
             error::ModelError,
             event_logger::EventLogger,
             events::{
-                event::SyncMode, registry::EventRegistry, running_provider::RunningProvider,
-                source_factory::EventSourceFactory, stream_provider::EventStreamProvider,
+                event::SyncMode,
+                registry::{EventRegistry, ExecutionMode},
+                running_provider::RunningProvider,
+                source_factory::EventSourceFactory,
+                stream_provider::EventStreamProvider,
             },
             hooks::EventType,
             hub::Hub,
@@ -240,7 +243,7 @@ pub struct BuiltinEnvironment {
     pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
-    is_debug: bool,
+    pub execution_mode: ExecutionMode,
 }
 
 impl BuiltinEnvironment {
@@ -374,15 +377,23 @@ impl BuiltinEnvironment {
         };
         model.root_realm.hooks.install(event_registry.hooks()).await;
 
+        let execution_mode = match args.debug {
+            false => ExecutionMode::Production,
+            true => ExecutionMode::Debug,
+        };
+
         // Set up the event source factory.
         let event_source_factory = Arc::new(EventSourceFactory::new(
             Arc::downgrade(&model),
             Arc::downgrade(&event_registry),
+            execution_mode.clone(),
         ));
         model.root_realm.hooks.install(event_source_factory.hooks()).await;
 
-        let event_stream_provider =
-            Arc::new(EventStreamProvider::new(Arc::downgrade(&event_registry)));
+        let event_stream_provider = Arc::new(EventStreamProvider::new(
+            Arc::downgrade(&event_registry),
+            execution_mode.clone(),
+        ));
         model.root_realm.hooks.install(event_stream_provider.hooks()).await;
 
         let event_logger = if args.debug {
@@ -416,7 +427,7 @@ impl BuiltinEnvironment {
             capability_ready_notifier,
             event_stream_provider,
             event_logger,
-            is_debug: args.debug,
+            execution_mode,
         })
     }
 
@@ -434,7 +445,7 @@ impl BuiltinEnvironment {
 
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
-        if self.is_debug {
+        if self.execution_mode.is_debug() {
             let event_source = self.event_source_factory.create_for_debug(SyncMode::Sync).await?;
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();

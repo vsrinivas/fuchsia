@@ -7,7 +7,7 @@ use {
         events::{
             event::{Event, SyncMode},
             filter::EventFilter,
-            registry::{SubscriptionOptions, SubscriptionType},
+            registry::{ExecutionMode, SubscriptionOptions, SubscriptionType},
         },
         hooks::{
             Event as ComponentEvent, EventError, EventErrorPayload, EventPayload, HasEventType,
@@ -154,8 +154,18 @@ impl EventDispatcherScope {
                 event_error_payload: EventErrorPayload::CapabilityRequested { source_moniker, .. },
                 ..
             }) => match &options.subscription_type {
-                SubscriptionType::Debug => true,
-                SubscriptionType::Normal(target) => *source_moniker == *target,
+                SubscriptionType::AboveRoot => true,
+                SubscriptionType::Component(target) => *source_moniker == *target,
+            },
+            // CapabilityRouted events are only dispatched when component manager runs
+            // in debug mode.
+            Ok(EventPayload::CapabilityRouted { .. })
+            | Err(EventError {
+                event_error_payload: EventErrorPayload::CapabilityRouted { .. },
+                ..
+            }) => match &options.execution_mode {
+                ExecutionMode::Debug => self.moniker.contains_in_realm(&event.target_moniker),
+                ExecutionMode::Production => false,
             },
             _ => self.moniker.contains_in_realm(&event.target_moniker),
         };
@@ -194,7 +204,15 @@ impl EventDispatcherScope {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fuchsia_zircon as zx, futures::StreamExt, matches::assert_matches, std::sync::Arc,
+        super::*,
+        crate::{
+            capability::{CapabilitySource, InternalCapability},
+            model::events::registry::ExecutionMode,
+        },
+        fuchsia_zircon as zx,
+        futures::StreamExt,
+        matches::assert_matches,
+        std::{convert::TryInto, sync::Arc},
     };
 
     struct EventDispatcherFactory {
@@ -240,13 +258,36 @@ mod tests {
         dispatcher.dispatch(&event).await.ok().flatten()
     }
 
+    async fn dispatch_capability_routed_event(
+        dispatcher: &EventDispatcher,
+    ) -> Option<oneshot::Receiver<()>> {
+        let empty_capability_provider = Arc::new(Mutex::new(None));
+        let event = ComponentEvent::new_for_test(
+            AbsoluteMoniker::root(),
+            "fuchsia-pkg://root/a/b/c",
+            Ok(EventPayload::CapabilityRouted {
+                source: CapabilitySource::AboveRoot {
+                    capability: InternalCapability::Protocol(
+                        "/svc/fuchsia.sys2.MyAwesomeProtocol".try_into().unwrap(),
+                    ),
+                },
+                capability_provider: empty_capability_provider,
+            }),
+        );
+        dispatcher.dispatch(&event).await.ok().flatten()
+    }
+
     // This test verifies that the CapabilityRequested event can only be sent to a source
     // that matches its source moniker.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn can_send_capability_requested_to_source() {
         // Verify we can dispatch to a debug source.
         // Sync events get a responder if the message was dispatched.
-        let options = SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async);
+        let options = SubscriptionOptions::new(
+            SubscriptionType::AboveRoot,
+            SyncMode::Async,
+            ExecutionMode::Production,
+        );
         let mut factory = EventDispatcherFactory::new();
         let dispatcher = factory.create_dispatcher(options);
         let source_moniker = vec!["root:0", "a:0", "b:0", "c:0"].into();
@@ -258,32 +299,36 @@ mod tests {
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root component.
         let options = SubscriptionOptions::new(
-            SubscriptionType::Normal(vec!["root:0"].into()),
+            SubscriptionType::Component(vec!["root:0"].into()),
             SyncMode::Sync,
+            ExecutionMode::Production,
         );
         let dispatcher = factory.create_dispatcher(options);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0 component.
         let options = SubscriptionOptions::new(
-            SubscriptionType::Normal(vec!["root:0", "a:0"].into()),
+            SubscriptionType::Component(vec!["root:0", "a:0"].into()),
             SyncMode::Sync,
+            ExecutionMode::Production,
         );
         let dispatcher = factory.create_dispatcher(options);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0/b:0 component.
         let options = SubscriptionOptions::new(
-            SubscriptionType::Normal(vec!["root:0", "a:0", "b:0"].into()),
+            SubscriptionType::Component(vec!["root:0", "a:0", "b:0"].into()),
             SyncMode::Sync,
+            ExecutionMode::Production,
         );
         let dispatcher = factory.create_dispatcher(options);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we CAN dispatch the CapabilityRequested event to the root:0/a:0/b:0/c:0 component.
         let options = SubscriptionOptions::new(
-            SubscriptionType::Normal(vec!["root:0", "a:0", "b:0", "c:0"].into()),
+            SubscriptionType::Component(vec!["root:0", "a:0", "b:0", "c:0"].into()),
             SyncMode::Sync,
+            ExecutionMode::Production,
         );
         let dispatcher = factory.create_dispatcher(options);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_some());
@@ -294,10 +339,41 @@ mod tests {
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0/b:0/c:0/d:0 component.
         let options = SubscriptionOptions::new(
-            SubscriptionType::Normal(vec!["root:0", "a:0", "b:0", "c:0", "d:0"].into()),
+            SubscriptionType::Component(vec!["root:0", "a:0", "b:0", "c:0", "d:0"].into()),
             SyncMode::Sync,
+            ExecutionMode::Production,
         );
         let dispatcher = factory.create_dispatcher(options);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
+    }
+
+    // This test verifies that the CapabilityRouted event can only be sent in Debug mode and
+    // not in production.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn cannot_send_capability_routed_in_production() {
+        let mut factory = EventDispatcherFactory::new();
+
+        // Verify we can dispatch a CapabilityRouted event in debug mode.
+        let options = SubscriptionOptions::new(
+            SubscriptionType::AboveRoot,
+            SyncMode::Sync,
+            ExecutionMode::Debug,
+        );
+        let dispatcher = factory.create_dispatcher(options);
+        assert!(dispatch_capability_routed_event(&dispatcher).await.is_some());
+        assert_matches!(
+            factory.next_event().await,
+            Some(ComponentEvent { result: Ok(EventPayload::CapabilityRouted { .. }), .. })
+        );
+
+        // Verify that we cannot dispatch the CapabilityRouted event in production.
+        let options = SubscriptionOptions::new(
+            SubscriptionType::Component(vec!["root:0"].into()),
+            SyncMode::Sync,
+            ExecutionMode::Production,
+        );
+        let dispatcher = factory.create_dispatcher(options);
+        // This indicates that the event was not dispatched.
+        assert!(dispatch_capability_routed_event(&dispatcher).await.is_none());
     }
 }

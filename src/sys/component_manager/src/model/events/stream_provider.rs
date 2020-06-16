@@ -8,7 +8,7 @@ use {
         events::{
             error::EventsError,
             event::SyncMode,
-            registry::{EventRegistry, SubscriptionOptions, SubscriptionType},
+            registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
             serve::serve_event_stream,
         },
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -49,11 +49,14 @@ pub struct EventStreamProvider {
     /// A mapping from a component instance's AbsoluteMoniker, to the set of
     /// event streams and their corresponding paths in the component instance's out directory.
     streams: Arc<Mutex<HashMap<AbsoluteMoniker, Vec<EventStreamAttachment>>>>,
+
+    /// The mode in which component manager is running.
+    execution_mode: ExecutionMode,
 }
 
 impl EventStreamProvider {
-    pub fn new(registry: Weak<EventRegistry>) -> Self {
-        Self { registry, streams: Arc::new(Mutex::new(HashMap::new())) }
+    pub fn new(registry: Weak<EventRegistry>, execution_mode: ExecutionMode) -> Self {
+        Self { registry, streams: Arc::new(Mutex::new(HashMap::new())), execution_mode }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -72,8 +75,9 @@ impl EventStreamProvider {
         events: Vec<CapabilityName>,
     ) -> Result<(), ModelError> {
         let options = SubscriptionOptions::new(
-            SubscriptionType::Normal(target_moniker.clone()),
+            SubscriptionType::Component(target_moniker.clone()),
             SyncMode::Async,
+            self.execution_mode.clone(),
         );
         let event_stream = registry.subscribe(&options, events).await?;
         let mut streams = self.streams.lock().await;

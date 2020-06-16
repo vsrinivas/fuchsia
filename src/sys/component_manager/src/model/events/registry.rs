@@ -79,30 +79,56 @@ pub struct SubscriptionOptions {
     /// Determines whether component manager waits for a response from the
     /// event receiver.
     pub sync_mode: SyncMode,
+    /// Specifies the mode ComponentManager was started in.
+    pub execution_mode: ExecutionMode,
 }
 
 impl SubscriptionOptions {
-    pub fn new(subscription_type: SubscriptionType, sync_mode: SyncMode) -> Self {
-        Self { subscription_type, sync_mode }
+    pub fn new(
+        subscription_type: SubscriptionType,
+        sync_mode: SyncMode,
+        execution_mode: ExecutionMode,
+    ) -> Self {
+        Self { subscription_type, sync_mode, execution_mode }
     }
 }
 
 impl Default for SubscriptionOptions {
     fn default() -> SubscriptionOptions {
         SubscriptionOptions {
-            subscription_type: SubscriptionType::Normal(AbsoluteMoniker::root()),
+            subscription_type: SubscriptionType::Component(AbsoluteMoniker::root()),
             sync_mode: SyncMode::Async,
+            execution_mode: ExecutionMode::Production,
         }
     }
 }
 
 #[derive(Clone)]
 pub enum SubscriptionType {
-    /// Indicates that event routing will be bypassed and all events can be subscribed.
-    Debug,
-    /// Indicates that this is a production-worthy event subscription and the target is
+    /// Indicates that a client above the root is subscribing to events (e.g. a test).
+    /// Event routing will be bypassed and all events can be subscribed.
+    AboveRoot,
+    /// Indicates that a component is subscribing to events and the target is
     /// the provided AbsoluteMoniker.
-    Normal(AbsoluteMoniker),
+    Component(AbsoluteMoniker),
+}
+
+#[derive(Clone)]
+pub enum ExecutionMode {
+    /// Indicates that the component manager is running in Debug mode. This
+    /// enables some additional events such as CapabilityRouted.
+    Debug,
+    /// Indicates that the component manager is running in Production mode.
+    Production,
+}
+
+impl ExecutionMode {
+    pub fn is_debug(&self) -> bool {
+        match self {
+            ExecutionMode::Debug => true,
+            ExecutionMode::Production => false,
+        }
+    }
 }
 
 /// Subscribes to events from multiple tasks and sends events to all of them.
@@ -149,14 +175,14 @@ impl EventRegistry {
         // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
         // realms.
         let events = match &options.subscription_type {
-            SubscriptionType::Debug => events
+            SubscriptionType::AboveRoot => events
                 .into_iter()
                 .map(|event| RoutedEvent {
                     source_name: event.clone(),
                     scopes: vec![EventDispatcherScope::new(AbsoluteMoniker::root()).for_debug()],
                 })
                 .collect(),
-            SubscriptionType::Normal(target_moniker) => {
+            SubscriptionType::Component(target_moniker) => {
                 let route_result = self.route_events(&target_moniker, &events).await?;
                 if route_result.len() != events.len() {
                     let names = events
@@ -397,7 +423,11 @@ mod tests {
 
         let mut event_stream_a = event_registry
             .subscribe(
-                &SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async),
+                &SubscriptionOptions::new(
+                    SubscriptionType::AboveRoot,
+                    SyncMode::Async,
+                    ExecutionMode::Production,
+                ),
                 vec![EventType::Discovered.into()],
             )
             .await
@@ -407,7 +437,11 @@ mod tests {
 
         let mut event_stream_b = event_registry
             .subscribe(
-                &SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async),
+                &SubscriptionOptions::new(
+                    SubscriptionType::AboveRoot,
+                    SyncMode::Async,
+                    ExecutionMode::Production,
+                ),
                 vec![EventType::Discovered.into()],
             )
             .await
@@ -448,7 +482,11 @@ mod tests {
 
         let mut event_stream = event_registry
             .subscribe(
-                &SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async),
+                &SubscriptionOptions::new(
+                    SubscriptionType::AboveRoot,
+                    SyncMode::Async,
+                    ExecutionMode::Production,
+                ),
                 vec![EventType::Resolved.into()],
             )
             .await
@@ -481,7 +519,11 @@ mod tests {
             event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
         );
 
-        let options = SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async);
+        let options = SubscriptionOptions::new(
+            SubscriptionType::AboveRoot,
+            SyncMode::Async,
+            ExecutionMode::Production,
+        );
 
         let mut event_stream_a = event_registry
             .subscribe(&options, vec![EventType::CapabilityRequested.into()])
