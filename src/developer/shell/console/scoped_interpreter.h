@@ -59,6 +59,7 @@ class ScopedInterpreter {
         condvar_.wait(lck);
       }
     }
+    client_->Shutdown();
     // Shutdown the loop and wait for the server thread to notice.
     if (sl != nullptr) {
       sl->Quit();
