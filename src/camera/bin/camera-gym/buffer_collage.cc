@@ -339,6 +339,72 @@ static std::tuple<float, float> ScaleToFit(float element_width, float element_he
   return {element_width * scale, element_height * scale};
 }
 
+// Builds a mesh that is equivalent to a scenic::Rectangle with the given |width| and |height|, but
+// also includes a second smaller rectangle superimposed in the corner that shows a zoomed subregion
+// of the associated material's center.
+static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float width,
+                                               float height) {
+  auto mesh = std::make_unique<scenic::Mesh>(session);
+
+  auto format = scenic::NewMeshVertexFormat(fuchsia::ui::gfx::ValueType::kVector3,
+                                            fuchsia::ui::gfx::ValueType::kNone,
+                                            fuchsia::ui::gfx::ValueType::kVector2);
+  constexpr float kMagnificationMargin = 0.02f;
+  constexpr float kMagnificationSize = 0.4f;
+  constexpr float kMagnificationAmount = 12.0f;
+  const float x1 = -width / 2;
+  const float x2 = width / 2;
+  const float y1 = -height / 2;
+  const float y2 = height / 2;
+  const float x3 = x1 + width * kMagnificationMargin;
+  const float x4 = x3 + width * kMagnificationSize;
+  const float y3 = y1 + height * kMagnificationMargin;
+  const float y4 = y3 + height * kMagnificationSize;
+  const float t1 = 0.5f - 0.5f / kMagnificationAmount;
+  const float t2 = 0.5f + 0.5f / kMagnificationAmount;
+
+  // clang-format off
+  std::vector<float> vb {
+    x1, y1, 0, 0,  0,
+    x2, y1, 0, 1,  0,
+    x1, y2, 0, 0,  1,
+    x2, y2, 0, 1,  1,
+    x3, y3, 0, t1, t1,
+    x4, y3, 0, t2, t1,
+    x3, y4, 0, t1, t2,
+    x4, y4, 0, t2, t2,
+  };
+  std::vector<uint32_t> ib {
+    0, 1, 2, 2, 1, 3,
+    4, 5, 6, 6, 5, 7,
+  };
+  //clang-format on
+
+  zx::vmo vb_vmo;
+  size_t vb_size = vb.size() * sizeof(vb[0]);
+  ZX_ASSERT(zx::vmo::create(vb_size, 0, &vb_vmo) == ZX_OK);
+  ZX_ASSERT(vb_vmo.write(vb.data(), 0, vb_size) == ZX_OK);
+  scenic::Memory vb_mem(session, std::move(vb_vmo), vb_size,
+                     fuchsia::images::MemoryType::HOST_MEMORY);
+  scenic::Buffer scenic_vb(vb_mem, 0, vb_size);
+
+  zx::vmo ib_vmo;
+  size_t ib_size = ib.size() * sizeof(ib[0]);
+  ZX_ASSERT(zx::vmo::create(ib_size, 0, &ib_vmo) == ZX_OK);
+  ZX_ASSERT(ib_vmo.write(ib.data(), 0, ib_size) == ZX_OK);
+  scenic::Memory ib_mem(session, std::move(ib_vmo), ib_size,
+                     fuchsia::images::MemoryType::HOST_MEMORY);
+  scenic::Buffer scenic_ib(ib_mem, 0, ib_size);
+
+  std::array<float, 3> aabb_min{x1, y1, 0};
+  std::array<float, 3> aabb_max{x2, y2, 0};
+
+  mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, ib.size(), scenic_vb,
+                    format, 0, vb.size(), aabb_min, aabb_max);
+
+  return mesh;
+}
+
 void BufferCollage::UpdateLayout() {
   // TODO(49070): resolve constraints even if node is not visible
   // There is no intrinsic need to present the views prior to extents being known.
@@ -369,10 +435,9 @@ void BufferCollage::UpdateLayout() {
     }
     auto [element_width, element_height] = ScaleToFit(
         view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
-    view.rectangle =
-        std::make_unique<scenic::Rectangle>(session_.get(), element_width, element_height);
+    view.mesh = BuildMesh(session_.get(), element_width, element_height);
     view.node = std::make_unique<scenic::ShapeNode>(session_.get());
-    view.node->SetShape(*view.rectangle);
+    view.node->SetShape(*view.mesh);
     view.node->SetMaterial(*view.material);
     auto [x, y] = GetCenter(index++, collection_views_.size());
     view.node->SetTranslation(view_width * x, view_height * y, 0);

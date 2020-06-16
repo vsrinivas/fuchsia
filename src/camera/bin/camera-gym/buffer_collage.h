@@ -28,7 +28,7 @@ struct CollectionView {
   fuchsia::images::ImagePipe2Ptr image_pipe;
   uint32_t image_pipe_id;
   std::unique_ptr<scenic::Material> material;
-  std::unique_ptr<scenic::Rectangle> rectangle;
+  std::unique_ptr<scenic::Mesh> mesh;
   std::unique_ptr<scenic::ShapeNode> node;
   bool visible;
 };
