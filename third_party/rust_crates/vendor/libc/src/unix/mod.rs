@@ -226,8 +226,12 @@ pub const S_ISUID: ::mode_t = 0x800;
 pub const S_ISGID: ::mode_t = 0x400;
 pub const S_ISVTX: ::mode_t = 0x200;
 
-pub const IF_NAMESIZE: ::size_t = 16;
-pub const IFNAMSIZ: ::size_t = IF_NAMESIZE;
+cfg_if! {
+    if #[cfg(not(any(target_os = "illumos", target_os = "solaris")))] {
+        pub const IF_NAMESIZE: ::size_t = 16;
+        pub const IFNAMSIZ: ::size_t = IF_NAMESIZE;
+    }
+}
 
 pub const LOG_EMERG: ::c_int = 0;
 pub const LOG_ALERT: ::c_int = 1;
@@ -264,10 +268,6 @@ pub const LOG_NOWAIT: ::c_int = 0x10;
 
 pub const LOG_PRIMASK: ::c_int = 7;
 pub const LOG_FACMASK: ::c_int = 0x3f8;
-
-pub const PRIO_PROCESS: ::c_int = 0;
-pub const PRIO_PGRP: ::c_int = 1;
-pub const PRIO_USER: ::c_int = 2;
 
 pub const PRIO_MIN: ::c_int = -20;
 pub const PRIO_MAX: ::c_int = 20;
@@ -365,7 +365,7 @@ impl ::Clone for FILE {
     }
 }
 #[cfg_attr(feature = "extra_traits", derive(Debug))]
-pub enum fpos_t {} // TODO: fill this out with a struct
+pub enum fpos_t {} // FIXME: fill this out with a struct
 impl ::Copy for fpos_t {}
 impl ::Clone for fpos_t {
     fn clone(&self) -> fpos_t {
@@ -388,6 +388,23 @@ extern "C" {
     pub fn isblank(c: c_int) -> c_int;
     pub fn tolower(c: c_int) -> c_int;
     pub fn toupper(c: c_int) -> c_int;
+    pub fn qsort(
+        base: *mut c_void,
+        num: size_t,
+        size: size_t,
+        compar: ::Option<
+            unsafe extern "C" fn(*const c_void, *const c_void) -> c_int,
+        >,
+    );
+    pub fn bsearch(
+        key: *const c_void,
+        base: *const c_void,
+        num: size_t,
+        size: size_t,
+        compar: ::Option<
+            unsafe extern "C" fn(*const c_void, *const c_void) -> c_int,
+        >,
+    ) -> *mut c_void;
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
         link_name = "fopen$UNIX2003"
@@ -504,6 +521,7 @@ extern "C" {
     pub fn strspn(cs: *const c_char, ct: *const c_char) -> size_t;
     pub fn strcspn(cs: *const c_char, ct: *const c_char) -> size_t;
     pub fn strdup(cs: *const c_char) -> *mut c_char;
+    pub fn strndup(cs: *const c_char, n: size_t) -> *mut c_char;
     pub fn strpbrk(cs: *const c_char, ct: *const c_char) -> *mut c_char;
     pub fn strstr(cs: *const c_char, ct: *const c_char) -> *mut c_char;
     pub fn strcasecmp(s1: *const c_char, s2: *const c_char) -> c_int;
@@ -521,6 +539,7 @@ extern "C" {
     pub fn strerror(n: c_int) -> *mut c_char;
     pub fn strtok(s: *mut c_char, t: *const c_char) -> *mut c_char;
     pub fn strxfrm(s: *mut c_char, ct: *const c_char, n: size_t) -> size_t;
+    pub fn strsignal(sig: c_int) -> *mut c_char;
     pub fn wcslen(buf: *const wchar_t) -> size_t;
     pub fn wcstombs(
         dest: *mut c_char,
@@ -529,6 +548,7 @@ extern "C" {
     ) -> ::size_t;
 
     pub fn memchr(cx: *const c_void, c: c_int, n: size_t) -> *mut c_void;
+    pub fn wmemchr(cx: *const wchar_t, c: wchar_t, n: size_t) -> *mut wchar_t;
     pub fn memcmp(cx: *const c_void, ct: *const c_void, n: size_t) -> c_int;
     pub fn memcpy(
         dest: *mut c_void,
@@ -593,7 +613,6 @@ extern "C" {
         all(target_os = "macos", target_arch = "x86"),
         link_name = "listen$UNIX2003"
     )]
-    #[cfg_attr(target_os = "illumos", link_name = "__xnet_listen")]
     pub fn listen(socket: ::c_int, backlog: ::c_int) -> ::c_int;
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
@@ -836,6 +855,7 @@ extern "C" {
     pub fn geteuid() -> uid_t;
     pub fn getgid() -> gid_t;
     pub fn getgroups(ngroups_max: ::c_int, groups: *mut gid_t) -> ::c_int;
+    #[cfg_attr(target_os = "illumos", link_name = "getloginx")]
     pub fn getlogin() -> *mut c_char;
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
@@ -892,6 +912,7 @@ extern "C" {
         all(target_os = "macos", target_arch = "x86"),
         link_name = "ttyname_r$UNIX2003"
     )]
+    #[cfg_attr(target_os = "illumos", link_name = "__posix_ttyname_r")]
     pub fn ttyname_r(
         fd: ::c_int,
         buf: *mut c_char,
@@ -1198,6 +1219,7 @@ extern "C" {
     pub fn dlclose(handle: *mut ::c_void) -> ::c_int;
     pub fn dladdr(addr: *const ::c_void, info: *mut Dl_info) -> ::c_int;
 
+    #[cfg_attr(target_os = "illumos", link_name = "__xnet_getaddrinfo")]
     pub fn getaddrinfo(
         node: *const c_char,
         service: *const c_char,
@@ -1429,6 +1451,12 @@ extern "C" {
         n: *mut size_t,
         stream: *mut FILE,
     ) -> ssize_t;
+
+    pub fn lockf(
+        fd: ::c_int,
+        cmd: ::c_int,
+        len: ::off_t,
+    ) -> ::c_int;
 }
 
 cfg_if! {

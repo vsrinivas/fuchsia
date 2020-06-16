@@ -312,6 +312,35 @@ s! {
         pub ll_host: [::c_char; UT_HOSTSIZE],
         pub ll_time: ::time_t
     }
+
+    pub struct timex {
+        pub modes: ::c_uint,
+        pub offset: ::c_long,
+        pub freq: ::c_long,
+        pub maxerror: ::c_long,
+        pub esterror: ::c_long,
+        pub status: ::c_int,
+        pub constant: ::c_long,
+        pub precision: ::c_long,
+        pub tolerance: ::c_long,
+        pub ppsfreq: ::c_long,
+        pub jitter: ::c_long,
+        pub shift: ::c_int,
+        pub stabil: ::c_long,
+        pub jitcnt: ::c_long,
+        pub calcnt: ::c_long,
+        pub errcnt: ::c_long,
+        pub stbcnt: ::c_long,
+    }
+
+    pub struct ntptimeval {
+        pub time: ::timespec,
+        pub maxerror: ::c_long,
+        pub esterror: ::c_long,
+        pub tai: ::c_long,
+        pub time_state: ::c_int,
+    }
+
 }
 
 s_no_extra_traits! {
@@ -865,12 +894,12 @@ pub const AT_REMOVEDIR: ::c_int = 0x800;
 pub const EXTATTR_NAMESPACE_USER: ::c_int = 1;
 pub const EXTATTR_NAMESPACE_SYSTEM: ::c_int = 2;
 
-pub const LC_COLLATE_MASK: ::c_int = (1 << ::LC_COLLATE);
-pub const LC_CTYPE_MASK: ::c_int = (1 << ::LC_CTYPE);
-pub const LC_MONETARY_MASK: ::c_int = (1 << ::LC_MONETARY);
-pub const LC_NUMERIC_MASK: ::c_int = (1 << ::LC_NUMERIC);
-pub const LC_TIME_MASK: ::c_int = (1 << ::LC_TIME);
-pub const LC_MESSAGES_MASK: ::c_int = (1 << ::LC_MESSAGES);
+pub const LC_COLLATE_MASK: ::c_int = 1 << ::LC_COLLATE;
+pub const LC_CTYPE_MASK: ::c_int = 1 << ::LC_CTYPE;
+pub const LC_MONETARY_MASK: ::c_int = 1 << ::LC_MONETARY;
+pub const LC_NUMERIC_MASK: ::c_int = 1 << ::LC_NUMERIC;
+pub const LC_TIME_MASK: ::c_int = 1 << ::LC_TIME;
+pub const LC_MESSAGES_MASK: ::c_int = 1 << ::LC_MESSAGES;
 pub const LC_ALL_MASK: ::c_int = !0;
 
 pub const ERA: ::nl_item = 52;
@@ -1233,6 +1262,58 @@ pub const BIOCSDLT: ::c_ulong = 0x80044278;
 pub const BIOCGSEESENT: ::c_ulong = 0x40044276;
 pub const BIOCSSEESENT: ::c_ulong = 0x80044277;
 
+//<sys/timex.h>
+pub const NTP_API: ::c_int = 4;
+pub const MAXPHASE: ::c_long = 500000000;
+pub const MAXFREQ: ::c_long = 500000;
+pub const MINSEC: ::c_int = 256;
+pub const MAXSEC: ::c_int = 2048;
+pub const NANOSECOND: ::c_long = 1000000000;
+pub const SCALE_PPM: ::c_int = 65;
+pub const MAXTC: ::c_int = 10;
+pub const MOD_OFFSET: ::c_uint = 0x0001;
+pub const MOD_FREQUENCY: ::c_uint = 0x0002;
+pub const MOD_MAXERROR: ::c_uint = 0x0004;
+pub const MOD_ESTERROR: ::c_uint = 0x0008;
+pub const MOD_STATUS: ::c_uint = 0x0010;
+pub const MOD_TIMECONST: ::c_uint = 0x0020;
+pub const MOD_PPSMAX: ::c_uint = 0x0040;
+pub const MOD_TAI: ::c_uint = 0x0080;
+pub const MOD_MICRO: ::c_uint = 0x1000;
+pub const MOD_NANO: ::c_uint = 0x2000;
+pub const MOD_CLKB: ::c_uint = 0x4000;
+pub const MOD_CLKA: ::c_uint = 0x8000;
+pub const STA_PLL: ::c_int = 0x0001;
+pub const STA_PPSFREQ: ::c_int = 0x0002;
+pub const STA_PPSTIME: ::c_int = 0x0004;
+pub const STA_FLL: ::c_int = 0x0008;
+pub const STA_INS: ::c_int = 0x0010;
+pub const STA_DEL: ::c_int = 0x0020;
+pub const STA_UNSYNC: ::c_int = 0x0040;
+pub const STA_FREQHOLD: ::c_int = 0x0080;
+pub const STA_PPSSIGNAL: ::c_int = 0x0100;
+pub const STA_PPSJITTER: ::c_int = 0x0200;
+pub const STA_PPSWANDER: ::c_int = 0x0400;
+pub const STA_PPSERROR: ::c_int = 0x0800;
+pub const STA_CLOCKERR: ::c_int = 0x1000;
+pub const STA_NANO: ::c_int = 0x2000;
+pub const STA_MODE: ::c_int = 0x4000;
+pub const STA_CLK: ::c_int = 0x8000;
+pub const STA_RONLY: ::c_int = STA_PPSSIGNAL
+    | STA_PPSJITTER
+    | STA_PPSWANDER
+    | STA_PPSERROR
+    | STA_CLOCKERR
+    | STA_NANO
+    | STA_MODE
+    | STA_CLK;
+pub const TIME_OK: ::c_int = 0;
+pub const TIME_INS: ::c_int = 1;
+pub const TIME_DEL: ::c_int = 2;
+pub const TIME_OOP: ::c_int = 3;
+pub const TIME_WAIT: ::c_int = 4;
+pub const TIME_ERROR: ::c_int = 5;
+
 cfg_if! {
     if #[cfg(any(target_arch = "sparc", target_arch = "sparc64",
                  target_arch = "x86", target_arch = "x86_64"))] {
@@ -1565,6 +1646,8 @@ pub const FIBMAP: ::c_ulong = 0xc008667a;
 
 pub const SIGSTKSZ: ::size_t = 40960;
 
+pub const REG_ENOSYS: ::c_int = 17;
+
 pub const PT_DUMPCORE: ::c_int = 12;
 pub const PT_LWPINFO: ::c_int = 13;
 pub const PT_SYSCALL: ::c_int = 14;
@@ -1647,6 +1730,11 @@ f! {
         };
         ::mem::size_of::<sockcred>() + ::mem::size_of::<::gid_t>() * ngrps
     }
+}
+
+extern "C" {
+    pub fn ntp_adjtime(buf: *mut timex) -> ::c_int;
+    pub fn ntp_gettime(buf: *mut ntptimeval) -> ::c_int;
 }
 
 #[link(name = "rt")]
@@ -1894,6 +1982,12 @@ extern "C" {
     ) -> ::c_int;
 
     pub fn _lwp_self() -> lwpid_t;
+    pub fn memmem(
+        haystack: *const ::c_void,
+        haystacklen: ::size_t,
+        needle: *const ::c_void,
+        needlelen: ::size_t,
+    ) -> *mut ::c_void;
 }
 
 #[link(name = "util")]

@@ -1,6 +1,7 @@
 pub type c_char = i8;
 pub type c_long = i64;
 pub type c_ulong = u64;
+pub type caddr_t = *mut ::c_char;
 
 pub type clockid_t = ::c_int;
 pub type blkcnt_t = ::c_long;
@@ -35,9 +36,6 @@ pub type mqd_t = *mut ::c_void;
 pub type id_t = ::c_int;
 pub type idtype_t = ::c_uint;
 pub type shmatt_t = ::c_ulong;
-
-pub type door_attr_t = ::c_uint;
-pub type door_id_t = ::c_ulonglong;
 
 #[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum timezone {}
@@ -217,33 +215,6 @@ s! {
         pub ai_next: *mut addrinfo,
     }
 
-    pub struct shmid_ds {
-        pub shm_perm: ipc_perm,
-        pub shm_segsz: ::size_t,
-        #[cfg(target_os = "illumos")]
-        pub shm_amp: *mut ::c_void,
-        #[cfg(target_os = "solaris")]
-        pub shm_flags: ::uintptr_t,
-        pub shm_lkcnt: ::c_ushort,
-        pub shm_lpid: ::pid_t,
-        pub shm_cpid: ::pid_t,
-        pub shm_nattch: ::shmatt_t,
-        pub shm_cnattch: ::c_ulong,
-        pub shm_atime: ::time_t,
-        pub shm_dtime: ::time_t,
-        pub shm_ctime: ::time_t,
-        #[cfg(target_os = "illumos")]
-        pub shm_pad4: [i64; 4],
-        #[cfg(target_os = "solaris")]
-        pub shm_amp: *mut ::c_void,
-        #[cfg(target_os = "solaris")]
-        pub shm_gransize: u64,
-        #[cfg(target_os = "solaris")]
-        pub shm_allocated: u64,
-        #[cfg(target_os = "solaris")]
-        pub shm_pad4: [i64; 1],
-    }
-
     pub struct sigset_t {
         bits: [u32; 4],
     }
@@ -371,7 +342,7 @@ s! {
         pub mq_maxmsg: ::c_long,
         pub mq_msgsize: ::c_long,
         pub mq_curmsgs: ::c_long,
-        _pad: [::c_int; 4]
+        _pad: [::c_int; 12]
     }
 
     pub struct port_event {
@@ -380,11 +351,6 @@ s! {
         pub portev_pad: ::c_ushort,
         pub portev_object: ::uintptr_t,
         pub portev_user: *mut ::c_void,
-    }
-
-    pub struct door_desc_t__d_data__d_desc {
-        pub d_descriptor: ::c_int,
-        pub d_id: ::door_id_t
     }
 
     pub struct exit_status {
@@ -401,10 +367,44 @@ s! {
         pub ut_exit: exit_status,
         pub ut_time: ::time_t,
     }
+
+    pub struct timex {
+        pub modes: u32,
+        pub offset: i32,
+        pub freq: i32,
+        pub maxerror: i32,
+        pub esterror: i32,
+        pub status: i32,
+        pub constant: i32,
+        pub precision: i32,
+        pub tolerance: i32,
+        pub ppsfreq: i32,
+        pub jitter: i32,
+        pub shift: i32,
+        pub stabil: i32,
+        pub jitcnt: i32,
+        pub calcnt: i32,
+        pub errcnt: i32,
+        pub stbcnt: i32,
+    }
+
+    pub struct ntptimeval {
+        pub time: ::timeval,
+        pub maxerror: i32,
+        pub esterror: i32,
+    }
+
 }
 
 s_no_extra_traits! {
-    #[cfg_attr(any(target_arch = "x86", target_arch = "x86_64"), repr(packed))]
+    #[cfg_attr(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            libc_packedN
+        ), repr(packed(4)))]
+    #[cfg_attr(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            not(libc_packedN)
+        ), repr(packed))]
     pub struct epoll_event {
         pub events: u32,
         pub u64: u64,
@@ -478,25 +478,6 @@ s_no_extra_traits! {
         pub sigev_notify_attributes: *const ::pthread_attr_t,
         __sigev_pad2: ::c_int,
     }
-
-    pub union door_desc_t__d_data {
-        pub d_desc: door_desc_t__d_data__d_desc,
-        d_resv: [::c_int; 5], /* Check out /usr/include/sys/door.h */
-    }
-
-    pub struct door_desc_t {
-        pub d_attributes: door_attr_t,
-        pub d_data: door_desc_t__d_data,
-    }
-
-    pub struct door_arg_t {
-        pub data_ptr: *const ::c_char,
-        pub data_size: ::size_t,
-        pub desc_ptr: *const door_desc_t,
-        pub dec_num: ::c_uint,
-        pub rbuf: *const ::c_char,
-        pub rsize: ::size_t,
-    }
 }
 
 cfg_if! {
@@ -536,7 +517,7 @@ cfg_if! {
                     .field("ut_session", &self.ut_session)
                     .field("ut_pad", &self.ut_pad)
                     .field("ut_syslen", &self.ut_syslen)
-                    .field("ut_host", &self.ut_host)
+                    .field("ut_host", &&self.ut_host[..])
                     .finish()
             }
         }
@@ -832,12 +813,12 @@ pub const LC_COLLATE: ::c_int = 3;
 pub const LC_MONETARY: ::c_int = 4;
 pub const LC_MESSAGES: ::c_int = 5;
 pub const LC_ALL: ::c_int = 6;
-pub const LC_CTYPE_MASK: ::c_int = (1 << LC_CTYPE);
-pub const LC_NUMERIC_MASK: ::c_int = (1 << LC_NUMERIC);
-pub const LC_TIME_MASK: ::c_int = (1 << LC_TIME);
-pub const LC_COLLATE_MASK: ::c_int = (1 << LC_COLLATE);
-pub const LC_MONETARY_MASK: ::c_int = (1 << LC_MONETARY);
-pub const LC_MESSAGES_MASK: ::c_int = (1 << LC_MESSAGES);
+pub const LC_CTYPE_MASK: ::c_int = 1 << LC_CTYPE;
+pub const LC_NUMERIC_MASK: ::c_int = 1 << LC_NUMERIC;
+pub const LC_TIME_MASK: ::c_int = 1 << LC_TIME;
+pub const LC_COLLATE_MASK: ::c_int = 1 << LC_COLLATE;
+pub const LC_MONETARY_MASK: ::c_int = 1 << LC_MONETARY;
+pub const LC_MESSAGES_MASK: ::c_int = 1 << LC_MESSAGES;
 pub const LC_ALL_MASK: ::c_int = LC_CTYPE_MASK
     | LC_NUMERIC_MASK
     | LC_TIME_MASK
@@ -988,7 +969,7 @@ pub const O_CREAT: ::c_int = 256;
 pub const O_EXCL: ::c_int = 1024;
 pub const O_NOCTTY: ::c_int = 2048;
 pub const O_TRUNC: ::c_int = 512;
-pub const O_NOFOLLOW: ::c_int = 0x200000;
+pub const O_NOFOLLOW: ::c_int = 0x20000;
 pub const O_SEARCH: ::c_int = 0x200000;
 pub const O_EXEC: ::c_int = 0x400000;
 pub const O_CLOEXEC: ::c_int = 0x800000;
@@ -1072,6 +1053,10 @@ pub const WNOWAIT: ::c_int = 0x80;
 
 pub const AT_FDCWD: ::c_int = 0xffd19553;
 pub const AT_SYMLINK_NOFOLLOW: ::c_int = 0x1000;
+pub const AT_SYMLINK_FOLLOW: ::c_int = 0x2000;
+pub const AT_REMOVEDIR: ::c_int = 0x1;
+pub const _AT_TRIGGER: ::c_int = 0x2;
+pub const AT_EACCESS: ::c_int = 0x4;
 
 pub const P_PID: idtype_t = 0;
 pub const P_PPID: idtype_t = 1;
@@ -1327,7 +1312,7 @@ pub const RLIMIT_AS: ::c_int = RLIMIT_VMEM;
 
 #[deprecated(since = "0.2.64", note = "Not stable across OS versions")]
 pub const RLIM_NLIMITS: rlim_t = 7;
-pub const RLIM_INFINITY: rlim_t = 0x7fffffff;
+pub const RLIM_INFINITY: rlim_t = 0xfffffffffffffffd;
 
 pub const RUSAGE_SELF: ::c_int = 0;
 pub const RUSAGE_CHILDREN: ::c_int = -1;
@@ -1341,8 +1326,6 @@ pub const MADV_FREE: ::c_int = 5;
 
 pub const AF_UNSPEC: ::c_int = 0;
 pub const AF_UNIX: ::c_int = 1;
-pub const AF_LOCAL: ::c_int = 0;
-pub const AF_FILE: ::c_int = 0;
 pub const AF_INET: ::c_int = 2;
 pub const AF_IMPLINK: ::c_int = 3;
 pub const AF_PUP: ::c_int = 4;
@@ -1430,6 +1413,9 @@ pub const MSG_NOSIGNAL: ::c_int = 0x200;
 pub const MSG_DUPCTRL: ::c_int = 0x800;
 pub const MSG_XPG4_2: ::c_int = 0x8000;
 pub const MSG_MAXIOVLEN: ::c_int = 16;
+
+pub const IF_NAMESIZE: ::size_t = 32;
+pub const IFNAMSIZ: ::size_t = 16;
 
 // https://docs.oracle.com/cd/E23824_01/html/821-1475/if-7p.html
 pub const IFF_UP: ::c_int = 0x0000000001; // Address is up
@@ -1746,8 +1732,6 @@ pub const PORT_SOURCE_FD: ::c_int = 4;
 pub const PORT_SOURCE_ALERT: ::c_int = 5;
 pub const PORT_SOURCE_MQ: ::c_int = 6;
 pub const PORT_SOURCE_FILE: ::c_int = 7;
-pub const PORT_SOURCE_POSTWAIT: ::c_int = 8;
-pub const PORT_SOURCE_SIGNAL: ::c_int = 9;
 
 pub const NONROOT_USR: ::c_short = 2;
 pub const _UTX_USERSIZE: usize = 32;
@@ -1769,21 +1753,21 @@ pub const DOWN_TIME: ::c_short = 10;
 
 const _TIOC: ::c_int = ('T' as i32) << 8;
 const tIOC: ::c_int = ('t' as i32) << 8;
-pub const TCGETA: ::c_int = (_TIOC | 1);
-pub const TCSETA: ::c_int = (_TIOC | 2);
-pub const TCSETAW: ::c_int = (_TIOC | 3);
-pub const TCSETAF: ::c_int = (_TIOC | 4);
-pub const TCSBRK: ::c_int = (_TIOC | 5);
-pub const TCXONC: ::c_int = (_TIOC | 6);
-pub const TCFLSH: ::c_int = (_TIOC | 7);
-pub const TCDSET: ::c_int = (_TIOC | 32);
-pub const TCGETS: ::c_int = (_TIOC | 13);
-pub const TCSETS: ::c_int = (_TIOC | 14);
-pub const TCSANOW: ::c_int = (_TIOC | 14);
-pub const TCSETSW: ::c_int = (_TIOC | 15);
-pub const TCSADRAIN: ::c_int = (_TIOC | 15);
-pub const TCSETSF: ::c_int = (_TIOC | 16);
-pub const TCSAFLUSH: ::c_int = (_TIOC | 16);
+pub const TCGETA: ::c_int = _TIOC | 1;
+pub const TCSETA: ::c_int = _TIOC | 2;
+pub const TCSETAW: ::c_int = _TIOC | 3;
+pub const TCSETAF: ::c_int = _TIOC | 4;
+pub const TCSBRK: ::c_int = _TIOC | 5;
+pub const TCXONC: ::c_int = _TIOC | 6;
+pub const TCFLSH: ::c_int = _TIOC | 7;
+pub const TCDSET: ::c_int = _TIOC | 32;
+pub const TCGETS: ::c_int = _TIOC | 13;
+pub const TCSETS: ::c_int = _TIOC | 14;
+pub const TCSANOW: ::c_int = _TIOC | 14;
+pub const TCSETSW: ::c_int = _TIOC | 15;
+pub const TCSADRAIN: ::c_int = _TIOC | 15;
+pub const TCSETSF: ::c_int = _TIOC | 16;
+pub const TCSAFLUSH: ::c_int = _TIOC | 16;
 pub const TCIFLUSH: ::c_int = 0;
 pub const TCOFLUSH: ::c_int = 1;
 pub const TCIOFLUSH: ::c_int = 2;
@@ -1792,55 +1776,55 @@ pub const TCOON: ::c_int = 1;
 pub const TCIOFF: ::c_int = 2;
 pub const TCION: ::c_int = 3;
 pub const TIOC: ::c_int = _TIOC;
-pub const TIOCKBON: ::c_int = (_TIOC | 8);
-pub const TIOCKBOF: ::c_int = (_TIOC | 9);
-pub const TIOCGWINSZ: ::c_int = (_TIOC | 104);
-pub const TIOCSWINSZ: ::c_int = (_TIOC | 103);
-pub const TIOCGSOFTCAR: ::c_int = (_TIOC | 105);
-pub const TIOCSSOFTCAR: ::c_int = (_TIOC | 106);
-pub const TIOCSETLD: ::c_int = (_TIOC | 123);
-pub const TIOCGETLD: ::c_int = (_TIOC | 124);
-pub const TIOCGPPS: ::c_int = (_TIOC | 125);
-pub const TIOCSPPS: ::c_int = (_TIOC | 126);
-pub const TIOCGPPSEV: ::c_int = (_TIOC | 127);
-pub const TIOCGETD: ::c_int = (tIOC | 0);
-pub const TIOCSETD: ::c_int = (tIOC | 1);
-pub const TIOCHPCL: ::c_int = (tIOC | 2);
-pub const TIOCGETP: ::c_int = (tIOC | 8);
-pub const TIOCSETP: ::c_int = (tIOC | 9);
-pub const TIOCSETN: ::c_int = (tIOC | 10);
-pub const TIOCEXCL: ::c_int = (tIOC | 13);
-pub const TIOCNXCL: ::c_int = (tIOC | 14);
-pub const TIOCFLUSH: ::c_int = (tIOC | 16);
-pub const TIOCSETC: ::c_int = (tIOC | 17);
-pub const TIOCGETC: ::c_int = (tIOC | 18);
-pub const TIOCLBIS: ::c_int = (tIOC | 127);
-pub const TIOCLBIC: ::c_int = (tIOC | 126);
-pub const TIOCLSET: ::c_int = (tIOC | 125);
-pub const TIOCLGET: ::c_int = (tIOC | 124);
-pub const TIOCSBRK: ::c_int = (tIOC | 123);
-pub const TIOCCBRK: ::c_int = (tIOC | 122);
-pub const TIOCSDTR: ::c_int = (tIOC | 121);
-pub const TIOCCDTR: ::c_int = (tIOC | 120);
-pub const TIOCSLTC: ::c_int = (tIOC | 117);
-pub const TIOCGLTC: ::c_int = (tIOC | 116);
-pub const TIOCOUTQ: ::c_int = (tIOC | 115);
-pub const TIOCNOTTY: ::c_int = (tIOC | 113);
-pub const TIOCSCTTY: ::c_int = (tIOC | 132);
-pub const TIOCSTOP: ::c_int = (tIOC | 111);
-pub const TIOCSTART: ::c_int = (tIOC | 110);
-pub const TIOCSILOOP: ::c_int = (tIOC | 109);
-pub const TIOCCILOOP: ::c_int = (tIOC | 108);
-pub const TIOCGPGRP: ::c_int = (tIOC | 20);
-pub const TIOCSPGRP: ::c_int = (tIOC | 21);
-pub const TIOCGSID: ::c_int = (tIOC | 22);
-pub const TIOCSTI: ::c_int = (tIOC | 23);
-pub const TIOCMSET: ::c_int = (tIOC | 26);
-pub const TIOCMBIS: ::c_int = (tIOC | 27);
-pub const TIOCMBIC: ::c_int = (tIOC | 28);
-pub const TIOCMGET: ::c_int = (tIOC | 29);
-pub const TIOCREMOTE: ::c_int = (tIOC | 30);
-pub const TIOCSIGNAL: ::c_int = (tIOC | 31);
+pub const TIOCKBON: ::c_int = _TIOC | 8;
+pub const TIOCKBOF: ::c_int = _TIOC | 9;
+pub const TIOCGWINSZ: ::c_int = _TIOC | 104;
+pub const TIOCSWINSZ: ::c_int = _TIOC | 103;
+pub const TIOCGSOFTCAR: ::c_int = _TIOC | 105;
+pub const TIOCSSOFTCAR: ::c_int = _TIOC | 106;
+pub const TIOCSETLD: ::c_int = _TIOC | 123;
+pub const TIOCGETLD: ::c_int = _TIOC | 124;
+pub const TIOCGPPS: ::c_int = _TIOC | 125;
+pub const TIOCSPPS: ::c_int = _TIOC | 126;
+pub const TIOCGPPSEV: ::c_int = _TIOC | 127;
+pub const TIOCGETD: ::c_int = tIOC | 0;
+pub const TIOCSETD: ::c_int = tIOC | 1;
+pub const TIOCHPCL: ::c_int = tIOC | 2;
+pub const TIOCGETP: ::c_int = tIOC | 8;
+pub const TIOCSETP: ::c_int = tIOC | 9;
+pub const TIOCSETN: ::c_int = tIOC | 10;
+pub const TIOCEXCL: ::c_int = tIOC | 13;
+pub const TIOCNXCL: ::c_int = tIOC | 14;
+pub const TIOCFLUSH: ::c_int = tIOC | 16;
+pub const TIOCSETC: ::c_int = tIOC | 17;
+pub const TIOCGETC: ::c_int = tIOC | 18;
+pub const TIOCLBIS: ::c_int = tIOC | 127;
+pub const TIOCLBIC: ::c_int = tIOC | 126;
+pub const TIOCLSET: ::c_int = tIOC | 125;
+pub const TIOCLGET: ::c_int = tIOC | 124;
+pub const TIOCSBRK: ::c_int = tIOC | 123;
+pub const TIOCCBRK: ::c_int = tIOC | 122;
+pub const TIOCSDTR: ::c_int = tIOC | 121;
+pub const TIOCCDTR: ::c_int = tIOC | 120;
+pub const TIOCSLTC: ::c_int = tIOC | 117;
+pub const TIOCGLTC: ::c_int = tIOC | 116;
+pub const TIOCOUTQ: ::c_int = tIOC | 115;
+pub const TIOCNOTTY: ::c_int = tIOC | 113;
+pub const TIOCSCTTY: ::c_int = tIOC | 132;
+pub const TIOCSTOP: ::c_int = tIOC | 111;
+pub const TIOCSTART: ::c_int = tIOC | 110;
+pub const TIOCSILOOP: ::c_int = tIOC | 109;
+pub const TIOCCILOOP: ::c_int = tIOC | 108;
+pub const TIOCGPGRP: ::c_int = tIOC | 20;
+pub const TIOCSPGRP: ::c_int = tIOC | 21;
+pub const TIOCGSID: ::c_int = tIOC | 22;
+pub const TIOCSTI: ::c_int = tIOC | 23;
+pub const TIOCMSET: ::c_int = tIOC | 26;
+pub const TIOCMBIS: ::c_int = tIOC | 27;
+pub const TIOCMBIC: ::c_int = tIOC | 28;
+pub const TIOCMGET: ::c_int = tIOC | 29;
+pub const TIOCREMOTE: ::c_int = tIOC | 30;
+pub const TIOCSIGNAL: ::c_int = tIOC | 31;
 
 pub const EPOLLIN: ::c_int = 0x1;
 pub const EPOLLPRI: ::c_int = 0x2;
@@ -1854,7 +1838,6 @@ pub const EPOLLERR: ::c_int = 0x8;
 pub const EPOLLHUP: ::c_int = 0x10;
 pub const EPOLLET: ::c_int = 0x80000000;
 pub const EPOLLRDHUP: ::c_int = 0x2000;
-pub const EPOLLEXCLUSIVE: ::c_int = 0x10000000;
 pub const EPOLLONESHOT: ::c_int = 0x40000000;
 pub const EPOLL_CLOEXEC: ::c_int = 0x80000;
 pub const EPOLL_CTL_ADD: ::c_int = 1;
@@ -1886,9 +1869,9 @@ pub const B230400: speed_t = 20;
 pub const B307200: speed_t = 21;
 pub const B460800: speed_t = 22;
 pub const B921600: speed_t = 23;
-pub const CSTART: ::tcflag_t = 021;
-pub const CSTOP: ::tcflag_t = 023;
-pub const CSWTCH: ::tcflag_t = 032;
+pub const CSTART: ::tcflag_t = 0o21;
+pub const CSTOP: ::tcflag_t = 0o23;
+pub const CSWTCH: ::tcflag_t = 0o32;
 pub const CSIZE: ::tcflag_t = 0o000060;
 pub const CS5: ::tcflag_t = 0;
 pub const CS6: ::tcflag_t = 0o000020;
@@ -1959,6 +1942,62 @@ pub const VERASE2: usize = 17;
 pub const SOCK_CLOEXEC: ::c_int = 0x080000;
 pub const SOCK_NONBLOCK: ::c_int = 0x100000;
 pub const SOCK_NDELAY: ::c_int = 0x200000;
+
+//<sys/timex.h>
+pub const SCALE_KG: ::c_int = 1 << 6;
+pub const SCALE_KF: ::c_int = 1 << 16;
+pub const SCALE_KH: ::c_int = 1 << 2;
+pub const MAXTC: ::c_int = 1 << 6;
+pub const SCALE_PHASE: ::c_int = 1 << 22;
+pub const SCALE_USEC: ::c_int = 1 << 16;
+pub const SCALE_UPDATE: ::c_int = SCALE_KG * MAXTC;
+pub const FINEUSEC: ::c_int = 1 << 22;
+pub const MAXPHASE: ::c_int = 512000;
+pub const MAXFREQ: ::c_int = 512 * SCALE_USEC;
+pub const MAXTIME: ::c_int = 200 << PPS_AVG;
+pub const MINSEC: ::c_int = 16;
+pub const MAXSEC: ::c_int = 1200;
+pub const PPS_AVG: ::c_int = 2;
+pub const PPS_SHIFT: ::c_int = 2;
+pub const PPS_SHIFTMAX: ::c_int = 8;
+pub const PPS_VALID: ::c_int = 120;
+pub const MAXGLITCH: ::c_int = 30;
+pub const MOD_OFFSET: u32 = 0x0001;
+pub const MOD_FREQUENCY: u32 = 0x0002;
+pub const MOD_MAXERROR: u32 = 0x0004;
+pub const MOD_ESTERROR: u32 = 0x0008;
+pub const MOD_STATUS: u32 = 0x0010;
+pub const MOD_TIMECONST: u32 = 0x0020;
+pub const MOD_CLKB: u32 = 0x4000;
+pub const MOD_CLKA: u32 = 0x8000;
+pub const STA_PLL: u32 = 0x0001;
+pub const STA_PPSFREQ: i32 = 0x0002;
+pub const STA_PPSTIME: i32 = 0x0004;
+pub const STA_FLL: i32 = 0x0008;
+pub const STA_INS: i32 = 0x0010;
+pub const STA_DEL: i32 = 0x0020;
+pub const STA_UNSYNC: i32 = 0x0040;
+pub const STA_FREQHOLD: i32 = 0x0080;
+pub const STA_PPSSIGNAL: i32 = 0x0100;
+pub const STA_PPSJITTER: i32 = 0x0200;
+pub const STA_PPSWANDER: i32 = 0x0400;
+pub const STA_PPSERROR: i32 = 0x0800;
+pub const STA_CLOCKERR: i32 = 0x1000;
+pub const STA_RONLY: i32 = STA_PPSSIGNAL
+    | STA_PPSJITTER
+    | STA_PPSWANDER
+    | STA_PPSERROR
+    | STA_CLOCKERR;
+pub const TIME_OK: i32 = 0;
+pub const TIME_INS: i32 = 1;
+pub const TIME_DEL: i32 = 2;
+pub const TIME_OOP: i32 = 3;
+pub const TIME_WAIT: i32 = 4;
+pub const TIME_ERROR: i32 = 5;
+
+pub const PRIO_PROCESS: ::c_int = 0;
+pub const PRIO_PGRP: ::c_int = 1;
+pub const PRIO_USER: ::c_int = 2;
 
 f! {
     pub fn FD_CLR(fd: ::c_int, set: *mut fd_set) -> () {
@@ -2051,11 +2090,6 @@ extern "C" {
     pub fn freeifaddrs(ifa: *mut ::ifaddrs);
 
     pub fn stack_getbounds(sp: *mut ::stack_t) -> ::c_int;
-    pub fn mincore(
-        addr: *const ::c_void,
-        len: ::size_t,
-        vec: *mut c_char,
-    ) -> ::c_int;
     pub fn initgroups(name: *const ::c_char, basegid: ::gid_t) -> ::c_int;
     pub fn setgroups(ngroups: ::c_int, ptr: *const ::gid_t) -> ::c_int;
     pub fn ioctl(fildes: ::c_int, request: ::c_int, ...) -> ::c_int;
@@ -2151,6 +2185,7 @@ extern "C" {
         options: ::c_int,
     ) -> ::c_int;
 
+    #[cfg_attr(target_os = "illumos", link_name = "_glob_ext")]
     pub fn glob(
         pattern: *const ::c_char,
         flags: ::c_int,
@@ -2160,6 +2195,7 @@ extern "C" {
         pglob: *mut ::glob_t,
     ) -> ::c_int;
 
+    #[cfg_attr(target_os = "illumos", link_name = "_globfree_ext")]
     pub fn globfree(pglob: *mut ::glob_t);
 
     pub fn posix_madvise(
@@ -2261,6 +2297,12 @@ extern "C" {
         msg: *mut ::msghdr,
         flags: ::c_int,
     ) -> ::ssize_t;
+    pub fn accept4(
+        fd: ::c_int,
+        address: *mut sockaddr,
+        address_len: *mut socklen_t,
+        flags: ::c_int
+    ) -> ::c_int;
 
     pub fn mq_open(name: *const ::c_char, oflag: ::c_int, ...) -> ::mqd_t;
     pub fn mq_close(mqd: ::mqd_t) -> ::c_int;
@@ -2322,10 +2364,17 @@ extern "C" {
         nget: *mut ::c_uint,
         timeout: *mut ::timespec,
     ) -> ::c_int;
-    pub fn fexecve(
-        fd: ::c_int,
-        argv: *const *const ::c_char,
-        envp: *const *const ::c_char,
+    pub fn port_send(
+        port: ::c_int,
+        events: ::c_int,
+        user: *mut ::c_void,
+    ) -> ::c_int;
+    pub fn port_sendn(
+        port_list: *mut ::c_int,
+        error_list: *mut ::c_int,
+        nent: ::c_uint,
+        events: ::c_int,
+        user: *mut ::c_void,
     ) -> ::c_int;
     #[cfg_attr(
         any(target_os = "solaris", target_os = "illumos"),
@@ -2451,25 +2500,6 @@ extern "C" {
     pub fn dup3(src: ::c_int, dst: ::c_int, flags: ::c_int) -> ::c_int;
     pub fn uname(buf: *mut ::utsname) -> ::c_int;
     pub fn pipe2(fds: *mut ::c_int, flags: ::c_int) -> ::c_int;
-    pub fn door_call(d: ::c_int, params: *const door_arg_t) -> ::c_int;
-    pub fn door_return(
-        data_ptr: *const ::c_char,
-        data_size: ::size_t,
-        desc_ptr: *const door_desc_t,
-        num_desc: ::c_uint,
-    );
-    pub fn door_create(
-        server_procedure: extern "C" fn(
-            cookie: *const ::c_void,
-            argp: *const ::c_char,
-            arg_size: ::size_t,
-            dp: *const door_desc_t,
-            n_desc: ::c_uint,
-        ),
-        cookie: *const ::c_void,
-        attributes: door_attr_t,
-    ) -> ::c_int;
-    pub fn fattach(fildes: ::c_int, path: *const ::c_char) -> ::c_int;
 
     pub fn makeutx(ux: *const utmpx) -> *mut utmpx;
     pub fn modutx(ux: *const utmpx) -> *mut utmpx;
@@ -2493,7 +2523,22 @@ extern "C" {
     pub fn getutmp(ux: *const utmpx, u: *mut utmp);
     pub fn getutmpx(u: *const utmp, ux: *mut utmpx);
     pub fn updwtmp(file: *const ::c_char, u: *mut utmp);
+
+    pub fn ntp_adjtime(buf: *mut timex) -> ::c_int;
+    pub fn ntp_gettime(buf: *mut ntptimeval) -> ::c_int;
 }
 
 mod compat;
 pub use self::compat::*;
+
+cfg_if! {
+    if #[cfg(target_os = "illumos")] {
+        mod illumos;
+        pub use self::illumos::*;
+    } else if #[cfg(target_os = "solaris")] {
+        mod solaris;
+        pub use self::solaris::*;
+    } else {
+        // Unknown target_os
+    }
+}

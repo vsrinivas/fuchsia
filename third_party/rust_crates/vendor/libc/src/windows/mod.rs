@@ -250,7 +250,7 @@ impl ::Clone for FILE {
     }
 }
 #[cfg_attr(feature = "extra_traits", derive(Debug))]
-pub enum fpos_t {} // TODO: fill this out with a struct
+pub enum fpos_t {} // FIXME: fill this out with a struct
 impl ::Copy for fpos_t {}
 impl ::Clone for fpos_t {
     fn clone(&self) -> fpos_t {
@@ -400,6 +400,8 @@ extern "C" {
     pub fn signal(signum: c_int, handler: sighandler_t) -> sighandler_t;
     pub fn raise(signum: c_int) -> c_int;
 
+    #[link_name = "_gmtime64_s"]
+    pub fn gmtime_s(destTime: *mut tm, srcTime: *const time_t) -> ::c_int;
     #[link_name = "_time64"]
     pub fn time(destTime: *mut time_t) -> time_t;
     #[link_name = "_chmod"]

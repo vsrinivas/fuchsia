@@ -1,12 +1,3 @@
-// Copyright 2012-2015 The Rust Project Developers. See the COPYRIGHT
-// file at the top-level directory of this distribution and at
-// http://rust-lang.org/COPYRIGHT.
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
 //! libc - Raw FFI bindings to platforms' system libraries
 //!
 //! [Documentation for other platforms][pd].
@@ -14,14 +5,17 @@
 //! [pd]: https://rust-lang.github.io/libc/#platform-specific-documentation
 #![crate_name = "libc"]
 #![crate_type = "rlib"]
-#![cfg_attr(libc_deny_warnings, deny(warnings))]
+// FIXME: Remove this and redundant_semicolon once renamed lint reaches stable.
+#![allow(renamed_and_removed_lints)]
 #![allow(
     bad_style,
     overflowing_literals,
     improper_ctypes,
     unknown_lints,
-    redundant_semicolon
+    redundant_semicolon,
+    redundant_semicolons
 )]
+#![cfg_attr(libc_deny_warnings, deny(warnings))]
 // Attributes needed when building as part of the standard library
 #![cfg_attr(
     feature = "rustc-dep-of-std",
@@ -44,6 +38,8 @@ cfg_if! {
         extern crate rustc_std_workspace_core as core;
         #[allow(unused_imports)]
         use core::iter;
+        #[allow(unused_imports)]
+        use core::ops;
         #[allow(unused_imports)]
         use core::option;
     }
@@ -121,6 +117,12 @@ cfg_if! {
 
         mod switch;
         pub use switch::*;
+    } else if #[cfg(target_os = "psp")] {
+        mod fixed_width_ints;
+        pub use fixed_width_ints::*;
+
+        mod psp;
+        pub use psp::*;
     } else if #[cfg(target_os = "vxworks")] {
         mod fixed_width_ints;
         pub use fixed_width_ints::*;

@@ -50,6 +50,8 @@ s! {
         pub sin6_scope_id: u32,
     }
 
+    // The order of the `ai_addr` field in this struct is crucial
+    // for converting between the Rust and C types.
     pub struct addrinfo {
         pub ai_flags: ::c_int,
         pub ai_family: ::c_int,
@@ -472,7 +474,7 @@ pub const F_SEAL_SHRINK: ::c_int = 0x0002;
 pub const F_SEAL_GROW: ::c_int = 0x0004;
 pub const F_SEAL_WRITE: ::c_int = 0x0008;
 
-// TODO(#235): Include file sealing fcntls once we have a way to verify them.
+// FIXME(#235): Include file sealing fcntls once we have a way to verify them.
 
 pub const SIGTRAP: ::c_int = 5;
 
@@ -489,10 +491,7 @@ pub const CLOCK_MONOTONIC_COARSE: ::clockid_t = 6;
 pub const CLOCK_BOOTTIME: ::clockid_t = 7;
 pub const CLOCK_REALTIME_ALARM: ::clockid_t = 8;
 pub const CLOCK_BOOTTIME_ALARM: ::clockid_t = 9;
-// TODO(#247) Someday our Travis shall have glibc 2.21 (released in Sep
-// 2014.) See also musl/mod.rs
-// pub const CLOCK_SGI_CYCLE: ::clockid_t = 10;
-// pub const CLOCK_TAI: ::clockid_t = 11;
+pub const CLOCK_TAI: ::clockid_t = 11;
 pub const TIMER_ABSTIME: ::c_int = 1;
 
 pub const RUSAGE_SELF: ::c_int = 0;
@@ -554,12 +553,12 @@ pub const LC_COLLATE: ::c_int = 3;
 pub const LC_MONETARY: ::c_int = 4;
 pub const LC_MESSAGES: ::c_int = 5;
 pub const LC_ALL: ::c_int = 6;
-pub const LC_CTYPE_MASK: ::c_int = (1 << LC_CTYPE);
-pub const LC_NUMERIC_MASK: ::c_int = (1 << LC_NUMERIC);
-pub const LC_TIME_MASK: ::c_int = (1 << LC_TIME);
-pub const LC_COLLATE_MASK: ::c_int = (1 << LC_COLLATE);
-pub const LC_MONETARY_MASK: ::c_int = (1 << LC_MONETARY);
-pub const LC_MESSAGES_MASK: ::c_int = (1 << LC_MESSAGES);
+pub const LC_CTYPE_MASK: ::c_int = 1 << LC_CTYPE;
+pub const LC_NUMERIC_MASK: ::c_int = 1 << LC_NUMERIC;
+pub const LC_TIME_MASK: ::c_int = 1 << LC_TIME;
+pub const LC_COLLATE_MASK: ::c_int = 1 << LC_COLLATE;
+pub const LC_MONETARY_MASK: ::c_int = 1 << LC_MONETARY;
+pub const LC_MESSAGES_MASK: ::c_int = 1 << LC_MESSAGES;
 // LC_ALL_MASK defined per platform
 
 pub const MAP_FILE: ::c_int = 0x0000;
@@ -601,42 +600,6 @@ pub const MS_STRICTATIME: ::c_ulong = 0x1000000;
 pub const MS_ACTIVE: ::c_ulong = 0x40000000;
 pub const MS_MGC_VAL: ::c_ulong = 0xc0ed0000;
 pub const MS_MGC_MSK: ::c_ulong = 0xffff0000;
-
-pub const EPERM: ::c_int = 1;
-pub const ENOENT: ::c_int = 2;
-pub const ESRCH: ::c_int = 3;
-pub const EINTR: ::c_int = 4;
-pub const EIO: ::c_int = 5;
-pub const ENXIO: ::c_int = 6;
-pub const E2BIG: ::c_int = 7;
-pub const ENOEXEC: ::c_int = 8;
-pub const EBADF: ::c_int = 9;
-pub const ECHILD: ::c_int = 10;
-pub const EAGAIN: ::c_int = 11;
-pub const ENOMEM: ::c_int = 12;
-pub const EACCES: ::c_int = 13;
-pub const EFAULT: ::c_int = 14;
-pub const ENOTBLK: ::c_int = 15;
-pub const EBUSY: ::c_int = 16;
-pub const EEXIST: ::c_int = 17;
-pub const EXDEV: ::c_int = 18;
-pub const ENODEV: ::c_int = 19;
-pub const ENOTDIR: ::c_int = 20;
-pub const EISDIR: ::c_int = 21;
-pub const EINVAL: ::c_int = 22;
-pub const ENFILE: ::c_int = 23;
-pub const EMFILE: ::c_int = 24;
-pub const ENOTTY: ::c_int = 25;
-pub const ETXTBSY: ::c_int = 26;
-pub const EFBIG: ::c_int = 27;
-pub const ENOSPC: ::c_int = 28;
-pub const ESPIPE: ::c_int = 29;
-pub const EROFS: ::c_int = 30;
-pub const EMLINK: ::c_int = 31;
-pub const EPIPE: ::c_int = 32;
-pub const EDOM: ::c_int = 33;
-pub const ERANGE: ::c_int = 34;
-pub const EWOULDBLOCK: ::c_int = EAGAIN;
 
 pub const SCM_RIGHTS: ::c_int = 0x01;
 pub const SCM_CREDENTIALS: ::c_int = 0x02;
@@ -812,6 +775,7 @@ pub const IP_TOS: ::c_int = 1;
 pub const IP_TTL: ::c_int = 2;
 pub const IP_HDRINCL: ::c_int = 3;
 pub const IP_PKTINFO: ::c_int = 8;
+pub const IP_MTU_DISCOVER: ::c_int = 10;
 pub const IP_RECVTOS: ::c_int = 13;
 pub const IP_RECVERR: ::c_int = 11;
 pub const IP_ADD_MEMBERSHIP: ::c_int = 35;
@@ -828,7 +792,6 @@ pub const IPV6_2292PKTOPTIONS: ::c_int = 6;
 pub const IPV6_CHECKSUM: ::c_int = 7;
 pub const IPV6_2292HOPLIMIT: ::c_int = 8;
 pub const IPV6_NEXTHOP: ::c_int = 9;
-pub const IPV6_FLOWINFO: ::c_int = 11;
 pub const IPV6_UNICAST_HOPS: ::c_int = 16;
 pub const IPV6_MULTICAST_IF: ::c_int = 17;
 pub const IPV6_MULTICAST_HOPS: ::c_int = 18;
@@ -844,8 +807,14 @@ pub const IPV6_JOIN_ANYCAST: ::c_int = 27;
 pub const IPV6_LEAVE_ANYCAST: ::c_int = 28;
 pub const IPV6_RECVPKTINFO: ::c_int = 49;
 pub const IPV6_PKTINFO: ::c_int = 50;
+pub const IPV6_HOPLIMIT: ::c_int = 52;
 pub const IPV6_RECVTCLASS: ::c_int = 66;
 pub const IPV6_TCLASS: ::c_int = 67;
+
+pub const IP_PMTUDISC_DONT: ::c_int = 0;
+pub const IP_PMTUDISC_WANT: ::c_int = 1;
+pub const IP_PMTUDISC_DO: ::c_int = 2;
+pub const IP_PMTUDISC_PROBE: ::c_int = 3;
 
 pub const TCP_NODELAY: ::c_int = 1;
 pub const TCP_MAXSEG: ::c_int = 2;
@@ -1095,15 +1064,15 @@ pub const IPOPT_CONTROL: u8 = 0x00;
 pub const IPOPT_RESERVED1: u8 = 0x20;
 pub const IPOPT_MEASUREMENT: u8 = 0x40;
 pub const IPOPT_RESERVED2: u8 = 0x60;
-pub const IPOPT_END: u8 = (0 | IPOPT_CONTROL);
-pub const IPOPT_NOOP: u8 = (1 | IPOPT_CONTROL);
-pub const IPOPT_SEC: u8 = (2 | IPOPT_CONTROL | IPOPT_COPY);
-pub const IPOPT_LSRR: u8 = (3 | IPOPT_CONTROL | IPOPT_COPY);
-pub const IPOPT_TIMESTAMP: u8 = (4 | IPOPT_MEASUREMENT);
-pub const IPOPT_RR: u8 = (7 | IPOPT_CONTROL);
-pub const IPOPT_SID: u8 = (8 | IPOPT_CONTROL | IPOPT_COPY);
-pub const IPOPT_SSRR: u8 = (9 | IPOPT_CONTROL | IPOPT_COPY);
-pub const IPOPT_RA: u8 = (20 | IPOPT_CONTROL | IPOPT_COPY);
+pub const IPOPT_END: u8 = 0 | IPOPT_CONTROL;
+pub const IPOPT_NOOP: u8 = 1 | IPOPT_CONTROL;
+pub const IPOPT_SEC: u8 = 2 | IPOPT_CONTROL | IPOPT_COPY;
+pub const IPOPT_LSRR: u8 = 3 | IPOPT_CONTROL | IPOPT_COPY;
+pub const IPOPT_TIMESTAMP: u8 = 4 | IPOPT_MEASUREMENT;
+pub const IPOPT_RR: u8 = 7 | IPOPT_CONTROL;
+pub const IPOPT_SID: u8 = 8 | IPOPT_CONTROL | IPOPT_COPY;
+pub const IPOPT_SSRR: u8 = 9 | IPOPT_CONTROL | IPOPT_COPY;
+pub const IPOPT_RA: u8 = 20 | IPOPT_CONTROL | IPOPT_COPY;
 pub const IPVERSION: u8 = 4;
 pub const MAXTTL: u8 = 255;
 pub const IPDEFTTL: u8 = 64;

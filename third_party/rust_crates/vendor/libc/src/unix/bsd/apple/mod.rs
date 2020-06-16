@@ -31,6 +31,9 @@ pub type posix_spawn_file_actions_t = *mut ::c_void;
 pub type key_t = ::c_int;
 pub type shmatt_t = ::c_ushort;
 
+pub type sae_associd_t = u32;
+pub type sae_connid_t = u32;
+
 deprecated_mach! {
     pub type vm_prot_t = ::c_int;
     pub type vm_size_t = ::uintptr_t;
@@ -492,6 +495,44 @@ s! {
 
     pub struct in_addr {
         pub s_addr: ::in_addr_t,
+    }
+
+    // sys/socket.h
+
+    pub struct sa_endpoints_t {
+        pub sae_srcif: ::c_uint, // optional source interface
+        pub sae_srcaddr: *const ::sockaddr, // optional source address
+        pub sae_srcaddrlen: ::socklen_t, // size of source address
+        pub sae_dstaddr: *const ::sockaddr, // destination address
+        pub sae_dstaddrlen: ::socklen_t, // size of destination address
+    }
+
+    pub struct timex {
+        pub modes: ::c_uint,
+        pub offset: ::c_long,
+        pub freq: ::c_long,
+        pub maxerror: ::c_long,
+        pub esterror: ::c_long,
+        pub status: ::c_int,
+        pub constant: ::c_long,
+        pub precision: ::c_long,
+        pub tolerance: ::c_long,
+        pub ppsfreq: ::c_long,
+        pub jitter: ::c_long,
+        pub shift: ::c_int,
+        pub stabil: ::c_long,
+        pub jitcnt: ::c_long,
+        pub calcnt: ::c_long,
+        pub errcnt: ::c_long,
+        pub stbcnt: ::c_long,
+    }
+
+    pub struct ntptimeval {
+        pub time: ::timespec,
+        pub maxerror: ::c_long,
+        pub esterror: ::c_long,
+        pub tai: ::c_long,
+        pub time_state: ::c_int,
     }
 }
 
@@ -1239,12 +1280,12 @@ pub const ACCOUNTING: ::c_short = 9;
 pub const SIGNATURE: ::c_short = 10;
 pub const SHUTDOWN_TIME: ::c_short = 11;
 
-pub const LC_COLLATE_MASK: ::c_int = (1 << 0);
-pub const LC_CTYPE_MASK: ::c_int = (1 << 1);
-pub const LC_MESSAGES_MASK: ::c_int = (1 << 2);
-pub const LC_MONETARY_MASK: ::c_int = (1 << 3);
-pub const LC_NUMERIC_MASK: ::c_int = (1 << 4);
-pub const LC_TIME_MASK: ::c_int = (1 << 5);
+pub const LC_COLLATE_MASK: ::c_int = 1 << 0;
+pub const LC_CTYPE_MASK: ::c_int = 1 << 1;
+pub const LC_MESSAGES_MASK: ::c_int = 1 << 2;
+pub const LC_MONETARY_MASK: ::c_int = 1 << 3;
+pub const LC_NUMERIC_MASK: ::c_int = 1 << 4;
+pub const LC_TIME_MASK: ::c_int = 1 << 5;
 pub const LC_ALL_MASK: ::c_int = LC_COLLATE_MASK
     | LC_CTYPE_MASK
     | LC_MESSAGES_MASK
@@ -1719,8 +1760,6 @@ pub const TIOCGETD: ::c_ulong = 0x4004741a;
 pub const TIOCSETD: ::c_ulong = 0x8004741b;
 pub const TIOCIXON: ::c_uint = 0x20007481;
 pub const TIOCIXOFF: ::c_uint = 0x20007480;
-pub const TIOCSBRK: ::c_uint = 0x2000747b;
-pub const TIOCCBRK: ::c_uint = 0x2000747a;
 pub const TIOCSDTR: ::c_uint = 0x20007479;
 pub const TIOCCDTR: ::c_uint = 0x20007478;
 pub const TIOCGPGRP: ::c_ulong = 0x40047477;
@@ -2208,14 +2247,20 @@ pub const IP_PKTINFO: ::c_int = 26;
 pub const IP_RECVTOS: ::c_int = 27;
 pub const IPV6_JOIN_GROUP: ::c_int = 12;
 pub const IPV6_LEAVE_GROUP: ::c_int = 13;
+pub const IPV6_CHECKSUM: ::c_int = 26;
 pub const IPV6_RECVTCLASS: ::c_int = 35;
 pub const IPV6_TCLASS: ::c_int = 36;
 pub const IPV6_PKTINFO: ::c_int = 46;
+pub const IPV6_HOPLIMIT: ::c_int = 47;
 pub const IPV6_RECVPKTINFO: ::c_int = 61;
 
 pub const TCP_NOPUSH: ::c_int = 4;
 pub const TCP_NOOPT: ::c_int = 8;
 pub const TCP_KEEPALIVE: ::c_int = 0x10;
+pub const TCP_KEEPINTVL: ::c_int = 0x101;
+pub const TCP_KEEPCNT: ::c_int = 0x102;
+/// Enable/Disable TCP Fastopen on this socket
+pub const TCP_FASTOPEN: ::c_int = 0x105;
 
 pub const SOL_LOCAL: ::c_int = 0;
 
@@ -2303,6 +2348,23 @@ pub const IFF_MULTICAST: ::c_int = 0x8000; // supports multicast
 pub const SHUT_RD: ::c_int = 0;
 pub const SHUT_WR: ::c_int = 1;
 pub const SHUT_RDWR: ::c_int = 2;
+
+pub const SAE_ASSOCID_ANY: ::sae_associd_t = 0;
+/// ((sae_associd_t)(-1ULL))
+pub const SAE_ASSOCID_ALL: ::sae_associd_t = 0xffffffff;
+
+pub const SAE_CONNID_ANY: ::sae_connid_t = 0;
+/// ((sae_connid_t)(-1ULL))
+pub const SAE_CONNID_ALL: ::sae_connid_t = 0xffffffff;
+
+// connectx() flag parameters
+
+/// resume connect() on read/write
+pub const CONNECT_RESUME_ON_READ_WRITE: ::c_uint = 0x1;
+/// data is idempotent
+pub const CONNECT_DATA_IDEMPOTENT: ::c_uint = 0x2;
+/// data includes security that replaces the TFO-cookie
+pub const CONNECT_DATA_AUTHENTICATED: ::c_uint = 0x4;
 
 pub const LOCK_SH: ::c_int = 1;
 pub const LOCK_EX: ::c_int = 2;
@@ -2438,6 +2500,7 @@ pub const PTHREAD_RWLOCK_INITIALIZER: pthread_rwlock_t = pthread_rwlock_t {
     __opaque: [0; __PTHREAD_RWLOCK_SIZE__],
 };
 
+pub const MINSIGSTKSZ: ::size_t = 32768;
 pub const SIGSTKSZ: ::size_t = 131072;
 
 pub const FD_SETSIZE: usize = 1024;
@@ -2976,6 +3039,43 @@ pub const DLT_LOOP: ::c_uint = 108;
 // sizeof(i32)
 pub const BPF_ALIGNMENT: ::c_int = 4;
 
+// sys/mount.h
+pub const MNT_RDONLY: ::c_int = 0x00000001;
+pub const MNT_SYNCHRONOUS: ::c_int = 0x00000002;
+pub const MNT_NOEXEC: ::c_int = 0x00000004;
+pub const MNT_NOSUID: ::c_int = 0x00000008;
+pub const MNT_NODEV: ::c_int = 0x00000010;
+pub const MNT_UNION: ::c_int = 0x00000020;
+pub const MNT_ASYNC: ::c_int = 0x00000040;
+pub const MNT_CPROTECT: ::c_int = 0x00000080;
+
+// NFS export related mount flags.
+pub const MNT_EXPORTED: ::c_int = 0x00000100;
+
+// MAC labeled / "quarantined" flag
+pub const MNT_QUARANTINE: ::c_int = 0x00000400;
+
+// Flags set by internal operations.
+pub const MNT_LOCAL: ::c_int = 0x00001000;
+pub const MNT_QUOTA: ::c_int = 0x00002000;
+pub const MNT_ROOTFS: ::c_int = 0x00004000;
+pub const MNT_DOVOLFS: ::c_int = 0x00008000;
+
+pub const MNT_DONTBROWSE: ::c_int = 0x00100000;
+pub const MNT_IGNORE_OWNERSHIP: ::c_int = 0x00200000;
+pub const MNT_AUTOMOUNTED: ::c_int = 0x00400000;
+pub const MNT_JOURNALED: ::c_int = 0x00800000;
+pub const MNT_NOUSERXATTR: ::c_int = 0x01000000;
+pub const MNT_DEFWRITE: ::c_int = 0x02000000;
+pub const MNT_MULTILABEL: ::c_int = 0x04000000;
+pub const MNT_NOATIME: ::c_int = 0x10000000;
+pub const MNT_SNAPSHOT: ::c_int = 0x40000000;
+
+// External filesystem command modifier flags.
+pub const MNT_UPDATE: ::c_int = 0x00010000;
+pub const MNT_NOBLOCK: ::c_int = 0x00020000;
+pub const MNT_RELOAD: ::c_int = 0x00040000;
+
 // sys/spawn.h:
 pub const POSIX_SPAWN_RESETIDS: ::c_int = 0x01;
 pub const POSIX_SPAWN_SETPGROUP: ::c_int = 0x02;
@@ -3030,6 +3130,58 @@ pub const SF_ARCHIVED: ::c_uint = 0x00010000;
 pub const SF_IMMUTABLE: ::c_uint = 0x00020000;
 pub const SF_APPEND: ::c_uint = 0x00040000;
 pub const UF_HIDDEN: ::c_uint = 0x00008000;
+
+//<sys/timex.h>
+pub const NTP_API: ::c_int = 4;
+pub const MAXPHASE: ::c_long = 500000000;
+pub const MAXFREQ: ::c_long = 500000;
+pub const MINSEC: ::c_int = 256;
+pub const MAXSEC: ::c_int = 2048;
+pub const NANOSECOND: ::c_long = 1000000000;
+pub const SCALE_PPM: ::c_int = 65;
+pub const MAXTC: ::c_int = 10;
+pub const MOD_OFFSET: ::c_uint = 0x0001;
+pub const MOD_FREQUENCY: ::c_uint = 0x0002;
+pub const MOD_MAXERROR: ::c_uint = 0x0004;
+pub const MOD_ESTERROR: ::c_uint = 0x0008;
+pub const MOD_STATUS: ::c_uint = 0x0010;
+pub const MOD_TIMECONST: ::c_uint = 0x0020;
+pub const MOD_PPSMAX: ::c_uint = 0x0040;
+pub const MOD_TAI: ::c_uint = 0x0080;
+pub const MOD_MICRO: ::c_uint = 0x1000;
+pub const MOD_NANO: ::c_uint = 0x2000;
+pub const MOD_CLKB: ::c_uint = 0x4000;
+pub const MOD_CLKA: ::c_uint = 0x8000;
+pub const STA_PLL: ::c_int = 0x0001;
+pub const STA_PPSFREQ: ::c_int = 0x0002;
+pub const STA_PPSTIME: ::c_int = 0x0004;
+pub const STA_FLL: ::c_int = 0x0008;
+pub const STA_INS: ::c_int = 0x0010;
+pub const STA_DEL: ::c_int = 0x0020;
+pub const STA_UNSYNC: ::c_int = 0x0040;
+pub const STA_FREQHOLD: ::c_int = 0x0080;
+pub const STA_PPSSIGNAL: ::c_int = 0x0100;
+pub const STA_PPSJITTER: ::c_int = 0x0200;
+pub const STA_PPSWANDER: ::c_int = 0x0400;
+pub const STA_PPSERROR: ::c_int = 0x0800;
+pub const STA_CLOCKERR: ::c_int = 0x1000;
+pub const STA_NANO: ::c_int = 0x2000;
+pub const STA_MODE: ::c_int = 0x4000;
+pub const STA_CLK: ::c_int = 0x8000;
+pub const STA_RONLY: ::c_int = STA_PPSSIGNAL
+    | STA_PPSJITTER
+    | STA_PPSWANDER
+    | STA_PPSERROR
+    | STA_CLOCKERR
+    | STA_NANO
+    | STA_MODE
+    | STA_CLK;
+pub const TIME_OK: ::c_int = 0;
+pub const TIME_INS: ::c_int = 1;
+pub const TIME_DEL: ::c_int = 2;
+pub const TIME_OOP: ::c_int = 3;
+pub const TIME_WAIT: ::c_int = 4;
+pub const TIME_ERROR: ::c_int = 5;
 
 cfg_if! {
     if #[cfg(libc_const_size_of)] {
@@ -3528,6 +3680,25 @@ extern "C" {
         newfd: ::c_int,
     ) -> ::c_int;
     pub fn uname(buf: *mut ::utsname) -> ::c_int;
+
+    pub fn connectx(
+        socket: ::c_int,
+        endpoints: *const sa_endpoints_t,
+        associd: sae_associd_t,
+        flags: ::c_uint,
+        iov: *const ::iovec,
+        iovcnt: ::c_uint,
+        len: *mut ::size_t,
+        connid: *mut sae_connid_t,
+    ) -> ::c_int;
+    pub fn disconnectx(
+        socket: ::c_int,
+        associd: sae_associd_t,
+        connid: sae_connid_t,
+    ) -> ::c_int;
+
+    pub fn ntp_adjtime(buf: *mut timex) -> ::c_int;
+    pub fn ntp_gettime(buf: *mut ntptimeval) -> ::c_int;
 }
 
 cfg_if! {

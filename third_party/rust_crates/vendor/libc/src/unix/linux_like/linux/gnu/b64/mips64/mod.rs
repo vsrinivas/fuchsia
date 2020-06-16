@@ -857,6 +857,9 @@ pub const F_GETOWN: ::c_int = 23;
 pub const F_SETOWN: ::c_int = 24;
 pub const F_SETLK: ::c_int = 6;
 pub const F_SETLKW: ::c_int = 7;
+pub const F_OFD_GETLK: ::c_int = 36;
+pub const F_OFD_SETLK: ::c_int = 37;
+pub const F_OFD_SETLKW: ::c_int = 38;
 
 pub const SFD_NONBLOCK: ::c_int = 0x80;
 
@@ -871,6 +874,8 @@ pub const TCSETAF: ::c_ulong = 0x5404;
 pub const TCSBRK: ::c_ulong = 0x5405;
 pub const TCXONC: ::c_ulong = 0x5406;
 pub const TCFLSH: ::c_ulong = 0x5407;
+pub const TIOCSBRK: ::c_ulong = 0x5427;
+pub const TIOCCBRK: ::c_ulong = 0x5428;
 pub const TIOCGSOFTCAR: ::c_ulong = 0x5481;
 pub const TIOCSSOFTCAR: ::c_ulong = 0x5482;
 pub const TIOCINQ: ::c_ulong = 0x467f;

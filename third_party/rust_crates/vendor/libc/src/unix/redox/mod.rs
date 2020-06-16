@@ -258,7 +258,7 @@ pub const F_GETLK: ::c_int = 5;
 pub const F_SETLK: ::c_int = 6;
 pub const F_SETLKW: ::c_int = 7;
 
-// TODO: relibc {
+// FIXME: relibc {
 pub const RTLD_DEFAULT: *mut ::c_void = 0i64 as *mut ::c_void;
 // }
 
@@ -413,7 +413,7 @@ pub const F_GETFD: ::c_int = 1;
 pub const F_SETFD: ::c_int = 2;
 pub const F_GETFL: ::c_int = 3;
 pub const F_SETFL: ::c_int = 4;
-// TODO: relibc {
+// FIXME: relibc {
 pub const F_DUPFD_CLOEXEC: ::c_int = ::F_DUPFD;
 // }
 pub const FD_CLOEXEC: ::c_int = 0x0100_0000;
@@ -435,14 +435,14 @@ pub const O_DIRECTORY: ::c_int = 0x1000_0000;
 pub const O_PATH: ::c_int = 0x2000_0000;
 pub const O_SYMLINK: ::c_int = 0x4000_0000;
 // Negative to allow it to be used as int
-// TODO: Fix negative values missing from includes
+// FIXME: Fix negative values missing from includes
 pub const O_NOFOLLOW: ::c_int = -0x8000_0000;
 
 // netdb.h
 pub const EAI_SYSTEM: ::c_int = -11;
 
 // netinet/in.h
-// TODO: relibc {
+// FIXME: relibc {
 pub const IP_TTL: ::c_int = 2;
 pub const IPV6_UNICAST_HOPS: ::c_int = 16;
 pub const IPV6_MULTICAST_IF: ::c_int = 17;
@@ -460,7 +460,7 @@ pub const IP_DROP_MEMBERSHIP: ::c_int = 36;
 
 // netinet/tcp.h
 pub const TCP_NODELAY: ::c_int = 1;
-// TODO: relibc {
+// FIXME: relibc {
 pub const TCP_KEEPIDLE: ::c_int = 1;
 // }
 
@@ -575,7 +575,7 @@ pub const EXIT_SUCCESS: ::c_int = 0;
 pub const EXIT_FAILURE: ::c_int = 1;
 
 // sys/ioctl.h
-// TODO: relibc {
+// FIXME: relibc {
 pub const FIONBIO: ::c_ulong = 0x5421;
 pub const FIOCLEX: ::c_ulong = 0x5451;
 // }
@@ -586,6 +586,23 @@ pub const TIOCGPGRP: ::c_ulong = 0x540F;
 pub const TIOCSPGRP: ::c_ulong = 0x5410;
 pub const TIOCGWINSZ: ::c_ulong = 0x5413;
 pub const TIOCSWINSZ: ::c_ulong = 0x5414;
+
+// sys/mman.h
+pub const PROT_NONE: ::c_int = 0x0000;
+pub const PROT_READ: ::c_int = 0x0004;
+pub const PROT_WRITE: ::c_int = 0x0002;
+pub const PROT_EXEC: ::c_int = 0x0001;
+
+pub const MAP_SHARED: ::c_int = 0x0001;
+pub const MAP_PRIVATE: ::c_int = 0x0002;
+pub const MAP_ANON: ::c_int = 0x0020;
+pub const MAP_ANONYMOUS: ::c_int = MAP_ANON;
+pub const MAP_FIXED: ::c_int = 0x0010;
+pub const MAP_FAILED: *mut ::c_void = !0 as _;
+
+pub const MS_ASYNC: ::c_int = 0x0001;
+pub const MS_INVALIDATE: ::c_int = 0x0002;
+pub const MS_SYNC: ::c_int = 0x0004;
 
 // sys/select.h
 pub const FD_SETSIZE: usize = 1024;
@@ -806,6 +823,10 @@ pub const _PC_ALLOC_SIZE_MIN: ::c_int = 18;
 pub const _PC_SYMLINK_MAX: ::c_int = 19;
 pub const _PC_2_SYMLINKS: ::c_int = 20;
 
+pub const PRIO_PROCESS: ::c_int = 0;
+pub const PRIO_PGRP: ::c_int = 1;
+pub const PRIO_USER: ::c_int = 2;
+
 // wait.h
 f! {
     pub fn WIFSTOPPED(status: ::c_int) -> bool {
@@ -838,6 +859,32 @@ f! {
 
     pub fn WCOREDUMP(status: ::c_int) -> bool {
         (status & 0x80) != 0
+    }
+
+    pub fn FD_CLR(fd: ::c_int, set: *mut fd_set) -> () {
+        let fd = fd as usize;
+        let size = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        (*set).fds_bits[fd / size] &= !(1 << (fd % size));
+        return
+    }
+
+    pub fn FD_ISSET(fd: ::c_int, set: *mut fd_set) -> bool {
+        let fd = fd as usize;
+        let size = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        return ((*set).fds_bits[fd / size] & (1 << (fd % size))) != 0
+    }
+
+    pub fn FD_SET(fd: ::c_int, set: *mut fd_set) -> () {
+        let fd = fd as usize;
+        let size = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        (*set).fds_bits[fd / size] |= 1 << (fd % size);
+        return
+    }
+
+    pub fn FD_ZERO(set: *mut fd_set) -> () {
+        for slot in (*set).fds_bits.iter_mut() {
+            *slot = 0;
+        }
     }
 }
 
@@ -907,6 +954,24 @@ extern "C" {
 
     // sys/ioctl.h
     pub fn ioctl(fd: ::c_int, request: ::c_ulong, ...) -> ::c_int;
+
+    // sys/mman.h
+    pub fn msync(
+        addr: *mut ::c_void,
+        len: ::size_t,
+        flags: ::c_int,
+    ) -> ::c_int;
+    pub fn mprotect(
+        addr: *mut ::c_void,
+        len: ::size_t,
+        prot: ::c_int,
+    ) -> ::c_int;
+    pub fn shm_open(
+        name: *const c_char,
+        oflag: ::c_int,
+        mode: mode_t,
+    ) -> ::c_int;
+    pub fn shm_unlink(name: *const ::c_char) -> ::c_int;
 
     // sys/resource.h
     pub fn getrlimit(resource: ::c_int, rlim: *mut ::rlimit) -> ::c_int;

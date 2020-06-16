@@ -7,7 +7,8 @@ macro_rules! expand_align {
                            target_arch = "mips64",
                            target_arch = "s390x",
                            target_arch = "sparc64",
-                           target_arch = "aarch64"),
+                           target_arch = "aarch64",
+                           target_arch = "riscv64"),
                        repr(align(4)))]
             #[cfg_attr(not(any(target_pointer_width = "32",
                                target_arch = "x86_64",
@@ -15,7 +16,8 @@ macro_rules! expand_align {
                                target_arch = "mips64",
                                target_arch = "s390x",
                                target_arch = "sparc64",
-                               target_arch = "aarch64")),
+                               target_arch = "aarch64",
+                               target_arch = "riscv64")),
                        repr(align(8)))]
             pub struct pthread_mutexattr_t {
                 #[doc(hidden)]
@@ -36,6 +38,17 @@ macro_rules! expand_align {
             pub struct pthread_condattr_t {
                 #[doc(hidden)]
                 size: [u8; ::__SIZEOF_PTHREAD_CONDATTR_T],
+            }
+
+            #[repr(align(8))]
+            pub struct fanotify_event_metadata {
+                pub event_len: __u32,
+                pub vers: __u8,
+                pub reserved: __u8,
+                pub metadata_len: __u16,
+                pub mask: __u64,
+                pub fd: ::c_int,
+                pub pid: ::c_int,
             }
         }
 

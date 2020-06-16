@@ -7,6 +7,7 @@ macro_rules! expand_align {
                           target_arch = "mips64",
                           target_arch = "s390x",
                           target_arch = "sparc64",
+                          target_arch = "riscv64",
                           all(target_arch = "aarch64",
                               target_env = "musl")))]
                 __align: [::c_int; 0],
@@ -15,6 +16,7 @@ macro_rules! expand_align {
                               target_arch = "mips64",
                               target_arch = "s390x",
                               target_arch = "sparc64",
+                              target_arch = "riscv64",
                               all(target_arch = "aarch64",
                                   target_env = "musl"))))]
                 __align: [::c_long; 0],
@@ -32,6 +34,17 @@ macro_rules! expand_align {
             pub struct pthread_condattr_t {
                 __align: [::c_int; 0],
                 size: [u8; ::__SIZEOF_PTHREAD_CONDATTR_T],
+            }
+
+            pub struct fanotify_event_metadata {
+                __align: [::c_long; 0],
+                pub event_len: __u32,
+                pub vers: __u8,
+                pub reserved: __u8,
+                pub metadata_len: __u16,
+                pub mask: __u64,
+                pub fd: ::c_int,
+                pub pid: ::c_int,
             }
         }
 

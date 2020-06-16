@@ -208,6 +208,16 @@ s! {
         pub cookie: u32,
         pub len: u32
     }
+
+    pub struct sock_extended_err {
+        pub ee_errno: u32,
+        pub ee_origin: u8,
+        pub ee_type: u8,
+        pub ee_code: u8,
+        pub ee_pad: u8,
+        pub ee_info: u32,
+        pub ee_data: u32,
+    }
 }
 
 s_no_extra_traits! {
@@ -831,12 +841,12 @@ pub const LC_ADDRESS: ::c_int = 9;
 pub const LC_TELEPHONE: ::c_int = 10;
 pub const LC_MEASUREMENT: ::c_int = 11;
 pub const LC_IDENTIFICATION: ::c_int = 12;
-pub const LC_PAPER_MASK: ::c_int = (1 << LC_PAPER);
-pub const LC_NAME_MASK: ::c_int = (1 << LC_NAME);
-pub const LC_ADDRESS_MASK: ::c_int = (1 << LC_ADDRESS);
-pub const LC_TELEPHONE_MASK: ::c_int = (1 << LC_TELEPHONE);
-pub const LC_MEASUREMENT_MASK: ::c_int = (1 << LC_MEASUREMENT);
-pub const LC_IDENTIFICATION_MASK: ::c_int = (1 << LC_IDENTIFICATION);
+pub const LC_PAPER_MASK: ::c_int = 1 << LC_PAPER;
+pub const LC_NAME_MASK: ::c_int = 1 << LC_NAME;
+pub const LC_ADDRESS_MASK: ::c_int = 1 << LC_ADDRESS;
+pub const LC_TELEPHONE_MASK: ::c_int = 1 << LC_TELEPHONE;
+pub const LC_MEASUREMENT_MASK: ::c_int = 1 << LC_MEASUREMENT;
+pub const LC_IDENTIFICATION_MASK: ::c_int = 1 << LC_IDENTIFICATION;
 pub const LC_ALL_MASK: ::c_int = ::LC_CTYPE_MASK
     | ::LC_NUMERIC_MASK
     | ::LC_TIME_MASK
@@ -1097,12 +1107,20 @@ pub const F_SETLKW: ::c_int = 7;
 pub const F_RDLCK: ::c_int = 0;
 pub const F_WRLCK: ::c_int = 1;
 pub const F_UNLCK: ::c_int = 2;
+pub const F_OFD_GETLK: ::c_int = 36;
+pub const F_OFD_SETLK: ::c_int = 37;
+pub const F_OFD_SETLKW: ::c_int = 38;
 
 pub const RLIMIT_CPU: ::c_int = 0;
 pub const RLIMIT_FSIZE: ::c_int = 1;
 pub const RLIMIT_DATA: ::c_int = 2;
 pub const RLIMIT_STACK: ::c_int = 3;
 pub const RLIMIT_CORE: ::c_int = 4;
+pub const RLIMIT_RSS: ::c_int = 5;
+pub const RLIMIT_NPROC: ::c_int = 6;
+pub const RLIMIT_NOFILE: ::c_int = 7;
+pub const RLIMIT_MEMLOCK: ::c_int = 8;
+pub const RLIMIT_AS: ::c_int = 9;
 pub const RLIMIT_LOCKS: ::c_int = 10;
 pub const RLIMIT_SIGPENDING: ::c_int = 11;
 pub const RLIMIT_MSGQUEUE: ::c_int = 12;
@@ -1142,6 +1160,8 @@ pub const TIOCMBIC: ::c_int = 0x5417;
 pub const TIOCMSET: ::c_int = 0x5418;
 pub const FIONREAD: ::c_int = 0x541B;
 pub const TIOCCONS: ::c_int = 0x541D;
+pub const TIOCSBRK: ::c_int = 0x5427;
+pub const TIOCCBRK: ::c_int = 0x5428;
 
 pub const ST_RDONLY: ::c_ulong = 1;
 pub const ST_NOSUID: ::c_ulong = 2;
@@ -1156,6 +1176,21 @@ pub const ST_RELATIME: ::c_ulong = 4096;
 pub const RTLD_NOLOAD: ::c_int = 0x4;
 
 pub const SEM_FAILED: *mut sem_t = 0 as *mut sem_t;
+
+pub const AI_PASSIVE: ::c_int = 0x00000001;
+pub const AI_CANONNAME: ::c_int = 0x00000002;
+pub const AI_NUMERICHOST: ::c_int = 0x00000004;
+pub const AI_NUMERICSERV: ::c_int = 0x00000008;
+pub const AI_MASK: ::c_int = AI_PASSIVE
+    | AI_CANONNAME
+    | AI_NUMERICHOST
+    | AI_NUMERICSERV
+    | AI_ADDRCONFIG;
+pub const AI_ALL: ::c_int = 0x00000100;
+pub const AI_V4MAPPED_CFG: ::c_int = 0x00000200;
+pub const AI_ADDRCONFIG: ::c_int = 0x00000400;
+pub const AI_V4MAPPED: ::c_int = 0x00000800;
+pub const AI_DEFAULT: ::c_int = AI_V4MAPPED_CFG | AI_ADDRCONFIG;
 
 pub const LINUX_REBOOT_MAGIC1: ::c_int = 0xfee1dead;
 pub const LINUX_REBOOT_MAGIC2: ::c_int = 672274793;
@@ -1396,6 +1431,72 @@ pub const NFULNL_CFG_F_SEQ: ::c_int = 0x0001;
 pub const NFULNL_CFG_F_SEQ_GLOBAL: ::c_int = 0x0002;
 pub const NFULNL_CFG_F_CONNTRACK: ::c_int = 0x0004;
 
+// linux/netfilter/nfnetlink_log.h
+pub const NFQNL_MSG_PACKET: ::c_int = 0;
+pub const NFQNL_MSG_VERDICT: ::c_int = 1;
+pub const NFQNL_MSG_CONFIG: ::c_int = 2;
+pub const NFQNL_MSG_VERDICT_BATCH: ::c_int = 3;
+
+pub const NFQA_UNSPEC: ::c_int = 0;
+pub const NFQA_PACKET_HDR: ::c_int = 1;
+pub const NFQA_VERDICT_HDR: ::c_int = 2;
+pub const NFQA_MARK: ::c_int = 3;
+pub const NFQA_TIMESTAMP: ::c_int = 4;
+pub const NFQA_IFINDEX_INDEV: ::c_int = 5;
+pub const NFQA_IFINDEX_OUTDEV: ::c_int = 6;
+pub const NFQA_IFINDEX_PHYSINDEV: ::c_int = 7;
+pub const NFQA_IFINDEX_PHYSOUTDEV: ::c_int = 8;
+pub const NFQA_HWADDR: ::c_int = 9;
+pub const NFQA_PAYLOAD: ::c_int = 10;
+pub const NFQA_CT: ::c_int = 11;
+pub const NFQA_CT_INFO: ::c_int = 12;
+pub const NFQA_CAP_LEN: ::c_int = 13;
+pub const NFQA_SKB_INFO: ::c_int = 14;
+pub const NFQA_EXP: ::c_int = 15;
+pub const NFQA_UID: ::c_int = 16;
+pub const NFQA_GID: ::c_int = 17;
+pub const NFQA_SECCTX: ::c_int = 18;
+/*
+ FIXME: These are not yet available in musl sanitized kernel headers and
+ make the tests fail. Enable them once musl has them.
+
+ See https://github.com/rust-lang/libc/pull/1628 for more details.
+pub const NFQA_VLAN: ::c_int = 19;
+pub const NFQA_L2HDR: ::c_int = 20;
+
+pub const NFQA_VLAN_UNSPEC: ::c_int = 0;
+pub const NFQA_VLAN_PROTO: ::c_int = 1;
+pub const NFQA_VLAN_TCI: ::c_int = 2;
+*/
+
+pub const NFQNL_CFG_CMD_NONE: ::c_int = 0;
+pub const NFQNL_CFG_CMD_BIND: ::c_int = 1;
+pub const NFQNL_CFG_CMD_UNBIND: ::c_int = 2;
+pub const NFQNL_CFG_CMD_PF_BIND: ::c_int = 3;
+pub const NFQNL_CFG_CMD_PF_UNBIND: ::c_int = 4;
+
+pub const NFQNL_COPY_NONE: ::c_int = 0;
+pub const NFQNL_COPY_META: ::c_int = 1;
+pub const NFQNL_COPY_PACKET: ::c_int = 2;
+
+pub const NFQA_CFG_UNSPEC: ::c_int = 0;
+pub const NFQA_CFG_CMD: ::c_int = 1;
+pub const NFQA_CFG_PARAMS: ::c_int = 2;
+pub const NFQA_CFG_QUEUE_MAXLEN: ::c_int = 3;
+pub const NFQA_CFG_MASK: ::c_int = 4;
+pub const NFQA_CFG_FLAGS: ::c_int = 5;
+
+pub const NFQA_CFG_F_FAIL_OPEN: ::c_int = 0x0001;
+pub const NFQA_CFG_F_CONNTRACK: ::c_int = 0x0002;
+pub const NFQA_CFG_F_GSO: ::c_int = 0x0004;
+pub const NFQA_CFG_F_UID_GID: ::c_int = 0x0008;
+pub const NFQA_CFG_F_SECCTX: ::c_int = 0x0010;
+pub const NFQA_CFG_F_MAX: ::c_int = 0x0020;
+
+pub const NFQA_SKB_CSUMNOTREADY: ::c_int = 0x0001;
+pub const NFQA_SKB_GSO: ::c_int = 0x0002;
+pub const NFQA_SKB_CSUM_NOTVERIFIED: ::c_int = 0x0004;
+
 pub const GENL_NAMSIZ: ::c_int = 16;
 
 pub const GENL_MIN_ID: ::c_int = NLMSG_MIN_TYPE;
@@ -1488,6 +1589,7 @@ pub const SOCK_NONBLOCK: ::c_int = O_NONBLOCK;
 pub const SO_ORIGINAL_DST: ::c_int = 80;
 pub const IP_ORIGDSTADDR: ::c_int = 20;
 pub const IP_RECVORIGDSTADDR: ::c_int = IP_ORIGDSTADDR;
+pub const IPV6_FLOWINFO: ::c_int = 11;
 pub const IPV6_ORIGDSTADDR: ::c_int = 74;
 pub const IPV6_RECVORIGDSTADDR: ::c_int = IPV6_ORIGDSTADDR;
 pub const IPV6_FLOWLABEL_MGR: ::c_int = 32;
@@ -1585,6 +1687,9 @@ pub const NF_IP6_PRI_SELINUX_LAST: ::c_int = 225;
 pub const NF_IP6_PRI_CONNTRACK_HELPER: ::c_int = 300;
 pub const NF_IP6_PRI_LAST: ::c_int = ::INT_MAX;
 
+// linux/netfilter_ipv6/ip6_tables.h
+pub const IP6T_SO_ORIGINAL_DST: ::c_int = 80;
+
 // linux/netfilter/nf_tables.h
 pub const NFT_TABLE_MAXNAMELEN: ::c_int = 256;
 pub const NFT_CHAIN_MAXNAMELEN: ::c_int = 256;
@@ -1680,12 +1785,12 @@ pub const NFT_CMP_GTE: ::c_int = 5;
 pub const NFT_RANGE_EQ: ::c_int = 0;
 pub const NFT_RANGE_NEQ: ::c_int = 1;
 
-pub const NFT_LOOKUP_F_INV: ::c_int = (1 << 0);
+pub const NFT_LOOKUP_F_INV: ::c_int = 1 << 0;
 
 pub const NFT_DYNSET_OP_ADD: ::c_int = 0;
 pub const NFT_DYNSET_OP_UPDATE: ::c_int = 1;
 
-pub const NFT_DYNSET_F_INV: ::c_int = (1 << 0);
+pub const NFT_DYNSET_F_INV: ::c_int = 1 << 0;
 
 pub const NFT_PAYLOAD_LL_HEADER: ::c_int = 0;
 pub const NFT_PAYLOAD_NETWORK_HEADER: ::c_int = 1;
@@ -1740,13 +1845,13 @@ pub const NFT_CT_BYTES: ::c_int = 15;
 pub const NFT_LIMIT_PKTS: ::c_int = 0;
 pub const NFT_LIMIT_PKT_BYTES: ::c_int = 1;
 
-pub const NFT_LIMIT_F_INV: ::c_int = (1 << 0);
+pub const NFT_LIMIT_F_INV: ::c_int = 1 << 0;
 
 pub const NFT_QUEUE_FLAG_BYPASS: ::c_int = 0x01;
 pub const NFT_QUEUE_FLAG_CPU_FANOUT: ::c_int = 0x02;
 pub const NFT_QUEUE_FLAG_MASK: ::c_int = 0x03;
 
-pub const NFT_QUOTA_F_INV: ::c_int = (1 << 0);
+pub const NFT_QUOTA_F_INV: ::c_int = 1 << 0;
 
 pub const NFT_REJECT_ICMP_UNREACH: ::c_int = 0;
 pub const NFT_REJECT_TCP_RST: ::c_int = 1;
@@ -1938,11 +2043,11 @@ pub const IN_MODIFY: u32 = 0x0000_0002;
 pub const IN_ATTRIB: u32 = 0x0000_0004;
 pub const IN_CLOSE_WRITE: u32 = 0x0000_0008;
 pub const IN_CLOSE_NOWRITE: u32 = 0x0000_0010;
-pub const IN_CLOSE: u32 = (IN_CLOSE_WRITE | IN_CLOSE_NOWRITE);
+pub const IN_CLOSE: u32 = IN_CLOSE_WRITE | IN_CLOSE_NOWRITE;
 pub const IN_OPEN: u32 = 0x0000_0020;
 pub const IN_MOVED_FROM: u32 = 0x0000_0040;
 pub const IN_MOVED_TO: u32 = 0x0000_0080;
-pub const IN_MOVE: u32 = (IN_MOVED_FROM | IN_MOVED_TO);
+pub const IN_MOVE: u32 = IN_MOVED_FROM | IN_MOVED_TO;
 pub const IN_CREATE: u32 = 0x0000_0100;
 pub const IN_DELETE: u32 = 0x0000_0200;
 pub const IN_DELETE_SELF: u32 = 0x0000_0400;
@@ -1959,7 +2064,7 @@ pub const IN_DONT_FOLLOW: u32 = 0x0200_0000;
 pub const IN_ISDIR: u32 = 0x4000_0000;
 pub const IN_ONESHOT: u32 = 0x8000_0000;
 
-pub const IN_ALL_EVENTS: u32 = (IN_ACCESS
+pub const IN_ALL_EVENTS: u32 = IN_ACCESS
     | IN_MODIFY
     | IN_ATTRIB
     | IN_CLOSE_WRITE
@@ -1970,7 +2075,7 @@ pub const IN_ALL_EVENTS: u32 = (IN_ACCESS
     | IN_DELETE
     | IN_CREATE
     | IN_DELETE_SELF
-    | IN_MOVE_SELF);
+    | IN_MOVE_SELF;
 
 pub const IN_CLOEXEC: ::c_int = O_CLOEXEC;
 pub const IN_NONBLOCK: ::c_int = O_NONBLOCK;
@@ -1993,6 +2098,55 @@ pub const FUTEX_PRIVATE_FLAG: ::c_int = 128;
 pub const FUTEX_CLOCK_REALTIME: ::c_int = 256;
 pub const FUTEX_CMD_MASK: ::c_int =
     !(FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME);
+
+// linux/errqueue.h
+pub const SO_EE_ORIGIN_NONE: u8 = 0;
+pub const SO_EE_ORIGIN_LOCAL: u8 = 1;
+pub const SO_EE_ORIGIN_ICMP: u8 = 2;
+pub const SO_EE_ORIGIN_ICMP6: u8 = 3;
+pub const SO_EE_ORIGIN_TXSTATUS: u8 = 4;
+pub const SO_EE_ORIGIN_TIMESTAMPING: u8 = SO_EE_ORIGIN_TXSTATUS;
+
+// errno.h
+pub const EPERM: ::c_int = 1;
+pub const ENOENT: ::c_int = 2;
+pub const ESRCH: ::c_int = 3;
+pub const EINTR: ::c_int = 4;
+pub const EIO: ::c_int = 5;
+pub const ENXIO: ::c_int = 6;
+pub const E2BIG: ::c_int = 7;
+pub const ENOEXEC: ::c_int = 8;
+pub const EBADF: ::c_int = 9;
+pub const ECHILD: ::c_int = 10;
+pub const EAGAIN: ::c_int = 11;
+pub const ENOMEM: ::c_int = 12;
+pub const EACCES: ::c_int = 13;
+pub const EFAULT: ::c_int = 14;
+pub const ENOTBLK: ::c_int = 15;
+pub const EBUSY: ::c_int = 16;
+pub const EEXIST: ::c_int = 17;
+pub const EXDEV: ::c_int = 18;
+pub const ENODEV: ::c_int = 19;
+pub const ENOTDIR: ::c_int = 20;
+pub const EISDIR: ::c_int = 21;
+pub const EINVAL: ::c_int = 22;
+pub const ENFILE: ::c_int = 23;
+pub const EMFILE: ::c_int = 24;
+pub const ENOTTY: ::c_int = 25;
+pub const ETXTBSY: ::c_int = 26;
+pub const EFBIG: ::c_int = 27;
+pub const ENOSPC: ::c_int = 28;
+pub const ESPIPE: ::c_int = 29;
+pub const EROFS: ::c_int = 30;
+pub const EMLINK: ::c_int = 31;
+pub const EPIPE: ::c_int = 32;
+pub const EDOM: ::c_int = 33;
+pub const ERANGE: ::c_int = 34;
+pub const EWOULDBLOCK: ::c_int = EAGAIN;
+
+pub const PRIO_PROCESS: ::c_int = 0;
+pub const PRIO_PGRP: ::c_int = 1;
+pub const PRIO_USER: ::c_int = 2;
 
 f! {
     pub fn CMSG_NXTHDR(mhdr: *const msghdr,
@@ -2052,6 +2206,10 @@ f! {
 
     pub fn NLA_ALIGN(len: ::c_int) -> ::c_int {
         return ((len) + NLA_ALIGNTO - 1) & !(NLA_ALIGNTO - 1)
+    }
+
+    pub fn SO_EE_OFFENDER(ee: *const ::sock_extended_err) -> *mut ::sockaddr {
+        ee.offset(1) as *mut ::sockaddr
     }
 }
 
@@ -2262,7 +2420,6 @@ extern "C" {
     pub fn setfsgid(gid: ::gid_t) -> ::c_int;
     pub fn setfsuid(uid: ::uid_t) -> ::c_int;
     pub fn sigsuspend(mask: *const ::sigset_t) -> ::c_int;
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrgid_r")]
     pub fn getgrgid_r(
         gid: ::gid_t,
         grp: *mut ::group,
@@ -2270,14 +2427,8 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut ::group,
     ) -> ::c_int;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "sigaltstack$UNIX2003"
-    )]
-    #[cfg_attr(target_os = "netbsd", link_name = "__sigaltstack14")]
     pub fn sigaltstack(ss: *const stack_t, oss: *mut stack_t) -> ::c_int;
     pub fn sem_close(sem: *mut sem_t) -> ::c_int;
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrnam_r")]
     pub fn getgrnam_r(
         name: *const ::c_char,
         grp: *mut ::group,
@@ -2285,10 +2436,6 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut ::group,
     ) -> ::c_int;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "pthread_sigmask$UNIX2003"
-    )]
     pub fn pthread_sigmask(
         how: ::c_int,
         set: *const sigset_t,
@@ -2299,8 +2446,6 @@ extern "C" {
     pub fn pthread_kill(thread: ::pthread_t, sig: ::c_int) -> ::c_int;
     pub fn sem_unlink(name: *const ::c_char) -> ::c_int;
     pub fn daemon(nochdir: ::c_int, noclose: ::c_int) -> ::c_int;
-    #[cfg_attr(target_os = "netbsd", link_name = "__getpwnam_r50")]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getpwnam_r")]
     pub fn getpwnam_r(
         name: *const ::c_char,
         pwd: *mut passwd,
@@ -2308,8 +2453,6 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut passwd,
     ) -> ::c_int;
-    #[cfg_attr(target_os = "netbsd", link_name = "__getpwuid_r50")]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getpwuid_r")]
     pub fn getpwuid_r(
         uid: ::uid_t,
         pwd: *mut passwd,
@@ -2317,11 +2460,6 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut passwd,
     ) -> ::c_int;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "sigwait$UNIX2003"
-    )]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_sigwait")]
     pub fn sigwait(set: *const sigset_t, sig: *mut ::c_int) -> ::c_int;
     pub fn pthread_atfork(
         prepare: ::Option<unsafe extern "C" fn()>,
@@ -2340,10 +2478,6 @@ extern "C" {
         attr: *const pthread_mutexattr_t,
         pshared: *mut ::c_int,
     ) -> ::c_int;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "popen$UNIX2003"
-    )]
     pub fn popen(command: *const c_char, mode: *const c_char) -> *mut ::FILE;
     pub fn faccessat(
         dirfd: ::c_int,

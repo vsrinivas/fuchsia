@@ -191,7 +191,7 @@ quote = "1.0.2"
 nix = "0.17.0"
 simplelog = "0.7.5"
 signal-hook = "0.1.13"
-smol = "0.1.10"
+smol = "0.1.11"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"
@@ -278,7 +278,7 @@ rustflags = ["--cfg=httparse_simd"]
 [[gn.crate.hyper."0.12.35"]]
 rustflags = ["--cfg=error_source", "--cfg=try_from"]
 
-[[gn.crate.libc."0.2.66"]]
+[[gn.crate.libc."0.2.71"]]
 rustflags = ["--cfg=freebsd11", "--cfg=libc_priv_mod_use", "--cfg=libc_union", "--cfg=libc_const_size_of", "--cfg=libc_align", "--cfg=libc_core_cvoid", "--cfg=libc_packedN"]
 
 [[gn.crate.log."0.4.8"]]
@@ -289,9 +289,6 @@ rustflags = ["--cfg=memchr_runtime_simd", "--cfg=memchr_runtime_sse2", "--cfg=me
 
 [[gn.crate.mime_guess."1.8.6"]]
 env_vars = ["OUT_DIR=../../../compat/mime_guess"]
-
-[[gn.crate.nix."0.17.0"]] 
-rustflags = []
 
 [[gn.crate.num-bigint."0.2.2"]]
 rustflags = ["--cfg=has_i128"]

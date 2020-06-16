@@ -1,7 +1,4 @@
-// libc port for HermitCore (https://hermitcore.org)
-//
-// Ported by Colin Fink <colin.finck@rwth-aachen.de>
-//       and Stefan Lankes <slankes@eonerc.rwth-aachen.de>
+//! PSP C type definitions
 
 pub type c_schar = i8;
 pub type c_uchar = u8;
@@ -22,26 +19,12 @@ pub type intptr_t = isize;
 pub type uintptr_t = usize;
 pub type ssize_t = isize;
 
+pub type c_char = u8;
 pub type c_long = i64;
 pub type c_ulong = u64;
 
-pub type wint_t = u32;
-pub type wctype_t = i64;
-
-pub type regoff_t = size_t;
-pub type off_t = c_long;
-
-cfg_if! {
-    if #[cfg(target_arch = "aarch64")] {
-        mod aarch64;
-        pub use self::aarch64::*;
-    } else if #[cfg(target_arch = "x86_64")] {
-        mod x86_64;
-        pub use self::x86_64::*;
-    } else {
-        // Unknown target_arch
-    }
-}
+pub const INT_MIN: c_int = -2147483648;
+pub const INT_MAX: c_int = 2147483647;
 
 cfg_if! {
     if #[cfg(libc_core_cvoid)] {

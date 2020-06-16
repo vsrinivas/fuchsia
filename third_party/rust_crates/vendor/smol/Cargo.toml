@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "smol"
-version = "0.1.10"
+version = "0.1.11"
 authors = ["Stjepan Glavina <stjepang@gmail.com>"]
 autoexamples = false
 description = "A small and fast async runtime"
@@ -31,8 +31,14 @@ harness = false
 [dependencies.async-task]
 version = "3.0.0"
 
-[dependencies.crossbeam]
+[dependencies.crossbeam-deque]
 version = "0.7.3"
+
+[dependencies.crossbeam-queue]
+version = "0.2.1"
+
+[dependencies.crossbeam-utils]
+version = "0.7.2"
 
 [dependencies.futures-io]
 version = "0.3.5"
@@ -61,7 +67,7 @@ version = "0.3.12"
 features = ["pair", "unix"]
 
 [dependencies.tokio]
-version = "0.2.19"
+version = "0.2"
 features = ["rt-threaded"]
 optional = true
 default-features = false
@@ -81,7 +87,7 @@ version = "3.1.0"
 
 [features]
 tokio02 = ["tokio"]
-[target."cfg(unix)".dependencies.nix]
-version = "0.17.0"
+[target."cfg(unix)".dependencies.libc]
+version = "0.2.70"
 [target."cfg(windows)".dependencies.wepoll-binding]
-version = "2.0.0"
+version = "2.0.2"

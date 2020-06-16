@@ -6,6 +6,7 @@ pub type socklen_t = u32;
 pub type sa_family_t = u8;
 pub type pthread_t = ::uintptr_t;
 pub type nfds_t = ::c_uint;
+pub type regoff_t = off_t;
 
 s! {
     pub struct sockaddr {
@@ -100,6 +101,18 @@ s! {
     pub struct if_nameindex {
         pub if_index: ::c_uint,
         pub if_name: *mut ::c_char,
+    }
+
+    pub struct regex_t {
+        __re_magic: ::c_int,
+        __re_nsub: ::size_t,
+        __re_endp: *const ::c_char,
+        __re_g: *mut ::c_void,
+    }
+
+    pub struct regmatch_t {
+        pub rm_so: regoff_t,
+        pub rm_eo: regoff_t,
     }
 }
 
@@ -450,6 +463,48 @@ pub const BIOCGHDRCMPLT: ::c_ulong = 0x40044274;
 pub const BIOCSHDRCMPLT: ::c_ulong = 0x80044275;
 pub const SIOCGIFADDR: ::c_ulong = 0xc0206921;
 
+pub const REG_BASIC: ::c_int = 0o0000;
+pub const REG_EXTENDED: ::c_int = 0o0001;
+pub const REG_ICASE: ::c_int = 0o0002;
+pub const REG_NOSUB: ::c_int = 0o0004;
+pub const REG_NEWLINE: ::c_int = 0o0010;
+pub const REG_NOSPEC: ::c_int = 0o0020;
+pub const REG_PEND: ::c_int = 0o0040;
+pub const REG_DUMP: ::c_int = 0o0200;
+
+pub const REG_NOMATCH: ::c_int = 1;
+pub const REG_BADPAT: ::c_int = 2;
+pub const REG_ECOLLATE: ::c_int = 3;
+pub const REG_ECTYPE: ::c_int = 4;
+pub const REG_EESCAPE: ::c_int = 5;
+pub const REG_ESUBREG: ::c_int = 6;
+pub const REG_EBRACK: ::c_int = 7;
+pub const REG_EPAREN: ::c_int = 8;
+pub const REG_EBRACE: ::c_int = 9;
+pub const REG_BADBR: ::c_int = 10;
+pub const REG_ERANGE: ::c_int = 11;
+pub const REG_ESPACE: ::c_int = 12;
+pub const REG_BADRPT: ::c_int = 13;
+pub const REG_EMPTY: ::c_int = 14;
+pub const REG_ASSERT: ::c_int = 15;
+pub const REG_INVARG: ::c_int = 16;
+pub const REG_ATOI: ::c_int = 255;
+pub const REG_ITOA: ::c_int = 0o0400;
+
+pub const REG_NOTBOL: ::c_int = 0o00001;
+pub const REG_NOTEOL: ::c_int = 0o00002;
+pub const REG_STARTEND: ::c_int = 0o00004;
+pub const REG_TRACE: ::c_int = 0o00400;
+pub const REG_LARGE: ::c_int = 0o01000;
+pub const REG_BACKR: ::c_int = 0o02000;
+
+pub const TIOCCBRK: ::c_uint = 0x2000747a;
+pub const TIOCSBRK: ::c_uint = 0x2000747b;
+
+pub const PRIO_PROCESS: ::c_int = 0;
+pub const PRIO_PGRP: ::c_int = 1;
+pub const PRIO_USER: ::c_int = 2;
+
 f! {
     pub fn CMSG_FIRSTHDR(mhdr: *const ::msghdr) -> *mut ::cmsghdr {
         if (*mhdr).msg_controllen as usize >= ::mem::size_of::<::cmsghdr>() {
@@ -686,7 +741,6 @@ extern "C" {
     ) -> ::ssize_t;
 
     pub fn sync();
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrgid_r")]
     pub fn getgrgid_r(
         gid: ::gid_t,
         grp: *mut ::group,
@@ -702,7 +756,6 @@ extern "C" {
     pub fn sigaltstack(ss: *const stack_t, oss: *mut stack_t) -> ::c_int;
     pub fn sem_close(sem: *mut sem_t) -> ::c_int;
     pub fn getdtablesize() -> ::c_int;
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrnam_r")]
     pub fn getgrnam_r(
         name: *const ::c_char,
         grp: *mut ::group,
@@ -729,7 +782,6 @@ extern "C" {
     pub fn pthread_kill(thread: ::pthread_t, sig: ::c_int) -> ::c_int;
     pub fn sem_unlink(name: *const ::c_char) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__getpwnam_r50")]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getpwnam_r")]
     pub fn getpwnam_r(
         name: *const ::c_char,
         pwd: *mut passwd,
@@ -738,7 +790,6 @@ extern "C" {
         result: *mut *mut passwd,
     ) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__getpwuid_r50")]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getpwuid_r")]
     pub fn getpwuid_r(
         uid: ::uid_t,
         pwd: *mut passwd,
@@ -750,7 +801,6 @@ extern "C" {
         all(target_os = "macos", target_arch = "x86"),
         link_name = "sigwait$UNIX2003"
     )]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_sigwait")]
     pub fn sigwait(set: *const sigset_t, sig: *mut ::c_int) -> ::c_int;
     pub fn pthread_atfork(
         prepare: ::Option<unsafe extern "C" fn()>,
@@ -776,6 +826,43 @@ extern "C" {
         value: *mut ::c_void,
     ) -> ::c_int;
     pub fn acct(filename: *const ::c_char) -> ::c_int;
+    #[cfg_attr(
+        all(target_os = "macos", target_arch = "x86"),
+        link_name = "wait4$UNIX2003"
+    )]
+    #[cfg_attr(
+        all(target_os = "freebsd", any(freebsd12, freebsd11, freebsd10)),
+        link_name = "wait4@FBSD_1.0"
+    )]
+    pub fn wait4(
+        pid: ::pid_t,
+        status: *mut ::c_int,
+        options: ::c_int,
+        rusage: *mut ::rusage,
+    ) -> ::pid_t;
+
+    pub fn regcomp(
+        preg: *mut regex_t,
+        pattern: *const ::c_char,
+        cflags: ::c_int,
+    ) -> ::c_int;
+
+    pub fn regexec(
+        preg: *const regex_t,
+        input: *const ::c_char,
+        nmatch: ::size_t,
+        pmatch: *mut regmatch_t,
+        eflags: ::c_int,
+    ) -> ::c_int;
+
+    pub fn regerror(
+        errcode: ::c_int,
+        preg: *const regex_t,
+        errbuf: *mut ::c_char,
+        errbuf_size: ::size_t,
+    ) -> ::size_t;
+
+    pub fn regfree(preg: *mut regex_t);
 }
 
 cfg_if! {

@@ -12,7 +12,7 @@
 
 [package]
 name = "libc"
-version = "0.2.66"
+version = "0.2.71"
 authors = ["The Rust Project Developers"]
 build = "build.rs"
 exclude = ["/ci/*", "/azure-pipelines.yml"]
@@ -36,9 +36,10 @@ extra_traits = []
 rustc-dep-of-std = ["align", "rustc-std-workspace-core"]
 std = []
 use_std = ["std"]
-[badges.appveyor]
-project_name = "rust-lang-libs/libc"
-repository = "rust-lang/libc"
+[badges.azure-devops]
+pipeline = "rust-lang.libc%20(1)"
+project = "rust-lang2/libc"
 
-[badges.travis-ci]
+[badges.cirrus-ci]
+branch = "master"
 repository = "rust-lang/libc"

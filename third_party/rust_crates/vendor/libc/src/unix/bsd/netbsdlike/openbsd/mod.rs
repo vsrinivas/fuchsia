@@ -1150,12 +1150,14 @@ pub const KERN_NTHREADS: ::c_int = 26;
 pub const KERN_OSVERSION: ::c_int = 27;
 pub const KERN_SOMAXCONN: ::c_int = 28;
 pub const KERN_SOMINCONN: ::c_int = 29;
+#[deprecated(since = "0.2.71", note = "Removed in OpenBSD 6.0")]
 pub const KERN_USERMOUNT: ::c_int = 30;
 pub const KERN_NOSUIDCOREDUMP: ::c_int = 32;
 pub const KERN_FSYNC: ::c_int = 33;
 pub const KERN_SYSVMSG: ::c_int = 34;
 pub const KERN_SYSVSEM: ::c_int = 35;
 pub const KERN_SYSVSHM: ::c_int = 36;
+#[deprecated(since = "0.2.71", note = "Removed in OpenBSD 6.0")]
 pub const KERN_ARND: ::c_int = 37;
 pub const KERN_MSGBUFSIZE: ::c_int = 38;
 pub const KERN_MALLOCSTATS: ::c_int = 39;
@@ -1315,8 +1317,8 @@ pub const IFF_LINK1: ::c_int = 0x2000; // per link layer defined bit
 pub const IFF_LINK2: ::c_int = 0x4000; // per link layer defined bit
 pub const IFF_MULTICAST: ::c_int = 0x8000; // supports multicast
 
-pub const PTHREAD_STACK_MIN: ::size_t = (1_usize << _MAX_PAGE_SHIFT);
-pub const MINSIGSTKSZ: ::size_t = (3_usize << _MAX_PAGE_SHIFT);
+pub const PTHREAD_STACK_MIN: ::size_t = 1_usize << _MAX_PAGE_SHIFT;
+pub const MINSIGSTKSZ: ::size_t = 3_usize << _MAX_PAGE_SHIFT;
 pub const SIGSTKSZ: ::size_t = MINSIGSTKSZ + (1_usize << _MAX_PAGE_SHIFT) * 4;
 
 pub const PT_FIRSTMACH: ::c_int = 32;
@@ -1392,12 +1394,6 @@ extern "C" {
     pub fn settimeofday(
         tp: *const ::timeval,
         tz: *const ::timezone,
-    ) -> ::c_int;
-    pub fn accept4(
-        s: ::c_int,
-        addr: *mut ::sockaddr,
-        addrlen: *mut ::socklen_t,
-        flags: ::c_int,
     ) -> ::c_int;
     pub fn execvpe(
         file: *const ::c_char,
@@ -1478,6 +1474,12 @@ extern "C" {
         addr: caddr_t,
         data: ::c_int,
     ) -> ::c_int;
+    pub fn memmem(
+        haystack: *const ::c_void,
+        haystacklen: ::size_t,
+        needle: *const ::c_void,
+        needlelen: ::size_t,
+    ) -> *mut ::c_void;
 }
 
 cfg_if! {

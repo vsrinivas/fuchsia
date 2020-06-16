@@ -107,6 +107,15 @@ s! {
         pub msg_hdr: ::msghdr,
         pub msg_len: ::ssize_t,
     }
+
+    pub struct sockcred {
+        pub sc_uid: ::uid_t,
+        pub sc_euid: ::uid_t,
+        pub sc_gid: ::gid_t,
+        pub sc_egid: ::gid_t,
+        pub sc_ngroups: ::c_int,
+        pub sc_groups: [::gid_t; 1],
+    }
 }
 
 s_no_extra_traits! {
@@ -339,6 +348,13 @@ pub const RLIMIT_KQUEUES: ::c_int = 13;
 pub const RLIMIT_UMTXP: ::c_int = 14;
 #[deprecated(since = "0.2.64", note = "Not stable across OS versions")]
 pub const RLIM_NLIMITS: ::rlim_t = 15;
+
+pub const NI_NOFQDN: ::c_int = 0x00000001;
+pub const NI_NUMERICHOST: ::c_int = 0x00000002;
+pub const NI_NAMEREQD: ::c_int = 0x00000004;
+pub const NI_NUMERICSERV: ::c_int = 0x00000008;
+pub const NI_DGRAM: ::c_int = 0x00000010;
+pub const NI_NUMERICSCOPE: ::c_int = 0x00000020;
 
 pub const Q_GETQUOTA: ::c_int = 0x700;
 pub const Q_SETQUOTA: ::c_int = 0x800;
@@ -1024,12 +1040,12 @@ pub const UTXDB_ACTIVE: ::c_int = 0;
 pub const UTXDB_LASTLOGIN: ::c_int = 1;
 pub const UTXDB_LOG: ::c_int = 2;
 
-pub const LC_COLLATE_MASK: ::c_int = (1 << 0);
-pub const LC_CTYPE_MASK: ::c_int = (1 << 1);
-pub const LC_MONETARY_MASK: ::c_int = (1 << 2);
-pub const LC_NUMERIC_MASK: ::c_int = (1 << 3);
-pub const LC_TIME_MASK: ::c_int = (1 << 4);
-pub const LC_MESSAGES_MASK: ::c_int = (1 << 5);
+pub const LC_COLLATE_MASK: ::c_int = 1 << 0;
+pub const LC_CTYPE_MASK: ::c_int = 1 << 1;
+pub const LC_MONETARY_MASK: ::c_int = 1 << 2;
+pub const LC_NUMERIC_MASK: ::c_int = 1 << 3;
+pub const LC_TIME_MASK: ::c_int = 1 << 4;
+pub const LC_MESSAGES_MASK: ::c_int = 1 << 5;
 pub const LC_ALL_MASK: ::c_int = LC_COLLATE_MASK
     | LC_CTYPE_MASK
     | LC_MESSAGES_MASK
@@ -1134,6 +1150,15 @@ f! {
     pub fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
         (_ALIGN(::mem::size_of::<::cmsghdr>()) + _ALIGN(length as usize))
             as ::c_uint
+    }
+
+    pub fn SOCKCREDSIZE(ngrps: usize) -> usize {
+        let ngrps = if ngrps > 0 {
+            ngrps - 1
+        } else {
+            0
+        };
+        ::mem::size_of::<sockcred>() + ::mem::size_of::<::gid_t>() * ngrps
     }
 
     pub fn uname(buf: *mut ::utsname) -> ::c_int {
@@ -1435,6 +1460,12 @@ extern "C" {
         flags: ::c_int,
         timeout: *const ::timespec,
     ) -> ::ssize_t;
+    pub fn memmem(
+        haystack: *const ::c_void,
+        haystacklen: ::size_t,
+        needle: *const ::c_void,
+        needlelen: ::size_t,
+    ) -> *mut ::c_void;
 }
 
 #[link(name = "util")]

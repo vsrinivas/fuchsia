@@ -1,6 +1,5 @@
 pub type blkcnt_t = i32;
 pub type blksize_t = i32;
-pub type clock_t = i32;
 pub type clockid_t = ::c_ulong;
 pub type dev_t = u32;
 pub type fsblkcnt_t = u64;
@@ -25,14 +24,23 @@ pub type time_t = i32;
 pub type useconds_t = u32;
 
 s! {
+    // The order of the `ai_addr` field in this struct is crucial
+    // for converting between the Rust and C types.
     pub struct addrinfo {
         pub ai_flags: ::c_int,
         pub ai_family: ::c_int,
         pub ai_socktype: ::c_int,
         pub ai_protocol: ::c_int,
         pub ai_addrlen: socklen_t,
-        pub ai_canonname: *mut ::c_char,
+
+        #[cfg(target_arch = "xtensa")]
         pub ai_addr: *mut sockaddr,
+
+        pub ai_canonname: *mut ::c_char,
+
+        #[cfg(not(target_arch = "xtensa"))]
+        pub ai_addr: *mut sockaddr,
+
         pub ai_next: *mut addrinfo,
     }
 
@@ -364,11 +372,6 @@ pub const O_NONBLOCK: ::c_int = 16384;
 pub const O_ACCMODE: ::c_int = 3;
 pub const O_CLOEXEC: ::c_int = 0x80000;
 
-pub const POLLIN: ::c_short = 0x1;
-pub const POLLPRI: ::c_short = 0x2;
-pub const POLLERR: ::c_short = 0x8;
-pub const POLLNVAL: ::c_short = 0x20;
-
 pub const RTLD_LAZY: ::c_int = 0x1;
 
 pub const STDIN_FILENO: ::c_int = 0;
@@ -379,7 +382,6 @@ pub const SEEK_SET: ::c_int = 0;
 pub const SEEK_CUR: ::c_int = 1;
 pub const SEEK_END: ::c_int = 2;
 
-pub const FIONBIO: ::c_ulong = 1;
 pub const FIOCLEX: ::c_ulong = 0x20006601;
 pub const FIONCLEX: ::c_ulong = 0x20006602;
 
@@ -406,7 +408,6 @@ pub const S_IROTH: ::mode_t = 4;
 pub const S_IWOTH: ::mode_t = 2;
 pub const S_IXOTH: ::mode_t = 1;
 
-pub const SOL_SOCKET: ::c_int = 65535;
 pub const SOL_TCP: ::c_int = 6;
 
 pub const PF_UNSPEC: ::c_int = 0;
@@ -416,6 +417,10 @@ pub const PF_INET6: ::c_int = 23;
 pub const AF_UNSPEC: ::c_int = 0;
 pub const AF_INET: ::c_int = 2;
 pub const AF_INET6: ::c_int = 23;
+
+pub const CLOCK_REALTIME: ::clockid_t = 1;
+pub const CLOCK_MONOTONIC: ::clockid_t = 4;
+pub const CLOCK_BOOTTIME: ::clockid_t = 4;
 
 pub const SOCK_STREAM: ::c_int = 1;
 pub const SOCK_DGRAM: ::c_int = 2;
@@ -543,6 +548,13 @@ pub const EAI_MEMORY: ::c_int = -304;
 pub const EAI_NONAME: ::c_int = -305;
 pub const EAI_SOCKTYPE: ::c_int = -307;
 
+pub const EXIT_SUCCESS: ::c_int = 0;
+pub const EXIT_FAILURE: ::c_int = 1;
+
+pub const PRIO_PROCESS: ::c_int = 0;
+pub const PRIO_PGRP: ::c_int = 1;
+pub const PRIO_USER: ::c_int = 2;
+
 f! {
     pub fn FD_CLR(fd: ::c_int, set: *mut fd_set) -> () {
         let bits = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
@@ -597,6 +609,18 @@ extern "C" {
 
     pub fn bind(fd: ::c_int, addr: *const sockaddr, len: socklen_t)
         -> ::c_int;
+    pub fn clock_settime(
+        clock_id: ::clockid_t,
+        tp: *const ::timespec,
+    ) -> ::c_int;
+    pub fn clock_gettime(
+        clock_id: ::clockid_t,
+        tp: *mut ::timespec,
+    ) -> ::c_int;
+    pub fn clock_getres(
+        clock_id: ::clockid_t,
+        res: *mut ::timespec,
+    ) -> ::c_int;
     pub fn closesocket(sockfd: ::c_int) -> ::c_int;
     pub fn ioctl(fd: ::c_int, request: ::c_ulong, ...) -> ::c_int;
     pub fn recvfrom(
@@ -623,7 +647,6 @@ extern "C" {
         envp: *const *const ::c_char,
     ) -> ::c_int;
     pub fn gettimeofday(tp: *mut ::timeval, tz: *mut ::c_void) -> ::c_int;
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrgid_r")]
     pub fn getgrgid_r(
         gid: ::gid_t,
         grp: *mut ::group,
@@ -631,15 +654,9 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut ::group,
     ) -> ::c_int;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "sigaltstack$UNIX2003"
-    )]
-    #[cfg_attr(target_os = "netbsd", link_name = "__sigaltstack14")]
     pub fn sigaltstack(ss: *const stack_t, oss: *mut stack_t) -> ::c_int;
     pub fn sem_close(sem: *mut sem_t) -> ::c_int;
     pub fn getdtablesize() -> ::c_int;
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrnam_r")]
     pub fn getgrnam_r(
         name: *const ::c_char,
         grp: *mut ::group,
@@ -647,10 +664,6 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut ::group,
     ) -> ::c_int;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "pthread_sigmask$UNIX2003"
-    )]
     pub fn pthread_sigmask(
         how: ::c_int,
         set: *const sigset_t,
@@ -661,8 +674,6 @@ extern "C" {
     pub fn pthread_kill(thread: ::pthread_t, sig: ::c_int) -> ::c_int;
     pub fn sem_unlink(name: *const ::c_char) -> ::c_int;
     pub fn daemon(nochdir: ::c_int, noclose: ::c_int) -> ::c_int;
-    #[cfg_attr(target_os = "netbsd", link_name = "__getpwnam_r50")]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getpwnam_r")]
     pub fn getpwnam_r(
         name: *const ::c_char,
         pwd: *mut passwd,
@@ -670,8 +681,6 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut passwd,
     ) -> ::c_int;
-    #[cfg_attr(target_os = "netbsd", link_name = "__getpwuid_r50")]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_getpwuid_r")]
     pub fn getpwuid_r(
         uid: ::uid_t,
         pwd: *mut passwd,
@@ -679,11 +688,6 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut passwd,
     ) -> ::c_int;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "sigwait$UNIX2003"
-    )]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_sigwait")]
     pub fn sigwait(set: *const sigset_t, sig: *mut ::c_int) -> ::c_int;
     pub fn pthread_atfork(
         prepare: ::Option<unsafe extern "C" fn()>,
@@ -691,10 +695,6 @@ extern "C" {
         child: ::Option<unsafe extern "C" fn()>,
     ) -> ::c_int;
     pub fn getgrgid(gid: ::gid_t) -> *mut ::group;
-    #[cfg_attr(
-        all(target_os = "macos", target_arch = "x86"),
-        link_name = "popen$UNIX2003"
-    )]
     pub fn popen(command: *const c_char, mode: *const c_char) -> *mut ::FILE;
     pub fn uname(buf: *mut ::utsname) -> ::c_int;
 }
@@ -706,6 +706,9 @@ cfg_if! {
     } else if #[cfg(target_arch = "aarch64")] {
         mod aarch64;
         pub use self::aarch64::*;
+    } else if #[cfg(target_arch = "xtensa")] {
+        mod xtensa;
+        pub use self::xtensa::*;
     } else {
         // Only tested on ARM so far. Other platforms might have different
         // definitions for types and constants.

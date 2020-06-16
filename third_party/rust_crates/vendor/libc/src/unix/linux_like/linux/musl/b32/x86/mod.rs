@@ -154,6 +154,24 @@ s! {
         pub f_namemax: ::c_ulong,
         __f_spare: [::c_int; 6],
     }
+
+    pub struct nlmsghdr {
+        pub nlmsg_len: u32,
+        pub nlmsg_type: u16,
+        pub nlmsg_flags: u16,
+        pub nlmsg_seq: u32,
+        pub nlmsg_pid: u32,
+    }
+
+    pub struct nlmsgerr {
+        pub error: ::c_int,
+        pub msg: nlmsghdr,
+    }
+
+    pub struct nlattr {
+        pub nla_len: u16,
+        pub nla_type: u16,
+    }
 }
 
 s_no_extra_traits! {
@@ -322,6 +340,7 @@ pub const MAP_NORESERVE: ::c_int = 0x04000;
 pub const MAP_POPULATE: ::c_int = 0x08000;
 pub const MAP_NONBLOCK: ::c_int = 0x010000;
 pub const MAP_STACK: ::c_int = 0x020000;
+pub const MAP_SYNC : ::c_int = 0x080000;
 
 pub const SOCK_STREAM: ::c_int = 1;
 pub const SOCK_DGRAM: ::c_int = 2;
@@ -479,6 +498,9 @@ pub const F_GETOWN: ::c_int = 9;
 pub const F_SETLK: ::c_int = 13;
 pub const F_SETLKW: ::c_int = 14;
 pub const F_SETOWN: ::c_int = 8;
+pub const F_OFD_GETLK: ::c_int = 36;
+pub const F_OFD_SETLK: ::c_int = 37;
+pub const F_OFD_SETLKW: ::c_int = 38;
 
 pub const VEOF: usize = 4;
 pub const VEOL: usize = 11;

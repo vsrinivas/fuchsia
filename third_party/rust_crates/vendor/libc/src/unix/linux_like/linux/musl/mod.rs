@@ -109,6 +109,35 @@ s! {
         pub l_len: ::off_t,
         pub l_pid: ::pid_t,
     }
+
+    pub struct regex_t {
+        __re_nsub: ::size_t,
+        __opaque: *mut ::c_void,
+        __padding: [*mut ::c_void; 4usize],
+        __nsub2: ::size_t,
+        __padding2: ::c_char,
+    }
+
+    pub struct rtentry {
+        pub rt_pad1: ::c_ulong,
+        pub rt_dst: ::sockaddr,
+        pub rt_gateway: ::sockaddr,
+        pub rt_genmask: ::sockaddr,
+        pub rt_flags: ::c_ushort,
+        pub rt_pad2: ::c_short,
+        pub rt_pad3: ::c_ulong,
+        pub rt_tos: ::c_uchar,
+        pub rt_class: ::c_uchar,
+        #[cfg(target_pointer_width = "64")]
+        pub rt_pad4: [::c_short; 3usize],
+        #[cfg(not(target_pointer_width = "64"))]
+        pub rt_pad4: [::c_short; 1usize],
+        pub rt_metric: ::c_short,
+        pub rt_dev: *mut ::c_char,
+        pub rt_mtu: ::c_ulong,
+        pub rt_window: ::c_ulong,
+        pub rt_irtt: ::c_ushort,
+    }
 }
 
 s_no_extra_traits! {
@@ -199,6 +228,30 @@ cfg_if! {
     }
 }
 
+// include/sys/mman.h
+/*
+ * Huge page size encoding when MAP_HUGETLB is specified, and a huge page
+ * size other than the default is desired.  See hugetlb_encode.h.
+ * All known huge page size encodings are provided here.  It is the
+ * responsibility of the application to know which sizes are supported on
+ * the running system.  See mmap(2) man page for details.
+ */
+pub const MAP_HUGE_SHIFT: ::c_int = 26;
+pub const MAP_HUGE_MASK:  ::c_int = 0x3f;
+
+pub const MAP_HUGE_64KB:  ::c_int = 16 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_512KB: ::c_int = 19 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_1MB:   ::c_int = 20 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_2MB:   ::c_int = 21 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_8MB:   ::c_int = 23 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_16MB:  ::c_int = 24 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_32MB:  ::c_int = 25 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_256MB: ::c_int = 28 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_512MB: ::c_int = 29 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_1GB:   ::c_int = 30 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_2GB:   ::c_int = 31 << MAP_HUGE_SHIFT;
+pub const MAP_HUGE_16GB:  ::c_int = 34 << MAP_HUGE_SHIFT;
+
 pub const MS_RMT_MASK: ::c_ulong = 0x02800051;
 
 pub const SFD_CLOEXEC: ::c_int = 0x080000;
@@ -271,6 +324,7 @@ pub const TCP_QUEUE_SEQ: ::c_int = 21;
 pub const TCP_REPAIR_OPTIONS: ::c_int = 22;
 pub const TCP_FASTOPEN: ::c_int = 23;
 pub const TCP_TIMESTAMP: ::c_int = 24;
+pub const TCP_FASTOPEN_CONNECT: ::c_int = 30;
 
 #[deprecated(since = "0.2.55", note = "Use SIGSYS instead")]
 pub const SIGUNUSED: ::c_int = ::SIGSYS;
@@ -327,10 +381,7 @@ pub const TCSAFLUSH: ::c_int = 2;
 pub const RTLD_GLOBAL: ::c_int = 0x100;
 pub const RTLD_NOLOAD: ::c_int = 0x4;
 
-// TODO(#247) Temporarily musl-specific (available since musl 0.9.12 / Linux
-// kernel 3.10).  See also linux_like/mod.rs
 pub const CLOCK_SGI_CYCLE: ::clockid_t = 10;
-pub const CLOCK_TAI: ::clockid_t = 11;
 
 pub const B0: ::speed_t = 0o000000;
 pub const B50: ::speed_t = 0o000001;
@@ -368,6 +419,15 @@ pub const RLIMIT_SIGPENDING: ::c_int = 11;
 pub const RLIMIT_MSGQUEUE: ::c_int = 12;
 pub const RLIMIT_NICE: ::c_int = 13;
 pub const RLIMIT_RTPRIO: ::c_int = 14;
+
+pub const REG_OK: ::c_int = 0;
+
+pub const TIOCSBRK: ::c_int = 0x5427;
+pub const TIOCCBRK: ::c_int = 0x5428;
+
+pub const PRIO_PROCESS: ::c_int = 0;
+pub const PRIO_PGRP: ::c_int = 1;
+pub const PRIO_USER: ::c_int = 2;
 
 extern "C" {
     pub fn sendmmsg(
@@ -416,6 +476,22 @@ extern "C" {
         cpuset: *const ::cpu_set_t,
     ) -> ::c_int;
     pub fn sched_getcpu() -> ::c_int;
+    pub fn memmem(
+        haystack: *const ::c_void,
+        haystacklen: ::size_t,
+        needle: *const ::c_void,
+        needlelen: ::size_t,
+    ) -> *mut ::c_void;
+    // Musl targets need the `mask` argument of `fanotify_mark` be specified
+    // `::c_ulonglong` instead of `u64` or there will be a type mismatch between
+    // `long long unsigned int` and the expected `uint64_t`.
+    pub fn fanotify_mark(
+        fd: ::c_int,
+        flags: ::c_uint,
+        mask: ::c_ulonglong,
+        dirfd: ::c_int,
+        path: *const ::c_char,
+    ) -> ::c_int;
 }
 
 cfg_if! {
