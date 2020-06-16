@@ -102,8 +102,7 @@ async fn load_config_with_instant(
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_core::args::DaemonCommand;
-    use ffx_lib_sub_command::Subcommand;
+    use ffx_lib_args::DEFAULT_FFX;
     use futures::future::join_all;
     use std::time::Duration;
 
@@ -113,7 +112,7 @@ mod test {
     }
 
     fn cli() -> Ffx {
-        Ffx { config: None, subcommand: Subcommand::Daemon(DaemonCommand {}) }
+        DEFAULT_FFX
     }
 
     async fn load(now: Instant, key: &Option<String>, cache: &Cache) {

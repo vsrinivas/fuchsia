@@ -172,17 +172,35 @@ impl Daemon {
         });
     }
 
-    /// Attempts to get at most one target. If there is more than one target,
-    /// returns an error.
+    /// Attempts to get at most one target. If the target_selector is empty and there is only one
+    /// device connected, that target will be returned.  If there are more devices and no target
+    /// selector, an error is returned.  An error is also returned if there are no connected
+    /// devices.
     /// TODO(fxb/47843): Implement target lookup for commands to deprecate this
     /// function, and as a result remove the inner_lock() function.
-    async fn target_from_cache(&self) -> Result<Arc<Target>, Error> {
+    async fn target_from_cache(&self, target_selector: String) -> Result<Arc<Target>, Error> {
         let targets = self.target_collection.inner_lock().await;
-        if targets.len() > 1 {
-            return Err(anyhow!("more than one target"));
+
+        if targets.len() == 0 {
+            return Err(anyhow!("no targets connected - is your device plugged in?"));
         }
 
-        match targets.values().next() {
+        if targets.len() > 1 && target_selector.is_empty() {
+            return Err(anyhow!("more than one target - specify a target"));
+        }
+
+        let target = if target_selector.is_empty() && targets.len() == 1 {
+            let target = targets.values().next();
+            log::debug!("No target selector and only one target - using {:?}", target);
+            target
+        } else {
+            // TODO: Maybe don't require an exact selector match, but calculate string distances
+            // and try to make an educated guess.
+            log::debug!("Using target selector {}", target_selector);
+            targets.get(&target_selector)
+        };
+
+        match target {
             Some(t) => Ok(t.clone()),
             None => Err(anyhow!("no targets found")),
         }
@@ -218,8 +236,8 @@ impl Daemon {
                     )
                     .context("error sending response")?;
             }
-            DaemonRequest::GetRemoteControl { remote, responder } => {
-                let target = match self.target_from_cache().await {
+            DaemonRequest::GetRemoteControl { target, remote, responder } => {
+                let target = match self.target_from_cache(target).await {
                     Ok(t) => t,
                     Err(e) => {
                         log::warn!("{}", e);
@@ -278,7 +296,6 @@ impl Daemon {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl::endpoints::create_proxy;
     use fidl_fuchsia_developer_bridge as bridge;
     use fidl_fuchsia_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy};
@@ -371,7 +388,7 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         spawn(async move {
-            while let Ok(_) = stream.try_next().await {
+            while let Ok(Some(_)) = stream.try_next().await {
                 // No requests should be made to the target RCS.
                 assert!(false);
             }
@@ -393,19 +410,53 @@ mod test {
     }
 
     #[test]
-    fn test_getting_rcs_multiple_targets_mdns() -> Result<(), Error> {
+    fn test_getting_rcs_multiple_targets_mdns_with_no_selector_should_err() -> Result<(), Error> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (_, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         hoist::run(async move {
             let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
             ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-            match daemon_proxy.get_remote_control(remote_server_end).await.unwrap() {
-                Ok(_) => panic!("failure expected for multiple targets"),
-                _ => (),
+            if let Ok(_) = daemon_proxy.get_remote_control("", remote_server_end).await.unwrap() {
+                panic!("failure expected for multiple targets");
             }
         });
+        Ok(())
+    }
 
+    #[test]
+    fn test_getting_rcs_multiple_targets_mdns_with_correct_selector_should_not_err(
+    ) -> Result<(), Error> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+        hoist::run(async move {
+            let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+            ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+            if let Err(_) =
+                daemon_proxy.get_remote_control("foobar", remote_server_end).await.unwrap()
+            {
+                panic!("failure unexpected for multiple targets with a matching selector");
+            }
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn test_getting_rcs_multiple_targets_mdns_with_incorrect_selector_should_err(
+    ) -> Result<(), Error> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+        hoist::run(async move {
+            let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+            ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+            if let Ok(_) =
+                daemon_proxy.get_remote_control("rando", remote_server_end).await.unwrap()
+            {
+                panic!("failure expected for multiple targets with a mismatched selector");
+            }
+        });
         Ok(())
     }
 

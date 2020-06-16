@@ -12,6 +12,16 @@ pub struct Ffx {
     /// configuration information
     pub config: Option<String>,
 
+    #[argh(option)]
+    /// target selection
+    pub target: Option<String>,
+
     #[argh(subcommand)]
     pub subcommand: Subcommand,
 }
+
+pub const DEFAULT_FFX: Ffx = Ffx {
+    target: None,
+    config: None,
+    subcommand: Subcommand::Daemon(ffx_core::args::DaemonCommand {}),
+};

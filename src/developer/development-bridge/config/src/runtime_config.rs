@@ -40,7 +40,11 @@ mod test {
     use ffx_lib_sub_command::Subcommand;
 
     fn test_cli_params(test: &str) -> Ffx {
-        Ffx { config: Some(test.to_string()), subcommand: Subcommand::Daemon(DaemonCommand {}) }
+        Ffx {
+            target: None,
+            config: Some(test.to_string()),
+            subcommand: Subcommand::Daemon(DaemonCommand {}),
+        }
     }
 
     #[test]

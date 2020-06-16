@@ -61,9 +61,10 @@ async fn quit(daemon_proxy: DaemonProxy) -> Result<(), Error> {
 async fn get_remote_proxy() -> Result<RemoteControlProxy, Error> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+    let app: Ffx = argh::from_env();
 
     let _result = daemon_proxy
-        .get_remote_control(remote_server_end)
+        .get_remote_control(&app.target.unwrap_or("".to_string()), remote_server_end)
         .await
         .context("get_remote_control call failed")
         .map_err(|e| format_err!("error getting remote: {:?}", e))?;
@@ -135,16 +136,12 @@ mod test {
     use {
         super::*,
         ffx_config::{ffx_cmd, ffx_env},
-        ffx_core::args::DaemonCommand,
     };
 
     #[test]
     fn test_config_macros() {
         // Testing these macros outside of the config library.
-        assert_eq!(
-            ffx_cmd!(),
-            Ffx { config: None, subcommand: Subcommand::Daemon(DaemonCommand {}) }
-        );
+        assert_eq!(ffx_cmd!(), ffx_lib_args::DEFAULT_FFX);
         let env: Result<(), Error> = ffx_env!();
         assert!(env.is_err());
     }
