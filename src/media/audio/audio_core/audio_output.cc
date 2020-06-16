@@ -24,22 +24,22 @@ AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* regist
                          LinkMatrix* link_matrix)
     : AudioDevice(Type::Output, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV1>(this)) {
-  next_sched_time_ = async::Now(mix_domain().dispatcher());
+  next_sched_time_mono_ = async::Now(mix_domain().dispatcher());
   next_sched_time_known_ = true;
 }
 
 AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                          LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver)
     : AudioDevice(Type::Output, threading_model, registry, link_matrix, std::move(driver)) {
-  next_sched_time_ = async::Now(mix_domain().dispatcher());
+  next_sched_time_mono_ = async::Now(mix_domain().dispatcher());
   next_sched_time_known_ = true;
 }
 
 void AudioOutput::Process() {
   FX_CHECK(pipeline_);
-  auto now = async::Now(mix_domain().dispatcher());
+  auto mono_now = async::Now(mix_domain().dispatcher());
 
-  int64_t trace_wake_delta = next_sched_time_known_ ? (now - next_sched_time_).get() : 0;
+  int64_t trace_wake_delta = next_sched_time_known_ ? (mono_now - next_sched_time_mono_).get() : 0;
   TRACE_DURATION("audio", "AudioOutput::Process", "wake delta", TA_INT64(trace_wake_delta));
 
   // At this point, we should always know when our implementation would like to be called to do some
@@ -48,7 +48,7 @@ void AudioOutput::Process() {
   // If the next sched time has not arrived yet, don't attempt to mix anything. Just trim the queues
   // and move on.
   FX_DCHECK(next_sched_time_known_);
-  if (now >= next_sched_time_) {
+  if (mono_now >= next_sched_time_mono_) {
     // Clear the flag. If the implementation does not set it during the cycle by calling
     // SetNextSchedTime, we consider it an error and shut down.
     next_sched_time_known_ = false;
@@ -56,10 +56,10 @@ void AudioOutput::Process() {
     uint32_t frames_remaining;
     do {
       float* payload = nullptr;
-      auto mix_frames = StartMixJob(now);
+      auto mix_frames = StartMixJob(mono_now);
       if (mix_frames && !mix_frames->is_mute) {
         // If we have frames to mix that are non-silent, we should do the mix now.
-        auto buf = pipeline_->ReadLock(now, mix_frames->start, mix_frames->length);
+        auto buf = pipeline_->ReadLock(mono_now, mix_frames->start, mix_frames->length);
         if (buf) {
           // We have a buffer so call FinishMixJob on this region and perform another MixJob if
           // we did not mix enough data. This can happen if our pipeline is unable to produce the
@@ -84,7 +84,7 @@ void AudioOutput::Process() {
       } else {
         // If we did not |ReadLock| on this region of the pipeline, we should instead trim now to
         // ensure any client packets that otherwise would have been mixed are still released.
-        pipeline_->Trim(now);
+        pipeline_->Trim(mono_now);
         frames_remaining = 0;
       }
 
@@ -103,11 +103,11 @@ void AudioOutput::Process() {
 
   // Figure out when we should wake up to do more work again. No matter how long our implementation
   // wants to wait, we need to make sure to wake up and periodically trim our input queues.
-  auto max_sched_time = now + kMaxTrimPeriod;
-  if (next_sched_time_ > max_sched_time) {
-    next_sched_time_ = max_sched_time;
+  auto max_sched_time = mono_now + kMaxTrimPeriod;
+  if (next_sched_time_mono_ > max_sched_time) {
+    next_sched_time_mono_ = max_sched_time;
   }
-  zx_status_t status = mix_timer_.PostForTime(mix_domain().dispatcher(), next_sched_time_);
+  zx_status_t status = mix_timer_.PostForTime(mix_domain().dispatcher(), next_sched_time_mono_);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to schedule mix";
     ShutdownSelf();
@@ -160,9 +160,10 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Initializ
 
 std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
     const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-    TimelineFunction device_reference_clock_to_fractional_frame) {
-  auto pipeline = std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
-                                                       device_reference_clock_to_fractional_frame);
+    TimelineFunction device_reference_clock_to_fractional_frame, ClockReference ref_clock) {
+  auto pipeline =
+      std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
+                                           device_reference_clock_to_fractional_frame, ref_clock);
   pipeline->SetMinLeadTime(min_lead_time_);
   return pipeline;
 }
@@ -171,7 +172,7 @@ void AudioOutput::SetupMixTask(const PipelineConfig& config, const VolumeCurve& 
                                size_t max_block_size_frames,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
   pipeline_ = CreateOutputPipeline(config, volume_curve, max_block_size_frames,
-                                   device_reference_clock_to_fractional_frame);
+                                   device_reference_clock_to_fractional_frame, reference_clock());
 }
 
 void AudioOutput::Cleanup() {

@@ -1030,8 +1030,8 @@ void BaseCapturer::UpdateFormat(Format format) {
   //
   // TODO(39886): Limit this to something smaller than one second of frames.
   uint32_t max_mix_frames = format_.frames_per_second();
-  mix_stage_ =
-      std::make_shared<MixStage>(format_, max_mix_frames, ref_clock_to_fractional_dest_frames_);
+  mix_stage_ = std::make_shared<MixStage>(format_, max_mix_frames,
+                                          ref_clock_to_fractional_dest_frames_, reference_clock());
 }
 
 // Eventually, we'll set the optimal clock according to the source where it is initially routed.

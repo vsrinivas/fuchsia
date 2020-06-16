@@ -12,6 +12,7 @@
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/volume_curve.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
@@ -290,6 +291,8 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
 
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
+  auto clock_mono = clock::CloneOfMonotonic();
+  auto ref_clock = ClockReference::MakeReadonly(clock_mono);
 
   auto stream = std::make_shared<PacketQueue>(
       Format::Create({
@@ -297,7 +300,8 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
                          .channels = 2,
                          .frames_per_second = 48000,
                      })
-          .take_value());
+          .take_value(),
+      ref_clock);
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());
@@ -315,6 +319,8 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
 
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
+  auto clock_mono = clock::CloneOfMonotonic();
+  auto ref_clock = ClockReference::MakeReadonly(clock_mono);
 
   auto stream = std::make_shared<PacketQueue>(
       Format::Create({
@@ -322,7 +328,8 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
                          .channels = 2,
                          .frames_per_second = 48000,
                      })
-          .take_value());
+          .take_value(),
+      ref_clock);
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());

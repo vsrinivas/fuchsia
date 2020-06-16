@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
@@ -36,13 +37,13 @@ class BaseRingBuffer {
   // ring buffer.
   static std::shared_ptr<ReadableRingBuffer> CreateReadableHardwareBuffer(
       const Format& format,
-      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames, zx::vmo vmo,
-      uint32_t frame_count, uint32_t offset_frames);
+      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
+      ClockReference ref_clock, zx::vmo vmo, uint32_t frame_count, uint32_t offset_frames);
 
   static std::shared_ptr<WritableRingBuffer> CreateWritableHardwareBuffer(
       const Format& format,
-      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames, zx::vmo vmo,
-      uint32_t frame_count, uint32_t offset_frames);
+      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
+      ClockReference ref_clock, zx::vmo vmo, uint32_t frame_count, uint32_t offset_frames);
 
   struct Endpoints {
     std::shared_ptr<ReadableRingBuffer> reader;
@@ -53,7 +54,7 @@ class BaseRingBuffer {
   static Endpoints AllocateSoftwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-      uint32_t frame_count, uint32_t frame_offset = 0);
+      ClockReference ref_clock, uint32_t frame_count, uint32_t frame_offset = 0);
 
   uint64_t size() const { return vmo_mapper_->size(); }
   uint32_t frames() const { return frames_; }
@@ -63,8 +64,8 @@ class BaseRingBuffer {
  protected:
   BaseRingBuffer(const Format& format,
                  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-                 fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-                 uint32_t offset_frames, bool is_hardware_buffer);
+                 ClockReference ref_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
+                 uint32_t frame_count, uint32_t offset_frames, bool is_hardware_buffer);
   virtual ~BaseRingBuffer() = default;
 
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFramesImpl() const;
@@ -72,6 +73,7 @@ class BaseRingBuffer {
   const fbl::RefPtr<RefCountedVmoMapper> vmo_mapper_;
   const uint32_t frames_ = 0;
   const fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame_;
+  ClockReference reference_clock_;
   const uint32_t offset_frames_;
   const bool is_hardware_buffer_;
 };
@@ -82,14 +84,16 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   // be called directly. Use static methods in BaseRingBuffer.
   ReadableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-                     fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-                     uint32_t offset_frames, bool is_hardware_buffer);
+                     ClockReference ref_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
+                     uint32_t frame_count, uint32_t offset_frames, bool is_hardware_buffer);
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time now, int64_t frame,
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
-  void Trim(zx::time trim_threshold) override {}
+  void Trim(zx::time ref_time) override {}
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+
+  ClockReference reference_clock() const override { return reference_clock_; }
 };
 
 class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
@@ -98,13 +102,15 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   // be called directly. Use static methods in BaseRingBuffer.
   WritableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-                     fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-                     uint32_t offset_frames, bool is_hardware_buffer);
+                     ClockReference ref_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
+                     uint32_t frame_count, uint32_t offset_frames, bool is_hardware_buffer);
 
   // |media::audio::WritableStream|
-  std::optional<WritableStream::Buffer> WriteLock(zx::time now, int64_t frame,
+  std::optional<WritableStream::Buffer> WriteLock(zx::time ref_time, int64_t frame,
                                                   uint32_t frame_count) override;
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+
+  ClockReference reference_clock() const override { return reference_clock_; }
 };
 
 }  // namespace media::audio

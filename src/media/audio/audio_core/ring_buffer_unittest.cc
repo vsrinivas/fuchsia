@@ -4,7 +4,12 @@
 
 #include "src/media/audio/audio_core/ring_buffer.h"
 
+#include <lib/zx/clock.h>
+
 #include <gtest/gtest.h>
+
+#include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/lib/clock/testing/clock_test.h"
 
 namespace media::audio {
 namespace {
@@ -20,42 +25,54 @@ const Format kDefaultFormat =
 // 10ms @ 48khz
 const uint32_t kRingBufferFrameCount = 480;
 
-class InputRingBufferTest : public testing::Test {
+class InputRingBufferTest : public ::testing::Test {
  protected:
   void SetUp() override {
     const auto& format = kDefaultFormat;
     auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
-    auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(format, std::move(timeline_function),
-                                                            kRingBufferFrameCount);
+    ref_clock_ = ClockReference::MakeReadonly(clock_mono_);
+
+    auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
+        format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount);
     ring_buffer_ = endpoints.reader;
     ASSERT_TRUE(ring_buffer());
   }
 
   ReadableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
+  ClockReference reference_clock() const { return ref_clock_; }
 
  private:
   std::shared_ptr<ReadableRingBuffer> ring_buffer_;
+  zx::clock clock_mono_ = clock::CloneOfMonotonic();
+
+  ClockReference ref_clock_;
 };
 
-class OutputRingBufferTest : public testing::Test {
+class OutputRingBufferTest : public ::testing::Test {
  protected:
   void SetUp() override {
     const auto& format = kDefaultFormat;
     auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
-    auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(format, std::move(timeline_function),
-                                                            kRingBufferFrameCount);
+    ref_clock_ = ClockReference::MakeReadonly(clock_mono_);
+
+    auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
+        format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount);
     ring_buffer_ = endpoints.writer;
     ASSERT_TRUE(ring_buffer());
   }
 
   WritableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
+  ClockReference reference_clock() const { return ref_clock_; }
 
  private:
   std::shared_ptr<WritableRingBuffer> ring_buffer_;
+  zx::clock clock_mono_ = clock::CloneOfMonotonic();
+
+  ClockReference ref_clock_;
 };
 
 TEST_F(InputRingBufferTest, ReadEmptyRing) {
@@ -192,8 +209,11 @@ TEST(RingBufferTest, FrameOffset) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
       zx::sec(1).to_nsecs()));
-  auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(format, std::move(timeline_function),
-                                                          kRingBufferFrameCount, frame_offset);
+  auto clock_mono = clock::CloneOfMonotonic();
+  auto ref_clock = ClockReference::MakeReadonly(clock_mono);
+
+  auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
+      format, std::move(timeline_function), ref_clock, kRingBufferFrameCount, frame_offset);
   auto ring_buffer = std::move(endpoints.writer);
   ASSERT_TRUE(ring_buffer);
 

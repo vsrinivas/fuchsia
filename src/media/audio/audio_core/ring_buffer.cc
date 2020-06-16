@@ -40,9 +40,9 @@ struct BufferTraits<WritableRingBuffer> {
 };
 
 template <class RingBufferT>
-std::optional<typename RingBufferT::Buffer> LockBuffer(RingBufferT* b, zx::time now, int64_t frame,
-                                                       uint32_t frame_count, bool is_read_lock,
-                                                       bool is_hardware_buffer) {
+std::optional<typename RingBufferT::Buffer> LockBuffer(RingBufferT* b, zx::time ref_time,
+                                                       int64_t frame, uint32_t frame_count,
+                                                       bool is_read_lock, bool is_hardware_buffer) {
   frame += b->offset_frames();
   auto [reference_clock_to_fractional_frame, _] = b->ReferenceClockToFractionalFrames();
   if (!reference_clock_to_fractional_frame.invertible()) {
@@ -50,7 +50,7 @@ std::optional<typename RingBufferT::Buffer> LockBuffer(RingBufferT* b, zx::time 
   }
 
   int64_t ring_position_now =
-      FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frame.Apply(now.get()))
+      FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frame.Apply(ref_time.get()))
           .Floor() +
       b->offset_frames();
 
@@ -145,11 +145,12 @@ fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, uint3
 BaseRingBuffer::BaseRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-    fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count, uint32_t offset_frames,
-    bool is_hardware_buffer)
+    ClockReference ref_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
+    uint32_t offset_frames, bool is_hardware_buffer)
     : vmo_mapper_(std::move(vmo_mapper)),
       frames_(frame_count),
       reference_clock_to_fractional_frame_(std::move(reference_clock_to_fractional_frames)),
+      reference_clock_(ref_clock),
       offset_frames_(offset_frames),
       is_hardware_buffer_(is_hardware_buffer) {
   FX_CHECK(vmo_mapper_->start() != nullptr);
@@ -159,26 +160,26 @@ BaseRingBuffer::BaseRingBuffer(
 ReadableRingBuffer::ReadableRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-    fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count, uint32_t offset_frames,
-    bool is_hardware_buffer)
+    ClockReference ref_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
+    uint32_t offset_frames, bool is_hardware_buffer)
     : ReadableStream(format),
-      BaseRingBuffer(format, reference_clock_to_fractional_frames, vmo_mapper, frame_count,
-                     offset_frames, is_hardware_buffer) {}
+      BaseRingBuffer(format, reference_clock_to_fractional_frames, ref_clock, vmo_mapper,
+                     frame_count, offset_frames, is_hardware_buffer) {}
 
 WritableRingBuffer::WritableRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-    fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count, uint32_t offset_frames,
-    bool is_hardware_buffer)
+    ClockReference ref_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
+    uint32_t offset_frames, bool is_hardware_buffer)
     : WritableStream(format),
-      BaseRingBuffer(format, reference_clock_to_fractional_frames, vmo_mapper, frame_count,
-                     offset_frames, is_hardware_buffer) {}
+      BaseRingBuffer(format, reference_clock_to_fractional_frames, ref_clock, vmo_mapper,
+                     frame_count, offset_frames, is_hardware_buffer) {}
 
 // static
 BaseRingBuffer::Endpoints BaseRingBuffer::AllocateSoftwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
-    uint32_t frame_count, uint32_t frame_offset) {
+    ClockReference ref_clock, uint32_t frame_count, uint32_t frame_offset) {
   TRACE_DURATION("audio", "RingBuffer::AllocateSoftwareBuffer");
 
   size_t vmo_size = frame_count * format.bytes_per_frame();
@@ -195,50 +196,55 @@ BaseRingBuffer::Endpoints BaseRingBuffer::AllocateSoftwareBuffer(
 
   return Endpoints{
       .reader = std::make_shared<ReadableRingBuffer>(format, reference_clock_to_fractional_frame,
-                                                     vmo_mapper, frame_count, frame_offset, false),
+                                                     ref_clock, vmo_mapper, frame_count,
+                                                     frame_offset, false),
       .writer = std::make_shared<WritableRingBuffer>(format, reference_clock_to_fractional_frame,
-                                                     vmo_mapper, frame_count, frame_offset, false),
+                                                     ref_clock, vmo_mapper, frame_count,
+                                                     frame_offset, false),
   };
 }
 
 // static
 std::shared_ptr<ReadableRingBuffer> BaseRingBuffer::CreateReadableHardwareBuffer(
     const Format& format,
-    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame, zx::vmo vmo,
-    uint32_t frame_count, uint32_t offset_frames) {
+    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
+    ClockReference ref_clock, zx::vmo vmo, uint32_t frame_count, uint32_t offset_frames) {
   TRACE_DURATION("audio", "RingBuffer::CreateReadableHardwareBuffer");
 
   auto vmo_mapper = MapVmo(format, std::move(vmo), frame_count, false);
   FX_DCHECK(vmo_mapper);
 
   return std::make_shared<ReadableRingBuffer>(
-      format, std::move(reference_clock_to_fractional_frame), std::move(vmo_mapper), frame_count,
-      offset_frames, true);
+      format, std::move(reference_clock_to_fractional_frame), ref_clock, std::move(vmo_mapper),
+      frame_count, offset_frames, true);
 }
 
 // static
 std::shared_ptr<WritableRingBuffer> BaseRingBuffer::CreateWritableHardwareBuffer(
     const Format& format,
-    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame, zx::vmo vmo,
-    uint32_t frame_count, uint32_t offset_frames) {
+    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
+    ClockReference ref_clock, zx::vmo vmo, uint32_t frame_count, uint32_t offset_frames) {
   TRACE_DURATION("audio", "RingBuffer::CreateWritableHardwareBuffer");
 
   auto vmo_mapper = MapVmo(format, std::move(vmo), frame_count, true);
   FX_DCHECK(vmo_mapper);
 
   return std::make_shared<WritableRingBuffer>(
-      format, std::move(reference_clock_to_fractional_frame), std::move(vmo_mapper), frame_count,
-      offset_frames, true);
+      format, std::move(reference_clock_to_fractional_frame), ref_clock, std::move(vmo_mapper),
+      frame_count, offset_frames, true);
 }
 
-std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(zx::time now, int64_t frame,
+std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(zx::time ref_time, int64_t frame,
                                                                    uint32_t frame_count) {
-  return LockBuffer<ReadableRingBuffer>(this, now, frame, frame_count, true, is_hardware_buffer_);
+  return LockBuffer<ReadableRingBuffer>(this, ref_time, frame, frame_count, true,
+                                        is_hardware_buffer_);
 }
 
-std::optional<WritableStream::Buffer> WritableRingBuffer::WriteLock(zx::time now, int64_t frame,
+std::optional<WritableStream::Buffer> WritableRingBuffer::WriteLock(zx::time ref_time,
+                                                                    int64_t frame,
                                                                     uint32_t frame_count) {
-  return LockBuffer<WritableRingBuffer>(this, now, frame, frame_count, false, is_hardware_buffer_);
+  return LockBuffer<WritableRingBuffer>(this, ref_time, frame, frame_count, false,
+                                        is_hardware_buffer_);
 }
 
 BaseStream::TimelineFunctionSnapshot BaseRingBuffer::ReferenceClockToFractionalFramesImpl() const {

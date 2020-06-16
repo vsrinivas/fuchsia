@@ -6,12 +6,14 @@
 
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -29,6 +31,11 @@ const Format kDefaultFormat =
 
 class MixStageTest : public testing::ThreadingModelFixture {
  protected:
+  void SetUp() {
+    ref_clock_ = ClockReference::MakeReadonly(clock_mono_);
+    mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, 128, timeline_function_, ref_clock_);
+  }
+
   zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
 
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
@@ -36,8 +43,10 @@ class MixStageTest : public testing::ThreadingModelFixture {
           TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
                        zx::sec(1).to_nsecs())));
 
-  std::shared_ptr<MixStage> mix_stage_ =
-      std::make_shared<MixStage>(kDefaultFormat, 128, timeline_function_);
+  zx::clock clock_mono_ = clock::CloneOfMonotonic();
+  ClockReference ref_clock_;
+
+  std::shared_ptr<MixStage> mix_stage_;
 
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
@@ -58,7 +67,7 @@ TEST_F(MixStageTest, Trim) {
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
   mix_stage_->AddInput(packet_queue);
 
   bool packet1_released = false;
@@ -97,8 +106,8 @@ TEST_F(MixStageTest, MixUniformFormats) {
                    zx::sec(1).to_nsecs())));
 
   // Create 2 packet queues that we will mix together.
-  auto packet_queue1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
-  auto packet_queue2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto packet_queue1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+  auto packet_queue2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
   mix_stage_->AddInput(packet_queue1);
   mix_stage_->AddInput(packet_queue2);
 
@@ -177,8 +186,8 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   constexpr uint32_t kRingSizeFrames = 72;
 
   // We explictly request a SincSampler here to get a non-trivial filter width.
-  auto ring_buffer_endpoints =
-      BaseRingBuffer::AllocateSoftwareBuffer(kDefaultFormat, timeline_function_, kRingSizeFrames);
+  auto ring_buffer_endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
+      kDefaultFormat, timeline_function_, ref_clock_, kRingSizeFrames);
   mix_stage_->AddInput(ring_buffer_endpoints.reader, Mixer::Resampler::WindowedSinc);
 
   // Fill up the ring buffer with some non-empty samples so that we can observe these values in
@@ -239,7 +248,7 @@ TEST_F(MixStageTest, MixSingleInput) {
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
   static constexpr auto kInputStreamUsage = StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION);
-  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
   packet_queue->set_usage(kInputStreamUsage);
   mix_stage_->AddInput(packet_queue);
 

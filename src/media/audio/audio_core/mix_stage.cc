@@ -37,18 +37,21 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 }  // namespace
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   TimelineFunction reference_clock_to_fractional_frame)
-    : MixStage(
-          output_format, block_size,
-          fbl::MakeRefCounted<VersionedTimelineFunction>(reference_clock_to_fractional_frame)) {}
+                   TimelineFunction reference_clock_to_fractional_frame, ClockReference ref_clock)
+    : MixStage(output_format, block_size,
+               fbl::MakeRefCounted<VersionedTimelineFunction>(reference_clock_to_fractional_frame),
+               ref_clock) {}
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame)
-    : MixStage(std::make_shared<IntermediateBuffer>(output_format, block_size,
-                                                    reference_clock_to_fractional_frame)) {}
+                   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
+                   ClockReference ref_clock)
+    : MixStage(std::make_shared<IntermediateBuffer>(
+          output_format, block_size, reference_clock_to_fractional_frame, ref_clock)) {}
 
 MixStage::MixStage(std::shared_ptr<WritableStream> output_stream)
-    : ReadableStream(output_stream->format()), output_stream_(std::move(output_stream)) {}
+    : ReadableStream(output_stream->format()),
+      output_stream_(std::move(output_stream)),
+      output_ref_clock_(output_stream_->reference_clock()) {}
 
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream,
                                           Mixer::Resampler resampler_hint) {
@@ -79,12 +82,12 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   streams_.erase(it);
 }
 
-std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time now, int64_t frame,
+std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time ref_time, int64_t frame,
                                                          uint32_t frame_count) {
   TRACE_DURATION("audio", "MixStage::ReadLock", "frame", frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-  auto output_buffer = output_stream_->WriteLock(now, frame, frame_count);
+  auto output_buffer = output_stream_->WriteLock(ref_time, frame, frame_count);
   if (!output_buffer) {
     return std::nullopt;
   }
@@ -102,7 +105,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time now, int64_t f
   // Fill the output buffer with silence.
   size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
-  ForEachSource(TaskType::Mix, now);
+  ForEachSource(TaskType::Mix, ref_time);
 
   // Transfer output_buffer ownership to the read lock via this destructor.
   // TODO(50669): If this buffer is not fully consumed, we should save this buffer and reuse it for
@@ -122,7 +125,7 @@ void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
   TRACE_DURATION("audio", "MixStage::SetMinLeadTime");
   ReadableStream::SetMinLeadTime(min_lead_time);
 
-  // Propogate our lead time to our inputs.
+  // Propagate our lead time to our inputs.
   std::lock_guard<std::mutex> lock(stream_lock_);
   for (const auto& holder : streams_) {
     FX_DCHECK(holder.stream);
@@ -133,9 +136,9 @@ void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
   }
 }
 
-void MixStage::Trim(zx::time time) {
+void MixStage::Trim(zx::time ref_time) {
   TRACE_DURATION("audio", "MixStage::Trim");
-  ForEachSource(TaskType::Trim, time);
+  ForEachSource(TaskType::Trim, ref_time);
 }
 
 void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {

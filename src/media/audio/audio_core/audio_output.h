@@ -50,8 +50,10 @@ class AudioOutput : public AudioDevice {
   fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
 
-  void SetNextSchedTime(zx::time next_sched_time) {
-    next_sched_time_ = next_sched_time;
+  // Mark this output as needing to be mixed at the specified future time.
+  // async PostForTime requires a time in the CLOCK_MONOTONIC timebase, so we use that here.
+  void SetNextSchedTime(zx::time next_sched_time_mono) {
+    next_sched_time_mono_ = next_sched_time_mono;
     next_sched_time_known_ = true;
   }
 
@@ -61,7 +63,7 @@ class AudioOutput : public AudioDevice {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   virtual std::unique_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-      TimelineFunction device_reference_clock_to_fractional_frame);
+      TimelineFunction device_reference_clock_to_fractional_frame, ClockReference ref_clock);
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 
@@ -118,7 +120,7 @@ class AudioOutput : public AudioDevice {
       FXL_GUARDED_BY(mix_domain().token()){this};
 
   zx::duration min_lead_time_;
-  zx::time next_sched_time_;
+  zx::time next_sched_time_mono_;
   bool next_sched_time_known_;
 
   std::unique_ptr<OutputPipeline> pipeline_;

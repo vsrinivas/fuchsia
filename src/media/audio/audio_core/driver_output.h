@@ -39,7 +39,7 @@ class DriverOutput : public AudioOutput {
   // AudioOutput implementation
   zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
-  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start)
+  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
   void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;

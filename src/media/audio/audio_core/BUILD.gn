@@ -291,7 +291,7 @@ executable("unittest_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/effects_loader/testing",
     "//src/media/audio/lib/format",

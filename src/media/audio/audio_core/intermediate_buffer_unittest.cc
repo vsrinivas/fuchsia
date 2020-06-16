@@ -6,6 +6,9 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/clock_reference.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
+
 namespace media::audio {
 namespace {
 
@@ -22,7 +25,11 @@ class IntermediateBufferTest : public ::testing::Test {};
 TEST_F(IntermediateBufferTest, WriteLock) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
       TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
-  auto intermediate_buffer = std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms);
+  auto clock_mono = clock::CloneOfMonotonic();
+  ClockReference ref_clock = ClockReference::MakeReadonly(clock_mono);
+
+  auto intermediate_buffer =
+      std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms, ref_clock);
   ASSERT_TRUE(intermediate_buffer);
 
   ASSERT_NE(intermediate_buffer->buffer(), nullptr);
@@ -48,7 +55,11 @@ TEST_F(IntermediateBufferTest, WriteLock) {
 TEST_F(IntermediateBufferTest, ClampLengthToBufferSize) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
       TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
-  auto intermediate_buffer = std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms);
+  auto clock_mono = clock::CloneOfMonotonic();
+  ClockReference ref_clock = ClockReference::MakeReadonly(clock_mono);
+
+  auto intermediate_buffer =
+      std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms, ref_clock);
   ASSERT_TRUE(intermediate_buffer);
 
   // Request 1024 frames, but since the buffer is only 256 frames the returned buffer should be

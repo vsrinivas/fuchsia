@@ -5,9 +5,12 @@
 #include "src/media/audio/audio_core/audio_output.h"
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
+// #include "src/media/audio/lib/clock/testing/clock_test.h"
 
 namespace media::audio {
 namespace {
@@ -36,6 +39,7 @@ class TestOutputPipeline : public OutputPipeline {
         .generation = kInvalidGenerationId,
     };
   }
+  ClockReference reference_clock() const override { return reference_clock_; }
 
   // |media::audio::OutputPipeline|
   std::shared_ptr<ReadableStream> loopback() const override { return nullptr; }
@@ -52,6 +56,8 @@ class TestOutputPipeline : public OutputPipeline {
 
  private:
   std::deque<ReadableStream::Buffer> buffers_;
+  zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
+  ClockReference reference_clock_ = ClockReference::MakeAdjustable(clock_mono_);
 };
 
 class TestAudioOutput : public AudioOutput {
@@ -73,12 +79,13 @@ class TestAudioOutput : public AudioOutput {
   }
   std::unique_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-      TimelineFunction device_reference_clock_to_fractional_frame) override {
+      TimelineFunction device_reference_clock_to_fractional_frame,
+      ClockReference ref_clock) override {
     if (output_pipeline_) {
       return std::move(output_pipeline_);
     }
     return AudioOutput::CreateOutputPipeline(config, volume_curve, max_block_size_frames,
-                                             device_reference_clock_to_fractional_frame);
+                                             device_reference_clock_to_fractional_frame, ref_clock);
   }
 
   // Allow a test to provide a delegate to handle |AudioOutput::StartMixJob| invocations.

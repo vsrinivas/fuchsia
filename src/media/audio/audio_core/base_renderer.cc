@@ -71,7 +71,8 @@ void BaseRenderer::Shutdown() {
 fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::InitializeDestLink(
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
-  auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_);
+  auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
+                                             reference_clock());
   queue->SetUnderflowReporter([this](zx::duration underflow_duration) {
     REPORT(RendererUnderflow(*this, underflow_duration));
   });

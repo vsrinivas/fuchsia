@@ -11,6 +11,7 @@
 #include <lib/zx/time.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
@@ -21,15 +22,17 @@ namespace media::audio {
 class MixStage : public ReadableStream {
  public:
   MixStage(const Format& output_format, uint32_t block_size,
-           TimelineFunction reference_clock_to_fractional_frame);
+           TimelineFunction reference_clock_to_fractional_frame, ClockReference ref_clock);
   MixStage(const Format& output_format, uint32_t block_size,
-           fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame);
+           fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
+           ClockReference ref_clock);
 
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  ClockReference reference_clock() const override { return output_ref_clock_; }
   void SetMinLeadTime(zx::duration min_lead_time) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream,
@@ -79,6 +82,10 @@ class MixStage : public ReadableStream {
 
   // State used by the mix task.
   MixJob cur_mix_job_;
+
+  // We are passed our destination stream's reference clock at construction time, and we cache it
+  // here, so we need not do multiple levels of dereferencing at clock-read time.
+  ClockReference output_ref_clock_;
 };
 
 }  // namespace media::audio

@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/volume_curve.h"
@@ -35,8 +36,10 @@ class EffectsStage : public ReadableStream {
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
-  void Trim(zx::time trim_threshold) override { source_->Trim(trim_threshold); }
+  void Trim(zx::time ref_time) override { source_->Trim(ref_time); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  ClockReference reference_clock() const override { return source_->reference_clock(); }
+
   void SetMinLeadTime(zx::duration lead_time) override;
   void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
                        FractionalFrames<int64_t> frac_source_mix_point,

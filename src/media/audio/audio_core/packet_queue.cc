@@ -10,6 +10,7 @@
 #include <iomanip>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/logging/logging.h"
@@ -34,10 +35,14 @@ static constexpr uint16_t kUnderflowErrorInterval = 100;
 
 }  // namespace
 
-PacketQueue::PacketQueue(Format format) : PacketQueue(format, nullptr) {}
+PacketQueue::PacketQueue(Format format, ClockReference ref_clock)
+    : PacketQueue(format, nullptr, ref_clock) {}
 
-PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function)
-    : ReadableStream(std::move(format)), timeline_function_(std::move(timeline_function)) {}
+PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function,
+                         ClockReference ref_clock)
+    : ReadableStream(std::move(format)),
+      timeline_function_(std::move(timeline_function)),
+      reference_clock_(ref_clock) {}
 
 PacketQueue::~PacketQueue() {
   pending_flush_packet_queue_.clear();
@@ -92,7 +97,7 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time now, int64_t frame,
+std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time ref_time, int64_t frame,
                                                             uint32_t frame_count) {
   TRACE_DURATION("audio", "PacketQueue::ReadLock");
   std::lock_guard<std::mutex> locker(pending_mutex_);

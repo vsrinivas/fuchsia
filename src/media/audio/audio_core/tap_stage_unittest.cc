@@ -6,10 +6,12 @@
 
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -43,13 +45,15 @@ class TapStageTest : public testing::ThreadingModelFixture {
                       zx::sec(1).to_nsecs());
     auto source_timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(rate));
-    packet_queue_ = std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function);
+    ref_clock_ = ClockReference::MakeAdjustable(clock_mono_);
+    packet_queue_ =
+        std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function, ref_clock_);
     ASSERT_TRUE(packet_queue_);
 
     auto tap_timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(FractionalFrames<int64_t>(tap_frame_offset_).raw_value(), 0, rate));
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(kDefaultFormat, tap_timeline_function,
-                                                            kRingBufferFrameCount);
+                                                            ref_clock_, kRingBufferFrameCount);
     ring_buffer_ = std::move(endpoints.reader);
 
     ASSERT_TRUE(ring_buffer_);
@@ -57,6 +61,8 @@ class TapStageTest : public testing::ThreadingModelFixture {
     tap_ = std::make_shared<TapStage>(packet_queue_, std::move(endpoints.writer));
     ClearRingBuffer();
   }
+  zx::clock clock_mono_ = clock::AdjustableCloneOfMonotonic();
+  ClockReference ref_clock_;
 
   template <typename T, size_t N>
   std::array<T, N>& as_array(void* ptr, size_t offset = 0) {

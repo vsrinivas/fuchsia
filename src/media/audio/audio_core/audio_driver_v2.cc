@@ -377,12 +377,12 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
             auto format = GetFormat();
             if (owner_->is_input()) {
               readable_ring_buffer_ = BaseRingBuffer::CreateReadableHardwareBuffer(
-                  *format, ref_clock_to_fractional_frames_,
+                  *format, ref_clock_to_fractional_frames_, reference_clock(),
                   std::move(result.response().ring_buffer), result.response().num_frames,
                   fifo_depth_frames());
             } else {
               writable_ring_buffer_ = BaseRingBuffer::CreateWritableHardwareBuffer(
-                  *format, ref_clock_to_fractional_frames_,
+                  *format, ref_clock_to_fractional_frames_, reference_clock(),
                   std::move(result.response().ring_buffer), result.response().num_frames, 0);
             }
             if (!readable_ring_buffer_ && !writable_ring_buffer_) {

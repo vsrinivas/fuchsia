@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/stream.h"
 
 namespace media::audio {
@@ -21,10 +22,12 @@ class TapStage : public ReadableStream {
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
-  void Trim(zx::time trim) override { source_->Trim(trim); }
+  void Trim(zx::time ref_time) override { source_->Trim(ref_time); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
     return source_->ReferenceClockToFractionalFrames();
   }
+  ClockReference reference_clock() const override { return source_->reference_clock(); }
+
   void SetMinLeadTime(zx::duration min_lead_time) override;
 
  private:

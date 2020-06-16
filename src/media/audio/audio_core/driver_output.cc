@@ -87,7 +87,7 @@ void DriverOutput::OnWakeup() {
   state_ = State::FetchingFormats;
 }
 
-std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
+std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_time) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
@@ -132,7 +132,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time uptime)
   // frames which have made sound so far.  Once a frame has left the
   // interconnect, it still has the device's external_delay before it will
   // finally hit the speaker.
-  int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(uptime.get());
+  int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(ref_time.get());
   int64_t output_frames_transmitted = output_frames_consumed - fifo_frames;
 
   if (output_frames_consumed >= frames_sent_) {
@@ -157,9 +157,9 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time uptime)
                      << " milliseconds.";
 
       // Use our Reporter to log this to Cobalt and Inspect, if enabled.
-      REPORT(OutputUnderflow(*this, output_underflow_duration, uptime));
+      REPORT(OutputUnderflow(*this, output_underflow_duration, ref_time));
 
-      underflow_start_time_ = uptime;
+      underflow_start_time_ = ref_time;
       output_producer_->FillWithSilence(rb.virt(), rb.frames());
       zx_cache_flush(rb.virt(), rb.size(), ZX_CACHE_FLUSH_DATA);
 
@@ -175,11 +175,11 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time uptime)
   // We want to fill up to be HighWaterNsec ahead of the current safe write
   // pointer position.  Add HighWaterNsec to our concept of "now" and run it
   // through our transformation to figure out what frame number this.
-  int64_t fill_target = ref_clock_to_safe_wr_frame.Apply((uptime + kDefaultHighWaterNsec).get());
+  int64_t fill_target = ref_clock_to_safe_wr_frame.Apply((ref_time + kDefaultHighWaterNsec).get());
 
   // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
   if (underflow_start_time_.get()) {
-    if (uptime < underflow_cooldown_deadline_) {
+    if (ref_time < underflow_cooldown_deadline_) {
       // Looks like we have not recovered yet.  Pretend to have produced the
       // frames we were going to produce and schedule the next wakeup time.
       frames_sent_ = fill_target;
@@ -188,7 +188,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time uptime)
     } else {
       // Looks like we recovered.  Log and go back to mixing.
       FX_LOGS(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
-                       << (uptime - underflow_start_time_).to_msecs() << " ms.";
+                       << (ref_time - underflow_start_time_).to_msecs() << " ms.";
       underflow_start_time_ = zx::time(0);
       underflow_cooldown_deadline_ = zx::time(0);
     }
