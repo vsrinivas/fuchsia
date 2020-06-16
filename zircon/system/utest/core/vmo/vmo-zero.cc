@@ -399,4 +399,27 @@ TEST(VmoZeroTestCase, ZeroLengths) {
   EXPECT_OK(vmo.op_range(ZX_VMO_OP_ZERO, PAGE_SIZE, 0, NULL, 0));
 }
 
+// Test that we handle free pages correctly when both decomitting and allocating new pages in a
+// single zero operation.
+TEST(VmoZeroTestcase, ZeroFreesAndAllocates) {
+  zx::vmo parent;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE * 3, 0, &parent));
+
+  // Commit the second page with non-zero data so that we have to fork it later.
+  VmoWrite(parent, 1, PAGE_SIZE);
+
+  // Create two levels of children so we are forced to fork a page when inserting a marker later.
+  zx::vmo intermediate;
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE * 3, &intermediate));
+  zx::vmo child;
+  EXPECT_OK(intermediate.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE * 3, &child));
+
+  // Commit the first page in the child so we have something to decommit later.
+  VmoWrite(child, 1, 0);
+
+  // Now zero the child. The first page gets decommitted, and potentially used to fulfill the page
+  // allocation involved in forking the second page into the intermediate.
+  EXPECT_OK(child.op_range(ZX_VMO_OP_ZERO, 0, PAGE_SIZE * 2, NULL, 0));
+}
+
 }  // namespace vmo_test

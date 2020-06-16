@@ -1591,7 +1591,9 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
 
   if (page_owner != parent_.get()) {
     AssertHeld(AsVmObjectPaged(parent_)->lock_);
-    page = AsVmObjectPaged(parent_)->CloneCowPageLocked(offset + parent_offset_, free_list,
+    // Do not pass free_list here as this wants a free_list to allocate from, where as our free_list
+    // is for placing on old objects.
+    page = AsVmObjectPaged(parent_)->CloneCowPageLocked(offset + parent_offset_, nullptr,
                                                         page_owner, page, owner_offset);
     if (page == nullptr) {
       return ZX_ERR_NO_MEMORY;
@@ -2320,6 +2322,15 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
       return get_initial_page_content().page != nullptr;
     };
 
+    // Ideally we just collect up pages and hand them over to the pmm all at the end, but if we need
+    // to allocate any pages then we would like to ensure that we do not cause total memory to peak
+    // higher due to squirreling these pages away.
+    auto free_any_pages = [&free_list] {
+      if (!list_is_empty(free_list)) {
+        pmm_free(free_list);
+      }
+    };
+
     // If there's already a marker then we can avoid any second guessing and leave the marker alone.
     if (slot && slot->IsMarker()) {
       continue;
@@ -2363,7 +2374,10 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
       }
       // Allocate a new page, it will be zeroed in the process.
       vm_page_t* p;
-      bool result = AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), free_list, &p);
+      free_any_pages();
+      // Do not pass our free_list here as this takes a list to allocate from, where as our list is
+      // for collecting things to free.
+      bool result = AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), nullptr, &p);
       if (!result) {
         return ZX_ERR_NO_MEMORY;
       }
@@ -2377,6 +2391,7 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
     // perform slightly more complex cow forking.
     const InitialPageContent& content = get_initial_page_content();
     if (slot->IsEmpty() && content.page_owner->is_hidden()) {
+      free_any_pages();
       zx_status_t result = CloneCowPageAsZeroLocked(offset, free_list, content.page_owner,
                                                     content.page, content.owner_offset);
       if (result != ZX_OK) {
