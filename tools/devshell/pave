@@ -19,9 +19,9 @@ if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi
 
-auth_keys_args=(--authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" "$@")
+auth_keys_args=(--authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys")
 if grep 'import("//products/bringup.gni")' "${FUCHSIA_BUILD_DIR}/args.gn" >/dev/null 2>&1; then
   auth_keys_args=()
 fi
 
-exec "${FUCHSIA_BUILD_DIR}/pave.sh" "${name_args[@]}" "${auth_keys_args[@]}"
+exec "${FUCHSIA_BUILD_DIR}/pave.sh" "${name_args[@]}" "${auth_keys_args[@]}" "$@"
