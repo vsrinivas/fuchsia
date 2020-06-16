@@ -1,15 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::fidl_processor::process_stream;
-
+use crate::fidl_process;
+use crate::fidl_processor::RequestContext;
 use futures::FutureExt;
 
 use futures::future::LocalBoxFuture;
 
 use fidl_fuchsia_settings::{
-    Error, NightModeMarker, NightModeRequest, NightModeRequestStream, NightModeSetResponder,
-    NightModeSettings, NightModeWatchResponder,
+    Error, NightModeMarker, NightModeRequest, NightModeSetResponder, NightModeSettings,
+    NightModeWatchResponder,
 };
 use fuchsia_async as fasync;
 
@@ -45,38 +45,26 @@ impl From<NightModeSettings> for SettingRequest {
     }
 }
 
-pub fn spawn_night_mode_fidl_handler(
-    switchboard_client: SwitchboardClient,
-    stream: NightModeRequestStream,
-) {
-    process_stream::<NightModeMarker, NightModeSettings, NightModeWatchResponder>(
-        stream,
-        switchboard_client,
-        SettingType::NightMode,
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<NightModeRequest>, anyhow::Error>> {
-                async move {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        NightModeRequest::Set { settings, responder } => {
-                            set(&context.switchboard_client, settings, responder).await;
-                        }
-                        NightModeRequest::Watch { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+fidl_process!(NightMode, SettingType::NightMode, process_request);
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+async fn process_request(
+    context: RequestContext<NightModeSettings, NightModeWatchResponder>,
+    req: NightModeRequest,
+) -> Result<Option<NightModeRequest>, anyhow::Error> {
+    #[allow(unreachable_patterns)]
+    match req {
+        NightModeRequest::Set { settings, responder } => {
+            set(&context.switchboard_client, settings, responder).await;
+        }
+        NightModeRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
 }
 
 async fn set(

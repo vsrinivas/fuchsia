@@ -5,7 +5,7 @@
 pub use self::audio_default_settings::{
     create_default_modified_timestamps, default_audio_info, ModifiedTimestamps,
 };
-pub use self::audio_fidl_handler::spawn_audio_fidl_handler;
+pub use self::audio_fidl_handler::fidl_io;
 pub use self::stream_volume_control::StreamVolumeControl;
 
 pub mod audio_controller;

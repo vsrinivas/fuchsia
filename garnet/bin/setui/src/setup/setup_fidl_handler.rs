@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use crate::fidl_hanging_get_responder;
-use crate::fidl_processor::{process_stream, RequestContext};
+use crate::fidl_process;
+
+use crate::fidl_processor::RequestContext;
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingType, SetupInfo,
     SwitchboardClient,
 };
 use crate::switchboard::hanging_get_handler::Sender;
-use fidl_fuchsia_settings::{
-    Error, SetupMarker, SetupRequest, SetupRequestStream, SetupSettings, SetupWatchResponder,
-};
+use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 use std::convert::TryFrom;
@@ -118,41 +118,32 @@ async fn set(
     return Err(fidl_fuchsia_settings::Error::Failed);
 }
 
-pub fn spawn_setup_fidl_handler(switchboard_client: SwitchboardClient, stream: SetupRequestStream) {
-    process_stream::<SetupMarker, SetupSettings, SetupWatchResponder>(
-        stream,
-        switchboard_client,
-        SettingType::Setup,
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<SetupRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        SetupRequest::Set { settings, responder } => {
-                            match set(context, settings, true).await {
-                                Ok(_) => responder.send(&mut Ok(())).ok(),
-                                Err(e) => responder.send(&mut Err(e)).ok(),
-                            };
-                        }
-                        SetupRequest::Set2 { settings, reboot_device, responder } => {
-                            match set(context, settings, reboot_device).await {
-                                Ok(_) => responder.send(&mut Ok(())).ok(),
-                                Err(e) => responder.send(&mut Err(e)).ok(),
-                            };
-                        }
-                        SetupRequest::Watch { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => return Ok(Some(req)),
-                    }
+async fn process_request(
+    context: RequestContext<SetupSettings, SetupWatchResponder>,
+    req: SetupRequest,
+) -> Result<Option<SetupRequest>, anyhow::Error> {
+    // Support future expansion of FIDL
+    #[allow(unreachable_patterns)]
+    match req {
+        SetupRequest::Set { settings, responder } => {
+            match set(context, settings, true).await {
+                Ok(_) => responder.send(&mut Ok(())).ok(),
+                Err(e) => responder.send(&mut Err(e)).ok(),
+            };
+        }
+        SetupRequest::Set2 { settings, reboot_device, responder } => {
+            match set(context, settings, reboot_device).await {
+                Ok(_) => responder.send(&mut Ok(())).ok(),
+                Err(e) => responder.send(&mut Err(e)).ok(),
+            };
+        }
+        SetupRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => return Ok(Some(req)),
+    }
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+    return Ok(None);
 }
+
+fidl_process!(Setup, SettingType::Setup, process_request);

@@ -1,9 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::fidl_process;
 use fidl_fuchsia_settings::{
-    Error, PrivacyMarker, PrivacyRequest, PrivacyRequestStream, PrivacySetResponder,
-    PrivacySettings, PrivacyWatch2Responder, PrivacyWatchResponder,
+    Error, PrivacyMarker, PrivacyRequest, PrivacySetResponder, PrivacySettings,
+    PrivacyWatch2Responder, PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
@@ -11,7 +12,7 @@ use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
 use crate::fidl_hanging_get_result_responder;
-use crate::fidl_processor::process_stream_both_watches;
+use crate::fidl_processor::RequestContext;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::Sender;
 
@@ -66,67 +67,51 @@ async fn set(
     }
 }
 
-pub fn spawn_privacy_fidl_handler(
-    switchboard_client: SwitchboardClient,
-    stream: PrivacyRequestStream,
-) {
-    // TODO(fxb/52593): Convert back to process_stream when clients are ported to watch2.
-    process_stream_both_watches::<
-        PrivacyMarker,
-        PrivacySettings,
-        PrivacyWatchResponder,
-        PrivacyWatch2Responder,
-    >(
-        stream,
-        switchboard_client,
-        SettingType::Privacy,
-        // Separate handlers because there are two separate Responders for Watch and
-        // Watch2. The hanging get handlers can only handle one type of Responder
-        // at a time, so they must be registered separately.
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<PrivacyRequest>, anyhow::Error>> {
-                async move {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        PrivacyRequest::Watch { responder } => {
-                            context.watch(responder, false).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+fidl_process!(
+    Privacy,
+    SettingType::Privacy,
+    process_request,
+    PrivacyWatch2Responder,
+    process_request_2
+);
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<PrivacyRequest>, anyhow::Error>> {
-                async move {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        PrivacyRequest::Set { settings, responder } => {
-                            set(&context.switchboard_client, settings, responder).await;
-                        }
-                        PrivacyRequest::Watch2 { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+// TODO(fxb/52593): Replace with logic from process_request_2
+// and remove process_request_2 when clients ported to Watch2 and back.
+async fn process_request(
+    context: RequestContext<PrivacySettings, PrivacyWatchResponder>,
+    req: PrivacyRequest,
+) -> Result<Option<PrivacyRequest>, anyhow::Error> {
+    #[allow(unreachable_patterns)]
+    match req {
+        PrivacyRequest::Watch { responder } => {
+            context.watch(responder, false).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+    return Ok(None);
+}
+
+async fn process_request_2(
+    context: RequestContext<PrivacySettings, PrivacyWatch2Responder>,
+    req: PrivacyRequest,
+) -> Result<Option<PrivacyRequest>, anyhow::Error> {
+    #[allow(unreachable_patterns)]
+    match req {
+        PrivacyRequest::Set { settings, responder } => {
+            set(&context.switchboard_client, settings, responder).await;
+        }
+        PrivacyRequest::Watch2 { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
 }
 
 #[cfg(test)]

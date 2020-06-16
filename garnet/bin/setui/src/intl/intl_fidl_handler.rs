@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use fidl_fuchsia_settings::{
-    Error, IntlMarker, IntlRequest, IntlRequestStream, IntlSetResponder, IntlSettings,
-    IntlWatch2Responder, IntlWatchResponder,
+    Error, IntlMarker, IntlRequest, IntlSetResponder, IntlSettings, IntlWatch2Responder,
+    IntlWatchResponder,
 };
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
@@ -11,7 +11,8 @@ use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
 use crate::fidl_hanging_get_result_responder;
-use crate::fidl_processor::{process_stream_both_watches, RequestContext};
+use crate::fidl_process;
+use crate::fidl_processor::RequestContext;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::Sender;
 
@@ -60,52 +61,42 @@ async fn set(
     }
 }
 
-pub fn spawn_intl_fidl_handler(switchboard_client: SwitchboardClient, stream: IntlRequestStream) {
-    // TODO(fxb/52593): Convert back to process_stream when clients are ported to watch2.
-    process_stream_both_watches::<IntlMarker, IntlSettings, IntlWatchResponder, IntlWatch2Responder>(
-        stream,
-        switchboard_client,
-        SettingType::Intl,
-        // Separate handlers because there are two separate Responders for Watch and
-        // Watch2. The hanging get handlers can only handle one type of Responder
-        // at a time, so they must be registered separately.
-        Box::new(
-            move |context, req| -> LocalBoxFuture<'_, Result<Option<IntlRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        IntlRequest::Watch { responder } => context.watch(responder, false).await,
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-        Box::new(
-            move |context, req| -> LocalBoxFuture<'_, Result<Option<IntlRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        IntlRequest::Set { settings, responder } => {
-                            set(context.clone(), settings, responder).await;
-                        }
-                        IntlRequest::Watch2 { responder } => context.watch(responder, true).await,
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+fidl_process!(Intl, SettingType::Intl, process_request, IntlWatch2Responder, process_request_2);
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+// TODO(fxb/52593): Replace with logic from process_request_2
+// and remove process_request_2 when clients ported to Watch2 and back.
+async fn process_request(
+    context: RequestContext<IntlSettings, IntlWatchResponder>,
+    req: IntlRequest,
+) -> Result<Option<IntlRequest>, anyhow::Error> {
+    // Support future expansion of FIDL
+    #[allow(unreachable_patterns)]
+    match req {
+        IntlRequest::Watch { responder } => context.watch(responder, false).await,
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+    return Ok(None);
+}
+
+async fn process_request_2(
+    context: RequestContext<IntlSettings, IntlWatch2Responder>,
+    req: IntlRequest,
+) -> Result<Option<IntlRequest>, anyhow::Error> {
+    // Support future expansion of FIDL
+    #[allow(unreachable_patterns)]
+    match req {
+        IntlRequest::Set { settings, responder } => {
+            set(context.clone(), settings, responder).await;
+        }
+        IntlRequest::Watch2 { responder } => context.watch(responder, true).await,
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
 }
 
 #[cfg(test)]

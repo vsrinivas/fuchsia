@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 use {
     crate::fidl_hanging_get_responder,
-    crate::fidl_processor::process_stream,
+    crate::fidl_process,
+    crate::fidl_processor::RequestContext,
     crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient},
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
-        Error, InputDeviceSettings, InputMarker, InputRequest, InputRequestStream,
-        InputSetResponder, InputWatchResponder, Microphone,
+        Error, InputDeviceSettings, InputMarker, InputRequest, InputSetResponder,
+        InputWatchResponder, Microphone,
     },
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
@@ -40,41 +41,32 @@ fn to_request(settings: InputDeviceSettings) -> Option<SettingRequest> {
     }
 }
 
-pub fn spawn_input_fidl_handler(switchboard_client: SwitchboardClient, stream: InputRequestStream) {
-    process_stream::<InputMarker, InputDeviceSettings, InputWatchResponder>(
-        stream,
-        switchboard_client,
-        SettingType::Input,
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<InputRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        InputRequest::Set { settings, responder } => {
-                            if let Some(request) = to_request(settings) {
-                                set_mic_mute(&context.switchboard_client, request, responder).await
-                            } else {
-                                responder
-                                    .send(&mut Err(Error::Unsupported))
-                                    .log_fidl_response_error(InputMarker::DEBUG_NAME);
-                            }
-                        }
-                        InputRequest::Watch { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+fidl_process!(Input, SettingType::Input, InputDeviceSettings, process_request);
+
+async fn process_request(
+    context: RequestContext<InputDeviceSettings, InputWatchResponder>,
+    req: InputRequest,
+) -> Result<Option<InputRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
+        InputRequest::Set { settings, responder } => {
+            if let Some(request) = to_request(settings) {
+                set_mic_mute(&context.switchboard_client, request, responder).await
+            } else {
+                responder
+                    .send(&mut Err(Error::Unsupported))
+                    .log_fidl_response_error(InputMarker::DEBUG_NAME);
+            }
+        }
+        InputRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+    return Ok(None);
 }
 
 /// Send the set request to the switchboard and send a response back over the [responder].

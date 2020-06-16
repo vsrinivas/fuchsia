@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::fidl_hanging_get_responder, crate::fidl_hanging_get_result_responder,
-    crate::fidl_processor::process_stream_both_watches, crate::switchboard::base::*,
+    crate::fidl_process, crate::fidl_processor::RequestContext, crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender, fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*, fuchsia_async as fasync, futures::future::LocalBoxFuture,
     futures::prelude::*,
@@ -111,70 +111,51 @@ fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
     request
 }
 
-pub fn spawn_audio_fidl_handler(switchboard_client: SwitchboardClient, stream: AudioRequestStream) {
-    // TODO(fxb/52593): Convert back to process_stream when clients are ported to watch2.
-    process_stream_both_watches::<
-        AudioMarker,
-        AudioSettings,
-        AudioWatchResponder,
-        AudioWatch2Responder,
-    >(
-        stream,
-        switchboard_client,
-        SettingType::Audio,
-        // Separate handlers because there are two separate Responders for Watch and
-        // Watch2. The hanging get handlers can only handle one type of Responder
-        // at a time, so they must be registered separately.
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<AudioRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        AudioRequest::Watch { responder } => {
-                            context.watch(responder, false).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<AudioRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        AudioRequest::Set { settings, responder } => {
-                            if let Some(request) = to_request(settings) {
-                                set_volume(&context.switchboard_client, request, responder).await
-                            } else {
-                                responder
-                                    .send(&mut Err(Error::Unsupported))
-                                    .log_fidl_response_error(AudioMarker::DEBUG_NAME);
-                            }
-                        }
-                        AudioRequest::Watch2 { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+fidl_process!(Audio, SettingType::Audio, process_request, AudioWatch2Responder, process_request_2);
+
+// TODO(fxb/52593): Replace with logic from process_request_2
+// and remove process_request_2 when clients ported to Watch2 and back.
+async fn process_request(
+    context: RequestContext<AudioSettings, AudioWatchResponder>,
+    req: AudioRequest,
+) -> Result<Option<AudioRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
+        AudioRequest::Watch { responder } => {
+            context.watch(responder, false).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+    return Ok(None);
+}
+
+async fn process_request_2(
+    context: RequestContext<AudioSettings, AudioWatch2Responder>,
+    req: AudioRequest,
+) -> Result<Option<AudioRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
+        AudioRequest::Set { settings, responder } => {
+            if let Some(request) = to_request(settings) {
+                set_volume(&context.switchboard_client, request, responder).await
+            } else {
+                responder
+                    .send(&mut Err(Error::Unsupported))
+                    .log_fidl_response_error(AudioMarker::DEBUG_NAME);
+            }
+        }
+        AudioRequest::Watch2 { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+    return Ok(None);
 }
 
 async fn set_volume(

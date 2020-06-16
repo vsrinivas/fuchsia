@@ -4,14 +4,15 @@
 use {
     crate::fidl_hanging_get_responder,
     crate::fidl_hanging_get_result_responder,
-    crate::fidl_processor::{process_stream_both_watches, RequestContext},
+    crate::fidl_process,
+    crate::fidl_processor::RequestContext,
     crate::switchboard::base::{
         SettingRequest, SettingResponse, SettingType, SwitchboardClient, SystemLoginOverrideMode,
     },
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
-        SystemMarker, SystemRequest, SystemRequestStream, SystemSetResponder, SystemSettings,
-        SystemWatch2Responder, SystemWatchResponder,
+        SystemMarker, SystemRequest, SystemSetResponder, SystemSettings, SystemWatch2Responder,
+        SystemWatchResponder,
     },
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
@@ -36,73 +37,57 @@ impl From<SettingResponse> for SystemSettings {
     }
 }
 
-pub fn spawn_system_fidl_handler(
-    switchboard_client: SwitchboardClient,
-    stream: SystemRequestStream,
-) {
-    // TODO(fxb/52593): Convert back to process_stream when clients are ported to watch2.
-    process_stream_both_watches::<
-        SystemMarker,
-        SystemSettings,
-        SystemWatchResponder,
-        SystemWatch2Responder,
-    >(
-        stream,
-        switchboard_client,
-        SettingType::System,
-        // Separate handlers because there are two separate Responders for Watch and
-        // Watch2. The hanging get handlers can only handle one type of Responder
-        // at a time, so they must be registered separately.
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<SystemRequest>, anyhow::Error>> {
-                async move {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        SystemRequest::Watch { responder } => {
-                            context.watch(responder, false).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+fidl_process!(
+    System,
+    SettingType::System,
+    process_request,
+    SystemWatch2Responder,
+    process_request_2
+);
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<SystemRequest>, anyhow::Error>> {
-                async move {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        SystemRequest::Set { settings, responder } => {
-                            if let Some(mode) = settings.mode {
-                                change_login_override(
-                                    context.clone(),
-                                    SystemLoginOverrideMode::from(mode),
-                                    responder,
-                                );
-                            }
-                        }
-                        SystemRequest::Watch2 { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+// TODO(fxb/52593): Replace with logic from process_request_2
+// and remove process_request_2 when clients ported to Watch2 and back.
+async fn process_request(
+    context: RequestContext<SystemSettings, SystemWatchResponder>,
+    req: SystemRequest,
+) -> Result<Option<SystemRequest>, anyhow::Error> {
+    #[allow(unreachable_patterns)]
+    match req {
+        SystemRequest::Watch { responder } => {
+            context.watch(responder, false).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+    return Ok(None);
+}
+
+async fn process_request_2(
+    context: RequestContext<SystemSettings, SystemWatch2Responder>,
+    req: SystemRequest,
+) -> Result<Option<SystemRequest>, anyhow::Error> {
+    #[allow(unreachable_patterns)]
+    match req {
+        SystemRequest::Set { settings, responder } => {
+            if let Some(mode) = settings.mode {
+                change_login_override(
+                    context.clone(),
+                    SystemLoginOverrideMode::from(mode),
+                    responder,
+                );
+            }
+        }
+        SystemRequest::Watch2 { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
 }
 
 /// Sets the login mode and schedules accounts to be cleared. Upon success, the

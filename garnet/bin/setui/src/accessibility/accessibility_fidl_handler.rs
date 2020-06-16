@@ -1,17 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::fidl_processor::process_stream_both_watches;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use fidl_fuchsia_settings::{
-    AccessibilityMarker, AccessibilityRequest, AccessibilityRequestStream,
-    AccessibilitySetResponder, AccessibilitySettings, AccessibilityWatch2Responder,
-    AccessibilityWatchResponder, Error,
+    AccessibilityMarker, AccessibilityRequest, AccessibilitySetResponder, AccessibilitySettings,
+    AccessibilityWatch2Responder, AccessibilityWatchResponder, Error,
 };
 use fuchsia_async as fasync;
 
+use crate::fidl_process;
+use crate::fidl_processor::RequestContext;
 use crate::switchboard::accessibility_types::{
     AccessibilityInfo, CaptionsSettings, ColorBlindnessType,
 };
@@ -25,7 +25,7 @@ fidl_hanging_get_responder!(
     AccessibilityMarker::DEBUG_NAME
 );
 
-// TODO(fxb/52593): Remove when clients are ported to watch2.
+// TODO(fxb/): Remove when clients are ported to watch2.
 fidl_hanging_get_result_responder!(
     AccessibilitySettings,
     AccessibilityWatchResponder,
@@ -70,71 +70,53 @@ impl From<AccessibilitySettings> for SettingRequest {
     }
 }
 
-pub fn spawn_accessibility_fidl_handler(
-    switchboard_client: SwitchboardClient,
-    stream: AccessibilityRequestStream,
-) {
-    // TODO(fxb/52593): Convert back to process_stream when clients are ported to watch2.
-    process_stream_both_watches::<
-        AccessibilityMarker,
-        AccessibilitySettings,
-        AccessibilityWatchResponder,
-        AccessibilityWatch2Responder
-    >(
-        stream,
-        switchboard_client,
-        SettingType::Accessibility,
-        // Separate handlers because there are two separate Responders for Watch and
-        // Watch2. The hanging get handlers can only handle one type of Responder
-        // at a time, so they must be registered separately.
-        Box::new(
-            move |context, req| ->
-            LocalBoxFuture<'_, Result<Option<AccessibilityRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        AccessibilityRequest::Watch { responder } => {
-                            context.watch(responder, false).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+fidl_process!(
+    Accessibility,
+    SettingType::Accessibility,
+    process_request,
+    AccessibilityWatch2Responder,
+    process_request_2
+);
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-        Box::new(
-            move |context, req| ->
-            LocalBoxFuture<'_, Result<Option<AccessibilityRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        AccessibilityRequest::Set { settings, responder } => {
-                            set_accessibility(
-                                &context.switchboard_client,
-                                settings,
-                                responder
-                            ).await;
-                        }
-                        AccessibilityRequest::Watch2 { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+// TODO(fxb/52593): Replace with logic from process_request_2
+// and remove process_request_2 when clients ported to Watch2 and back.
+async fn process_request(
+    context: RequestContext<AccessibilitySettings, AccessibilityWatchResponder>,
+    req: AccessibilityRequest,
+) -> Result<Option<AccessibilityRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
+        AccessibilityRequest::Watch { responder } => {
+            context.watch(responder, false).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+    return Ok(None);
+}
+
+async fn process_request_2(
+    context: RequestContext<AccessibilitySettings, AccessibilityWatch2Responder>,
+    req: AccessibilityRequest,
+) -> Result<Option<AccessibilityRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
+        AccessibilityRequest::Set { settings, responder } => {
+            set_accessibility(&context.switchboard_client, settings, responder).await;
+        }
+        AccessibilityRequest::Watch2 { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
 }
 
 /// Sends a request to set the accessibility settings through the switchboard and responds with an

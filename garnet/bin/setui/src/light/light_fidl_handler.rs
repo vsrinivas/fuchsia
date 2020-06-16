@@ -4,8 +4,8 @@
 
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
-    LightError, LightGroup, LightMarker, LightRequest, LightRequestStream,
-    LightSetLightGroupValuesResponder, LightState, LightWatchLightGroupsResponder,
+    LightError, LightGroup, LightMarker, LightRequest, LightSetLightGroupValuesResponder,
+    LightState, LightWatchLightGroupsResponder,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -13,13 +13,16 @@ use fuchsia_zircon::Status;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
-use crate::fidl_processor::{process_stream, RequestContext};
+use crate::fidl_process_full;
+use crate::fidl_processor::RequestContext;
 use crate::switchboard::base::FidlResponseErrorLogger;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::Sender;
 
-impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
-    fn send_response(self, data: Vec<LightGroup>) {
+type LightGroupSet = Vec<LightGroup>;
+
+impl Sender<LightGroupSet> for LightWatchLightGroupsResponder {
+    fn send_response(self, data: LightGroupSet) {
         self.send(&mut data.into_iter()).log_fidl_response_error(LightMarker::DEBUG_NAME);
     }
 
@@ -29,7 +32,7 @@ impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
     }
 }
 
-impl From<SettingResponse> for Vec<LightGroup> {
+impl From<SettingResponse> for LightGroupSet {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Light(info) = response {
             // Internally we store the data in a HashMap, need to flatten it out into a vector.
@@ -46,41 +49,37 @@ impl From<SettingResponse> for Vec<LightGroup> {
     }
 }
 
-pub fn spawn_light_fidl_handler(switchboard_client: SwitchboardClient, stream: LightRequestStream) {
-    // TODO(fxb/53312): implement WatchLightGroup.
-    process_stream::<LightMarker, Vec<LightGroup>, LightWatchLightGroupsResponder>(
-        stream,
-        switchboard_client,
-        SettingType::Light,
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<LightRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        LightRequest::SetLightGroupValues { name, state, responder } => {
-                            set(context.clone(), name, state, responder).await;
-                        }
-                        LightRequest::WatchLightGroups { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+fidl_process_full!(
+    Light,
+    SettingType::Light,
+    LightGroupSet,
+    LightWatchLightGroupsResponder,
+    process_request
+);
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+async fn process_request(
+    context: RequestContext<LightGroupSet, LightWatchLightGroupsResponder>,
+    req: LightRequest,
+) -> Result<Option<LightRequest>, anyhow::Error> {
+    // Support future expansion of FIDL
+    #[allow(unreachable_patterns)]
+    match req {
+        LightRequest::SetLightGroupValues { name, state, responder } => {
+            set(context.clone(), name, state, responder).await;
+        }
+        LightRequest::WatchLightGroups { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
 }
 
 async fn set(
-    context: RequestContext<Vec<LightGroup>, LightWatchLightGroupsResponder>,
+    context: RequestContext<LightGroupSet, LightWatchLightGroupsResponder>,
     name: String,
     state: Vec<LightState>,
     responder: LightSetLightGroupValuesResponder,
@@ -129,7 +128,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_response_to_vector_empty() {
-        let response: Vec<LightGroup> = SettingResponse::into(SettingResponse::Light(LightInfo {
+        let response: LightGroupSet = SettingResponse::into(SettingResponse::Light(LightInfo {
             light_groups: Default::default(),
         }));
 
@@ -156,7 +155,7 @@ mod tests {
         light_groups.insert("test".to_string(), light_group_1.clone().into());
         light_groups.insert("test2".to_string(), light_group_2.clone().into());
 
-        let mut response: Vec<LightGroup> =
+        let mut response: LightGroupSet =
             SettingResponse::into(SettingResponse::Light(LightInfo { light_groups }));
 
         // Sort so light groups are in a predictable order.

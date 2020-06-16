@@ -5,18 +5,17 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_hanging_get_responder_no_imports,
     crate::fidl_hanging_get_result_responder,
-    crate::fidl_processor::FidlProcessor,
+    crate::fidl_process,
+    crate::fidl_processor::RequestContext,
     crate::switchboard::base::{
         LowLightMode, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
     },
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
-        DisplayMarker, DisplayRequest, DisplayRequestStream, DisplaySettings,
-        DisplayWatch2Responder, DisplayWatchLightSensor2Responder,
-        DisplayWatchLightSensorResponder, DisplayWatchResponder, Error, LightSensorData,
-        LowLightMode as FidlLowLightMode,
+        DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
+        DisplayWatchLightSensor2Responder, DisplayWatchLightSensorResponder, DisplayWatchResponder,
+        Error, LightSensorData, LowLightMode as FidlLowLightMode,
     },
-    fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
 };
@@ -99,147 +98,132 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
     request
 }
 
-pub fn spawn_display_fidl_handler(
-    switchboard_client: SwitchboardClient,
-    stream: DisplayRequestStream,
-) {
-    fasync::spawn_local(async move {
-        let mut processor = FidlProcessor::<DisplayMarker>::new(stream, switchboard_client);
+fidl_process!(
+    Display,
+    SettingType::Display,
+    process_request,
+    SettingType::Display,
+    DisplaySettings,
+    DisplayWatch2Responder,
+    process_request_2,
+    SettingType::LightSensor,
+    LightSensorData,
+    DisplayWatchLightSensorResponder,
+    process_sensor_request,
+    SettingType::LightSensor,
+    LightSensorData,
+    DisplayWatchLightSensor2Responder,
+    process_sensor_request_2
+);
 
-        // TODO(fxb/52593): Remove when clients are ported to watch2.
-        processor.register::<DisplaySettings, DisplayWatchResponder>(
-            SettingType::Display,
-            Box::new(move |context, req| ->
-                LocalBoxFuture<'_, Result<Option<DisplayRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        DisplayRequest::Watch { responder } => {
-                            context.watch(responder, false).await;
-                        },
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
-                    return Ok(None);
+// TODO(fxb/52593): Replace with logic from process_request_2
+// and remove process_request_2 when clients ported to Watch2 and back.
+async fn process_request(
+    context: RequestContext<DisplaySettings, DisplayWatchResponder>,
+    req: DisplayRequest,
+) -> Result<Option<DisplayRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
+        DisplayRequest::Watch { responder } => {
+            context.watch(responder, false).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+    return Ok(None);
+}
+
+async fn process_request_2(
+    context: RequestContext<DisplaySettings, DisplayWatch2Responder>,
+    req: DisplayRequest,
+) -> Result<Option<DisplayRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    match req {
+        DisplayRequest::Set { settings, responder } => {
+            if let Some(request) = to_request(settings) {
+                match context.switchboard_client.request(SettingType::Display, request).await {
+                    Ok(_) => responder
+                        .send(&mut Ok(()))
+                        .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
+                    Err(_err) => responder
+                        .send(&mut Err(Error::Unsupported))
+                        .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
                 }
-                .boxed_local()
-            }),
-        ).await;
+            } else {
+                responder
+                    .send(&mut Err(Error::Unsupported))
+                    .log_fidl_response_error(DisplayMarker::DEBUG_NAME);
+            }
+        }
+        DisplayRequest::Watch2 { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
 
-        processor.register::<DisplaySettings, DisplayWatch2Responder>(
-            SettingType::Display,
-            Box::new(move |context, req| ->
-                LocalBoxFuture<'_, Result<Option<DisplayRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        DisplayRequest::Set { settings, responder } => {
-                            if let Some(request) = to_request(settings) {
-                                match context.switchboard_client.request(
-                                    SettingType::Display,
-                                    request
-                                ).await {
-                                    Ok(_) => responder
-                                        .send(&mut Ok(()))
-                                        .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
-                                    Err(_err) => responder
-                                        .send(&mut Err(Error::Unsupported))
-                                        .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
-                                }
-                            } else {
-                                responder
-                                    .send(&mut Err(Error::Unsupported))
-                                    .log_fidl_response_error(DisplayMarker::DEBUG_NAME);
-                            }
-                        },
-                        DisplayRequest::Watch2 { responder } => {
-                            context.watch(responder, true).await;
-                        },
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+    return Ok(None);
+}
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            }),
-        ).await;
-
-        // TODO(fxb/52593): Remove when clients are ported to watch2.
-        processor.register::<LightSensorData, DisplayWatchLightSensorResponder>(
-            SettingType::LightSensor,
-            Box::new(move |context, req| ->
-                LocalBoxFuture<'_, Result<Option<DisplayRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    if let DisplayRequest::WatchLightSensor { delta, responder } = req {
-                        context.watch_with_change_fn(
-                            Box::new(
-                                move |old_data: &LightSensorData, new_data: &LightSensorData| {
-                                    if let (Some(old_lux), Some(new_lux)) =
-                                        (old_data.illuminance_lux, new_data.illuminance_lux)
-                                    {
-                                        (new_lux - old_lux).abs() >= delta
-                                    } else {
-                                        true
-                                    }
-                                },
-                            ),
-                            responder,
-                            false,
-                        )
-                        .await;
+// TODO(fxb/52593): Replace with logic from process_request_2
+// and remove process_request_2 when clients ported to Watch2 and back.
+async fn process_sensor_request(
+    context: RequestContext<LightSensorData, DisplayWatchLightSensorResponder>,
+    req: DisplayRequest,
+) -> Result<Option<DisplayRequest>, anyhow::Error> {
+    #[allow(unreachable_patterns)]
+    if let DisplayRequest::WatchLightSensor { delta, responder } = req {
+        context
+            .watch_with_change_fn(
+                Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
+                    if let (Some(old_lux), Some(new_lux)) =
+                        (old_data.illuminance_lux, new_data.illuminance_lux)
+                    {
+                        (new_lux - old_lux).abs() >= delta
                     } else {
-                        return Ok(Some(req));
+                        true
                     }
+                }),
+                responder,
+                false,
+            )
+            .await;
+    } else {
+        return Ok(Some(req));
+    }
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            }),
-        ).await;
+    return Ok(None);
+}
 
-        processor.register::<LightSensorData, DisplayWatchLightSensor2Responder>(
-            SettingType::LightSensor,
-            Box::new(move |context, req| ->
-                LocalBoxFuture<'_, Result<Option<DisplayRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    if let DisplayRequest::WatchLightSensor2 { delta, responder } = req {
-                        context.watch_with_change_fn(
-                            Box::new(
-                                move |
-                                    old_data: &LightSensorData,
-                                    new_data: &LightSensorData
-                                | {
-                                    if let (Some(old_lux), Some(new_lux)) =
-                                        (old_data.illuminance_lux, new_data.illuminance_lux)
-                                    {
-                                        (new_lux - old_lux).abs() >= delta
-                                    } else {
-                                        true
-                                    }
-                                },
-                            ),
-                            responder,
-                            true,
-                        )
-                        .await;
+async fn process_sensor_request_2(
+    context: RequestContext<LightSensorData, DisplayWatchLightSensor2Responder>,
+    req: DisplayRequest,
+) -> Result<Option<DisplayRequest>, anyhow::Error> {
+    // Support future expansion of FIDL.
+    #[allow(unreachable_patterns)]
+    if let DisplayRequest::WatchLightSensor2 { delta, responder } = req {
+        context
+            .watch_with_change_fn(
+                Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
+                    if let (Some(old_lux), Some(new_lux)) =
+                        (old_data.illuminance_lux, new_data.illuminance_lux)
+                    {
+                        (new_lux - old_lux).abs() >= delta
                     } else {
-                        return Ok(Some(req));
+                        true
                     }
+                }),
+                responder,
+                true,
+            )
+            .await;
+    } else {
+        return Ok(Some(req));
+    }
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            }),
-        ).await;
-        processor.process().await;
-    });
+    return Ok(None);
 }

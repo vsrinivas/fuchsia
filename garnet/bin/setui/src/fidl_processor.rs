@@ -263,26 +263,3 @@ pub fn process_stream<S, T, ST>(
         processor.process().await;
     });
 }
-
-/// Process the request stream, enabling both watch() and watch2()
-/// to be handled.
-// TODO(fxb/52593): Remove when clients are ported to watch2.
-pub fn process_stream_both_watches<S, T, ST1, ST2>(
-    stream: RequestStream<S>,
-    switchboard: SwitchboardClient,
-    setting_type: SettingType,
-    watch_callback: RequestCallback<S, T, ST1>,
-    watch_2_callback: RequestCallback<S, T, ST2>,
-) where
-    S: ServiceMarker,
-    T: From<SettingResponse> + Send + Sync + 'static,
-    ST1: Sender<T> + Send + Sync + 'static,
-    ST2: Sender<T> + Send + Sync + 'static,
-{
-    fasync::spawn_local(async move {
-        let mut processor = FidlProcessor::<S>::new(stream, switchboard);
-        processor.register::<T, ST1>(setting_type, watch_callback).await;
-        processor.register::<T, ST2>(setting_type, watch_2_callback).await;
-        processor.process().await;
-    });
-}

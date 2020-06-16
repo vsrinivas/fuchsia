@@ -7,33 +7,23 @@
 
 use {
     crate::accessibility::accessibility_controller::AccessibilityController,
-    crate::accessibility::spawn_accessibility_fidl_handler,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
     crate::agent::base::{
         Authority, BlueprintHandle as AgentBlueprintHandle, InitializationContext, Lifespan,
     },
     crate::audio::audio_controller::AudioController,
-    crate::audio::spawn_audio_fidl_handler,
     crate::device::device_controller::DeviceController,
-    crate::device::spawn_device_fidl_handler,
     crate::display::display_controller::DisplayController,
     crate::display::light_sensor_controller::LightSensorController,
-    crate::display::spawn_display_fidl_handler,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
-    crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::input::input_controller::InputController,
-    crate::input::spawn_input_fidl_handler,
     crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
-    crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
     crate::light::light_controller::LightController,
-    crate::light::light_fidl_handler::spawn_light_fidl_handler,
     crate::night_mode::night_mode_controller::NightModeController,
-    crate::night_mode::spawn_night_mode_fidl_handler,
     crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
-    crate::privacy::spawn_privacy_fidl_handler,
     crate::registry::base::GenerateHandler,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::registry_impl::RegistryImpl,
@@ -44,7 +34,6 @@ use {
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
-    crate::setup::spawn_setup_fidl_handler,
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         AudioInfo, DisplayInfo, DoNotDisturbInfo, InputInfo, NightModeInfo, PrivacyInfo,
@@ -54,7 +43,6 @@ use {
     crate::switchboard::light_types::LightInfo,
     crate::switchboard::switchboard_impl::SwitchboardBuilder,
     crate::system::spawn_setui_fidl_handler,
-    crate::system::spawn_system_fidl_handler,
     crate::system::system_controller::SystemController,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
@@ -146,6 +134,24 @@ macro_rules! register_handler {
     ($handler_factory:ident, $setting_type:expr, $spawn_method:expr) => {
         $handler_factory.register($setting_type, Box::new($spawn_method));
     };
+}
+
+/// This macro conditionally adds a FIDL service handler based on the presence
+/// of `SettingType`s in the available components. The caller specifies the
+/// mod containing a generated fidl_io mod to handle the incoming request
+/// streams, the target FIDL interface, and a list of `SettingType`s whose
+/// presence will cause this handler to be included.
+macro_rules! register_fidl_handler {
+    ($components:ident, $service_dir:ident, $client:ident, $interface:ident,
+            $handler_mod:ident$(, $target:ident)+) => {
+        if false $(|| $components.contains(&SettingType::$target))+
+        {
+            let client = $client.clone();
+            $service_dir.add_fidl_service(move |stream: paste::item!{[<$interface RequestStream>]}| {
+                crate::$handler_mod::fidl_io::spawn(client.clone(), stream);
+            });
+        }
+    }
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
@@ -430,96 +436,64 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     )
     .await
     .expect("could not create registry");
-    if components.contains(&SettingType::Accessibility) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {
-            spawn_accessibility_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
 
-    if components.contains(&SettingType::Audio) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: AudioRequestStream| {
-            spawn_audio_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(components, service_dir, switchboard_client, Light, light, Light);
 
-    if components.contains(&SettingType::Device) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: DeviceRequestStream| {
-            spawn_device_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        Accessibility,
+        accessibility,
+        Accessibility
+    );
 
-    if components.contains(&SettingType::Display) || components.contains(&SettingType::LightSensor)
-    {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
-            spawn_display_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(components, service_dir, switchboard_client, Audio, audio, Audio);
 
-    if components.contains(&SettingType::DoNotDisturb) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: DoNotDisturbRequestStream| {
-            spawn_do_not_disturb_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(components, service_dir, switchboard_client, Device, device, Device);
 
-    if components.contains(&SettingType::Input) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: InputRequestStream| {
-            spawn_input_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        Display,
+        display,
+        Display,
+        LightSensor
+    );
 
-    if components.contains(&SettingType::Intl) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: IntlRequestStream| {
-            spawn_intl_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        DoNotDisturb,
+        do_not_disturb,
+        DoNotDisturb
+    );
 
-    if components.contains(&SettingType::Light) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: LightRequestStream| {
-            spawn_light_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(components, service_dir, switchboard_client, Intl, intl, Intl);
 
-    if components.contains(&SettingType::NightMode) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
-            spawn_night_mode_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        NightMode,
+        night_mode,
+        NightMode
+    );
 
-    if components.contains(&SettingType::Privacy) {
-        let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
-            spawn_privacy_fidl_handler(switchboard_client.clone(), stream);
-        });
-    }
+    register_fidl_handler!(components, service_dir, switchboard_client, Privacy, privacy, Privacy);
+
+    register_fidl_handler!(components, service_dir, switchboard_client, System, system, System);
+
+    register_fidl_handler!(components, service_dir, switchboard_client, Input, input, Input);
+
+    register_fidl_handler!(components, service_dir, switchboard_client, Setup, setup, Setup);
 
     if components.contains(&SettingType::System) {
-        {
-            let switchboard_client = switchboard_client.clone();
-            service_dir.add_fidl_service(move |stream: SystemRequestStream| {
-                spawn_system_fidl_handler(switchboard_client.clone(), stream);
-            });
-        }
-        {
-            let switchboard_client = switchboard_client.clone();
-            service_dir.add_fidl_service(move |stream: SetUiServiceRequestStream| {
-                spawn_setui_fidl_handler(switchboard_client.clone(), stream);
-            });
-        }
-    }
-
-    if components.contains(&SettingType::Setup) {
         let switchboard_client = switchboard_client.clone();
-        service_dir.add_fidl_service(move |stream: SetupRequestStream| {
-            spawn_setup_fidl_handler(switchboard_client.clone(), stream);
+        service_dir.add_fidl_service(move |stream: SetUiServiceRequestStream| {
+            spawn_setui_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 

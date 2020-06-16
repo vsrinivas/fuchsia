@@ -1,11 +1,10 @@
 use {
     crate::fidl_hanging_get_responder,
-    crate::fidl_processor::process_stream,
+    crate::fidl_process,
+    crate::fidl_processor::RequestContext,
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
-    fidl_fuchsia_settings::{
-        DeviceMarker, DeviceRequest, DeviceRequestStream, DeviceSettings, DeviceWatchResponder,
-    },
+    fidl_fuchsia_settings::{DeviceMarker, DeviceRequest, DeviceSettings, DeviceWatchResponder},
     futures::future::LocalBoxFuture,
     futures::FutureExt,
 };
@@ -24,34 +23,22 @@ impl From<SettingResponse> for DeviceSettings {
     }
 }
 
-pub fn spawn_device_fidl_handler(
-    switchboard_client: SwitchboardClient,
-    stream: DeviceRequestStream,
-) {
-    process_stream::<DeviceMarker, DeviceSettings, DeviceWatchResponder>(
-        stream,
-        switchboard_client,
-        SettingType::Device,
-        Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<DeviceRequest>, anyhow::Error>> {
-                async move {
-                    // Support future expansion of FIDL
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        DeviceRequest::Watch { responder } => {
-                            context.watch(responder, true).await;
-                        }
-                        _ => {
-                            return Ok(Some(req));
-                        }
-                    }
+fidl_process!(Device, SettingType::Device, process_request);
 
-                    return Ok(None);
-                }
-                .boxed_local()
-            },
-        ),
-    );
+async fn process_request(
+    context: RequestContext<DeviceSettings, DeviceWatchResponder>,
+    req: DeviceRequest,
+) -> Result<Option<DeviceRequest>, anyhow::Error> {
+    // Support future expansion of FIDL
+    #[allow(unreachable_patterns)]
+    match req {
+        DeviceRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
 }
