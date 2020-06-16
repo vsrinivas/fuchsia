@@ -25,7 +25,7 @@
 
 #include <fbl/algorithm.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // argv[0]
 static char* program_path;
@@ -74,7 +74,7 @@ struct Message {
 static void send_msg_with_handles(zx_handle_t channel, MessageType type,
                                   zx_handle_t* optional_handles, uint32_t num_handles) {
   uint32_t data = type;
-  unittest_printf("sending message %d on handle %u, with %u handles\n", type, channel, num_handles);
+  printf("sending message %d on handle %u, with %u handles\n", type, channel, num_handles);
   zx_status_t status =
       zx_channel_write(channel, 0, &data, sizeof(data), optional_handles, num_handles);
   ZX_DEBUG_ASSERT(status == ZX_OK);
@@ -85,10 +85,10 @@ static void send_msg(zx_handle_t channel, MessageType type) {
 }
 
 static bool recv_msg(zx_handle_t channel, Message* msg) {
-  unittest_printf("waiting for message on handle %u\n", channel);
+  printf("waiting for message on handle %u\n", channel);
 
   if (!tu_channel_wait_readable(channel)) {
-    unittest_printf("peer closed while trying to read message\n");
+    printf("peer closed while trying to read message\n");
     return false;
   }
 
@@ -98,29 +98,28 @@ static bool recv_msg(zx_handle_t channel, Message* msg) {
   zx_status_t status = zx_channel_read(channel, 0, &data, &msg->handles[0], num_bytes,
                                        msg->num_handles, &num_bytes, &msg->num_handles);
   if (status != ZX_OK) {
-    unittest_printf("ERROR: failed to read message: %s\n", zx_status_get_string(status));
+    printf("ERROR: failed to read message: %s\n", zx_status_get_string(status));
     return false;
   }
   if (num_bytes != sizeof(data)) {
-    unittest_printf("ERROR: unexpected message size, %u != %zu\n", num_bytes, sizeof(data));
+    printf("ERROR: unexpected message size, %u != %zu\n", num_bytes, sizeof(data));
     return false;
   }
 
   msg->type = static_cast<MessageType>(data);
-  unittest_printf("received message %u\n", msg->type);
+  printf("received message %u\n", msg->type);
   return true;
 }
 
-static bool recv_specific_msg(zx_handle_t channel, MessageType expected_type) {
+static void recv_specific_msg(zx_handle_t channel, MessageType expected_type) {
   Message msg;
   ASSERT_TRUE(recv_msg(channel, &msg));
   ASSERT_EQ(msg.type, expected_type);
-  return true;
 }
 
 static void do_msg_thread_handle_request(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles != 0) {
-    unittest_printf("ERROR: wrong number handles\n");
+    printf("ERROR: wrong number handles\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -130,7 +129,7 @@ static void do_msg_thread_handle_request(zx_handle_t channel, const Message* msg
 
 static void do_msg_sleep_test(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles != 0) {
-    unittest_printf("ERROR: wrong number handles\n");
+    printf("ERROR: wrong number handles\n");
     // There's no point in sending MSG_FAIL here as the test can never
     // receive MSG_PASS.
     return;
@@ -141,7 +140,7 @@ static void do_msg_sleep_test(zx_handle_t channel, const Message* msg) {
 
 static void do_msg_futex_test(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles != 0) {
-    unittest_printf("ERROR: wrong number handles\n");
+    printf("ERROR: wrong number handles\n");
     // There's no point in sending MSG_FAIL here as the test can never
     // receive MSG_PASS.
     return;
@@ -154,7 +153,7 @@ static void do_msg_futex_test(zx_handle_t channel, const Message* msg) {
 
 static void do_msg_port_test(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles != 1) {
-    unittest_printf("ERROR: wrong number handles\n");
+    printf("ERROR: wrong number handles\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -164,7 +163,7 @@ static void do_msg_port_test(zx_handle_t channel, const Message* msg) {
   auto status = zx_port_wait(port, ZX_TIME_INFINITE, &packet);
   zx_handle_close(port);
   if (status != ZX_OK) {
-    unittest_printf("ERROR: port_wait failed: %d/%s\n", status, zx_status_get_string(status));
+    printf("ERROR: port_wait failed: %d/%s\n", status, zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -172,7 +171,7 @@ static void do_msg_port_test(zx_handle_t channel, const Message* msg) {
   if (packet.key != port_test_packet.key || packet.type != port_test_packet.type ||
       packet.status != port_test_packet.status ||
       memcmp(&packet.user, &port_test_packet.user, sizeof(zx_port_packet_t::user)) != 0) {
-    unittest_printf("ERROR: bad data in packet\n");
+    printf("ERROR: bad data in packet\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -182,7 +181,7 @@ static void do_msg_port_test(zx_handle_t channel, const Message* msg) {
 
 static void do_msg_channel_test(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles != 1) {
-    unittest_printf_critical("ERROR: wrong number handles\n");
+    printf("ERROR: wrong number handles\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -209,8 +208,8 @@ static void do_msg_channel_test(zx_handle_t channel, const Message* msg) {
   if (status == ZX_ERR_PEER_CLOSED) {
     // ok
   } else {
-    unittest_printf_critical("ERROR: channel_call didn't get PEER_CLOSED: %d/%s\n", status,
-                             zx_status_get_string(status));
+    printf("ERROR: channel_call didn't get PEER_CLOSED: %d/%s\n", status,
+           zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -220,7 +219,7 @@ static void do_msg_channel_test(zx_handle_t channel, const Message* msg) {
 
 static void do_msg_wait_one_test(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles != 1) {
-    unittest_printf("ERROR: wrong number handles\n");
+    printf("ERROR: wrong number handles\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -235,13 +234,13 @@ static void do_msg_wait_one_test(zx_handle_t channel, const Message* msg) {
       zx_object_wait_one(msg->handles[0], ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &observed);
   zx_handle_close(msg->handles[0]);
   if (status != ZX_OK) {
-    unittest_printf("ERROR: wait_one failed: %d/%s\n", status, zx_status_get_string(status));
+    printf("ERROR: wait_one failed: %d/%s\n", status, zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
     return;
   }
 
   if (!(observed & ZX_EVENTPAIR_PEER_CLOSED)) {
-    unittest_printf("ERROR: ZX_EVENTPAIR_PEER_CLOSED not observed\n");
+    printf("ERROR: ZX_EVENTPAIR_PEER_CLOSED not observed\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -251,7 +250,7 @@ static void do_msg_wait_one_test(zx_handle_t channel, const Message* msg) {
 
 static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles > NUM_WAIT_MANY_HANDLES) {
-    unittest_printf("ERROR: too many handles\n");
+    printf("ERROR: too many handles\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -272,7 +271,7 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
     zx_handle_close(msg->handles[i]);
   }
   if (status != ZX_OK) {
-    unittest_printf("ERROR: wait_many failed: %d/%s\n", status, zx_status_get_string(status));
+    printf("ERROR: wait_many failed: %d/%s\n", status, zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -286,7 +285,7 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
     }
   }
   if (!got_peer_closed) {
-    unittest_printf("ERROR: ZX_EVENTPAIR_PEER_CLOSED not observed\n");
+    printf("ERROR: ZX_EVENTPAIR_PEER_CLOSED not observed\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -296,7 +295,7 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
 
 static void do_msg_interrupt_test(zx_handle_t channel, const Message* msg) {
   if (msg->num_handles != 1) {
-    unittest_printf("ERROR: wrong number handles\n");
+    printf("ERROR: wrong number handles\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -306,13 +305,13 @@ static void do_msg_interrupt_test(zx_handle_t channel, const Message* msg) {
   auto status = zx_interrupt_wait(interrupt, &timestamp);
   zx_handle_close(interrupt);
   if (status != ZX_OK) {
-    unittest_printf("ERROR: interrupt_wait failed: %d/%s\n", status, zx_status_get_string(status));
+    printf("ERROR: interrupt_wait failed: %d/%s\n", status, zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
     return;
   }
 
   if (timestamp != interrupt_signaled_timestamp) {
-    unittest_printf("ERROR: interrupt timestamp mismatch\n");
+    printf("ERROR: interrupt timestamp mismatch\n");
     send_msg(channel, MSG_FAIL);
     return;
   }
@@ -327,7 +326,7 @@ static void msg_loop(zx_handle_t channel) {
     Message msg;
     msg.num_handles = static_cast<uint32_t>(std::size(msg.handles));
     if (!recv_msg(channel, &msg)) {
-      unittest_printf("ERROR: while receiving msg\n");
+      printf("ERROR: while receiving msg\n");
       return;
     }
 
@@ -360,33 +359,31 @@ static void msg_loop(zx_handle_t channel) {
         do_msg_interrupt_test(channel, &msg);
         break;
       default:
-        unittest_printf("ERROR: unknown message received: %u\n", msg.type);
+        printf("ERROR: unknown message received: %u\n", msg.type);
         break;
     }
   }
 }
 
 static void __NO_RETURN test_child(void) {
-  unittest_printf("Test child starting.\n");
+  printf("Test child starting.\n");
   zx_handle_t channel = zx_take_startup_handle(PA_USER0);
   if (channel == ZX_HANDLE_INVALID)
     tu_fatal("zx_take_startup_handle", ZX_ERR_BAD_HANDLE - 1000);
   msg_loop(channel);
-  unittest_printf("Test child exiting.\n");
+  printf("Test child exiting.\n");
   exit(0);
 }
 
 static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_channel) {
-  unittest_printf("Starting test child %s.\n", arg);
+  printf("Starting test child %s.\n", arg);
   zx_handle_t our_channel, their_channel;
   zx_status_t status = zx_channel_create(0, &our_channel, &their_channel);
   ZX_DEBUG_ASSERT(status == ZX_OK);
   const char* test_child_path = program_path;
-  const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'), '\0'};
   const char* const argv[] = {
       test_child_path,
       arg,
-      verbosity_string,
   };
   int argc = std::size(argv);
   zx_handle_t handles[1] = {their_channel};
@@ -394,7 +391,7 @@ static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_hand
   *out_channel = our_channel;
   springboard_t* sb =
       tu_launch_init(job, test_child_name, argc, argv, 0, NULL, 1, handles, handle_ids);
-  unittest_printf("Test child setup.\n");
+  printf("Test child setup.\n");
   return sb;
 }
 
@@ -402,17 +399,16 @@ static void start_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_
                              zx_handle_t* out_channel) {
   springboard_t* sb = setup_test_child(job, arg, out_channel);
   *out_child = tu_launch_fini(sb);
-  unittest_printf("Test child started.\n");
+  printf("Test child started.\n");
 }
 
-static bool get_child_thread(zx_handle_t channel, zx_handle_t* thread) {
+static void get_child_thread(zx_handle_t channel, zx_handle_t* thread) {
   send_msg(channel, MSG_THREAD_HANDLE_REQUEST);
   Message msg;
   ASSERT_TRUE(recv_msg(channel, &msg));
   EXPECT_EQ(msg.type, MSG_THREAD_HANDLE_RESPONSE);
   EXPECT_EQ(msg.num_handles, 1u);
   *thread = msg.handles[0];
-  return true;
 }
 
 // Wait for |thread| to enter blocked state |reason|.
@@ -432,21 +428,22 @@ static void wait_thread_blocked(zx_handle_t thread, uint32_t reason) {
 
 // Terminate |process| by killing it and wait for it to exit.
 
-static bool terminate_process(zx_handle_t process) {
+static void terminate_process(zx_handle_t process) {
   zx_status_t status = zx_task_kill(process);
   ASSERT_EQ(status, ZX_OK);
   tu_process_wait_signaled(process);
-  return true;
 }
 
-static bool sleeping_test() {
-  BEGIN_TEST;
+// Note that ZX_THREAD_STATE_BLOCKED_EXCEPTION is tested in utest/exception
+// but not here.  There's a lot of support logic and there's no reason to
+// duplicate the coverage of it here.
 
+TEST(ThreadStateTests, sleeping_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   send_msg(channel, MSG_SLEEP_TEST);
 
@@ -456,36 +453,28 @@ static bool sleeping_test() {
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_SLEEPING);
 
   terminate_process(child);
-
-  END_TEST;
 }
 
-static bool futex_test() {
-  BEGIN_TEST;
-
+TEST(ThreadStateTests, futex_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   send_msg_with_handles(channel, MSG_FUTEX_TEST, nullptr, 0);
 
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_FUTEX);
 
   terminate_process(child);
-
-  END_TEST;
 }
 
-static bool port_test() {
-  BEGIN_TEST;
-
+TEST(ThreadStateTests, port_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   zx_handle_t port;
   ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
@@ -501,22 +490,18 @@ static bool port_test() {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
 
   zx_handle_close(port);
   terminate_process(child);
-
-  END_TEST;
 }
 
-static bool channel_test() {
-  BEGIN_TEST;
-
+TEST(ThreadStateTests, channel_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   zx_handle_t our_channel, their_channel;
   ASSERT_EQ(zx_channel_create(0, &our_channel, &their_channel), ZX_OK);
@@ -530,21 +515,17 @@ static bool channel_test() {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
 
   terminate_process(child);
-
-  END_TEST;
 }
 
-static bool wait_one_test() {
-  BEGIN_TEST;
-
+TEST(ThreadStateTests, wait_one_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   zx_handle_t h[2];
   ASSERT_EQ(zx_eventpair_create(0, &h[0], &h[1]), ZX_OK);
@@ -553,7 +534,7 @@ static bool wait_one_test() {
 
   // Don't continue until we see MSG_PROCEED, that tells us the child has
   // received the message and isn't in a wait_one/wait_many syscall.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PROCEED));
 
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
@@ -562,21 +543,17 @@ static bool wait_one_test() {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
 
   terminate_process(child);
-
-  END_TEST;
 }
 
-static bool wait_many_test() {
-  BEGIN_TEST;
-
+TEST(ThreadStateTests, wait_many_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   uint32_t num_handles = NUM_WAIT_MANY_HANDLES;
   zx_handle_t h[2][num_handles];
@@ -588,7 +565,7 @@ static bool wait_many_test() {
 
   // Don't continue until we see MSG_PROCEED, that tells us the child has
   // received the message and isn't in a wait_one/wait_many syscall.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PROCEED));
 
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY);
 
@@ -599,47 +576,39 @@ static bool wait_many_test() {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
 
   terminate_process(child);
-
-  END_TEST;
 }
 
 // Just like wait_many_test except the child doesn't wait on any objects, just
 // the (infinite) timeout.
-static bool wait_many_no_objects_test() {
-  BEGIN_TEST;
-
+TEST(ThreadStateTests, wait_many_no_objects_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   send_msg(channel, MSG_WAIT_MANY_TEST);
 
   // Don't continue until we see MSG_PROCEED, that tells us the child has
   // received the message and isn't in a wait_one/wait_many syscall.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PROCEED));
 
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY);
 
   // The child won't be sending a pass/fail message back because it's stuck in
   // object_wait_many so just kill it.
   terminate_process(child);
-
-  END_TEST;
 }
 
-static bool interrupt_test() {
-  BEGIN_TEST;
-
+TEST(ThreadStateTests, interrupt_test) {
   // Start a new process.
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_TRUE(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
 
   zx_handle_t interrupt;
   // Creating a virtual interrupt does not require a valid handle.
@@ -656,39 +625,14 @@ static bool interrupt_test() {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
 
   zx_handle_close(interrupt);
   terminate_process(child);
-
-  END_TEST;
-}
-
-BEGIN_TEST_CASE(thread_state_tests)
-// ZX_THREAD_STATE_BLOCKED_EXCEPTION is tested in utest/exception.
-// There's a lot of support logic and there's no reason to duplicate it here.
-RUN_TEST(sleeping_test);
-RUN_TEST(futex_test);
-RUN_TEST(port_test);
-RUN_TEST(channel_test);
-RUN_TEST(wait_one_test);
-RUN_TEST(wait_many_test);
-RUN_TEST(wait_many_no_objects_test);
-RUN_TEST(interrupt_test);
-END_TEST_CASE(thread_state_tests)
-
-static void scan_argv(int argc, char** argv) {
-  for (int i = 1; i < argc; ++i) {
-    if (strncmp(argv[i], "v=", 2) == 0) {
-      int verbosity = atoi(argv[i] + 2);
-      unittest_set_verbosity_level(verbosity);
-    }
-  }
 }
 
 int main(int argc, char** argv) {
   program_path = argv[0];
-  scan_argv(argc, argv);
 
   if (argc >= 2) {
     if (strcmp(argv[1], test_child_name) == 0) {
@@ -697,7 +641,5 @@ int main(int argc, char** argv) {
     }
   }
 
-  bool success = unittest_run_all_tests(argc, argv);
-
-  return success ? 0 : -1;
+  return zxtest::RunAllTests(argc, argv);
 }
