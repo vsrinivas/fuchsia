@@ -16,10 +16,6 @@ package("rust_inspect_benchmarks") {
 
   resources = [
     {
-      path = rebase_path("benchmarks.tspec")
-      dest = "benchmarks.tspec"
-    },
-    {
       path = rebase_path("reader_benchmarks.tspec")
       dest = "reader_benchmarks.tspec"
     },
