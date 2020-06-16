@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/spawn.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/algorithm.h>
-#include <lib/fdio/spawn.h>
-#include <unittest/unittest.h>
-#include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 // This file is for regression tests for race conditions where the test was
 // only observed to reproduce the race condition when some scheduling
@@ -30,9 +30,7 @@ static void Subprocess() {
 // process -- as reported by zx_object_get_info()'s return_code field --
 // could change.  That could happen if multiple threads called
 // zx_process_exit() concurrently.
-static bool TestProcessExitStatusRace() {
-  BEGIN_TEST;
-
+TEST(RaceTests, TestProcessExitStatusRace) {
   // Launch a subprocess.
   const char* argv[] = {g_executable_filename, "--subprocess", nullptr};
   zx_handle_t proc;
@@ -66,13 +64,7 @@ static bool TestProcessExitStatusRace() {
 
   // Clean up.
   ASSERT_EQ(zx_handle_close(proc), ZX_OK);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(race_tests)
-RUN_TEST(TestProcessExitStatusRace)
-END_TEST_CASE(race_tests)
 
 int main(int argc, char** argv) {
   g_executable_filename = argv[0];
@@ -82,6 +74,5 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  bool success = unittest_run_all_tests(argc, argv);
-  return success ? 0 : -1;
+  return zxtest::RunAllTests(argc, argv);
 }
