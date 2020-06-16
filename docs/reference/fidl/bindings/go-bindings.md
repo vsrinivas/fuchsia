@@ -264,6 +264,7 @@ type User struct {
 ```
 
 `User` provides the following methods:
+
 * `func (u *User) HasAge() bool` and `func (u *User) HasName() bool`: Checks for
   the presence of a field.
 * `func (u *User) SetAge(age uint8)` and `func (u *User) SetName(name string)`:

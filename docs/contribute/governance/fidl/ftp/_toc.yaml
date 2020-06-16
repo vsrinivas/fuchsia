@@ -82,5 +82,7 @@ toc:
   path: /docs/contribute/governance/fidl/ftp/ftp-049.md
 - title: "FTP-054: Parameter Attributes"
   path: /docs/contribute/governance/fidl/ftp/ftp-054.md
+- title: "FTP-057: Default No Handles"
+  path: /docs/contribute/governance/fidl/ftp/ftp-057.md
 - title: "FTP-059: Reserved Bits in Vector/String/Array Count Fields"
   path: /docs/contribute/governance/fidl/ftp/ftp-059.md

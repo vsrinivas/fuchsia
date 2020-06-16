@@ -390,7 +390,7 @@ implementing C APIs that take a raw `zx_handle_t`.
 * `ResultOf::MakeMove MakeMove(uint8_t row, uint8_t col)`: Owned variant of a
   two way method call, which takes the parameters as arguments and returns the
   `ResultOf` class.
-* `UnownedResultOf::MakeMove(fidl::BytePart _request_bufffer, uint8_t row,
+* `UnownedResultOf::MakeMove(fidl::BytePart _request_buffer, uint8_t row,
   uint8_t col, fidl::BytePart _response_buffer)`: Caller-allocated variant of a
   two way method, which takes in backing storage for the request buffer,
   followed by the request parameters, and finally backing storage for the

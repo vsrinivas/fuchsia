@@ -18,3 +18,5 @@ toc:
   path: /docs/reference/fidl/language/fidlc.md
 - title: "Lexicon"
   path: /docs/reference/fidl/language/lexicon.md
+- title: "Bindings spec"
+  path: /docs/reference/fidl/language/bindings-spec.md

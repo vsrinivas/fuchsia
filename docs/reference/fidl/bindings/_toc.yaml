@@ -14,5 +14,3 @@ toc:
   path: /docs/reference/fidl/bindings/rust-bindings.md
 - title: "Go bindings"
   path: /docs/reference/fidl/bindings/go-bindings.md
-- title: "Other languages"
-  path: /docs/reference/fidl/bindings/bindings-spec.md
