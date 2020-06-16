@@ -29,6 +29,7 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:uuid",
     ]
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
   }
 
   rustc_binary("bin") {
