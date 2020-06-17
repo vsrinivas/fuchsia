@@ -32,7 +32,7 @@ const MESSAGE_LABEL: &str = "__msg";
 /// [`LogMessage`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
 // TODO(53222) - rename enum to avoid clashes with MESSAGE_LABEL above.
 #[derive(Debug, PartialEq, Clone)]
-pub enum MessageLabel {
+pub enum Field {
     ProcessId,
     ThreadId,
     Dropped,
@@ -41,7 +41,7 @@ pub enum MessageLabel {
     Other(String),
 }
 
-impl AsRef<str> for MessageLabel {
+impl AsRef<str> for Field {
     fn as_ref(&self) -> &str {
         match self {
             // TODO(50519) - ensure that strings reported here align with naming
@@ -56,7 +56,7 @@ impl AsRef<str> for MessageLabel {
     }
 }
 
-impl From<String> for MessageLabel {
+impl From<String> for Field {
     fn from(s: String) -> Self {
         match s.as_str() {
             PID_LABEL => Self::ProcessId,
@@ -70,9 +70,9 @@ impl From<String> for MessageLabel {
 }
 
 /// A representation of a structured log's payload.
-pub type LogHierarchy = NodeHierarchy<MessageLabel>;
+pub type LogHierarchy = NodeHierarchy<Field>;
 /// A representation of a property in a structured log.
-pub type LogProperty = Property<MessageLabel>;
+pub type LogProperty = Property<Field>;
 
 /// An internal representation of a structured log.
 #[derive(Clone, Debug, PartialEq)]
@@ -159,16 +159,15 @@ impl Message {
                 let mut contents = LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(MessageLabel::ProcessId, pid),
-                        LogProperty::Uint(MessageLabel::ThreadId, tid),
-                        LogProperty::Uint(MessageLabel::Dropped, dropped_logs as u64),
-                        LogProperty::string(MessageLabel::Msg, message),
+                        LogProperty::Uint(Field::ProcessId, pid),
+                        LogProperty::Uint(Field::ThreadId, tid),
+                        LogProperty::Uint(Field::Dropped, dropped_logs as u64),
+                        LogProperty::string(Field::Msg, message),
                     ],
                     vec![],
                 );
                 for tag in tags {
-                    contents
-                        .add_property(vec!["root"], LogProperty::String(MessageLabel::Tag, tag));
+                    contents.add_property(vec!["root"], LogProperty::String(Field::Tag, tag));
                 }
 
                 return Ok(Self { size: cursor + message_len + 1, time, severity, contents });
@@ -186,7 +185,7 @@ impl Message {
     pub fn from_structured(bytes: &[u8]) -> Result<Self, StreamError> {
         let (_, record) = diagnostic_streams::parse::parse_record(bytes)?;
         let properties = Result::from_iter(record.arguments.into_iter().map(|a| {
-            let label = MessageLabel::from(a.name);
+            let label = Field::from(a.name);
 
             match a.value {
                 Value::SignedInt(v) => Ok(LogProperty::Int(label, v)),
@@ -207,7 +206,7 @@ impl Message {
     /// Returns the pid associated with the message, if one exists.
     pub fn pid(&self) -> Option<u64> {
         self.contents.properties.iter().find_map(|property| match property {
-            LogProperty::Uint(MessageLabel::ProcessId, pid) => Some(*pid),
+            LogProperty::Uint(Field::ProcessId, pid) => Some(*pid),
             _ => None,
         })
     }
@@ -215,7 +214,7 @@ impl Message {
     /// Returns the tid associated with the message, if one exists.
     pub fn tid(&self) -> Option<u64> {
         self.contents.properties.iter().find_map(|property| match property {
-            LogProperty::Uint(MessageLabel::ThreadId, tid) => Some(*tid),
+            LogProperty::Uint(Field::ThreadId, tid) => Some(*tid),
             _ => None,
         })
     }
@@ -223,9 +222,9 @@ impl Message {
     /// Returns any tags associated with the message.
     pub fn tags(&self) -> impl Iterator<Item = &str> {
         // Multiple tags are supported for the `LogMessage` format and are represented
-        // as multiple instances of MessageLabel::Tag arguments.
+        // as multiple instances of Field::Tag arguments.
         self.contents.properties.iter().filter_map(|property| match property {
-            LogProperty::String(MessageLabel::Tag, tag) => Some(tag.as_str()),
+            LogProperty::String(Field::Tag, tag) => Some(tag.as_str()),
             _ => None,
         })
     }
@@ -233,7 +232,7 @@ impl Message {
     /// Returns the string log associated with the message, if one exists.
     pub fn msg(&self) -> Option<&str> {
         self.contents.properties.iter().find_map(|property| match property {
-            LogProperty::String(MessageLabel::Msg, msg) => Some(msg.as_str()),
+            LogProperty::String(Field::Msg, msg) => Some(msg.as_str()),
             _ => None,
         })
     }
@@ -241,7 +240,7 @@ impl Message {
     /// Returns number of dropped logs if reported in the message.
     pub fn dropped_logs(&self) -> Option<u64> {
         self.contents.properties.iter().find_map(|property| match property {
-            LogProperty::Uint(MessageLabel::Dropped, dropped) => Some(*dropped),
+            LogProperty::Uint(Field::Dropped, dropped) => Some(*dropped),
             _ => None,
         })
     }
@@ -512,11 +511,11 @@ mod tests {
             contents: LogHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(MessageLabel::Tag, "AAAAAAAAAAA"),
-                    LogProperty::string(MessageLabel::Msg, "BBBBB"),
+                    LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(Field::Tag, "AAAAAAAAAAA"),
+                    LogProperty::string(Field::Msg, "BBBBB"),
                 ],
                 vec![],
             ),
@@ -584,12 +583,12 @@ mod tests {
             contents: LogHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(MessageLabel::Tag, "AAAAAAAAAAA"),
-                    LogProperty::string(MessageLabel::Tag, "BBBBB"),
-                    LogProperty::string(MessageLabel::Msg, "CCCCC"),
+                    LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(Field::Tag, "AAAAAAAAAAA"),
+                    LogProperty::string(Field::Tag, "BBBBB"),
+                    LogProperty::string(Field::Msg, "CCCCC"),
                 ],
                 vec![],
             ),
@@ -629,18 +628,18 @@ mod tests {
         let mut full_parsed = Message::from_logger(full_buffer).unwrap();
 
         let mut expected_properties = vec![
-            LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-            LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-            LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+            LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+            LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+            LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
             LogProperty::String(
-                MessageLabel::Msg,
+                Field::Msg,
                 String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
             ),
         ];
         let mut tag_properties = (0..MAX_TAGS as _)
             .map(|tag_num| {
                 LogProperty::String(
-                    MessageLabel::Tag,
+                    Field::Tag,
                     String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap(),
                 )
             })
@@ -695,10 +694,10 @@ mod tests {
         let mut expected_contents = LogHierarchy::new(
             "root",
             vec![
-                LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-                LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-                LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
-                LogProperty::string(MessageLabel::Msg, ""),
+                LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+                LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+                LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
+                LogProperty::string(Field::Msg, ""),
             ],
             vec![],
         );
@@ -706,7 +705,7 @@ mod tests {
             expected_contents.add_property(
                 vec!["root"],
                 LogProperty::String(
-                    MessageLabel::Tag,
+                    Field::Tag,
                     String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2]).unwrap(),
                 ),
             );
@@ -744,10 +743,10 @@ mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-                        LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-                        LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
-                        LogProperty::string(MessageLabel::Msg, "AA")
+                        LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+                        LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+                        LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
+                        LogProperty::string(Field::Msg, "AA")
                     ],
                     vec![],
                 ),
@@ -771,10 +770,10 @@ mod tests {
             contents: LogHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(MessageLabel::Msg, ""),
+                    LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(Field::Msg, ""),
                 ],
                 vec![],
             ),
@@ -828,10 +827,10 @@ mod tests {
             contents: LogHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(MessageLabel::Msg, ""),
+                    LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(Field::Msg, ""),
                 ],
                 vec![],
             ),
@@ -899,12 +898,12 @@ mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Int(MessageLabel::Other("arg1".to_string()), -23),
-                        LogProperty::Uint(MessageLabel::ProcessId, 43),
-                        LogProperty::Uint(MessageLabel::ThreadId, 912),
-                        LogProperty::Uint(MessageLabel::Dropped, 2),
-                        LogProperty::string(MessageLabel::Tag, "tag"),
-                        LogProperty::string(MessageLabel::Msg, "msg"),
+                        LogProperty::Int(Field::Other("arg1".to_string()), -23),
+                        LogProperty::Uint(Field::ProcessId, 43),
+                        LogProperty::Uint(Field::ThreadId, 912),
+                        LogProperty::Uint(Field::Dropped, 2),
+                        LogProperty::string(Field::Tag, "tag"),
+                        LogProperty::string(Field::Msg, "msg"),
                     ],
                     vec![],
                 )
@@ -935,9 +934,9 @@ mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::string(MessageLabel::Tag, "tag1"),
-                        LogProperty::string(MessageLabel::Tag, "tag2"),
-                        LogProperty::string(MessageLabel::Tag, "tag3"),
+                        LogProperty::string(Field::Tag, "tag1"),
+                        LogProperty::string(Field::Tag, "tag2"),
+                        LogProperty::string(Field::Tag, "tag3"),
                     ],
                     vec![],
                 )

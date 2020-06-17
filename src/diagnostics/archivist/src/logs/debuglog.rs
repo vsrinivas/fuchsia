@@ -4,7 +4,7 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use super::message::{LogHierarchy, LogProperty, Message, MessageLabel, Severity, METADATA_SIZE};
+use super::message::{Field, LogHierarchy, LogProperty, Message, Severity, METADATA_SIZE};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use fuchsia_async as fasync;
@@ -151,10 +151,10 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         contents: LogHierarchy::new(
             "root",
             vec![
-                LogProperty::Uint(MessageLabel::ProcessId, pid),
-                LogProperty::Uint(MessageLabel::ThreadId, tid),
-                LogProperty::string(MessageLabel::Tag, "klog"),
-                LogProperty::string(MessageLabel::Msg, contents),
+                LogProperty::Uint(Field::ProcessId, pid),
+                LogProperty::Uint(Field::ThreadId, tid),
+                LogProperty::string(Field::Tag, "klog"),
+                LogProperty::string(Field::Msg, contents),
             ],
             vec![],
         ),
@@ -274,10 +274,10 @@ pub mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
-                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
-                        LogProperty::string(MessageLabel::Tag, "klog"),
-                        LogProperty::string(MessageLabel::Msg, "test log")
+                        LogProperty::Uint(Field::ProcessId, klog.pid),
+                        LogProperty::Uint(Field::ThreadId, klog.tid),
+                        LogProperty::string(Field::Tag, "klog"),
+                        LogProperty::string(Field::Msg, "test log")
                     ],
                     vec![]
                 )
@@ -296,11 +296,11 @@ pub mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
-                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
-                        LogProperty::string(MessageLabel::Tag, "klog"),
+                        LogProperty::Uint(Field::ProcessId, klog.pid),
+                        LogProperty::Uint(Field::ThreadId, klog.tid),
+                        LogProperty::string(Field::Tag, "klog"),
                         LogProperty::string(
-                            MessageLabel::Msg,
+                            Field::Msg,
                             String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
                                 .unwrap()
                         )
@@ -322,10 +322,10 @@ pub mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
-                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
-                        LogProperty::string(MessageLabel::Tag, "klog"),
-                        LogProperty::string(MessageLabel::Msg, "")
+                        LogProperty::Uint(Field::ProcessId, klog.pid),
+                        LogProperty::Uint(Field::ThreadId, klog.tid),
+                        LogProperty::string(Field::Tag, "klog"),
+                        LogProperty::string(Field::Msg, "")
                     ],
                     vec![]
                 )
@@ -362,10 +362,10 @@ pub mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
-                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
-                        LogProperty::string(MessageLabel::Tag, "klog"),
-                        LogProperty::string(MessageLabel::Msg, "test log")
+                        LogProperty::Uint(Field::ProcessId, klog.pid),
+                        LogProperty::Uint(Field::ThreadId, klog.tid),
+                        LogProperty::string(Field::Tag, "klog"),
+                        LogProperty::string(Field::Msg, "test log")
                     ],
                     vec![]
                 )

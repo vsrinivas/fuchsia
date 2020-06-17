@@ -102,7 +102,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::super::message::{
-        fx_log_packet_t, LogHierarchy, LogProperty, Message, MessageLabel, Severity, METADATA_SIZE,
+        fx_log_packet_t, Field, LogHierarchy, LogProperty, Message, Severity, METADATA_SIZE,
     };
     use super::*;
     use diagnostic_streams::{
@@ -130,11 +130,11 @@ mod tests {
             contents: LogHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
-                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
-                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(MessageLabel::Tag, "AAAAA"),
-                    LogProperty::string(MessageLabel::Msg, "BBBBB"),
+                    LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(Field::Tag, "AAAAA"),
+                    LogProperty::string(Field::Msg, "BBBBB"),
                 ],
                 vec![],
             ),
@@ -176,8 +176,8 @@ mod tests {
             contents: LogHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::string(MessageLabel::Other("key".to_string()), "value"),
-                    LogProperty::string(MessageLabel::Tag, "tag-a"),
+                    LogProperty::string(Field::Other("key".to_string()), "value"),
+                    LogProperty::string(Field::Tag, "tag-a"),
                 ],
                 vec![],
             ),
