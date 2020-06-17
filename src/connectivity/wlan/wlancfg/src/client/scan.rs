@@ -193,11 +193,14 @@ async fn send_scan_results(
     scan_results: &Vec<types::ScanResult>,
 ) -> Result<(), Error> {
     let mut chunks = scan_results.chunks(OUTPUT_CHUNK_NETWORK_COUNT);
+    let mut sent_some_results = false;
     // Wait to get a request for a chunk of scan results
     let (mut stream, ctrl) = output_iterator.into_stream_and_control_handle()?;
     loop {
-        if let Some(req) = stream.try_next().await? {
-            let fidl_policy::ScanResultIteratorRequest::GetNext { responder } = req;
+        if let Some(fidl_policy::ScanResultIteratorRequest::GetNext { responder }) =
+            stream.try_next().await?
+        {
+            sent_some_results = true;
             if let Some(chunk) = chunks.next() {
                 let mut next_result: fidl_policy::ScanResultIteratorGetNextResult = Ok(chunk
                     .into_iter()
@@ -214,7 +217,14 @@ async fn send_scan_results(
         } else {
             // This will happen if the iterator request stream was closed and we expected to send
             // another response.
-            return Err(format_err!("Peer closed channel for getting scan results unexpectedly"));
+            if sent_some_results {
+                // Some consumers may not care about all scan results, e.g. if they find the
+                // particular network they were looking for. This is not an error.
+                debug!("Scan result consumer closed channel before consuming all scan results");
+                return Ok(());
+            } else {
+                return Err(format_err!("Peer closed channel before receiving any scan results"));
+            }
         }
     }
     Ok(())
@@ -797,6 +807,65 @@ mod tests {
             let results = result.expect("Failed to get next scan results").unwrap();
             assert_eq!(results, vec![]);
         });
+    }
+
+    // TODO(54255): Separate test case for "empty final vector not consumed" vs "partial ap list"
+    // consumed.
+    #[test]
+    fn partial_scan_result_consumption_has_no_error() {
+        set_logger_for_test();
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (input_aps, output_aps) = create_scan_ap_data();
+        let scan_results = convert_scan_info(&input_aps);
+
+        // Create an iterator and send scan results
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let send_fut = send_scan_results(iter_server, &scan_results);
+        pin_mut!(send_fut);
+
+        // Request a chunk of scan results.
+        let mut output_iter_fut = iter.get_next();
+
+        // Send first chunk of scan results
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Pending);
+
+        // Make sure the first chunk of results were delivered
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, output_aps);
+        });
+
+        // Close the channel without getting remaining results
+        // Note: as of the writing of this test, the "remaining results" are just the final message
+        // with an empty vector of networks that signify the end of results. That final empty vector
+        // is still considered part of the results, so this test successfully exercises the
+        // "partial results read" path.
+        drop(output_iter_fut);
+        drop(iter);
+
+        // This should not result in error, since some results were consumed
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Ok(())));
+    }
+
+    #[test]
+    fn no_scan_result_consumption_has_error() {
+        set_logger_for_test();
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (input_aps, _output_aps) = create_scan_ap_data();
+        let scan_results = convert_scan_info(&input_aps);
+
+        // Create an iterator and send scan results
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let send_fut = send_scan_results(iter_server, &scan_results);
+        pin_mut!(send_fut);
+
+        // Close the channel without getting results
+        drop(iter);
+
+        // This should result in error, since no results were consumed
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Err(_)));
     }
 
     #[test]
