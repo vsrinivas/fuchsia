@@ -35,6 +35,7 @@ group("tests") {
     "//src/media/audio/lib/simple-audio-stream/tests:sa-unittest-package",
     "//src/security/zxcrypt/tests:zxcrypt-package",
     "//src/ui/input/tests/hid:hid-package",
+    "//src/zircon/tests/vmo:vmo-package",
     "//zircon/system/ulib/abs_clock/test:abs-clock-test-package",
     "//zircon/system/ulib/affine/test:affine-package",
     "//zircon/system/ulib/async-loop/test:async-loop-package",
@@ -157,6 +158,5 @@ group("tests") {
     "//zircon/system/utest/util:util-package",
     "//zircon/system/utest/vdso:vdso-package",
     "//zircon/system/utest/vdso-base:vdso-base-package",
-    "//zircon/system/utest/vmo:vmo-package",
   ]
 }
