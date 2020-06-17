@@ -256,12 +256,21 @@ void EthernetDevice::ReleaseLocked() {
 }
 
 void EthernetDevice::IrqRingUpdate() {
+  for (;;) {
+    bool again = IrqRingUpdateInternal();
+    if (!again) {
+      break;
+    }
+  }
+}
+
+bool EthernetDevice::IrqRingUpdateInternal() {
   LTRACE_ENTRY;
   // Lock to prevent changes to ifc_.
   {
     fbl::AutoLock lock(&state_lock_);
     if (!ifc_.ops) {
-      return;
+      return false;
     }
     rx_.SetNoInterrupt();
     // Ring::IrqRingUpdate will call this lambda on each rx buffer filled by
@@ -317,6 +326,7 @@ void EthernetDevice::IrqRingUpdate() {
   if (need_kick && !rx_.NoNotify()) {
     rx_.Kick();
   }
+  return rx_.HasWork();
 }
 
 void EthernetDevice::IrqConfigChange() {

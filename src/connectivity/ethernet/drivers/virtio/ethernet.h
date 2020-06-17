@@ -69,6 +69,9 @@ class EthernetDevice : public Device,
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(EthernetDevice);
 
+  // Implementation of IrqRingUpdate; returns true if it should be called again.
+  bool IrqRingUpdateInternal() TA_EXCL(state_lock_);
+
   // DDK device hooks; see ddk/device.h
   void ReleaseLocked() TA_REQ(state_lock_);
 
