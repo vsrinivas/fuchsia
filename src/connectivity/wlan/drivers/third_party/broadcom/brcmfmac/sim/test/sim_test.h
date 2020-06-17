@@ -106,6 +106,14 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
   zx_device_t* parent_dev_;
 };
 
+// Schedule a call from within a SimTest to a member function that takes no arguments
+#define SCHEDULE_CALL(member_fn, when)                       \
+  do {                                                       \
+    auto cb_fn = std::make_unique<std::function<void()>>();  \
+    *cb_fn = std::bind(member_fn, this);                     \
+    env_->ScheduleNotification(std::move(cb_fn), when);      \
+  } while (0)
+
 }  // namespace wlan::brcmfmac
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_TEST_SIM_TEST_H_

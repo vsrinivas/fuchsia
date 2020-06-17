@@ -35,9 +35,6 @@ class ChannelSwitchTest : public SimTest {
   // Run through the join => auth => assoc flow
   void StartAssoc();
 
-  // Schedule a future call to a member function
-  void ScheduleCall(void (ChannelSwitchTest::*fn)(), zx::duration when);
-
   // Schedule a future SetChannel event for the first AP in list
   void ScheduleChannelSwitch(const wlan_channel_t& new_channel, zx::duration when);
 
@@ -170,12 +167,6 @@ void ChannelSwitchTest::StartAssoc() {
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
-void ChannelSwitchTest::ScheduleCall(void (ChannelSwitchTest::*fn)(), zx::duration when) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(std::move(cb_fn), when);
-}
-
 // This function schedules a Setchannel() event for the first AP in AP list.
 void ChannelSwitchTest::ScheduleChannelSwitch(const wlan_channel_t& new_channel,
                                               zx::duration when) {
@@ -191,7 +182,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitch) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   env_->Run(kTestDuration);
 
@@ -210,7 +201,7 @@ TEST_F(ChannelSwitchTest, SwitchBackInSingleInterval) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   ScheduleChannelSwitch(kDefaultChannel, zx::msec(550));
 
@@ -228,7 +219,7 @@ TEST_F(ChannelSwitchTest, ChangeDstAddressWhenSwitching) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   ScheduleChannelSwitch(kSecondSwitchedChannel, zx::msec(550));
 
@@ -248,7 +239,7 @@ TEST_F(ChannelSwitchTest, SwitchBackInDiffInterval) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   // The default CSA beacon interval is 150 msec, so when it comes to 700 msec, it's the second time
   // CSA is triggered.
@@ -281,7 +272,7 @@ TEST_F(ChannelSwitchTest, NotSwitchForDifferentAP) {
   right_ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&right_ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
 
   // This will trigger SetChannel() for first AP in AP list, which is wrong_ap.
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
@@ -300,7 +291,7 @@ TEST_F(ChannelSwitchTest, StopStillSwitch) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
 
   // Schedule DisableBeacon for sim-fake-ap
@@ -324,7 +315,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchToSameChannel) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
 
   // SendFakeCSABeacon() is using the ssid and bssid of the AP which client is associated to.
   auto callback = std::make_unique<std::function<void()>>();
@@ -345,7 +336,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
 
   auto scan_handler = std::make_unique<std::function<void()>>();
   *scan_handler = std::bind(&ChannelSwitchTest::StartScan, this);

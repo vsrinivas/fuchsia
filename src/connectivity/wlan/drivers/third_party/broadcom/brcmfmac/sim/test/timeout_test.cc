@@ -40,9 +40,6 @@ class TimeoutTest : public SimTest {
   // Start a deauth request from client.
   void StartDeauth();
 
-  // Schedule a future call to a member function
-  void ScheduleCall(void (TimeoutTest::*fn)(), zx::duration when);
-
  protected:
   // This is the interface we will use for our single client interface
   SimInterface client_ifc_;
@@ -138,17 +135,11 @@ void TimeoutTest::StartDeauth() {
   client_ifc_.if_impl_ops_->deauth_req(client_ifc_.if_impl_ctx_, &deauth_req);
 }
 
-void TimeoutTest::ScheduleCall(void (TimeoutTest::*fn)(), zx::duration when) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(std::move(cb_fn), when);
-}
-
 // Create our device instance and hook up the callbacks
 void TimeoutTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
-  ScheduleCall(&TimeoutTest::Finish, kTestDuration);
+  SCHEDULE_CALL(&TimeoutTest::Finish, kTestDuration);
 }
 
 void TimeoutTest::Finish() {
@@ -201,7 +192,7 @@ TEST_F(TimeoutTest, ScanTimeout) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, client_ifc_.iface_id_);
 
-  ScheduleCall(&TimeoutTest::StartScan, zx::msec(10));
+  SCHEDULE_CALL(&TimeoutTest::StartScan, zx::msec(10));
 
   env_->Run();
 
@@ -221,7 +212,7 @@ TEST_F(TimeoutTest, AssocTimeout) {
   // Ignore association req in sim-fw.
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_.iface_id_);
-  ScheduleCall(&TimeoutTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&TimeoutTest::StartAssoc, zx::msec(10));
 
   env_->Run();
 
@@ -240,7 +231,7 @@ TEST_F(TimeoutTest, DisassocTimeout) {
   // Ignore disassociation req in sim-fw.
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_DISASSOC, ZX_OK, client_ifc_.iface_id_);
-  ScheduleCall(&TimeoutTest::StartDeauth, zx::msec(10));
+  SCHEDULE_CALL(&TimeoutTest::StartDeauth, zx::msec(10));
 
   env_->Run();
 
@@ -262,9 +253,9 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_.iface_id_);
   // There are three timers for them, and all have been cancelled.
-  ScheduleCall(&TimeoutTest::StartAssoc, zx::msec(10));
-  ScheduleCall(&TimeoutTest::StartDeauth, zx::sec(1));
-  ScheduleCall(&TimeoutTest::StartScan, zx::sec(3));
+  SCHEDULE_CALL(&TimeoutTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&TimeoutTest::StartDeauth, zx::sec(1));
+  SCHEDULE_CALL(&TimeoutTest::StartScan, zx::sec(3));
 
   env_->Run();
 

@@ -71,9 +71,6 @@ class DataFrameTest : public SimTest {
   // Run through the join => auth => assoc flow
   void StartAssoc();
 
-  // Schedule a future call to a member function
-  void ScheduleCall(void (DataFrameTest::*fn)(), zx::duration when);
-
   // Schedule a future transmission
   void ScheduleTx(std::vector<uint8_t>& ethFrame, zx::duration when);
   void ScheduleEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
@@ -252,7 +249,7 @@ void DataFrameTest::Init() {
 
   // Schedule a time to terminate execution. Simulation runs until no more events are scheduled,
   // and since we have a beaconing fake AP, that means forever if we don't stop it.
-  ScheduleCall(&DataFrameTest::Finish, kTestDuration);
+  SCHEDULE_CALL(&DataFrameTest::Finish, kTestDuration);
 }
 
 void DataFrameTest::Finish() {
@@ -260,12 +257,6 @@ void DataFrameTest::Finish() {
     ap->DisableBeacon();
   }
   aps_.clear();
-}
-
-void DataFrameTest::ScheduleCall(void (DataFrameTest::*fn)(), zx::duration when) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
 std::vector<uint8_t> DataFrameTest::CreateEthernetFrame(common::MacAddr dstAddr,
@@ -486,7 +477,7 @@ TEST_F(DataFrameTest, TxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(10));
 
   // Simulate sending a data frame from driver to the AP
   data_context_.expected_sent_data.push_back(
@@ -524,7 +515,7 @@ TEST_F(DataFrameTest, TxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(10));
 
   // Simulate sending a illegal ethernet frame from us to the AP
   std::vector<uint8_t> ethFrame = {0x20, 0x43};
@@ -549,7 +540,7 @@ TEST_F(DataFrameTest, TxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(10));
 
   // Simulate sending a EAPOL packet from us to the AP
   data_context_.expected_sent_data.push_back(kSampleEapol);
@@ -583,11 +574,11 @@ TEST_F(DataFrameTest, RxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
 
   // Want test to associate with fake AP
-  ScheduleCall(&DataFrameTest::ClientAuth, zx::msec(50));
-  ScheduleCall(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
+  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(
@@ -620,11 +611,11 @@ TEST_F(DataFrameTest, CheckRssiInStatsQueryResp) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
 
   // Want test to associate with fake AP
-  ScheduleCall(&DataFrameTest::ClientAuth, zx::msec(50));
-  ScheduleCall(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
+  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
 
   // Want to send some packets from test to driver
   data_context_.expected_received_data.push_back(
@@ -658,11 +649,11 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
 
   // Want test to associate with fake AP
-  ScheduleCall(&DataFrameTest::ClientAuth, zx::msec(50));
-  ScheduleCall(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
+  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
 
   // ethernet frame too small to hold ethernet header
   std::vector<uint8_t> ethFrame = {0x00, 0x45};
@@ -690,11 +681,11 @@ TEST_F(DataFrameTest, RxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
 
   // Want test to associate with fake AP
-  ScheduleCall(&DataFrameTest::ClientAuth, zx::msec(50));
-  ScheduleCall(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
+  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
@@ -725,13 +716,13 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  ScheduleCall(&DataFrameTest::StartAssoc, delay);
+  SCHEDULE_CALL(&DataFrameTest::StartAssoc, delay);
 
   // Want test to associate with fake AP
   delay = delay + zx::msec(10);
-  ScheduleCall(&DataFrameTest::ClientAuth, delay);
+  SCHEDULE_CALL(&DataFrameTest::ClientAuth, delay);
   delay = delay + zx::msec(10);
-  ScheduleCall(&DataFrameTest::ClientAssoc, delay);
+  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, delay);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);

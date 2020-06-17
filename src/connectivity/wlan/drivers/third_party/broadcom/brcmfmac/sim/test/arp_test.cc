@@ -68,9 +68,6 @@ class ArpTest : public SimTest {
   void Init();
   void CleanupApInterface();
 
-  // Schedule a future call to a member function
-  void ScheduleCall(void (ArpTest::*fn)(), zx::duration when);
-
   // Send a frame directly into the environment
   void Tx(const std::vector<uint8_t>& ethFrame);
 
@@ -157,12 +154,6 @@ void GenericIfc::OnStopConf(const wlanif_stop_confirm_t* resp) {
 }
 
 void ArpTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
-
-void ArpTest::ScheduleCall(void (ArpTest::*fn)(), zx::duration when) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(std::move(cb_fn), when);
-}
 
 // static
 std::vector<uint8_t> ArpTest::CreateEthernetFrame(common::MacAddr dstAddr, common::MacAddr srcAddr,
@@ -288,8 +279,8 @@ TEST_F(ArpTest, SoftApArpOffload) {
   EXPECT_EQ(StartSoftAP(), ZX_OK);
 
   // Have the test associate with the AP
-  ScheduleCall(&ArpTest::TxAssocReq, zx::sec(1));
-  ScheduleCall(&ArpTest::VerifyAssoc, zx::sec(2));
+  SCHEDULE_CALL(&ArpTest::TxAssocReq, zx::sec(1));
+  SCHEDULE_CALL(&ArpTest::VerifyAssoc, zx::sec(2));
 
   // Send an ARP frame that we expect to be received
   ScheduleArpFrameTx(zx::sec(3), true);
@@ -302,7 +293,7 @@ TEST_F(ArpTest, SoftApArpOffload) {
   ScheduleNonArpFrameTx(zx::sec(7));
 
   // Stop AP and remove interface
-  ScheduleCall(&ArpTest::CleanupApInterface, zx::sec(8));
+  SCHEDULE_CALL(&ArpTest::CleanupApInterface, zx::sec(8));
 
   env_->Run(kTestDuration);
 
@@ -324,7 +315,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   simulation::FakeAp ap(env_.get(), kTheirMac, kDefaultSsid, kDefaultChannel);
 
   // Associate with fake AP
-  ScheduleCall(&ArpTest::StartAssoc, zx::sec(1));
+  SCHEDULE_CALL(&ArpTest::StartAssoc, zx::sec(1));
 
   // Send an ARP frame that we expect to be offloaded
   ScheduleArpFrameTx(zx::sec(2), false);

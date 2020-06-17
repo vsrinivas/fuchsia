@@ -30,9 +30,6 @@ class BeaconLostTest : public SimTest {
   // Run through the join => auth => assoc flow
   void StartAssoc();
 
-  // Schedule a future call to a member function
-  void ScheduleCall(void (BeaconLostTest::*fn)(), zx::duration when);
-
   // Move client's location in environment
   void MoveClient(int32_t x, int32_t y);
 
@@ -146,7 +143,7 @@ void BeaconLostTest::Init() {
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   context_.assoc_resp_count = 0;
   context_.deauth_ind_count = 0;
-  ScheduleCall(&BeaconLostTest::Finish, kTestDuration);
+  SCHEDULE_CALL(&BeaconLostTest::Finish, kTestDuration);
 }
 
 void BeaconLostTest::Finish() {
@@ -194,12 +191,6 @@ void BeaconLostTest::StartAssoc() {
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
-void BeaconLostTest::ScheduleCall(void (BeaconLostTest::*fn)(), zx::duration when) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(std::move(cb_fn), when);
-}
-
 // Move the client (not the test)
 void BeaconLostTest::MoveClient(int32_t x, int32_t y) {
   env_->MoveStation(device_->GetSim()->sim_fw->GetHardwareIfc(), x, y);
@@ -218,7 +209,7 @@ TEST_F(BeaconLostTest, NoBeaconDisassocTest) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Associate with fake AP
-  ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&BeaconLostTest::StartAssoc, zx::msec(10));
 
   // disable the beacon after association
   auto cb_fn = std::make_unique<std::function<void()>>();
@@ -254,7 +245,7 @@ TEST_F(BeaconLostTest, BeaconTooFarDisassocTest) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Associate with fake AP
-  ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&BeaconLostTest::StartAssoc, zx::msec(10));
   // Move away from the AP
   auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&BeaconLostTest::MoveClient, this, 150, 0);
@@ -296,7 +287,7 @@ TEST_F(BeaconLostTest, WrongBeaconLossTest) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Will associate with one AP
-  ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&BeaconLostTest::StartAssoc, zx::msec(10));
   // Move away closer to the AP we are associated to. Should not impact connection.
   auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&BeaconLostTest::MoveClient, this, -75, 0);
@@ -338,7 +329,7 @@ TEST_F(BeaconLostTest, TempBeaconLossTest) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Will associate with one AP
-  ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&BeaconLostTest::StartAssoc, zx::msec(10));
   // Move away from the AP we are associated to.
   auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&BeaconLostTest::MoveClient, this, 100, 0);

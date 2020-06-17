@@ -42,8 +42,6 @@ class DynamicIfTest : public SimTest {
   // Run through the join => auth => assoc flow
   void StartAssoc();
 
-  // Schedule a future callback
-  void ScheduleCall(void (DynamicIfTest::*fn)(), zx::duration when);
   void ChannelCheck();
   // Schedule an event to stop the test. This is needed to stop any beaconing APs, since the test
   // won't end until all events are processed.
@@ -278,12 +276,6 @@ void DynamicIfTest::StartAssoc() {
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
-void DynamicIfTest::ScheduleCall(void (DynamicIfTest::*fn)(), zx::duration when) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(std::move(cb_fn), when);
-}
-
 void DynamicIfTest::TxAssocReq() {
   // Get the mac address of the SoftAP
   uint8_t mac_buf[ETH_ALEN];
@@ -437,9 +429,9 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Associate to FakeAp
-  ScheduleCall(&DynamicIfTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&DynamicIfTest::StartAssoc, zx::msec(10));
   // Associate to SoftAP
-  ScheduleCall(&DynamicIfTest::TxAssocReq, zx::msec(100));
+  SCHEDULE_CALL(&DynamicIfTest::TxAssocReq, zx::msec(100));
 
   env_->Run();
 
@@ -469,12 +461,12 @@ TEST_F(DynamicIfTest, StopAPDisassocsClientIF) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Associate to FakeAp
-  ScheduleCall(&DynamicIfTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(&DynamicIfTest::StartAssoc, zx::msec(10));
   // Associate to SoftAP
-  ScheduleCall(&DynamicIfTest::TxAssocReq, zx::msec(100));
+  SCHEDULE_CALL(&DynamicIfTest::TxAssocReq, zx::msec(100));
 
   // Verify Assoc with SoftAP succeeded
-  ScheduleCall(&DynamicIfTest::VerifyAssocWithSoftAP, zx::msec(150));
+  SCHEDULE_CALL(&DynamicIfTest::VerifyAssocWithSoftAP, zx::msec(150));
   env_->Run();
 
   // Check if the client's assoc with FakeAP succeeded
@@ -549,16 +541,16 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
 
   zx::duration delay = zx::msec(10);
   // Associate to FakeAp
-  ScheduleCall(&DynamicIfTest::StartAssoc, delay);
+  SCHEDULE_CALL(&DynamicIfTest::StartAssoc, delay);
   // Start our SoftAP
   delay += zx::msec(10);
-  ScheduleCall(&DynamicIfTest::StartSoftAP, delay);
+  SCHEDULE_CALL(&DynamicIfTest::StartSoftAP, delay);
 
   // Wait until SIM FW sends AP Start confirmation. This is set as a
   // scheduled event to ensure test runs until AP Start confirmation is
   // received.
   delay += kStartAPConfDelay + zx::msec(10);
-  ScheduleCall(&DynamicIfTest::ChannelCheck, delay);
+  SCHEDULE_CALL(&DynamicIfTest::ChannelCheck, delay);
   env_->Run();
   // ChannelCheck();
 }
