@@ -67,32 +67,25 @@ class GichState {
   zx_status_t Init();
 
   bool Pending() { return interrupt_tracker_.Pending(); }
-
   hypervisor::InterruptType Pop(uint32_t* vector) { return interrupt_tracker_.Pop(vector); }
-
   void Track(uint32_t vector, hypervisor::InterruptType type) {
     interrupt_tracker_.Track(vector, type);
   }
-
   void Interrupt(uint32_t vector, hypervisor::InterruptType type) {
     interrupt_tracker_.Interrupt(vector, type);
   }
-
   zx_status_t Wait(zx_time_t deadline) { return interrupt_tracker_.Wait(deadline, nullptr); }
 
-  InterruptState GetInterruptState(uint32_t vector);
-  bool HasPendingInterrupt();
-  void SetAllInterruptStates(IchState* ich_state);
+  bool IsUsingListRegister() { return !lr_tracker_.Scan(0, kNumInterrupts, false); }
+  bool InListRegister(uint32_t vector) { return lr_tracker_.GetOne(vector); }
+  void TrackAllListRegisters(IchState* ich_state);
 
  private:
-  void SetInterruptState(uint32_t vector, InterruptState state);
-
   // Tracks pending interrupts.
   hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker_;
 
-  // Tracks active and pending interrupts.
-  static constexpr uint32_t kNumBits = kNumInterrupts * 2;
-  bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumBits>> current_interrupts_;
+  // Tracks list registers.
+  bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>> lr_tracker_;
 };
 
 // Loads GICH within a given scope.

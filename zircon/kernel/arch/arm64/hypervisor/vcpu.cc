@@ -53,9 +53,8 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
       // There are no more pending interrupts.
       break;
     }
-    InterruptState state = gich_state->GetInterruptState(vector);
-    if (state != InterruptState::INACTIVE) {
-      // Skip an interrupt if it is not inactive, and therefore in an LR.
+    if (gich_state->InListRegister(vector)) {
+      // Skip an interrupt if it is already in an LR.
       continue;
     }
 
@@ -77,61 +76,22 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
 }
 
 zx_status_t GichState::Init() {
-  current_interrupts_.Reset(kNumBits);
-  return interrupt_tracker_.Init();
-}
-
-InterruptState GichState::GetInterruptState(uint32_t vector) {
-  if (vector >= kNumInterrupts) {
-    DEBUG_ASSERT(false);
-    return InterruptState::INACTIVE;
+  zx_status_t status = interrupt_tracker_.Init();
+  if (status != ZX_OK) {
+    return status;
   }
-  size_t bitoff = vector * 2;
-  uint32_t state =
-      (current_interrupts_.GetOne(bitoff) << 0) | (current_interrupts_.GetOne(bitoff + 1) << 1);
-  return static_cast<InterruptState>(state);
+  return lr_tracker_.Reset(kNumInterrupts);
 }
 
-bool GichState::HasPendingInterrupt() {
-  size_t start = 0;
-  while (start < kNumBits) {
-    size_t bitoff;
-    bool is_empty = current_interrupts_.Scan(start, kNumBits, false, &bitoff);
-    if (is_empty) {
-      return false;
-    } else if (bitoff % 2 == 0) {
-      return true;
-    }
-    start = bitoff + 1;
-  }
-  return false;
-}
-
-void GichState::SetAllInterruptStates(IchState* ich_state) {
-  current_interrupts_.ClearAll();
+void GichState::TrackAllListRegisters(IchState* ich_state) {
+  lr_tracker_.ClearAll();
   for (uint8_t i = 0; i < ich_state->num_lrs; i++) {
     if (BIT(ich_state->elrsr, i)) {
       continue;
     }
     InterruptState state;
     uint32_t vector = gic_get_vector_from_lr(ich_state->lr[i], &state);
-    SetInterruptState(vector, state);
-  }
-}
-
-// This function must only be called by SetAllInterruptStates, as it
-// assumes |current_interrupts_| has been cleared.
-void GichState::SetInterruptState(uint32_t vector, InterruptState state) {
-  if (vector >= kNumInterrupts) {
-    DEBUG_ASSERT(false);
-    return;
-  }
-  size_t bitoff = vector * 2;
-  if (state == InterruptState::PENDING || state == InterruptState::PENDING_AND_ACTIVE) {
-    current_interrupts_.SetOne(bitoff);
-  }
-  if (state == InterruptState::ACTIVE || state == InterruptState::PENDING_AND_ACTIVE) {
-    current_interrupts_.SetOne(bitoff + 1);
+    lr_tracker_.SetOne(vector);
   }
 }
 
@@ -270,7 +230,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       running_.store(false);
       GUEST_STATS_INC(vm_exits);
     }
-    gich_state_.SetAllInterruptStates(ich_state);
+    gich_state_.TrackAllListRegisters(ich_state);
     if (status == ZX_ERR_NEXT) {
       // We received a physical interrupt. If it was due to the thread
       // being killed, then we should exit with an error, otherwise return

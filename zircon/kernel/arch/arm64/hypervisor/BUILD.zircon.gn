@@ -16,7 +16,6 @@ source_set("hypervisor") {
     "vmexit.cc",
   ]
   deps = [
-    ":tests",
     "$zx/kernel/dev/interrupt/arm_gic/common",
     "$zx/kernel/dev/interrupt/arm_gic/v2",
     "$zx/kernel/dev/interrupt/arm_gic/v3",
@@ -26,15 +25,5 @@ source_set("hypervisor") {
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/ktrace",
     "$zx/system/ulib/affine",
-  ]
-}
-
-source_set("tests") {
-  # TODO: testonly = true
-  sources = [ "gich_state_test.cc" ]
-  deps = [
-    "$zx/kernel/dev/interrupt/arm_gic/common",
-    "$zx/kernel/hypervisor:headers",
-    "$zx/kernel/lib/unittest",
   ]
 }
