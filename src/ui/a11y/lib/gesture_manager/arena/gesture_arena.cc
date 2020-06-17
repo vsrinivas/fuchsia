@@ -173,6 +173,7 @@ void GestureArena::TryToResolve() {
           member.recognizer->OnDefeat();
         } else {
           winner_assigned = true;
+          FX_LOGS(INFO) << "Gesture Arena: " << member.recognizer->DebugName() << " Won.";
           member.recognizer->OnWin();
         }
       }
