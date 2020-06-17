@@ -249,7 +249,7 @@ impl AccessPoint {
                 fidl_sme::StartApResultCode::Success
                 | fidl_sme::StartApResultCode::AlreadyStarted => {}
                 ref state => {
-                    let ssid_as_str = match std::str::from_utf8(&result.config.ssid) {
+                    let ssid_as_str = match std::str::from_utf8(&result.config.id.ssid) {
                         Ok(ssid) => ssid,
                         Err(_) => "",
                     };
@@ -304,9 +304,9 @@ fn derive_ap_config(
     mode: fidl_policy::ConnectivityMode,
     band: fidl_policy::OperatingBand,
 ) -> Result<state_machine::ApConfig, Error> {
-    let ssid = match config.id.as_ref() {
-        Some(id) => id.ssid.to_vec(),
-        None => return Err(format_err!("Missing SSID")),
+    let network_id = match config.id.as_ref() {
+        Some(id) => id.clone(),
+        None => return Err(format_err!("invalid NetworkIdentifier")),
     };
     let credential = match config.credential.as_ref() {
         Some(credential) => match credential {
@@ -330,7 +330,7 @@ fn derive_ap_config(
     let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel);
 
     Ok(state_machine::ApConfig {
-        ssid,
+        id: network_id,
         credential,
         radio_config,
         mode: types::ConnectivityMode::from(mode),
@@ -388,10 +388,7 @@ mod tests {
 
     #[async_trait]
     impl IfaceManagerApi for FakeIfaceManager {
-        async fn disconnect(
-            &mut self,
-            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
-        ) -> Result<(), Error> {
+        async fn disconnect(&mut self, _network_id: types::NetworkIdentifier) -> Result<(), Error> {
             Ok(())
         }
 

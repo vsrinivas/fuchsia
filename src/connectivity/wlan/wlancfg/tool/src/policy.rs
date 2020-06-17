@@ -664,6 +664,7 @@ mod tests {
         state: wlan_policy::OperatingState,
     ) -> wlan_policy::AccessPointState {
         wlan_policy::AccessPointState {
+            id: None,
             state: Some(state),
             mode: None,
             band: None,

@@ -4,7 +4,10 @@
 
 use {
     crate::{
-        access_point::state_machine::{self as ap_fsm, AccessPointApi},
+        access_point::{
+            state_machine::{self as ap_fsm, AccessPointApi},
+            types as ap_types,
+        },
         client::state_machine as client_fsm,
         config_management::SavedNetworksManager,
         mode_management::phy_manager::PhyManagerApi,
@@ -30,7 +33,7 @@ use {
 struct ClientIfaceContainer {
     iface_id: u16,
     sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
-    config: Option<fidl_fuchsia_wlan_policy::NetworkIdentifier>,
+    config: Option<ap_types::NetworkIdentifier>,
     client_state_machine: Box<dyn client_fsm::ClientApi + Send>,
 }
 
@@ -44,10 +47,7 @@ pub(crate) struct ApIfaceContainer {
 pub(crate) trait IfaceManagerApi {
     /// Finds the client iface with the given network configuration, disconnects from the network,
     /// and removes the client's network configuration information.
-    async fn disconnect(
-        &mut self,
-        network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
-    ) -> Result<(), Error>;
+    async fn disconnect(&mut self, network_id: ap_types::NetworkIdentifier) -> Result<(), Error>;
 
     /// Selects a client iface, ensures that a ClientSmeProxy and client connectivity state machine
     /// exists for the iface, and then issues a connect request to the client connectivity state
@@ -256,10 +256,7 @@ impl IfaceManager {
 
 #[async_trait]
 impl IfaceManagerApi for IfaceManager {
-    async fn disconnect(
-        &mut self,
-        network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
-    ) -> Result<(), Error> {
+    async fn disconnect(&mut self, network_id: ap_types::NetworkIdentifier) -> Result<(), Error> {
         // Find the client interface associated with the given network config and disconnect from
         // the network.
         let client_count = self.clients.len();
@@ -453,13 +450,7 @@ impl IfaceManagerApi for IfaceManager {
     async fn stop_ap(&mut self, ssid: Vec<u8>, credential: Vec<u8>) -> Result<(), Error> {
         if let Some(removal_index) =
             self.aps.iter().position(|ap_container| match ap_container.config.as_ref() {
-                Some(config) => {
-                    if config.ssid == ssid && config.credential == credential {
-                        true
-                    } else {
-                        false
-                    }
-                }
+                Some(config) => config.id.ssid == ssid && config.credential == credential,
                 None => false,
             })
         {
@@ -546,7 +537,7 @@ mod tests {
 
     /// Produces wlan network configuration objects to be used in tests.
     pub fn create_connect_request(ssid: &str, password: &str) -> client_fsm::ConnectRequest {
-        let network = fidl_fuchsia_wlan_policy::NetworkIdentifier {
+        let network = ap_types::NetworkIdentifier {
             ssid: ssid.as_bytes().to_vec(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
         };
@@ -809,7 +800,7 @@ mod tests {
         );
 
         if configured {
-            client_container.config = Some(fidl_fuchsia_wlan_policy::NetworkIdentifier {
+            client_container.config = Some(ap_types::NetworkIdentifier {
                 ssid: TEST_SSID.as_bytes().to_vec(),
                 type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
             });
@@ -822,7 +813,10 @@ mod tests {
     fn create_ap_config(ssid: &str, password: &str) -> ap_fsm::ApConfig {
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         ap_fsm::ApConfig {
-            ssid: ssid.as_bytes().to_vec(),
+            id: ap_types::NetworkIdentifier {
+                ssid: ssid.as_bytes().to_vec(),
+                type_: fidl_fuchsia_wlan_policy::SecurityType::None,
+            },
             credential: password.as_bytes().to_vec(),
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -1140,7 +1134,7 @@ mod tests {
 
         {
             // Issue a call to disconnect from the network.
-            let network_id = fidl_fuchsia_wlan_policy::NetworkIdentifier {
+            let network_id = ap_types::NetworkIdentifier {
                 ssid: TEST_SSID.as_bytes().to_vec(),
                 type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
             };
@@ -1176,7 +1170,7 @@ mod tests {
 
         {
             // Issue a disconnect request for a bogus network configuration.
-            let network_id = fidl_fuchsia_wlan_policy::NetworkIdentifier {
+            let network_id = ap_types::NetworkIdentifier {
                 ssid: "nonexistent_ssid".as_bytes().to_vec(),
                 type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
             };
@@ -1210,7 +1204,7 @@ mod tests {
         );
 
         // Call disconnect on the IfaceManager
-        let network_id = fidl_fuchsia_wlan_policy::NetworkIdentifier {
+        let network_id = ap_types::NetworkIdentifier {
             ssid: "nonexistent_ssid".as_bytes().to_vec(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
         };
@@ -1235,7 +1229,7 @@ mod tests {
             Box::new(FakeClient { connect_ok: true, disconnect_ok: false, exit_ok: false });
 
         // Call disconnect on the IfaceManager
-        let network_id = fidl_fuchsia_wlan_policy::NetworkIdentifier {
+        let network_id = ap_types::NetworkIdentifier {
             ssid: TEST_SSID.as_bytes().to_vec(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa2,
         };

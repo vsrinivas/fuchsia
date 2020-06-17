@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use {
     super::generic::{CurrentStateCache, Listener, Message},
     crate::access_point::types,
@@ -23,6 +27,7 @@ pub struct ApStatesUpdate {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApStateUpdate {
+    pub id: types::NetworkIdentifier,
     pub state: types::OperatingState,
     pub mode: Option<types::ConnectivityMode>,
     pub band: Option<types::OperatingBand>,
@@ -32,11 +37,19 @@ pub struct ApStateUpdate {
 
 impl ApStateUpdate {
     pub fn new(
+        id: types::NetworkIdentifier,
         state: types::OperatingState,
         mode: types::ConnectivityMode,
         band: types::OperatingBand,
     ) -> Self {
-        ApStateUpdate { state, mode: Some(mode), band: Some(band), frequency: None, clients: None }
+        ApStateUpdate {
+            id,
+            state,
+            mode: Some(mode),
+            band: Some(band),
+            frequency: None,
+            clients: None,
+        }
     }
 }
 
@@ -45,6 +58,7 @@ impl Into<Vec<fidl_policy::AccessPointState>> for ApStatesUpdate {
         self.access_points
             .iter()
             .map(|ap| fidl_policy::AccessPointState {
+                id: Some(types::NetworkIdentifier::from(ap.id.clone())),
                 state: Some(fidl_policy::OperatingState::from(ap.state)),
                 mode: ap.mode.map(|mode| fidl_policy::ConnectivityMode::from(mode)),
                 band: ap.band.map(|band| fidl_policy::OperatingBand::from(band)),
@@ -90,6 +104,10 @@ mod tests {
         fidl_fuchsia_wlan_policy as fidl_policy,
     };
 
+    fn create_network_id() -> types::NetworkIdentifier {
+        types::NetworkIdentifier { ssid: b"test".to_vec(), type_: fidl_policy::SecurityType::None }
+    }
+
     #[test]
     fn merge_updates() {
         let mut current_state_cache = ApStatesUpdate::default();
@@ -99,6 +117,7 @@ mod tests {
         let update = ApStatesUpdate {
             access_points: vec![{
                 ApStateUpdate {
+                    id: create_network_id(),
                     state: types::OperatingState::Starting,
                     mode: Some(types::ConnectivityMode::Unrestricted),
                     band: Some(types::OperatingBand::Any),
@@ -114,6 +133,7 @@ mod tests {
             ApStatesUpdate {
                 access_points: vec![{
                     ApStateUpdate {
+                        id: create_network_id(),
                         state: types::OperatingState::Starting,
                         mode: Some(types::ConnectivityMode::Unrestricted),
                         band: Some(types::OperatingBand::Any),
@@ -130,6 +150,7 @@ mod tests {
         let state = ApStatesUpdate {
             access_points: vec![{
                 ApStateUpdate {
+                    id: create_network_id(),
                     state: types::OperatingState::Starting,
                     mode: Some(types::ConnectivityMode::Unrestricted),
                     band: Some(types::OperatingBand::Any),
@@ -142,6 +163,10 @@ mod tests {
         assert_eq!(
             fidl_state,
             vec![fidl_policy::AccessPointState {
+                id: Some(types::NetworkIdentifier {
+                    ssid: b"test".to_vec(),
+                    type_: fidl_policy::SecurityType::None
+                }),
                 state: Some(fidl_policy::OperatingState::Starting),
                 mode: Some(fidl_policy::ConnectivityMode::Unrestricted),
                 band: Some(fidl_policy::OperatingBand::Any),

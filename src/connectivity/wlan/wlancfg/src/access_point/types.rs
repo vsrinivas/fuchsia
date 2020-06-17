@@ -4,6 +4,8 @@
 
 use fidl_fuchsia_wlan_policy as fidl_policy;
 
+pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OperatingState {
     Failed,

@@ -77,6 +77,9 @@ table AccessPointState {
 
     /// Information about connected clients
     5: ConnectedClientInformation clients;
+
+    /// Identifying information of the access point whose state has changed.
+    6: NetworkIdentifier id;
 };
 
 /// Connectivity operating mode for the access point.

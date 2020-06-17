@@ -84,7 +84,7 @@ pub enum ManualRequest {
 
 #[derive(Clone, PartialEq)]
 pub struct ApConfig {
-    pub ssid: Vec<u8>,
+    pub id: types::NetworkIdentifier,
     pub credential: Vec<u8>,
     pub radio_config: RadioConfig,
     pub mode: types::ConnectivityMode,
@@ -94,7 +94,7 @@ pub struct ApConfig {
 impl From<ApConfig> for fidl_sme::ApConfig {
     fn from(config: ApConfig) -> Self {
         fidl_sme::ApConfig {
-            ssid: config.ssid,
+            ssid: config.id.ssid,
             password: config.credential,
             radio_cfg: config.radio_config.to_fidl(),
         }
@@ -208,7 +208,8 @@ async fn starting_state(
     send_ap_stopped_update(&sender)?;
 
     // Create an initial AP state
-    let mut state = ApStateUpdate::new(types::OperatingState::Starting, req.mode, req.band);
+    let mut state =
+        ApStateUpdate::new(req.id.clone(), types::OperatingState::Starting, req.mode, req.band);
     send_state_update(&sender, state.clone())?;
 
     let mut ap_config = fidl_sme::ApConfig::from(req.clone());
@@ -401,6 +402,7 @@ mod tests {
         super::*,
         crate::util::listener,
         fidl::endpoints::create_proxy,
+        fidl_fuchsia_wlan_policy as fidl_policy,
         futures::{stream::StreamFuture, task::Poll, Future},
         wlan_common::{
             assert_variant,
@@ -434,6 +436,13 @@ mod tests {
         }
     }
 
+    fn create_network_id() -> types::NetworkIdentifier {
+        types::NetworkIdentifier {
+            ssid: b"test_ssid".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        }
+    }
+
     fn poll_sme_req(
         exec: &mut fasync::Executor,
         next_sme_req: &mut StreamFuture<fidl_sme::ApSmeRequestStream>,
@@ -461,13 +470,14 @@ mod tests {
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
         let state = ApStateUpdate::new(
+            create_network_id(),
             types::OperatingState::Starting,
             types::ConnectivityMode::Unrestricted,
             types::OperatingBand::Any,
@@ -526,13 +536,14 @@ mod tests {
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
         let state = ApStateUpdate::new(
+            create_network_id(),
             types::OperatingState::Starting,
             types::ConnectivityMode::Unrestricted,
             types::OperatingBand::Any,
@@ -582,13 +593,14 @@ mod tests {
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
         let state = ApStateUpdate::new(
+            create_network_id(),
             types::OperatingState::Starting,
             types::ConnectivityMode::Unrestricted,
             types::OperatingBand::Any,
@@ -626,7 +638,7 @@ mod tests {
         let (sender, mut receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -668,13 +680,14 @@ mod tests {
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
         let mut state = ApStateUpdate::new(
+            create_network_id(),
             types::OperatingState::Starting,
             types::ConnectivityMode::Unrestricted,
             types::OperatingBand::Any,
@@ -724,13 +737,14 @@ mod tests {
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
         let mut state = ApStateUpdate::new(
+            create_network_id(),
             types::OperatingState::Starting,
             types::ConnectivityMode::Unrestricted,
             types::OperatingBand::Any,
@@ -784,13 +798,14 @@ mod tests {
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
         let mut state = ApStateUpdate::new(
+            create_network_id(),
             types::OperatingState::Starting,
             types::ConnectivityMode::Unrestricted,
             types::OperatingBand::Any,
@@ -881,7 +896,7 @@ mod tests {
         let (sender, mut receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -1042,7 +1057,7 @@ mod tests {
         let (start_sender, mut start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -1128,7 +1143,7 @@ mod tests {
         let (start_sender, mut start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -1200,7 +1215,7 @@ mod tests {
         let (start_sender, mut start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -1245,7 +1260,7 @@ mod tests {
         let (second_start_sender, mut second_start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -1297,7 +1312,7 @@ mod tests {
         let (start_sender, mut start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
@@ -1364,7 +1379,7 @@ mod tests {
         let (start_sender, _start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         let req = ApConfig {
-            ssid: vec![],
+            id: create_network_id(),
             credential: vec![],
             radio_config,
             mode: types::ConnectivityMode::Unrestricted,
