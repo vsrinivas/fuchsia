@@ -36,6 +36,8 @@ group("large-test") {
   deps = [
     ":blobfs-large-integration-fragmentation",
     ":blobfs-large-integration-fragmentation-paged",
+    ":blobfs-large-integration-max-reservation",
+    ":blobfs-large-integration-max-reservation-paged",
     ":blobfs-large-integration-no-space",
     ":blobfs-large-integration-no-space-paged",
     ":blobfs-large-integration-short",
@@ -231,6 +233,10 @@ source_set("load-generator") {
 
 blobfs_large_integration_test("fragmentation") {
   sources = [ "integration/large/fragmentation.cc" ]
+}
+
+blobfs_large_integration_test("max-reservation") {
+  sources = [ "integration/large/max-reservation.cc" ]
 }
 
 blobfs_large_integration_test("no-space") {

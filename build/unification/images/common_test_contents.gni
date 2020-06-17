@@ -77,6 +77,8 @@ common_test_contents = [
   "//zircon/system/ulib/blobfs/test:blobfs-integration-paged",
   "//zircon/system/ulib/blobfs/test:blobfs-large-integration-fragmentation",
   "//zircon/system/ulib/blobfs/test:blobfs-large-integration-fragmentation-paged",
+  "//zircon/system/ulib/blobfs/test:blobfs-large-integration-max-reservation",
+  "//zircon/system/ulib/blobfs/test:blobfs-large-integration-max-reservation-paged",
   "//zircon/system/ulib/blobfs/test:blobfs-large-integration-no-space",
   "//zircon/system/ulib/blobfs/test:blobfs-large-integration-no-space-paged",
   "//zircon/system/ulib/blobfs/test:blobfs-large-integration-short",

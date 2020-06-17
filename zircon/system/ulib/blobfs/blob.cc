@@ -193,8 +193,10 @@ zx_status_t Blob::SpaceAllocate(uint64_t block_count) {
   }
   const ExtentCountType extent_count = static_cast<ExtentCountType>(extents.size());
 
-  // Reserve space for all the nodes necessary to contain this blob.
-  size_t node_count = NodePopulator::NodeCountForExtents(extent_count);
+  // Reserve space for all additional nodes necessary to contain this blob.
+  // The inode has already been reserved in Blob::PrepareWrite.
+  // Hence, we need to reserve one less node here.
+  size_t node_count = NodePopulator::NodeCountForExtents(extent_count) - 1;
   status = blobfs_->GetAllocator()->ReserveNodes(node_count, &nodes);
   if (status != ZX_OK) {
     return status;
