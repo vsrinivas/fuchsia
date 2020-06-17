@@ -201,9 +201,6 @@ mod tests {
     /// verifies that if the DriverManagerHandler node is present in the config file, then it is
     /// listed before any other nodes that require a driver connection (identified as a node that
     /// contains a string config key called "driver_path").
-    // TODO(fxbug.dev/52890): Re-enable this test after the DriverManagerHandler node is correctly
-    //      moved to the top of astro_node_config.json
-    #[ignore]
     #[test]
     fn test_config_files_driver_manager_handler_ordering() {
         for (file_path, config_file) in get_node_config_files() {

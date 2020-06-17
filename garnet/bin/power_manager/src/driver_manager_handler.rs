@@ -84,7 +84,7 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
     ) -> Self {
         #[derive(Deserialize)]
         struct Config {
-            registration_timeout: Option<f64>,
+            registration_timeout_s: Option<f64>,
         };
 
         #[derive(Deserialize)]
@@ -95,9 +95,8 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
         let data: JsonData = json::from_value(json_data).unwrap();
         let mut builder = Self::new().with_service_fs(service_fs);
 
-        if data.config.registration_timeout.is_some() {
-            builder = builder
-                .with_registration_timeout(Seconds(data.config.registration_timeout.unwrap()));
+        if let Some(timeout) = data.config.registration_timeout_s {
+            builder = builder.with_registration_timeout(Seconds(timeout));
         }
 
         builder
@@ -178,10 +177,7 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
 
         // Bind the received Directory channel to the namespace. This lets the received drivers be
         // accessed in the usual way (using `fdio::service_connect` and a /dev path).
-        // TODO(fxbug.dev/52890): This is expected to fail until the power manager removes /dev from
-        // its sandbox (because /dev will already exist in the namespace). For now, ignore the
-        // error.
-        let _ = bind_driver_directory(registration.dir).context("Failed to bind driver directory");
+        bind_driver_directory(registration.dir).context("Failed to bind driver directory")?;
 
         let node = Rc::new(DriverManagerHandler {
             termination_state_proxy: registration.termination_state_proxy,

@@ -3,10 +3,6 @@
         "binary": "bin/power_manager"
     },
     "sandbox": {
-        "dev": [
-            "class/cpu-ctrl",
-            "class/thermal"
-        ],
         "features": [
             "config-data"
         ],

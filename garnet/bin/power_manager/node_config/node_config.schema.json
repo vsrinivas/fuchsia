@@ -124,7 +124,7 @@
           "config": {
             "type": "object",
             "properties": {
-              "registration_timeout": {
+              "registration_timeout_s": {
                 "type": "number"
               }
             },
