@@ -20,8 +20,13 @@ use {
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 
 /// Controller that determines whether or not a change should be sent to the
-/// hanging get.
-struct HangingGetController<T> {
+/// hanging get. T is the type of the value to be watched and sent to back to
+/// the client via the sender ST.
+struct HangingGetController<T, ST>
+where
+    T: From<SettingResponse> + Send + Sync + 'static,
+    ST: Sender<T> + Send + Sync + 'static,
+{
     /// The last value that was sent to the client
     last_sent_value: Option<T>,
     /// Function called on change. If function returns true, tells the
@@ -30,14 +35,21 @@ struct HangingGetController<T> {
     /// If true, should send value next time watch
     /// is called or if there is a hanging watch.
     should_send: bool,
+    /// List of responders to send the changed value to.
+    pending_responders: Vec<(ST, Option<UnboundedSender<()>>)>,
 }
 
-impl<T> HangingGetController<T> {
-    fn new() -> HangingGetController<T> {
+impl<T, ST> HangingGetController<T, ST>
+where
+    T: From<SettingResponse> + Send + Sync + 'static,
+    ST: Sender<T> + Send + Sync + 'static,
+{
+    fn new() -> HangingGetController<T, ST> {
         let mut controller = HangingGetController {
             last_sent_value: None,
             change_function: Box::new(|_old: &T, _new: &T| true),
             should_send: true,
+            pending_responders: Vec::new(),
         };
 
         // Initialize with same method use for resetting.
@@ -52,8 +64,21 @@ impl<T> HangingGetController<T> {
         self.change_function = Box::new(|_old: &T, _new: &T| true);
     }
 
+    /// Add a pending responder that wants to be notified of the next value change.
+    fn add_pending_responder(&mut self, responder: ST, error_sender: Option<UnboundedSender<()>>) {
+        self.pending_responders.push((responder, error_sender));
+    }
+
     fn on_error(&mut self) {
         self.initialize();
+
+        // Notify responders of error.
+        while let Some((responder, optional_exit_tx)) = self.pending_responders.pop() {
+            responder.on_error();
+            if let Some(exit_tx) = optional_exit_tx {
+                exit_tx.unbounded_send(()).ok();
+            }
+        }
     }
 
     /// Sets the function that will be called on_change. Note that this will
@@ -78,6 +103,16 @@ impl<T> HangingGetController<T> {
         self.should_send
     }
 
+    /// Called when receiving a notification that value has changed.
+    async fn send_if_needed(&mut self, response: SettingResponse) {
+        if !self.pending_responders.is_empty() {
+            while let Some((responder, _)) = self.pending_responders.pop() {
+                responder.send_response(T::from(response.clone()));
+            }
+            self.on_send(T::from(response));
+        }
+    }
+
     /// Should be called whenever a value is sent to the hanging get.
     fn on_send(&mut self, new_value: T) {
         self.last_sent_value = Some(new_value);
@@ -97,10 +132,9 @@ where
 {
     switchboard_messenger: switchboard::message::Messenger,
     listen_exit_tx: Option<UnboundedSender<()>>,
-    pending_responders: Vec<(ST, Option<UnboundedSender<()>>)>,
     data_type: PhantomData<T>,
     setting_type: SettingType,
-    controller: HangingGetController<T>,
+    controller: HangingGetController<T, ST>,
     command_tx: UnboundedSender<ListenCommand>,
 }
 
@@ -139,7 +173,6 @@ where
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST> {
             switchboard_messenger: switchboard_messenger,
             listen_exit_tx: None,
-            pending_responders: Vec::new(),
             data_type: PhantomData,
             setting_type: setting_type,
             controller: HangingGetController::new(),
@@ -193,8 +226,7 @@ where
         error_sender: Option<UnboundedSender<()>>,
     ) {
         self.controller.set_change_function(change_function);
-
-        self.pending_responders.push((responder, error_sender));
+        self.controller.add_pending_responder(responder, error_sender);
 
         if self.listen_exit_tx.is_none() {
             let command_tx_clone = self.command_tx.clone();
@@ -230,7 +262,7 @@ where
 
         if self.controller.on_watch() {
             if let Ok(response) = self.get_response().await {
-                self.send_if_needed(response).await
+                self.controller.send_if_needed(response).await
             } else {
                 self.on_error();
             }
@@ -241,7 +273,7 @@ where
     async fn on_change(&mut self) {
         if let Ok(response) = self.get_response().await {
             if self.controller.on_change(&T::from(response.clone())) {
-                self.send_if_needed(response).await;
+                self.controller.send_if_needed(response).await;
             }
         } else {
             self.on_error();
@@ -254,24 +286,6 @@ where
         }
 
         self.controller.on_error();
-        if !self.pending_responders.is_empty() {
-            while let Some((responder, optional_exit_tx)) = self.pending_responders.pop() {
-                responder.on_error();
-                if let Some(exit_tx) = optional_exit_tx {
-                    exit_tx.unbounded_send(()).ok();
-                }
-            }
-        }
-    }
-
-    /// Called when receiving a notification that value has changed.
-    async fn send_if_needed(&mut self, response: SettingResponse) {
-        if !self.pending_responders.is_empty() {
-            while let Some((responder, _)) = self.pending_responders.pop() {
-                responder.send_response(T::from(response.clone()));
-            }
-            self.controller.on_send(T::from(response));
-        }
     }
 
     async fn get_response(&self) -> Result<SettingResponse, Error> {
@@ -684,23 +698,25 @@ mod tests {
 
     #[test]
     fn test_hanging_get_controller() {
-        let mut controller: HangingGetController<i32> = HangingGetController::new();
+        let mut controller: HangingGetController<TestStruct, TestSender> =
+            HangingGetController::new();
 
         // Should send change on launch
         assert_eq!(controller.on_watch(), true);
-        assert_eq!(controller.on_change(&1), true);
-        controller.on_send(1);
+        assert_eq!(controller.on_change(&TestStruct { id: 1.0 }), true);
+        controller.on_send(TestStruct { id: 1.0 });
 
         // After sent, without change, shouldn't send
         assert_eq!(controller.on_watch(), false);
-        assert_eq!(controller.on_change(&2), true);
-        controller.on_send(2);
+        assert_eq!(controller.on_change(&TestStruct { id: 2.0 }), true);
+        controller.on_send(TestStruct { id: 2.0 });
 
         // Setting change function should change when sending occurs
-        controller.set_change_function(Box::new(|old, new| old < new));
-        assert_eq!(controller.on_change(&1), false);
+        controller
+            .set_change_function(Box::new(|old: &TestStruct, new: &TestStruct| old.id < new.id));
+        assert_eq!(controller.on_change(&TestStruct { id: 1.0 }), false);
         assert_eq!(controller.on_watch(), false);
-        assert_eq!(controller.on_change(&3), true);
+        assert_eq!(controller.on_change(&TestStruct { id: 3.0 }), true);
         assert_eq!(controller.on_watch(), true);
     }
 }
