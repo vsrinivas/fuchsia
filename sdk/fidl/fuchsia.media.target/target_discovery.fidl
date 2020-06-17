@@ -50,14 +50,16 @@ struct SessionBinding {
     Id target_id;
 };
 
-table SessionBindingWatchEvent {
-    /// A list of active session bindings added or updated in the network
-    /// at any point in time.
-    1: vector<SessionBinding>:MAX updated;
-
-    /// A list of session bindings that are removed in the network since
-    /// notified.
-    2: vector<SessionBinding>:MAX removed;
+union SessionBindingWatchEvent {
+    /// An already existing binding at the time of connection.
+    1: SessionBinding existing;
+    /// Indicates the full set of bindings from the time of connection have
+    /// been enumerated. No more `existing` events will be received.
+    2: Void idle;
+    /// A new binding added since connection.
+    3: SessionBinding added;
+    /// A binding removed.
+    4: SessionBinding removed;
 };
 
 /// A target is a device or group of devices on which media can be rendered,
@@ -99,12 +101,21 @@ protocol Group {
     GetNextTarget() -> (TargetWatchEvent target_watch_event);
 };
 
-table TargetWatchEvent {
-    /// Targets added or updated on the network at any point in time.
-    1: vector<Description>:MAX updated;
+struct Void {
+};
 
-    /// Targets that are removed since last notified.
-    2: vector<Id>:MAX removed;
+union TargetWatchEvent {
+    /// An already existing target at the time of connection.
+    1: Description existing;
+    /// Indicates the full set of targets from the time of connection have
+    /// been enumerated. No more `existing` events will be received.
+    2: Void idle;
+    /// A new target added since connection.
+    3: Description added;
+    /// A target’s description was updated.
+    4: Description updated;
+    /// A target removed.
+    5: Id removed;
 };
 
 /// A protocol to control the volume of target.
