@@ -10,7 +10,7 @@ This codelab explains the Triage utility.
 
 The source files and examples to which this document refers are available at:
 
-* [//src/diagnostics/examples/triage/inspect.json][triage-inspect-example].
+* [//src/diagnostics/examples/triage/bugreport/inspect.json][triage-inspect-example].
 * [//src/diagnostics/examples/triage/rules.triage][triage-rules-example].
 * [//src/diagnostics/examples/triage/solution][triage-codelab-solution].
 
@@ -320,7 +320,7 @@ See
 [Triage (fx triage)](/src/diagnostics/triage/README.md)
 for the latest features and options - Triage will keep improving!
 
-[triage-inspect-example]: /src/diagnostics/examples/triage/inspect.json
+[triage-inspect-example]: /src/diagnostics/examples/triage/bugreport/inspect.json
 [triage-rules-example]: /src/diagnostics/examples/triage/rules.triage
 [triage-codelab-solution]: /src/diagnostics/examples/triage/solution
 

@@ -13,8 +13,7 @@
 ## "fx bugreport" and uses its "inspect.json" file.
 ##
 ##    --config <config-file-or-dir>      Path to config file or dir
-##    --bugreport <dir>                  Directory to get an inspect.json file from
-##    --inspect <file>                   Path to inspect.json
+##    --data <bugreport-or-dir>          Path to bugreport.zip or uncompressed dir
 ##    --tag <tag>                        Adds an action tag to include
 ##    --exclude-tag <tag>                Adds an action tag to exclude
 ##    --test                             (deprecated) Run self-tests (only)
@@ -34,14 +33,12 @@
 ## If no --tag values or --exclude-tag values are included then all of the
 ##   actions will be included.
 ##
-## 0 or more --bugreport or --inspect paths may be given. 
-##   --bugreport is path to a directory containing an unpacked "bugreport.zip".
+## 0 or 1 --data paths may be given.
+##   Path must point to a bugreport.zip or a directory containing an unpacked bugreport.zip.
 ##   For this path, 'fx triage' will analyze all supported filetypes.
 ##   Currently, the only supported filetype is inspect.json.
 ##   Future versions will add support for different files.
-##   --inspect is a path to an Inspect tree output dump file (e.g. "inspect.json" from bugreport).
-##   If no --bugreport and no --inspect is given,
-##   --bugreport with the result of `fx bugreport` will be invoked and analyzed.
+##   If no --data is given,`fx bugreport` will be invoked and analyzed.
 
 set -e
 trap 'echo Failed: ${BASH_COMMAND}' ERR
@@ -52,8 +49,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"\
 # Defaults.
 config_paths=( )
 testit=""
-directories=( )
-inspect_files=( )
+data_paths=( )
 tags=( )
 exclude_tags=( )
 flags=""
@@ -69,13 +65,9 @@ while [[ "$1" =~ ^- ]]; do
       shift
       config_paths+=( "$1" )
       ;;
-    --bugreport)
+    --data)
       shift
-      directories+=( "$1" )
-      ;;
-    --inspect)
-      shift
-      inspect_files+=( "$1" )
+      data_paths+=( "$1" )
       ;;
     --tag)
       shift
@@ -123,22 +115,29 @@ do
   flags="${flags} --config ${config_file}"
 done
 
-if [ -z "${directories}" ] && [ -z "${inspect_files}" ]; then
+if [ -z "${data_paths}" ]; then
   temp_dir=$(mktemp -d)
   trap 'rm -rf "${temp_dir}"' EXIT
   fx-command-run bugreport --output-directory "${temp_dir}" > /dev/null
   unzip "${temp_dir}/bugreport.zip" -d "${temp_dir}" > /dev/null
-  directories+="${temp_dir}"
+  data_paths+="${temp_dir}"
 fi
 
-for directory in "${directories[@]}"
+for data_path in "${data_paths[@]}"
 do
-  flags="${flags} --bugreport ${directory}"
-done
-
-for file in "${inspect_files[@]}"
-do
-  flags="${flags} --inspect ${file}"
+  if [[ -d "${data_path}" ]] ; then
+    # This should be an unzipped bugreport.zip; pass it to the Triage
+    # executable.
+    # Triage will complain if bugreport.zip files aren't in the directory.
+    flags="${flags} --data ${data_path}"
+  else
+    # This should be a .zip file. unzip will complain if not. Unzip it and
+    # pass its contents to the Triage executable.
+    temp_dir=$(mktemp -d)
+    trap 'rm -rf "${temp_dir}"' EXIT
+    unzip "${data_path}" -d "${temp_dir}" > /dev/null
+    flags="${flags} --data ${temp_dir}"
+  fi
 done
 
 for tag in "${tags[@]}"

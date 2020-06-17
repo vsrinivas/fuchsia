@@ -27,7 +27,13 @@ fx triage
 To analyze an existing bugreport:
 
 ```
-fx triage --inspect /path/to/bugreport.zip
+fx triage --data /path/to/bugreport.zip
+```
+
+or
+
+```
+fx triage --data /path/to/unzipped_bugreport_dir
 ```
 
 To specify config files to use:
@@ -43,9 +49,9 @@ TODO(cphoenix): Should these paths be relative to tree-root, or CWD?
 
 Config file format is described in [Configuring 'fx triage'](config.md). It includes:
 
- *   Selector metrics which specify the data to extract from the inspect.json produced
+ *   Selectors which specify the data to extract from the inspect.json produced
          by bugreport.zip
- *   Eval metrics which specify calculations
+ *   Eval expressions which specify calculations
  *   Actions to take if a condition is true (currently, only "print a warning")
  *   Tests to ensure your actions trigger (or not) appropriately with sample data
      you supply.
@@ -66,16 +72,12 @@ fx test triage_lib_tests
 
 *   //tools/devshell/contrib/triage - A bash script which implements the entry
     point to the "fx triage" command.
-    *   By default, it invokes //src/diagnostics/triage/src/main.rs
+    *   Invokes //src/diagnostics/triage/src/main.rs
         to analyze a bugreport.
-    *   With the `--test` argument, it dispatches
-        an integration test by invoking //src/diagnostics/triage/
-        test/src/main.rs.
-*   //src/diagnostics/triage/src/
-    *   main.rs - Entry point of the main "triage" program. It reads command
-        line arguments, loads the config files and inspect.json file that they
-        specify, and then processes the actions and self-tests specified in
-        the config files.
+*   //src/diagnostics/triage/
+    *   Entry point of the main "triage" program. Parses command line
+        arguments, loads files, launches analysis, and formats output.
+*   //src/diagnostics/lib/triage/src/
     *   metrics.rs - Data structures and calculation engine for metrics.
         *   metrics/fetch.rs - Business logic to read values from the
             inspect.json file.
@@ -85,7 +87,9 @@ fx test triage_lib_tests
         evaluate the self-tests specified in the config files.
     *   config.rs - Loads configuration information from *.triage files.
         *   config/parse.rs - A `nom`-based parser for Eval metrics.
-*   //src/diagnostics/triage/test_data/ - Data which is used in integration testing.
+*   //src/diagnostics/triage/test_data/ - Data which is used in integration
+    testing.
 *   //src/diagnostics/triage/build
     *   triage_config_test.gni defines a gn target to run config tests in CQ.
-    * triage_config_test_runner defines a binary which executes the tests for the triage_config_test.gni target.
+    *   triage_config_test_runner defines a binary which executes the tests for
+        the triage_config_test.gni target.

@@ -10,7 +10,6 @@ use {
 
 enum Input {
     Bugreport(String),
-    Inspect(String),
 }
 
 /// Returns the path relative to the current exectuable.
@@ -73,12 +72,8 @@ fn run_command(
 
     match input {
         Input::Bugreport(bugreport) => {
-            args.push("--bugreport".to_string());
+            args.push("--data".to_string());
             args.push(bugreport);
-        }
-        Input::Inspect(inspect) => {
-            args.push("--inspect".to_string());
-            args.push(inspect);
         }
     }
 
@@ -220,20 +215,6 @@ fn report_missing_config_file() -> Result<(), Error> {
     let output =
         run_command(Input::Bugreport(bugreport_path()?), vec!["cfg".to_string()], vec![], vec![])?;
     verify_output(output, 1, StringMatch::Contains("Couldn't read config file"));
-    Ok(())
-}
-
-#[test]
-fn reads_inspect_file_directly() -> Result<(), Error> {
-    //note: we do not use the macro here because we want to not fail on the
-    // file conversion logic
-    let output = run_command(
-        Input::Inspect(inspect_file_path()?),
-        vec![config_file_path("sample.triage").unwrap()],
-        vec![],
-        vec![],
-    )?;
-    verify_output(output, 1, StringMatch::DoesNotContain("Couldn't"));
     Ok(())
 }
 

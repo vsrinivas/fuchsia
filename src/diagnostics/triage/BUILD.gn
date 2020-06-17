@@ -26,6 +26,7 @@ group("tests") {
     "build/triage_config_test_runner:tests",
     "test_data",
     "//src/diagnostics/lib/triage:unittests($host_toolchain)",
+    "//src/diagnostics/lib/triage/wasm:tests($host_toolchain)",
   ]
 }
 

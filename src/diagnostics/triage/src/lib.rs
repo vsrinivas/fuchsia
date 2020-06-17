@@ -16,13 +16,9 @@ pub struct Options {
     #[structopt(long = "config")]
     config_files: Vec<String>,
 
-    /// Directories to read diagnostic (bugreport) files from.
-    #[structopt(long = "bugreport")]
-    data_directories: Vec<String>,
-
-    /// Inspect files to read directly.
-    #[structopt(long = "inspect")]
-    inspect_files: Vec<String>,
+    /// Directory to read diagnostic (bugreport) files from.
+    #[structopt(long = "data")]
+    data_directory: String,
 
     /// How to print the results.
     #[structopt(long = "output-format", default_value = "text")]

@@ -21,6 +21,8 @@ use std::{fs, path::Path};
 
 pub(crate) mod parse;
 
+const INSPECT_FILENAME: &str = "inspect.json";
+
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
 /// files using serde_json.
 #[derive(Deserialize, Default, Debug)]
@@ -64,24 +66,12 @@ impl DiagnosticData {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn from_directory(directory: &Path) -> Result<DiagnosticData, Error> {
-        let inspect_text = Self::text_from_file(&directory, "inspect.json")?;
-        Self::new(directory.as_os_str().to_string_lossy().to_string(), inspect_text)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn from_inspect(file: &Path) -> Result<DiagnosticData, Error> {
-        let str_file = file.as_os_str().to_string_lossy().to_string();
-        let inspect_text = fs::read_to_string(&file)
-            .context(format!("Couldn't read file '{}' to string", str_file))?;
-        Self::new(str_file, inspect_text)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn text_from_file(directory: &Path, file_name: &str) -> Result<String, Error> {
-        let file_path = directory.join(file_name).into_os_string().to_string_lossy().to_string();
-        fs::read_to_string(&file_path)
-            .context(format!("Couldn't read file '{}' to string", file_path))
+    pub fn from_directory(directory: &Path) -> Result<Vec<DiagnosticData>, Error> {
+        let file_path =
+            directory.join(INSPECT_FILENAME).into_os_string().to_string_lossy().to_string();
+        let inspect_text = fs::read_to_string(&file_path)
+            .context(format!("Couldn't read file '{}' to string", file_path))?;
+        Ok(vec![Self::new(file_path, inspect_text)?])
     }
 }
 

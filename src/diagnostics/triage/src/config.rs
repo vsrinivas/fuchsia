@@ -5,9 +5,12 @@
 use {
     crate::Options,
     anyhow::{bail, format_err, Error},
-    std::{path::Path, str::FromStr},
+    std::str::FromStr,
     triage::{ActionTagDirective, DiagnosticData, ParseResult},
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
 
 // TODO(fxb/50451): Add support for CSV.
 #[derive(Debug, PartialEq)]
@@ -20,9 +23,7 @@ impl FromStr for OutputFormat {
     fn from_str(output_format: &str) -> Result<Self, Self::Err> {
         match output_format {
             "text" => Ok(OutputFormat::Text),
-            incorrect => {
-                Err(format_err!("Invalid output type '{}' - must be 'csv' or 'text'", incorrect))
-            }
+            incorrect => Err(format_err!("Invalid output type '{}' - must be 'text'", incorrect)),
         }
     }
 }
@@ -36,15 +37,7 @@ pub struct ProgramStateHolder {
 
 /// Parses the inspect.json file and all the config files.
 pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
-    let Options {
-        data_directories,
-        inspect_files,
-        output_format,
-        config_files,
-        tags,
-        exclude_tags,
-        ..
-    } = options;
+    let Options { data_directory, output_format, config_files, tags, exclude_tags, .. } = options;
 
     if config_files.len() == 0 {
         bail!("Need at least one config file; use --config");
@@ -54,13 +47,7 @@ pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
         ParseResult::from_files(&config_files, &ActionTagDirective::from_tags(tags, exclude_tags))?;
     parse_result.validate()?;
 
-    let diagnostic_data = data_directories
-        .into_iter()
-        .map(|path| DiagnosticData::from_directory(&Path::new(&path)))
-        .chain(
-            inspect_files.into_iter().map(|path| DiagnosticData::from_inspect(&Path::new(&path))),
-        )
-        .collect::<Result<Vec<_>, Error>>()?;
+    let diagnostic_data = DiagnosticData::from_directory(&Path::new(&data_directory))?;
 
     Ok(ProgramStateHolder { parse_result, diagnostic_data, output_format })
 }
