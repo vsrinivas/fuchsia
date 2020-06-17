@@ -57,7 +57,7 @@ InspectManager::InspectManager(inspect::Node* root_node, const timekeeper::Clock
 bool InspectManager::AddReport(const std::string& program_name,
                                const std::string& local_report_id) {
   if (Contains(local_report_id)) {
-    FX_LOGS(ERROR) << fxl::Substitute("Local crash report, ID $0, already exposed in Inspect",
+    FX_LOGS(ERROR) << fxl::Substitute("Local report $0 already exposed in Inspect",
                                       local_report_id);
     return false;
   }
@@ -73,7 +73,7 @@ bool InspectManager::AddReport(const std::string& program_name,
 
 bool InspectManager::SetUploadAttempt(const std::string& local_report_id, uint64_t upload_attempt) {
   if (!Contains(local_report_id)) {
-    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    FX_LOGS(ERROR) << "Failed to find local report " << local_report_id;
     return false;
   }
 
@@ -91,7 +91,7 @@ bool InspectManager::SetUploadAttempt(const std::string& local_report_id, uint64
 bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
                                           const std::string& server_properties_report_id) {
   if (!Contains(local_report_id)) {
-    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    FX_LOGS(ERROR) << "Failed to find local report " << local_report_id;
     return false;
   }
 
@@ -110,7 +110,7 @@ bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
 
 bool InspectManager::MarkReportAsArchived(const std::string& local_report_id) {
   if (!Contains(local_report_id)) {
-    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    FX_LOGS(ERROR) << "Failed to find local report " << local_report_id;
     return false;
   }
 
@@ -122,7 +122,7 @@ bool InspectManager::MarkReportAsArchived(const std::string& local_report_id) {
 
 bool InspectManager::MarkReportAsGarbageCollected(const std::string& local_report_id) {
   if (!Contains(local_report_id)) {
-    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    FX_LOGS(ERROR) << "Failed to find local report " << local_report_id;
     return false;
   }
 

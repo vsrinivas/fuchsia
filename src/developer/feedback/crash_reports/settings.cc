@@ -15,13 +15,13 @@ void Settings::set_upload_policy(const Settings::UploadPolicy upload_policy) {
 
   switch (upload_policy_) {
     case Settings::UploadPolicy::DISABLED:
-      FX_LOGS(INFO) << "Crash report upload is disabled";
+      FX_LOGS(INFO) << "Upload is disabled";
       break;
     case Settings::UploadPolicy::ENABLED:
-      FX_LOGS(INFO) << "Crash report upload is enabled";
+      FX_LOGS(INFO) << "Upload is enabled";
       break;
     case Settings::UploadPolicy::LIMBO:
-      FX_LOGS(INFO) << "Crash report upload is in limbo";
+      FX_LOGS(INFO) << "Upload is in limbo";
       break;
   }
 

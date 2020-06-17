@@ -105,13 +105,13 @@ CrashReporter::CrashReporter(
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
-    FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
+    FX_LOGS(ERROR) << "Input report missing required program name. Won't file.";
     callback(::fit::error(ZX_ERR_INVALID_ARGS));
     info_.LogCrashState(cobalt::CrashState::kDropped);
     return;
   }
   const std::string program_name = report.program_name();
-  FX_LOGS(INFO) << "Generating crash report for " << program_name;
+  FX_LOGS(INFO) << "Generating report for '" << program_name << "'";
 
   auto bugreport_promise = data_provider_ptr_.GetBugreport(kBugreportTimeout);
   auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
@@ -157,7 +157,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
               })
           .then([callback = std::move(callback)](::fit::result<void>& result) {
             if (result.is_error()) {
-              FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
+              FX_LOGS(ERROR) << "Failed to file report. Won't retry.";
               callback(::fit::error(ZX_ERR_INTERNAL));
             } else {
               callback(::fit::ok());

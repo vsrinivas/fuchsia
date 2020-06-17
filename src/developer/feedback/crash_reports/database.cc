@@ -36,7 +36,7 @@ std::unique_ptr<Database> Database::TryCreate(std::shared_ptr<InfoContext> info_
   auto crashpad_database =
       crashpad::CrashReportDatabase::Initialize(base::FilePath(kCrashpadDatabasePath));
   if (!crashpad_database) {
-    FX_LOGS(ERROR) << fxl::StringPrintf("Error initializing local crash report database at %s",
+    FX_LOGS(ERROR) << fxl::StringPrintf("Error initializing local report database at %s",
                                         kCrashpadDatabasePath);
     info_context->Cobalt().LogOccurrence(cobalt::CrashpadFunctionError::kInitializeDatabase);
     return nullptr;
@@ -95,7 +95,7 @@ bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& 
 
 std::unique_ptr<UploadReport> Database::GetUploadReport(const UUID& local_report_id) {
   if (!Contains(local_report_id)) {
-    FX_LOGS(ERROR) << fxl::StringPrintf("Error fetching additional data for local crash report %s",
+    FX_LOGS(ERROR) << fxl::StringPrintf("Error fetching additional data for local report %s",
                                         local_report_id.ToString().c_str());
     // The database no longer contains the report (it was most likely pruned).
     return nullptr;
@@ -147,7 +147,7 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
       status != OperationStatus::kNoError) {
     info_.CrashpadError(cobalt::CrashpadFunctionError::kRecordUploadComplete);
     FX_LOGS(ERROR) << fxl::StringPrintf(
-        "Unable to record local crash report %s as uploaded in the database (%u)",
+        "Unable to record local report %s as uploaded in the database (%u)",
         local_report_id.ToString().c_str(), status);
     return false;
   }
@@ -157,12 +157,12 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
 
 bool Database::Archive(const crashpad::UUID& local_report_id) {
   if (!Contains(local_report_id)) {
-    FX_LOGS(INFO) << fxl::StringPrintf("Unable to archive local crash report ID %s",
+    FX_LOGS(INFO) << fxl::StringPrintf("Unable to archive local report %s",
                                        local_report_id.ToString().c_str());
     return false;
   }
 
-  FX_LOGS(INFO) << fxl::StringPrintf("Archiving local crash report, ID %s, under %s",
+  FX_LOGS(INFO) << fxl::StringPrintf("Archiving local report %s under %s",
                                      local_report_id.ToString().c_str(), kCrashpadDatabasePath);
   info_.MarkReportAsArchived(local_report_id.ToString(),
                              additional_data_.at(local_report_id).upload_attempts);
@@ -176,7 +176,7 @@ bool Database::Archive(const crashpad::UUID& local_report_id) {
       status != OperationStatus::kNoError) {
     info_.CrashpadError(cobalt::CrashpadFunctionError::kSkipReportUpload);
     FX_LOGS(ERROR) << fxl::StringPrintf(
-        "Unable to record local crash report %s as skipped in the database (%u)",
+        "Unable to record local report %s as skipped in the database (%u)",
         local_report_id.ToString().c_str(), status);
     return false;
   }
@@ -197,16 +197,14 @@ size_t Database::GarbageCollect() {
   crashpad::DatabaseSizePruneCondition pruning_condition(max_crashpad_database_size_in_kb_);
   const size_t num_pruned = crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
   if (num_pruned > 0) {
-    FX_LOGS(INFO) << fxl::StringPrintf("Pruned %lu crash report(s) from Crashpad database",
-                                       num_pruned);
+    FX_LOGS(INFO) << fxl::StringPrintf("Pruned %lu report(s) from Crashpad database", num_pruned);
   }
 
   // We set the |lockfile_ttl| to one day to ensure that reports in new aren't removed until
   // a period of time has passed in which it is certain they are orphaned.
   const size_t num_cleaned = database_->CleanDatabase(/*lockfile_ttl=*/60 * 60 * 24);
   if (num_cleaned > 0) {
-    FX_LOGS(INFO) << fxl::StringPrintf("Cleaned %lu crash report(s) from Crashpad database",
-                                       num_cleaned);
+    FX_LOGS(INFO) << fxl::StringPrintf("Cleaned %lu report(s) from Crashpad database", num_cleaned);
   }
 
   if (num_cleaned + num_pruned > 0) {
