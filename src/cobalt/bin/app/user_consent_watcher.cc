@@ -43,18 +43,12 @@ void UserConsentWatcher::RestartWatching() {
 }
 
 void UserConsentWatcher::Watch() {
-  privacy_settings_ptr_->Watch(
-      [this](fit::result<fuchsia::settings::PrivacySettings, fuchsia::settings::Error> result) {
-        if (result.is_error()) {
-          FX_LOGS(ERROR) << "Failed to obtain privacy settings: " << result.error();
-          RestartWatching();
-          return;
-        }
-
+  privacy_settings_ptr_->Watch2(
+      [this](fuchsia::settings::PrivacySettings settings) {
         // Reset the exponential backoff since we successfully watched once.
         backoff_.Reset();
 
-        privacy_settings_ = result.take_value();
+        privacy_settings_ = std::move(settings);
         Update();
 
         // We watch for the next update, following the hanging get pattern.
