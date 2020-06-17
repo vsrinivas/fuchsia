@@ -30,7 +30,7 @@ class VirtualAudioBus {
     // Define entry-point operations for this control device.
     static zx_protocol_device_t device_ops = {
         .version = DEVICE_OPS_VERSION,
-        .unbind = &VirtualAudioControlImpl::DdkUnbindDeprecated,
+        .unbind = &VirtualAudioControlImpl::DdkUnbind,
         .release = &VirtualAudioControlImpl::DdkRelease,
         .message = &VirtualAudioControlImpl::DdkMessage,
     };

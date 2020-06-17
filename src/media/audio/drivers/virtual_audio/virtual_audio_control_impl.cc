@@ -19,7 +19,7 @@ namespace virtual_audio {
 //
 // Unbind proceeds "down" from parent to child, while Release proceeds "up" (called for parent once
 // all children have been released).
-void VirtualAudioControlImpl::DdkUnbindDeprecated(void* ctx) {
+void VirtualAudioControlImpl::DdkUnbind(void* ctx) {
   ZX_DEBUG_ASSERT(ctx != nullptr);
 
   auto self = static_cast<VirtualAudioControlImpl*>(ctx);
@@ -28,7 +28,7 @@ void VirtualAudioControlImpl::DdkUnbindDeprecated(void* ctx) {
   self->ReleaseBindings();
 
   // Now remove the control device itself (this later calls our DdkRelease).
-  device_remove_deprecated(self->dev_node());
+  device_unbind_reply(self->dev_node());
 }
 
 // static

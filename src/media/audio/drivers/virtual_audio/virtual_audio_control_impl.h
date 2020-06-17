@@ -27,7 +27,7 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   // Always called after DdkUnbind.
   static void DdkRelease(void* ctx);
   // Always called after our child drivers are unbound and released.
-  static void DdkUnbindDeprecated(void* ctx);
+  static void DdkUnbind(void* ctx);
   // Delivers C-binding-FIDL Forwarder calls to the driver.
   static zx_status_t DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 
