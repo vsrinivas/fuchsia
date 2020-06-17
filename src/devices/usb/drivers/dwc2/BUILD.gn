@@ -42,6 +42,12 @@ test("dwc2-test") {
     "dwc2.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.dci",
+    "//sdk/banjo/ddk.protocol.usb.phy",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
