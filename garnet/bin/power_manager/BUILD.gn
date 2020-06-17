@@ -37,7 +37,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo-rustc",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fdio/rust:fdio",

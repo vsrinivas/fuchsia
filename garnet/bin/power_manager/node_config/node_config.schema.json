@@ -141,6 +141,21 @@
       {
         "properties": {
           "type": {
+            "pattern": "ShutdownWatcher"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "SystemPowerHandler"
           },
           "name": {

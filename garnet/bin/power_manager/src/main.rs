@@ -17,6 +17,7 @@ mod cpu_stats_handler;
 mod crash_report_handler;
 mod dev_control_handler;
 mod driver_manager_handler;
+mod shutdown_watcher;
 mod system_power_handler;
 mod system_shutdown_handler;
 mod temperature_handler;

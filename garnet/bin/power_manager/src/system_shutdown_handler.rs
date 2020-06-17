@@ -50,6 +50,7 @@ use std::rc::Rc;
 /// A builder for constructing the SystemShutdownHandler node.
 pub struct SystemShutdownHandlerBuilder<'a, 'b> {
     driver_manager_handler: Rc<dyn Node>,
+    shutdown_watcher: Option<Rc<dyn Node>>,
     component_mgr_path: Option<String>,
     component_mgr_proxy: Option<fsys::SystemControllerProxy>,
     shutdown_timeout: Option<Seconds>,
@@ -62,6 +63,7 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
     pub fn new(driver_manager_handler: Rc<dyn Node>) -> Self {
         Self {
             driver_manager_handler,
+            shutdown_watcher: None,
             component_mgr_path: None,
             component_mgr_proxy: None,
             shutdown_timeout: None,
@@ -85,6 +87,7 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         #[derive(Deserialize)]
         struct Dependencies {
             driver_manager_handler_node: String,
+            shutdown_watcher_node: Option<String>,
         }
 
         #[derive(Deserialize)]
@@ -100,6 +103,10 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
 
         if data.config.shutdown_timeout.is_some() {
             builder = builder.with_shutdown_timeout(Seconds(data.config.shutdown_timeout.unwrap()))
+        }
+
+        if let Some(watcher_name) = data.dependencies.shutdown_watcher_node {
+            builder = builder.with_shutdown_watcher(nodes[&watcher_name].clone())
         }
 
         builder
@@ -120,6 +127,11 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
 
     pub fn with_shutdown_timeout(mut self, timeout: Seconds) -> Self {
         self.shutdown_timeout = Some(timeout);
+        self
+    }
+
+    pub fn with_shutdown_watcher(mut self, watcher: Rc<dyn Node>) -> Self {
+        self.shutdown_watcher = Some(watcher);
         self
     }
 
@@ -165,6 +177,7 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
             force_shutdown_func: self.force_shutdown_func,
             shutdown_pending: Cell::new(false),
             driver_mgr_handler: self.driver_manager_handler,
+            shutdown_watcher: self.shutdown_watcher,
             component_mgr_proxy,
             inspect: InspectData::new(inspect_root, "SystemShutdownHandler".to_string()),
         });
@@ -199,6 +212,11 @@ pub struct SystemShutdownHandler {
     /// Reference to the DriverManagerHandler node. It is expected that this node responds to the
     /// SetTerminationSystemState message.
     driver_mgr_handler: Rc<dyn Node>,
+
+    /// Optional reference to a SystemShutdownWatcher instance. There is no requirement that a node
+    /// be populated in this Option. If one exists, then it will be notified of system shutdown
+    /// events. If not, then no notifications are sent out for system shutdown events.
+    shutdown_watcher: Option<Rc<dyn Node>>,
 
     /// Proxy handle to communicate with the Component Manager's SystemController protocol.
     component_mgr_proxy: fsys::SystemControllerProxy,
@@ -293,6 +311,12 @@ impl SystemShutdownHandler {
 
         info!("System shutdown ({:?})", request);
         self.inspect.log_shutdown_request(&request);
+
+        // If we have one, notify the ShutdownWatcher node of the incoming shutdown request.
+        // Since the call is blocking, the node could choose to delay shutdown if it likes.
+        if let Some(watcher_node) = &self.shutdown_watcher {
+            let _ = self.send_message(watcher_node, &Message::SystemShutdown(request)).await;
+        }
 
         // Handle the shutdown using a timeout if one is present in the config
         let result = if self.shutdown_timeout.is_some() {
@@ -661,5 +685,41 @@ mod tests {
         // error. When the orderly shutdown fails, the forced shutdown method will be called.
         let _ = node.handle_shutdown(ShutdownRequest::PowerOff).await;
         assert_eq!(force_shutdown.get(), true);
+    }
+
+    /// Tests that when the node is sent a shutdown request and there is a ShutdownWatcher node
+    /// present, then the watcher node is notified of the shutdown request.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_watcher_notify() {
+        // Choose an arbitrary shutdown request for the test
+        let shutdown_request = ShutdownRequest::Reboot(RebootReason::HighTemperature);
+
+        // A mock DriverManagerHandler node that expects the SetTerminationSystemState message
+        // corresponding to the above shutdown_request
+        let driver_mgr_node = create_mock_node(
+            "DriverManagerHandler",
+            vec![(
+                msg_eq!(SetTerminationSystemState(shutdown_request.into())),
+                msg_ok_return!(SetTerminationSystemState),
+            )],
+        );
+
+        // A mock ShutdownWatcher node that expects the SystemShutdown message containing the above
+        // shutdown_request
+        let shutdown_watcher = create_mock_node(
+            "ShutdownWatcher",
+            vec![(msg_eq!(SystemShutdown(shutdown_request)), msg_ok_return!(SystemShutdown))],
+        );
+
+        // Create the SystemShutdownHandler node and send the shutdown request
+        let node = SystemShutdownHandlerBuilder::new(driver_mgr_node)
+            .with_component_mgr_proxy(setup_fake_component_mgr_service(|| {}))
+            .with_shutdown_watcher(shutdown_watcher)
+            .build()
+            .unwrap();
+        assert!(node.handle_shutdown(shutdown_request).await.is_ok());
+
+        // When the test exits, the mock nodes' drop methods verify that the expected messages
+        // were received
     }
 }

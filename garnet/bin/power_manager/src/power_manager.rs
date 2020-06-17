@@ -16,8 +16,8 @@ use std::rc::Rc;
 // nodes
 use crate::{
     cpu_control_handler, cpu_stats_handler, crash_report_handler, dev_control_handler,
-    driver_manager_handler, system_power_handler, system_shutdown_handler, temperature_handler,
-    thermal_limiter, thermal_policy,
+    driver_manager_handler, shutdown_watcher, system_power_handler, system_shutdown_handler,
+    temperature_handler, thermal_limiter, thermal_policy,
 };
 
 /// Path to the node config JSON file.
@@ -134,6 +134,12 @@ impl PowerManager {
                 )
                 .build()?
             }
+            "ShutdownWatcher" => shutdown_watcher::ShutdownWatcherBuilder::new_from_json(
+                json_data,
+                &self.nodes,
+                service_fs,
+            )
+            .build()?,
             "TemperatureHandler" => temperature_handler::TemperatureHandlerBuilder::new_from_json(
                 json_data,
                 &self.nodes,
