@@ -5,7 +5,7 @@
 source_set("cmdline") {
   visibility = [
     ":kcounter",
-    "//zircon/system/utest/kcounter",
+    "//src/zircon/tests/kcounter",
   ]
   sources = [ "kcounter_cmdline.cc" ]
 }
