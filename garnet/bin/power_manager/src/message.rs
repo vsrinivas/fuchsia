@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::shutdown_request::ShutdownRequest;
 use crate::types::{Celsius, ThermalLoad, Watts};
 
 /// Defines the message types and arguments to be used for inter-node communication
@@ -27,8 +28,8 @@ pub enum Message {
     SetMaxPowerConsumption(Watts),
 
     /// Command a system shutdown
-    /// Arg: a string specifying the reason for the shutdown, to be used for logging
-    SystemShutdown(String),
+    /// Arg: a ShutdownRequest indicating the requested shutdown state and reason
+    SystemShutdown(ShutdownRequest),
 
     /// Instruct a node to update its thermal load value
     /// Arg: a ThermalLoad value which represents the severity of thermal load in the system

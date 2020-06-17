@@ -5,14 +5,14 @@
 use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::shutdown_request::ShutdownRequest;
 use crate::types::Seconds;
 use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use fidl_fuchsia_device_manager as fdevicemgr;
 use fidl_fuchsia_hardware_power_statecontrol as fpowercontrol;
 use fidl_fuchsia_sys2 as fsys;
-use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::{self as inspect, Property};
 use fuchsia_zircon::{self as zx, Status as zx_status};
@@ -23,11 +23,12 @@ use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::rc::Rc;
 
 /// Node: SystemShutdownHandler
 ///
-/// Summary: Provides a mechanism for the Power Manager to shutdown the system. In addition to
+/// Summary: Provides a mechanism for the Power Manager to shut down the system. In addition to
 /// providing a shutdown mechanism for the Power Manager internally, this node hosts the
 /// fuchsia.hardware.power.statecontrol protocol to support system shutdown for external components.
 ///
@@ -44,7 +45,7 @@ use std::rc::Rc;
 ///     - fuchsia.hardware.power.statecontrol.Admin: the node hosts a service of this protocol to
 ///       the rest of the system
 ///     - fuchsia.sys2.SystemController: the node uses this protocol to instruct the Component
-///       Manager to shutdown the component tree
+///       Manager to shut down the component tree
 
 /// A builder for constructing the SystemShutdownHandler node.
 pub struct SystemShutdownHandlerBuilder<'a, 'b> {
@@ -148,21 +149,21 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         // Connect to the Component Manager's SystemController service if a proxy wasn't specified
-        let component_mgr_proxy = if self.component_mgr_proxy.is_none() {
+        let component_mgr_proxy = if let Some(proxy) = self.component_mgr_proxy {
+            proxy
+        } else {
             connect_proxy::<fsys::SystemControllerMarker>(
                 &self
                     .component_mgr_path
                     .ok_or(format_err!("Must specify Component Manager path or proxy"))?
                     .to_string(),
             )?
-        } else {
-            self.component_mgr_proxy.unwrap()
         };
 
         let node = Rc::new(SystemShutdownHandler {
             shutdown_timeout: self.shutdown_timeout,
             force_shutdown_func: self.force_shutdown_func,
-            suspend_pending: Cell::new(false),
+            shutdown_pending: Cell::new(false),
             driver_mgr_handler: self.driver_manager_handler,
             component_mgr_proxy,
             inspect: InspectData::new(inspect_root, "SystemShutdownHandler".to_string()),
@@ -191,9 +192,9 @@ pub struct SystemShutdownHandler {
     /// Function to force a system shutdown.
     force_shutdown_func: Box<dyn Fn()>,
 
-    /// Tracks the current suspend request state. Used to ignore suspend requests while a current
+    /// Tracks the current shutdown request state. Used to ignore shutdown requests while a current
     /// request is being processed.
-    suspend_pending: Cell<bool>,
+    shutdown_pending: Cell<bool>,
 
     /// Reference to the DriverManagerHandler node. It is expected that this node responds to the
     /// SetTerminationSystemState message.
@@ -212,7 +213,7 @@ impl SystemShutdownHandler {
         self: Rc<Self>,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) {
-        service_fs.dir("svc").add_fidl_service(move |stream: fpowercontrol::AdminRequestStream| {
+        service_fs.dir("svc").add_fidl_service(move |stream| {
             self.clone().handle_new_service_connection(stream);
         });
     }
@@ -233,56 +234,37 @@ impl SystemShutdownHandler {
                 while let Some(req) = stream.try_next().await? {
                     match req {
                         fpowercontrol::AdminRequest::Suspend { state, responder } => {
-                            let result = self.handle_suspend(state, None).await;
+                            let result = self.handle_shutdown(state.try_into()?).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                         fpowercontrol::AdminRequest::PowerFullyOn { responder } => {
-                            let result = self
-                                .handle_suspend(fpowercontrol::SystemPowerState::FullyOn, None)
-                                .await;
-                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                            let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
                         }
-                        fpowercontrol::AdminRequest::Reboot { reason: _, responder } => {
-                            let result = self
-                                .handle_suspend(fpowercontrol::SystemPowerState::Reboot, None)
-                                .await;
+                        fpowercontrol::AdminRequest::Reboot { reason, responder } => {
+                            let result =
+                                self.handle_shutdown(ShutdownRequest::Reboot(reason)).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                         fpowercontrol::AdminRequest::RebootToBootloader { responder } => {
-                            let result = self
-                                .handle_suspend(
-                                    fpowercontrol::SystemPowerState::RebootBootloader,
-                                    None,
-                                )
-                                .await;
+                            let result =
+                                self.handle_shutdown(ShutdownRequest::RebootBootloader).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                         fpowercontrol::AdminRequest::RebootToRecovery { responder } => {
-                            let result = self
-                                .handle_suspend(
-                                    fpowercontrol::SystemPowerState::RebootRecovery,
-                                    None,
-                                )
-                                .await;
+                            let result =
+                                self.handle_shutdown(ShutdownRequest::RebootRecovery).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                         fpowercontrol::AdminRequest::Poweroff { responder } => {
-                            let result = self
-                                .handle_suspend(fpowercontrol::SystemPowerState::Poweroff, None)
-                                .await;
+                            let result = self.handle_shutdown(ShutdownRequest::PowerOff).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                         fpowercontrol::AdminRequest::Mexec { responder } => {
-                            let result = self
-                                .handle_suspend(fpowercontrol::SystemPowerState::Mexec, None)
-                                .await;
+                            let result = self.handle_shutdown(ShutdownRequest::Mexec).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                         fpowercontrol::AdminRequest::SuspendToRam { responder } => {
-                            let result = self
-                                .handle_suspend(fpowercontrol::SystemPowerState::SuspendRam, None)
-                                .await;
-                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                            let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
                         }
                     }
                 }
@@ -292,35 +274,31 @@ impl SystemShutdownHandler {
         );
     }
 
-    /// Called each time a client calls the Suspend API. If the function is called while a suspend
-    /// is already in progress, then an error is returned. This is the only scenario where the
-    /// function will return. In all other cases, the function does not return.
-    async fn handle_suspend(
-        &self,
-        state: fpowercontrol::SystemPowerState,
-        reason: Option<String>,
-    ) -> Result<(), zx_status> {
+    /// Called each time a client calls the fuchsia.hardware.power.statecontrol.Admin API to
+    /// initiate a system state transition. If the function is called while a shutdown is already in
+    /// progress, then an error is returned. This is the only scenario where the function will
+    /// return. In all other cases, the function does not return.
+    async fn handle_shutdown(&self, request: ShutdownRequest) -> Result<(), zx_status> {
         fuchsia_trace::instant!(
             "power_manager",
-            "SystemShutdownHandler::handle_suspend",
+            "SystemShutdownHandler::handle_shutdown",
             fuchsia_trace::Scope::Thread,
-            "state" => format!("{:?}", state).as_str(),
-            "reason" => format!("{:?}", reason).as_str()
+            "request" => format!("{:?}", request).as_str()
         );
 
         // Return if shutdown is already pending
-        if self.suspend_pending.replace(true) == true {
+        if self.shutdown_pending.replace(true) == true {
             return Err(zx_status::ALREADY_EXISTS);
         }
 
-        info!("System shutdown (reason: {:?})", reason);
-        self.inspect.log_suspend_request(state);
+        info!("System shutdown ({:?})", request);
+        self.inspect.log_shutdown_request(&request);
 
-        // Handle the suspend using a timeout if one is present in the config
+        // Handle the shutdown using a timeout if one is present in the config
         let result = if self.shutdown_timeout.is_some() {
-            self.suspend_with_timeout(state, self.shutdown_timeout.unwrap()).await
+            self.shutdown_with_timeout(request, self.shutdown_timeout.unwrap()).await
         } else {
-            self.suspend(state).await
+            self.shutdown(request).await
         };
 
         // If the result is an error, either by underlying API failure or by timeout, then force a
@@ -333,79 +311,53 @@ impl SystemShutdownHandler {
         Ok(())
     }
 
-    /// Wraps the node's `suspend` function with a timeout value. If the `suspend` call has not
-    /// returned within the specified timeout, an error is returned.
-    async fn suspend_with_timeout(
+    /// Wraps the node's `shutdown` function with a timeout value. If the `shutdown` call has not
+    /// returned within the specified timeout, an error is returned. In the event of a timeout, the
+    /// underlying channel that encountered the timeout may encounter issues with subsequent
+    /// transactions (fxbug.dev/53760). In this case, that means either the channel used by the
+    /// `driver_mgr_handler` node or the `component_mgr_proxy` channel encountered the timeout. In
+    /// all likelihood, because Driver Manager will not be doing any meaningful work in response to
+    /// this FIDL call, we can presume that Component Manager, which will be performing a
+    /// significant amount of work, is the channel that encountered the timeout. Therefore, care
+    /// should be taken to avoid reusing the `component_mgr_proxy` channel in the event of a
+    /// shutdown timeout. Currently this is not a problem because in the event of a timeout, we will
+    /// force a system shutdown by other means.
+    async fn shutdown_with_timeout(
         &self,
-        state: fpowercontrol::SystemPowerState,
+        request: ShutdownRequest,
         timeout: Seconds,
     ) -> Result<(), Error> {
-        let sleep_duration = zx::Duration::from_seconds(timeout.0 as i64);
-        let timer = fasync::Timer::new(sleep_duration.after_now());
-
-        match futures::future::select(Box::pin(self.suspend(state)), timer).await {
-            futures::future::Either::Left((result, _)) => result,
-            futures::future::Either::Right(_) => Err(format_err!("Suspend timed out")),
-        }
+        let deadline = zx::Duration::from_seconds(timeout.0 as i64).after_now();
+        self.shutdown(request).on_timeout(deadline, || Err(format_err!("Shutdown timed out"))).await
     }
 
-    /// Suspend the system to the specified power state. The function works as follows:
-    ///     1. Update the Driver Manager's termination state to match the requested power state
+    /// Shut down the system into the specified state. The function works as follows:
+    ///     1. Update the Driver Manager's termination state to match the requested shutdown state
     ///     2. Issue a shutdown to the Component Manager
     ///     3. Once the Component Manager shutdown process reaches the Driver Manager component,
     ///        the system will be put into the state that is specified by the termination state
-    async fn suspend(&self, state: fpowercontrol::SystemPowerState) -> Result<(), Error> {
+    async fn shutdown(&self, request: ShutdownRequest) -> Result<(), Error> {
         self.send_message(
             &self.driver_mgr_handler,
-            &Message::SetTerminationSystemState(system_power_state_to_driver_manager_state(state)),
+            &Message::SetTerminationSystemState(request.into()),
         )
         .await?;
         self.component_mgr_proxy.shutdown().await?;
         Ok(())
     }
 
-    /// Handle a SystemShutdown message which is a request to shutdown the system from within the
+    /// Handle a SystemShutdown message which is a request to shut down the system from within the
     /// PowerManager itself.
     async fn handle_system_shutdown_message(
         &self,
-        reason: String,
+        request: ShutdownRequest,
     ) -> Result<MessageReturn, PowerManagerError> {
-        match self.handle_suspend(fpowercontrol::SystemPowerState::Reboot, Some(reason)).await {
+        match self.handle_shutdown(request).await {
             Ok(()) => Ok(MessageReturn::SystemShutdown),
             Err(zx_status::ALREADY_EXISTS) => {
                 Err(PowerManagerError::Busy("Shutdown already in progress".to_string()))
             }
             Err(e) => Err(PowerManagerError::GenericError(format_err!("{}", e))),
-        }
-    }
-}
-
-/// Translate a fuchsia.hardware.power.statecontrol.SystemPowerState into a
-/// fuchsia.device.manager.SystemPowerState.
-fn system_power_state_to_driver_manager_state(
-    state: fpowercontrol::SystemPowerState,
-) -> fdevicemgr::SystemPowerState {
-    match state {
-        fpowercontrol::SystemPowerState::FullyOn => {
-            fdevicemgr::SystemPowerState::SystemPowerStateFullyOn
-        }
-        fpowercontrol::SystemPowerState::Reboot => {
-            fdevicemgr::SystemPowerState::SystemPowerStateReboot
-        }
-        fpowercontrol::SystemPowerState::RebootBootloader => {
-            fdevicemgr::SystemPowerState::SystemPowerStateRebootBootloader
-        }
-        fpowercontrol::SystemPowerState::RebootRecovery => {
-            fdevicemgr::SystemPowerState::SystemPowerStateRebootRecovery
-        }
-        fpowercontrol::SystemPowerState::Poweroff => {
-            fdevicemgr::SystemPowerState::SystemPowerStatePoweroff
-        }
-        fpowercontrol::SystemPowerState::Mexec => {
-            fdevicemgr::SystemPowerState::SystemPowerStateMexec
-        }
-        fpowercontrol::SystemPowerState::SuspendRam => {
-            fdevicemgr::SystemPowerState::SystemPowerStateSuspendRam
         }
     }
 }
@@ -426,9 +378,7 @@ impl Node for SystemShutdownHandler {
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
-            Message::SystemShutdown(reason) => {
-                self.handle_system_shutdown_message(reason.to_string()).await
-            }
+            Message::SystemShutdown(request) => self.handle_system_shutdown_message(*request).await,
             _ => Err(PowerManagerError::Unsupported),
         }
     }
@@ -439,7 +389,7 @@ struct InspectData {
     root_node: inspect::Node,
 
     // Properties
-    shutdown_request_state: inspect::StringProperty,
+    shutdown_request: inspect::StringProperty,
     force_shutdown_attempted: inspect::BoolProperty,
 }
 
@@ -447,7 +397,7 @@ impl InspectData {
     fn new(parent: &inspect::Node, name: String) -> Self {
         let root_node = parent.create_child(name);
         Self {
-            shutdown_request_state: root_node.create_string("shutdown_request_state", "None"),
+            shutdown_request: root_node.create_string("shutdown_request", "None"),
             force_shutdown_attempted: root_node.create_bool("force_shutdown_attempted", false),
             root_node,
         }
@@ -463,15 +413,16 @@ impl InspectData {
         self.root_node.record(config_node);
     }
 
-    /// Updates the `shutdown_request_state` property according to the provided state.
-    fn log_suspend_request(&self, state: fpowercontrol::SystemPowerState) {
-        self.shutdown_request_state.set(format!("{:?}", state).as_str());
+    /// Updates the `shutdown_request` property according to the provided request.
+    fn log_shutdown_request(&self, request: &ShutdownRequest) {
+        self.shutdown_request.set(format!("{:?}", request).as_str());
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shutdown_request::RebootReason;
     use crate::test::mock_node::{create_dummy_node, create_mock_node, MessageMatcher};
     use crate::{msg_eq, msg_ok_return};
     use inspect::assert_inspect_tree;
@@ -531,40 +482,40 @@ mod tests {
             .with_component_mgr_proxy(setup_fake_component_mgr_service(|| {}))
             .with_inspect_root(inspector.root())
             .with_force_shutdown_function(Box::new(|| {}))
+            .with_shutdown_timeout(Seconds(100.0))
             .build()
             .unwrap();
 
-        // Issue a suspend call that will fail (because the DriverManager dummy node will respond to
-        // SetTerminationSystemState with an error), which causes a force shutdown to be issued. This
-        // gives us something interesting to verify in Inspect.
-        let _ = node.handle_suspend(fpowercontrol::SystemPowerState::Reboot, None).await;
+        // Issue a shutdown call that will fail (because the DriverManager dummy node will respond
+        // to SetTerminationSystemState with an error), which causes a force shutdown to be issued.
+        // This gives us something interesting to verify in Inspect.
+        let _ = node.handle_shutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature)).await;
 
         assert_inspect_tree!(
             inspector,
             root: {
                 SystemShutdownHandler: {
                     config: {
-                        "shutdown_timeout (s)": 0u64
+                        "shutdown_timeout (s)": 100u64
                     },
-                    shutdown_request_state: "Reboot",
+                    shutdown_request: "Reboot(HighTemperature)",
                     force_shutdown_attempted: true
                 }
             }
         );
     }
 
-    /// Tests that the `suspend` function correctly sets the corresponding termination state on
-    /// the Driver Manager and calls the Component Manager shutdown API.
+    /// Tests that the `shutdown` function correctly sets the corresponding termination state on the
+    /// Driver Manager and calls the Component Manager shutdown API.
     #[fasync::run_singlethreaded(test)]
-    async fn test_suspend() {
-        // The test will call suspend with each of these system power states
-        let system_power_states = vec![
-            fpowercontrol::SystemPowerState::Reboot,
-            fpowercontrol::SystemPowerState::RebootBootloader,
-            fpowercontrol::SystemPowerState::RebootRecovery,
-            fpowercontrol::SystemPowerState::Poweroff,
-            fpowercontrol::SystemPowerState::Mexec,
-            fpowercontrol::SystemPowerState::SuspendRam,
+    async fn test_shutdown() {
+        // The test will call `shutdown` with each of these shutdown requests
+        let shutdown_requests = vec![
+            ShutdownRequest::Reboot(RebootReason::UserRequest),
+            ShutdownRequest::RebootBootloader,
+            ShutdownRequest::RebootRecovery,
+            ShutdownRequest::PowerOff,
+            ShutdownRequest::Mexec,
         ];
 
         // At the end of the test, verify the Component Manager's received shutdown count (expected
@@ -576,13 +527,11 @@ mod tests {
         // message for each state in `system_power_states`
         let driver_mgr_node = create_mock_node(
             "DriverMgrNode",
-            system_power_states
+            shutdown_requests
                 .iter()
-                .map(|state| {
+                .map(|request| {
                     (
-                        msg_eq!(SetTerminationSystemState(
-                            system_power_state_to_driver_manager_state(*state)
-                        )),
+                        msg_eq!(SetTerminationSystemState((*request).into())),
                         msg_ok_return!(SetTerminationSystemState),
                     )
                 })
@@ -599,24 +548,24 @@ mod tests {
 
         // Call `suspend` for each power state. The mock Driver Manager node verifies that the
         // SetTerminationSystemState messages are sent as expected.
-        for state in &system_power_states {
-            let _ = node.suspend(*state).await;
+        for request in &shutdown_requests {
+            let _ = node.shutdown(*request).await;
         }
 
-        // Verify the Component Manager shutdown was called for each suspend call
-        assert_eq!(shutdown_count.get(), system_power_states.len());
+        // Verify the Component Manager shutdown was called for each shutdown call
+        assert_eq!(shutdown_count.get(), shutdown_requests.len());
     }
 
-    /// Tests that the suspend timer works as expected by returning with an error after the expected
-    /// timeout period.
+    /// Tests that the shutdown timer works as expected by returning with an error after the
+    /// expected timeout period.
     #[test]
-    fn test_suspend_timeout() {
+    fn test_shutdown_timeout() {
         // Need to use an Executor with fake time to test the timeout value
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
-        // Arbitrary suspend state to be used in the test
-        let suspend_state = fpowercontrol::SystemPowerState::Reboot;
+        // Arbitrary shutdown request to be used in the test
+        let shutdown_request = ShutdownRequest::PowerOff;
 
         // Arbitrary timeout value to be used in the test
         let timeout = Seconds(10.0);
@@ -630,9 +579,7 @@ mod tests {
         let node = SystemShutdownHandlerBuilder::new(create_mock_node(
             "DriverMgrNode",
             vec![(
-                msg_eq!(SetTerminationSystemState(system_power_state_to_driver_manager_state(
-                    suspend_state
-                ))),
+                msg_eq!(SetTerminationSystemState(shutdown_request.into())),
                 msg_ok_return!(SetTerminationSystemState),
             )],
         ))
@@ -641,30 +588,30 @@ mod tests {
         .unwrap();
 
         // Future that attempts a suspend with a timeout
-        let mut suspend_future = Box::pin(node.suspend_with_timeout(suspend_state, timeout));
+        let mut shutdown_future = Box::pin(node.shutdown_with_timeout(shutdown_request, timeout));
 
         // Run the future until it stalls. In this case, the stall will happen because the fake
         // Component Manager proxy doesn't respond to the shutdown request.
-        assert!(exec.run_until_stalled(&mut suspend_future).is_pending());
+        assert!(exec.run_until_stalled(&mut shutdown_future).is_pending());
 
         // Wake the timer and verify the timer was scheduled to fire at the expected time
         assert_eq!(exec.wake_next_timer(), Some(fasync::Time::from_nanos(timeout.into_nanos())));
 
         // Run the future again. This time it should complete with an error (due to the timeout)
         assert_matches!(
-            exec.run_until_stalled(&mut suspend_future),
+            exec.run_until_stalled(&mut shutdown_future),
             futures::task::Poll::Ready(Err(_))
         );
     }
 
-    /// Tests that a second suspend request will fail with an error if a prior request is already in
-    /// progress.
+    /// Tests that a second shutdown request will fail with an error if a prior request is already
+    /// in progress.
     #[test]
-    fn test_ignore_second_suspend() {
+    fn test_ignore_second_shutdown() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Arbitrary suspend state to be used in the test
-        let suspend_state = fpowercontrol::SystemPowerState::Reboot;
+        // Arbitrary shutdown request to be used in the test
+        let shutdown_request = ShutdownRequest::PowerOff;
 
         // Don't use `setup_fake_component_mgr_service` here because we want a stream object that
         // doesn't respond to the request. This way we can properly exercise the timeout path.
@@ -673,9 +620,7 @@ mod tests {
         let node = SystemShutdownHandlerBuilder::new(create_mock_node(
             "DriverMgrNode",
             vec![(
-                msg_eq!(SetTerminationSystemState(system_power_state_to_driver_manager_state(
-                    suspend_state
-                ))),
+                msg_eq!(SetTerminationSystemState(shutdown_request.into())),
                 msg_ok_return!(SetTerminationSystemState),
             )],
         ))
@@ -683,20 +628,20 @@ mod tests {
         .build()
         .unwrap();
 
-        // Run the first suspend request. This is expected to stall because the fake Component
+        // Run the first shutdown request. This is expected to stall because the fake Component
         // Manager proxy will not be responding to the request.
         assert!(exec
-            .run_until_stalled(&mut Box::pin(node.handle_suspend(suspend_state, None)))
+            .run_until_stalled(&mut Box::pin(node.handle_shutdown(shutdown_request)))
             .is_pending());
 
         // Run a second request and verify it returns with the expected error
         assert_matches!(
-            exec.run_until_stalled(&mut Box::pin(node.handle_suspend(suspend_state, None))),
+            exec.run_until_stalled(&mut Box::pin(node.handle_shutdown(shutdown_request))),
             futures::task::Poll::Ready(Err(zx_status::ALREADY_EXISTS))
         );
     }
 
-    /// Tests that if an orderly suspend request fails, the forced shutdown method is called.
+    /// Tests that if an orderly shutdown request fails, the forced shutdown method is called.
     #[fasync::run_singlethreaded(test)]
     async fn test_force_shutdown() {
         let force_shutdown = Rc::new(Cell::new(false));
@@ -711,10 +656,10 @@ mod tests {
             .build()
             .unwrap();
 
-        // Call the normal suspend function. The orderly suspend will fail because the DriverManager
-        // dummy node will respond to the SetTerminationSystemState message with an error. When the
-        // orderly suspend fails, the forced shutdown method will be called.
-        let _ = node.handle_suspend(fpowercontrol::SystemPowerState::Reboot, None).await;
+        // Call the normal shutdown function. The orderly shutdown will fail because the
+        // DriverManager dummy node will respond to the SetTerminationSystemState message with an
+        // error. When the orderly shutdown fails, the forced shutdown method will be called.
+        let _ = node.handle_shutdown(ShutdownRequest::PowerOff).await;
         assert_eq!(force_shutdown.get(), true);
     }
 }

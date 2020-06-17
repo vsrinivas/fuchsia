@@ -7,6 +7,7 @@ mod error;
 mod message;
 mod node;
 mod power_manager;
+mod shutdown_request;
 mod types;
 mod utils;
 

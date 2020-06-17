@@ -6,6 +6,7 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::shutdown_request::{RebootReason, ShutdownRequest};
 use crate::thermal_limiter;
 use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
 use crate::utils::{get_current_timestamp, CobaltIntHistogram, CobaltIntHistogramConfig};
@@ -491,18 +492,9 @@ impl ThermalPolicy {
             self.thermal_metrics.borrow_mut().log_throttle_end_shutdown(timestamp);
             self.inspect.throttle_history().mark_throttling_inactive(timestamp);
 
-            // TODO(pshickel): We shouldn't ever get an error here. But we should probably have
-            // some type of fallback or secondary mechanism of halting the system if it somehow
-            // does happen. This could have physical safety implications.
             self.send_message(
                 &self.config.sys_pwr_handler,
-                &Message::SystemShutdown(
-                    format!(
-                        "Exceeded thermal limit ({}C > {}C)",
-                        temperature.0, self.config.policy_params.thermal_shutdown_temperature.0
-                    )
-                    .to_string(),
-                ),
+                &Message::SystemShutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature)),
             )
             .await
             .map_err(|e| format_err!("Failed to shut down the system: {}", e))?;

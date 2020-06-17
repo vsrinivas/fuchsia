@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxbug.dev/54210): This node will be obsolete once the new power_manager based shutdown path
+// is in place. Delete this node once the new shutdown path is active.
+
 use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::shutdown_request::ShutdownRequest;
 use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
@@ -89,15 +93,16 @@ pub struct SystemPowerStateHandler {
 impl SystemPowerStateHandler {
     async fn handle_system_shutdown(
         &self,
-        reason: String,
+        request: &ShutdownRequest,
     ) -> Result<MessageReturn, PowerManagerError> {
-        fuchsia_trace::duration!(
+        fuchsia_trace::instant!(
             "power_manager",
             "SystemPowerStateHandler::handle_system_shutdown",
-            "reason" => reason.as_str()
+            fuchsia_trace::Scope::Thread,
+            "request" => format!("{:?}", request).as_str()
         );
-        info!("System shutdown (reason: {})", reason);
-        let result = self.dev_mgr_suspend(fdevmgr::SUSPEND_FLAG_POWEROFF).await;
+        info!("System shutdown ({:?})", request);
+        let result = self.dev_mgr_suspend(request.to_driver_manager_flag()).await;
         log_if_err!(result, "System shutdown failed");
         fuchsia_trace::instant!(
             "power_manager",
@@ -109,8 +114,8 @@ impl SystemPowerStateHandler {
         match result {
             Ok(_) => Ok(MessageReturn::SystemShutdown),
             Err(e) => {
-                self.inspect.suspend_errors.add(1);
-                self.inspect.last_suspend_error.set(format!("{}", e).as_str());
+                self.inspect.shutdown_errors.add(1);
+                self.inspect.last_shutdown_error.set(format!("{}", e).as_str());
                 Err(PowerManagerError::GenericError(e))
             }
         }
@@ -146,9 +151,7 @@ impl Node for SystemPowerStateHandler {
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
-            Message::SystemShutdown(reason) => {
-                self.handle_system_shutdown(reason.to_string()).await
-            }
+            Message::SystemShutdown(request) => self.handle_system_shutdown(request).await,
             _ => Err(PowerManagerError::Unsupported),
         }
     }
@@ -156,8 +159,8 @@ impl Node for SystemPowerStateHandler {
 
 struct InspectData {
     system_power_state: inspect::StringProperty,
-    suspend_errors: inspect::UintProperty,
-    last_suspend_error: inspect::StringProperty,
+    shutdown_errors: inspect::UintProperty,
+    last_shutdown_error: inspect::StringProperty,
 }
 
 impl InspectData {
@@ -165,18 +168,19 @@ impl InspectData {
         // Create a local root node and properties
         let root = parent.create_child(name);
         let system_power_state = root.create_string("system_power_state", "fully_on");
-        let suspend_errors = root.create_uint("suspend_errors", 0);
-        let last_suspend_error = root.create_string("last_suspend_error", "");
+        let shutdown_errors = root.create_uint("shutdown_errors", 0);
+        let last_shutdown_error = root.create_string("last_shutdown_error", "");
 
         // Pass ownership of the new node to the parent node, otherwise it'll be dropped
         parent.record(root);
 
-        InspectData { system_power_state, suspend_errors, last_suspend_error }
+        InspectData { system_power_state, shutdown_errors, last_shutdown_error }
     }
 
     fn set_system_power_state(&self, suspend_flag: u32) {
         self.system_power_state.set(match suspend_flag {
             fdevmgr::SUSPEND_FLAG_POWEROFF => "power_off",
+            fdevmgr::SUSPEND_FLAG_REBOOT => "reboot",
             _ => "unknown",
         })
     }
@@ -185,6 +189,7 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::shutdown_request::RebootReason;
     use fuchsia_async as fasync;
     use futures::TryStreamExt;
     use inspect::assert_inspect_tree;
@@ -201,7 +206,7 @@ pub mod tests {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fdevmgr::AdministratorRequest::Suspend {
-                        flags: fdevmgr::SUSPEND_FLAG_POWEROFF,
+                        flags: fdevmgr::SUSPEND_FLAG_REBOOT,
                         responder,
                     }) => {
                         shutdown_function();
@@ -245,7 +250,13 @@ pub mod tests {
         let node = setup_test_node(move || {
             shutdown_applied_2.set(true);
         });
-        match node.handle_message(&Message::SystemShutdown(String::new())).await.unwrap() {
+        match node
+            .handle_message(&Message::SystemShutdown(ShutdownRequest::Reboot(
+                RebootReason::UserRequest,
+            )))
+            .await
+            .unwrap()
+        {
             MessageReturn::SystemShutdown => {}
             _ => assert!(false),
         }
