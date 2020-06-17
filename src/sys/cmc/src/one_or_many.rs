@@ -2,18 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    serde::Deserialize,
-    std::{
-        fmt::{self, Display, Formatter},
-        slice, vec,
-    },
+use std::{
+    fmt::{self, Display, Formatter},
+    slice, vec,
 };
 
 /// Represents either a single value, or multiple values of T.
 /// Useful for differentiating between an array of length 1 and a single value.
-#[derive(Deserialize, Debug, Clone)]
-#[serde(untagged)]
+#[derive(Debug, Clone)]
 pub enum OneOrMany<T> {
     /// A single instance of T.
     One(T),
@@ -27,15 +23,6 @@ impl<T> OneOrMany<T> {
         match self {
             Self::One(_) => false,
             Self::Many(_) => true,
-        }
-    }
-
-    /// Transforms the `OneOrMany<T>` into an `Option<&T>`, where `One(t)` maps to
-    /// `Some(&t)` and `Many(_)` maps to None.
-    pub fn one(&self) -> Option<&T> {
-        match self {
-            OneOrMany::One(item) => Some(item),
-            _ => None,
         }
     }
 
@@ -71,11 +58,11 @@ impl<T> IntoIterator for OneOrMany<T> {
     }
 }
 
-impl<T: Clone> OneOrMany<T> {
-    pub fn to_vec(&self) -> Vec<T> {
+impl<T> OneOrMany<T> {
+    pub fn to_vec(&self) -> Vec<&T> {
         match self {
-            OneOrMany::One(x) => return vec![x.clone()],
-            OneOrMany::Many(xs) => return xs.to_vec(),
+            OneOrMany::One(x) => vec![&x],
+            OneOrMany::Many(v) => v.iter().collect(),
         }
     }
 }
@@ -172,20 +159,7 @@ impl<T> ExactSizeIterator for IntoIter<T> {}
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        matches::assert_matches,
-        serde_json::{self, json},
-    };
-
-    #[test]
-    fn test_one() {
-        let v = OneOrMany::One(34);
-        assert_matches!(v.one(), Some(&34));
-
-        let v = OneOrMany::Many(vec![1, 2, 3]);
-        assert_matches!(v.one(), None);
-    }
+    use {super::*, matches::assert_matches};
 
     #[test]
     fn test_iter_one() {
@@ -217,10 +191,10 @@ mod tests {
     #[test]
     fn test_to_vec() {
         let v = OneOrMany::One(34);
-        assert_eq!(&[34], &v.to_vec()[..]);
+        assert_eq!(&[&34], &v.to_vec()[..]);
 
         let v = OneOrMany::Many(vec![1, 2, 3]);
-        assert_eq!(&[1, 2, 3], &v.to_vec()[..]);
+        assert_eq!(&[&1, &2, &3], &v.to_vec()[..]);
     }
 
     #[test]
@@ -232,28 +206,5 @@ mod tests {
         let val = vec![1, 2, 3];
         let v = OneOrMany::Many(val);
         assert_eq!(v.to_string(), "1, 2, 3");
-    }
-
-    #[derive(Deserialize)]
-    struct Wrapper {
-        key: OneOrMany<String>,
-    }
-
-    #[test]
-    fn parses_one() {
-        let j = json!({
-            "key": "foo",
-        });
-        let v: Wrapper = serde_json::from_value(j).expect("json parsed");
-        assert_matches!(v.key, OneOrMany::One(val) if val == "foo");
-    }
-
-    #[test]
-    fn parses_many() {
-        let j = json!({
-            "key": [ "foo" ],
-        });
-        let v: Wrapper = serde_json::from_value(j).expect("json parsed");
-        assert_matches!(v.key, OneOrMany::Many(v) if v == vec!["foo"]);
     }
 }

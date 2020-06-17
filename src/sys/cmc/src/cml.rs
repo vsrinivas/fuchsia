@@ -5,26 +5,15 @@
 use {
     crate::one_or_many::OneOrMany,
     cm_json::{cm, Error},
-    cmc_macro::Ref,
+    cmc_macro::{CheckedVec, OneOrMany, Ref},
     serde::{de, Deserialize},
     serde_json::{Map, Value},
     std::{collections::HashMap, fmt, str::FromStr},
-    thiserror::Error,
 };
 
 pub use cm_types::{
-    DependencyType, Durability, Name, NameValidationError, Path, PathValidationError, RelativePath,
-    StartupMode, StorageType, Url,
+    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, StorageType, Url,
 };
-
-/// An error that occurs during validation.
-#[derive(Debug, Error)]
-pub enum ValidationError {
-    #[error("Name is not valid")]
-    NameInvalid(cm_types::NameValidationError),
-    #[error("Reference is not valid")]
-    RefInvalid(RefValidationError),
-}
 
 /// A string that could be a name or filesystem path.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -67,23 +56,14 @@ impl NameOrPath {
     }
 }
 
-/// The error representing a failed validation of a `NameOrPath`.
-#[derive(Debug, Error)]
-pub enum NameOrPathValidationError {
-    #[error("Name is not valid")]
-    NameInvalid(NameValidationError),
-    #[error("Path is not valid")]
-    PathInvalid(PathValidationError),
-}
-
 impl FromStr for NameOrPath {
-    type Err = NameOrPathValidationError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(if s.starts_with("/") {
-            NameOrPath::Path(s.parse().map_err(|e| NameOrPathValidationError::PathInvalid(e))?)
+            NameOrPath::Path(s.parse()?)
         } else {
-            NameOrPath::Name(s.parse().map_err(|e| NameOrPathValidationError::NameInvalid(e))?)
+            NameOrPath::Name(s.parse()?)
         })
     }
 }
@@ -113,22 +93,16 @@ impl<'de> de::Deserialize<'de> for NameOrPath {
                 E: de::Error,
             {
                 s.parse().map_err(|err| match err {
-                    NameOrPathValidationError::NameInvalid(NameValidationError::InvalidLength)
-                    | NameOrPathValidationError::PathInvalid(PathValidationError::InvalidLength) => {
-                        E::invalid_length(
-                            s.len(),
-                            &"a non-empty path no more than 1024 characters in length, or \
-                              a non-empty name no more than 100 characters in length",
-                        )
-                    }
-                    NameOrPathValidationError::NameInvalid(NameValidationError::MalformedName)
-                    | NameOrPathValidationError::PathInvalid(PathValidationError::MalformedPath) => {
-                        E::invalid_value(
-                            de::Unexpected::Str(s),
-                            &"a path with leading `/` and non-empty segments, or \
+                    ParseError::InvalidValue => E::invalid_value(
+                        de::Unexpected::Str(s),
+                        &"a path with leading `/` and non-empty segments, or \
                               a name containing only alpha-numeric characters or [_-.]",
-                        )
-                    }
+                    ),
+                    ParseError::InvalidLength => E::invalid_length(
+                        s.len(),
+                        &"a non-empty path no more than 1024 characters in length, or \
+                              a non-empty name no more than 100 characters in length",
+                    ),
                 })
             }
         }
@@ -136,30 +110,51 @@ impl<'de> de::Deserialize<'de> for NameOrPath {
     }
 }
 
-/// An error representing failed validation of a reference.
-#[derive(Debug, Error)]
-pub enum RefValidationError {
-    #[error("Reference is more than 100 characters")]
-    RefTooLong,
-    #[error("`use from` reference is not valid")]
-    UseFromRefInvalid,
-    #[error("`expose from` reference is not valid")]
-    ExposeFromRefInvalid,
-    #[error("`expose to` reference is not valid")]
-    ExposeToRefInvalid,
-    #[error("`offer from` reference is not valid")]
-    OfferFromRefInvalid,
-    #[error("`offer to` reference is not valid")]
-    OfferToRefInvalid,
-    #[error("environment reference is not valid")]
-    EnvironmentRefInvalid,
-    #[error("`storage from` reference is not valid")]
-    StorageFromRefInvalid,
-    #[error("`runner from` reference is not valid")]
-    RunnerFromRefInvalid,
-    #[error("Environment registration reference is not valid")]
-    RegistrationRefInvalid,
-}
+/// A list of offer targets.
+#[derive(CheckedVec, Debug)]
+#[expected = "a nonempty array of offer targets, with unique elements"]
+#[min_length = 1]
+#[unique_items = true]
+pub struct OfferTo(pub Vec<OfferToRef>);
+
+/// A list of rights.
+#[derive(CheckedVec, Debug)]
+#[expected = "a nonempty array of rights, with unique elements"]
+#[min_length = 1]
+#[unique_items = true]
+pub struct Rights(pub Vec<Right>);
+
+/// Generates deserializer for `OneOrMany<Name>`.
+#[derive(OneOrMany, Debug, Clone)]
+#[inner_type(Name)]
+#[expected = "a name or nonempty array of names, with unique elements"]
+#[min_length = 1]
+#[unique_items = true]
+pub struct OneOrManyNames;
+
+/// Generates deserializer for `OneOrMany<Path>`.
+#[derive(OneOrMany, Debug, Clone)]
+#[inner_type(Path)]
+#[expected = "a path or nonempty array of paths, with unique elements"]
+#[min_length = 1]
+#[unique_items = true]
+pub struct OneOrManyPaths;
+
+/// Generates deserializer for `OneOrMany<ExposeFromRef>`.
+#[derive(OneOrMany, Debug, Clone)]
+#[inner_type(ExposeFromRef)]
+#[expected = "one or an array of \"framework\", \"self\", or \"#<child-name>\""]
+#[min_length = 1]
+#[unique_items = true]
+pub struct OneOrManyExposeFromRefs;
+
+/// Generates deserializer for `OneOrMany<OfferFromRef>`.
+#[derive(OneOrMany, Debug, Clone)]
+#[inner_type(OfferFromRef)]
+#[expected = "one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\""]
+#[min_length = 1]
+#[unique_items = true]
+pub struct OneOrManyOfferFromRefs;
 
 /// A relative reference to another object. This is a generic type that can encode any supported
 /// reference subtype. For named references, it holds a reference to the name instead of the name
@@ -195,8 +190,7 @@ impl fmt::Display for AnyRef<'_> {
 
 /// A reference in a `use from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "a `use from` reference"]
-#[parse_error(RefValidationError::UseFromRefInvalid)]
+#[expected = "\"realm\", \"framework\", or none"]
 pub enum UseFromRef {
     /// A reference to the containing realm.
     Realm,
@@ -206,8 +200,7 @@ pub enum UseFromRef {
 
 /// A reference in an `expose from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "an `expose from` reference"]
-#[parse_error(RefValidationError::ExposeFromRefInvalid)]
+#[expected = "\"framework\", \"self\", or \"#<child-name>\""]
 pub enum ExposeFromRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -219,8 +212,7 @@ pub enum ExposeFromRef {
 
 /// A reference in an `expose to`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "an `expose to` reference"]
-#[parse_error(RefValidationError::ExposeToRefInvalid)]
+#[expected = "\"realm\", \"framework\", or none"]
 pub enum ExposeToRef {
     /// A reference to the realm.
     Realm,
@@ -230,8 +222,7 @@ pub enum ExposeToRef {
 
 /// A reference in an `offer from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "an `offer from` reference"]
-#[parse_error(RefValidationError::OfferFromRefInvalid)]
+#[expected = "\"realm\", \"framework\", \"self\", or \"#<child-name>\""]
 pub enum OfferFromRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -245,8 +236,7 @@ pub enum OfferFromRef {
 
 /// A reference in an `offer to`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "an `offer to` reference"]
-#[parse_error(RefValidationError::OfferToRefInvalid)]
+#[expected = "\"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""]
 pub enum OfferToRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -254,8 +244,7 @@ pub enum OfferToRef {
 
 /// A reference in an environment.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "an environment reference"]
-#[parse_error(RefValidationError::EnvironmentRefInvalid)]
+#[expected = "\"#<environment-name>\""]
 pub enum EnvironmentRef {
     /// A reference to an environment defined in this component.
     Named(Name),
@@ -263,8 +252,7 @@ pub enum EnvironmentRef {
 
 /// A reference in a `storage from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "a `storage from` reference"]
-#[parse_error(RefValidationError::StorageFromRefInvalid)]
+#[expected = "\"realm\", \"self\", or \"#<child-name>\""]
 pub enum StorageFromRef {
     /// A reference to a child.
     Named(Name),
@@ -276,8 +264,7 @@ pub enum StorageFromRef {
 
 /// A reference in a `runner from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "a `runner from` reference"]
-#[parse_error(RefValidationError::RunnerFromRefInvalid)]
+#[expected = "\"realm\", \"self\", or \"#<child-name>\""]
 pub enum RunnerFromRef {
     /// A reference to a child.
     Named(Name),
@@ -289,8 +276,7 @@ pub enum RunnerFromRef {
 
 /// A reference in an environment registration.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "a registration reference"]
-#[parse_error(RefValidationError::RegistrationRefInvalid)]
+#[expected = "\"realm\", \"self\", or \"#<child-name>\""]
 pub enum RegistrationRef {
     /// A reference to a child.
     Named(Name),
@@ -411,9 +397,9 @@ impl Right {
 
 /// Converts a set of cml right tokens (including aliases) into a well formed cm::Rights expansion.
 /// A `cm::RightsValidationError` is returned on invalid rights.
-pub fn parse_rights(right_tokens: &Vec<Right>) -> Result<cm::Rights, cm::RightsValidationError> {
+pub fn parse_rights(right_tokens: &Rights) -> Result<cm::Rights, cm::RightsValidationError> {
     let mut rights = Vec::<cm::Right>::new();
-    for right_token in right_tokens.iter() {
+    for right_token in right_tokens.0.iter() {
         rights.append(&mut right_token.expand());
     }
     cm::Rights::new(rights)
@@ -441,13 +427,12 @@ impl Document {
             for use_ in uses.iter() {
                 if let Some(event) = &use_.event {
                     let alias = use_.r#as();
-                    let mut events =
-                        event.to_vec().iter().map(|e| e.clone()).collect::<Vec<Name>>();
-
+                    let events: Vec<_> = event.to_vec();
                     if events.len() == 1 {
                         let event_name = alias_or_name(alias, &events[0])?.clone();
                         all_events.push(event_name);
                     } else {
+                        let mut events = events.into_iter().cloned().collect();
                         all_events.append(&mut events);
                     }
                 }
@@ -558,7 +543,7 @@ pub struct Use {
     pub runner: Option<Name>,
     pub from: Option<UseFromRef>,
     pub r#as: Option<NameOrPath>,
-    pub rights: Option<Vec<Right>>,
+    pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
     pub event_stream: Option<OneOrMany<Name>>,
@@ -575,7 +560,7 @@ pub struct Expose {
     pub from: OneOrMany<ExposeFromRef>,
     pub r#as: Option<NameOrPath>,
     pub to: Option<ExposeToRef>,
-    pub rights: Option<Vec<Right>>,
+    pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
 }
 
@@ -589,9 +574,9 @@ pub struct Offer {
     pub resolver: Option<Name>,
     pub event: Option<OneOrMany<Name>>,
     pub from: OneOrMany<OfferFromRef>,
-    pub to: Vec<OfferToRef>,
+    pub to: OfferTo,
     pub r#as: Option<NameOrPath>,
-    pub rights: Option<Vec<Right>>,
+    pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
     pub dependency: Option<DependencyType>,
     pub filter: Option<Map<String, Value>>,
@@ -650,6 +635,9 @@ pub trait CapabilityClause {
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
     fn capability_name(&self) -> &'static str;
+
+    fn decl_type(&self) -> &'static str;
+    fn supported(&self) -> &[&'static str];
 }
 
 pub trait AsClause {
@@ -703,6 +691,12 @@ impl CapabilityClause for Use {
         } else {
             ""
         }
+    }
+    fn decl_type(&self) -> &'static str {
+        "use"
+    }
+    fn supported(&self) -> &[&'static str] {
+        &["service", "protocol", "directory", "storage", "runner", "event", "event_stream"]
     }
 }
 
@@ -766,6 +760,12 @@ impl CapabilityClause for Expose {
             ""
         }
     }
+    fn decl_type(&self) -> &'static str {
+        "expose"
+    }
+    fn supported(&self) -> &[&'static str] {
+        &["service", "protocol", "directory", "runner", "resolver"]
+    }
 }
 
 impl AsClause for Expose {
@@ -824,9 +824,17 @@ impl CapabilityClause for Offer {
             "runner"
         } else if self.resolver.is_some() {
             "resolver"
+        } else if self.event.is_some() {
+            "event"
         } else {
             ""
         }
+    }
+    fn decl_type(&self) -> &'static str {
+        "offer"
+    }
+    fn supported(&self) -> &[&'static str] {
+        &["service", "protocol", "directory", "storage", "runner", "resolver", "event"]
     }
 }
 

@@ -4,7 +4,7 @@
 
 use {
     crate::{cml, one_or_many::OneOrMany},
-    cm_json::{self, Error, JsonSchema, CML_SCHEMA, CMX_SCHEMA},
+    cm_json::{self, Error, JsonSchema, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
     lazy_static::lazy_static,
     serde_json::Value,
@@ -47,9 +47,9 @@ pub fn validate<P: AsRef<Path>>(
 
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
 pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
-    validate_json(&value, CML_SCHEMA)?;
-    let document: cml::Document = serde_json::from_value(value)
-        .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
+    // TODO(52963): Include line and column number in the error.
+    let document: cml::Document =
+        serde_json::from_value(value).map_err(|e| Error::parse(format!("{}", e)))?;
     let mut ctx = ValidationContext {
         document: &document,
         all_children: HashMap::new(),
@@ -223,7 +223,7 @@ impl<'a> CapabilityId<'a> {
     /// source names.
     pub fn from_clause<'b, T>(clause: &'b T) -> Result<Vec<CapabilityId<'b>>, Error>
     where
-        T: cml::CapabilityClause + cml::AsClause + cml::FilterClause,
+        T: cml::CapabilityClause + cml::AsClause + cml::FilterClause + std::fmt::Debug,
     {
         // For directory/service/runner types, return the source name,
         // using the "as" clause to rename if neccessary.
@@ -288,7 +288,17 @@ impl<'a> CapabilityId<'a> {
         }
 
         // Unknown capability type.
-        Err(Error::internal("unknown capability type"))
+        let supported_keywords = clause
+            .supported()
+            .into_iter()
+            .map(|k| format!("\"{}\"", k))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Err(Error::validate(format!(
+            "`{}` declaration is missing a capability keyword, one of: {}",
+            clause.decl_type(),
+            supported_keywords,
+        )))
     }
 }
 
@@ -491,7 +501,7 @@ impl<'a> ValidationContext<'a> {
         if let Some(event_stream) = use_.event_stream.as_ref() {
             let events = event_stream.to_vec();
             for event in events {
-                if !self.all_event_names.contains(&event) {
+                if !self.all_event_names.contains(event) {
                     return Err(Error::validate(format!(
                         "Event \"{}\" in event stream not found in any \"use\" declaration.",
                         event
@@ -586,8 +596,9 @@ impl<'a> ValidationContext<'a> {
 
         // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
-            // Directories can only have a single `from` clause.
-            if *expose.from.one().unwrap() == cml::ExposeFromRef::Self_ || expose.rights.is_some() {
+            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_)
+                || expose.rights.is_some()
+            {
                 match &expose.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => return Err(Error::validate(
@@ -610,7 +621,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure that resolvers exposed from self are defined in `resolvers`.
         if let Some(resolver_name) = &expose.resolver {
             // Resolvers can only have a single `from` clause.
-            if *expose.from.one().unwrap() == cml::ExposeFromRef::Self_ {
+            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                 if !self.all_resolvers.contains(resolver_name) {
                     return Err(Error::validate(format!(
                        "Resolver \"{}\" is exposed from self, so it must be declared in \"resolvers\"", resolver_name
@@ -646,7 +657,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure directory rights are specified if offering from self.
         if offer.directory.is_some() {
             // Directories can only have a single `from` clause.
-            if *offer.from.one().unwrap() == cml::OfferFromRef::Self_ || offer.rights.is_some() {
+            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) || offer.rights.is_some() {
                 match &offer.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => {
@@ -661,7 +672,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure that resolvers offered from self are defined in `resolvers`.
         if let Some(resolver_name) = &offer.resolver {
             // Resolvers can only have a single `from` clause.
-            if *offer.from.one().unwrap() == cml::OfferFromRef::Self_ {
+            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
                 if !self.all_resolvers.contains(resolver_name) {
                     return Err(Error::validate(format!(
                         "Resolver \"{}\" is offered from self, so it must be declared in \
@@ -686,7 +697,7 @@ impl<'a> ValidationContext<'a> {
         }?;
 
         // Validate every target of this offer.
-        for to in offer.to.iter() {
+        for to in &offer.to.0 {
             // Ensure the "to" value is a child.
             let to_target = match to {
                 cml::OfferToRef::Named(ref name) => name,
@@ -728,9 +739,9 @@ impl<'a> ValidationContext<'a> {
             if offer.storage.is_some() {
                 // Storage can only have a single `from` clause and this has been
                 // verified.
-                if let cml::OfferFromRef::Named(name) = &offer.from.one().unwrap() {
+                if let OneOrMany::One(cml::OfferFromRef::Named(name)) = &offer.from {
                     if let Some(cml::StorageFromRef::Named(source)) =
-                        self.all_storage_and_sources.get(name)
+                        self.all_storage_and_sources.get(&name)
                     {
                         if to_target == source {
                             return Err(Error::validate(format!(
@@ -741,7 +752,7 @@ impl<'a> ValidationContext<'a> {
                     }
                 }
             } else {
-                for reference in &offer.from {
+                for reference in offer.from.to_vec() {
                     match reference {
                         cml::OfferFromRef::Named(name) if name == to_target => {
                             return Err(Error::validate(format!(
@@ -756,7 +767,7 @@ impl<'a> ValidationContext<'a> {
 
             // Collect strong dependencies. We'll check for dependency cycles after all offer
             // declarations are validated.
-            for from in offer.from.iter() {
+            for from in offer.from.to_vec().iter() {
                 let is_strong = if offer.directory.is_some() || offer.protocol.is_some() {
                     offer.dependency.as_ref().unwrap_or(&cml::DependencyType::Strong)
                         == &cml::DependencyType::Strong
@@ -870,9 +881,9 @@ impl<'a> ValidationContext<'a> {
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
     /// contain duplicate rights.
-    fn validate_directory_rights(&self, rights_clause: &Vec<cml::Right>) -> Result<(), Error> {
+    fn validate_directory_rights(&self, rights_clause: &cml::Rights) -> Result<(), Error> {
         let mut rights = HashSet::new();
-        for right_token in rights_clause.iter() {
+        for right_token in rights_clause.0.iter() {
             for right in right_token.expand() {
                 if !rights.insert(right) {
                     return Err(Error::validate(format!(
@@ -921,12 +932,9 @@ impl<'a> ValidationContext<'a> {
         match &environment.extends {
             Some(cml::EnvironmentExtends::None) => {
                 if environment.stop_timeout_ms.is_none() {
-                    return Err(Error::validate_schema(
-                        CML_SCHEMA,
-                        concat!(
-                        "'__stop_timeout_ms' must be provided if the environment does not extend ",
-                        "another environment"
-                    ),
+                    return Err(Error::validate(
+                        "'__stop_timeout_ms' must be provided if the environment does not extend \
+                        another environment",
                     ));
                 }
             }
@@ -1169,49 +1177,6 @@ mod tests {
             ),
             result = Ok(()),
         },
-        test_cml_invalid_lifecycle_event => {
-            input = json!(
-                {
-                    "program": {
-                        "binary": "bin/app",
-                        "lifecycle": {
-                            "foo": "bar",
-                        }
-                    },
-                    "use": [
-                        { "runner": "elf" }
-                    ]
-                }
-            ),
-            result = Err(Error::validate_schema(
-                CML_SCHEMA,
-                "Property conditions are not met at /program/lifecycle")
-                ),
-        },
-        test_cml_invalid_subscription_value => {
-            // what if someone spelled notify backwards!?
-            input = json!(
-                {
-                    "program": {
-                        "binary": "bin/app",
-                        "lifecycle": {
-                            "stop_event": "yfiton",
-                        }
-                    },
-                    "use": [
-                        { "runner": "elf" }
-                    ]
-                }
-            ),
-        result = Err(Error::validate_schema(
-            CML_SCHEMA,
-            "Enum conditions are not met at /program/lifecycle/stop_event")
-            ),
-        },
-        test_cml_program_no_binary => {
-            input = json!({"program": {}}),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /program/binary")),
-        },
 
         // use
         test_cml_use => {
@@ -1270,7 +1235,7 @@ mod tests {
             input = json!({
                 "use": [ { "as": "/svc/fuchsia.logger.Log" } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0")),
+            result = Err(Error::validate("`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\"")),
         },
         test_cml_use_as_with_meta_storage => {
             input = json!({
@@ -1296,7 +1261,7 @@ mod tests {
                   { "service": "/fonts/CoolFonts", "from": "self" }
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/from")),
+            result = Err(Error::parse("invalid value: string \"self\", expected \"realm\", \"framework\", or none")),
         },
         test_cml_use_bad_as => {
             input = json!({
@@ -1324,7 +1289,7 @@ mod tests {
                   { "protocol": ["/svc/fuchsia.sys2.Realm", "/svc/fuchsia.sys2.Realm"] },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/protocol")),
+            result = Err(Error::parse("invalid value: array with duplicate element, expected a path or nonempty array of paths, with unique elements")),
         },
         test_cml_use_empty_protocols => {
             input = json!({
@@ -1334,7 +1299,7 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/protocol")),
+            result = Err(Error::parse("invalid length 0, expected a path or nonempty array of paths, with unique elements")),
         },
         test_cml_use_bad_subdir => {
             input = json!({
@@ -1347,7 +1312,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
         },
         test_cml_use_resolver_fails => {
             input = json!({
@@ -1358,7 +1323,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0")),
+            result = Err(Error::validate("`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\"")),
         },
 
         test_cml_use_disallows_nested_dirs => {
@@ -1530,7 +1495,7 @@ mod tests {
             input = json!({
                 "expose": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0, This property is required at /expose/0/from")),
+            result = Err(Error::parse("missing field `from`")),
         },
         test_cml_expose_missing_from => {
             input = json!({
@@ -1579,7 +1544,7 @@ mod tests {
                     "service": "/loggers/fuchsia.logger.Log", "from": "realm"
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/from")),
+            result = Err(Error::parse("invalid value: string \"realm\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\"")),
         },
         // if "as" is specified, only 1 "protocol" array item is allowed.
         test_cml_expose_bad_as => {
@@ -1625,7 +1590,7 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/protocol")),
+            result = Err(Error::parse("invalid length 0, expected a path or nonempty array of paths, with unique elements")),
         },
         test_cml_expose_bad_subdir => {
             input = json!({
@@ -1638,7 +1603,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/subdir")),
+            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
         },
         test_cml_expose_invalid_subdir_to_framework => {
             input = json!({
@@ -1876,7 +1841,7 @@ mod tests {
             input = json!({
                 "offer": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0, This property is required at /offer/0/from, This property is required at /offer/0/to")),
+            result = Err(Error::parse("missing field `from`")),
         },
         test_cml_offer_missing_from => {
             input = json!({
@@ -1906,7 +1871,7 @@ mod tests {
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0/from")),
+            result = Err(Error::parse("invalid value: string \"#invalid@\", expected one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\"")),
         },
         test_cml_offer_invalid_multiple_from => {
             input = json!({
@@ -1951,7 +1916,7 @@ mod tests {
                     "to": []
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MinItems condition is not met at /offer/0/to")),
+            result = Err(Error::parse("invalid length 0, expected a nonempty array of offer targets, with unique elements")),
         },
         test_cml_offer_duplicate_targets => {
             input = json!({
@@ -1961,7 +1926,7 @@ mod tests {
                     "to": ["#a", "#a"]
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "UniqueItems condition is not met at /offer/0/to")),
+            result = Err(Error::parse("invalid value: array with duplicate element, expected a nonempty array of offer targets, with unique elements")),
         },
         test_cml_offer_target_missing_props => {
             input = json!({
@@ -1971,7 +1936,7 @@ mod tests {
                     "as": "/svc/fuchsia.logger.SysLog",
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /offer/0/to")),
+            result = Err(Error::parse("missing field `to`")),
         },
         test_cml_offer_target_missing_to => {
             input = json!({
@@ -1996,7 +1961,7 @@ mod tests {
                     "as": "/svc/fuchsia.logger.SysLog",
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/to/0")),
+            result = Err(Error::parse("invalid value: string \"self\", expected \"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\"")),
         },
         test_cml_offer_empty_protocols => {
             input = json!({
@@ -2009,7 +1974,7 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0/protocol")),
+            result = Err(Error::parse("invalid length 0, expected a path or nonempty array of paths, with unique elements")),
         },
         test_cml_offer_target_equals_from => {
             input = json!({
@@ -2161,7 +2126,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/subdir")),
+            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
         },
         test_cml_offer_resolver_from_self => {
             input = json!({
@@ -2347,7 +2312,7 @@ mod tests {
             input = json!({
                 "children": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /children/0/name, This property is required at /children/0/url")),
+            result = Err(Error::parse("missing field `name`")),
         },
         test_cml_children_duplicate_names => {
            input = json!({
@@ -2374,7 +2339,7 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/startup")),
+            result = Err(Error::parse("unknown variant `zzz`, expected `lazy` or `eager`")),
         },
         test_cml_children_bad_environment => {
             input = json!({
@@ -2386,7 +2351,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/environment")),
+            result = Err(Error::parse("invalid value: string \"realm\", expected \"#<environment-name>\"")),
         },
         test_cml_children_unknown_environment => {
             input = json!({
@@ -2427,7 +2392,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /collections/0/environment")),
+            result = Err(Error::parse("invalid value: string \"realm\", expected \"#<environment-name>\"")),
         },
         test_cml_collections_unknown_environment => {
             input = json!({
@@ -2481,8 +2446,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA,
-                "Minimum condition is not met at /environments/0/__stop_timeout_ms")),
+            result = Err(Error::parse("invalid value: integer `-3`, expected u32")),
         },
 
         // collections
@@ -2505,7 +2469,7 @@ mod tests {
             input = json!({
                 "collections": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /collections/0/durability, This property is required at /collections/0/name")),
+            result = Err(Error::parse("missing field `name`")),
         },
         test_cml_collections_duplicate_names => {
            input = json!({
@@ -2531,7 +2495,7 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /collections/0/durability")),
+            result = Err(Error::parse("unknown variant `zzz`, expected `persistent` or `transient`")),
         },
 
         // storage
@@ -2585,7 +2549,7 @@ mod tests {
             input = json!({
                 "storage": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /storage/0/from, This property is required at /storage/0/name, This property is required at /storage/0/path")),
+            result = Err(Error::parse("missing field `name`")),
         },
         test_cml_storage_missing_from => {
             input = json!({
@@ -2649,11 +2613,7 @@ mod tests {
             input = json!({
                 "runners": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, concat!(
-                   "This property is required at /runners/0/from, ",
-                   "This property is required at /runners/0/name, ",
-                   "This property is required at /runners/0/path",
-            ))),
+            result = Err(Error::parse("missing field `name`")),
         },
         test_cml_runner_missing_from => {
             input = json!({
@@ -2696,10 +2656,10 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, concat!(
-                "'__stop_timeout_ms' must be provided if the environment does not extend ",
-                "another environment"
-            ))),
+            result = Err(Error::validate(
+                "'__stop_timeout_ms' must be provided if the environment does not extend \
+                another environment"
+            )),
         },
 
         test_cml_environment_invalid_extends => {
@@ -2711,15 +2671,13 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::Parse("Couldn't read input as struct: unknown variant `some_made_up_string`, expected `realm` or `none`".to_string())),
+            result = Err(Error::Parse("unknown variant `some_made_up_string`, expected `realm` or `none`".to_string())),
         },
         test_cml_environment_missing_props => {
             input = json!({
                 "environments": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, concat!(
-                "This property is required at /environments/0/name",
-            ))),
+            result = Err(Error::parse("missing field `name`")),
         },
 
         test_cml_environment_with_runners => {
@@ -2797,9 +2755,7 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::validate_schema(
-                CML_SCHEMA, "Pattern condition is not met at /environments/0/runners/0/as",
-            )),
+            result = Err(Error::parse("invalid value: string \"#elf\", expected a name containing only alpha-numeric characters or [_-.]")),
         },
         test_cml_environment_with_runners_duplicate_name => {
             input = json!({
@@ -2908,8 +2864,8 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::validate_schema(
-                CML_SCHEMA, "Pattern condition is not met at /environments/0/resolvers/0/scheme",
+            result = Err(Error::parse(
+                "invalid value: string \"9scheme\", expected a valid URL scheme"
             )),
         },
         test_cml_environment_with_resolvers_duplicate_scheme => {
@@ -3045,7 +3001,7 @@ mod tests {
             input = json!({
                 "facets": 55
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Type of the value is wrong at /facets")),
+            result = Err(Error::parse("invalid type: integer `55`, expected a map")),
         },
 
         // constraints
@@ -3071,7 +3027,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Enum conditions are not met at /use/0/rights/0")),
+            result = Err(Error::parse("unknown variant `cAnnect`, expected one of `connect`, `enumerate`, `execute`, `get_attributes`, `modify_directory`, `read_bytes`, `traverse`, `update_attributes`, `write_bytes`, `admin`, `r*`, `w*`, `x*`, `rw*`, `rx*`")),
         },
         test_cml_rights_duplicate => {
             input = json!({
@@ -3082,7 +3038,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "UniqueItems condition is not met at /use/0/rights")),
+            result = Err(Error::parse("invalid value: array with duplicate element, expected a nonempty array of rights, with unique elements")),
         },
         test_cml_rights_empty => {
             input = json!({
@@ -3093,7 +3049,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MinItems condition is not met at /use/0/rights")),
+            result = Err(Error::parse("invalid length 0, expected a nonempty array of rights, with unique elements")),
         },
         test_cml_rights_alias_star_expansion => {
             input = json!({
@@ -3193,7 +3149,7 @@ mod tests {
                   { "service": "" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MinLength condition is not met at /use/0/service, Pattern condition is not met at /use/0/service")),
+            result = Err(Error::parse("invalid length 0, expected a non-empty path no more than 1024 characters in length")),
         },
         test_cml_path_invalid_root => {
             input = json!({
@@ -3201,15 +3157,15 @@ mod tests {
                   { "service": "/" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+            result = Err(Error::parse("invalid value: string \"/\", expected a path with leading `/` and non-empty segments")),
         },
-        test_cml_path_invalid_relative => {
+        test_cml_path_invalid_absolute_is_relative => {
             input = json!({
                 "use": [
                   { "service": "foo/bar" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+            result = Err(Error::parse("invalid value: string \"foo/bar\", expected a path with leading `/` and non-empty segments")),
         },
         test_cml_path_invalid_trailing => {
             input = json!({
@@ -3217,7 +3173,7 @@ mod tests {
                   { "service": "/foo/bar/" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+            result = Err(Error::parse("invalid value: string \"/foo/bar/\", expected a path with leading `/` and non-empty segments")),
         },
         test_cml_path_too_long => {
             input = json!({
@@ -3225,7 +3181,7 @@ mod tests {
                   { "service": format!("/{}", "a".repeat(1024)) },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/service")),
+            result = Err(Error::parse("invalid length 1025, expected a non-empty path no more than 1024 characters in length")),
         },
         test_cml_relative_path => {
             input = json!({
@@ -3249,7 +3205,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MinLength condition is not met at /use/0/subdir, Pattern condition is not met at /use/0/subdir")),
+            result = Err(Error::parse("invalid length 0, expected a non-empty path no more than 1024 characters in length")),
         },
         test_cml_relative_path_invalid_root => {
             input = json!({
@@ -3261,7 +3217,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
         },
         test_cml_relative_path_invalid_absolute => {
             input = json!({
@@ -3273,7 +3229,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+            result = Err(Error::parse("invalid value: string \"/bar\", expected a path with no leading `/` and non-empty segments")),
         },
         test_cml_relative_path_invalid_trailing => {
             input = json!({
@@ -3285,7 +3241,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+            result = Err(Error::parse("invalid value: string \"bar/\", expected a path with no leading `/` and non-empty segments")),
         },
         test_cml_relative_path_too_long => {
             input = json!({
@@ -3297,7 +3253,7 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/subdir")),
+            result = Err(Error::parse("invalid length 1025, expected a non-empty path no more than 1024 characters in length")),
         },
         test_cml_relative_ref_too_long => {
             input = json!({
@@ -3314,7 +3270,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/from")),
+            result = Err(Error::parse("invalid length 102, expected one or an array of \"framework\", \"self\", or \"#<child-name>\"")),
         },
         test_cml_child_name => {
             input = json!({
@@ -3336,7 +3292,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/name")),
+            result = Err(Error::parse("invalid value: string \"#bad\", expected a name containing only alpha-numeric characters or [_-.]")),
         },
         test_cml_child_name_too_long => {
             input = json!({
@@ -3347,7 +3303,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/name")),
+            result = Err(Error::parse("invalid length 101, expected a non-empty name no more than 100 characters in length")),
         },
         test_cml_url => {
             input = json!({
@@ -3365,11 +3321,11 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "url": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg",
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/url")),
+            result = Err(Error::parse("invalid value: string \"fuchsia-pkg\", expected a valid URL")),
         },
         test_cml_url_too_long => {
             input = json!({
@@ -3380,7 +3336,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/url")),
+            result = Err(Error::parse("invalid length 4097, expected a non-empty URL no more than 4096 characters in length")),
         },
         test_cml_duplicate_identifiers_children_collection => {
            input = json!({
@@ -3498,7 +3454,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /resolvers/0/name")),
+            result = Err(Error::parse("missing field `name`")),
         },
         test_cml_resolvers_missing_path => {
             input = json!({
@@ -3508,7 +3464,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /resolvers/0/path")),
+            result = Err(Error::parse("missing field `path`")),
         },
     }
 
@@ -3742,7 +3698,7 @@ mod tests {
             resolver: None,
             event: None,
             from: OneOrMany::One(cml::OfferFromRef::Self_),
-            to: vec![],
+            to: cml::OfferTo(vec![]),
             r#as: None,
             rights: None,
             subdir: None,

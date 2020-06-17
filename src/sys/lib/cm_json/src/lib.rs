@@ -40,8 +40,6 @@ impl<'a> JsonSchema<'a> {
 }
 
 // Directly include schemas in the library. These are used to parse component manifests.
-pub const CML_SCHEMA: &JsonSchema<'_> =
-    &JsonSchema::new("cml_schema.json", include_str!("../cml_schema.json"));
 pub const CMX_SCHEMA: &JsonSchema<'_> =
     &JsonSchema::new("cmx_schema.json", include_str!("../cmx_schema.json"));
 
@@ -117,27 +115,9 @@ impl From<Utf8Error> for Error {
     }
 }
 
-impl From<cm::PathValidationError> for Error {
-    fn from(err: cm::PathValidationError) -> Self {
-        Error::validate(err)
-    }
-}
-
-impl From<cm::NameValidationError> for Error {
-    fn from(err: cm::NameValidationError) -> Self {
-        Error::validate(err)
-    }
-}
-
-impl From<cm::RightsValidationError> for Error {
-    fn from(err: cm::RightsValidationError) -> Self {
-        Error::validate(err)
-    }
-}
-
-impl From<cm::UrlValidationError> for Error {
-    fn from(err: cm::UrlValidationError) -> Self {
-        Error::validate(err)
+impl From<cm::ParseError> for Error {
+    fn from(err: cm::ParseError) -> Self {
+        Error::parse(err)
     }
 }
 

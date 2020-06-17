@@ -196,8 +196,10 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             }
         } else if let Some(p) = use_.event_stream() {
             let target_path = one_target_capability_id(use_, use_)?.extract_path()?;
-            out_uses
-                .push(cm::Use::EventStream(cm::UseEventStream { target_path, events: p.to_vec() }));
+            out_uses.push(cm::Use::EventStream(cm::UseEventStream {
+                target_path,
+                events: p.to_vec().into_iter().cloned().collect(),
+            }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
         };
@@ -224,7 +226,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             }
         } else if let Some(p) = expose.protocol() {
             let source = extract_single_expose_source(expose)?;
-            let source_ids = p.to_vec();
+            let source_ids: Vec<_> = p.to_vec();
             let target_ids = all_target_capability_ids(expose, expose)
                 .ok_or_else(|| Error::internal("no capability"))?;
             for target_id in target_ids {
@@ -588,9 +590,9 @@ fn expose_source_from_ref(reference: &cml::ExposeFromRef) -> Result<cm::Ref, Err
 fn extract_single_expose_source(in_obj: &cml::Expose) -> Result<cm::Ref, Error> {
     match &in_obj.from {
         OneOrMany::One(reference) => expose_source_from_ref(&reference),
-        many => {
+        OneOrMany::Many(many) => {
             return Err(Error::internal(format!(
-                "multiple unexpected \"from\" clauses for \"expose\": {}",
+                "multiple unexpected \"from\" clauses for \"expose\": {:?}",
                 many
             )))
         }
@@ -598,7 +600,7 @@ fn extract_single_expose_source(in_obj: &cml::Expose) -> Result<cm::Ref, Error> 
 }
 
 fn extract_all_expose_sources(in_obj: &cml::Expose) -> Result<Vec<cm::Ref>, Error> {
-    in_obj.from.iter().map(expose_source_from_ref).collect()
+    in_obj.from.to_vec().into_iter().map(expose_source_from_ref).collect()
 }
 
 fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<cm::Rights>, Error> {
@@ -636,22 +638,25 @@ where
 }
 
 fn extract_all_offer_sources(in_obj: &cml::Offer) -> Result<Vec<cm::Ref>, Error> {
-    in_obj.from.iter().map(|r| offer_source_from_ref(r.into())).collect()
+    in_obj.from.to_vec().into_iter().map(|r| offer_source_from_ref(r.into())).collect()
 }
 
 fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<cm::Ref, Error> {
-    let reference = in_obj.from.one().ok_or_else(|| {
-        Error::internal(format!(
-            "multiple unexpected \"from\" clauses for \"offer\": {}",
-            in_obj.from
-        ))
-    })?;
+    let reference = match &in_obj.from {
+        OneOrMany::One(r) => r,
+        OneOrMany::Many(_) => {
+            return Err(Error::internal(format!(
+                "multiple unexpected \"from\" clauses for \"offer\": {:?}",
+                in_obj.from
+            )));
+        }
+    };
     match reference {
         cml::OfferFromRef::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
         cml::OfferFromRef::Named(name) => {
             Ok(cm::Ref::Storage(cm::StorageRef { name: name.clone() }))
         }
-        other => Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", other))),
+        other => Err(Error::internal(format!("invalid \"from\" for \"offer\": {:?}", other))),
     }
 }
 
@@ -681,6 +686,7 @@ fn extract_storage_targets(
 ) -> Result<Vec<cm::Ref>, Error> {
     in_obj
         .to
+        .0
         .iter()
         .map(|to| translate_child_or_collection_ref(to.into(), all_children, all_collections))
         .collect()
@@ -698,7 +704,7 @@ fn extract_all_targets_for_each_child(
         .ok_or_else(|| Error::internal("no capability".to_string()))?;
 
     // Validate the "to" references.
-    for to in &in_obj.to {
+    for to in &in_obj.to.0 {
         for target_id in &target_ids {
             let target =
                 translate_child_or_collection_ref(to.into(), all_children, all_collections)?;
@@ -2253,8 +2259,6 @@ mod tests {
 
     #[test]
     fn test_invalid_json() {
-        use cm_json::CML_SCHEMA;
-
         let tmp_dir = TempDir::new().unwrap();
         let tmp_in_path = tmp_dir.path().join("test.cml");
         let tmp_out_path = tmp_dir.path().join("test.cm");
@@ -2267,9 +2271,9 @@ mod tests {
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         {
             let result = compile(&tmp_in_path, false, Some(tmp_out_path.clone()));
-            let expected_result: Result<(), Error> = Err(Error::validate_schema(
-                CML_SCHEMA,
-                "OneOf conditions are not met at /expose/0/from",
+            let expected_result: Result<(), Error> = Err(Error::parse(
+                "invalid value: string \"realm\", expected one or an array of \"framework\", \
+                \"self\", or \"#<child-name>\"",
             ));
             assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
         }

@@ -274,8 +274,8 @@ be interpreted by interested components.
 
 ## Syntax {#syntax}
 
-This section explains the syntax for each section of the component manifest, in
-CML format. For the full schema, see [cml_schema.json][src-cml-schema].
+This section describes the syntax for each section of the component manifest, in
+CML format.
 
 ### References {#references}
 
@@ -504,11 +504,10 @@ explained in [Routing terminology](#routing-terminology).
     -   `#<storage-name>` A [reference](#references) to a storage declaration.
         This source can only be used when offering storage capabilities.
 -   `to`: An array of capability targets, each of which is a
-    [reference](#references) to the child or collection to which the
-    capability is being offered, of the form `#<target-name>`.
+    [reference](#references) to the child or collection to which the capability
+    is being offered, of the form `#<target-name>`.
 -   `as` _(optional)_: The explicit [target path](#capability-paths) for the
-    capability. If omitted, defaults to the source path. `as` cannot be
-    used:
+    capability. If omitted, defaults to the source path. `as` cannot be used:
     -   For storage capabilities.
     -   When `protocol` is an array of multiple items.
 
@@ -596,4 +595,3 @@ This section may be omitted.
 [fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
 [src-cmc]: /src/sys/cmc
-[src-cml-schema]: /src/sys/lib/cm_json/cml_schema.json

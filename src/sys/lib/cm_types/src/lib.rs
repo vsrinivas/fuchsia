@@ -19,15 +19,15 @@ use {
 #[derive(Serialize, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Name(String);
 
-/// The error representing a failed validation of a `Name` string.
+/// The error representing a failure to parse a type from string.
 #[derive(Debug, Error)]
-pub enum NameValidationError {
-    /// The name string is empty or greater than 100 characters in length.
-    #[error("name must be non-empty and no more than 100 characters in length")]
+pub enum ParseError {
+    /// The string did not match a valid value.
+    #[error("invalid value")]
+    InvalidValue,
+    /// The string was too long or too short.
+    #[error("invalid length")]
     InvalidLength,
-    /// The name string contains illegal characters. See [`Name::new`].
-    #[error("name must only contain alpha-numeric characters or _-.")]
-    MalformedName,
 }
 
 impl Name {
@@ -35,17 +35,17 @@ impl Name {
     /// fails validation. The string must be non-empty, no more than 100
     /// characters in length, and consist of one or more of the
     /// following characters: `a-z`, `0-9`, `_`, `.`, `-`.
-    pub fn new(name: String) -> Result<Self, NameValidationError> {
+    pub fn new(name: String) -> Result<Self, ParseError> {
         Self::from_str_impl(Cow::Owned(name))
     }
 
-    fn from_str_impl(name: Cow<'_, str>) -> Result<Self, NameValidationError> {
+    fn from_str_impl(name: Cow<'_, str>) -> Result<Self, ParseError> {
         if name.is_empty() || name.len() > 100 {
-            return Err(NameValidationError::InvalidLength);
+            return Err(ParseError::InvalidLength);
         }
         let valid_fn = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.';
         if !name.chars().all(valid_fn) {
-            return Err(NameValidationError::MalformedName);
+            return Err(ParseError::InvalidValue);
         }
         Ok(Self(name.into_owned()))
     }
@@ -68,7 +68,7 @@ impl fmt::Display for Name {
 }
 
 impl FromStr for Name {
-    type Err = NameValidationError;
+    type Err = ParseError;
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
         Self::from_str_impl(Cow::Borrowed(name))
@@ -104,13 +104,13 @@ impl<'de> de::Deserialize<'de> for Name {
                 E: de::Error,
             {
                 s.parse().map_err(|err| match err {
-                    NameValidationError::InvalidLength => E::invalid_length(
-                        s.len(),
-                        &"a non-empty name no more than 100 characters in length",
-                    ),
-                    NameValidationError::MalformedName => E::invalid_value(
+                    ParseError::InvalidValue => E::invalid_value(
                         de::Unexpected::Str(s),
                         &"a name containing only alpha-numeric characters or [_-.]",
+                    ),
+                    ParseError::InvalidLength => E::invalid_length(
+                        s.len(),
+                        &"a non-empty name no more than 100 characters in length",
                     ),
                 })
             }
@@ -123,37 +123,26 @@ impl<'de> de::Deserialize<'de> for Name {
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Path(String);
 
-/// The error representing a failed validation of a `Path` string.
-#[derive(Debug, Error)]
-pub enum PathValidationError {
-    /// The path string is empty or greater than 1024 characters in length.
-    #[error("path must be non-empty and no more than 1024 characters in length")]
-    InvalidLength,
-    /// The path string is malformed. See [`Path::new`].
-    #[error("path is malformed")]
-    MalformedPath,
-}
-
 impl Path {
     /// Creates a `Path` from a `String`, returning an `Err` if the string
     /// fails validation. The string must be non-empty, no more than 1024
     /// characters in length, start with a leading `/`, and contain no empty
     /// path segments.
-    pub fn new(path: String) -> Result<Self, PathValidationError> {
+    pub fn new(path: String) -> Result<Self, ParseError> {
         Self::validate(&path)?;
         Ok(Path(path))
     }
 
     /// Validates `path` but does not construct a new `Path` object.
-    pub fn validate(path: &str) -> Result<(), PathValidationError> {
+    pub fn validate(path: &str) -> Result<(), ParseError> {
         if path.is_empty() || path.len() > 1024 {
-            return Err(PathValidationError::InvalidLength);
+            return Err(ParseError::InvalidLength);
         }
         if !path.starts_with('/') {
-            return Err(PathValidationError::MalformedPath);
+            return Err(ParseError::InvalidValue);
         }
         if !path[1..].split('/').all(|part| !part.is_empty()) {
-            return Err(PathValidationError::MalformedPath);
+            return Err(ParseError::InvalidValue);
         }
         Ok(())
     }
@@ -164,7 +153,7 @@ impl Path {
 }
 
 impl FromStr for Path {
-    type Err = PathValidationError;
+    type Err = ParseError;
 
     fn from_str(path: &str) -> Result<Self, Self::Err> {
         Self::validate(path)?;
@@ -201,13 +190,13 @@ impl<'de> de::Deserialize<'de> for Path {
                 E: de::Error,
             {
                 s.parse().map_err(|err| match err {
-                    PathValidationError::InvalidLength => E::invalid_length(
-                        s.len(),
-                        &"a non-empty path no more than 1024 characters in length",
-                    ),
-                    PathValidationError::MalformedPath => E::invalid_value(
+                    ParseError::InvalidValue => E::invalid_value(
                         de::Unexpected::Str(s),
                         &"a path with leading `/` and non-empty segments",
+                    ),
+                    ParseError::InvalidLength => E::invalid_length(
+                        s.len(),
+                        &"a non-empty path no more than 1024 characters in length",
                     ),
                 })
             }
@@ -224,16 +213,16 @@ impl RelativePath {
     /// Creates a `RelativePath` from a `String`, returning an `Err` if the string fails
     /// validation. The string must be non-empty, no more than 1024 characters in length, not start
     /// with a `/`, and contain no empty path segments.
-    pub fn new(path: String) -> Result<Self, PathValidationError> {
+    pub fn new(path: String) -> Result<Self, ParseError> {
         Self::from_str_impl(Cow::Owned(path))
     }
 
-    fn from_str_impl(path: Cow<'_, str>) -> Result<Self, PathValidationError> {
+    fn from_str_impl(path: Cow<'_, str>) -> Result<Self, ParseError> {
         if path.is_empty() || path.len() > 1024 {
-            return Err(PathValidationError::InvalidLength);
+            return Err(ParseError::InvalidLength);
         }
         if !path.split('/').all(|part| !part.is_empty()) {
-            return Err(PathValidationError::MalformedPath);
+            return Err(ParseError::InvalidValue);
         }
         return Ok(Self(path.into_owned()));
     }
@@ -244,7 +233,7 @@ impl RelativePath {
 }
 
 impl FromStr for RelativePath {
-    type Err = PathValidationError;
+    type Err = ParseError;
 
     fn from_str(path: &str) -> Result<Self, Self::Err> {
         Self::from_str_impl(Cow::Borrowed(path))
@@ -280,13 +269,13 @@ impl<'de> de::Deserialize<'de> for RelativePath {
                 E: de::Error,
             {
                 s.parse().map_err(|err| match err {
-                    PathValidationError::InvalidLength => E::invalid_length(
-                        s.len(),
-                        &"a non-empty path no more than 1024 characters in length",
-                    ),
-                    PathValidationError::MalformedPath => E::invalid_value(
+                    ParseError::InvalidValue => E::invalid_value(
                         de::Unexpected::Str(s),
                         &"a path with no leading `/` and non-empty segments",
+                    ),
+                    ParseError::InvalidLength => E::invalid_length(
+                        s.len(),
+                        &"a non-empty path no more than 1024 characters in length",
                     ),
                 })
             }
@@ -300,32 +289,21 @@ impl<'de> de::Deserialize<'de> for RelativePath {
 #[derive(Serialize, Clone, Debug)]
 pub struct Url(String);
 
-/// The error representing a failed validation of a `Url` string.
-#[derive(Debug, Error)]
-pub enum UrlValidationError {
-    /// The URL string is empty or greater than 4096 characters in length.
-    #[error("url must be non-empty and no more than 4096 characters")]
-    InvalidLength,
-    /// The URL string is not a valid URL. See the [`Url::new`].
-    #[error("url is malformed")]
-    MalformedUrl,
-}
-
 impl Url {
     /// Creates a `Url` from a `String`, returning an `Err` if the string fails
     /// validation. The string must be non-empty, no more than 4096 characters
     /// in length, and be a valid URL. See the [`url`](../../url/index.html) crate.
-    pub fn new(url: String) -> Result<Self, UrlValidationError> {
+    pub fn new(url: String) -> Result<Self, ParseError> {
         Self::from_str_impl(Cow::Owned(url))
     }
 
-    fn from_str_impl(url_str: Cow<'_, str>) -> Result<Self, UrlValidationError> {
+    fn from_str_impl(url_str: Cow<'_, str>) -> Result<Self, ParseError> {
         if url_str.is_empty() || url_str.len() > 4096 {
-            return Err(UrlValidationError::InvalidLength);
+            return Err(ParseError::InvalidLength);
         }
-        let parsed_url = url::Url::parse(&url_str).map_err(|_| UrlValidationError::MalformedUrl)?;
+        let parsed_url = url::Url::parse(&url_str).map_err(|_| ParseError::InvalidValue)?;
         if parsed_url.cannot_be_a_base() {
-            return Err(UrlValidationError::MalformedUrl);
+            return Err(ParseError::InvalidValue);
         }
         // Use the unparsed URL string so that the original format is preserved.
         Ok(Self(url_str.into_owned()))
@@ -337,7 +315,7 @@ impl Url {
 }
 
 impl FromStr for Url {
-    type Err = UrlValidationError;
+    type Err = ParseError;
 
     fn from_str(url: &str) -> Result<Self, Self::Err> {
         Self::from_str_impl(Cow::Borrowed(url))
@@ -369,13 +347,13 @@ impl<'de> de::Deserialize<'de> for Url {
                 E: de::Error,
             {
                 s.parse().map_err(|err| match err {
-                    UrlValidationError::InvalidLength => E::invalid_length(
+                    ParseError::InvalidValue => {
+                        E::invalid_value(de::Unexpected::Str(s), &"a valid URL")
+                    }
+                    ParseError::InvalidLength => E::invalid_length(
                         s.len(),
                         &"a non-empty URL no more than 4096 characters in length",
                     ),
-                    UrlValidationError::MalformedUrl => {
-                        E::invalid_value(de::Unexpected::Str(s), &"a valid URL")
-                    }
                 })
             }
         }
@@ -387,42 +365,31 @@ impl<'de> de::Deserialize<'de> for Url {
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize)]
 pub struct UrlScheme(String);
 
-/// The error representing a failed validation of a `UrlScheme` string.
-#[derive(Debug, Error)]
-pub enum UrlSchemeValidationError {
-    /// The URL scheme is empty or greater than 100 characters in length.
-    #[error("URL scheme must be non-empty and no more than 100 characters, got {} characters", 0)]
-    InvalidLength(usize),
-    /// The URL scheme is not valid. See [`UrlScheme::new`].
-    #[error("Invalid character in URL scheme: '{}'", 0)]
-    MalformedUrlScheme(char),
-}
-
 impl UrlScheme {
     /// Creates a `UrlScheme` from a `String`, returning an `Err` if the string fails
     /// validation. The string must be non-empty and no more than 100 characters
     /// in length. It must start with a lowercase ASCII letter (a-z),
     /// and contain only lowercase ASCII letters, digits, `+`, `-`, and `.`.
-    pub fn new(url_scheme: String) -> Result<Self, UrlSchemeValidationError> {
+    pub fn new(url_scheme: String) -> Result<Self, ParseError> {
         Self::validate(&url_scheme)?;
         Ok(UrlScheme(url_scheme))
     }
 
     /// Validates `url_scheme` but does not construct a new `UrlScheme` object.
     /// See [`UrlScheme::new`] for validation details.
-    pub fn validate(url_scheme: &str) -> Result<(), UrlSchemeValidationError> {
+    pub fn validate(url_scheme: &str) -> Result<(), ParseError> {
         if url_scheme.is_empty() || url_scheme.len() > 100 {
-            return Err(UrlSchemeValidationError::InvalidLength(url_scheme.len()));
+            return Err(ParseError::InvalidLength);
         }
         let mut iter = url_scheme.chars();
         let first_char = iter.next().unwrap();
         if !first_char.is_ascii_lowercase() {
-            return Err(UrlSchemeValidationError::MalformedUrlScheme(first_char));
+            return Err(ParseError::InvalidValue);
         }
-        if let Some(c) = iter.find(|&c| {
+        if let Some(_) = iter.find(|&c| {
             !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '.' && c != '+' && c != '-'
         }) {
-            return Err(UrlSchemeValidationError::MalformedUrlScheme(c));
+            return Err(ParseError::InvalidValue);
         }
         Ok(())
     }
@@ -439,7 +406,7 @@ impl fmt::Display for UrlScheme {
 }
 
 impl FromStr for UrlScheme {
-    type Err = UrlSchemeValidationError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::validate(s)?;
@@ -472,13 +439,13 @@ impl<'de> de::Deserialize<'de> for UrlScheme {
                 E: de::Error,
             {
                 s.parse().map_err(|err| match err {
-                    UrlSchemeValidationError::InvalidLength(l) => E::invalid_length(
-                        l,
-                        &"a non-empty URL scheme no more than 100 characters in length",
-                    ),
-                    UrlSchemeValidationError::MalformedUrlScheme(_) => {
+                    ParseError::InvalidValue => {
                         E::invalid_value(de::Unexpected::Str(s), &"a valid URL scheme")
                     }
+                    ParseError::InvalidLength => E::invalid_length(
+                        s.len(),
+                        &"a non-empty URL scheme no more than 100 characters in length",
+                    ),
                 })
             }
         }

@@ -31,8 +31,6 @@ pub enum Error {
     DuplicateField(DeclField, String),
     #[error("{} has invalid {}", .0.decl, .0.field)]
     InvalidField(DeclField),
-    #[error("{} has invalid {}, unexpected character '{1}'", .0.decl, .0.field)]
-    InvalidCharacterInField(DeclField, char),
     #[error("{}'s {} is too long", .0.decl, .0.field)]
     FieldTooLong(DeclField),
     #[error("\"{0}\" target \"{1}\" is same as source")]
@@ -85,17 +83,6 @@ impl Error {
 
     pub fn invalid_field(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
         Error::InvalidField(DeclField { decl: decl_type.into(), field: keyword.into() })
-    }
-
-    pub fn invalid_character_in_field(
-        decl_type: impl Into<String>,
-        keyword: impl Into<String>,
-        character: char,
-    ) -> Self {
-        Error::InvalidCharacterInField(
-            DeclField { decl: decl_type.into(), field: keyword.into() },
-            character,
-        )
     }
 
     pub fn field_too_long(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
@@ -1744,8 +1731,8 @@ fn check_name(
         for b in name.bytes() {
             match b as char {
                 '0'..='9' | 'a'..='z' | '_' | '-' | '.' => (),
-                c => {
-                    errors.push(Error::invalid_character_in_field(decl_type, keyword, c));
+                _ => {
+                    errors.push(Error::invalid_field(decl_type, keyword));
                     return false;
                 }
             }
@@ -1786,8 +1773,8 @@ fn check_url(
                         }
                     }
                 }
-                c => {
-                    errors.push(Error::invalid_character_in_field(decl_type, keyword, c));
+                _ => {
+                    errors.push(Error::invalid_field(decl_type, keyword));
                     return false;
                 }
             }
@@ -1807,15 +1794,14 @@ fn check_url_scheme(
     if let Some(scheme) = prop {
         if let Err(err) = cm_types::UrlScheme::validate(scheme) {
             errors.push(match err {
-                cm_types::UrlSchemeValidationError::InvalidLength(0) => {
-                    Error::empty_field(decl_type, keyword)
+                cm_types::ParseError::InvalidLength => {
+                    if scheme.is_empty() {
+                        Error::empty_field(decl_type, keyword)
+                    } else {
+                        Error::field_too_long(decl_type, keyword)
+                    }
                 }
-                cm_types::UrlSchemeValidationError::InvalidLength(_) => {
-                    Error::field_too_long(decl_type, keyword)
-                }
-                cm_types::UrlSchemeValidationError::MalformedUrlScheme(c) => {
-                    Error::invalid_character_in_field(decl_type, keyword, c)
-                }
+                cm_types::ParseError::InvalidValue => Error::invalid_field(decl_type, keyword),
             });
             return false;
         }
@@ -2213,7 +2199,7 @@ mod tests {
         test_identifier_name_invalid => {
             check_fn = check_name,
             input = "^bad",
-            result = Err(ErrorList::new(vec![Error::invalid_character_in_field("FooDecl", "foo", '^')])),
+            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
         },
         test_identifier_name_too_long => {
             check_fn = check_name,
@@ -2478,11 +2464,11 @@ mod tests {
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseEventDecl", "source"),
-                Error::invalid_character_in_field("UseEventDecl", "source_name", '/'),
-                Error::invalid_character_in_field("UseEventDecl", "target_name", '/'),
-                Error::invalid_character_in_field("UseEventStreamDecl", "event_name", '/'),
+                Error::invalid_field("UseEventDecl", "source_name"),
+                Error::invalid_field("UseEventDecl", "target_name"),
+                Error::invalid_field("UseEventStreamDecl", "event_name"),
                 Error::invalid_event_stream("UseEventStreamDecl", "events", "/a".to_string()),
-                Error::invalid_character_in_field("UseEventStreamDecl", "event_name", '/'),
+                Error::invalid_field("UseEventStreamDecl", "event_name"),
                 Error::invalid_event_stream("UseEventStreamDecl", "events", "/b".to_string()),
             ])),
         },
@@ -2808,22 +2794,22 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_character_in_field("ExposeServiceDecl", "source.child.name", '^'),
+                Error::invalid_field("ExposeServiceDecl", "source.child.name"),
                 Error::invalid_field("ExposeServiceDecl", "source_path"),
                 Error::invalid_field("ExposeServiceDecl", "target_path"),
-                Error::invalid_character_in_field("ExposeProtocolDecl", "source.child.name", '^'),
+                Error::invalid_field("ExposeProtocolDecl", "source.child.name"),
                 Error::invalid_field("ExposeProtocolDecl", "source_path"),
                 Error::invalid_field("ExposeProtocolDecl", "target_path"),
-                Error::invalid_character_in_field("ExposeDirectoryDecl", "source.child.name", '^'),
+                Error::invalid_field("ExposeDirectoryDecl", "source.child.name"),
                 Error::invalid_field("ExposeDirectoryDecl", "source_path"),
                 Error::invalid_field("ExposeDirectoryDecl", "target_path"),
                 Error::invalid_field("ExposeDirectoryDecl", "subdir"),
-                Error::invalid_character_in_field("ExposeRunnerDecl", "source.child.name", '^'),
-                Error::invalid_character_in_field("ExposeRunnerDecl", "source_name", '/'),
-                Error::invalid_character_in_field("ExposeRunnerDecl", "target_name", '!'),
-                Error::invalid_character_in_field("ExposeResolverDecl", "source.child.name", '^'),
-                Error::invalid_character_in_field("ExposeResolverDecl", "source_name", '/'),
-                Error::invalid_character_in_field("ExposeResolverDecl", "target_name", '!'),
+                Error::invalid_field("ExposeRunnerDecl", "source.child.name"),
+                Error::invalid_field("ExposeRunnerDecl", "source_name"),
+                Error::invalid_field("ExposeRunnerDecl", "target_name"),
+                Error::invalid_field("ExposeResolverDecl", "source.child.name"),
+                Error::invalid_field("ExposeResolverDecl", "source_name"),
+                Error::invalid_field("ExposeResolverDecl", "target_name"),
             ])),
         },
         test_validate_exposes_invalid_source_target => {
@@ -3624,30 +3610,30 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_character_in_field("OfferServiceDecl", "source.child.name", '^'),
+                Error::invalid_field("OfferServiceDecl", "source.child.name"),
                 Error::invalid_field("OfferServiceDecl", "source_path"),
-                Error::invalid_character_in_field("OfferServiceDecl", "target.child.name", '%'),
+                Error::invalid_field("OfferServiceDecl", "target.child.name"),
                 Error::invalid_field("OfferServiceDecl", "target_path"),
-                Error::invalid_character_in_field("OfferProtocolDecl", "source.child.name", '^'),
+                Error::invalid_field("OfferProtocolDecl", "source.child.name"),
                 Error::invalid_field("OfferProtocolDecl", "source_path"),
-                Error::invalid_character_in_field("OfferProtocolDecl", "target.child.name", '%'),
+                Error::invalid_field("OfferProtocolDecl", "target.child.name"),
                 Error::invalid_field("OfferProtocolDecl", "target_path"),
-                Error::invalid_character_in_field("OfferDirectoryDecl", "source.child.name", '^'),
+                Error::invalid_field("OfferDirectoryDecl", "source.child.name"),
                 Error::invalid_field("OfferDirectoryDecl", "source_path"),
-                Error::invalid_character_in_field("OfferDirectoryDecl", "target.child.name", '%'),
+                Error::invalid_field("OfferDirectoryDecl", "target.child.name"),
                 Error::invalid_field("OfferDirectoryDecl", "target_path"),
                 Error::invalid_field("OfferDirectoryDecl", "subdir"),
-                Error::invalid_character_in_field("OfferRunnerDecl", "source.child.name", '^'),
-                Error::invalid_character_in_field("OfferRunnerDecl", "source_name", '/'),
-                Error::invalid_character_in_field("OfferRunnerDecl", "target.child.name", '%'),
-                Error::invalid_character_in_field("OfferRunnerDecl", "target_name", '!'),
-                Error::invalid_character_in_field("OfferResolverDecl", "source.child.name", '^'),
-                Error::invalid_character_in_field("OfferResolverDecl", "source_name", '/'),
-                Error::invalid_character_in_field("OfferResolverDecl", "target.child.name", '%'),
-                Error::invalid_character_in_field("OfferResolverDecl", "target_name", '!'),
-                Error::invalid_character_in_field("OfferEventDecl", "source_name", '/'),
-                Error::invalid_character_in_field("OfferEventDecl", "target.child.name", '%'),
-                Error::invalid_character_in_field("OfferEventDecl", "target_name", '/'),
+                Error::invalid_field("OfferRunnerDecl", "source.child.name"),
+                Error::invalid_field("OfferRunnerDecl", "source_name"),
+                Error::invalid_field("OfferRunnerDecl", "target.child.name"),
+                Error::invalid_field("OfferRunnerDecl", "target_name"),
+                Error::invalid_field("OfferResolverDecl", "source.child.name"),
+                Error::invalid_field("OfferResolverDecl", "source_name"),
+                Error::invalid_field("OfferResolverDecl", "target.child.name"),
+                Error::invalid_field("OfferResolverDecl", "target_name"),
+                Error::invalid_field("OfferEventDecl", "source_name"),
+                Error::invalid_field("OfferEventDecl", "target.child.name"),
+                Error::invalid_field("OfferEventDecl", "target_name"),
             ])),
         },
         test_validate_offers_target_equals_source => {
@@ -4390,12 +4376,12 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_character_in_field("RunnerRegistration", "source_name", '^'),
+                Error::invalid_field("RunnerRegistration", "source_name"),
                 Error::invalid_field("RunnerRegistration", "source"),
-                Error::invalid_character_in_field("RunnerRegistration", "target_name", '%'),
-                Error::invalid_character_in_field("ResolverRegistration", "resolver", '^'),
+                Error::invalid_field("RunnerRegistration", "target_name"),
+                Error::invalid_field("ResolverRegistration", "resolver"),
                 Error::invalid_field("ResolverRegistration", "source"),
-                Error::invalid_character_in_field("ResolverRegistration", "scheme", '9'),
+                Error::invalid_field("ResolverRegistration", "scheme"),
             ])),
         },
         test_validate_environment_missing_runner => {
@@ -4646,8 +4632,8 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_character_in_field("ChildDecl", "name", '^'),
-                Error::invalid_character_in_field("ChildDecl", "url", '&'),
+                Error::invalid_field("ChildDecl", "name"),
+                Error::invalid_field("ChildDecl", "url"),
             ])),
         },
         test_validate_children_long_identifiers => {
@@ -4711,7 +4697,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_character_in_field("CollectionDecl", "name", '^'),
+                Error::invalid_field("CollectionDecl", "name"),
             ])),
         },
         test_validate_collections_long_identifiers => {
@@ -4791,7 +4777,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("RunnerDecl", "source"),
-                Error::invalid_character_in_field("RunnerDecl", "name", '^'),
+                Error::invalid_field("RunnerDecl", "name"),
                 Error::invalid_field("RunnerDecl", "source_path"),
             ])),
         },
@@ -4879,7 +4865,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_character_in_field("ResolverDecl", "name", '^'),
+                Error::invalid_field("ResolverDecl", "name"),
                 Error::invalid_field("ResolverDecl", "source_path")
             ])),
         },

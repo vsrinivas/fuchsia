@@ -9,8 +9,8 @@ use thiserror::Error;
 
 // Re-export symbols.
 pub use cm_types::{
-    DependencyType, Durability, Name, NameValidationError, Path, PathValidationError, RelativePath,
-    StartupMode, StorageType, Url, UrlScheme, UrlSchemeValidationError, UrlValidationError,
+    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, StorageType,
+    Url, UrlScheme,
 };
 
 /// The in-memory representation of a binary Component Manifest JSON file.
