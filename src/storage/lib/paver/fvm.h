@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_ULIB_PAVER_FVM_H_
-#define ZIRCON_SYSTEM_ULIB_PAVER_FVM_H_
+#ifndef SRC_STORAGE_LIB_PAVER_FVM_H_
+#define SRC_STORAGE_LIB_PAVER_FVM_H_
 
 #include <block-client/cpp/client.h>
 #include <fvm/sparse-reader.h>
@@ -52,6 +52,10 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
                                 std::unique_ptr<PartitionClient> partition_client,
                                 std::unique_ptr<fvm::ReaderInterface> payload);
 
+// Unbinds the FVM driver from the given device. Assumes that the driver is either
+// loaded or not (but not in the process of being loaded).
+zx_status_t FvmUnbind(const fbl::unique_fd& devfs_root, const char* device);
+
 }  // namespace paver
 
-#endif  // ZIRCON_SYSTEM_ULIB_PAVER_FVM_H_
+#endif  // SRC_STORAGE_LIB_PAVER_FVM_H_

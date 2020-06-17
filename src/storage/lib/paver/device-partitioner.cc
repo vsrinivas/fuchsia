@@ -41,6 +41,7 @@
 #include <zxcrypt/volume.h>
 
 #include "abr-client.h"
+#include "fvm.h"
 #include "partition-client.h"
 #include "pave-logging.h"
 #include "validation.h"
@@ -96,62 +97,6 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
 template <typename T>
 std::unique_ptr<T> WrapUnique(T* ptr) {
   return std::unique_ptr<T>(ptr);
-}
-
-// Unbinds a device, waiting for the operation to complete. |directory| is the parent device of
-// the device being removed (assumes only one child device).
-zx_status_t UnbindDevice(zx::channel device, fbl::unique_fd directory, zx_duration_t timeout) {
-  auto cb = [](int dirfd, int event, const char* filename, void* cookie) {
-    auto device = reinterpret_cast<zx::channel*>(cookie);
-    switch (event) {
-      case WATCH_EVENT_REMOVE_FILE:
-        return ZX_ERR_STOP;
-      case WATCH_EVENT_WAITING: {
-        auto resp = device::Controller::Call::ScheduleUnbind(device->borrow());
-        if (resp.status() != ZX_OK) {
-          return resp.status();
-        }
-        if (resp->result.is_err()) {
-          return resp->result.err();
-        }
-        return ZX_OK;
-      }
-      default:
-        return ZX_OK;
-    }
-  };
-
-  zx_time_t deadline = zx_deadline_after(timeout);
-  zx_status_t status = fdio_watch_directory(directory.get(), cb, deadline, &device);
-  if (status == ZX_ERR_STOP) {
-    status = ZX_OK;
-  }
-  return status;
-}
-
-// Unbinds the FVM driver from the given device. Assumes that the driver is either
-// loaded or not (but not in the process of being loaded).
-zx_status_t UnbindFvm(const fbl::unique_fd& devfs_root, const char* device) {
-  fbl::StringBuffer<PATH_MAX> name_buffer;
-  name_buffer.Append(device);
-  name_buffer.Append("/fvm");
-
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_service_connect(name_buffer.data(), remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fbl::unique_fd dir_fd(openat(devfs_root.get(), device, O_RDONLY));
-  if (!dir_fd) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  return UnbindDevice(std::move(local), std::move(dir_fd), ZX_SEC(3));
 }
 
 zx_status_t OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
@@ -1959,7 +1904,7 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
   name_buffer.Append(response.result.response().path.data(),
                      static_cast<size_t>(response.result.response().path.size()));
 
-  status = UnbindFvm(devfs_root_, name_buffer.data());
+  status = FvmUnbind(devfs_root_, name_buffer.data());
   if (status != ZX_OK) {
     // The driver may refuse to bind to a corrupt volume.
     ERROR("Warning: Failed to unbind FVM: %s\n", zx_status_get_string(status));

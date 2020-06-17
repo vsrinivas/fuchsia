@@ -158,4 +158,56 @@ TEST_F(FvmTest, AllocateEmptyPartitions) {
   ASSERT_TRUE(data.is_valid());
 }
 
+TEST_F(FvmTest, Unbind) {
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  ASSERT_TRUE(fvm_part.is_valid());
+
+  ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
+
+  fbl::unique_fd blob(
+      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block", O_RDONLY));
+  ASSERT_TRUE(blob.is_valid());
+
+  fbl::unique_fd data(
+      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/minfs-p-2/block", O_RDONLY));
+  ASSERT_TRUE(data.is_valid());
+  ASSERT_OK(paver::FvmUnbind(devfs_root(), "/dev/misc/ramctl/ramdisk-0/block"));
+  fvm_part.reset();
+  blob.reset();
+  data.reset();
+}
+
+TEST_F(FvmTest, UnbindInvalidPath) {
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  ASSERT_TRUE(fvm_part.is_valid());
+
+  ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
+
+  fbl::unique_fd blob(
+      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block", O_RDONLY));
+  ASSERT_TRUE(blob.is_valid());
+
+  fbl::unique_fd data(
+      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/minfs-p-2/block", O_RDONLY));
+  ASSERT_TRUE(data.is_valid());
+
+  // Path too short
+  ASSERT_EQ(paver::FvmUnbind(devfs_root(), "/dev"), ZX_ERR_INVALID_ARGS);
+
+  // Path too long
+  char path[PATH_MAX + 2];
+  memset(path, 'a', sizeof(path));
+  path[sizeof(path) - 1] = '\0';
+  ASSERT_EQ(paver::FvmUnbind(devfs_root(), path), ZX_ERR_INVALID_ARGS);
+
+  ASSERT_OK(paver::FvmUnbind(devfs_root(), "/dev/misc/ramctl/ramdisk-0/block"));
+  fvm_part.reset();
+  blob.reset();
+  data.reset();
+}
+
 }  // namespace

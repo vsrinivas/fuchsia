@@ -11,6 +11,7 @@
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
@@ -25,6 +26,7 @@
 #include <block-client/cpp/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -41,6 +43,7 @@ namespace {
 namespace block = ::llcpp::fuchsia::hardware::block;
 namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 namespace volume = ::llcpp::fuchsia::hardware::block::volume;
+namespace device = ::llcpp::fuchsia::device;
 
 using ::llcpp::fuchsia::hardware::block::volume::VolumeInfo;
 using ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo;
@@ -516,7 +519,8 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
       return ZX_ERR_IO;
     }
     if (ext->extent_length > ext->slice_count * hdr->slice_size) {
-      ERROR("Extent length must fit within allocated slice count\n");
+      ERROR("Extent length(%lu) must fit within allocated slice count(%lu * %lu)\n",
+            ext->extent_length, ext->slice_count, hdr->slice_size);
       return ZX_ERR_IO;
     }
 
@@ -534,7 +538,11 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
         ERROR("Extents must have > 0 slices\n");
         return ZX_ERR_IO;
       } else if (ext->extent_length > ext->slice_count * hdr->slice_size) {
-        ERROR("Extent must fit within allocated slice count\n");
+        char name[BLOCK_NAME_LEN + 1];
+        name[BLOCK_NAME_LEN] = '\0';
+        memcpy(&name, parts[p].pd->name, sizeof(BLOCK_NAME_LEN));
+        ERROR("Partition(%s) extent length(%lu) must fit within allocated slice count(%lu * %lu)\n",
+              name, ext->extent_length, ext->slice_count, hdr->slice_size);
         return ZX_ERR_IO;
       }
 
@@ -773,6 +781,47 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     }
   }
 
+  return ZX_OK;
+}
+
+// Unbinds the FVM driver from the given device. Assumes that the driver is either
+// loaded or not (but not in the process of being loaded).
+zx_status_t FvmUnbind(const fbl::unique_fd& devfs_root, const char* device) {
+  size_t len = strnlen(device, PATH_MAX);
+  constexpr const char* kDevPath = "/dev/";
+  constexpr size_t kDevPathLen = std::char_traits<char>::length(kDevPath);
+
+  if (len == PATH_MAX || len <= kDevPathLen) {
+    ERROR("Invalid device name: %s\n", device);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  fbl::StringBuffer<PATH_MAX> name_buffer;
+  name_buffer.Append(device + kDevPathLen);
+  name_buffer.Append("/fvm");
+
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
+  status = fdio_service_connect_at(caller.borrow_channel(), name_buffer.data(), remote.release());
+  if (status != ZX_OK) {
+    ERROR("Unable to connect to FVM service: %s on device %s\n", zx_status_get_string(status),
+          name_buffer.data());
+    return status;
+  }
+  auto resp = device::Controller::Call::ScheduleUnbind(local.borrow());
+  if (resp.status() != ZX_OK) {
+    ERROR("Failed to schedule FVM unbind: %s on device %s\n", zx_status_get_string(resp.status()),
+          name_buffer.data());
+    return resp.status();
+  }
+  if (resp->result.is_err()) {
+    ERROR("FVM unbind failed: %s on device %s\n", zx_status_get_string(resp->result.err()),
+          name_buffer.data());
+    return resp->result.err();
+  }
   return ZX_OK;
 }
 
