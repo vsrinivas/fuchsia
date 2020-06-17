@@ -17,13 +17,6 @@
 
 namespace {
 
-struct Position;
-
-struct StartingPoint {
-  uint8_t* const addr;
-  Position ToPosition() const;
-};
-
 struct Position {
   void* addr;
   Position operator+(uint32_t size) const {
@@ -34,19 +27,14 @@ struct Position {
     return *this;
   }
   template <typename T>
-  constexpr T* Get(StartingPoint start) const {
+  constexpr T* Get() const {
     return reinterpret_cast<T*>(addr);
   }
 };
 
-Position StartingPoint::ToPosition() const { return Position{reinterpret_cast<void*>(addr)}; }
-
-class FidlHandleCloser final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
+class FidlHandleCloser final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
  public:
   FidlHandleCloser(const char** out_error_msg) : out_error_msg_(out_error_msg) {}
-
-  using StartingPoint = StartingPoint;
 
   using Position = Position;
 
@@ -121,7 +109,7 @@ zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char*
   }
 
   FidlHandleCloser handle_closer(out_error_msg);
-  fidl::Walk(handle_closer, type, StartingPoint{reinterpret_cast<uint8_t*>(value)});
+  fidl::Walk(handle_closer, type, Position{reinterpret_cast<uint8_t*>(value)});
 
   return handle_closer.status();
 }

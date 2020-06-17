@@ -54,7 +54,7 @@ namespace {
 // All pointers passed to the visitor are guaranteed to be alive throughout the duration
 // of the message traversal.
 // For all callbacks in the visitor, the return value indicates if an error has occurred.
-template <typename MutationTrait_, typename StartingPoint_, typename Position_>
+template <typename MutationTrait_, typename Position_>
 class Visitor {
  public:
   using MutationTrait = MutationTrait_;
@@ -62,12 +62,6 @@ class Visitor {
   template <typename T>
   using Ptr = typename std::conditional<MutationTrait::kIsConst, typename std::add_const<T>::type,
                                         T>::type*;
-
-  // A type encapsulating the starting point of message traversal.
-  //
-  // Implementations must have the following:
-  // - Position ToPosition() const, which returns a |Position| located at the starting point.
-  using StartingPoint = StartingPoint_;
 
   // A type encapsulating the position of the walker within the message. This type is parametric,
   // such that the walker does not assume any memory order between objects. |Position| is tracked
@@ -207,11 +201,6 @@ constexpr bool CheckVisitorInterface() {
   static_assert(std::is_same<decltype(ImplSubType::kAllowNonNullableCollectionsToBeAbsent),
                              const bool>::value,
                 "ImplSubType must declare constexpr bool kAllowNonNullableCollectionsToBeAbsent");
-
-  static_assert(std::is_same<typename internal::callable_traits<decltype(
-                                 &Visitor::StartingPoint::ToPosition)>::return_type,
-                             typename Visitor::Position>::value,
-                "Incorrect/missing StartingPoint");
 
   static_assert(internal::SameInterface<decltype(&Visitor::VisitPointer),
                                         decltype(&ImplSubType::VisitPointer)>,

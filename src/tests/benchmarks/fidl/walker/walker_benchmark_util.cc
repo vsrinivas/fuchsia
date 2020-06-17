@@ -7,13 +7,6 @@
 namespace walker_benchmarks {
 namespace internal {
 
-struct Position;
-
-struct StartingPoint {
-  uint8_t* const addr;
-  Position ToPosition() const;
-};
-
 struct Position {
   void* addr;
   Position operator+(uint32_t size) const {
@@ -24,19 +17,14 @@ struct Position {
     return *this;
   }
   template <typename T>
-  constexpr T* Get(StartingPoint start) const {
+  constexpr T* Get() const {
     return reinterpret_cast<T*>(addr);
   }
 };
 
-Position StartingPoint::ToPosition() const { return Position{reinterpret_cast<void*>(addr)}; }
-
-class NoOpVisitor final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
+class NoOpVisitor final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
  public:
   NoOpVisitor() {}
-
-  using StartingPoint = StartingPoint;
 
   using Position = Position;
 
@@ -82,7 +70,7 @@ class NoOpVisitor final
 
 void Walk(const fidl_type_t* fidl_type, uint8_t* data) {
   NoOpVisitor visitor;
-  fidl::Walk(visitor, fidl_type, NoOpVisitor::StartingPoint{data});
+  fidl::Walk(visitor, fidl_type, NoOpVisitor::Position{data});
   ZX_ASSERT(visitor.error() == nullptr);
 }
 

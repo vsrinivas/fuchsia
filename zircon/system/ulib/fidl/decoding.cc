@@ -24,27 +24,18 @@
 
 namespace {
 
-struct Position;
-
-struct StartingPoint {
-  uint8_t* const addr;
-  Position ToPosition() const;
-};
-
 struct Position {
-  uint32_t offset;
-  Position operator+(uint32_t size) const { return Position{offset + size}; }
+  uint8_t* addr;
+  Position operator+(uint32_t size) const { return Position{addr + size}; }
   Position& operator+=(uint32_t size) {
-    offset += size;
+    addr += size;
     return *this;
   }
   template <typename T>
-  constexpr T* Get(StartingPoint start) const {
-    return reinterpret_cast<T*>(start.addr + offset);
+  constexpr T* Get() const {
+    return reinterpret_cast<T*>(addr);
   }
 };
-
-Position StartingPoint::ToPosition() const { return Position{0}; }
 
 constexpr uintptr_t kAllocPresenceMarker = FIDL_ALLOC_PRESENT;
 constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
@@ -56,8 +47,7 @@ constexpr zx_rights_t subtract_rights(zx_rights_t minuend, zx_rights_t subtrahen
 }
 static_assert(subtract_rights(0b011, 0b101) == 0b010, "ensure rights subtraction works correctly");
 
-class FidlDecoder final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
+class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
  public:
   FidlDecoder(void* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
               uint32_t next_out_of_line, const char** out_error_msg)
@@ -82,8 +72,6 @@ class FidlDecoder final
       handles_ = handle_infos;
     }
   }
-
-  using StartingPoint = StartingPoint;
 
   using Position = Position;
 
@@ -122,7 +110,7 @@ class FidlDecoder final
         return Status::kConstraintViolationError;
       }
     }
-    *out_position = Position{next_out_of_line_};
+    *out_position = Position{bytes_ + next_out_of_line_};
     *object_ptr_ptr = reinterpret_cast<void*>(&bytes_[next_out_of_line_]);
 
     next_out_of_line_ = new_offset;
@@ -210,7 +198,7 @@ class FidlDecoder final
   Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
 
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-    auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
+    auto padding_ptr = padding_position.template Get<const uint8_t>();
     return ValidatePadding(padding_ptr, padding_length);
   }
 
@@ -365,7 +353,7 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   }
 
   FidlDecoder decoder(bytes, num_bytes, handles, num_handles, next_out_of_line, out_error_msg);
-  fidl::Walk(decoder, type, StartingPoint{reinterpret_cast<uint8_t*>(bytes)});
+  fidl::Walk(decoder, type, Position{reinterpret_cast<uint8_t*>(bytes)});
 
   if (decoder.status() != ZX_OK) {
     drop_all_handles();

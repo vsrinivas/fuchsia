@@ -17,35 +17,25 @@
 
 namespace {
 
-struct Position;
-
-struct StartingPoint {
-  const uint8_t* const addr;
-  Position ToPosition() const;
-};
-
 struct Position {
-  uint32_t offset;
-  Position operator+(uint32_t size) const { return Position{offset + size}; }
+  const uint8_t* addr;
+  Position operator+(uint32_t size) const { return Position{addr + size}; }
   Position& operator+=(uint32_t size) {
-    offset += size;
+    addr += size;
     return *this;
   }
   template <typename T>
-  constexpr const T* Get(StartingPoint start) const {
-    return reinterpret_cast<const T*>(start.addr + offset);
+  constexpr const T* Get() const {
+    return reinterpret_cast<const T*>(addr);
   }
 };
-
-Position StartingPoint::ToPosition() const { return Position{0}; }
 
 constexpr uintptr_t kAllocPresenceMarker = FIDL_ALLOC_PRESENT;
 constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
 
 using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
-class FidlValidator final
-    : public fidl::Visitor<fidl::NonMutatingVisitorTrait, StartingPoint, Position> {
+class FidlValidator final : public fidl::Visitor<fidl::NonMutatingVisitorTrait, Position> {
  public:
   FidlValidator(const void* bytes, uint32_t num_bytes, uint32_t num_handles,
                 uint32_t next_out_of_line, const char** out_error_msg)
@@ -54,8 +44,6 @@ class FidlValidator final
         num_handles_(num_handles),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg) {}
-
-  using StartingPoint = StartingPoint;
 
   using Position = Position;
 
@@ -94,7 +82,7 @@ class FidlValidator final
         return Status::kConstraintViolationError;
       }
     }
-    *out_position = Position{next_out_of_line_};
+    *out_position = Position{bytes_ + next_out_of_line_};
     next_out_of_line_ = new_offset;
     return Status::kSuccess;
   }
@@ -116,7 +104,7 @@ class FidlValidator final
   Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
 
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-    auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
+    auto padding_ptr = padding_position.template Get<const uint8_t>();
     return ValidatePadding(padding_ptr, padding_length);
   }
 
@@ -229,7 +217,7 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
   }
 
   FidlValidator validator(bytes, num_bytes, num_handles, next_out_of_line, out_error_msg);
-  fidl::Walk(validator, type, StartingPoint{reinterpret_cast<const uint8_t*>(bytes)});
+  fidl::Walk(validator, type, Position{reinterpret_cast<const uint8_t*>(bytes)});
 
   if (validator.status() == ZX_OK) {
     if (!validator.DidConsumeAllBytes()) {

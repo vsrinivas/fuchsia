@@ -140,24 +140,21 @@ class Walker final {
  private:
   using MutationTrait = typename VisitorImpl::MutationTrait;
 
-  using StartingPoint = typename VisitorImpl::StartingPoint;
-
   using Position = typename VisitorImpl::Position;
 
-  using VisitorSuper = Visitor<MutationTrait, StartingPoint, Position>;
+  using VisitorSuper = Visitor<MutationTrait, Position>;
 
   using Status = typename VisitorSuper::Status;
 
   static_assert(CheckVisitorInterface<VisitorSuper, VisitorImpl>(), "");
 
  public:
-  Walker(VisitorImpl* visitor, StartingPoint start) : visitor_(visitor), start_(start) {}
+  Walker(VisitorImpl* visitor) : visitor_(visitor) {}
 
   Result Walk(const fidl_type_t* type, Position position);
 
  private:
   VisitorImpl* visitor_;
-  StartingPoint start_;
 
   // Optionally uses non-const pointers depending on if the visitor
   // is declared as mutating or not.
@@ -167,7 +164,7 @@ class Walker final {
   // Wrapper around Position::Get with friendlier syntax.
   template <typename T>
   Ptr<T> PtrTo(Position position) {
-    return position.template Get<T>(start_);
+    return position.template Get<T>();
   }
 
   Result WalkInternal(const fidl_type_t* type, Position position, OutOfLineDepth depth);
@@ -648,10 +645,9 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
 // |type|           is the coding table for the FIDL type. It cannot be null.
 // |start|          is the starting point for the walk.
 template <typename VisitorImpl>
-void Walk(VisitorImpl& visitor, const fidl_type_t* type,
-          typename VisitorImpl::StartingPoint start) {
-  internal::Walker<VisitorImpl> walker(&visitor, start);
-  walker.Walk(type, start.ToPosition());
+void Walk(VisitorImpl& visitor, const fidl_type_t* type, typename VisitorImpl::Position start) {
+  internal::Walker<VisitorImpl> walker(&visitor);
+  walker.Walk(type, start);
 }
 
 // Infer the size of the primary object, from the coding table in |type|.

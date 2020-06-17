@@ -22,25 +22,15 @@
 
 namespace {
 
-struct Position;
-
-struct StartingPoint {
-  // Pointer to the input object.
-  void* const source;
-  // The starting address of a contiguous destination buffer.
-  uint8_t* const dest;
-  Position ToPosition() const;
-};
-
 struct Position {
   // |source_object| points to one of the objects from the source pile.
   void* source_object;
-  // |offset| is an offset into the destination buffer.
-  uint32_t dest_offset;
+  // |dest| is an address in the destination buffer.
+  uint8_t* dest;
   Position operator+(uint32_t size) const {
     return Position{
         .source_object = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(source_object) + size),
-        .dest_offset = dest_offset + size,
+        .dest = dest + size,
     };
   }
   Position& operator+=(uint32_t size) {
@@ -49,12 +39,12 @@ struct Position {
   }
   // By default, return the pointer to the destination buffer
   template <typename T>
-  constexpr T* Get(StartingPoint start) const {
-    return GetFromDest<T>(start.dest);
+  constexpr T* Get() const {
+    return GetFromDest<T>();
   }
   template <typename T>
-  constexpr T* GetFromDest(uint8_t* dest_bytes) const {
-    return reinterpret_cast<T*>(dest_bytes + dest_offset);
+  constexpr T* GetFromDest() const {
+    return reinterpret_cast<T*>(dest);
   }
   // Additional method to get a pointer to one of the source objects
   template <typename T>
@@ -63,17 +53,12 @@ struct Position {
   }
 };
 
-Position StartingPoint::ToPosition() const {
-  return Position{.source_object = source, .dest_offset = 0};
-}
-
 using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
 enum class Mode { EncodeOnly, LinearizeAndEncode };
 
 template <Mode mode>
-class FidlEncoder final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
+class FidlEncoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
  public:
   FidlEncoder(void* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t num_handles,
               uint32_t next_out_of_line, const char** out_error_msg)
@@ -99,8 +84,6 @@ class FidlEncoder final
       handles_ = handle_dispositions;
     }
   }
-
-  using StartingPoint = StartingPoint;
 
   using Position = Position;
 
@@ -157,7 +140,7 @@ class FidlEncoder final
     }
 
     // Instruct the walker to traverse the pointee afterwards.
-    *out_position = Position{.source_object = object_ptr, .dest_offset = next_out_of_line_};
+    *out_position = Position{.source_object = object_ptr, .dest = bytes_ + next_out_of_line_};
 
     next_out_of_line_ = new_offset;
 
@@ -210,7 +193,7 @@ class FidlEncoder final
   }
 
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-    auto padding_ptr = padding_position.template GetFromDest<uint8_t>(bytes_);
+    auto padding_ptr = padding_position.template GetFromDest<uint8_t>();
     memset(padding_ptr, 0, padding_length);
     return Status::kSuccess;
   }
@@ -368,7 +351,7 @@ zx_status_t fidl_linearize_and_encode_impl(const fidl_type_t* type, void* value,
 
   FidlEncoder<Mode::LinearizeAndEncode> encoder(out_bytes, num_bytes, out_handles, num_handles,
                                                 next_out_of_line, out_error_msg);
-  fidl::Walk(encoder, type, StartingPoint{.source = value, .dest = out_bytes});
+  fidl::Walk(encoder, type, Position{.source_object = value, .dest = out_bytes});
 
   auto drop_all_handles = [&]() {
     if (out_num_actual_handles) {
@@ -442,7 +425,7 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   FidlEncoder<Mode::EncodeOnly> encoder(bytes, num_bytes, handles, max_handles, next_out_of_line,
                                         out_error_msg);
   fidl::Walk(encoder, type,
-             StartingPoint{.source = bytes, .dest = reinterpret_cast<uint8_t*>(bytes)});
+             Position{.source_object = bytes, .dest = reinterpret_cast<uint8_t*>(bytes)});
 
   auto drop_all_handles = [&]() {
     if (out_actual_handles) {

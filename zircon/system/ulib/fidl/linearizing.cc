@@ -18,24 +18,14 @@
 
 namespace {
 
-struct Position;
-
-struct StartingPoint {
-  // The starting object of linearization
-  void* const source;
-  // The starting address of a contiguous destination buffer
-  uint8_t* const destination;
-  Position ToPosition() const;
-};
-
 struct Position {
   // |object| points to one of the objects from the source pile
   void* object;
-  // |offset| is an offset into the destination buffer
-  uint32_t offset;
+  // |destination| is an address in the destination buffer
+  uint8_t* destination;
   Position operator+(uint32_t size) const {
     return Position{.object = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(object) + size),
-                    .offset = offset + size};
+                    .destination = destination + size};
   }
   Position& operator+=(uint32_t size) {
     *this = *this + size;
@@ -43,8 +33,8 @@ struct Position {
   }
   // By default, return the pointer in the destination buffer
   template <typename T>
-  constexpr T* Get(StartingPoint start) const {
-    return reinterpret_cast<T*>(start.destination + offset);
+  constexpr T* Get() const {
+    return reinterpret_cast<T*>(destination);
   }
   // Additional method to get a pointer to one of the source objects
   template <typename T>
@@ -53,12 +43,9 @@ struct Position {
   }
 };
 
-Position StartingPoint::ToPosition() const { return Position{.object = source, .offset = 0}; }
-
 using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
-class FidlLinearizer final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
+class FidlLinearizer final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
  public:
   FidlLinearizer(void* bytes, uint32_t num_bytes, uint32_t next_out_of_line,
                  const char** out_error_msg)
@@ -66,8 +53,6 @@ class FidlLinearizer final
         num_bytes_(num_bytes),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg) {}
-
-  using StartingPoint = StartingPoint;
 
   using Position = Position;
 
@@ -111,7 +96,7 @@ class FidlLinearizer final
     memcpy(&bytes_[next_out_of_line_], object_ptr, inline_size);
 
     // Instruct the walker to traverse the pointee afterwards.
-    *out_position = Position{.object = object_ptr, .offset = next_out_of_line_};
+    *out_position = Position{.object = object_ptr, .destination = bytes_ + next_out_of_line_};
 
     // Update the pointer within message buffer to point to the copy
     *object_ptr_ptr = &bytes_[next_out_of_line_];
@@ -253,8 +238,8 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
   FidlLinearizer linearizer(buffer, num_bytes, static_cast<uint32_t>(next_out_of_line),
                             out_error_msg);
   fidl::Walk(linearizer, type,
-             StartingPoint{
-                 .source = value,
+             Position{
+                 .object = value,
                  .destination = buffer,
              });
 
