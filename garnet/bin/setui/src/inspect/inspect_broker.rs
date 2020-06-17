@@ -16,7 +16,6 @@ use futures::StreamExt;
 
 use crate::clock;
 use crate::internal::handler::message::{Client, Factory, Messenger, Signature};
-
 use crate::internal::handler::Payload;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::registry::base::Command;
@@ -71,34 +70,34 @@ impl InspectBroker {
                         Payload::Command(Command::HandleRequest(SettingRequest::Restore)) => {
                             match InspectBroker::watch_reply(client).await {
                                 Ok(reply_signature) => {
-                                    broker.lock().await
-                                        .request_and_write_to_inspect(reply_signature).await
-                                        .map_err(
-                                        |err| {
-                                            fx_log_err!(
-                                                "[inspect_broker] Failed to request value on restore: {:?}",
-                                                err
-                                            )
-                                        }).ok();
+                                    broker
+                                        .lock()
+                                        .await
+                                        .request_and_write_to_inspect(reply_signature)
+                                        .await
+                                        .ok();
                                 }
-                                Err(err) => fx_log_err!(
-                                    "[inspect_broker] Failed to watch reply to restore: {:?}",
-                                    err
-                                ),
+                                Err(err) => {
+                                    fx_log_err!("Failed to watch reply to restore: {:?}", err)
+                                }
                             }
                         }
                         // Whenever we see a setting handler tell the registry it changed, we ask it
                         // for its value again.
-                        Payload::Changed(_) => {
+                        Payload::Changed(setting_type) => {
                             broker
-                                .lock().await
-                                .request_and_write_to_inspect(client.get_author()).await
+                                .lock()
+                                .await
+                                .request_and_write_to_inspect(client.get_author())
+                                .await
                                 .map_err(|err| {
                                     fx_log_err!(
-                                        "[inspect_broker] Failed to request value from Changed: {:?}",
+                                        "Failed to request value on change for {:?}: {:?}",
+                                        setting_type,
                                         err
                                     )
-                                }).ok();
+                                })
+                                .ok();
                         }
                         _ => {}
                     }
