@@ -5,6 +5,4 @@
 // This test just succeeds unconditionally.
 // The logic is that since this test is intended to test mexec, the fact that
 // this test runs _at all_ is proof positive that the system was able to mexec.
-int main() {
-    return 0;
-}
+int main() { return 0; }
