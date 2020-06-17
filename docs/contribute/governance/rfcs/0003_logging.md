@@ -59,14 +59,15 @@ should indicate the reason for termination.
 
 #### ERROR
 
-This log level indicates an undesired or unexpected event has occurred that the
-program can recover from. An ERROR log entry should correspond to a bug that
-needs to be fixed. Developers should strive for a one-to-one correspondence
-between the bug and the ERROR log entry. In other words, for every unique bug,
-there should be an ERROR log entry, and for every ERROR log entry, there should
-be a separate bug. Developers should attempt to maintain this correspondence in
-code where possible. Note that the bug might not be in the code issuing the log
-statement. The bug may be in one of the callers or one of its dependencies.
+This log level indicates an undesired event has occurred that the program can
+recover from. An ERROR log entry's appearance in the logs is an indication of
+incorrect program behavior that needs to be fixed. Developers should strive for
+a one-to-one correspondence between a bug in the bug tracker and the ERROR log
+entry. In other words, for every unique bug, there should be an ERROR log entry,
+and for every ERROR log entry, there should be a separate bug. Developers should
+attempt to maintain this correspondence in code where possible. Note that the
+bug might not be in the code issuing the log statement. The bug may be in one of
+the callers or one of its dependencies.
 
 This log level and above will serve as a signal to system stability metrics.
 Additionally, this log level and above will typically be present in bug reports.
