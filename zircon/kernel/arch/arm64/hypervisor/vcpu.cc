@@ -54,8 +54,8 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
       break;
     }
     InterruptState state = gich_state->GetInterruptState(vector);
-    if (state == InterruptState::PENDING || state == InterruptState::PENDING_AND_ACTIVE) {
-      // Skip an interrupt if it was already pending, or active and pending.
+    if (state != InterruptState::INACTIVE) {
+      // Skip an interrupt if it is not inactive, and therefore in an LR.
       continue;
     }
 
@@ -70,9 +70,7 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
     // We may have as few as 16 priority levels, so step by 16 to the next
     // lowest priority in order to prioritise SGIs and PPIs over SPIs.
     uint8_t prio = vector < GIC_BASE_SPI ? 0 : 0x10;
-    state = state == InterruptState::INACTIVE ? InterruptState::PENDING
-                                              : InterruptState::PENDING_AND_ACTIVE;
-    uint64_t lr = gic_get_lr_from_vector(hw, prio, state, vector);
+    uint64_t lr = gic_get_lr_from_vector(hw, prio, InterruptState::PENDING, vector);
     ich_state->lr[lr_index] = lr;
     elrsr &= ~(1u << lr_index);
   }
@@ -111,7 +109,7 @@ bool GichState::HasPendingInterrupt() {
 
 void GichState::SetAllInterruptStates(IchState* ich_state) {
   current_interrupts_.ClearAll();
-  for (uint32_t i = 0; i < ich_state->num_lrs; i++) {
+  for (uint8_t i = 0; i < ich_state->num_lrs; i++) {
     if (BIT(ich_state->elrsr, i)) {
       continue;
     }
