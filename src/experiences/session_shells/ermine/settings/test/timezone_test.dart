@@ -25,7 +25,7 @@ void main() {
   });
 
   test('Timezone', () async {
-    when(intlSettingsProxy.watch())
+    when(intlSettingsProxy.watch2())
         .thenAnswer((_) => Future<IntlSettings>.value(IntlSettings(
               timeZoneId: TimeZoneId(id: 'Foo'),
             )));
@@ -42,7 +42,7 @@ void main() {
   test('Change Timezone', () async {
     var response = 'tz1';
 
-    when(intlSettingsProxy.watch()).thenAnswer((_) {
+    when(intlSettingsProxy.watch2()).thenAnswer((_) {
       return Future<IntlSettings>.value(IntlSettings(
         timeZoneId: TimeZoneId(id: response),
       ));

@@ -112,7 +112,7 @@ class _TimeZoneModel {
 
   _TimeZoneModel({this.intlSettingsService, this.onChange}) {
     // Get current timezone and watch it for changes.
-    intlSettingsService.watch().then(_onIntlSettingsChange);
+    intlSettingsService.watch2().then(_onIntlSettingsChange);
   }
 
   Future<void> _onIntlSettingsChange(IntlSettings intlSettings) async {
@@ -124,7 +124,7 @@ class _TimeZoneModel {
     }
     // Use the FIDL "hanging get" pattern to request the next update.
     if (intlSettingsService != null) {
-      await intlSettingsService.watch().then(_onIntlSettingsChange);
+      await intlSettingsService.watch2().then(_onIntlSettingsChange);
     }
   }
 
