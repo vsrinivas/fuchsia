@@ -6,11 +6,11 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <threads.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/function.h>
 #include <unittest/unittest.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
 
 #include "bench.h"
 
