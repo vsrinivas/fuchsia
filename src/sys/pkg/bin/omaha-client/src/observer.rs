@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    cobalt::notify_cobalt_current_channel,
+    cobalt::notify_cobalt_current_software_distribution,
     fidl::{FidlServer, StateMachineController},
     inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
 };
@@ -144,7 +144,7 @@ where
             .unwrap_or(false);
 
         if !self.notified_cobalt && no_update {
-            notify_cobalt_current_channel(self.app_set.clone()).await;
+            notify_cobalt_current_software_distribution(self.app_set.clone()).await;
             self.notified_cobalt = true;
         }
     }

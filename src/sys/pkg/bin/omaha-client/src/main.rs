@@ -109,7 +109,9 @@ fn main() -> Result<(), Error> {
         let notify_cobalt =
             channel_source == ChannelSource::VbMeta || channel_source == ChannelSource::SysConfig;
         if notify_cobalt {
-            futures.push(cobalt::notify_cobalt_current_channel(app_set.clone()).boxed_local());
+            futures.push(
+                cobalt::notify_cobalt_current_software_distribution(app_set.clone()).boxed_local(),
+            );
         }
 
         // Serve FIDL API

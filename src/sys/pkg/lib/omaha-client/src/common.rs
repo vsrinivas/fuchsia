@@ -341,6 +341,12 @@ impl AppSet {
         }
     }
 
+    /// Get the current app id.
+    pub async fn get_current_app_id(&self) -> String {
+        let apps = self.apps.lock().await;
+        apps[0].id.clone()
+    }
+
     /// Get the current channel name from cohort name, returns empty string if no cohort name set
     /// for the app.
     pub async fn get_current_channel(&self) -> String {
