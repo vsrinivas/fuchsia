@@ -161,7 +161,7 @@ void FakeAp::RemoveClient(common::MacAddr mac_addr) {
   }
 }
 
-uint32_t FakeAp::GetNumAssociatedClient() {
+uint32_t FakeAp::GetNumAssociatedClient() const {
   uint32_t client_count = 0;
   for (auto it = clients_.begin(); it != clients_.end(); it++) {
     if ((*it)->status_ == Client::ASSOCIATED) {

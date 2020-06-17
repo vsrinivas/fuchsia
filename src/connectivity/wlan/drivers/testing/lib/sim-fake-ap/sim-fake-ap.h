@@ -71,10 +71,10 @@ class FakeAp : public StationIfc {
   void SetSsid(const wlan_ssid_t& ssid);
   void SetCSABeaconInterval(zx::duration interval);
 
-  wlan_channel_t GetChannel() { return tx_info_.channel; }
-  common::MacAddr GetBssid() { return bssid_; }
-  wlan_ssid_t GetSsid() { return ssid_; }
-  uint32_t GetNumAssociatedClient();
+  wlan_channel_t GetChannel() const { return tx_info_.channel; }
+  common::MacAddr GetBssid() const { return bssid_; }
+  wlan_ssid_t GetSsid() const { return ssid_; }
+  uint32_t GetNumAssociatedClient() const;
 
   // Will we receive a message sent on the specified channel?
   bool CanReceiveChannel(const wlan_channel_t& channel);
