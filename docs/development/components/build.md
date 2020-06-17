@@ -84,10 +84,7 @@ The file `my_program.cmx` should include at least the following:
 Note the following details:
 
 *   This example imports `"//src/sys/build/components.gni"`. This single import
-    includes all of
-    [`fuchsia_component.gni`](/src/sys/build/fuchsia_component.gni),
-    [`fuchsia_package.gni`](/src/sys/build/fuchsia_package.gni), and
-    [`fuchsia_test.gni`](/src/sys/build/fuchsia_test.gni).
+    includes all templates related to packages, components, and testing them.
 *   This example defines an `executable()`, which is used to build a C++
     program. This is for illustrative purposes - a component can launch all
     sorts of programs.
@@ -263,6 +260,41 @@ Note the following details:
 *   Finally, this example defines a `group()` to contain all the tests (which we
     have exactly one of). This is a [recommended practice][source-code-layout]
     for organizing targets across the source tree.
+
+An important limitation of `fuchsia_test_package()` is that any
+`test_components` targets must be defined in the same `BUILD.gn` file as the
+test package target. This is due to a [limitation in GN][gn-get-target-outputs].
+
+It's possible to work around this limitation with an indirection through
+`fuchsia_test()`. In one `BUILD.gn` file, define:
+
+```gn
+import("//src/sys/build/components.gni")
+
+executable("my_test") {
+  sources = [ "my_test.cc" ]
+  testonly = true
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_component("my-test-component") {
+  testonly = true
+  manifest = "meta/my_test.cmx"
+  deps = [ ":my_test" ]
+}
+
+fuchsia_test("my-test-component-test") {
+  package = "//path/to:fuchsia_package"
+  component = ":my-test-component"
+}
+```
+
+Then elsewhere, you can add the `fuchsia_component()` target to the `deps` of a
+`fuchsia_package()` target, and add the `fuchsia_test()` target to a standard
+`"tests"` group.
 
 ### Unit tests {#unit-tests}
 
@@ -765,6 +797,7 @@ templates. These unsupported features include:
 [glossary-fuchsia-pkg-url]: /docs/glossary.md#fuchsia-pkg-url
 [glossary-gn]: /docs/glossary.md#gn
 [glossary-package]: /docs/glossary.md#fuchsia-package
+[gn-get-target-outputs]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_get_target_outputs
 [package-name]: /docs/concepts/packages/package_url.md#package-name
 [pm]: /src/sys/pkg/bin/pm/README.md
 [rustc-binary]: /build/rust/rustc_binary.gni
