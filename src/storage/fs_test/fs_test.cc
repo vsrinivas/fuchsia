@@ -18,6 +18,7 @@
 #include <fs-management/mount.h>
 
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
+#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 
 namespace fs_test {
 

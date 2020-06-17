@@ -26,7 +26,9 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-TEST_P(FileSystemTest, ReadOnlyFileIsImmutable) {
+using AccessTest = FileSystemTest;
+
+TEST_P(AccessTest, ReadOnlyFileIsImmutable) {
   const std::string filename = GetPath("alpha");
 
   // Try writing a string to a file
@@ -58,7 +60,7 @@ TEST_P(FileSystemTest, ReadOnlyFileIsImmutable) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-TEST_P(FileSystemTest, WriteOnlyIsNotReadable) {
+TEST_P(AccessTest, WriteOnlyIsNotReadable) {
   const std::string filename = GetPath("alpha");
 
   // Try writing a string to a file
@@ -87,7 +89,7 @@ TEST_P(FileSystemTest, WriteOnlyIsNotReadable) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-TEST_P(FileSystemTest, OpenFileWithTruncateAndReadOnlyIsError) {
+TEST_P(AccessTest, OpenFileWithTruncateAndReadOnlyIsError) {
   const std::string filename = GetPath("foobar");
 
   fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT, 0644));
@@ -100,7 +102,7 @@ TEST_P(FileSystemTest, OpenFileWithTruncateAndReadOnlyIsError) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-TEST_P(FileSystemTest, TestAccessDirectory) {
+TEST_P(AccessTest, TestAccessDirectory) {
   const std::string filename = GetPath("foobar");
 
   ASSERT_EQ(mkdir(filename.c_str(), 0666), 0);
@@ -132,7 +134,7 @@ TEST_P(FileSystemTest, TestAccessDirectory) {
 }
 
 // Fixture setup for hierarchical directory permission tests
-class DirectoryPermissionTest : public FileSystemTest {
+class DirectoryPermissionTest : public AccessTest {
   // This class creates and tears down a nested structure
   // ::foo/
   //       sub_dir/
@@ -325,7 +327,7 @@ TEST_P(DirectoryPermissionTest, TestModifyingFileTime) {
   ASSERT_EQ(close(bar_file_fd), 0);
 }
 
-TEST_P(FileSystemTest, TestAccessOpath) {
+TEST_P(AccessTest, TestAccessOpath) {
   const std::string dirname = GetPath("foo");
   const std::string filename = GetPath("foo/bar");
 
@@ -421,7 +423,7 @@ TEST_P(FileSystemTest, TestAccessOpath) {
 // opened without "O_PATH" do cause the underlying object to
 // be opened. Cloning the object should not invalidate the
 // internal file descriptor count.
-TEST_P(FileSystemTest, TestOpathFdCount) {
+TEST_P(AccessTest, TestOpathFdCount) {
   const std::string dirname = GetPath("foo");
   fbl::unique_fd fd(-1);
   zx_handle_t handle = ZX_HANDLE_INVALID;
@@ -444,6 +446,9 @@ TEST_P(FileSystemTest, TestOpathFdCount) {
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(rmdir(dirname.c_str()), 0);
 }
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AccessTest, testing::ValuesIn(AllTestFileSystems()),
+                         testing::PrintToStringParamName());
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirectoryPermissionTest,
                          testing::ValuesIn(AllTestFileSystems()),

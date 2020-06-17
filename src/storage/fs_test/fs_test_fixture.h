@@ -11,7 +11,7 @@
 
 namespace fs_test {
 
-class BaseFileSystemTest : public testing::Test {
+class __EXPORT BaseFileSystemTest : public testing::Test {
  public:
   BaseFileSystemTest(const TestFileSystemOptions& options)
       : fs_(TestFileSystem::Create(options).value()) {}
@@ -33,11 +33,13 @@ class BaseFileSystemTest : public testing::Test {
 //
 // #include "fs_test_fixture.h"
 //
-// TEST_P(FileSystemTest, CheckThatFooSucceeds) {
+// using MyTest = FileSystemTest;
+//
+// TEST_P(MyTest, CheckThatFooSucceeds) {
 //   ...
 // }
 //
-// INSTANTIATE_TEST_SUITE_P(FooTests, FileSystemTest,
+// INSTANTIATE_TEST_SUITE_P(FooTests, MyTest,
 //                          testing::ValuesIn(AllTestFileSystems()),
 //                          testing::PrintToStringParamName());
 

@@ -24,7 +24,9 @@
 namespace fs_test {
 namespace {
 
-TEST_P(FileSystemTest, Append) {
+using AppendTest = FileSystemTest;
+
+TEST_P(AppendTest, Append) {
   char buf[4096];
   const char* hello = "Hello, ";
   const char* world = "World!\n";
@@ -80,7 +82,7 @@ TEST_P(FileSystemTest, Append) {
   ASSERT_EQ(close(fd.release()), 0);
 }
 
-TEST_P(FileSystemTest, AppendOnClone) {
+TEST_P(AppendTest, AppendOnClone) {
   enum AppendState {
     Append,
     NoAppend,
@@ -222,6 +224,9 @@ std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) 
   s << std::get<0>(param.param) << "WithThreadCount" << std::get<1>(param.param);
   return s.str();
 }
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AppendTest, testing::ValuesIn(AllTestFileSystems()),
+                         testing::PrintToStringParamName());
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AppendAtomicTest,
                          testing::Combine(testing::ValuesIn(AllTestFileSystems()),

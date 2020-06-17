@@ -19,6 +19,8 @@
 namespace fs_test {
 namespace {
 
+using OverflowTest = FileSystemTest;
+
 // Make a 'len' byte long filename (not including null) consisting of the character 'c'.
 std::string MakeName(std::string_view mount_path, size_t len, char c) {
   std::string path = std::string(mount_path) + "/";
@@ -32,7 +34,7 @@ void ExtendName(std::string* name, size_t len, char c) {
   name->append(len, c);
 }
 
-TEST_P(FileSystemTest, NameTooLong) {
+TEST_P(OverflowTest, NameTooLong) {
   const std::string name_largest = MakeName(fs().mount_path(), NAME_MAX, 'a');
   const std::string name_largest_alt = MakeName(fs().mount_path(), NAME_MAX, 'b');
   const std::string name_too_large = MakeName(fs().mount_path(), NAME_MAX + 1, 'a');
@@ -63,7 +65,7 @@ TEST_P(FileSystemTest, NameTooLong) {
   ASSERT_EQ(mkdir(name_too_large.c_str(), 0755), -1);
 }
 
-TEST_P(FileSystemTest, PathTooLong) {
+TEST_P(OverflowTest, PathTooLong) {
   int depth = 0;
 
   // Create an initial directory
@@ -91,7 +93,7 @@ TEST_P(FileSystemTest, PathTooLong) {
   }
 }
 
-TEST_P(FileSystemTest, OutOfRangeTruncateAndSeekFails) {
+TEST_P(OverflowTest, OutOfRangeTruncateAndSeekFails) {
   const std::string filename = GetPath("file");
   int fd = open(filename.c_str(), O_CREAT | O_RDWR | O_EXCL, 0644);
   ASSERT_GT(fd, 0);
@@ -119,6 +121,9 @@ TEST_P(FileSystemTest, OutOfRangeTruncateAndSeekFails) {
   ASSERT_EQ(close(fd), 0);
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, OverflowTest, testing::ValuesIn(AllTestFileSystems()),
+                         testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace fs_test

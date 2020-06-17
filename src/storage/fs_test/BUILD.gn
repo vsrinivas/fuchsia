@@ -1,4 +1,9 @@
-import("//build/test/test_package.gni")
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 group("tests") {
   testonly = true
@@ -16,96 +21,152 @@ group("large_tests") {
   ]
 }
 
-executable("fs_tests") {
+shared_library("fs_test") {
+  output_name = "fs_test"
   testonly = true
   sources = [
-    "access.cc",
-    "append.cc",
     "fs_test.cc",
     "fs_test_fixture.cc",
-    "overflow.cc",
-    "read_write.cc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/lib/isolated_devmgr/v2_component:client",
+    "//src/storage/bin/minfs",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/memfs",
-    "//zircon/system/ulib/minfs",
+  ]
+  public_deps = [
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fs-management",
   ]
 }
 
-test_package("fs-tests") {
-  deps = [
-    ":fs_tests",
-    "//src/storage/bin/minfs",
-  ]
-  binaries = [
-    {
-      name = "fs_tests"
-    },
-    {
-      name = "minfs"
-    },
-  ]
-  v2_tests = [
-    {
-      name = "fs_tests"
-    },
-  ]
-}
-
-executable("large_fs_tests") {
+executable("access") {
   testonly = true
-  sources = [
-    "fs_test.cc",
-    "fs_test_fixture.cc",
-    "max_file.cc",
-  ]
+  sources = [ "access.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//sdk/lib/sys/cpp",
+    ":fs_test",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+fuchsia_component("access-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/access.cml"
+  deps = [
+    ":access",
+    ":manifests",
+  ]
+}
+
+executable("append") {
+  testonly = true
+  sources = [ "append.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("append-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/append.cml"
+  deps = [
+    ":append",
+    ":manifests",
+  ]
+}
+
+executable("overflow") {
+  testonly = true
+  sources = [ "overflow.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("overflow-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/overflow.cml"
+  deps = [
+    ":manifests",
+    ":overflow",
+  ]
+}
+
+executable("read_write") {
+  testonly = true
+  sources = [ "read_write.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("read-write-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/read-write.cml"
+  deps = [
+    ":manifests",
+    ":read_write",
+  ]
+}
+
+fuchsia_test_package("fs-tests") {
+  test_components = [
+    ":access-tests",
+    ":append-tests",
+    ":overflow-tests",
+    ":read-write-tests",
+  ]
+}
+
+executable("max_file") {
+  testonly = true
+  sources = [ "max_file.cc" ]
+  deps = [
+    ":fs_test",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/isolated_devmgr/v2_component",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fvm",
-    "//zircon/system/ulib/memfs",
-    "//zircon/system/ulib/minfs",
+    "//zircon/public/lib/fbl",
   ]
 }
 
-test_package("large-fs-tests") {
+fuchsia_component("max-file-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/max-file.cml"
   deps = [
-    ":large_fs_tests",
-    "//src/storage/bin/minfs",
-    "//src/sys/test_runners/gtest",
+    ":manifests",
+    ":max_file",
   ]
-  binaries = [
-    {
-      name = "large_fs_tests"
-    },
-    {
-      name = "minfs"
-    },
+}
+
+fuchsia_test_package("large-fs-tests") {
+  test_components = [ ":max-file-tests" ]
+}
+
+action("manifests") {
+  script = "generate_manifests.py"
+  sources = [ "meta/fs_tests.cml" ]
+  outputs = [
+    "$target_gen_dir/access.cml",
+    "$target_gen_dir/append.cml",
+    "$target_gen_dir/max-file.cml",
+    "$target_gen_dir/overflow.cml",
+    "$target_gen_dir/read-write.cml",
   ]
-  v2_tests = [
-    {
-      name = "large_fs_tests"
-    },
-  ]
+  args = rebase_path(sources, root_build_dir) +
+         rebase_path(outputs, root_build_dir)
 }

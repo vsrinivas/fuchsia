@@ -7,9 +7,9 @@
 
 #include <lib/zx/status.h>
 
-#include <fs-management/format.h>
+#include <string>
 
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
+#include <fs-management/format.h>
 
 namespace fs_test {
 
@@ -27,16 +27,16 @@ struct TestFileSystemOptions {
   const FileSystem* file_system = nullptr;
 };
 
-std::ostream& operator<<(std::ostream& out, const TestFileSystemOptions& options);
+__EXPORT std::ostream& operator<<(std::ostream& out, const TestFileSystemOptions& options);
 
-std::vector<TestFileSystemOptions> AllTestFileSystems();
+__EXPORT std::vector<TestFileSystemOptions> AllTestFileSystems();
 
 // A file system instance is a specific instance created for test purposes.
 class FileSystemInstance {
  public:
   FileSystemInstance() = default;
   FileSystemInstance(const FileSystemInstance&) = delete;
-  FileSystemInstance& operator =(const FileSystemInstance&) = delete;
+  FileSystemInstance& operator=(const FileSystemInstance&) = delete;
   virtual ~FileSystemInstance() = default;
 
   virtual zx::status<> Mount(const std::string& mount_path) = 0;
@@ -82,9 +82,7 @@ class MinfsFileSystem : public FileSystemImpl<MinfsFileSystem> {
   zx::status<std::unique_ptr<FileSystemInstance>> Make(
       const TestFileSystemOptions& options) const override;
   const Traits& GetTraits() const override {
-    static Traits traits{
-      .can_unmount = true
-    };
+    static Traits traits{.can_unmount = true};
     return traits;
   }
 };
@@ -95,15 +93,13 @@ class MemfsFileSystem : public FileSystemImpl<MemfsFileSystem> {
   zx::status<std::unique_ptr<FileSystemInstance>> Make(
       const TestFileSystemOptions& options) const override;
   const Traits& GetTraits() const override {
-    static Traits traits{
-      .can_unmount = false
-    };
+    static Traits traits{.can_unmount = false};
     return traits;
   }
 };
 
 // Helper that creates a test file system with the given options and will clean-up upon destruction.
-class TestFileSystem {
+class __EXPORT TestFileSystem {
  public:
   // Creates and returns a mounted test file system.
   static zx::status<TestFileSystem> Create(const TestFileSystemOptions& options);

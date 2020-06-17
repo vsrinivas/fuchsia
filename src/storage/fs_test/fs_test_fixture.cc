@@ -13,7 +13,4 @@ BaseFileSystemTest::~BaseFileSystemTest() {
   EXPECT_EQ(fs_.Fsck().status_value(), ZX_OK);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, FileSystemTest, testing::ValuesIn(AllTestFileSystems()),
-                         testing::PrintToStringParamName());
-
 }  // namespace fs_test
