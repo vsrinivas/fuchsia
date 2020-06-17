@@ -134,6 +134,10 @@ void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
 }
 
+void SimInterface::OnChannelSwitch(const wlanif_channel_switch_info_t* ind) {
+  stats_.csa_indications_.push_back(*ind);
+}
+
 void SimInterface::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   stats_.deauth_indications_.push_back(*ind);
 }

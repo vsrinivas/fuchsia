@@ -42,6 +42,7 @@ struct SimInterface {
     std::list<wlanif_auth_confirm_t> auth_results_;
     std::list<wlanif_assoc_confirm_t> assoc_results_;
     std::list<wlanif_deauth_indication_t> deauth_indications_;
+    std::list<wlanif_channel_switch_info_t> csa_indications_;
   };
 
   zx_status_t Init(std::shared_ptr<simulation::Environment> env);
@@ -70,7 +71,7 @@ struct SimInterface {
   virtual void OnStartConf(const wlanif_start_confirm_t* resp) {}
   virtual void OnStopConf(const wlanif_stop_confirm_t* resp) {}
   virtual void OnEapolConf(const wlanif_eapol_confirm_t* resp) {}
-  virtual void OnChannelSwitch(const wlanif_channel_switch_info_t* ind) {}
+  virtual void OnChannelSwitch(const wlanif_channel_switch_info_t* ind);
   virtual void OnSignalReport(const wlanif_signal_report_indication_t* ind) {}
   virtual void OnEapolInd(const wlanif_eapol_indication_t* ind) {}
   virtual void OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {}
