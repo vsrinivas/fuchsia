@@ -19,7 +19,7 @@ use {
 
 pub(crate) struct Listener {
     proxy: DeviceServiceProxy,
-    legacy_client: shim::IfaceRef,
+    legacy_shim: shim::IfaceRef,
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
 }
@@ -60,7 +60,7 @@ pub(crate) async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
             let mut phy_manager = listener.phy_manager.lock().await;
             phy_manager.on_iface_removed(iface_id);
 
-            listener.legacy_client.remove_if_matching(iface_id);
+            listener.legacy_shim.remove_if_matching(iface_id);
             info!("iface removed: {}", iface_id);
         }
     }
@@ -105,7 +105,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
 
     match response.role {
         wlan::MacRole::Client => {
-            let legacy_client = listener.legacy_client.clone();
+            let legacy_shim = listener.legacy_shim.clone();
             let (sme, remote) = create_proxy()
                 .map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
 
@@ -123,7 +123,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
                 sme: sme.clone(),
                 iface_id,
             };
-            legacy_client.set_if_empty(lc);
+            legacy_shim.set_if_empty(lc);
         }
         // The AP service make direct use of the PhyManager to get interfaces.
         wlan::MacRole::Ap => {}
@@ -139,10 +139,10 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
 impl Listener {
     pub fn new(
         proxy: DeviceServiceProxy,
-        legacy_client: shim::IfaceRef,
+        legacy_shim: shim::IfaceRef,
         phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     ) -> Self {
-        Listener { proxy, legacy_client, phy_manager, iface_manager }
+        Listener { proxy, legacy_shim, phy_manager, iface_manager }
     }
 }
