@@ -41,13 +41,39 @@ const (
 )
 
 var (
-	// ConnectionError is an all-purpose error indicating the a client had become unresponsive.
-	ConnectionError = errors.New("SSH connection error")
-
 	// defaultConnectBackoff is the connection backoff for clients returned by
 	// Connect() and ConnectToNode().
 	defaultConnectBackoff = retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
 )
+
+// ConnectionError is an all-purpose error indicating that a client has become
+// unresponsive.
+type ConnectionError struct {
+	Err error
+}
+
+func (e ConnectionError) Unwrap() error {
+	return e.Err
+}
+
+func (e ConnectionError) Error() string {
+	// ConnectionError is intended to be an umbrella error type for all kinds of
+	// SSH-related errors, so there's no information we can add to the
+	// underlying error message that would be particularly useful in all
+	// scenarios.
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return "SSH connection error"
+}
+
+// IsConnectionError determines whether the given error is a ConnectionError.
+// This is a common check that we include in sshutil to save callers a line of
+// code.
+func IsConnectionError(err error) bool {
+	var connErr ConnectionError
+	return errors.As(err, &connErr)
+}
 
 // GeneratePrivateKey generates a private SSH key.
 func GeneratePrivateKey() ([]byte, error) {
@@ -68,7 +94,7 @@ func GeneratePrivateKey() ([]byte, error) {
 // it returns an error that unwraps as a ConnectionError.
 func CheckConnection(client *ssh.Client) error {
 	if _, _, err := client.Conn.SendRequest(keepaliveOpenSSH, true, nil); err != nil {
-		return fmt.Errorf("%w: %v", ConnectionError, err)
+		return ConnectionError{err}
 	}
 	return nil
 }
@@ -98,9 +124,9 @@ func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientCo
 			// `totalConnectTimeout + connectAttemptTimeout`. So we measure the
 			// duration to improve accuracy.
 			duration := time.Now().Sub(startTime).Truncate(time.Second)
-			err = fmt.Errorf("%w: timed out trying to connect to ssh after %v", ConnectionError, duration)
+			err = ConnectionError{fmt.Errorf("timed out trying to connect to ssh after %v", duration)}
 		} else {
-			err = fmt.Errorf("%w: cannot connect to address %q: %v", ConnectionError, raddr, err)
+			err = ConnectionError{fmt.Errorf("cannot connect to address %q: %v", raddr, err)}
 		}
 		return nil, err
 	}

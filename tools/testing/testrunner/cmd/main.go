@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -227,7 +226,7 @@ func runTests(ctx context.Context, tests []testsharder.Test, t tester, outputs *
 	for _, test := range tests {
 		for i := 0; i < test.Runs; i++ {
 			result, err := runTest(ctx, test, i, t)
-			if errors.Is(err, sshutil.ConnectionError) {
+			if sshutil.IsConnectionError(err) {
 				return err
 			}
 			if err := outputs.record(*result); err != nil {
@@ -270,7 +269,7 @@ func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester)
 	if err != nil {
 		result = runtests.TestFailure
 		logger.Errorf(ctx, err.Error())
-		if errors.Is(err, sshutil.ConnectionError) {
+		if sshutil.IsConnectionError(err) {
 			return nil, err
 		}
 	}

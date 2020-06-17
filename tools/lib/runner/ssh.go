@@ -34,7 +34,7 @@ func NewSSHRunner(client *ssh.Client, config *ssh.ClientConfig) *SSHRunner {
 	}
 }
 
-// Run executes the given command, returning a *sshutil.ConnectionError if the
+// Run executes the given command, returning a sshutil.ConnectionError if the
 // connection has become unresponsive.
 func (r *SSHRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
 	if err := r.run(ctx, command, stdout, stderr); err != nil {
@@ -100,9 +100,9 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 
 // Reconnect closes the underlying connection and attempts to reopen it. The
 // method is useful after one has observed that the returned error of Run()
-// is of type sshutil.ConnectionError. Also, this can be used
-// to recover the runner after having called Close(). If there is an underlying
-// connection error, the returned value will unwrap as sshutil.ConnectionError.
+// is a sshutil.ConnectionError. Also, this can be used to recover the runner
+// after having called Close(). If there is an underlying connection error, the
+// returned value will unwrap as sshutil.ConnectionError.
 func (r *SSHRunner) Reconnect(ctx context.Context) (*ssh.Client, error) {
 	raddr := r.client.Conn.RemoteAddr()
 	client, err := sshutil.ConnectDeprecated(ctx, raddr, r.config)

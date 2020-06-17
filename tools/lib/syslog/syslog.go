@@ -6,8 +6,8 @@ package syslog
 
 import (
 	"context"
-	"errors"
 	"io"
+	"log"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -58,7 +58,11 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		err := s.r.Run(ctx, cmd, output, nil)
 		// We need not attempt to reconnect if the context was canceled or if we
 		// hit an error unrelated to the connection.
-		if err == nil || ctx.Err() != nil || !errors.Is(err, sshutil.ConnectionError) {
+		if err != nil {
+			log.Printf(err.Error())
+		}
+		if err == nil || ctx.Err() != nil || !sshutil.IsConnectionError(err) {
+			log.Printf("exiting")
 			return err
 		}
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)

@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -154,13 +153,13 @@ func TestSSHTester(t *testing.T) {
 		},
 		{
 			name:      "connection error retry and test failure",
-			runErrs:   []error{sshutil.ConnectionError, fmt.Errorf("test failed")},
+			runErrs:   []error{sshutil.ConnectionError{}, fmt.Errorf("test failed")},
 			reconErrs: []error{nil},
 			wantErr:   true,
 		},
 		{
 			name:      "reconnect succeeds then fails",
-			runErrs:   []error{sshutil.ConnectionError, sshutil.ConnectionError},
+			runErrs:   []error{sshutil.ConnectionError{}, sshutil.ConnectionError{}},
 			reconErrs: []error{nil, fmt.Errorf("reconnect failed")},
 			wantErr:   true,
 			// Make sure we return the original ConnectionError and not the error from the failed
@@ -170,7 +169,7 @@ func TestSSHTester(t *testing.T) {
 		},
 		{
 			name:      "reconnect succeeds thrice",
-			runErrs:   []error{sshutil.ConnectionError, sshutil.ConnectionError, sshutil.ConnectionError},
+			runErrs:   []error{sshutil.ConnectionError{}, sshutil.ConnectionError{}, sshutil.ConnectionError{}},
 			reconErrs: []error{nil, nil, nil},
 			wantErr:   true,
 			// Reconnection succeeds so we don't want the caller to see a ConnectionError.
@@ -204,7 +203,7 @@ func TestSSHTester(t *testing.T) {
 				if !c.wantErr {
 					t.Errorf("tester.Test got error: %v, want nil", err)
 				}
-				if isConnErr := errors.Is(err, sshutil.ConnectionError); isConnErr != c.wantConnErr {
+				if isConnErr := sshutil.IsConnectionError(err); isConnErr != c.wantConnErr {
 					t.Errorf("got isConnErr: %t, want: %t", isConnErr, c.wantConnErr)
 				}
 			}

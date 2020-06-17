@@ -195,8 +195,8 @@ func TestRunTest(t *testing.T) {
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
 			},
-			testErr:        sshutil.ConnectionError,
-			expectedErr:    sshutil.ConnectionError,
+			testErr:        sshutil.ConnectionError{},
+			expectedErr:    sshutil.ConnectionError{},
 			expectedResult: nil,
 		},
 		{

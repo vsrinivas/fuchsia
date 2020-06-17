@@ -103,7 +103,7 @@ func TestStream(t *testing.T) {
 
 	// The streaming will block until we stub in an error or bytes to stream.
 	// First let's test our abstraction to verify that bytes are indeed streamed.
-	t.Run("streams if no errors are encoutered", func(t *testing.T) {
+	t.Run("streams if no errors are encountered", func(t *testing.T) {
 		io.WriteString(pw, "ABCDE")
 		err := <-streamErrs
 		if err != nil {
@@ -117,7 +117,7 @@ func TestStream(t *testing.T) {
 		}
 	})
 
-	// Now we check that errors not of type *sshutil.ConnectionError will not
+	// Now we check that errors not of type sshutil.ConnectionError will not
 	// effect a reconnection.
 	t.Run("non-connection error interrupts the stream", func(t *testing.T) {
 		r.errs <- fmt.Errorf("error unrelated to connection")
@@ -139,7 +139,7 @@ func TestStream(t *testing.T) {
 		// at which point we have a stubbed nil error waiting to be consumed.
 		// The streaming error returned should too be nil, by which point we should
 		// have reconnected.
-		r.errs <- sshutil.ConnectionError
+		r.errs <- sshutil.ConnectionError{}
 		r.errs <- nil
 		err := <-streamErrs
 		if err != nil {
@@ -161,7 +161,7 @@ func TestStream(t *testing.T) {
 		r.reconnectErrs <- reconnectErr
 		r.reconnectErrs <- reconnectErr
 		r.reconnectErrs <- reconnectErr
-		r.errs <- sshutil.ConnectionError
+		r.errs <- sshutil.ConnectionError{}
 		// Reconnection failures should not have caused `Stream()` to return, so
 		// the streamErrs channel should be empty.
 		select {

@@ -95,9 +95,9 @@ func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig, backo
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
 		duration := time.Now().Sub(startTime).Truncate(time.Second)
-		return nil, fmt.Errorf("%w: timed out trying to connect to ssh after %v", ConnectionError, duration)
+		return nil, ConnectionError{fmt.Errorf("timed out trying to connect to ssh after %v", duration)}
 	} else if err != nil {
-		return nil, fmt.Errorf("%w: cannot connect to address %q: %v", ConnectionError, addr, err)
+		return nil, ConnectionError{fmt.Errorf("cannot connect to address %q: %v", addr, err)}
 	}
 
 	return &Conn{

@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -191,7 +190,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	const maxReconnectAttempts = 3
 	retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
 		testErr = t.r.Run(ctx, test.Command, stdout, stderr)
-		if errors.Is(testErr, sshutil.ConnectionError) {
+		if sshutil.IsConnectionError(testErr) {
 			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %v", testErr)
 			if err := t.reconnectIfNecessary(ctx); err != nil {
 				logger.Errorf(ctx, "%s: %v", constants.FailedToReconnectMsg, err)
@@ -208,7 +207,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		return nil
 	}, nil)
 
-	if errors.Is(testErr, sshutil.ConnectionError) {
+	if sshutil.IsConnectionError(testErr) {
 		return nil, testErr
 	}
 
