@@ -121,7 +121,6 @@ async fn scoped_events_test() -> Result<(), Error> {
         events_echo.message,
         concat!(
             "Events: [",
-            "EventMatcher { event_type: Some(CapabilityRouted), capability_id: Some(\"elf\"), target_moniker: Some(\"./echo_server:0\") }, ",
             "EventMatcher { event_type: Some(Started), capability_id: None, target_moniker: Some(\"./echo_server:0\") }",
             "]"
         )

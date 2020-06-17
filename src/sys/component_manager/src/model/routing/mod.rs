@@ -235,6 +235,7 @@ pub async fn open_capability_at_source(
 ) -> Result<(), ModelError> {
     let capability_provider =
         Arc::new(Mutex::new(get_default_provider(target_realm.as_weak(), &source)));
+
     let event = Event::new(
         &target_realm,
         Ok(EventPayload::CapabilityRouted {
@@ -242,6 +243,8 @@ pub async fn open_capability_at_source(
             capability_provider: capability_provider.clone(),
         }),
     );
+    // Get a capability provider from the tree
+    target_realm.hooks.dispatch(&event).await?;
 
     // This hack changes the flags for a scoped framework service
     let mut flags = flags;
@@ -249,8 +252,6 @@ pub async fn open_capability_at_source(
         flags = SERVICE_OPEN_FLAGS;
     }
 
-    // Get a capability provider from the tree
-    target_realm.hooks.dispatch(&event).await?;
     let capability_provider = capability_provider.lock().await.take();
 
     // If a hook in the component tree gave a capability provider, then use it.

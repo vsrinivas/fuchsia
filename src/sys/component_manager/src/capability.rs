@@ -38,6 +38,15 @@ pub enum CapabilitySource {
 }
 
 impl CapabilitySource {
+    /// Returns whether the given CapabilitySource can be available in a component's namespace.
+    pub fn can_be_in_namespace(&self) -> bool {
+        match self {
+            CapabilitySource::Component { capability, .. } => capability.can_be_in_namespace(),
+            CapabilitySource::Framework { capability, .. } => capability.can_be_in_namespace(),
+            CapabilitySource::AboveRoot { capability } => capability.can_be_in_namespace(),
+        }
+    }
+
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
             CapabilitySource::Component { capability, .. } => capability.source_path(),
@@ -98,6 +107,13 @@ pub enum InternalCapability {
 }
 
 impl InternalCapability {
+    /// Returns whether the given InternalCapability can be available in a component's namespace.
+    pub fn can_be_in_namespace(&self) -> bool {
+        matches!(self, InternalCapability::Service(_) |
+                       InternalCapability::Protocol(_) |
+                       InternalCapability::Directory(_))
+    }
+
     /// Returns a name for the capability type.
     pub fn type_name(&self) -> &'static str {
         match self {
@@ -276,6 +292,24 @@ pub enum ComponentCapability {
 }
 
 impl ComponentCapability {
+    /// Returns whether the given ComponentCapability can be available in a component's namespace.
+    pub fn can_be_in_namespace(&self) -> bool {
+        match self {
+            ComponentCapability::Use(use_) => matches!(use_, UseDecl::Protocol(_) |
+                               UseDecl::Directory(_) |
+                               UseDecl::Service(_)),
+            ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
+                matches!(expose, ExposeDecl::Protocol(_) |
+                                 ExposeDecl::Directory(_) |
+                                 ExposeDecl::Service(_))
+            }
+            ComponentCapability::Offer(offer) => matches!(offer, OfferDecl::Protocol(_) |
+                                OfferDecl::Directory(_) |
+                                OfferDecl::Service(_)),
+            _ => false,
+        }
+    }
+
     /// Returns a name for the capability type.
     pub fn type_name(&self) -> &'static str {
         match self {

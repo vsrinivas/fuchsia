@@ -15,7 +15,10 @@ use {
                 stream::EventStream,
                 synthesizer::{EventSynthesisProvider, EventSynthesizer},
             },
-            hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
+            hooks::{
+                Event as ComponentEvent, EventPayload, EventType, HasEventType, Hook,
+                HooksRegistration,
+            },
             model::Model,
             moniker::AbsoluteMoniker,
             realm::Realm,
@@ -354,7 +357,20 @@ impl EventRegistry {
 #[async_trait]
 impl Hook for EventRegistry {
     async fn on(self: Arc<Self>, event: &ComponentEvent) -> Result<(), ModelError> {
-        self.dispatch(event).await
+        match &event.result {
+            Ok(EventPayload::CapabilityRouted { source, .. }) => {
+                // Only dispatch the CapabilityRouted event for capabilities
+                // that can be in a component's namespace.
+                // TODO(fxb/54251): In the future, if we wish to be able to mock or
+                // interpose runners, we can introduce, a new, separate event
+                // type.
+                if source.can_be_in_namespace() {
+                    return self.dispatch(event).await;
+                }
+                return Ok(());
+            }
+            _ => self.dispatch(event).await,
+        }
     }
 }
 
