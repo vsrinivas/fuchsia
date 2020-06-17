@@ -11,7 +11,7 @@ use {
         CommitMsg, ConfirmMsg, Key, RejectReason, SaeHandshake, SaeUpdate, SaeUpdateSink, Timeout,
     },
     crate::crypto_utils::kdf_sha256,
-    anyhow::Error,
+    anyhow::{bail, format_err, Error},
     log::{error, warn},
     wlan_statemachine::*,
 };
@@ -21,15 +21,25 @@ use {
 // TODO(42562): Handle BadGrp/DiffGrp.
 // TODO(42563): Handle frame status.
 
+/// We store an FcgConstructor rather than a FiniteCyclicGroup so that our handshake
+/// can impl `Send`. FCGs are not generally `Send`, so we construct them on the fly.
+type FcgConstructor<E> =
+    Box<dyn Fn() -> Result<Box<dyn FiniteCyclicGroup<Element = E>>, Error> + Send + 'static>;
+
 struct SaeConfiguration<E> {
-    fcg: Box<dyn FiniteCyclicGroup<Element = E>>,
+    fcg: FcgConstructor<E>,
     params: SaeParameters,
-    pwe: E,
+    pwe: Vec<u8>,
 }
 
 struct Commit<E> {
     scalar: Bignum,
     element: E,
+}
+
+struct SerializedCommit {
+    scalar: Vec<u8>,
+    element: Vec<u8>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -38,11 +48,24 @@ struct Kck(Vec<u8>);
 impl<E> Commit<E> {
     /// IEEE 802.11-2016 12.4.7.4
     /// Returns the serialized scalar and element with appropriate padding as needed.
-    fn serialize(&self, config: &SaeConfiguration<E>) -> Result<(Vec<u8>, Vec<u8>), Error> {
-        let scalar_size = config.fcg.scalar_size()?;
+    fn serialize(&self, config: &SaeConfiguration<E>) -> Result<SerializedCommit, Error> {
+        let fcg = (config.fcg)()?;
+        let scalar_size = fcg.scalar_size()?;
         let scalar = self.scalar.to_left_padded_vec(scalar_size);
-        let element = config.fcg.element_to_octets(&self.element)?;
-        Ok((scalar, element))
+        let element = fcg.element_to_octets(&self.element)?;
+        Ok(SerializedCommit { scalar, element })
+    }
+}
+
+impl SerializedCommit {
+    fn deserialize<E>(&self, config: &SaeConfiguration<E>) -> Result<Commit<E>, Error> {
+        let fcg = (config.fcg)()?;
+        let scalar = Bignum::new_from_slice(&self.scalar[..])?;
+        let element = match fcg.element_from_octets(&self.element)? {
+            Some(element) => element,
+            None => bail!("Attempted to deserialize invalid FCG element"),
+        };
+        Ok(Commit { scalar, element })
     }
 }
 
@@ -52,15 +75,15 @@ struct SaeNew<E> {
 
 struct SaeCommitted<E> {
     config: SaeConfiguration<E>,
-    rand: Bignum,
-    commit: Commit<E>,
+    rand: Vec<u8>,
+    commit: SerializedCommit,
     sync: u16,
 }
 
 struct SaeConfirmed<E> {
     config: SaeConfiguration<E>,
-    commit: Commit<E>,
-    peer_commit: Commit<E>,
+    commit: SerializedCommit,
+    peer_commit: SerializedCommit,
     kck: Kck,
     key: Key,
     sc: u16, // send confirm
@@ -112,26 +135,25 @@ fn process_commit<E>(
     peer_scalar: &[u8],
     peer_element: &[u8],
 ) -> Result<FrameResult<(Commit<E>, Kck, Key)>, RejectReason> {
+    let fcg = (config.fcg)()?;
     // Parse the peer element.
-    let peer_commit = match config.fcg.element_from_octets(peer_element)? {
+    let peer_commit = match fcg.element_from_octets(peer_element)? {
         Some(element) => Commit { scalar: Bignum::new_from_slice(peer_scalar)?, element },
         None => return Ok(FrameResult::Drop),
     };
 
-    let element_k = config.fcg.scalar_op(
+    let pwe = fcg.element_from_octets(&config.pwe)?.ok_or(format_err!("Could not unwrap PWE"))?;
+    let element_k = fcg.scalar_op(
         rand,
-        &config.fcg.elem_op(
-            &config.fcg.scalar_op(&peer_commit.scalar, &config.pwe)?,
-            &peer_commit.element,
-        )?,
+        &fcg.elem_op(&fcg.scalar_op(&peer_commit.scalar, &pwe)?, &peer_commit.element)?,
     )?;
-    let k = match config.fcg.map_to_secret_value(&element_k)? {
+    let k = match fcg.map_to_secret_value(&element_k)? {
         Some(k) => k,
         None => return Ok(FrameResult::Drop), // This is an auth failure.
     };
     let ctx = BignumCtx::new()?;
     let keyseed = (config.params.h)(&[0u8; 32][..], &k.to_vec()[..]);
-    let sha_ctx = peer_commit.scalar.mod_add(&commit.scalar, &config.fcg.order()?, &ctx)?.to_vec();
+    let sha_ctx = peer_commit.scalar.mod_add(&commit.scalar, &fcg.order()?, &ctx)?.to_vec();
     let kck_and_pmk = kdf_sha256(&keyseed[..], "SAE KCK and PMK", &sha_ctx[..], 512);
     let kck = kck_and_pmk[0..32].to_vec();
     let pmk = kck_and_pmk[32..64].to_vec();
@@ -146,15 +168,13 @@ fn compute_confirm<E>(
     config: &SaeConfiguration<E>,
     kck: &Kck,
     send_confirm: u16,
-    commit1: &Commit<E>,
-    commit2: &Commit<E>,
+    commit1: &SerializedCommit,
+    commit2: &SerializedCommit,
 ) -> Result<Vec<u8>, RejectReason> {
-    let (scalar1, element1) = commit1.serialize(config)?;
-    let (scalar2, element2) = commit2.serialize(config)?;
     Ok((config.params.cn)(
         &kck.0[..],
         send_confirm,
-        vec![&scalar1[..], &element1[..], &scalar2[..], &element2[..]],
+        vec![&commit1.scalar[..], &commit1.element[..], &commit2.scalar[..], &commit2.element[..]],
     ))
 }
 
@@ -171,8 +191,9 @@ fn check_sync(sync: &u16) -> Result<(), RejectReason> {
 
 /// IEEE 802.11-2016 12.4.5.3
 impl<E> SaeNew<E> {
-    fn commit(&self) -> Result<(Bignum, Commit<E>), Error> {
-        let order = self.config.fcg.order()?;
+    fn commit(&self) -> Result<(Vec<u8>, SerializedCommit), Error> {
+        let fcg = (self.config.fcg)()?;
+        let order = fcg.order()?;
         let ctx = BignumCtx::new()?;
         let (rand, mask, scalar) = loop {
             // 2 < rand < order
@@ -186,19 +207,25 @@ impl<E> SaeNew<E> {
                 break (rand, mask, commit_scalar);
             }
         };
-        let element =
-            self.config.fcg.inverse_op(self.config.fcg.scalar_op(&mask, &self.config.pwe)?)?;
-        Ok((rand, Commit { scalar, element }))
+        let pwe = fcg
+            .element_from_octets(&self.config.pwe)?
+            .ok_or(format_err!("Could not unwrap PWE"))?;
+        let element = fcg.inverse_op(fcg.scalar_op(&mask, &pwe)?)?;
+        Ok((rand.to_vec(), Commit { scalar, element }.serialize(&self.config)?))
     }
 
     fn send_first_commit(
         &self,
         sink: &mut SaeUpdateSink,
-    ) -> Result<(Bignum, Commit<E>), RejectReason> {
+    ) -> Result<(Vec<u8>, SerializedCommit), RejectReason> {
         let (rand, commit) = self.commit()?;
-        let (scalar, element) = commit.serialize(&self.config)?;
-        let group_id = self.config.fcg.group_id();
-        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
+        let group_id = (self.config.fcg)()?.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(
+            group_id,
+            &commit.scalar[..],
+            &commit.element[..],
+            &[],
+        )));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok((rand, commit))
     }
@@ -207,8 +234,10 @@ impl<E> SaeNew<E> {
         &self,
         sink: &mut SaeUpdateSink,
         commit_msg: &CommitMsg,
-    ) -> Result<(Bignum, Commit<E>, Commit<E>, Kck, Key), RejectReason> {
-        let (rand, commit) = self.commit()?;
+    ) -> Result<(Vec<u8>, SerializedCommit, SerializedCommit, Kck, Key), RejectReason> {
+        let (serialized_rand, serialized_commit) = self.commit()?;
+        let commit = serialized_commit.deserialize(&self.config)?;
+        let rand = Bignum::new_from_slice(&serialized_rand[..])?;
         let (peer_commit, kck, key) = match process_commit(
             &self.config,
             &rand,
@@ -220,14 +249,19 @@ impl<E> SaeNew<E> {
             // If we drop the first frame, reject the authentication immediately.
             FrameResult::Drop => return Err(RejectReason::AuthFailed),
         };
-        let confirm = compute_confirm(&self.config, &kck, 1, &commit, &peer_commit)?;
+        let peer_commit = peer_commit.serialize(&self.config)?;
+        let confirm = compute_confirm(&self.config, &kck, 1, &serialized_commit, &peer_commit)?;
         // We do not send our own commit message unless we process the peer's successfully.
-        let (scalar, element) = commit.serialize(&self.config)?;
-        let group_id = self.config.fcg.group_id();
-        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
+        let group_id = (self.config.fcg)()?.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(
+            group_id,
+            &serialized_commit.scalar[..],
+            &serialized_commit.element[..],
+            &[],
+        )));
         sink.push(SaeUpdate::SendFrame(write_confirm(1, &confirm[..])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
-        Ok((rand, commit, peer_commit, kck, key))
+        Ok((serialized_rand, serialized_commit, peer_commit, kck, key))
     }
 }
 
@@ -237,18 +271,18 @@ impl<E> SaeCommitted<E> {
         &self,
         sink: &mut SaeUpdateSink,
         commit_msg: &CommitMsg,
-    ) -> Result<FrameResult<(Commit<E>, Kck, Key)>, RejectReason> {
-        let scalar = self.commit.scalar.to_left_padded_vec(self.config.fcg.scalar_size()?);
-        let element = self.config.fcg.element_to_octets(&self.commit.element)?;
-        if &commit_msg.scalar[..] == &scalar[..] && &commit_msg.element[..] == &element[..] {
+    ) -> Result<FrameResult<(SerializedCommit, Kck, Key)>, RejectReason> {
+        if &commit_msg.scalar[..] == &self.commit.scalar[..]
+            && &commit_msg.element[..] == &self.commit.element[..]
+        {
             // This is a reflection attack.
             sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
             return Ok(FrameResult::Drop);
         }
         let (peer_commit, kck, key) = match process_commit(
             &self.config,
-            &self.rand,
-            &self.commit,
+            &Bignum::new_from_slice(&self.rand[..])?,
+            &self.commit.deserialize(&self.config)?,
             &commit_msg.scalar[..],
             &commit_msg.element[..],
         )? {
@@ -257,6 +291,7 @@ impl<E> SaeCommitted<E> {
             // the retransmission timer, but we stick with the spec.
             FrameResult::Drop => return Ok(FrameResult::Drop),
         };
+        let peer_commit = peer_commit.serialize(&self.config)?;
         let confirm = compute_confirm(&self.config, &kck, 1, &self.commit, &peer_commit)?;
         sink.push(SaeUpdate::SendFrame(write_confirm(1, &confirm[..])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
@@ -271,9 +306,13 @@ impl<E> SaeCommitted<E> {
         check_sync(&self.sync)?;
         self.sync += 1;
         // We resend our last commit.
-        let (scalar, element) = self.commit.serialize(&self.config)?;
-        let group_id = self.config.fcg.group_id();
-        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
+        let group_id = (self.config.fcg)()?.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(
+            group_id,
+            &self.commit.scalar[..],
+            &self.commit.element[..],
+            &[],
+        )));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok(())
     }
@@ -294,9 +333,13 @@ impl<E> SaeConfirmed<E> {
         self.sc += 1;
         let confirm =
             compute_confirm(&self.config, &self.kck, self.sc, &self.commit, &self.peer_commit)?;
-        let (scalar, element) = self.commit.serialize(&self.config)?;
-        let group_id = self.config.fcg.group_id();
-        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
+        let group_id = (self.config.fcg)()?.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(
+            group_id,
+            &self.commit.scalar[..],
+            &self.commit.element[..],
+            &[],
+        )));
         sink.push(SaeUpdate::SendFrame(write_confirm(self.sc, &confirm[..])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok(())
@@ -501,13 +544,11 @@ impl<E> SaeHandshakeState<E> {
 pub struct SaeHandshakeImpl<E>(StateMachine<SaeHandshakeState<E>>);
 
 impl<E> SaeHandshakeImpl<E> {
-    pub fn new(
-        fcg: Box<dyn FiniteCyclicGroup<Element = E>>,
-        params: SaeParameters,
-    ) -> Result<Self, Error> {
-        let pwe = fcg.generate_pwe(&params)?;
+    pub fn new(fcg_constructor: FcgConstructor<E>, params: SaeParameters) -> Result<Self, Error> {
+        let fcg = fcg_constructor()?;
+        let pwe = fcg.element_to_octets(&fcg.generate_pwe(&params)?)?;
         Ok(Self(StateMachine::new(SaeHandshakeState::from(State::new(SaeNew {
-            config: SaeConfiguration { fcg, params, pwe },
+            config: SaeConfiguration { fcg: fcg_constructor, params, pwe },
         })))))
     }
 }
@@ -577,15 +618,26 @@ mod test {
             sta_a_mac: TEST_STA_A,
             sta_b_mac: TEST_STA_B,
         };
-        let fcg = Box::new(ecc::Group::new(TEST_GROUP).unwrap());
-        let pwe = fcg.generate_pwe(&params).unwrap();
-        SaeConfiguration { fcg, params, pwe }
+        let fcg_constructor = Box::new(|| {
+            ecc::Group::new(TEST_GROUP).map(|group| {
+                Box::new(group)
+                    as Box<
+                        dyn FiniteCyclicGroup<Element = <ecc::Group as FiniteCyclicGroup>::Element>,
+                    >
+            })
+        });
+        let fcg = (fcg_constructor)().unwrap();
+        let pwe = fcg.element_to_octets(&fcg.generate_pwe(&params).unwrap()).unwrap();
+        SaeConfiguration { fcg: fcg_constructor, params, pwe }
     }
 
     fn make_commit<E>(config: &SaeConfiguration<E>, scalar: &str, element: &str) -> Commit<E> {
         let scalar = Bignum::new_from_slice(&Vec::from_hex(scalar).unwrap()[..]).unwrap();
-        let element =
-            config.fcg.element_from_octets(&Vec::from_hex(element).unwrap()[..]).unwrap().unwrap();
+        let element = (config.fcg)()
+            .unwrap()
+            .element_from_octets(&Vec::from_hex(element).unwrap()[..])
+            .unwrap()
+            .unwrap();
         Commit { scalar, element }
     }
 
@@ -649,8 +701,10 @@ mod test {
     #[test]
     fn test_compute_confirm() {
         let config = make_ecc_config();
-        let commit_a = make_commit(&config, TEST_SCALAR_A, TEST_ELEMENT_A);
-        let commit_b = make_commit(&config, TEST_SCALAR_B, TEST_ELEMENT_B);
+        let commit_a =
+            make_commit(&config, TEST_SCALAR_A, TEST_ELEMENT_A).serialize(&config).unwrap();
+        let commit_b =
+            make_commit(&config, TEST_SCALAR_B, TEST_ELEMENT_B).serialize(&config).unwrap();
         let kck = expected_kck();
 
         let confirm_a = compute_confirm(&config, &kck, 1, &commit_a, &commit_b).unwrap();

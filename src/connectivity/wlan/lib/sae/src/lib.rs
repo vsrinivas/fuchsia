@@ -106,7 +106,7 @@ pub type SaeUpdateSink = Vec<SaeUpdate>;
 /// None of the functions in this trait return errors. Instead, non-fatal errors are logged, and
 /// fatal errors push an SaeUpdate::Reject to the update sink. Once an SaeUpdate::Reject is pushed,
 /// all further operations are no-ops.
-pub trait SaeHandshake {
+pub trait SaeHandshake: Send {
     /// Initiate SAE by sending the first commit message. If the peer STA sends the first commit
     /// message, handle_commit should be called first and initiate_sae should never be called.
     fn initiate_sae(&mut self, sink: &mut SaeUpdateSink);
@@ -145,8 +145,17 @@ pub fn new_sae_handshake(
     match group_id {
         19 => {
             // Elliptic curve group 19 is the default supported group.
-            let ec_group = Box::new(ecc::Group::new(EcGroupId::P256)?);
-            Ok(Box::new(state::SaeHandshakeImpl::new(ec_group, params)?))
+            let group_constructor = Box::new(|| {
+                ecc::Group::new(EcGroupId::P256).map(|group| {
+                    Box::new(group)
+                        as Box<
+                            dyn internal::FiniteCyclicGroup<
+                                Element = <ecc::Group as internal::FiniteCyclicGroup>::Element,
+                            >,
+                        >
+                })
+            });
+            Ok(Box::new(state::SaeHandshakeImpl::new(group_constructor, params)?))
         }
         _ => bail!("Unsupported SAE group id: {}", group_id),
     }
