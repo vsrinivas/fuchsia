@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/listnode.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -26,9 +26,7 @@ void expect_list_sorted(list_node_t* list, int count) {
   }
 }
 
-bool initialize_empty_list() {
-  BEGIN_TEST;
-
+TEST(ListnodeTests, initialize_empty_list) {
   list_node_t list = LIST_INITIAL_CLEARED_VALUE;
   EXPECT_FALSE(list_in_list(&list));
 
@@ -55,13 +53,9 @@ bool initialize_empty_list() {
   EXPECT_NULL(list_prev_type(&list, &list, list_elem_t, node));
   EXPECT_NULL(list_prev_wrap(&list, &list));
   EXPECT_NULL(list_prev_wrap_type(&list, &list, list_elem_t, node));
-
-  END_TEST;
 }
 
-bool element_add_remove() {
-  BEGIN_TEST;
-
+TEST(ListnodeTests, element_add_remove) {
   list_elem_t first_set[5] = {
       {-1, {}}, {2, {}}, {3, {}}, {4, {}}, {-1, {}},
   };
@@ -96,13 +90,9 @@ bool element_add_remove() {
   list_node_t* to_del = NULL;
   list_for_every_safe(&list, node, to_del) { list_delete(node); }
   EXPECT_TRUE(list_is_empty(&list));
-
-  END_TEST;
 }
 
-bool list_splice_split() {
-  BEGIN_TEST;
-
+TEST(ListnodeTests, list_splice_split) {
   list_elem_t first_set[3] = {
       {0, {}},
       {3, {}},
@@ -149,14 +139,6 @@ bool list_splice_split() {
 
   // The second list should be sorted now.
   expect_list_sorted(&second_list, 6);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(listnode_tests)
-RUN_TEST(initialize_empty_list);
-RUN_TEST(element_add_remove);
-RUN_TEST(list_splice_split);
-END_TEST_CASE(listnode_tests)
