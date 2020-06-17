@@ -87,7 +87,11 @@ escher::ViewingVolume Layer::GetViewingVolume() const {
   return escher::ViewingVolume(size_.x, size_.y, kTop, kBottom);
 }
 
-escher::mat4 Layer::GetScreenToWorldSpaceTransform() const {
+std::optional<escher::mat4> Layer::GetWorldFromScreenTransform() const {
+  if (!renderer_ || !renderer_->camera()) {
+    return std::nullopt;
+  }
+
   // Transform from pixel space [0, width] x [0, height] to Vulkan normalized device coordinates [0,
   // 1] x [0, 1].
   const escher::mat4 pixel_transform = glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));

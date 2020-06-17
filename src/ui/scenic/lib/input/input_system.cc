@@ -92,6 +92,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
             [this](fuchsia::ui::input::accessibility::PointerEvent pointer) {
               accessibility_pointer_event_listener()->OnEvent(std::move(pointer));
             });
+        FX_LOGS(INFO) << "PointerEventBuffer created";
 
         for (const auto& kv : touch_targets_) {
           // Force a reject in all active pointer IDs. When a new stream arrives,
@@ -115,6 +116,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
         // The listener disconnected. Release held events, delete the buffer.
         accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
         pointer_event_buffer_.reset();
+        FX_LOGS(INFO) << "PointerEventBuffer destroyed";
       });
 
   ime_service_ = this->context()->app_context()->svc()->Connect<fuchsia::ui::input::ImeService>();
@@ -275,35 +277,54 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
     return;
   }
 
-  if (!scene_graph_)
+  if (!scene_graph_) {
+    FX_LOGS(INFO) << "SceneGraph wasn't set up before injecting legacy input. Dropping event.";
     return;
+  }
 
   // Compositor and layer stack required for dispatch.
   const GlobalId compositor_id(session_id, command.compositor_id);
   gfx::CompositorWeakPtr compositor = scene_graph_->GetCompositor(compositor_id);
-  if (!compositor)
+  if (!compositor) {
+    FX_LOGS(INFO) << "Compositor wasn't set up before injecting legacy input. Dropping event.";
     return;  // It's legal to race against GFX's compositor setup.
+  }
 
   gfx::LayerStackPtr layer_stack = compositor->layer_stack();
-  if (!layer_stack)
+  if (!layer_stack) {
+    FX_LOGS(INFO) << "Layer stack wasn't set up before injecting legacy input. Dropping event.";
     return;  // It's legal to race against GFX's layer stack setup.
+  }
 
   const auto layers = layer_stack->layers();
-  if (layers.empty())
+  if (layers.empty()) {
+    FX_LOGS(INFO) << "Layer wasn't set up before injecting legacy input. Dropping event.";
     return;
+  }
 
   // Assume we only have one layer.
   const gfx::LayerPtr first_layer = *layers.begin();
-  const glm::mat4 world_from_screen_transform = first_layer->GetScreenToWorldSpaceTransform();
+  const std::optional<glm::mat4> world_from_screen_transform =
+      first_layer->GetWorldFromScreenTransform();
+  if (!world_from_screen_transform) {
+    FX_LOGS(INFO) << "Wasn't able to get a WorldFromScreenTransform when injecting legacy input. "
+                     "Dropping event. Is the camera or renderer uninitialized?";
+    return;
+  }
+
   const zx_koid_t scene_koid = first_layer->scene()->view_ref_koid();
 
   FX_DCHECK(GetWorldToViewTransform(scene_koid));
   const glm::mat4 context_from_world_transform = GetWorldToViewTransform(scene_koid).value();
 
-  const float screen_width = first_layer->width();
-  const float screen_height = first_layer->height();
+  const uint32_t screen_width = first_layer->width();
+  const uint32_t screen_height = first_layer->height();
+  if (screen_width == 0 || screen_height == 0) {
+    FX_LOGS(WARNING) << "Attempted to inject legacy input while Layer had 0 area";
+    return;
+  }
   const glm::mat4 context_from_screen_transform =
-      context_from_world_transform * world_from_screen_transform;
+      context_from_world_transform * world_from_screen_transform.value();
 
   InternalPointerEvent internal_event =
       GfxPointerEventToInternalEvent(command.pointer_event, scene_koid, screen_width, screen_height,

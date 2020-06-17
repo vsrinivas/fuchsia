@@ -72,7 +72,8 @@ class Layer : public Resource {
 
   // Returns the transform from screen space coordinates to world space.
   // It maps from pixel to camera space, and then undoes the camera's transformation matrices.
-  escher::mat4 GetScreenToWorldSpaceTransform() const;
+  // Returns std::nullopt if either the renderer or the camera has not been set.
+  std::optional<escher::mat4> GetWorldFromScreenTransform() const;
 
  private:
   friend class LayerStack;
