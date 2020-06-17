@@ -337,6 +337,8 @@ typedef struct zx_info_thread_stats {
 } zx_info_thread_stats_t;
 ```
 
+Returns **ZX_ERR_BAD_STATE** if the thread has exited.
+
 ### ZX_INFO_CPU_STATS
 
 Note: many values of this topic are being retired in favor of a different mechanism.

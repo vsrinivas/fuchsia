@@ -305,7 +305,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
   zx_status_t result;
 
   Thread* current_core_thread = Thread::Current::Get();
-  ThreadDispatcher* current_thread = current_core_thread->user_thread_;
+  ThreadDispatcher* current_thread = current_core_thread->user_thread_.get();
   uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
   {
     // Obtain the FutexState for the ID we are interested in, activating a free

@@ -78,8 +78,8 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
                             zx_rights_t* out_rights);
   ~ThreadDispatcher();
 
-  static ThreadDispatcher* GetCurrent() { return Thread::Current::Get()->user_thread_; }
-  static void ExitCurrent() __NO_RETURN { Thread::Current::Get()->user_thread_->Exit(); }
+  static ThreadDispatcher* GetCurrent() { return Thread::Current::Get()->user_thread_.get(); }
+  static void ExitCurrent() __NO_RETURN { Thread::Current::Exit(0); }
 
   // Dispatcher implementation.
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }
@@ -202,8 +202,9 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
     const Blocked prev_reason;
   };
 
-  // callback from kernel when thread is exiting, just before it stops for good.
-  void Exiting();
+  // This is called from Thread as it is exiting, just before it stops for good.
+  // It is an error to call this on anything other than the current thread.
+  void ExitingCurrent();
 
   // callback from kernel when thread is suspending
   void Suspending();
@@ -234,10 +235,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // wait_queue operations can be performed on ThreadDispatchers
   friend class FutexContext;
 
-  // Exit the current Thread. It is an error to call this on anything other than the current
-  // thread. Please use ExitCurrent() instead of calling this directly.
-  void Exit() __NO_RETURN;
-
   // kernel level entry point
   static int StartRoutine(void* arg);
 
@@ -264,8 +261,9 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // a ref pointer back to the parent process.
   const fbl::RefPtr<ProcessDispatcher> process_;
 
-  // The thread as understood by the lower kernel.
-  Thread* const core_thread_ TA_GUARDED(get_lock());
+  // The thread as understood by the lower kernel. This is set to nullptr when
+  // `state_` transitions to DEAD.
+  Thread* core_thread_ TA_GUARDED(get_lock());
 
   // User thread starting register values.
   EntryState user_entry_;

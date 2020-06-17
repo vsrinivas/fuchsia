@@ -57,11 +57,15 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 
+#define LOCAL_TRACE 0
+
 // kernel counters.
 // The counters below never decrease.
 //
 // counts the number of Threads successfully created.
 KCOUNTER(thread_create_count, "thread.create")
+// counts the number of detached Threads that exited. Never decreases.
+KCOUNTER(thread_detached_exit_count, "thread.detached_exit")
 // counts the number of Threads joined. Never decreases.
 KCOUNTER(thread_join_count, "thread.join")
 // counts the number of calls to suspend() that succeeded.
@@ -150,7 +154,7 @@ static void initial_thread_func() {
   arch_enable_ints();
 
   Thread* ct = Thread::Current::Get();
-  ret = (ct->arg_) ? ct->entry_(ct->arg_) : ct->entry_(ct->user_thread_);
+  ret = (ct->arg_) ? ct->entry_(ct->arg_) : ct->entry_(ct->user_thread_.get());
 
   Thread::Current::Exit(ret);
 }
@@ -496,6 +500,8 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
 
   // if we're detached, then do our teardown here
   if (current_thread->flags_ & THREAD_FLAG_DETACHED) {
+    kcounter_add(thread_detached_exit_count, 1);
+
     // remove it from the master thread list
     thread_list->erase(*current_thread);
 
@@ -556,7 +562,7 @@ void Thread::Current::Exit(int retcode) {
 
   if (current_thread->user_thread_) {
     DEBUG_ASSERT(!arch_ints_disabled() || !thread_lock.IsHeld());
-    current_thread->user_thread_->Exiting();
+    current_thread->user_thread_->ExitingCurrent();
   }
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
@@ -1192,10 +1198,16 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
  * ThreadDispatcher::Exiting()
  * ThreadDispatcher::Suspending() / Resuming()
  */
-void Thread::SetUsermodeThread(ThreadDispatcher* user_thread) {
+void Thread::SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread) {
   DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   DEBUG_ASSERT(state_ == THREAD_INITIAL);
-  user_thread_ = user_thread;
+  DEBUG_ASSERT(!user_thread_);
+
+  user_thread_ = ktl::move(user_thread);
+
+  // All user mode threads are detached since they are responsible for cleaning themselves up.
+  // We can set this directly because we've checked that we are in the initial state.
+  flags_ |= THREAD_FLAG_DETACHED;
 }
 
 /**
@@ -1385,7 +1397,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
             t->owned_wait_queues_.is_empty() ? "no" : "yes");
 
     dprintf(INFO, "\taspace %p\n", t->aspace_);
-    dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n", t->user_thread_,
+    dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n", t->user_thread_.get(),
             t->user_pid_, t->user_tid_);
     arch_dump_thread(t);
   } else {

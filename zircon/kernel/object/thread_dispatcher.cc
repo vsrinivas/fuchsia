@@ -69,7 +69,6 @@ ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, Threa
       core_thread_(core_thread),
       exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_THREAD) {
   LTRACE_ENTRY_OBJ;
-  core_thread_->SetUsermodeThread(this);
   kcounter_add(dispatcher_thread_create_count, 1);
 }
 
@@ -78,36 +77,22 @@ ThreadDispatcher::~ThreadDispatcher() {
 
   kcounter_add(dispatcher_thread_destroy_count, 1);
 
-  DEBUG_ASSERT(core_thread_ != nullptr);
-  DEBUG_ASSERT(core_thread_ != Thread::Current::Get());
-
-  switch (state_.lifecycle()) {
-    case ThreadState::Lifecycle::DEAD: {
-      // join the LK thread before doing anything else to clean up LK state and ensure
-      // the thread we're destroying has stopped.
-      LTRACEF("joining LK thread to clean up state\n");
-      [[maybe_unused]] auto ret = core_thread_->Join(nullptr, ZX_TIME_INFINITE);
-      LTRACEF("done joining LK thread\n");
-      DEBUG_ASSERT_MSG(ret == ZX_OK, "Thread::Join returned something other than ZX_OK\n");
-      break;
-    }
-    case ThreadState::Lifecycle::INITIAL:
-      __FALLTHROUGH;
-      // this gets a pass, we can destruct a partially constructed thread.
-    case ThreadState::Lifecycle::INITIALIZED:
-      // as we've been initialized previously, forget the LK thread.
-      // note that thread_forget is not called for self since the thread is not running.
-      core_thread_->Forget();
-      break;
-    default:
-      DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n",
-                       ThreadLifecycleToString(state_.lifecycle()), this);
-  }
+  DEBUG_ASSERT_MSG(!HasStartedLocked() || IsDyingOrDeadLocked(),
+                   "Thread %p killed in bad state: %s\n", this,
+                   ThreadLifecycleToString(state_.lifecycle()));
 
   if (state_.lifecycle() != ThreadState::Lifecycle::INITIAL) {
     // We grew the pool in Initialize(), which transitioned the thread from its
     // inintial state.
     process_->futex_context().ShrinkFutexStatePool();
+  }
+
+  // If MakeRunnable hasn't been called, then our core_thread_ has never run and
+  // we need to be the ones to remove it.
+  if (!HasStartedLocked()) {
+    // Since the Thread is in an initialized state we can directly destruct it.
+    core_thread_->Forget();
+    core_thread_ = nullptr;
   }
 }
 
@@ -139,6 +124,9 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     len = ZX_MAX_NAME_LEN - 1;
 
   Guard<Mutex> thread_guard{get_lock()};
+  if (core_thread_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
   memcpy(core_thread_->name_, name, len);
   memset(core_thread_->name_ + len, 0, ZX_MAX_NAME_LEN - len);
   return ZX_OK;
@@ -150,6 +138,9 @@ void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
   memset(out_name, 0, ZX_MAX_NAME_LEN);
 
   Guard<Mutex> thread_guard{get_lock()};
+  if (core_thread_ == nullptr) {
+    return;
+  }
   strlcpy(out_name, core_thread_->name_, ZX_MAX_NAME_LEN);
 }
 
@@ -179,11 +170,13 @@ zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspend
   if (suspended)
     suspend_count_++;
 
-  // bump the ref on this object that the LK thread state will now own until the lk thread has
-  // exited
-  AddRef();
+  // Update the core_thread_ information.
   core_thread_->user_tid_ = get_koid();
   core_thread_->user_pid_ = process_->get_koid();
+
+  // Attach the ThreadDispatcher to the core thread. This takes out an additional
+  // reference on the ThreadDispatcher.
+  core_thread_->SetUsermodeThread(fbl::RefPtr<ThreadDispatcher>(this));
 
   // start the thread in RUNNING state, if we're starting suspended it will transition to
   // SUSPENDED when it checks thread signals before executing any user code
@@ -199,28 +192,6 @@ zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspend
   }
 
   return ZX_OK;
-}
-
-// called in the context of our thread
-void ThreadDispatcher::Exit() {
-  canary_.Assert();
-
-  LTRACE_ENTRY_OBJ;
-
-  {
-    Guard<Mutex> guard{get_lock()};
-
-    // only valid to call this on the current thread
-    DEBUG_ASSERT(Thread::Current::Get() == core_thread_);
-
-    SetStateLocked(ThreadState::Lifecycle::DYING);
-  }
-
-  // exit here
-  // this will recurse back to us in ::Exiting()
-  Thread::Current::Exit(0);
-
-  __UNREACHABLE;
 }
 
 void ThreadDispatcher::Kill() {
@@ -350,10 +321,16 @@ static void ThreadCleanupDpc(Dpc* d) {
   delete t;
 }
 
-void ThreadDispatcher::Exiting() {
+void ThreadDispatcher::ExitingCurrent() {
   canary_.Assert();
 
   LTRACE_ENTRY_OBJ;
+
+  // Set ourselves in the DYING state before calling the Debugger.
+  {
+    Guard<fbl::Mutex> guard{get_lock()};
+    SetStateLocked(ThreadState::Lifecycle::DYING);
+  }
 
   // Notify a debugger if attached. Do this before marking the thread as
   // dead: the debugger expects to see the thread in the DYING state, it may
@@ -375,6 +352,7 @@ void ThreadDispatcher::Exiting() {
 
     // put ourselves into the dead state
     SetStateLocked(ThreadState::Lifecycle::DEAD);
+    core_thread_ = nullptr;
   }
 
   // Drop our exception channel endpoint so any userspace listener
@@ -384,23 +362,6 @@ void ThreadDispatcher::Exiting() {
   // remove ourselves from our parent process's view
   process_->RemoveThread(this);
 
-  // drop LK's reference
-  if (Release()) {
-    // We're the last reference, so will need to destruct ourself while running, which is not
-    // possible. Use a dpc to pull this off
-    cleanup_dpc_ = Dpc(&ThreadCleanupDpc, this);
-
-    // Disable interrupts before queuing the dpc to prevent starving the DPC thread if it starts
-    // running before we're completed. Disabling interrupts effectively raises us to maximum
-    // priority on this cpu. Note this is only safe because we're about to exit the thread
-    // permanently so the context switch will effectively reenable interrupts in the new thread.
-    arch_disable_ints();
-
-    // Queue without reschedule since us exiting is a reschedule event already.
-    cleanup_dpc_.Queue(false);
-  }
-
-  // After this point the thread will stop permanently.
   LTRACE_EXIT_OBJ;
 }
 
@@ -581,6 +542,12 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   info->state = ThreadLifecycleToState(state_.lifecycle(), blocked_reason_);
   info->wait_exception_channel_type = exceptionate_type_;
 
+  // If we've exited then return with the lifecycle and exception type, and keep
+  // the cpu_affinity_mask at 0.
+  if (core_thread_ == nullptr) {
+    return ZX_OK;
+  }
+
   // Get CPU affinity.
   //
   // We assume that we can fit the entire mask in the first word of
@@ -599,6 +566,11 @@ zx_status_t ThreadDispatcher::GetStatsForUserspace(zx_info_thread_stats_t* info)
   *info = {};
 
   Guard<Mutex> guard{get_lock()};
+
+  if (core_thread_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   info->total_runtime = core_thread_->Runtime();
   info->last_scheduled_cpu = core_thread_->LastCpu();
   return ZX_OK;

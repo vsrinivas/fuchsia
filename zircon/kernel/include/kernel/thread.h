@@ -140,7 +140,7 @@ struct Thread {
                            int priority, thread_trampoline_routine alt_trampoline);
 
   void SetCurrent();
-  void SetUsermodeThread(ThreadDispatcher* user_thread);
+  void SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread);
 
   // Called to mark a thread as schedulable.
   void Resume();
@@ -472,8 +472,10 @@ struct Thread {
   // pointer to the kernel address space this thread is associated with
   struct vmm_aspace* aspace_;
 
-  // pointer to user thread if one exists for this thread
-  ThreadDispatcher* user_thread_;
+  // Strong reference to user thread if one exists for this thread.
+  // In the common case freeing Thread will also free ThreadDispatcher when this
+  // reference is dropped.
+  fbl::RefPtr<ThreadDispatcher> user_thread_;
   uint64_t user_tid_;
   uint64_t user_pid_;
 

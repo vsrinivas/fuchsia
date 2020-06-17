@@ -348,6 +348,21 @@ TEST(Threads, InfoTaskStatsFails) {
   ASSERT_EQ(zx_handle_close(thandle), ZX_OK);
 }
 
+TEST(Threads, InfoThreadStatsFails) {
+  // Spin up a thread.
+  zxr_thread_t thread;
+  zx_handle_t thandle;
+  ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)zx_deadline_after(ZX_MSEC(100)), &thread,
+                           &thandle));
+  ASSERT_EQ(zx_object_wait_one(thandle, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
+
+  // Ensure that thread_stats doesn't work on it.
+  zx_info_task_stats_t info;
+  EXPECT_EQ(zx_object_get_info(thandle, ZX_INFO_THREAD_STATS, &info, sizeof(info), NULL, NULL),
+            ZX_ERR_BAD_STATE, "THREAD_STATS shouldn't work after a thread exits");
+  ASSERT_EQ(zx_handle_close(thandle), ZX_OK);
+}
+
 TEST(Threads, GetLastScheduledCpu) {
   // State to synchronize with the worker thread.
   struct WorkerState {
