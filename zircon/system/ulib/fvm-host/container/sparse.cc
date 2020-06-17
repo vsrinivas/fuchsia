@@ -679,6 +679,8 @@ zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, uint64_t slice_
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  ZX_ASSERT(slice_size_ == image_.slice_size);
+  ZX_ASSERT((slice_count * image_.slice_size) >= extent_length);
   SparsePartitionInfo* partition = &partitions_[part_index];
   fvm::extent_descriptor_t extent;
   extent.magic = fvm::kExtentDescriptorMagic;

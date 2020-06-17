@@ -91,7 +91,9 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   uint32_t dat_blocks = fvm_info_.block_count;
 
   if (minimum_data_blocks > fvm_info_.block_count) {
-    abm_blocks = minfs::BlocksRequiredForBits(minimum_data_blocks);
+    // We are requested to reserve minimum_data_blocks, which is greater than data blocks
+    // in fvm_info_. Ensure that we reserve sufficient space for allocation bitmap.
+    abm_blocks = std::max(minfs::BlocksRequiredForBits(minimum_data_blocks), abm_blocks);
     dat_blocks = minimum_data_blocks;
   }
 
@@ -170,10 +172,17 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
       return ZX_OK;
     }
     case 1: {
+      size_t blocks_per_slice = fvm_info_.slice_size / minfs::kMinfsBlockSize;
+      uint32_t reserved_blocks = fvm_info_.ibm_slices * blocks_per_slice;
       vslice_info->vslice_start = minfs::kFVMBlockInodeBmStart;
       vslice_info->slice_count = fvm_info_.ibm_slices;
       vslice_info->block_offset = info_.ibm_block;
-      vslice_info->block_count = info_.abm_block - info_.ibm_block;
+
+      // block_count is used to determine the extent_length, which tells the
+      // paver, for the slices reserved how many blocks contain valid data.
+      // This helps to keep sparse image small and helps paver to zero-out
+      // block that are reserved but are not part of the sparse image file.
+      vslice_info->block_count = std::min(info_.abm_block - info_.ibm_block, reserved_blocks);
       vslice_info->zero_fill = true;
       return ZX_OK;
     }
