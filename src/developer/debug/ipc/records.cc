@@ -118,6 +118,8 @@ const char* ThreadRecord::BlockedReasonToString(BlockedReason reason) {
       return "Wait many";
     case ThreadRecord::BlockedReason::kInterrupt:
       return "Interrupt";
+    case ThreadRecord::BlockedReason::kPager:
+      return "Pager";
     case ThreadRecord::BlockedReason::kLast:
       break;
   }

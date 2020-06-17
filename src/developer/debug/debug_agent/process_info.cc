@@ -83,6 +83,8 @@ debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(uint32_t s
       return debug_ipc::ThreadRecord::BlockedReason::kWaitMany;
     case ZX_THREAD_STATE_BLOCKED_INTERRUPT:
       return debug_ipc::ThreadRecord::BlockedReason::kInterrupt;
+    case ZX_THREAD_STATE_BLOCKED_PAGER:
+      return debug_ipc::ThreadRecord::BlockedReason::kPager;
     default:
       FX_NOTREACHED();
       return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;

@@ -185,6 +185,7 @@ struct ThreadRecord {
     kWaitOne,
     kWaitMany,
     kInterrupt,
+    kPager,
 
     kLast  // Not an actual blocked reason, for range checking.
   };
