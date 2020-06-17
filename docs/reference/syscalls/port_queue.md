@@ -68,12 +68,22 @@ typedef union zx_packet_user {
 
 **ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_WRITE**.
 
-**ZX_ERR_SHOULD_WAIT** the port has too many pending packets. Once a thread
-has drained some packets a new `zx_port_queue()` call will likely succeed.
+**ZX_ERR_SHOULD_WAIT** the port has too many pending packets. See [Full Port
+Queue](#full-port-queue).
 
 ## NOTES
 
 The queue is drained by calling [`zx_port_wait()`].
+
+### Full Port Queue
+
+`zx_port_queue()` may return **ZX_ERR_SHOULD_WAIT** indicating that
+there is no more space available in the queue for new port packets.
+It is guaranteed that there are packets in the queue available for
+reading when this occurs. Calling code should arrange to read packets
+from the queue until at least one **ZX_PKT_TYPE_USER** packet has
+been removed from the queue before attempting to enqueue another
+packet.
 
 
 ## SEE ALSO
