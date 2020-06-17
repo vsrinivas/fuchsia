@@ -15,6 +15,41 @@ use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
 
+fidl_enum! {
+  ObjType(u32) {
+    None = 0,
+    Process = 1,
+    Thread = 2,
+    Vmo = 3,
+    Channel = 4,
+    Event = 5,
+    Port = 6,
+    Interrupt = 9,
+    PciDevice = 11,
+    Log = 12,
+    Socket = 14,
+    Resource = 15,
+    Eventpair = 16,
+    Job = 17,
+    Vmar = 18,
+    Fifo = 19,
+    Guest = 20,
+    Vcpu = 21,
+    Timer = 22,
+    Iommu = 23,
+    Bti = 24,
+    Profile = 25,
+    Pmt = 26,
+    SuspendToken = 27,
+    Pager = 28,
+    Exception = 29,
+    Clock = 30,
+    Stream = 31,
+    MsiAllocation = 32,
+    MsiInterrupt = 33,
+  }
+}
+
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Handles {
     pub plain_handle: fidl::Handle,

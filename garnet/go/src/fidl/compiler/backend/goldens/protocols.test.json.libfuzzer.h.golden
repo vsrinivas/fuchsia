@@ -13,6 +13,7 @@
 
 namespace fuzzing {
 
+using obj_type = ::test::name::obj_type;
 using WithErrorSyntax_ResponseAsStruct_Response =
     ::test::name::WithErrorSyntax_ResponseAsStruct_Response;
 using WithErrorSyntax_ResponseAsStruct_Result =
@@ -27,6 +28,31 @@ using ErrorEnun = ::test::name::ErrorEnun;
 using WithErrorSyntax_ErrorAsEnum_Result =
     ::test::name::WithErrorSyntax_ErrorAsEnum_Result;
 
+template <>
+struct MinSize<obj_type> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template <>
+struct Allocate<obj_type> {
+  obj_type operator()(FuzzInput* src, size_t* size) {
+    obj_type out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 2) {
+      case 0:
+        out = obj_type::NONE;
+        break;
+      case 1:
+        out = obj_type::SOCKET;
+        break;
+    }
+
+    return out;
+  }
+};
 template <>
 struct MinSize<WithErrorSyntax_ResponseAsStruct_Response> {
   operator size_t() {

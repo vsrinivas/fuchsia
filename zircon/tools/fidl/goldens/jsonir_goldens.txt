@@ -5,6 +5,7 @@ constants.test.json.golden
 consts.test.json.golden
 doc_comments.test.json.golden
 empty_struct.test.json.golden
+encapsulated_structs.test.json.golden
 enum.test.json.golden
 error.test.json.golden
 escaping.test.json.golden

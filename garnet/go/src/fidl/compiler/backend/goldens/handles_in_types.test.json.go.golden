@@ -7,6 +7,23 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
+type ObjType uint32
+
+const (
+	ObjTypeNone ObjType = 0
+	ObjTypeVmo  ObjType = 3
+)
+
+func (x ObjType) String() string {
+	switch x {
+	case 0:
+		return "None"
+	case 3:
+		return "Vmo"
+	}
+	return "Unknown"
+}
+
 type HandlesInTypes struct {
 	_                     struct{}        `fidl:"s" fidl_size_v1:"104" fidl_alignment_v1:"8"`
 	NormalHandle          _zx.VMO         `fidl_offset_v1:"0" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`

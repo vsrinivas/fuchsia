@@ -16,6 +16,13 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 
 fidl_enum! {
+  ObjType(u32) {
+    None = 0,
+    Socket = 14,
+  }
+}
+
+fidl_enum! {
   ErrorEnun(u32) {
     ErrFoo = 1,
     ErrBar = 2,

@@ -34,6 +34,11 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+enum class obj_type : uint32_t {
+  NONE = 0u,
+  SOCKET = 14u,
+};
+
 struct WithErrorSyntax_ResponseAsStruct_Response;
 class WithErrorSyntax_ResponseAsStruct_Result;
 struct WithErrorSyntax_ErrorAsPrimitive_Response;
@@ -2748,6 +2753,9 @@ class WithErrorSyntax final {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::test::name::obj_type> : public std::true_type {};
 
 template <>
 struct IsFidlType<

@@ -7,6 +7,23 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
+type ObjType uint32
+
+const (
+	ObjTypeNone   ObjType = 0
+	ObjTypeSocket ObjType = 14
+)
+
+func (x ObjType) String() string {
+	switch x {
+	case 0:
+		return "None"
+	case 14:
+		return "Socket"
+	}
+	return "Unknown"
+}
+
 type ErrorEnun uint32
 
 const (

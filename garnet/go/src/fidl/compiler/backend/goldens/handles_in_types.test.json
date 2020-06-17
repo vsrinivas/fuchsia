@@ -4,8 +4,90 @@
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
-  "enum_declarations": [],
-  "experimental_resource_declarations": [],
+  "enum_declarations": [
+    {
+      "name": "test.name/obj_type",
+      "location": {
+        "filename": "handles_in_types.test.fidl",
+        "line": 6,
+        "column": 6,
+        "length": 8
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "NONE",
+          "location": {
+            "filename": "handles_in_types.test.fidl",
+            "line": 7,
+            "column": 5,
+            "length": 4
+          },
+          "value": {
+            "kind": "literal",
+            "value": "0",
+            "expression": "0",
+            "literal": {
+              "kind": "numeric",
+              "value": "0",
+              "expression": "0"
+            }
+          }
+        },
+        {
+          "name": "VMO",
+          "location": {
+            "filename": "handles_in_types.test.fidl",
+            "line": 8,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "3",
+            "expression": "3",
+            "literal": {
+              "kind": "numeric",
+              "value": "3",
+              "expression": "3"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "experimental_resource_declarations": [
+    {
+      "name": "test.name/handle",
+      "location": {
+        "filename": "handles_in_types.test.fidl",
+        "line": 11,
+        "column": 10,
+        "length": 6
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "properties": [
+        {
+          "name": "subtype",
+          "location": {
+            "filename": "handles_in_types.test.fidl",
+            "line": 13,
+            "column": 18,
+            "length": 7
+          },
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/obj_type",
+            "nullable": false
+          }
+        }
+      ]
+    }
+  ],
   "interface_declarations": [],
   "service_declarations": [],
   "struct_declarations": [
@@ -13,7 +95,7 @@
       "name": "test.name/HandlesInTypes",
       "location": {
         "filename": "handles_in_types.test.fidl",
-        "line": 11,
+        "line": 25,
         "column": 8,
         "length": 14
       },
@@ -29,8 +111,8 @@
           "name": "normal_handle",
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 12,
-            "column": 17,
+            "line": 26,
+            "column": 16,
             "length": 13
           },
           "field_shape_v1": {
@@ -52,8 +134,8 @@
           "name": "handle_in_vec",
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 14,
-            "column": 25,
+            "line": 28,
+            "column": 24,
             "length": 13
           },
           "field_shape_v1": {
@@ -75,8 +157,8 @@
           "name": "handle_in_array",
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 15,
-            "column": 26,
+            "line": 29,
+            "column": 25,
             "length": 15
           },
           "field_shape_v1": {
@@ -102,8 +184,8 @@
           "name": "handle_in_mixed_vec_array",
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 16,
-            "column": 34,
+            "line": 30,
+            "column": 33,
             "length": 25
           },
           "field_shape_v1": {
@@ -120,7 +202,7 @@
           "name": "table_with_handle",
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 18,
+            "line": 32,
             "column": 21,
             "length": 17
           },
@@ -138,7 +220,7 @@
           "name": "union_with_handle",
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 19,
+            "line": 33,
             "column": 21,
             "length": 17
           },
@@ -165,7 +247,7 @@
       "name": "test.name/TableWithHandle",
       "location": {
         "filename": "handles_in_types.test.fidl",
-        "line": 3,
+        "line": 17,
         "column": 7,
         "length": 15
       },
@@ -182,8 +264,8 @@
           "name": "h",
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 4,
-            "column": 20,
+            "line": 18,
+            "column": 19,
             "length": 1
           }
         }
@@ -206,7 +288,7 @@
       "name": "test.name/UnionWithHandle",
       "location": {
         "filename": "handles_in_types.test.fidl",
-        "line": 7,
+        "line": 21,
         "column": 16,
         "length": 15
       },
@@ -223,8 +305,8 @@
           },
           "location": {
             "filename": "handles_in_types.test.fidl",
-            "line": 8,
-            "column": 20,
+            "line": 22,
+            "column": 19,
             "length": 1
           }
         }
@@ -244,11 +326,15 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
+    "test.name/obj_type",
+    "test.name/handle",
     "test.name/UnionWithHandle",
     "test.name/TableWithHandle",
     "test.name/HandlesInTypes"
   ],
   "declarations": {
+    "test.name/obj_type": "enum",
+    "test.name/handle": "experimental_resource",
     "test.name/HandlesInTypes": "struct",
     "test.name/TableWithHandle": "table",
     "test.name/UnionWithHandle": "union"

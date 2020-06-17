@@ -15,6 +15,13 @@ use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
 
+fidl_enum! {
+  ObjType(u32) {
+    None = 0,
+    Channel = 4,
+  }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct ExampleOfUseOfAliases {
     pub field_of_u32: u32,

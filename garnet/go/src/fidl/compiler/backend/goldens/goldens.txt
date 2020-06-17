@@ -58,6 +58,15 @@ empty_struct.test.json.llcpp.h.golden
 empty_struct.test.json.rs.golden
 empty_struct.test.json.syz.txt.golden
 empty_struct.test.json_test_base.h.golden
+encapsulated_structs.test.json
+encapsulated_structs.test.json.cc.golden
+encapsulated_structs.test.json.go.golden
+encapsulated_structs.test.json.h.golden
+encapsulated_structs.test.json.llcpp.cc.golden
+encapsulated_structs.test.json.llcpp.h.golden
+encapsulated_structs.test.json.rs.golden
+encapsulated_structs.test.json.syz.txt.golden
+encapsulated_structs.test.json_test_base.h.golden
 enum.test.json
 enum.test.json.cc.golden
 enum.test.json.go.golden

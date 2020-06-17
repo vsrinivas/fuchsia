@@ -3,6 +3,7 @@
 #pragma once
 
 #include <nullable.test.json.h>
+#include <zx/cpp/fidl.h>
 namespace fidl {
 namespace test {
 namespace nullable {

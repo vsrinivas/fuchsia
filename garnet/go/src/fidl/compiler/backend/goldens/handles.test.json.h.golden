@@ -8,6 +8,75 @@ namespace fidl {
 namespace test {
 namespace handles {
 
+enum class obj_type : uint32_t {
+
+  NONE = 0u,
+
+  PROCESS = 1u,
+
+  THREAD = 2u,
+
+  VMO = 3u,
+
+  CHANNEL = 4u,
+
+  EVENT = 5u,
+
+  PORT = 6u,
+
+  INTERRUPT = 9u,
+
+  PCI_DEVICE = 11u,
+
+  LOG = 12u,
+
+  SOCKET = 14u,
+
+  RESOURCE = 15u,
+
+  EVENTPAIR = 16u,
+
+  JOB = 17u,
+
+  VMAR = 18u,
+
+  FIFO = 19u,
+
+  GUEST = 20u,
+
+  VCPU = 21u,
+
+  TIMER = 22u,
+
+  IOMMU = 23u,
+
+  BTI = 24u,
+
+  PROFILE = 25u,
+
+  PMT = 26u,
+
+  SUSPEND_TOKEN = 27u,
+
+  PAGER = 28u,
+
+  EXCEPTION = 29u,
+
+  CLOCK = 30u,
+
+  STREAM = 31u,
+
+  MSI_ALLOCATION = 32u,
+
+  MSI_INTERRUPT = 33u,
+};
+
+inline zx_status_t Clone(::fidl::test::handles::obj_type value,
+                         ::fidl::test::handles::obj_type* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 class Handles;
 #ifdef __Fuchsia__
 
@@ -236,6 +305,37 @@ class SomeProtocol_SyncProxy : public SomeProtocol_Sync {
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
+
+template <>
+struct CodingTraits<::fidl::test::handles::obj_type> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::handles::obj_type);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::handles::obj_type);
+  static void Encode(Encoder* encoder, ::fidl::test::handles::obj_type* value,
+                     size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::fidl::test::handles::obj_type* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::fidl::test::handles::obj_type>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::fidl::test::handles::obj_type value,
+                         ::fidl::test::handles::obj_type* result) {
+  return ::fidl::test::handles::Clone(value, result);
+}
+template <>
+struct Equality<::fidl::test::handles::obj_type> {
+  bool operator()(const ::fidl::test::handles::obj_type& _lhs,
+                  const ::fidl::test::handles::obj_type& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
 
 template <>
 struct CodingTraits<::fidl::test::handles::Handles>

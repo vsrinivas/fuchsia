@@ -7,6 +7,19 @@
 namespace test {
 namespace name {
 
+enum class obj_type : uint32_t {
+
+  NONE = 0u,
+
+  SOCKET = 14u,
+};
+
+inline zx_status_t Clone(::test::name::obj_type value,
+                         ::test::name::obj_type* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 class WithErrorSyntax_ResponseAsStruct_Response;
 class WithErrorSyntax_ResponseAsStruct_Result;
 class WithErrorSyntax_ErrorAsPrimitive_Response;
@@ -1508,6 +1521,35 @@ class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
 }  // namespace name
 }  // namespace test
 namespace fidl {
+
+template <>
+struct CodingTraits<::test::name::obj_type> {
+  static constexpr size_t inline_size_old = sizeof(::test::name::obj_type);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::obj_type);
+  static void Encode(Encoder* encoder, ::test::name::obj_type* value,
+                     size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::test::name::obj_type* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::name::obj_type>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::name::obj_type value,
+                         ::test::name::obj_type* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct Equality<::test::name::obj_type> {
+  bool operator()(const ::test::name::obj_type& _lhs,
+                  const ::test::name::obj_type& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
 
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Response>

@@ -1,0 +1,40 @@
+library fidl.test.encapsulatedstructs;
+
+struct Int8Int32 {
+    int8 a;
+    // padding of 3 bytes.
+    int32 b;
+};
+
+struct Int16Int8 {
+    int16 a;
+    int8 b;
+    // padding of 1 byte.
+};
+
+struct ArrayInt16Int8 {
+    array<Int16Int8>:3 arr;
+    // inner padding plus 3 bytes padding at the end.
+};
+
+struct StructPaddingTestStruct {
+    Int16Int8 trailing;
+    // padding of 4 bytes.
+    // after flattening the FourByteAlignedTrailingPaddingStruct into this
+    // struct for the coding tables, there will be 5 bytes of padding.
+    Int8Int32 inner;
+    ArrayInt16Int8 array;
+    // after flattening, there should be 3 bytes of padding after the array
+    // elements.
+};
+
+struct NonInlineStructTestStruct {
+    Int16Int8? element; // 8-byte alignment
+    handle h;
+    // 4-byte padding after handle.
+};
+
+struct TopLevelStruct {
+    StructPaddingTestStruct a;
+    NonInlineStructTestStruct b;
+};

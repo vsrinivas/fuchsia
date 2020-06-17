@@ -33,6 +33,11 @@ namespace llcpp {
 
 namespace example {
 
+enum class obj_type : uint32_t {
+  NONE = 0u,
+  CHANNEL = 4u,
+};
+
 struct ExampleOfUseOfAliases;
 
 extern "C" const fidl_type_t example_ExampleOfUseOfAliasesTable;
@@ -74,6 +79,9 @@ struct ExampleOfUseOfAliases {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::example::obj_type> : public std::true_type {};
 
 template <>
 struct IsFidlType<::llcpp::example::ExampleOfUseOfAliases>

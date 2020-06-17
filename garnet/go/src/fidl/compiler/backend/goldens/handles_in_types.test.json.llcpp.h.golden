@@ -33,6 +33,11 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+enum class obj_type : uint32_t {
+  NONE = 0u,
+  VMO = 3u,
+};
+
 class UnionWithHandle;
 class TableWithHandle;
 struct HandlesInTypes;
@@ -296,6 +301,9 @@ struct HandlesInTypes {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::test::name::obj_type> : public std::true_type {};
 
 template <>
 struct IsFidlType<::llcpp::test::name::UnionWithHandle>

@@ -15,6 +15,13 @@ use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
 
+fidl_enum! {
+  ObjType(u32) {
+    None = 0,
+    Vmo = 3,
+  }
+}
+
 fidl_xunion! {
     #[derive(Debug, PartialEq)]
     name: UnionWithHandle,

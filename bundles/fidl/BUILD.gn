@@ -40,5 +40,8 @@ group("tests") {
 }
 
 group("tools") {
-  deps = [ "//src/tests/benchmarks/fidl/benchmark_suite/gen:host" ]
+  deps = [ 
+    "//src/tests/benchmarks/fidl/benchmark_suite/gen:host",
+    "//tools/fidl/fidldoc",
+  ]
 }

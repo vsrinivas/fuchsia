@@ -8,6 +8,19 @@
 
 namespace example {
 
+enum class obj_type : uint32_t {
+
+  NONE = 0u,
+
+  CHANNEL = 4u,
+};
+
+inline zx_status_t Clone(::example::obj_type value,
+                         ::example::obj_type* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 class ExampleOfUseOfAliases;
 
 class ExampleOfUseOfAliases final {
@@ -53,6 +66,35 @@ inline zx_status_t Clone(const ::example::ExampleOfUseOfAliases& _value,
 using ExampleOfUseOfAliasesPtr = ::std::unique_ptr<ExampleOfUseOfAliases>;
 }  // namespace example
 namespace fidl {
+
+template <>
+struct CodingTraits<::example::obj_type> {
+  static constexpr size_t inline_size_old = sizeof(::example::obj_type);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(::example::obj_type);
+  static void Encode(Encoder* encoder, ::example::obj_type* value,
+                     size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::example::obj_type* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::example::obj_type>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::example::obj_type value,
+                         ::example::obj_type* result) {
+  return ::example::Clone(value, result);
+}
+template <>
+struct Equality<::example::obj_type> {
+  bool operator()(const ::example::obj_type& _lhs,
+                  const ::example::obj_type& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
 
 template <>
 struct CodingTraits<::example::ExampleOfUseOfAliases>
