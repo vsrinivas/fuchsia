@@ -145,6 +145,8 @@ abstract class OutputFormatter {
       _handleTimeElapsedEvent(event);
     } else if (event is TestInfo) {
       _handleTestInfo(event);
+    } else if (event is FatalError) {
+      _handleFatalError(event);
     } else if (event is AllTestsCompleted) {
       _finalizeOutput();
     }
@@ -170,6 +172,9 @@ abstract class OutputFormatter {
 
   /// Generic info events handler.
   void _handleTestInfo(TestInfo event);
+
+  /// Handler for fatal errors.
+  void _handleFatalError(FatalError event);
 
   /// Handler for the stream of stdout and stderr content produced by running
   /// tests.
@@ -320,6 +325,11 @@ class StandardOutputFormatter extends OutputFormatter {
     }
   }
 
+  @override
+  void _handleFatalError(FatalError event) {
+    buffer.addLine(wrapWith(event.message, [red]));
+  }
+
   void _finalizeLastTestLine() {
     if (!cleanEndOfOutput) return;
     var verboseHint = wrapWith(
@@ -356,6 +366,8 @@ class InfoFormatter extends OutputFormatter {
 
   @override
   void _handleTestInfo(TestInfo event) {}
+  @override
+  void _handleFatalError(FatalError event) {}
   @override
   void _handleTestStarted(TestStarted event) {
     buffer.addLines([
