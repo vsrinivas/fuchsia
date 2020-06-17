@@ -359,15 +359,27 @@ generated.
 
 ### Client {#client}
 
-The LLCPP bindings provides two main ways to interact with a FIDL protocol as a
-client. The first is using a `SyncClient`, which is a class that owns the client
-end of a channel and provides methods to make requests over the channel. The
-second is using `Call`, which provides static methods to make requests directly
-on an unowned channel without instantiating a `SyncClient`.
+The LLCPP bindings provides three ways to interact with a FIDL protocol as a
+client:
 
-The methods provided by these two classes are analogous, but `Call` may be
-easier to use when migrating code from the C bindings to LLCPP, or when
-implementing C APIs that take a raw `zx_handle_t`.
+* `fidl::Client<Protocol>`: This class exposes thread-safe APIs for outgoing
+  asynchronous and synchronous calls as well as asynchronous event handling. It
+  owns the client end of the channel. An `async_dispatcher_t*` is required to
+  support the asynchronous APIs as well as event and error handling. This is the
+  recommended variant for most use-cases, except for those where an
+  `async_dispatcher_t` cannot be used.
+* `Protocol::SyncClient`: This class exposes purely synchronous APIs for
+  outgoing calls as well as for event handling. It owns the client end of the
+  channel.
+* `Protocol::Call`: This class is identical to `SyncClient` except that it does
+  not have ownership of the client end of the channel. `Call` may be preferable
+  to `SyncClient` when migrating code from the C bindings to the LLCPP bindings,
+  or when implementing C APIs that take raw `zx_handle_t`s.
+
+#### Async-capable Client
+
+See
+[here](/docs/development/languages/fidl/tutorials/tutorial-llcpp.md#Async_capable-Client).
 
 #### SyncClient
 
