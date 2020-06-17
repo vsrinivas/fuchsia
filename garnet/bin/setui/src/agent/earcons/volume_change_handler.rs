@@ -334,41 +334,8 @@ mod tests {
     use crate::internal::event;
     use crate::message::base::MessengerType;
     use crate::service_context::ServiceContext;
-    use crate::switchboard::base::{
-        ListenCallback, ListenSession, SettingResponseResult, Switchboard,
-    };
     use futures::lock::Mutex;
     use std::sync::Arc;
-
-    struct FakeSwitchboard {}
-    struct FakeListenSession {}
-
-    impl ListenSession for FakeListenSession {
-        fn close(&mut self) {}
-    }
-
-    impl Drop for FakeListenSession {
-        fn drop(&mut self) {}
-    }
-
-    impl Switchboard for FakeSwitchboard {
-        fn request(
-            &mut self,
-            _setting_type: SettingType,
-            _request: SettingRequest,
-            _callback: futures::channel::oneshot::Sender<SettingResponseResult>,
-        ) -> Result<(), Error> {
-            Ok(())
-        }
-
-        fn listen(
-            &mut self,
-            _setting_type: SettingType,
-            _listener: ListenCallback,
-        ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
-            Ok(Box::new(FakeListenSession {}))
-        }
-    }
 
     fn fake_values() -> (
         [AudioStream; 5],   // fake_streams

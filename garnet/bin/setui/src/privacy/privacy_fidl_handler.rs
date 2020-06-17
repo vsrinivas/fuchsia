@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use crate::fidl_process;
 use fidl_fuchsia_settings::{
-    Error, PrivacyMarker, PrivacyRequest, PrivacySetResponder, PrivacySettings,
-    PrivacyWatch2Responder, PrivacyWatchResponder,
+    Error, PrivacyMarker, PrivacyRequest, PrivacySettings, PrivacyWatch2Responder,
+    PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
@@ -13,7 +13,8 @@ use futures::FutureExt;
 use crate::fidl_hanging_get_responder;
 use crate::fidl_hanging_get_result_responder;
 use crate::fidl_processor::RequestContext;
-use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
+use crate::request_respond;
+use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(PrivacySettings, PrivacyWatch2Responder, PrivacyMarker::DEBUG_NAME);
@@ -38,32 +39,6 @@ impl From<SettingResponse> for PrivacySettings {
 impl From<PrivacySettings> for SettingRequest {
     fn from(settings: PrivacySettings) -> Self {
         SettingRequest::SetUserDataSharingConsent(settings.user_data_sharing_consent)
-    }
-}
-
-async fn set(
-    switchboard_client: &SwitchboardClient,
-    settings: PrivacySettings,
-    responder: PrivacySetResponder,
-) {
-    match switchboard_client.request(SettingType::Privacy, settings.into()).await {
-        Ok(response_rx) => {
-            fasync::spawn(async move {
-                let result = match response_rx.await {
-                    Ok(_) => responder.send(&mut Ok(())),
-                    Err(_) => responder.send(&mut Err(Error::Failed)),
-                };
-                result.log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
-            });
-        }
-        Err(_) => {
-            // Report back an error immediately if we could not successfully make the privacy
-            // set request. The return result can be ignored as there is no actionable steps
-            // that can be taken.
-            responder
-                .send(&mut Err(Error::Failed))
-                .log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
-        }
     }
 }
 
@@ -101,7 +76,17 @@ async fn process_request_2(
     #[allow(unreachable_patterns)]
     match req {
         PrivacyRequest::Set { settings, responder } => {
-            set(&context.switchboard_client, settings, responder).await;
+            fasync::spawn(async move {
+                request_respond!(
+                    context,
+                    responder,
+                    SettingType::Privacy,
+                    settings.into(),
+                    Ok(()),
+                    Err(Error::Failed),
+                    PrivacyMarker::DEBUG_NAME
+                );
+            });
         }
         PrivacyRequest::Watch2 { responder } => {
             context.watch(responder, true).await;

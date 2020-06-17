@@ -7,7 +7,7 @@ use {
     crate::fidl_process,
     crate::fidl_processor::RequestContext,
     crate::switchboard::base::{
-        SettingRequest, SettingResponse, SettingType, SwitchboardClient, SystemLoginOverrideMode,
+        SettingRequest, SettingResponse, SettingType, SystemLoginOverrideMode,
     },
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
@@ -98,67 +98,31 @@ fn change_login_override(
     responder: SystemSetResponder,
 ) {
     fasync::spawn(async move {
-        let login_override_result = request(
-            &context.switchboard_client,
-            SettingType::System,
-            SettingRequest::SetLoginOverrideMode(mode),
-            "set login override",
-        )
-        .await;
-        if login_override_result.is_err() {
+        if context
+            .request(SettingType::System, SettingRequest::SetLoginOverrideMode(mode))
+            .await
+            .is_err()
+        {
             responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
             return;
         }
 
-        let schedule_account_clear_result = request(
-            &context.switchboard_client,
-            SettingType::Account,
-            SettingRequest::ScheduleClearAccounts,
-            "clear accounts",
-        )
-        .await;
-
-        if schedule_account_clear_result.is_err() {
+        if context
+            .request(SettingType::Account, SettingRequest::ScheduleClearAccounts)
+            .await
+            .is_err()
+        {
             responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
             return;
         }
 
-        let restart_result = request(
-            &context.switchboard_client,
-            SettingType::Power,
-            SettingRequest::Reboot,
-            "rebooting",
-        )
-        .await;
-
-        if restart_result.is_err() {
+        if context.request(SettingType::Power, SettingRequest::Reboot).await.is_err() {
             responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
             return;
         }
 
         responder.send(&mut Ok(())).ok();
     });
-}
-
-async fn request(
-    switchboard_client: &SwitchboardClient,
-    setting_type: SettingType,
-    setting_request: SettingRequest,
-    description: &str,
-) -> Result<(), ()> {
-    match switchboard_client.request(setting_type, setting_request).await {
-        Ok(response_rx) => response_rx
-            .await
-            .map_err(|error| error.to_string())
-            .and_then(|resp| resp.map(|_| {}).map_err(|error| error.to_string()))
-            .map_err(|error| {
-                fx_log_err!("request failed: {} error: {}", description, error);
-            }),
-        Err(error) => {
-            fx_log_err!("request failed: {} error: {}", description, error);
-            return Err(());
-        }
-    }
 }
 
 impl From<fidl_fuchsia_settings::LoginOverride> for SystemLoginOverrideMode {

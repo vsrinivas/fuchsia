@@ -8,15 +8,13 @@ use futures::FutureExt;
 use futures::future::LocalBoxFuture;
 
 use fidl_fuchsia_settings::{
-    Error, NightModeMarker, NightModeRequest, NightModeSetResponder, NightModeSettings,
-    NightModeWatchResponder,
+    Error, NightModeMarker, NightModeRequest, NightModeSettings, NightModeWatchResponder,
 };
 use fuchsia_async as fasync;
 
 use crate::fidl_hanging_get_responder;
-use crate::switchboard::base::{
-    NightModeInfo, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
-};
+use crate::request_respond;
+use crate::switchboard::base::{NightModeInfo, SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(
@@ -54,7 +52,17 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         NightModeRequest::Set { settings, responder } => {
-            set(&context.switchboard_client, settings, responder).await;
+            fasync::spawn(async move {
+                request_respond!(
+                    context,
+                    responder,
+                    SettingType::NightMode,
+                    settings.into(),
+                    Ok(()),
+                    Err(Error::Failed),
+                    NightModeMarker::DEBUG_NAME
+                );
+            });
         }
         NightModeRequest::Watch { responder } => {
             context.watch(responder, true).await;
@@ -65,32 +73,6 @@ async fn process_request(
     }
 
     return Ok(None);
-}
-
-async fn set(
-    switchboard_client: &SwitchboardClient,
-    settings: NightModeSettings,
-    responder: NightModeSetResponder,
-) {
-    match switchboard_client.request(SettingType::NightMode, settings.into()).await {
-        Ok(response_rx) => {
-            fasync::spawn(async move {
-                let result = match response_rx.await {
-                    Ok(Ok(_)) => responder.send(&mut Ok(())),
-                    _ => responder.send(&mut Err(Error::Failed)),
-                };
-                result.log_fidl_response_error(NightModeMarker::DEBUG_NAME);
-            });
-        }
-        Err(_) => {
-            // Report back an error immediately if we could not successfully make the night mode
-            // set request. The returned result can be ignored as there is no actionable steps
-            // that can be taken.
-            responder
-                .send(&mut Err(Error::Failed))
-                .log_fidl_response_error(NightModeMarker::DEBUG_NAME);
-        }
-    }
 }
 
 #[cfg(test)]

@@ -4,8 +4,7 @@
 
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
-    LightError, LightGroup, LightMarker, LightRequest, LightSetLightGroupValuesResponder,
-    LightState, LightWatchLightGroupsResponder,
+    LightError, LightGroup, LightMarker, LightRequest, LightState, LightWatchLightGroupsResponder,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -15,8 +14,9 @@ use futures::FutureExt;
 
 use crate::fidl_process_full;
 use crate::fidl_processor::RequestContext;
+use crate::request_respond;
 use crate::switchboard::base::FidlResponseErrorLogger;
-use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
+use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 type LightGroupSet = Vec<LightGroup>;
@@ -65,7 +65,20 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         LightRequest::SetLightGroupValues { name, state, responder } => {
-            set(context.clone(), name, state, responder).await;
+            fasync::spawn(async move {
+                request_respond!(
+                    context,
+                    responder,
+                    SettingType::Light,
+                    SettingRequest::SetLightGroupValue(
+                        name,
+                        state.into_iter().map(LightState::into).collect::<Vec<_>>(),
+                    ),
+                    Ok(()),
+                    Err(LightError::Failed),
+                    LightMarker::DEBUG_NAME
+                );
+            });
         }
         LightRequest::WatchLightGroups { responder } => {
             context.watch(responder, true).await;
@@ -76,43 +89,6 @@ async fn process_request(
     }
 
     return Ok(None);
-}
-
-async fn set(
-    context: RequestContext<LightGroupSet, LightWatchLightGroupsResponder>,
-    name: String,
-    state: Vec<LightState>,
-    responder: LightSetLightGroupValuesResponder,
-) {
-    match context
-        .switchboard_client
-        .request(
-            SettingType::Light,
-            SettingRequest::SetLightGroupValue(
-                name,
-                state.into_iter().map(LightState::into).collect::<Vec<_>>(),
-            ),
-        )
-        .await
-    {
-        Ok(response_rx) => {
-            fasync::spawn(async move {
-                let result = match response_rx.await {
-                    Ok(Ok(_)) => responder.send(&mut Ok(())),
-                    _ => responder.send(&mut Err(LightError::Failed)),
-                };
-                result.log_fidl_response_error(LightMarker::DEBUG_NAME);
-            });
-        }
-        Err(_) => {
-            // Report back an error immediately if we could not successfully make the light set
-            // request. The return result can be ignored as there is no actionable steps that
-            // can be taken.
-            responder
-                .send(&mut Err(LightError::Failed))
-                .log_fidl_response_error(LightMarker::DEBUG_NAME);
-        }
-    }
 }
 
 #[cfg(test)]

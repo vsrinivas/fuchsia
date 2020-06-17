@@ -5,17 +5,18 @@ use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use fidl_fuchsia_settings::{
-    AccessibilityMarker, AccessibilityRequest, AccessibilitySetResponder, AccessibilitySettings,
-    AccessibilityWatch2Responder, AccessibilityWatchResponder, Error,
+    AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, AccessibilityWatch2Responder,
+    AccessibilityWatchResponder,
 };
 use fuchsia_async as fasync;
 
 use crate::fidl_process;
 use crate::fidl_processor::RequestContext;
+use crate::request_respond;
 use crate::switchboard::accessibility_types::{
     AccessibilityInfo, CaptionsSettings, ColorBlindnessType,
 };
-use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
+use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 use crate::{fidl_hanging_get_responder, fidl_hanging_get_result_responder};
 
@@ -106,7 +107,17 @@ async fn process_request_2(
     #[allow(unreachable_patterns)]
     match req {
         AccessibilityRequest::Set { settings, responder } => {
-            set_accessibility(&context.switchboard_client, settings, responder).await;
+            fasync::spawn(async move {
+                request_respond!(
+                    context,
+                    responder,
+                    SettingType::Accessibility,
+                    settings.into(),
+                    Ok(()),
+                    Err(fidl_fuchsia_settings::Error::Failed),
+                    AccessibilityMarker::DEBUG_NAME
+                );
+            });
         }
         AccessibilityRequest::Watch2 { responder } => {
             context.watch(responder, true).await;
@@ -117,36 +128,6 @@ async fn process_request_2(
     }
 
     return Ok(None);
-}
-
-/// Sends a request to set the accessibility settings through the switchboard and responds with an
-/// appropriate result to the given responder.
-async fn set_accessibility(
-    switchboard_client: &SwitchboardClient,
-    settings: AccessibilitySettings,
-    responder: AccessibilitySetResponder,
-) {
-    if let Ok(response_rx) =
-        switchboard_client.request(SettingType::Accessibility, settings.into()).await
-    {
-        fasync::spawn(async move {
-            match response_rx.await {
-                Ok(_) => responder
-                    .send(&mut Ok(()))
-                    .log_fidl_response_error(AccessibilityMarker::DEBUG_NAME),
-                Err(_) => responder
-                    .send(&mut Err(Error::Failed))
-                    .log_fidl_response_error(AccessibilityMarker::DEBUG_NAME),
-            }
-        });
-    } else {
-        // report back an error immediately if we could not successfully
-        // make the time zone set request. The return result can be ignored
-        // as there is no actionable steps that can be taken.
-        responder
-            .send(&mut Err(Error::Failed))
-            .log_fidl_response_error(AccessibilityMarker::DEBUG_NAME);
-    }
 }
 
 #[cfg(test)]

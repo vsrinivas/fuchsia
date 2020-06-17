@@ -2,6 +2,7 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::RequestContext,
+    crate::request_respond,
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
@@ -50,24 +51,17 @@ async fn process_request(
     match req {
         DoNotDisturbRequest::Set { settings, responder } => {
             if let Some(request) = to_request(settings) {
-                if let Ok(response_rx) =
-                    context.switchboard_client.request(SettingType::DoNotDisturb, request).await
-                {
-                    fasync::spawn(async move {
-                        match response_rx.await {
-                            Ok(_) => responder
-                                .send(&mut Ok(()))
-                                .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME),
-                            Err(_) => responder
-                                .send(&mut Err(Error::Failed))
-                                .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME),
-                        };
-                    });
-                } else {
-                    responder
-                        .send(&mut Err(Error::Failed))
-                        .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
-                }
+                fasync::spawn(async move {
+                    request_respond!(
+                        context,
+                        responder,
+                        SettingType::DoNotDisturb,
+                        request,
+                        Ok(()),
+                        Err(Error::Failed),
+                        DoNotDisturbMarker::DEBUG_NAME
+                    );
+                });
             } else {
                 responder
                     .send(&mut Err(Error::Failed))

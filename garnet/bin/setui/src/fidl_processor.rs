@@ -11,8 +11,10 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
 use crate::internal::switchboard;
-use crate::message::base::MessengerType;
-use crate::switchboard::base::{SettingResponse, SettingType, SwitchboardClient};
+use crate::message::base::{Audience, MessengerType};
+use crate::switchboard::base::{
+    SettingRequest, SettingResponse, SettingResponseResult, SettingType, SwitchboardError,
+};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
 
@@ -29,7 +31,7 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    pub switchboard_client: SwitchboardClient,
+    switchboard_messenger: switchboard::message::Messenger,
     hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST>>>,
     exit_tx: ExitSender,
 }
@@ -39,6 +41,28 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
+    pub async fn request(
+        &self,
+        setting_type: SettingType,
+        request: SettingRequest,
+    ) -> SettingResponseResult {
+        let mut receptor = self
+            .switchboard_messenger
+            .message(
+                switchboard::Payload::Action(switchboard::Action::Request(setting_type, request)),
+                Audience::Address(switchboard::Address::Switchboard),
+            )
+            .send();
+
+        if let Ok((switchboard::Payload::Action(switchboard::Action::Response(result)), _)) =
+            receptor.next_payload().await
+        {
+            return result;
+        }
+
+        Err(SwitchboardError::CommunicationError)
+    }
+
     pub async fn watch(&self, responder: ST, close_on_error: bool) {
         let mut hanging_get_lock = self.hanging_get_handler.lock().await;
         hanging_get_lock
@@ -63,6 +87,17 @@ where
     }
 }
 
+#[macro_export]
+macro_rules! request_respond {
+    ($context:ident, $responder:ident, $setting_type:expr, $request:expr, $success:expr, $error:expr, $marker:expr) => {
+        match $context.request($setting_type, $request).await {
+            Ok(_) => $responder.send(&mut $success),
+            _ => $responder.send(&mut $error),
+        }
+        .log_fidl_response_error($marker);
+    };
+}
+
 impl<T, ST> Clone for RequestContext<T, ST>
 where
     T: From<SettingResponse> + Send + Sync + 'static,
@@ -70,7 +105,7 @@ where
 {
     fn clone(&self) -> RequestContext<T, ST> {
         RequestContext {
-            switchboard_client: self.switchboard_client.clone(),
+            switchboard_messenger: self.switchboard_messenger.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
             exit_tx: self.exit_tx.clone(),
         }
@@ -94,7 +129,7 @@ where
 {
     fn process(
         &self,
-        switchboard: SwitchboardClient,
+        switchboard_messenger: switchboard::message::Messenger,
         request: Request<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S>;
@@ -158,12 +193,12 @@ where
 {
     fn process(
         &self,
-        switchboard_client: SwitchboardClient,
+        switchboard_messenger: switchboard::message::Messenger,
         request: Request<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
         let context = RequestContext {
-            switchboard_client: switchboard_client.clone(),
+            switchboard_messenger: switchboard_messenger.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
             exit_tx: exit_tx.clone(),
         };
@@ -179,7 +214,6 @@ where
     S: ServiceMarker,
 {
     request_stream: RequestStream<S>,
-    switchboard_client: SwitchboardClient,
     switchboard_messenger: switchboard::message::Messenger,
     processing_units: Vec<Box<dyn ProcessingUnit<S>>>,
 }
@@ -190,15 +224,9 @@ where
 {
     pub async fn new(
         stream: RequestStream<S>,
-        switchboard_client: SwitchboardClient,
         switchboard_messenger: switchboard::message::Messenger,
     ) -> Self {
-        Self {
-            request_stream: stream,
-            switchboard_client,
-            switchboard_messenger,
-            processing_units: Vec::new(),
-        }
+        Self { request_stream: stream, switchboard_messenger, processing_units: Vec::new() }
     }
 
     pub async fn register<V, SV>(
@@ -239,7 +267,7 @@ where
                             // request. Otherwise, hand the request to the next processing
                             // unit
                             match processing_unit.process(
-                                    self.switchboard_client.clone(),
+                                    self.switchboard_messenger.clone(),
                                     req, exit_tx.clone()).await {
                                 Ok(Some(return_request)) => {
                                     req = return_request;
@@ -263,7 +291,6 @@ where
 
 pub fn process_stream<S, T, ST>(
     stream: RequestStream<S>,
-    switchboard: SwitchboardClient,
     switchboard_messenger_factory: switchboard::message::Factory,
     setting_type: SettingType,
     callback: RequestCallback<S, T, ST>,
@@ -276,7 +303,7 @@ pub fn process_stream<S, T, ST>(
         if let Ok((messenger, _)) =
             switchboard_messenger_factory.create(MessengerType::Unbound).await
         {
-            let mut processor = FidlProcessor::<S>::new(stream, switchboard, messenger).await;
+            let mut processor = FidlProcessor::<S>::new(stream, messenger).await;
             processor.register::<T, ST>(setting_type, callback).await;
             processor.process().await;
         }

@@ -8,7 +8,6 @@ use crate::fidl_process;
 use crate::fidl_processor::RequestContext;
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingType, SetupInfo,
-    SwitchboardClient,
 };
 use crate::switchboard::hanging_get_handler::Sender;
 use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
@@ -86,14 +85,11 @@ impl From<SetupInfo> for SetupSettings {
     }
 }
 
-async fn reboot(switchboard_client: SwitchboardClient) -> Result<(), Error> {
-    if let Ok(response_rx) =
-        switchboard_client.request(SettingType::Power, SettingRequest::Reboot).await
-    {
-        if let Ok(Ok(_)) = response_rx.await {
-            return Ok(());
-        }
+async fn reboot(context: RequestContext<SetupSettings, SetupWatchResponder>) -> Result<(), Error> {
+    if let Ok(_) = context.request(SettingType::Power, SettingRequest::Reboot).await {
+        return Ok(());
     }
+
     return Err(fidl_fuchsia_settings::Error::Failed);
 }
 
@@ -103,18 +99,16 @@ async fn set(
     do_reboot: bool,
 ) -> Result<(), Error> {
     if let Ok(request) = SettingRequest::try_from(settings) {
-        if let Ok(response_rx) =
-            context.switchboard_client.request(SettingType::Setup, request).await
-        {
-            let switchboard_client = context.switchboard_client.clone();
-            if let Ok(Ok(_)) = response_rx.await {
-                if do_reboot {
-                    return reboot(switchboard_client).await;
-                }
-                return Ok(());
+        if let Ok(_) = context.request(SettingType::Setup, request).await {
+            if do_reboot {
+                return reboot(context).await;
             }
+            return Ok(());
+        } else {
+            return Err(fidl_fuchsia_settings::Error::Failed);
         }
     }
+
     return Err(fidl_fuchsia_settings::Error::Failed);
 }
 

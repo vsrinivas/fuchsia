@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use fidl_fuchsia_settings::{
-    Error, IntlMarker, IntlRequest, IntlSetResponder, IntlSettings, IntlWatch2Responder,
-    IntlWatchResponder,
+    IntlMarker, IntlRequest, IntlSettings, IntlWatch2Responder, IntlWatchResponder,
 };
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
@@ -13,7 +12,8 @@ use crate::fidl_hanging_get_responder;
 use crate::fidl_hanging_get_result_responder;
 use crate::fidl_process;
 use crate::fidl_processor::RequestContext;
-use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
+use crate::request_respond;
+use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(IntlSettings, IntlWatch2Responder, IntlMarker::DEBUG_NAME);
@@ -34,30 +34,6 @@ impl From<SettingResponse> for IntlSettings {
 impl From<IntlSettings> for SettingRequest {
     fn from(settings: IntlSettings) -> Self {
         SettingRequest::SetIntlInfo(settings.into())
-    }
-}
-
-async fn set(
-    context: RequestContext<IntlSettings, IntlWatch2Responder>,
-    settings: IntlSettings,
-    responder: IntlSetResponder,
-) {
-    match context.switchboard_client.request(SettingType::Intl, settings.into()).await {
-        Ok(response_rx) => {
-            fasync::spawn(async move {
-                let result = match response_rx.await {
-                    Ok(Ok(_)) => responder.send(&mut Ok(())),
-                    _ => responder.send(&mut Err(Error::Failed)),
-                };
-                result.log_fidl_response_error(IntlMarker::DEBUG_NAME);
-            });
-        }
-        Err(_) => {
-            // Report back an error immediately if we could not successfully make the intl set
-            // request. The return result can be ignored as there is no actionable steps that
-            // can be taken.
-            responder.send(&mut Err(Error::Failed)).log_fidl_response_error(IntlMarker::DEBUG_NAME);
-        }
     }
 }
 
@@ -88,7 +64,17 @@ async fn process_request_2(
     #[allow(unreachable_patterns)]
     match req {
         IntlRequest::Set { settings, responder } => {
-            set(context.clone(), settings, responder).await;
+            fasync::spawn(async move {
+                request_respond!(
+                    context,
+                    responder,
+                    SettingType::Intl,
+                    settings.into(),
+                    Ok(()),
+                    Err(fidl_fuchsia_settings::Error::Failed),
+                    IntlMarker::DEBUG_NAME
+                );
+            });
         }
         IntlRequest::Watch2 { responder } => context.watch(responder, true).await,
         _ => {

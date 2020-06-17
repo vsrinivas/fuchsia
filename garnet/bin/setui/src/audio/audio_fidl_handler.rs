@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 use {
     crate::fidl_hanging_get_responder, crate::fidl_hanging_get_result_responder,
-    crate::fidl_process, crate::fidl_processor::RequestContext, crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::Sender, fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_settings::*, fuchsia_async as fasync, futures::future::LocalBoxFuture,
-    futures::prelude::*,
+    crate::fidl_process, crate::fidl_processor::RequestContext, crate::request_respond,
+    crate::switchboard::base::*, crate::switchboard::hanging_get_handler::Sender,
+    fidl_fuchsia_media::AudioRenderUsage, fidl_fuchsia_settings::*, fuchsia_async as fasync,
+    futures::future::LocalBoxFuture, futures::prelude::*,
 };
 
 fidl_hanging_get_responder!(AudioSettings, AudioWatch2Responder, AudioMarker::DEBUG_NAME);
@@ -141,7 +141,17 @@ async fn process_request_2(
     match req {
         AudioRequest::Set { settings, responder } => {
             if let Some(request) = to_request(settings) {
-                set_volume(&context.switchboard_client, request, responder).await
+                fasync::spawn(async move {
+                    request_respond!(
+                        context,
+                        responder,
+                        SettingType::Audio,
+                        request,
+                        Ok(()),
+                        Err(fidl_fuchsia_settings::Error::Failed),
+                        AudioMarker::DEBUG_NAME
+                    );
+                });
             } else {
                 responder
                     .send(&mut Err(Error::Unsupported))
@@ -156,28 +166,4 @@ async fn process_request_2(
         }
     }
     return Ok(None);
-}
-
-async fn set_volume(
-    switchboard_client: &SwitchboardClient,
-    request: SettingRequest,
-    responder: AudioSetResponder,
-) {
-    if let Ok(response_rx) = switchboard_client.request(SettingType::Audio, request).await {
-        fasync::spawn(async move {
-            // Return success if we get a Ok result from the
-            // switchboard.
-            if let Ok(Ok(_)) = response_rx.await {
-                responder.send(&mut Ok(())).log_fidl_response_error(AudioMarker::DEBUG_NAME);
-            } else {
-                responder
-                    .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
-                    .log_fidl_response_error(AudioMarker::DEBUG_NAME);
-            }
-        });
-    } else {
-        responder
-            .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
-            .log_fidl_response_error(AudioMarker::DEBUG_NAME);
-    }
 }

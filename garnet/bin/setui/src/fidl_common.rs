@@ -24,8 +24,7 @@ macro_rules! fidl_process_full {
             use crate::internal::switchboard;
             use crate::message::base::MessengerType;
 
-            pub fn spawn (switchboard_client: SwitchboardClient,
-                    switchboard_messenger_factory: switchboard::message::Factory,
+            pub fn spawn (switchboard_messenger_factory: switchboard::message::Factory,
                     stream: paste::item!{[<$interface RequestStream>]}) {
                 fasync::spawn_local(async move {
                     let messenger = if let Ok((messenger, _)) = switchboard_messenger_factory.create(MessengerType::Unbound).await {
@@ -34,7 +33,7 @@ macro_rules! fidl_process_full {
                         return
                     };
 
-                    let mut processor = FidlProcessor::<paste::item!{[<$interface Marker>]}>::new(stream, switchboard_client, messenger).await;
+                    let mut processor = FidlProcessor::<paste::item!{[<$interface Marker>]}>::new(stream, messenger).await;
                         $(processor
                             .register::<$fidl_settings, $fidl_responder>(
                                 $setting_type,

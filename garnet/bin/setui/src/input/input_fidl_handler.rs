@@ -5,11 +5,11 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::RequestContext,
-    crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient},
+    crate::request_respond,
+    crate::switchboard::base::{SettingRequest, SettingResponse, SettingType},
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
-        Error, InputDeviceSettings, InputMarker, InputRequest, InputSetResponder,
-        InputWatchResponder, Microphone,
+        Error, InputDeviceSettings, InputMarker, InputRequest, InputWatchResponder, Microphone,
     },
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
@@ -52,7 +52,17 @@ async fn process_request(
     match req {
         InputRequest::Set { settings, responder } => {
             if let Some(request) = to_request(settings) {
-                set_mic_mute(&context.switchboard_client, request, responder).await
+                fasync::spawn(async move {
+                    request_respond!(
+                        context,
+                        responder,
+                        SettingType::Input,
+                        request,
+                        Ok(()),
+                        Err(fidl_fuchsia_settings::Error::Failed),
+                        InputMarker::DEBUG_NAME
+                    );
+                });
             } else {
                 responder
                     .send(&mut Err(Error::Unsupported))
@@ -67,28 +77,4 @@ async fn process_request(
         }
     }
     return Ok(None);
-}
-
-/// Send the set request to the switchboard and send a response back over the [responder].
-async fn set_mic_mute(
-    switchboard_client: &SwitchboardClient,
-    request: SettingRequest,
-    responder: InputSetResponder,
-) {
-    if let Ok(response_rx) = switchboard_client.request(SettingType::Input, request).await {
-        fasync::spawn(async move {
-            // Return success if we get a Ok result from the switchboard.
-            if let Ok(Ok(_)) = response_rx.await {
-                responder.send(&mut Ok(())).log_fidl_response_error(InputMarker::DEBUG_NAME);
-            } else {
-                responder
-                    .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
-                    .log_fidl_response_error(InputMarker::DEBUG_NAME);
-            }
-        });
-    } else {
-        responder
-            .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
-            .log_fidl_response_error(InputMarker::DEBUG_NAME);
-    }
 }

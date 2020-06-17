@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 use std::collections::HashSet;
-use std::sync::Arc;
 
-use anyhow::Error;
 use fuchsia_syslog::fx_log_warn;
-use futures::channel::oneshot::{Receiver, Sender};
-use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -18,14 +14,9 @@ use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::{LightInfo, LightState};
 use bitflags::bitflags;
 
-pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
-
 /// Return type from a controller after handling a state change.
 pub type ControllerStateResult = Result<(), SwitchboardError>;
 pub type SettingResponseResult = Result<Option<SettingResponse>, SwitchboardError>;
-pub type SettingRequestResponder = Sender<SettingResponseResult>;
-
-pub type ListenCallback = Arc<dyn Fn(SettingType) + Send + Sync>;
 
 /// A trait for structs where all fields are options. Recursively performs
 /// [Option::or](std::option::Option::or) on each field in the struct and substructs.
@@ -59,6 +50,9 @@ pub enum SwitchboardError {
 
     #[error("Undeliverable Request:{request:?} for setting type: {setting_type:?}")]
     UndeliverableError { setting_type: SettingType, request: SettingRequest },
+
+    #[error("Communication error")]
+    CommunicationError,
 }
 
 /// The setting types supported by the messaging system. This is used as a key
@@ -423,74 +417,6 @@ pub trait ListenSession: Drop {
     /// Invoked to close the current listening session. No further updates will
     /// be provided to the listener provided at the initial listen call.
     fn close(&mut self);
-}
-
-/// A interface for send SettingActions.
-pub trait Switchboard {
-    /// Transmits a SettingRequest. Results are returned from the passed in
-    /// oneshot sender.
-    fn request(
-        &mut self,
-        setting_type: SettingType,
-        request: SettingRequest,
-        callback: Sender<SettingResponseResult>,
-    ) -> Result<(), Error>;
-
-    /// Establishes a continuous callback for change notifications around a
-    /// SettingType.
-    fn listen(
-        &mut self,
-        setting_type: SettingType,
-        listener: ListenCallback,
-    ) -> Result<Box<dyn ListenSession + Send + Sync>, Error>;
-}
-
-/// SwitchboardClient is a cloneable wrapper around SwitchboardHandle that
-/// ensures the switchboard lock is not held beyond its intended usage.
-#[derive(Clone)]
-pub struct SwitchboardClient {
-    handle: SwitchboardHandle,
-}
-
-// TODO(fxb/50511): Remove once not part of Invocation.
-impl std::fmt::Debug for SwitchboardClient {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("").finish()
-    }
-}
-
-impl SwitchboardClient {
-    pub fn new(handle: &SwitchboardHandle) -> Self {
-        Self { handle: handle.clone() }
-    }
-
-    pub async fn request(
-        &self,
-        setting_type: SettingType,
-        request: SettingRequest,
-    ) -> Result<Receiver<SettingResponseResult>, Error> {
-        let (response_tx, response_rx) =
-            futures::channel::oneshot::channel::<SettingResponseResult>();
-        let mut handle_lock = self.handle.lock().await;
-
-        let result = handle_lock.request(setting_type, request, response_tx);
-
-        match result {
-            Ok(_) => Ok(response_rx),
-            Err(err) => Err(err),
-        }
-    }
-
-    pub async fn listen(
-        &self,
-        setting_type: SettingType,
-        listener: ListenCallback,
-    ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
-        let mut handle_lock = self.handle.lock().await;
-        let result = handle_lock.listen(setting_type, listener);
-
-        return result;
-    }
 }
 
 /// Custom trait used to handle results from responding to FIDL calls.

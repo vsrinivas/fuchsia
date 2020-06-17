@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::fidl_processor::process_stream,
+    crate::fidl_processor::RequestContext,
     crate::internal::switchboard,
-    crate::switchboard::base::{
-        SettingRequest, SettingType, SwitchboardClient, SystemLoginOverrideMode,
-    },
+    crate::switchboard::base::{SettingRequest, SettingType, SystemLoginOverrideMode},
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::*,
@@ -64,13 +63,11 @@ impl Sender<SystemSettings> for SetUiServiceWatchResponder {
 }
 
 pub fn spawn_setui_fidl_handler(
-    switchboard_client: SwitchboardClient,
     switchboard_messenger_factory: switchboard::message::Factory,
     stream: SetUiServiceRequestStream,
 ) {
     process_stream::<SetUiServiceMarker, SystemSettings, SetUiServiceWatchResponder>(
     stream,
-    switchboard_client,
     switchboard_messenger_factory,
     SettingType::System,
     Box::new(
@@ -85,12 +82,14 @@ pub fn spawn_setui_fidl_handler(
                 operation: Some(AccountOperation::SetLoginOverride),
                 login_override: Some(login_override)
               }) = mutation {
-                set_login_override(
-                  &context.switchboard_client,
-                  SystemLoginOverrideMode::from(login_override),
-                  responder,
-                )
-                .await;
+                fasync::spawn(async move {
+                    set_login_override(
+                    context,
+                    SystemLoginOverrideMode::from(login_override),
+                    responder,
+                    )
+                    .await
+                });
 
                 return Ok(None);
               }
@@ -118,23 +117,14 @@ pub fn spawn_setui_fidl_handler(
 }
 
 async fn set_login_override(
-    switchboard_client: &SwitchboardClient,
+    context: RequestContext<SystemSettings, SetUiServiceWatchResponder>,
     mode: SystemLoginOverrideMode,
     responder: SetUiServiceMutateResponder,
 ) {
-    if let Ok(response_rx) = switchboard_client
-        .request(SettingType::System, SettingRequest::SetLoginOverrideMode(mode))
-        .await
+    if let Ok(_) =
+        context.request(SettingType::System, SettingRequest::SetLoginOverrideMode(mode)).await
     {
-        fasync::spawn(async move {
-            // Return success if we get a Ok result from the
-            // switchboard.
-            if let Ok(Ok(_optional_response)) = response_rx.await {
-                responder.send(&mut MutationResponse { return_code: ReturnCode::Ok }).ok();
-            } else {
-                responder.send(&mut MutationResponse { return_code: ReturnCode::Failed }).ok();
-            }
-        });
+        responder.send(&mut MutationResponse { return_code: ReturnCode::Ok }).ok();
     } else {
         responder.send(&mut MutationResponse { return_code: ReturnCode::Failed }).ok();
     }

@@ -7,15 +7,15 @@ use {
     crate::fidl_hanging_get_result_responder,
     crate::fidl_process,
     crate::fidl_processor::RequestContext,
-    crate::switchboard::base::{
-        LowLightMode, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
-    },
+    crate::request_respond,
+    crate::switchboard::base::{LowLightMode, SettingRequest, SettingResponse, SettingType},
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
         DisplayWatchLightSensor2Responder, DisplayWatchLightSensorResponder, DisplayWatchResponder,
         Error, LightSensorData, LowLightMode as FidlLowLightMode,
     },
+    fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
 };
@@ -144,14 +144,17 @@ async fn process_request_2(
     match req {
         DisplayRequest::Set { settings, responder } => {
             if let Some(request) = to_request(settings) {
-                match context.switchboard_client.request(SettingType::Display, request).await {
-                    Ok(_) => responder
-                        .send(&mut Ok(()))
-                        .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
-                    Err(_err) => responder
-                        .send(&mut Err(Error::Unsupported))
-                        .log_fidl_response_error(DisplayMarker::DEBUG_NAME),
-                }
+                fasync::spawn(async move {
+                    request_respond!(
+                        context,
+                        responder,
+                        SettingType::Display,
+                        request,
+                        Ok(()),
+                        Err(Error::Unsupported),
+                        DisplayMarker::DEBUG_NAME
+                    );
+                });
             } else {
                 responder
                     .send(&mut Err(Error::Unsupported))
