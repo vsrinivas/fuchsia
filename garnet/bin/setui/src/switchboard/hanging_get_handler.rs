@@ -211,7 +211,9 @@ where
 
             fasync::spawn(async move {
                 loop {
-                    let mut receptor_fuse = receptor.next().fuse();
+                    let receptor_fuse = receptor.next().fuse();
+                    futures::pin_mut!(receptor_fuse);
+
                     futures::select! {
                         update = receptor_fuse => {
                             if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(setting))) = extract_payload(update) {

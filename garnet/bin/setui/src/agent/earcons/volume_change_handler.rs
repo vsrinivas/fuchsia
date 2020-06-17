@@ -120,7 +120,9 @@ impl VolumeChangeHandler {
                 )
                 .send();
             loop {
-                let mut listen_receptor_fuse = listen_receptor.next().fuse();
+                let listen_receptor_fuse = listen_receptor.next().fuse();
+                futures::pin_mut!(listen_receptor_fuse);
+
                 futures::select! {
                     event = input_rx.next() => {
                         if let Some(event) = event {

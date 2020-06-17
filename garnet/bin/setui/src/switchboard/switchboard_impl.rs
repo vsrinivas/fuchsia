@@ -170,9 +170,10 @@ impl SwitchboardImpl {
 
         fasync::spawn(async move {
             loop {
-                let mut registry_receptor = registry_receptor.next().fuse();
-                let mut switchboard_receptor = switchboard_receptor.next().fuse();
-                let mut cancel_receptor = cancel_listen_rx.next().fuse();
+                let registry_receptor = registry_receptor.next().fuse();
+                let switchboard_receptor = switchboard_receptor.next().fuse();
+                let cancel_receptor = cancel_listen_rx.next().fuse();
+                futures::pin_mut!(registry_receptor, switchboard_receptor, cancel_receptor);
 
                 futures::select! {
                     // Invoked when there is a new message from the registry.

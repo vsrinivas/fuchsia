@@ -123,8 +123,10 @@ impl RegistryImpl {
 
         fasync::spawn(async move {
             loop {
-                let mut controller_fuse = controller_receptor.next().fuse();
-                let mut registry_fuse = registry_messenger_receptor.next().fuse();
+                let controller_fuse = controller_receptor.next().fuse();
+                let registry_fuse = registry_messenger_receptor.next().fuse();
+                futures::pin_mut!(controller_fuse, registry_fuse);
+
                 futures::select! {
                     // handle top level message from controllers.
                     controller_event = controller_fuse => {
