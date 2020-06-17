@@ -14,26 +14,32 @@
 macro_rules! fidl_process_full {
     ($interface:ident $(,$setting_type:expr, $fidl_settings:ty,
             $fidl_responder:ty, $handle_func:ident)+$(,)*) => {
+        type HandleResult<'a> = LocalBoxFuture<'a, Result<Option<paste::item!{[<$interface Request>]}>, anyhow::Error>>;
+
         pub mod fidl_io {
             paste::item!{use fidl_fuchsia_settings::{[<$interface Marker>], [<$interface RequestStream>]};}
             use super::*;
             use fuchsia_async as fasync;
             use crate::fidl_processor::{FidlProcessor};
+            use crate::internal::switchboard;
+            use crate::message::base::MessengerType;
 
             pub fn spawn (switchboard_client: SwitchboardClient,
+                    switchboard_messenger_factory: switchboard::message::Factory,
                     stream: paste::item!{[<$interface RequestStream>]}) {
                 fasync::spawn_local(async move {
-                        let mut processor = FidlProcessor::<paste::item!{[<$interface Marker>]}>::new(stream, switchboard_client);
+                    let messenger = if let Ok((messenger, _)) = switchboard_messenger_factory.create(MessengerType::Unbound).await {
+                        messenger
+                    } else {
+                        return
+                    };
+
+                    let mut processor = FidlProcessor::<paste::item!{[<$interface Marker>]}>::new(stream, switchboard_client, messenger).await;
                         $(processor
                             .register::<$fidl_settings, $fidl_responder>(
                                 $setting_type,
                                 Box::new(
-                                    move |context,
-                                        req|
-                                        -> LocalBoxFuture<
-                                        '_,
-                                        Result<Option<paste::item!{[<$interface Request>]}>, anyhow::Error>,
-                                    > {
+                                    move |context, req| -> HandleResult<'_> {
                                         async move {
                                             $handle_func(context, req).await
                                         }
@@ -43,10 +49,10 @@ macro_rules! fidl_process_full {
                             )
                             .await;)*
                         processor.process().await;
-                    });
-                }
+                });
             }
         }
+    }
 }
 
 #[macro_export]

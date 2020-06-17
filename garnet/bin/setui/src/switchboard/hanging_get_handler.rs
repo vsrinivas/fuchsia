@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 use {
+    crate::internal::switchboard,
+    crate::message::base::Audience,
+    crate::message::receptor::extract_payload,
     crate::switchboard::base::*,
     anyhow::{format_err, Error},
     fuchsia_async as fasync,
     futures::channel::mpsc::UnboundedSender,
     futures::lock::Mutex,
     futures::stream::StreamExt,
+    futures::FutureExt,
     std::marker::PhantomData,
     std::sync::Arc,
 };
@@ -91,8 +95,8 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    switchboard_client: SwitchboardClient,
-    listen_session: Option<Box<dyn ListenSession + Send + Sync>>,
+    switchboard_messenger: switchboard::message::Messenger,
+    listen_exit_tx: Option<UnboundedSender<()>>,
     pending_responders: Vec<(ST, Option<UnboundedSender<()>>)>,
     data_type: PhantomData<T>,
     setting_type: SettingType,
@@ -127,14 +131,14 @@ where
     ST: Sender<T> + Send + Sync + 'static,
 {
     pub async fn create(
-        switchboard_client: SwitchboardClient,
+        switchboard_messenger: switchboard::message::Messenger,
         setting_type: SettingType,
     ) -> Arc<Mutex<HangingGetHandler<T, ST>>> {
         let (on_command_sender, mut on_command_receiver) =
             futures::channel::mpsc::unbounded::<ListenCommand>();
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST> {
-            switchboard_client: switchboard_client.clone(),
-            listen_session: None,
+            switchboard_messenger: switchboard_messenger,
+            listen_exit_tx: None,
             pending_responders: Vec::new(),
             data_type: PhantomData,
             setting_type: setting_type,
@@ -164,6 +168,10 @@ where
     }
 
     pub fn close(&mut self) {
+        if let Some(exit_tx) = self.listen_exit_tx.take() {
+            exit_tx.unbounded_send(()).ok();
+        }
+
         self.command_tx.unbounded_send(ListenCommand::Exit).ok();
     }
 
@@ -188,23 +196,34 @@ where
 
         self.pending_responders.push((responder, error_sender));
 
-        if self.listen_session.is_none() {
+        if self.listen_exit_tx.is_none() {
             let command_tx_clone = self.command_tx.clone();
-            if let Ok(session) = self
-                .switchboard_client
-                .listen(
-                    self.setting_type,
-                    Arc::new(move |setting| {
-                        command_tx_clone.unbounded_send(ListenCommand::Change(setting)).ok();
-                    }),
+            let mut receptor = self
+                .switchboard_messenger
+                .message(
+                    switchboard::Payload::Listen(switchboard::Listen::Request(self.setting_type)),
+                    Audience::Address(switchboard::Address::Switchboard),
                 )
-                .await
-            {
-                self.listen_session = Some(session);
-            } else {
-                self.on_error();
-                return;
-            }
+                .send();
+
+            let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
+            self.listen_exit_tx = Some(exit_tx);
+
+            fasync::spawn(async move {
+                loop {
+                    let mut receptor_fuse = receptor.next().fuse();
+                    futures::select! {
+                        update = receptor_fuse => {
+                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(setting))) = extract_payload(update) {
+                                command_tx_clone.unbounded_send(ListenCommand::Change(setting)).ok();
+                            }
+                        }
+                        exit = exit_rx.next() => {
+                            return;
+                        }
+                    }
+                }
+            });
         }
 
         if self.controller.on_watch() {
@@ -228,7 +247,10 @@ where
     }
 
     fn on_error(&mut self) {
-        self.listen_session = None;
+        if let Some(exit_tx) = self.listen_exit_tx.take() {
+            exit_tx.unbounded_send(()).ok();
+        }
+
         self.controller.on_error();
         if !self.pending_responders.is_empty() {
             while let Some((responder, optional_exit_tx)) = self.pending_responders.pop() {
@@ -251,14 +273,23 @@ where
     }
 
     async fn get_response(&self) -> Result<SettingResponse, Error> {
-        if let Ok(response_rx) =
-            self.switchboard_client.request(self.setting_type, SettingRequest::Get).await
+        let mut receptor = self
+            .switchboard_messenger
+            .message(
+                switchboard::Payload::Action(switchboard::Action::Request(
+                    self.setting_type,
+                    SettingRequest::Get,
+                )),
+                Audience::Address(switchboard::Address::Switchboard),
+            )
+            .send();
+
+        if let Ok((
+            switchboard::Payload::Action(switchboard::Action::Response(Ok(Some(setting_response)))),
+            _,
+        )) = receptor.next_payload().await
         {
-            if let Ok(Some(setting_response)) = response_rx.await.expect("got result") {
-                Ok(setting_response)
-            } else {
-                Err(format_err!("Couldn't get value"))
-            }
+            Ok(setting_response)
         } else {
             Err(format_err!("Couldn't make request"))
         }
@@ -268,11 +299,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{format_err, Error};
+    use crate::message::base::MessengerType;
     use fuchsia_async::DurationExt;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc::UnboundedSender;
-    use parking_lot::RwLock;
 
     const ID1: f32 = 1.0;
     const ID2: f32 = 2.0;
@@ -294,28 +324,19 @@ mod tests {
         sender: UnboundedSender<Event>,
     }
 
-    struct TestListenSession {}
-
-    impl ListenSession for TestListenSession {
-        fn close(&mut self) {}
-    }
-
-    impl Drop for TestListenSession {
-        fn drop(&mut self) {}
-    }
-
     struct TestSwitchboardBuilder {
-        id_to_send: Arc<RwLock<Option<f32>>>,
+        id_to_send: Option<f32>,
         always_fail: bool,
+        messenger_factory: switchboard::message::Factory,
     }
 
     impl TestSwitchboardBuilder {
-        fn new() -> Self {
-            Self { id_to_send: Arc::new(RwLock::new(None)), always_fail: false }
+        fn new(messenger_factory: switchboard::message::Factory) -> Self {
+            Self { messenger_factory: messenger_factory, id_to_send: None, always_fail: false }
         }
 
         fn set_initial_id(mut self, id: f32) -> Self {
-            self.id_to_send = Arc::new(RwLock::new(Some(id)));
+            self.id_to_send = Some(id);
             self
         }
 
@@ -324,36 +345,112 @@ mod tests {
             self
         }
 
-        fn build(self) -> Arc<Mutex<TestSwitchboard>> {
-            Arc::new(Mutex::new(TestSwitchboard {
-                id_to_send: self.id_to_send,
-                setting_type: None,
-                listener: None,
-                always_fail: self.always_fail,
-            }))
+        async fn build(self) -> Arc<Mutex<TestSwitchboard>> {
+            TestSwitchboard::create(self.messenger_factory, self.id_to_send, self.always_fail).await
         }
     }
 
     struct TestSwitchboard {
-        id_to_send: Arc<RwLock<Option<f32>>>,
+        id_to_send: Option<f32>,
         setting_type: Option<SettingType>,
-        listener: Option<ListenCallback>,
+        listener: Option<switchboard::message::Client>,
         always_fail: bool,
     }
 
     impl TestSwitchboard {
+        async fn create(
+            messenger_factory: switchboard::message::Factory,
+            id_to_send: Option<f32>,
+            always_fail: bool,
+        ) -> Arc<Mutex<TestSwitchboard>> {
+            let switchboard = Arc::new(Mutex::new(TestSwitchboard {
+                id_to_send,
+                setting_type: None,
+                listener: None,
+                always_fail: always_fail,
+            }));
+
+            let (_, mut receptor) = messenger_factory
+                .create(MessengerType::Addressable(switchboard::Address::Switchboard))
+                .await
+                .unwrap();
+
+            let switchboard_clone = switchboard.clone();
+            fasync::spawn(async move {
+                while let Ok((payload, client)) = receptor.next_payload().await {
+                    let mut switchboard = switchboard_clone.lock().await;
+                    match payload {
+                        switchboard::Payload::Action(switchboard::Action::Request(
+                            setting_type,
+                            request,
+                        )) => {
+                            switchboard.request(client, setting_type, request);
+                        }
+                        switchboard::Payload::Listen(switchboard::Listen::Request(
+                            setting_type,
+                        )) => {
+                            switchboard.listen(client, setting_type);
+                        }
+                        _ => {
+                            panic!("unexpected payload");
+                        }
+                    }
+                }
+            });
+
+            switchboard
+        }
+
         fn set_id(&mut self, id: f32) {
-            self.id_to_send = Arc::new(RwLock::new(Some(id)));
+            self.id_to_send = Some(id);
         }
 
         fn notify_listener(&self) {
             if let Some(setting_type_value) = self.setting_type {
-                if let Some(listener_sender) = self.listener.clone() {
-                    (listener_sender)(setting_type_value);
+                if let Some(listener) = self.listener.clone() {
+                    listener
+                        .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
+                            setting_type_value,
+                        )))
+                        .send();
                     return;
                 }
             }
             panic!("Missing listener to notify");
+        }
+
+        fn listen(&mut self, listener: switchboard::message::Client, setting_type: SettingType) {
+            self.setting_type = Some(setting_type);
+            self.listener = Some(listener);
+        }
+
+        fn request(
+            &mut self,
+            requestor: switchboard::message::Client,
+            setting_type: SettingType,
+            request: SettingRequest,
+        ) {
+            assert_eq!(setting_type, SETTING_TYPE);
+            assert_eq!(request, SettingRequest::Get);
+
+            let mut response = None;
+            if self.always_fail {
+                response = Some(Err(SwitchboardError::UnexpectedError {
+                    description: "set failure".to_string(),
+                }));
+            } else if let Some(value) = self.id_to_send.take() {
+                response = Some(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(
+                    false,
+                    value,
+                    LowLightMode::Disable,
+                )))));
+            }
+
+            if let Some(response) = response.take() {
+                requestor
+                    .reply(switchboard::Payload::Action(switchboard::Action::Response(response)))
+                    .send();
+            }
         }
     }
 
@@ -376,49 +473,6 @@ mod tests {
         }
     }
 
-    impl Switchboard for TestSwitchboard {
-        fn request(
-            &mut self,
-            setting_type: SettingType,
-            request: SettingRequest,
-            callback: futures::channel::oneshot::Sender<SettingResponseResult>,
-        ) -> Result<(), Error> {
-            assert_eq!(setting_type, SETTING_TYPE);
-            assert_eq!(request, SettingRequest::Get);
-
-            if self.always_fail {
-                callback
-                    .send(Err(SwitchboardError::UnexpectedError {
-                        description: "set failure".to_string(),
-                    }))
-                    .unwrap();
-            } else if let Some(value) = *self.id_to_send.read() {
-                callback
-                    .send(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(
-                        false,
-                        value,
-                        LowLightMode::Disable,
-                    )))))
-                    .unwrap();
-            }
-            Ok(())
-        }
-
-        fn listen(
-            &mut self,
-            setting_type: SettingType,
-            listener: ListenCallback,
-        ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
-            if self.always_fail {
-                return Err(format_err!("failure"));
-            }
-
-            self.setting_type = Some(setting_type);
-            self.listener = Some(listener);
-            Ok(Box::new(TestListenSession {}))
-        }
-    }
-
     fn verify_id(event: Event, id: f32) {
         if let Event::Data(data) = event {
             assert_eq!(data.id, id);
@@ -430,11 +484,15 @@ mod tests {
     /// Ensures errors are gracefully handed back by the hanging_get
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_error_resolution() {
-        let switchboard_handle = TestSwitchboardBuilder::new().set_always_fail(true).build();
+        let switchboard_messenger_factory = switchboard::message::create_hub();
+        let _ = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
+            .set_always_fail(true)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
             HangingGetHandler::create(
-                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
                 SettingType::Display,
             )
             .await;
@@ -460,11 +518,16 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_change_after_watch() {
-        let switchboard_handle = TestSwitchboardBuilder::new().set_initial_id(ID1).build();
+        let switchboard_messenger_factory = switchboard::message::create_hub();
+
+        let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
+            .set_initial_id(ID1)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
             HangingGetHandler::create(
-                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
                 SettingType::Display,
             )
             .await;
@@ -499,11 +562,15 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_after_change() {
-        let switchboard_handle = TestSwitchboardBuilder::new().set_initial_id(ID1).build();
+        let switchboard_messenger_factory = switchboard::message::create_hub();
+        let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
+            .set_initial_id(ID1)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
             HangingGetHandler::create(
-                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
                 SettingType::Display,
             )
             .await;
@@ -538,11 +605,15 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_with_change_function() {
-        let switchboard_handle = TestSwitchboardBuilder::new().set_initial_id(ID1).build();
+        let switchboard_messenger_factory = switchboard::message::create_hub();
+        let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
+            .set_initial_id(ID1)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
             HangingGetHandler::create(
-                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
                 SettingType::Display,
             )
             .await;

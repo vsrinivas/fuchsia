@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::fidl_processor::process_stream,
+    crate::internal::switchboard,
     crate::switchboard::base::{
         SettingRequest, SettingType, SwitchboardClient, SystemLoginOverrideMode,
     },
@@ -64,11 +65,13 @@ impl Sender<SystemSettings> for SetUiServiceWatchResponder {
 
 pub fn spawn_setui_fidl_handler(
     switchboard_client: SwitchboardClient,
+    switchboard_messenger_factory: switchboard::message::Factory,
     stream: SetUiServiceRequestStream,
 ) {
     process_stream::<SetUiServiceMarker, SystemSettings, SetUiServiceWatchResponder>(
     stream,
     switchboard_client,
+    switchboard_messenger_factory,
     SettingType::System,
     Box::new(
       move |context,

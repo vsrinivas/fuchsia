@@ -10,6 +10,8 @@ use futures::future::LocalBoxFuture;
 use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
+use crate::internal::switchboard;
+use crate::message::base::MessengerType;
 use crate::switchboard::base::{SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
@@ -120,12 +122,16 @@ where
 {
     async fn new(
         setting_type: SettingType,
-        switchboard_client: SwitchboardClient,
+        switchboard_messenger: switchboard::message::Messenger,
         callback: RequestCallback<S, T, ST>,
     ) -> Self {
         Self {
             callback: callback,
-            hanging_get_handler: HangingGetHandler::create(switchboard_client, setting_type).await,
+            hanging_get_handler: HangingGetHandler::create(
+                switchboard_messenger.clone(),
+                setting_type,
+            )
+            .await,
         }
     }
 }
@@ -174,6 +180,7 @@ where
 {
     request_stream: RequestStream<S>,
     switchboard_client: SwitchboardClient,
+    switchboard_messenger: switchboard::message::Messenger,
     processing_units: Vec<Box<dyn ProcessingUnit<S>>>,
 }
 
@@ -181,10 +188,15 @@ impl<S> FidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    pub fn new(stream: RequestStream<S>, switchboard_client: SwitchboardClient) -> Self {
+    pub async fn new(
+        stream: RequestStream<S>,
+        switchboard_client: SwitchboardClient,
+        switchboard_messenger: switchboard::message::Messenger,
+    ) -> Self {
         Self {
             request_stream: stream,
-            switchboard_client: switchboard_client,
+            switchboard_client,
+            switchboard_messenger,
             processing_units: Vec::new(),
         }
     }
@@ -200,7 +212,7 @@ where
         let processing_unit = Box::new(
             SettingProcessingUnit::<S, V, SV>::new(
                 setting_type,
-                self.switchboard_client.clone(),
+                self.switchboard_messenger.clone(),
                 callback,
             )
             .await,
@@ -215,7 +227,9 @@ where
         loop {
             // Note that we create a fuse outside the select! to prevent it from
             // being called from outside the select! macro.
-            let mut fused_stream = self.request_stream.try_next().fuse();
+            let fused_stream = self.request_stream.try_next().fuse();
+            futures::pin_mut!(fused_stream);
+
             futures::select! {
                 request = fused_stream => {
                     if let Ok(Some(mut req)) = request {
@@ -250,6 +264,7 @@ where
 pub fn process_stream<S, T, ST>(
     stream: RequestStream<S>,
     switchboard: SwitchboardClient,
+    switchboard_messenger_factory: switchboard::message::Factory,
     setting_type: SettingType,
     callback: RequestCallback<S, T, ST>,
 ) where
@@ -258,8 +273,12 @@ pub fn process_stream<S, T, ST>(
     ST: Sender<T> + Send + Sync + 'static,
 {
     fasync::spawn_local(async move {
-        let mut processor = FidlProcessor::<S>::new(stream, switchboard);
-        processor.register::<T, ST>(setting_type, callback).await;
-        processor.process().await;
+        if let Ok((messenger, _)) =
+            switchboard_messenger_factory.create(MessengerType::Unbound).await
+        {
+            let mut processor = FidlProcessor::<S>::new(stream, switchboard, messenger).await;
+            processor.register::<T, ST>(setting_type, callback).await;
+            processor.process().await;
+        }
     });
 }

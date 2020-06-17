@@ -142,13 +142,14 @@ macro_rules! register_handler {
 /// streams, the target FIDL interface, and a list of `SettingType`s whose
 /// presence will cause this handler to be included.
 macro_rules! register_fidl_handler {
-    ($components:ident, $service_dir:ident, $client:ident, $interface:ident,
-            $handler_mod:ident$(, $target:ident)+) => {
+    ($components:ident, $service_dir:ident, $client:ident, $messenger_factory:ident,
+            $interface:ident, $handler_mod:ident$(, $target:ident)+) => {
         if false $(|| $components.contains(&SettingType::$target))+
         {
             let client = $client.clone();
+            let factory = $messenger_factory.clone();
             $service_dir.add_fidl_service(move |stream: paste::item!{[<$interface RequestStream>]}| {
-                crate::$handler_mod::fidl_io::spawn(client.clone(), stream);
+                crate::$handler_mod::fidl_io::spawn(client.clone(), factory.clone(), stream);
             });
         }
     }
@@ -437,25 +438,51 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     .await
     .expect("could not create registry");
 
-    register_fidl_handler!(components, service_dir, switchboard_client, Light, light, Light);
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
+        Light,
+        light,
+        Light
+    );
 
     register_fidl_handler!(
         components,
         service_dir,
         switchboard_client,
+        switchboard_messenger_factory,
         Accessibility,
         accessibility,
         Accessibility
     );
 
-    register_fidl_handler!(components, service_dir, switchboard_client, Audio, audio, Audio);
-
-    register_fidl_handler!(components, service_dir, switchboard_client, Device, device, Device);
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
+        Audio,
+        audio,
+        Audio
+    );
 
     register_fidl_handler!(
         components,
         service_dir,
         switchboard_client,
+        switchboard_messenger_factory,
+        Device,
+        device,
+        Device
+    );
+
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
         Display,
         display,
         Display,
@@ -466,34 +493,77 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         switchboard_client,
+        switchboard_messenger_factory,
         DoNotDisturb,
         do_not_disturb,
         DoNotDisturb
     );
 
-    register_fidl_handler!(components, service_dir, switchboard_client, Intl, intl, Intl);
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
+        Intl,
+        intl,
+        Intl
+    );
 
     register_fidl_handler!(
         components,
         service_dir,
         switchboard_client,
+        switchboard_messenger_factory,
         NightMode,
         night_mode,
         NightMode
     );
 
-    register_fidl_handler!(components, service_dir, switchboard_client, Privacy, privacy, Privacy);
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
+        Privacy,
+        privacy,
+        Privacy
+    );
 
-    register_fidl_handler!(components, service_dir, switchboard_client, System, system, System);
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
+        System,
+        system,
+        System
+    );
 
-    register_fidl_handler!(components, service_dir, switchboard_client, Input, input, Input);
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
+        Input,
+        input,
+        Input
+    );
 
-    register_fidl_handler!(components, service_dir, switchboard_client, Setup, setup, Setup);
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_client,
+        switchboard_messenger_factory,
+        Setup,
+        setup,
+        Setup
+    );
 
     if components.contains(&SettingType::System) {
         let switchboard_client = switchboard_client.clone();
+        let messenger_factory = switchboard_messenger_factory.clone();
         service_dir.add_fidl_service(move |stream: SetUiServiceRequestStream| {
-            spawn_setui_fidl_handler(switchboard_client.clone(), stream);
+            spawn_setui_fidl_handler(switchboard_client.clone(), messenger_factory.clone(), stream);
         });
     }
 
