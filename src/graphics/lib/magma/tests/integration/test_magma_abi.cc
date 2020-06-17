@@ -965,9 +965,8 @@ TEST(MagmaAbi, ExecuteCommandBufferNoResources) {
 }
 
 TEST(MagmaAbi, FlowControl) {
-#if !defined(__x86_64__)  // TODO(fxb/12989) - enable for ARM platforms
-  GTEST_SKIP();
-#endif
+  if (gVendorId == 0x13B5)  // TODO(fxb/12989) - enable for all platforms
+    GTEST_SKIP();
 
   if (TestConnection::is_virtmagma())
     GTEST_SKIP();

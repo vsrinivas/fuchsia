@@ -5,6 +5,7 @@
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/zx/channel.h>
 
+#include "magma_util/dlog.h"
 #include "platform_connection_client.h"
 #include "platform_device_client.h"
 
@@ -14,6 +15,22 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
   ZirconPlatformDeviceClient(magma_handle_t handle) : channel_(handle) {}
 
   std::unique_ptr<PlatformConnectionClient> Connect() {
+    uint64_t inflight_params = 0;
+
+    {
+      uint64_t result;
+      if (Query(MAGMA_QUERY_VENDOR_ID, &result)) {
+        // TODO(fxb/12989) - enable for all platforms
+        if (result == 0x13B5) {
+          // Skipping ARM/Mali for now
+        } else if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &inflight_params)) {
+          return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
+        }
+      } else {
+        DLOG("Query(MAGMA_QUERY_VENDOR_ID) failed");
+      }
+    }
+
     uint32_t device_handle;
     uint32_t device_notification_handle;
     zx_status_t status =
@@ -22,15 +39,9 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     if (status != ZX_OK)
       return DRETP(nullptr, "magma_DeviceConnect failed: %d", status);
 
-    uint64_t value = 0;
+    uint64_t max_inflight_messages = magma::upper_32_bits(inflight_params);
+    uint64_t max_inflight_bytes = magma::lower_32_bits(inflight_params) * 1024 * 1024;
 
-#if defined(__x86_64__)  // TODO(fxb/12989) - enable for ARM platforms
-    if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &value))
-      return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
-#endif
-
-    uint64_t max_inflight_messages = magma::upper_32_bits(value);
-    uint64_t max_inflight_bytes = magma::lower_32_bits(value) * 1024 * 1024;
     return magma::PlatformConnectionClient::Create(device_handle, device_notification_handle,
                                                    max_inflight_messages, max_inflight_bytes);
   }
