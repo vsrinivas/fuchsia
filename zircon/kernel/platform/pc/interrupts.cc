@@ -14,6 +14,9 @@
 #include <zircon/types.h>
 
 #include <arch/x86.h>
+#include <arch/x86/feature.h>
+#include <arch/x86/platform_access.h>
+#include <arch/x86/pv.h>
 #include <fbl/algorithm.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
@@ -178,6 +181,11 @@ unsigned int remap_interrupt(unsigned int vector) {
 void shutdown_interrupts(void) { pic_disable(); }
 
 void shutdown_interrupts_curr_cpu(void) {
+  if (x86_hypervisor_has_pv_eoi()) {
+    MsrAccess msr;
+    pv::PvEoi::get()->Disable(&msr);
+  }
+
   // TODO(maniscalco): Walk interrupt redirection entries and make sure nothing targets this CPU.
 }
 

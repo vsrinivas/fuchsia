@@ -637,7 +637,9 @@ void platform_stop_timer(void) {
 void platform_shutdown_timer(void) {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  // TODO(maniscalco): What should we do here?  Anything?
+  if (x86_hypervisor_has_pv_clock() && arch_curr_cpu_num() == 0) {
+    pv_clock_shutdown();
+  }
 }
 
 // Currently, usermode can access our source of ticks only if we have chosen TSC

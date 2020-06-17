@@ -47,9 +47,22 @@ zx_status_t pv_clock_init(void) {
   }
   arch_zero_page(paddr_to_physmap(pa));
   system_time = static_cast<pv_clock_system_time*>(paddr_to_physmap(pa));
+
+  // Note: We're setting up one, system-wide PV clock rather than per-CPU system
+  // clocks. This is OK because
+  //   - the PV clock is only used if it's stable
+  //   - we assume invariant TSC if the clock is stable
+  //   - we don't read from the clock's tsc_timestamp; we use rdtsc directly
   write_msr(kKvmSystemTimeMsr, pa | kSystemTimeEnable);
 
   return ZX_OK;
+}
+
+void pv_clock_shutdown() {
+  DEBUG_ASSERT(arch_curr_cpu_num() == 0);
+
+  // Tell our hypervisor to stop updating the clock.
+  write_msr(kKvmSystemTimeMsr, 0);
 }
 
 bool pv_clock_is_stable() {

@@ -54,7 +54,16 @@ struct pv_clock_system_time {
 static_assert(sizeof(struct pv_clock_system_time) == 32,
               "sizeof(pv_clock_system_time) should be 32");
 
+// Initialize the para-virtualized clock.
+//
+// This function should only be called by CPU 0.
 zx_status_t pv_clock_init();
+
+// Shutsdown the para-virtualized clock.
+//
+// This function should only be called by CPU 0.
+void pv_clock_shutdown();
+
 bool pv_clock_is_stable();
 uint64_t pv_clock_get_tsc_freq();
 

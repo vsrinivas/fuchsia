@@ -37,6 +37,7 @@
 #include <object/user_handles.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform/halt_helper.h>
+#include <platform/timer.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -444,6 +445,13 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
   // sure that things are still available afterwards.
   arch_clean_cache_range((vaddr_t)id_page_addr, PAGE_SIZE);
   arch_clean_cache_range((vaddr_t)ops_ptr, PAGE_SIZE);
+
+  // Stop and shutdown the timer.  Performing shutdown of these components is
+  // critical as we might be using a PV clock or PV EOI signaling so we must
+  // tell our hypervisor to stop updating them to avoid corrupting aribtrary
+  // memory post-mexec.
+  platform_stop_timer();
+  platform_shutdown_timer();
 
   shutdown_interrupts();
 
