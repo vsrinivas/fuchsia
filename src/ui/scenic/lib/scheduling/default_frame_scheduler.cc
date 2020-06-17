@@ -114,6 +114,8 @@ std::pair<zx::time, zx::time> DefaultFrameScheduler::ComputePresentationAndWakeu
     const zx::time requested_presentation_time) const {
   const zx::time last_vsync_time = vsync_timing_->last_vsync_time();
   const zx::duration vsync_interval = vsync_timing_->vsync_interval();
+  FX_DCHECK(vsync_interval.get() >= 0);
+  FX_DCHECK(last_vsync_time.get() >= 0);
   const zx::time now = zx::time(async_now(dispatcher_));
 
   PredictedTimes times =
@@ -330,6 +332,8 @@ void DefaultFrameScheduler::GetFuturePresentationInfos(
 
   // We assume this value is constant, at least for the near future.
   request.vsync_interval = vsync_timing_->vsync_interval();
+  FX_DCHECK(request.last_vsync_time.get() >= 0);
+  FX_DCHECK(request.vsync_interval.get() >= 0);
 
   constexpr static const uint64_t kMaxPredictionCount = 8;
   uint64_t count = 0;
@@ -389,6 +393,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   FX_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
 
   FX_DCHECK(timings.finalized());
+  FX_DCHECK(vsync_timing_->vsync_interval().get() >= 0);
   const FrameTimings::Timestamps timestamps = timings.GetTimestamps();
   stats_.RecordFrame(timestamps, vsync_timing_->vsync_interval());
 

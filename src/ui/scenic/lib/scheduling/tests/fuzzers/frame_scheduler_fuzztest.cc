@@ -26,10 +26,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   EXPECT_EQ(async_get_default_dispatcher(), test_loop.dispatcher());
 
   // Fuzz vsync and prediction times.
-  zx::time last_vsync_time = zx::time(fuzzed_data.ConsumeIntegral<uint64_t>());
-  zx::duration vsync_interval = zx::msec(fuzzed_data.ConsumeIntegral<uint64_t>());
-  zx::duration constant_prediction_offset = zx::msec(fuzzed_data.ConsumeIntegral<uint64_t>());
-  zx::time schedule_present_time = zx::time(fuzzed_data.ConsumeIntegral<uint64_t>());
+  zx::time last_vsync_time = zx::time(fuzzed_data.ConsumeIntegral<zx_time_t>());
+  zx::duration vsync_interval = zx::msec(fuzzed_data.ConsumeIntegral<zx_time_t>());
+
+  // Negative values here indicates programming or driver bug and are not interesting to fuzz.
+  if (last_vsync_time.get() < 0 || vsync_interval.get() < 0)
+    return 0;
+
+  zx::duration constant_prediction_offset = zx::msec(fuzzed_data.ConsumeIntegral<zx_time_t>());
+  zx::time schedule_present_time = zx::time(fuzzed_data.ConsumeIntegral<zx_time_t>());
 
   // Set up DefaultFrameScheduler.
   auto vsync_timing = std::make_shared<VsyncTiming>();
