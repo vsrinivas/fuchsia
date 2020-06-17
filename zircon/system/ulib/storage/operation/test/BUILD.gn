@@ -34,7 +34,6 @@ test("storage_operation") {
       configs -= fdio_config
     }
   }
-  test_group = "storage"
   output_name = "storage-operation-test"
   sources = [ "unbuffered_operations_builder_test.cc" ]
   deps = [

@@ -34,7 +34,6 @@ test("block-client-unit") {
       configs -= fdio_config
     }
   }
-  test_group = "fs"
   sources = [
     "block-group-registry-tests.cc",
     "fake-block-device-test.cc",

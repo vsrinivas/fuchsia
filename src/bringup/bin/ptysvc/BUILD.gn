@@ -73,7 +73,6 @@ test("ptysvc-test") {
       configs -= fdio_config
     }
   }
-  test_group = "sys"
 
   sources = [ "pty-tests.cc" ]
   deps = [

@@ -29,7 +29,6 @@ test("utc-procargs") {
       configs -= fdio_config
     }
   }
-  test_group = "sys"
   sources = [ "transfer-tests.cc" ]
   deps = [
     "//zircon/public/lib/fbl",

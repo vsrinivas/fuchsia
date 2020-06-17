@@ -28,7 +28,6 @@ test("driver-integration") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  test_group = "ddk"
   sources = [ "main.cc" ]
   deps = [
     "//src/lib/ddk",

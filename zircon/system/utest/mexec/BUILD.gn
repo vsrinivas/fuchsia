@@ -40,7 +40,6 @@ test("zbi-child") {
       configs -= fdio_config
     }
   }
-  test_group = "core"
   sources = [ "success.cc" ]
 }
 
@@ -80,7 +79,6 @@ test("zbi-parent") {
       configs -= fdio_config
     }
   }
-  test_group = "core"
   sources = [ "parent.cc" ]
 
   data_deps = [ ":zbi-child-image-resource" ]

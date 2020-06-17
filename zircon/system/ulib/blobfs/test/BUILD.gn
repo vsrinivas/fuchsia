@@ -92,7 +92,6 @@ test("blobfs-unit") {
   if (configs + fdio_config - fdio_config != configs) {
     configs -= fdio_config
   }
-  test_group = "fs"
   sources = [
     "unit/allocated-extent-iterator-test.cc",
     "unit/allocator-test.cc",
@@ -179,7 +178,6 @@ test("blobfs-integration") {
   if (configs + fdio_config - fdio_config != configs) {
     configs -= fdio_config
   }
-  test_group = "fs"
   sources = [
     "integration/blobfs_integration_test.cc",
     "integration/fdio_test.cc",
@@ -258,7 +256,6 @@ test("blobfs-integration-paged") {
   if (configs + fdio_config - fdio_config != configs) {
     configs -= fdio_config
   }
-  test_group = "fs"
   sources = [
     "integration/blobfs_integration_paged_main.cc",
     "integration/launch.cc",

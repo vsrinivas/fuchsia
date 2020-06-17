@@ -19,7 +19,6 @@ test("fs-test-utils") {
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
-  test_group = "fs"
   sources = [
     "fixture_test.cc",
     "main.cc",

@@ -89,7 +89,6 @@ test("debugdata") {
       configs -= fdio_config
     }
   }
-  test_group = "c"
   sources = [ "debugdata.cc" ]
   data_deps = [ ":debugdata-test-helper" ]
   deps = [
@@ -126,7 +125,6 @@ test("posix-clocks") {
       configs -= fdio_config
     }
   }
-  test_group = "c"
   sources = [ "posix-clocks.cc" ]
   deps = [
     "//zircon/public/lib/fbl",
@@ -151,7 +149,6 @@ test("atexit") {
       configs -= fdio_config
     }
   }
-  test_group = "c"
   sources = [ "atexit.cc" ]
   deps = [
     "//zircon/public/lib/fdio",

@@ -161,7 +161,6 @@ test("fshost-test") {
       configs -= fdio_config
     }
   }
-  test_group = "ddk"
   sources = [
     "delayed-outdir-test.cc",
     "fshost-boot-args-test.cc",
@@ -200,7 +199,6 @@ test("fshost-metrics-test") {
       configs -= fdio_config
     }
   }
-  test_group = "ddk"
   sources = [ "metrics-test.cc" ]
   deps = [
     ":metrics",
@@ -228,7 +226,6 @@ test("block-watcher-test") {
       configs -= fdio_config
     }
   }
-  test_group = "ddk"
   sources = [
     "block-device-test.cc",
     "block-watcher-test.cc",

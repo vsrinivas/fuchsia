@@ -155,7 +155,6 @@ test("x86-battery-test") {
     }
   }
   output_name = "x86-battery-test"
-  test_group = "ddk"
   sources = [
     "acpi-dev/dev-battery-test.cc",
     "acpi-dev/dev-battery.cc",
@@ -201,7 +200,6 @@ test("x86-lid-test") {
     }
   }
   output_name = "x86-lid-test"
-  test_group = "ddk"
   sources = [
     "acpi-dev/dev-lid-test.cc",
     "acpi-dev/dev-lid.cc",
@@ -240,7 +238,6 @@ test("x86-pwrsrc-test") {
     }
   }
   output_name = "x86-pwrsrc-test"
-  test_group = "ddk"
   sources = [
     "acpi-dev/dev-pwrsrc-test.cc",
     "acpi-dev/dev-pwrsrc.cc",
@@ -278,7 +275,6 @@ test("x86-board-test") {
       configs -= fdio_config
     }
   }
-  test_group = "ddk"
   sources = [
     "iommu-test.cc",
     "smbios-test.cc",
@@ -310,7 +306,6 @@ test("x86-thermal-test") {
     }
   }
   output_name = "x86-thermal-test"
-  test_group = "ddk"
   sources = [
     "acpi-dev/dev-thermal-test.cc",
     "acpi-dev/dev-thermal.cc",
@@ -349,7 +344,6 @@ test("x86-cros-ec-test") {
     }
   }
   output_name = "x86-cros-ec-test"
-  test_group = "ddk"
   sources = [
     "acpi-dev/dev-cros-ec/acpi.cc",
     "acpi-dev/dev-cros-ec/acpi.h",

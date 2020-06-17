@@ -41,7 +41,6 @@ test("journal-unit") {
       configs -= fdio_config
     }
   }
-  test_group = "fs"
   sources = [
     "background_executor_test.cc",
     "data_streamer_test.cc",

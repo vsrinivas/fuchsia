@@ -35,7 +35,6 @@ test("storage_buffer") {
     }
   }
   output_name = "storage-buffer-test"
-  test_group = "storage"
   sources = [
     "block_buffer_view_test.cc",
     "blocking_ring_buffer_test.cc",

@@ -34,7 +34,6 @@ test("sanitizer-utils") {
       configs -= fdio_config
     }
   }
-  test_group = "libc"
   sources = [ "sanitizer-utils.cc" ]
   deps = [
     ":memory-snapshot-test",

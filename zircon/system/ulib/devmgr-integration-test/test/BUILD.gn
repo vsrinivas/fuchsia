@@ -28,7 +28,6 @@ test("devmgr-integration") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  test_group = "ddk"
   sources = [ "launcher_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",

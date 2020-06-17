@@ -28,7 +28,6 @@ test("fallback-rtc") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "fallback-rtc"
-  test_group = "ddk"
   sources = [ "fallback-rtc-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",

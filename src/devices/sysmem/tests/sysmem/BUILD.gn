@@ -9,7 +9,6 @@ test("sysmem") {
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
-  test_group = "sys"
   sources = [ "sysmem_tests.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",

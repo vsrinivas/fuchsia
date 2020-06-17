@@ -30,7 +30,6 @@ test("metrics-composite-latency-event") {
       configs -= fdio_config
     }
   }
-  test_group = "fs"
   sources = [ "composite_latency_event_test.cc" ]
   deps = [
     "//zircon/public/lib/zxtest",
@@ -58,7 +57,6 @@ test("metrics-inspect") {
       configs -= fdio_config
     }
   }
-  test_group = "fs"
   sources = [
     "histograms_test.cc",
     "latency_event_test.cc",
@@ -89,7 +87,6 @@ test("metrics-cobalt") {
       configs -= fdio_config
     }
   }
-  test_group = "fs"
   sources = [ "cobalt_metrics_test.cc" ]
 
   deps = [

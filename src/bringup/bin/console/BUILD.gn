@@ -67,7 +67,6 @@ test("console-test") {
       configs -= fdio_config
     }
   }
-  test_group = "sys"
 
   sources = [
     "console-test.cc",

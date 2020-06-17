@@ -28,7 +28,6 @@ test("minfs-allocator-unit") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  test_group = "fs"
   sources = [
     "allocator_test.cc",
     "main.cc",

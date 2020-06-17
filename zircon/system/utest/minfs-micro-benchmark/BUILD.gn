@@ -19,7 +19,6 @@ test("minfs-micro-benchmark") {
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
-  test_group = "fs"
   sources = [
     "block-device-utils.cc",
     "minfs-costs.cc",

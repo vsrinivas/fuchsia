@@ -91,7 +91,6 @@ foreach(test_name, core_tests) {
         configs -= fdio_config
       }
     }
-    test_group = "core"
     deps = [ test_name ]
   }
 }
@@ -117,7 +116,6 @@ test("standalone") {
       configs -= fdio_config
     }
   }
-  test_group = "core"
   deps = core_tests + unified_only
   sources = [ "libc-and-io-stubs.c" ]
   deps += [ "//zircon/public/lib/zxtest" ]
