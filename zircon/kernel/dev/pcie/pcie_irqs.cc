@@ -97,14 +97,13 @@ fbl::RefPtr<SharedLegacyIrqHandler> SharedLegacyIrqHandler::Create(uint irq_id) 
 }
 
 SharedLegacyIrqHandler::SharedLegacyIrqHandler(uint irq_id) : irq_id_(irq_id) {
-  list_initialize(&device_handler_list_);
   mask_interrupt(irq_id_);  // This should not be needed, but just in case.
   zx_status_t status = register_int_handler(irq_id_, HandlerThunk, this);
   DEBUG_ASSERT(status == ZX_OK);
 }
 
 SharedLegacyIrqHandler::~SharedLegacyIrqHandler() {
-  DEBUG_ASSERT(list_is_empty(&device_handler_list_));
+  DEBUG_ASSERT(device_handler_list_.is_empty());
   mask_interrupt(irq_id_);
   zx_status_t status = register_int_handler(irq_id_, nullptr, nullptr);
   DEBUG_ASSERT(status == ZX_OK);
@@ -117,7 +116,7 @@ void SharedLegacyIrqHandler::Handler() {
    * at the end of this IRQ. */
   Guard<SpinLock, NoIrqSave> guard{&device_handler_list_lock_};
 
-  if (list_is_empty(&device_handler_list_)) {
+  if (device_handler_list_.is_empty()) {
     TRACEF(
         "Received legacy PCI INT (system IRQ %u), but there are no devices registered to "
         "handle this interrupt.  This is Very Bad.  Disabling the interrupt at the system "
@@ -127,20 +126,18 @@ void SharedLegacyIrqHandler::Handler() {
     return;
   }
 
-  PcieDevice* dev;
-  list_for_every_entry (&device_handler_list_, dev, PcieDevice, irq_.legacy.shared_handler_node) {
+  for (PcieDevice& dev : device_handler_list_) {
     uint16_t command, status;
-    auto cfg = dev->config();
+    auto cfg = dev.config();
 
     {
-      Guard<SpinLock, NoIrqSave> guard{&dev->cmd_reg_lock_};
+      Guard<SpinLock, NoIrqSave> guard{&dev.cmd_reg_lock_};
       command = cfg->Read(PciConfig::kCommand);
       status = cfg->Read(PciConfig::kStatus);
     }
 
     if ((status & PCIE_CFG_STATUS_INT_STS) && !(command & PCIE_CFG_COMMAND_INT_DISABLE)) {
-      DEBUG_ASSERT(dev);
-      pcie_irq_handler_state_t* hstate = &dev->irq_.handlers[0];
+      pcie_irq_handler_state_t* hstate = &dev.irq_.handlers[0];
 
       if (hstate) {
         pcie_irq_handler_retval_t irq_ret = PCIE_IRQRET_MASK;
@@ -148,20 +145,20 @@ void SharedLegacyIrqHandler::Handler() {
 
         if (hstate->handler) {
           if (!hstate->masked) {
-            irq_ret = hstate->handler(*dev, 0, hstate->ctx);
+            irq_ret = hstate->handler(dev, 0, hstate->ctx);
           }
         } else {
           TRACEF(
               "Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x, but no irq_ "
               "handler has been registered by the driver.  Force disabling the "
               "interrupt.\n",
-              irq_id_, dev->bus_id_, dev->dev_id_, dev->func_id_);
+              irq_id_, dev.bus_id_, dev.dev_id_, dev.func_id_);
         }
 
         if (irq_ret & PCIE_IRQRET_MASK) {
           hstate->masked = true;
           {
-            Guard<SpinLock, NoIrqSave> guard{&dev->cmd_reg_lock_};
+            Guard<SpinLock, NoIrqSave> guard{&dev.cmd_reg_lock_};
             command = cfg->Read(PciConfig::kCommand);
             cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
           }
@@ -170,10 +167,10 @@ void SharedLegacyIrqHandler::Handler() {
         TRACEF(
             "Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x , but no irq_ "
             "handlers have been allocated!  Force disabling the interrupt.\n",
-            irq_id_, dev->bus_id_, dev->dev_id_, dev->func_id_);
+            irq_id_, dev.bus_id_, dev.dev_id_, dev.func_id_);
 
         {
-          Guard<SpinLock, NoIrqSave> guard{&dev->cmd_reg_lock_};
+          Guard<SpinLock, NoIrqSave> guard{&dev.cmd_reg_lock_};
           command = cfg->Read(PciConfig::kCommand);
           cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
         }
@@ -184,7 +181,7 @@ void SharedLegacyIrqHandler::Handler() {
 
 void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
   DEBUG_ASSERT(dev.irq_.legacy.shared_handler.get() == this);
-  DEBUG_ASSERT(!list_in_list(&dev.irq_.legacy.shared_handler_node));
+  DEBUG_ASSERT(!dev.irq_.legacy.shared_handler_node.InContainer());
 
   /* Make certain that the device's legacy IRQ has been masked at the PCI
    * device level.  Then add this dev to the handler's list.  If this was the
@@ -195,8 +192,8 @@ void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
   dev.cfg_->Write(PciConfig::kCommand,
                   dev.cfg_->Read(PciConfig::kCommand) | PCIE_CFG_COMMAND_INT_DISABLE);
 
-  bool first_device = list_is_empty(&device_handler_list_);
-  list_add_tail(&device_handler_list_, &dev.irq_.legacy.shared_handler_node);
+  bool first_device = device_handler_list_.is_empty();
+  device_handler_list_.push_back(&dev);
 
   if (first_device) {
     unmask_interrupt(irq_id_);
@@ -205,7 +202,7 @@ void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
 
 void SharedLegacyIrqHandler::RemoveDevice(PcieDevice& dev) {
   DEBUG_ASSERT(dev.irq_.legacy.shared_handler.get() == this);
-  DEBUG_ASSERT(list_in_list(&dev.irq_.legacy.shared_handler_node));
+  DEBUG_ASSERT(dev.irq_.legacy.shared_handler_node.InContainer());
 
   /* Make absolutely sure we have been masked at the PCIe config level, then
    * remove the device from the shared handler list.  If this was the last
@@ -214,9 +211,9 @@ void SharedLegacyIrqHandler::RemoveDevice(PcieDevice& dev) {
 
   dev.cfg_->Write(PciConfig::kCommand,
                   dev.cfg_->Read(PciConfig::kCommand) | PCIE_CFG_COMMAND_INT_DISABLE);
-  list_delete(&dev.irq_.legacy.shared_handler_node);
+  device_handler_list_.erase(dev);
 
-  if (list_is_empty(&device_handler_list_)) {
+  if (device_handler_list_.is_empty()) {
     mask_interrupt(irq_id_);
   }
 }
@@ -636,7 +633,7 @@ zx_status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_ir
   // Leave our present IRQ mode
   switch (irq_.mode) {
     case PCIE_IRQ_MODE_LEGACY:
-      DEBUG_ASSERT(list_in_list(&irq_.legacy.shared_handler_node));
+      DEBUG_ASSERT(irq_.legacy.shared_handler_node.InContainer());
       LeaveLegacyIrqMode();
       break;
 

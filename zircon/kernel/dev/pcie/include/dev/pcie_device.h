@@ -29,6 +29,7 @@
 #include <ktl/unique_ptr.h>
 
 /* Fwd decls */
+class PcieDevice;
 class PcieBusDriver;
 
 /*
@@ -382,6 +383,7 @@ class PcieDevice {
 
  private:
   friend class SharedLegacyIrqHandler;
+  friend struct SharedHandlerTrait;
 
   // Top level internal IRQ support.
   zx_status_t QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
@@ -441,11 +443,9 @@ class PcieDevice {
 
     /* Legacy IRQ state */
     struct {
-      // TODO(johngro): clean up the messy list_node initialization below
-      // by converting to fbl intrusive lists.
       uint8_t pin = 0;
       uint irq_id = static_cast<uint>(-1);
-      struct list_node shared_handler_node = {nullptr, nullptr};
+      SharedHandlerTrait::NodeState shared_handler_node;
       fbl::RefPtr<SharedLegacyIrqHandler> shared_handler;
     } legacy;
 
@@ -456,4 +456,7 @@ class PcieDevice {
   } irq_;
 };
 
+inline SharedHandlerTrait::NodeState& SharedHandlerTrait::node_state(PcieDevice& device) {
+  return device.irq_.legacy.shared_handler_node;
+}
 #endif  // ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_DEVICE_H_

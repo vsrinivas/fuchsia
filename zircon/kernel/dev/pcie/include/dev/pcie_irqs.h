@@ -14,6 +14,7 @@
 
 #include <dev/interrupt.h>
 #include <dev/pcie_platform.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
@@ -24,6 +25,14 @@
 
 /* Fwd decls */
 class PcieDevice;
+
+// Trait for the legacy list of shared handles.
+struct SharedHandlerTrait {
+  using NodeState = fbl::DoublyLinkedListNodeState<PcieDevice*>;
+  // This is defined after the layout of PcieDevice is visible.
+  static NodeState& node_state(PcieDevice& device);
+};
+using DeviceHandlerList = fbl::DoublyLinkedListCustomTraits<PcieDevice*, SharedHandlerTrait>;
 
 /**
  * Enumeration which defines the IRQ modes a PCIe device may be operating in.
@@ -155,7 +164,7 @@ class SharedLegacyIrqHandler
 
   void Handler();
 
-  struct list_node device_handler_list_;
+  DeviceHandlerList device_handler_list_;
   // TODO(32978): Tracking of this lock is disabled to silence the circular
   // dependency warning from lockdep. The circular dependency is a known issue
   // that will be addressed by refactoring PCI support into userspace.
