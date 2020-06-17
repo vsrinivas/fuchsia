@@ -134,6 +134,10 @@ void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
 }
 
+void SimInterface::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
+  stats_.deauth_indications_.push_back(*ind);
+}
+
 void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
   ZX_ASSERT(assoc_ctx_.state_ == AssocContext::kJoining);
 

@@ -19,7 +19,6 @@ namespace wlan::brcmfmac {
 // This class represents an interface created on a simulated device, collecting all of the
 // attributes related to that interface.
 struct SimInterface {
-
   // Track state of association
   struct AssocContext {
     enum AssocState {
@@ -42,6 +41,7 @@ struct SimInterface {
     std::list<wlan_join_result_t> join_results_;
     std::list<wlanif_auth_confirm_t> auth_results_;
     std::list<wlanif_assoc_confirm_t> assoc_results_;
+    std::list<wlanif_deauth_indication_t> deauth_indications_;
   };
 
   zx_status_t Init(std::shared_ptr<simulation::Environment> env);
@@ -62,7 +62,7 @@ struct SimInterface {
   virtual void OnAuthConf(const wlanif_auth_confirm_t* resp);
   virtual void OnAuthInd(const wlanif_auth_ind_t* resp) {}
   virtual void OnDeauthConf(const wlanif_deauth_confirm_t* resp) {}
-  virtual void OnDeauthInd(const wlanif_deauth_indication_t* ind) {}
+  virtual void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   virtual void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   virtual void OnAssocInd(const wlanif_assoc_ind_t* ind) {}
   virtual void OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {}
@@ -146,11 +146,11 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
 };
 
 // Schedule a call from within a SimTest to a member function that takes no arguments
-#define SCHEDULE_CALL(member_fn, when)                       \
-  do {                                                       \
-    auto cb_fn = std::make_unique<std::function<void()>>();  \
-    *cb_fn = std::bind(member_fn, this);                     \
-    env_->ScheduleNotification(std::move(cb_fn), when);      \
+#define SCHEDULE_CALL(member_fn, when)                      \
+  do {                                                      \
+    auto cb_fn = std::make_unique<std::function<void()>>(); \
+    *cb_fn = std::bind(member_fn, this);                    \
+    env_->ScheduleNotification(std::move(cb_fn), when);     \
   } while (0)
 
 }  // namespace wlan::brcmfmac
