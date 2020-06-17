@@ -193,7 +193,7 @@ executable("iovar_test") {
   ]
 
   # TODO(46539): Fix the leaks and remove this.
-  #deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("lifecycle_test") {
@@ -295,6 +295,9 @@ executable("beacon_lost_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("data_frame_test") {
