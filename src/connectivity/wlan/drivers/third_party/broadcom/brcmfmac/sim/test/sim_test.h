@@ -11,6 +11,7 @@
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
 
 namespace wlan::brcmfmac {
@@ -18,9 +19,32 @@ namespace wlan::brcmfmac {
 // This class represents an interface created on a simulated device, collecting all of the
 // attributes related to that interface.
 struct SimInterface {
-  SimInterface() = default;
 
-  zx_status_t Init() { return zx_channel_create(0, &ch_sme_, &ch_mlme_); }
+  // Track state of association
+  struct AssocContext {
+    enum AssocState {
+      kNone,
+      kJoining,
+      kAuthenticating,
+      kAssociating,
+      kAssociated,
+    } state_ = kNone;
+
+    common::MacAddr bssid_;
+    wlan_ssid_t ssid_;
+    wlan_channel_t channel_;
+  };
+
+  // Useful statistics about operations performed
+  struct Stats {
+    size_t assoc_attempts_ = 0;
+    size_t assoc_successes_ = 0;
+    std::list<wlan_join_result_t> join_results_;
+    std::list<wlanif_auth_confirm_t> auth_results_;
+    std::list<wlanif_assoc_confirm_t> assoc_results_;
+  };
+
+  zx_status_t Init(std::shared_ptr<simulation::Environment> env);
 
   virtual ~SimInterface() {
     if (ch_sme_ != ZX_HANDLE_INVALID) {
@@ -34,12 +58,12 @@ struct SimInterface {
   // Default SME Callbacks
   virtual void OnScanResult(const wlanif_scan_result_t* result) {}
   virtual void OnScanEnd(const wlanif_scan_end_t* end) {}
-  virtual void OnJoinConf(const wlanif_join_confirm_t* resp) {}
-  virtual void OnAuthConf(const wlanif_auth_confirm_t* resp) {}
+  virtual void OnJoinConf(const wlanif_join_confirm_t* resp);
+  virtual void OnAuthConf(const wlanif_auth_confirm_t* resp);
   virtual void OnAuthInd(const wlanif_auth_ind_t* resp) {}
   virtual void OnDeauthConf(const wlanif_deauth_confirm_t* resp) {}
   virtual void OnDeauthInd(const wlanif_deauth_indication_t* ind) {}
-  virtual void OnAssocConf(const wlanif_assoc_confirm_t* resp) {}
+  virtual void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   virtual void OnAssocInd(const wlanif_assoc_ind_t* ind) {}
   virtual void OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {}
   virtual void OnDisassocInd(const wlanif_disassoc_indication_t* ind) {}
@@ -53,7 +77,16 @@ struct SimInterface {
   virtual void OnRelayCapturedFrame(const wlanif_captured_frame_result_t* result) {}
   virtual void OnDataRecv(const void* data, size_t data_size, uint32_t flags) {}
 
-  // Default protocols that redirect to the above virtual functions
+  // Start an assocation with a fake AP. We can use these for subsequent association events, but
+  // not interleaved association events (which I doubt are terribly useful, anyway). Note that for
+  // the moment only non-authenticated associations are supported.
+  virtual void StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
+                          const wlan_channel_t& channel);
+  virtual void AssociateWith(const simulation::FakeAp& ap,
+                             std::optional<zx::duration> delay = std::nullopt);
+
+  std::shared_ptr<simulation::Environment> env_;
+
   static wlanif_impl_ifc_protocol_ops_t default_sme_dispatch_tbl_;
   wlanif_impl_ifc_protocol default_ifc_ = {.ops = &default_sme_dispatch_tbl_, .ctx = this};
 
@@ -68,6 +101,12 @@ struct SimInterface {
   // SME is present).
   zx_handle_t ch_sme_ = ZX_HANDLE_INVALID;   // SME-owned side
   zx_handle_t ch_mlme_ = ZX_HANDLE_INVALID;  // MLME-owned side
+
+  // Current state of association
+  AssocContext assoc_ctx_;
+
+  // Allows us to track individual operations
+  Stats stats_;
 };
 
 // A base class that can be used for creating simulation tests. It provides functionality that

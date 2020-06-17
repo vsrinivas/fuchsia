@@ -91,6 +91,103 @@ wlanif_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
         },
 };
 
+zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env) {
+  zx_status_t result = zx_channel_create(0, &ch_sme_, &ch_mlme_);
+  if (result == ZX_OK) {
+    env_ = env;
+  }
+  return result;
+}
+
+void SimInterface::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
+  ZX_ASSERT(assoc_ctx_.state_ == AssocContext::kAssociating);
+
+  stats_.assoc_results_.push_back(*resp);
+
+  if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
+    assoc_ctx_.state_ = AssocContext::kAssociated;
+    stats_.assoc_successes_++;
+  } else {
+    assoc_ctx_.state_ = AssocContext::kNone;
+  }
+}
+
+void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
+  ZX_ASSERT(assoc_ctx_.state_ == AssocContext::kAuthenticating);
+  ZX_ASSERT(!memcmp(assoc_ctx_.bssid_.byte, resp->peer_sta_address, ETH_ALEN));
+
+  stats_.auth_results_.push_back(*resp);
+
+  // We only support open authentication, for now
+  ZX_ASSERT(resp->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM);
+
+  if (resp->result_code != WLAN_AUTH_RESULT_SUCCESS) {
+    assoc_ctx_.state_ = AssocContext::kNone;
+    return;
+  }
+
+  assoc_ctx_.state_ = AssocContext::kAssociating;
+
+  //  Send assoc request
+  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
+  memcpy(assoc_req.peer_sta_address, assoc_ctx_.bssid_.byte, ETH_ALEN);
+  if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
+}
+
+void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
+  ZX_ASSERT(assoc_ctx_.state_ == AssocContext::kJoining);
+
+  stats_.join_results_.push_back(resp->result_code);
+
+  if (resp->result_code != WLAN_JOIN_RESULT_SUCCESS) {
+    assoc_ctx_.state_ = AssocContext::kNone;
+    return;
+  }
+
+  assoc_ctx_.state_ = AssocContext::kAuthenticating;
+
+  // Send auth request
+  wlanif_auth_req_t auth_req;
+  std::memcpy(auth_req.peer_sta_address, assoc_ctx_.bssid_.byte, ETH_ALEN);
+  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
+  if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
+}
+
+void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
+                              const wlan_channel_t& channel) {
+  stats_.assoc_attempts_++;
+
+  // Save off context
+  assoc_ctx_.state_ = AssocContext::kJoining;
+  assoc_ctx_.bssid_ = bssid;
+  assoc_ctx_.ssid_ = ssid;
+  assoc_ctx_.channel_ = channel;
+
+  // Send join request
+  wlanif_join_req join_req = {};
+  std::memcpy(join_req.selected_bss.bssid, bssid.byte, ETH_ALEN);
+  join_req.selected_bss.ssid.len = ssid.len;
+  memcpy(join_req.selected_bss.ssid.data, ssid.ssid, WLAN_MAX_SSID_LEN);
+  join_req.selected_bss.chan = channel;
+  join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
+  if_impl_ops_->join_req(if_impl_ctx_, &join_req);
+}
+
+void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx::duration> delay) {
+  common::MacAddr bssid = ap.GetBssid();
+  wlan_ssid_t ssid = ap.GetSsid();
+  wlan_channel_t channel = ap.GetChannel();
+
+  if (delay) {
+    auto cb_fn = std::make_unique<std::function<void()>>();
+    *cb_fn = std::bind(&SimInterface::StartAssoc, this, bssid, ssid, channel);
+    env_->ScheduleNotification(std::move(cb_fn), *delay);
+  } else {
+    StartAssoc(ap.GetBssid(), ap.GetSsid(), ap.GetChannel());
+  }
+}
+
 // static
 intptr_t SimTest::instance_num_ = 0;
 
@@ -113,7 +210,7 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
                                     std::optional<const wlanif_impl_ifc_protocol*> sme_protocol,
                                     std::optional<common::MacAddr> mac_addr) {
   zx_status_t status;
-  if ((status = sim_ifc->Init()) != ZX_OK) {
+  if ((status = sim_ifc->Init(env_)) != ZX_OK) {
     return status;
   }
 

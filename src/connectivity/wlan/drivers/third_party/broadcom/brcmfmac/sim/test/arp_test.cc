@@ -43,16 +43,10 @@ const ether_arp kSampleArpReq = {.ea_hdr = {.ar_hrd = htons(ETH_P_802_3),
 const std::vector<uint8_t> kDummyData = {0, 1, 2, 3, 4};
 
 struct GenericIfc : public SimInterface {
-  void OnAssocConf(const wlanif_assoc_confirm_t* resp) override;
   void OnAssocInd(const wlanif_assoc_ind_t* ind) override;
-  void OnAuthConf(const wlanif_auth_confirm_t* resp) override;
   void OnDataRecv(const void* frame, size_t frame_size, uint32_t flags) override;
-  void OnJoinConf(const wlanif_join_confirm_t* resp) override;
   void OnStartConf(const wlanif_start_confirm_t* resp) override;
   void OnStopConf(const wlanif_stop_confirm_t* resp) override;
-
-  // Have we completed associating our client interface with a fake AP?
-  bool assoc_complete_ = false;
 
   unsigned int arp_frames_received_ = 0;
   unsigned int non_arp_frames_received_ = 0;
@@ -81,9 +75,6 @@ class ArpTest : public SimTest {
   void TxAssocReq();
   void VerifyAssoc();
 
-  // Client association handlers
-  void StartAssoc();
-
   // Frame processing
   void ScheduleTx(const common::MacAddr& dstAddr, const common::MacAddr& srcAddr,
                   const std::vector<uint8_t>& ethFrame, zx::duration when);
@@ -100,18 +91,9 @@ class ArpTest : public SimTest {
   GenericIfc sim_ifc_;
 };
 
-void GenericIfc::OnAssocConf(const wlanif_assoc_confirm_t* resp) { assoc_complete_ = true; }
-
 void GenericIfc::OnAssocInd(const wlanif_assoc_ind_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, kTheirMac.byte, ETH_ALEN), 0);
   assoc_ind_recv_ = true;
-}
-
-void GenericIfc::OnAuthConf(const wlanif_auth_confirm_t* resp) {
-  // Send assoc request
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
-  if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
 }
 
 void GenericIfc::OnDataRecv(const void* frame, size_t size, uint32_t flags) {
@@ -134,15 +116,6 @@ void GenericIfc::OnDataRecv(const void* frame, size_t size, uint32_t flags) {
 
   const ether_arp* arp_hdr = reinterpret_cast<const ether_arp*>(frame_bytes + sizeof(ethhdr));
   EXPECT_EQ(memcmp(arp_hdr, &kSampleArpReq, sizeof(ether_arp)), 0);
-}
-
-void GenericIfc::OnJoinConf(const wlanif_join_confirm_t* resp) {
-  // Send auth request
-  wlanif_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
-  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
 }
 
 void GenericIfc::OnStartConf(const wlanif_start_confirm_t* resp) {
@@ -259,17 +232,6 @@ void ArpTest::ScheduleNonArpFrameTx(zx::duration when) {
   ScheduleTx(kOurMac, kTheirMac, frame_bytes, when);
 }
 
-void ArpTest::StartAssoc() {
-  // Send join request
-  wlanif_join_req join_req = {};
-  std::memcpy(join_req.selected_bss.bssid, kTheirMac.byte, ETH_ALEN);
-  join_req.selected_bss.ssid.len = kDefaultSsid.len;
-  memcpy(join_req.selected_bss.ssid.data, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN);
-  join_req.selected_bss.chan = kDefaultChannel;
-  join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
-  sim_ifc_.if_impl_ops_->join_req(sim_ifc_.if_impl_ctx_, &join_req);
-}
-
 // Verify that an ARP frame received by an AP interface is not offloaded, even after multicast
 // promiscuous mode is enabled.
 TEST_F(ArpTest, SoftApArpOffload) {
@@ -315,7 +277,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   simulation::FakeAp ap(env_.get(), kTheirMac, kDefaultSsid, kDefaultChannel);
 
   // Associate with fake AP
-  SCHEDULE_CALL(&ArpTest::StartAssoc, zx::sec(1));
+  sim_ifc_.AssociateWith(ap, zx::sec(1));
 
   // Send an ARP frame that we expect to be offloaded
   ScheduleArpFrameTx(zx::sec(2), false);
@@ -330,7 +292,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   env_->Run(kTestDuration);
 
   // Verify that we completed the association process
-  EXPECT_EQ(sim_ifc_.assoc_complete_, true);
+  EXPECT_EQ(sim_ifc_.stats_.assoc_successes_, 1U);
 
   // Verify that all ARP frames were offloaded
   EXPECT_EQ(sim_ifc_.arp_frames_received_, 0U);
