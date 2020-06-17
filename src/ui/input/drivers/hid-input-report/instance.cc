@@ -4,6 +4,8 @@
 
 #include "instance.h"
 
+#include <lib/fidl/epitaph.h>
+
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
@@ -31,6 +33,105 @@ zx_status_t InputReportInstance::Bind(InputReportBase* base) {
 zx_status_t InputReportInstance::DdkClose(uint32_t flags) {
   base_->RemoveInstanceFromList(this);
   return ZX_OK;
+}
+
+void InputReportInstance::GetInputReportsReader(zx::channel req,
+                                                GetInputReportsReaderCompleter::Sync completer) {
+  fbl::AutoLock lock(&report_lock_);
+
+  if (input_reports_reader_) {
+    fidl_epitaph_write(req.get(), ZX_ERR_ALREADY_BOUND);
+    return;
+  }
+
+  // Check if the loop needs to be cleaned up.
+  if (loop_) {
+    if (loop_->GetState() == ASYNC_LOOP_QUIT) {
+      loop_->Shutdown();
+    }
+    if (loop_->GetState() == ASYNC_LOOP_SHUTDOWN) {
+      loop_.reset();
+    }
+  }
+
+  if (!loop_.has_value()) {
+    loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
+    zx_status_t status = loop_->StartThread("hid-input-report-reader-loop");
+    if (status != ZX_OK) {
+      fidl_epitaph_write(req.get(), status);
+      return;
+    }
+  }
+
+  input_reports_reader_ = InputReportsReader(this);
+
+  // Invoked when the channel is closed or on any binding-related error.
+  fidl::OnUnboundFn<llcpp::fuchsia::input::report::InputReportsReader::Interface> unbound_fn(
+      [](llcpp::fuchsia::input::report::InputReportsReader::Interface* dev, fidl::UnboundReason,
+         zx_status_t, zx::channel) {
+        auto* device = static_cast<InputReportsReader*>(dev)->instance_;
+        fbl::AutoLock lock(&device->report_lock_);
+
+        if (device->loop_) {
+          device->loop_->Quit();
+        }
+
+        if (device->input_reports_waiting_read_) {
+          device->input_reports_waiting_read_->ReplyError(ZX_ERR_PEER_CLOSED);
+          device->input_reports_waiting_read_.reset();
+        }
+
+        device->input_reports_reader_.reset();
+      });
+
+  auto binding =
+      fidl::BindServer(loop_->dispatcher(), std::move(req),
+                       static_cast<llcpp::fuchsia::input::report::InputReportsReader::Interface*>(
+                           &input_reports_reader_.value()),
+                       std::move(unbound_fn));
+  if (binding.is_error()) {
+    return;
+  }
+  input_reports_reader_binding_.emplace(std::move(binding.value()));
+}
+
+void InputReportInstance::SetWaitingReportsReader(
+    InputReportsReader::ReadInputReportsCompleter::Async waiting_read) {
+  fbl::AutoLock lock(&report_lock_);
+
+  if (input_reports_waiting_read_) {
+    waiting_read.ReplyError(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
+
+  input_reports_waiting_read_ = std::move(waiting_read);
+  SendReportsToWaitingRead();
+}
+
+void InputReportInstance::SendReportsToWaitingRead() {
+  if (reports_data_.empty()) {
+    return;
+  }
+
+  std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+      reports;
+  size_t num_reports = 0;
+
+  TRACE_DURATION("input", "InputReportInstance GetReports", "instance_id", instance_id_);
+  while (!reports_data_.empty()) {
+    TRACE_FLOW_STEP("input", "input_report", reports_data_.front().trace_id());
+    reports[num_reports++] = std::move(reports_data_.front());
+    reports_data_.pop();
+  }
+
+  reports_event_.signal(DEV_STATE_READABLE, 0);
+
+  input_reports_waiting_read_->ReplySuccess(fidl::VectorView<fuchsia_input_report::InputReport>(
+      fidl::unowned_ptr(reports.data()), num_reports));
+  input_reports_waiting_read_.reset();
+
+  // We have sent the reports so reset the allocator.
+  report_allocator_.inner_allocator().reset();
 }
 
 void InputReportInstance::GetReportsEvent(GetReportsEventCompleter::Sync completer) {
@@ -113,6 +214,10 @@ void InputReportInstance::ReceiveReport(const uint8_t* report, size_t report_siz
 
   reports_data_.push(report_builder.build());
   TRACE_FLOW_BEGIN("input", "input_report", reports_data_.back().trace_id());
+
+  if (input_reports_waiting_read_) {
+    SendReportsToWaitingRead();
+  }
 }
 
 }  // namespace hid_input_report_dev

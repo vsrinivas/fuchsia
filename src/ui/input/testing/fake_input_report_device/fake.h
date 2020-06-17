@@ -35,6 +35,11 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
   void SetDescriptor(fuchsia::input::report::DeviceDescriptorPtr descriptor);
 
   // The overriden FIDL function calls.
+  void GetInputReportsReader(
+      ::fidl::InterfaceRequest<fuchsia::input::report::InputReportsReader> reader) override {
+    reader.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
   void GetReportsEvent(GetReportsEventCallback callback) override;
   void GetReports(GetReportsCallback callback) override;
   void GetDescriptor(GetDescriptorCallback callback) override;

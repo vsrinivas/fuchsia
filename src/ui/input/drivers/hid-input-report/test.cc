@@ -320,6 +320,169 @@ TEST_F(HidDevTest, GetReportTest) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
+TEST_F(HidDevTest, ReadInputReportsTest) {
+  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
+  fake_hid_.SetReportDesc(boot_mouse);
+
+  device_->Bind();
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
+
+  // Get an InputReportsReader.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
+
+  // Spoof send a report.
+  std::vector<uint8_t> sent_report = {0xFF, 0x50, 0x70};
+  fake_hid_.SendReport(sent_report);
+
+  // Get the report.
+  auto result = reader.ReadInputReports();
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+  auto& reports = result->result.response().reports;
+
+  ASSERT_EQ(1, reports.count());
+
+  auto& report = reports[0];
+  ASSERT_TRUE(report.has_event_time());
+  ASSERT_TRUE(report.has_mouse());
+  auto& mouse = report.mouse();
+
+  ASSERT_TRUE(mouse.has_movement_x());
+  ASSERT_EQ(0x50, mouse.movement_x());
+
+  ASSERT_TRUE(mouse.has_movement_y());
+  ASSERT_EQ(0x70, mouse.movement_y());
+
+  ASSERT_TRUE(mouse.has_pressed_buttons());
+  const fidl::VectorView<uint8_t>& pressed_buttons = mouse.pressed_buttons();
+  for (size_t i = 0; i < pressed_buttons.count(); i++) {
+    ASSERT_EQ(i + 1, pressed_buttons[i]);
+  }
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDevTest, ReadInputReportsSecondClientFails) {
+  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
+  fake_hid_.SetReportDesc(boot_mouse);
+
+  device_->Bind();
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
+
+  // Get an InputReportsReader.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader =
+        llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
+
+  // Try and get a second Reader which will fail since we have the first.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient failed_reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    failed_reader =
+        llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
+  auto result = failed_reader.ReadInputReports();
+  ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
+  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
+  fake_hid_.SetReportDesc(boot_mouse);
+
+  device_->Bind();
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
+
+  // Get an InputReportsReader.
+
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fidl::Client<llcpp::fuchsia::input::report::InputReportsReader> reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    ASSERT_OK(reader.Bind(std::move(token_client), loop.dispatcher()));
+  }
+
+  // Read the report. This will hang until a report is sent.
+  auto status = reader->ReadInputReports(
+      [&](::llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
+        ASSERT_FALSE(result.is_err());
+        auto& reports = result.response().reports;
+        ASSERT_EQ(1, reports.count());
+
+        auto& report = reports[0];
+        ASSERT_TRUE(report.has_event_time());
+        ASSERT_TRUE(report.has_mouse());
+        auto& mouse = report.mouse();
+
+        ASSERT_TRUE(mouse.has_movement_x());
+        ASSERT_EQ(0x50, mouse.movement_x());
+
+        ASSERT_TRUE(mouse.has_movement_y());
+        ASSERT_EQ(0x70, mouse.movement_y());
+        loop.Quit();
+      });
+  ASSERT_OK(status.status());
+  loop.RunUntilIdle();
+
+  // Send the report.
+  std::vector<uint8_t> sent_report = {0xFF, 0x50, 0x70};
+  fake_hid_.SendReport(sent_report);
+
+  loop.Run();
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
 TEST_F(HidDevTest, SensorTest) {
   const uint8_t* sensor_desc_ptr;
   size_t sensor_desc_size = get_ambient_light_report_desc(&sensor_desc_ptr);

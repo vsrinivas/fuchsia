@@ -10,6 +10,7 @@ import("//build/test/test_package.gni")
 driver_module("hid-input-report") {
   sources = [
     "input-report.cc",
+    "input-reports-reader.cc",
     "instance.cc",
   ]
   deps = [
@@ -21,7 +22,10 @@ driver_module("hid-input-report") {
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/trace:trace-driver",
@@ -33,6 +37,7 @@ driver_module("hid-input-report") {
 test("hid-input-report-test-bin") {
   sources = [
     "input-report.cc",
+    "input-reports-reader.cc",
     "instance.cc",
     "test.cc",
   ]
@@ -46,9 +51,12 @@ test("hid-input-report-test-bin") {
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/trace:trace-driver",

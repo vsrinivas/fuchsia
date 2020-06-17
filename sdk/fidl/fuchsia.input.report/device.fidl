@@ -8,12 +8,31 @@ using zx;
 
 const uint32 MAX_DEVICE_REPORT_COUNT = 50;
 
+/// At the moment calling `ReadReports` drains the same report FIFO used
+/// by fuchsia.input.report.InputDevice:GetReports.
+/// TODO(44923) Remove GetReports API and then give InputReportsReader its own
+/// FIFO.
+protocol InputReportsReader {
+    /// This is a Hanging-Get function to read the reports in the
+    /// Report FIFO. This will not reply until there is at least one
+    /// report available.
+    /// If there is already one outstanding Hanging-Get, calling this
+    /// again will return ZX_ERR_ALREADY_BOUND.
+    ReadInputReports() -> (vector<InputReport>:MAX_DEVICE_REPORT_COUNT reports) error zx.status;
+};
+
 /// An `InputDevice` driver represents a single physical input device.
 /// The InputDevice maintains an internal FIFO of `MAX_DEVICE_REPORT_COUNT`
 /// reports for each client that connects. Reports are removed from the FIFO
 /// once they are read by the client. If the FIFO is full, it will drop the
 /// oldest report to make room for an incoming report.
 protocol InputDevice {
+    /// Open a new InputReportsReader on this device. At the moment, only one
+    /// GetInputReportsReader can be created per connection to InputDevice
+    /// TODO(44923) Remove GetReports API and then allow multiple
+    /// InputReportsReaders.
+    GetInputReportsReader(request<InputReportsReader> reader);
+
     /// Receive an event that will be signalled when there are reports in the
     /// Device's report FIFO. When there are events in the FIFO, `event` will have
     /// `DEV_STATE_READABLE` triggered. When the client has read all of the events,

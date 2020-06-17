@@ -5,6 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_HID_INPUT_REPORT_INSTANCE_H_
 #define SRC_UI_INPUT_DRIVERS_HID_INPUT_REPORT_INSTANCE_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 
 #include <array>
@@ -15,6 +17,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
 
+#include "input-reports-reader.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report_dev {
@@ -39,6 +42,13 @@ class InputReportInstance : public InstanceDeviceType,
  public:
   InputReportInstance(zx_device_t* parent, uint32_t instance_id)
       : InstanceDeviceType(parent), instance_id_(instance_id) {}
+  ~InputReportInstance() {
+    // This will cause the loop to close, which unbinds input_reports_reader_binding_ and
+    // calls RemoveInputReportsReader.
+    if (loop_) {
+      loop_->Shutdown();
+    }
+  }
 
   // The |InputReportBase| is responsible for creating |InputReportInstance| and adding it to
   // the LinkedList of instances that are owned by the base. The Instance is a child driver
@@ -54,6 +64,8 @@ class InputReportInstance : public InstanceDeviceType,
                      hid_input_report::Device* device);
 
   // FIDL functions.
+  void GetInputReportsReader(zx::channel req,
+                             GetInputReportsReaderCompleter::Sync completer) override;
   void GetReportsEvent(GetReportsEventCompleter::Sync completer) override;
   void GetReports(GetReportsCompleter::Sync completer) override;
   void GetDescriptor(GetDescriptorCompleter::Sync completer) override;
@@ -67,6 +79,8 @@ class InputReportInstance : public InstanceDeviceType,
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void SetWaitingReportsReader(InputReportsReader::ReadInputReportsCompleter::Async waiting_read);
+
  private:
   // This is the static size that is used to allocate this instance's InputReports that
   // are stored in `reports_data`. This amount of memory is allocated with the driver
@@ -76,6 +90,8 @@ class InputReportInstance : public InstanceDeviceType,
   // This is the static size that is used to allocate this instance's InputDescriptor.
   // This amount of memory is stack allocated when a client calls GetDescriptor.
   static constexpr size_t kFidlDescriptorBufferSize = 4096 * 2;
+
+  void SendReportsToWaitingRead() __TA_REQUIRES(report_lock_);
 
   uint32_t instance_id_;
 
@@ -87,6 +103,14 @@ class InputReportInstance : public InstanceDeviceType,
       reports_data_ __TA_GUARDED(report_lock_);
 
   InputReportBase* base_ = nullptr;
+
+  // InputReportsReader objects.
+  std::optional<InputReportsReader::ReadInputReportsCompleter::Async> input_reports_waiting_read_
+      __TA_GUARDED(report_lock_);
+  std::optional<InputReportsReader> input_reports_reader_ __TA_GUARDED(report_lock_);
+  std::optional<fidl::ServerBinding<llcpp::fuchsia::input::report::InputReportsReader>>
+      input_reports_reader_binding_ __TA_GUARDED(report_lock_);
+  std::optional<async::Loop> loop_ __TA_GUARDED(report_lock_);
 };
 
 }  // namespace hid_input_report_dev
