@@ -110,14 +110,6 @@ void SessionProvider::Teardown(fit::function<void()> callback) {
   session_context_->Shutdown(ShutDownReason::CRASHED, std::move(callback));
 }
 
-FuturePtr<> SessionProvider::SwapSessionShell(fuchsia::modular::AppConfig session_shell_config) {
-  if (!session_context_) {
-    return Future<>::CreateCompleted("SwapSessionShell(Completed)");
-  }
-
-  return session_context_->SwapSessionShell(std::move(session_shell_config));
-}
-
 void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) {
   if (!session_context_) {
     return;

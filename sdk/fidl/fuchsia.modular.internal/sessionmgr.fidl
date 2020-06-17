@@ -27,8 +27,6 @@ protocol Sessionmgr {
                bool use_session_shell_for_story_shell_factory,
                SessionContext session_context,
                fuchsia.ui.views.ViewToken view_token);
-
-    SwapSessionShell(fuchsia.modular.AppConfig session_shell) -> ();
 };
 
 /// This interface is provided by basemgr to `Sessionmgr`.

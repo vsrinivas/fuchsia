@@ -57,11 +57,6 @@ class SessionProvider {
   // session
   void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason);
 
-  // Stops the active session shell, and starts the session shell specified in
-  // |session_shell_config|. If no session shells are running, this has no
-  // effect, and will return an immediately-completed future.
-  FuturePtr<> SwapSessionShell(fuchsia::modular::AppConfig session_shell_config);
-
   // Shuts down the running session, causing a new session to be created.
   void RestartSession(fit::function<void()> on_restart_complete);
 

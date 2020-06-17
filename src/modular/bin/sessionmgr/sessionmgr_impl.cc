@@ -433,36 +433,6 @@ void SessionmgrImpl::TerminateSessionShell(fit::function<void()> callback) {
       });
 }
 
-class SessionmgrImpl::SwapSessionShellOperation : public Operation<> {
- public:
-  SwapSessionShellOperation(SessionmgrImpl* const sessionmgr_impl,
-                            fuchsia::modular::AppConfig session_shell_config,
-                            ResultCall result_call)
-      : Operation("SessionmgrImpl::SwapSessionShellOperation", std::move(result_call)),
-        sessionmgr_impl_(sessionmgr_impl),
-        session_shell_config_(std::move(session_shell_config)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-    sessionmgr_impl_->story_provider_impl_->StopAllStories([this, flow] {
-      sessionmgr_impl_->TerminateSessionShell([this, flow] {
-        sessionmgr_impl_->RunSessionShell(std::move(session_shell_config_));
-        sessionmgr_impl_->ConnectSessionShellToStoryProvider();
-      });
-    });
-  }
-
-  SessionmgrImpl* const sessionmgr_impl_;
-  fuchsia::modular::AppConfig session_shell_config_;
-};
-
-void SessionmgrImpl::SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
-                                      SwapSessionShellCallback callback) {
-  operation_queue_.Add(std::make_unique<SwapSessionShellOperation>(
-      this, std::move(session_shell_config), std::move(callback)));
-}
-
 void SessionmgrImpl::Terminate(fit::function<void()> done) {
   FX_LOGS(INFO) << "Sessionmgr::Terminate()";
   terminating_ = true;

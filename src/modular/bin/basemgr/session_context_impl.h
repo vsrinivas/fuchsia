@@ -62,10 +62,6 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // |on_session_shutdown_|.
   void Shutdown(ShutDownReason reason, fit::function<void()> callback);
 
-  // Stops the active session shell, and starts the session shell specified in
-  // |session_shell_config|.
-  FuturePtr<> SwapSessionShell(fuchsia::modular::AppConfig session_shell_config);
-
  private:
   // Determines where current configurations are being read from, and forwards
   // that directory into a flat namespace that will be added to sessionmgr's

@@ -214,12 +214,6 @@ void SessionContextImpl::GetPresentation(
   get_presentation_(std::move(request));
 }
 
-FuturePtr<> SessionContextImpl::SwapSessionShell(fuchsia::modular::AppConfig session_shell_config) {
-  auto future = Future<>::Create("SwapSessionShell");
-  sessionmgr_->SwapSessionShell(std::move(session_shell_config), future->Completer());
-  return future;
-}
-
 void SessionContextImpl::Logout() {
   Shutdown(ShutDownReason::LOGGED_OUT, [] {});
 }

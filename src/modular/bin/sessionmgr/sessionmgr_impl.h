@@ -59,10 +59,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
                   fuchsia::ui::views::ViewToken view_token) override;
 
-  // |Sessionmgr|
-  void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
-                        SwapSessionShellCallback callback) override;
-
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeSessionEnvironment(std::string session_id);
   void InitializeLedger();
@@ -182,8 +178,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Holds the done callback of Terminate() while the on_terminate_cbs_ actions are being
   // executed.
   fit::function<void()> terminate_done_;
-
-  class SwapSessionShellOperation;
 
   OperationQueue operation_queue_;
 
