@@ -32,8 +32,6 @@ base_package_labels += [
   "//src/connectivity/management/network-manager/sysmgr:config",
   "//src/connectivity/management/network-manager:config-toulouse",
   "//src/connectivity/management/network-manager-cli",
-  "//src/connectivity/management/reachability",
-  "//src/connectivity/management/reachability:reachability_sysmgr_config",
   "//src/connectivity/network/dhcp:dhcpd",
   "//src/connectivity/network/mdns/bundles:utils",
   "//src/connectivity/network/net-cli",
