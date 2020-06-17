@@ -14,7 +14,10 @@ zx_library("cpuid") {
   ]
 
   # TODO: testonly
-  deps = [ ":test" ]
+  deps = [
+    ":test",
+    "$zx/system/ulib/fbl",
+  ]
 }
 
 source_set("test") {

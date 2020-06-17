@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <bits.h>
 #include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
@@ -16,6 +15,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/hwp.h>
 #include <arch/x86/platform_access.h>
+#include <fbl/bits.h>
 #include <fbl/hard_int.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
@@ -88,10 +88,10 @@ HwpCapabilities ReadHwpCapabilities(MsrAccess* msr) {
   uint64_t hwp_caps = msr->read_msr(X86_MSR_IA32_HWP_CAPABILITIES);
 
   HwpCapabilities result;
-  result.highest_performance = PerformanceLevel(ExtractBits<7, 0, uint8_t>(hwp_caps));
-  result.guaranteed_performance = PerformanceLevel(ExtractBits<15, 8, uint8_t>(hwp_caps));
-  result.most_efficient_performance = PerformanceLevel(ExtractBits<23, 16, uint8_t>(hwp_caps));
-  result.lowest_performance = PerformanceLevel(ExtractBits<31, 24, uint8_t>(hwp_caps));
+  result.highest_performance = PerformanceLevel(fbl::ExtractBits<7, 0, uint8_t>(hwp_caps));
+  result.guaranteed_performance = PerformanceLevel(fbl::ExtractBits<15, 8, uint8_t>(hwp_caps));
+  result.most_efficient_performance = PerformanceLevel(fbl::ExtractBits<23, 16, uint8_t>(hwp_caps));
+  result.lowest_performance = PerformanceLevel(fbl::ExtractBits<31, 24, uint8_t>(hwp_caps));
 
   return result;
 }

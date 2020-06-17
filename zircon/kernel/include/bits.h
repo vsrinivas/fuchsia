@@ -8,11 +8,10 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_BITS_H_
 #define ZIRCON_KERNEL_INCLUDE_BITS_H_
 
+#include <pow2.h>
 #include <zircon/compiler.h>
 
 #include <arch/ops.h>
-#include <pow2.h>
-
 
 #define clz(x) __builtin_clz(x)
 #define ctz(x) __builtin_ctz(x)
@@ -98,21 +97,6 @@ static inline int bitmap_ffz(unsigned long *bitmap, int numbits) {
     return -1;
   }
   return -1;
-}
-
-// Extracts the bit range from [lower_bound, upper_bound] (inclusive) from input
-// and returns it as a type ReturnType.
-template <size_t upper_bound, size_t lower_bound, typename ReturnType, typename SourceType>
-constexpr inline ReturnType ExtractBits(SourceType input) {
-  // Add one to upper bound because it is inclusive.
-  constexpr auto bit_count = upper_bound + 1 - lower_bound;
-
-  static_assert(upper_bound > lower_bound, "Upper bound must be higher than lower bound.");
-  static_assert(upper_bound < (sizeof(SourceType) * 8), "Source value ends before upper bound");
-  static_assert(bit_count <= (sizeof(ReturnType) * 8),
-                "Return Type is not large enough to hold requested bits.");
-
-  return static_cast<ReturnType>((input >> lower_bound) & (valpow2(bit_count) - 1));
 }
 
 #endif  // ZIRCON_KERNEL_INCLUDE_BITS_H_

@@ -46,7 +46,6 @@ if (toolchain.environment == "kernel") {
     sources = [
       "alloc_checker_tests.cc",
       "benchmarks.cc",
-      "bits_tests.cc",
       "brwlock_tests.cc",
       "cache_tests.cc",
       "clock_tests.cc",

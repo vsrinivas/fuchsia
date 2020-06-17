@@ -12,7 +12,22 @@
 
 namespace fbl {
 
-// This file contains safe wrappers for numeric bitfields. You can read or
+// Extracts the bit range from [lower_bound, upper_bound] (inclusive) from input
+// and returns it as a type ReturnType.
+template <size_t upper_bound, size_t lower_bound, typename ReturnType, typename SourceType>
+constexpr inline ReturnType ExtractBits(SourceType input) {
+  // Add one to upper bound because it is inclusive.
+  constexpr auto bit_count = upper_bound + 1 - lower_bound;
+
+  static_assert(upper_bound > lower_bound, "Upper bound must be higher than lower bound.");
+  static_assert(upper_bound < (sizeof(SourceType) * 8), "Source value ends before upper bound");
+  static_assert(bit_count <= (sizeof(ReturnType) * 8),
+                "Return Type is not large enough to hold requested bits.");
+  auto pow2 = static_cast<SourceType>(1) << bit_count;
+  return static_cast<ReturnType>((input >> lower_bound) & (pow2 - 1));
+}
+
+// The following contains safe wrappers for numeric bitfields. You can read or
 // write to the members which in the general case is undefined behavior.
 // However, the standard carves a special exception for types that are
 // standard-layout as long they share a common initial sequence which is

@@ -6,11 +6,12 @@
 
 #include "arch/x86/cpuid.h"
 
-#include <bits.h>
 #include <pow2.h>
 #include <trace.h>
 
 #include <memory>
+
+#include <fbl/bits.h>
 
 #define LOCAL_TRACE 0
 
@@ -22,7 +23,7 @@ constexpr uint32_t ExtendedLeaf() {
   return 0x80000000 + base;
 }
 
-inline uint8_t BaseFamilyFromEax(uint32_t eax) { return ExtractBits<11, 8, uint8_t>(eax); }
+inline uint8_t BaseFamilyFromEax(uint32_t eax) { return fbl::ExtractBits<11, 8, uint8_t>(eax); }
 
 Registers CallCpuId(uint32_t leaf, uint32_t subleaf = 0) {
   Registers result;
@@ -130,8 +131,8 @@ ProcessorId::ProcessorId(Registers registers) : registers_(registers) {}
 uint8_t ProcessorId::stepping() const { return registers_.eax() & 0xF; }
 
 uint16_t ProcessorId::model() const {
-  const uint8_t base = ExtractBits<7, 4, uint8_t>(registers_.eax());
-  const uint8_t extended = ExtractBits<19, 16, uint8_t>(registers_.eax());
+  const uint8_t base = fbl::ExtractBits<7, 4, uint8_t>(registers_.eax());
+  const uint8_t extended = fbl::ExtractBits<19, 16, uint8_t>(registers_.eax());
 
   const uint8_t family = BaseFamilyFromEax(registers_.eax());
   if (family == 0xF || family == 0x6) {
@@ -143,7 +144,7 @@ uint16_t ProcessorId::model() const {
 
 uint16_t ProcessorId::family() const {
   const uint8_t base = BaseFamilyFromEax(registers_.eax());
-  const uint8_t extended = ExtractBits<27, 20, uint8_t>(registers_.eax());
+  const uint8_t extended = fbl::ExtractBits<27, 20, uint8_t>(registers_.eax());
   if (base == 0xF) {
     return static_cast<uint16_t>(base + extended);
   } else {
@@ -154,7 +155,7 @@ uint16_t ProcessorId::family() const {
 uint32_t ProcessorId::signature() const { return registers_.eax(); }
 
 uint8_t ProcessorId::local_apic_id() const {
-  return ExtractBits<31, 24, uint8_t>(registers_.ebx());
+  return fbl::ExtractBits<31, 24, uint8_t>(registers_.ebx());
 }
 
 Features::Features(Registers leaf1, Registers leaf6, Registers leaf7, Registers leaf8_01,
@@ -162,7 +163,7 @@ Features::Features(Registers leaf1, Registers leaf6, Registers leaf7, Registers 
     : leaves_{leaf1, leaf6, leaf7, leaf8_01, leaf8_07, leaf8_08} {}
 
 uint8_t Features::max_logical_processors_in_package() const {
-  return ExtractBits<23, 16, uint8_t>(leaves_[LEAF1].ebx());
+  return fbl::ExtractBits<23, 16, uint8_t>(leaves_[LEAF1].ebx());
 }
 
 Topology::Topology(ManufacturerInfo info, Features features, Registers leaf4,
@@ -182,9 +183,9 @@ ktl::optional<Topology::Levels> Topology::IntelLevels() const {
     int nodes_under_previous_level = 0;
     int bits_in_previous_levels = 0;
     for (int i = 0; i < 3; i++) {
-      const uint8_t width = ExtractBits<4, 0, uint8_t>(leafB_.subleaf[i].eax());
+      const uint8_t width = fbl::ExtractBits<4, 0, uint8_t>(leafB_.subleaf[i].eax());
       if (width) {
-        uint8_t raw_type = ExtractBits<15, 8, uint8_t>(leafB_.subleaf[i].ecx());
+        uint8_t raw_type = fbl::ExtractBits<15, 8, uint8_t>(leafB_.subleaf[i].ecx());
 
         LevelType type = LevelType::INVALID;
         if (raw_type == 1) {
@@ -198,7 +199,7 @@ ktl::optional<Topology::Levels> Topology::IntelLevels() const {
 
         // This actually contains total logical processors in all
         // subtrees of this level of the topology.
-        const uint16_t nodes_under_level = ExtractBits<7, 0, uint8_t>(leafB_.subleaf[i].ebx());
+        const uint16_t nodes_under_level = fbl::ExtractBits<7, 0, uint8_t>(leafB_.subleaf[i].ebx());
         const uint8_t node_count = static_cast<uint8_t>(
             nodes_under_level /
             ((nodes_under_previous_level == 0) ? 1 : nodes_under_previous_level));
@@ -225,7 +226,7 @@ ktl::optional<Topology::Levels> Topology::IntelLevels() const {
       };
     } else {
       const auto logical_in_package = features_.max_logical_processors_in_package();
-      const auto cores_in_package = ExtractBits<31, 26, uint8_t>(leaf4_.eax()) + 1;
+      const auto cores_in_package = fbl::ExtractBits<31, 26, uint8_t>(leaf4_.eax()) + 1;
       const auto logical_per_core = logical_in_package / cores_in_package;
       if (logical_per_core > 1) {
         levels.levels[levels.level_count++] = {
@@ -257,17 +258,17 @@ ktl::optional<Topology::Levels> Topology::IntelLevels() const {
 ktl::optional<Topology::Levels> Topology::AmdLevels() const {
   Topology::Levels levels;
   if (info_.highest_extended_cpuid_leaf() >= ExtendedLeaf<8>()) {
-    uint8_t thread_id_bits = ExtractBits<15, 12, uint8_t>(leaf8_8_.ecx());
+    uint8_t thread_id_bits = fbl::ExtractBits<15, 12, uint8_t>(leaf8_8_.ecx());
     if (thread_id_bits == 0) {
       thread_id_bits =
-          static_cast<uint8_t>(log2_uint_ceil(ExtractBits<7, 0, uint8_t>(leaf8_8_.ecx()) + 1));
+          static_cast<uint8_t>(log2_uint_ceil(fbl::ExtractBits<7, 0, uint8_t>(leaf8_8_.ecx()) + 1));
     }
 
     const uint8_t smt_bits =
-        static_cast<uint8_t>(log2_uint_ceil(ExtractBits<15, 8, uint8_t>(leaf8_1E_.ebx()) + 1));
+        static_cast<uint8_t>(log2_uint_ceil(fbl::ExtractBits<15, 8, uint8_t>(leaf8_1E_.ebx()) + 1));
 
     const uint8_t node_bits =
-        static_cast<uint8_t>(log2_uint_ceil(ExtractBits<10, 8, uint8_t>(leaf8_1E_.ecx()) + 1));
+        static_cast<uint8_t>(log2_uint_ceil(fbl::ExtractBits<10, 8, uint8_t>(leaf8_1E_.ecx()) + 1));
 
     // thread_id is the unique id of a thread in a package (socket), if we
     // remove the bits used to identify the thread inside of the core (smt)
@@ -330,14 +331,14 @@ ktl::optional<Topology::Levels> Topology::levels() const {
 Topology::Cache Topology::highest_level_cache() const {
   const auto& leaf = (leaf4_.eax() != 0) ? leaf4_ /*Intel*/ : leaf8_1D_ /*AMD*/;
   const uint16_t threads_sharing_cache =
-      static_cast<uint16_t>(ExtractBits<25, 14, uint16_t>(leaf.eax()) + 1);
+      static_cast<uint16_t>(fbl::ExtractBits<25, 14, uint16_t>(leaf.eax()) + 1);
   LTRACEF("threads sharing cache %u\n", threads_sharing_cache);
   return {
-      .level = ExtractBits<7, 5, uint8_t>(leaf.eax()),
+      .level = fbl::ExtractBits<7, 5, uint8_t>(leaf.eax()),
       .shift_width = ToShiftWidth(threads_sharing_cache),
-      .size_bytes = (ExtractBits<31, 22, uint16_t>(leaf.ebx()) + 1) *
-                    (ExtractBits<21, 12, uint16_t>(leaf.ebx()) + 1) *
-                    (ExtractBits<11, 0, uint16_t>(leaf.ebx()) + 1) * (leaf.ecx() + 1),
+      .size_bytes = (fbl::ExtractBits<31, 22, uint16_t>(leaf.ebx()) + 1) *
+                    (fbl::ExtractBits<21, 12, uint16_t>(leaf.ebx()) + 1) *
+                    (fbl::ExtractBits<11, 0, uint16_t>(leaf.ebx()) + 1) * (leaf.ecx() + 1),
   };
 }
 
