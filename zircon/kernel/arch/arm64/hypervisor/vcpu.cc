@@ -38,6 +38,22 @@ static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
   return (vpid - 1) | (mpidr & 0xffffff00fe000000);
 }
 
+template <typename F>
+static bool for_each_lr(IchState* ich_state, F function) {
+  for (uint8_t i = 0; i < ich_state->num_lrs; i++) {
+    if (BIT(ich_state->elrsr, i)) {
+      continue;
+    }
+    InterruptState state;
+    uint32_t vector = gic_get_vector_from_lr(ich_state->lr[i], &state);
+    zx_status_t status = function(i, state, vector);
+    if (status == ZX_ERR_STOP) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
   // From ARM GIC v3/v4, Section 4.8: If, on a particular CPU interface,
   // multiple pending interrupts have the same priority, and have sufficient
@@ -53,11 +69,6 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
       // There are no more pending interrupts.
       break;
     }
-    if (gich_state->InListRegister(vector)) {
-      // Skip an interrupt if it is already in an LR.
-      continue;
-    }
-
     uint32_t lr_index = __builtin_ctzl(elrsr);
     bool hw = type == hypervisor::InterruptType::PHYSICAL;
     // From ARM GIC v3/v4, Section 4.8: If the GIC implements fewer than 256
@@ -69,8 +80,25 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
     // We may have as few as 16 priority levels, so step by 16 to the next
     // lowest priority in order to prioritise SGIs and PPIs over SPIs.
     uint8_t prio = vector < GIC_BASE_SPI ? 0 : 0x10;
-    uint64_t lr = gic_get_lr_from_vector(hw, prio, InterruptState::PENDING, vector);
-    ich_state->lr[lr_index] = lr;
+    InterruptState state = InterruptState::PENDING;
+
+    if (gich_state->InListRegister(vector)) {
+      bool skip = for_each_lr(ich_state, [&](uint8_t i, InterruptState s, uint32_t v) {
+        if (v != vector || s != InterruptState::ACTIVE) {
+          return ZX_ERR_NEXT;
+        }
+        // If the interrupt is active, change its state to pending and active.
+        state = InterruptState::PENDING_AND_ACTIVE;
+        lr_index = i;
+        return ZX_ERR_STOP;
+      });
+      if (skip) {
+        // Skip an interrupt if it is in an LR, and its state is not changing.
+        continue;
+      }
+    }
+
+    ich_state->lr[lr_index] = gic_get_lr_from_vector(hw, prio, state, vector);
     elrsr &= ~(1u << lr_index);
   }
 }
@@ -85,14 +113,10 @@ zx_status_t GichState::Init() {
 
 void GichState::TrackAllListRegisters(IchState* ich_state) {
   lr_tracker_.ClearAll();
-  for (uint8_t i = 0; i < ich_state->num_lrs; i++) {
-    if (BIT(ich_state->elrsr, i)) {
-      continue;
-    }
-    InterruptState state;
-    uint32_t vector = gic_get_vector_from_lr(ich_state->lr[i], &state);
-    lr_tracker_.SetOne(vector);
-  }
+  for_each_lr(ich_state, [this](uint8_t i, InterruptState s, uint32_t v) {
+    lr_tracker_.SetOne(v);
+    return ZX_ERR_NEXT;
+  });
 }
 
 static VcpuExit vmexit_interrupt_ktrace_meta(uint32_t misr) {
