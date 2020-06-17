@@ -196,7 +196,7 @@ class Sl4f {
       }
 
       // Check if it's already started.
-      if (await _isRunning()) {
+      if (await isRunning()) {
         _log.info('SL4F has started.');
         return;
       }
@@ -223,7 +223,7 @@ class Sl4f {
       // ssh does not wait for them to close, and thus we can await here safely.
       await ssh.run('run -d $_sl4fComponentUrl > /dev/null 2> /dev/null');
 
-      if (await _isRunning(tries: 3, delay: Duration(seconds: 2))) {
+      if (await isRunning(tries: 3, delay: Duration(seconds: 2))) {
         _log.info('SL4F has started.');
         return;
       }
@@ -331,13 +331,13 @@ class Sl4f {
   }
 
   /// Sends an empty http request to the server to verify if it's listening on
-  /// port 80.
+  /// [port].
   ///
   /// By default it tries to connect just once, but that can be changed with
   /// [tries]. In which case it will wait [delay] time between tries.
   /// The server must respond within [timeout] before its considered to be
   /// unreachable.
-  Future<bool> _isRunning(
+  Future<bool> isRunning(
       {int tries = 1,
       Duration delay = const Duration(seconds: 2),
       Duration timeout = const Duration(seconds: 10)}) async {
@@ -353,7 +353,7 @@ class Sl4f {
 
       try {
         await http.get(Uri.http('$target:$port', '/')).timeout(timeout);
-      } on SocketException {
+      } on IOException {
         continue;
       } on TimeoutException {
         continue;

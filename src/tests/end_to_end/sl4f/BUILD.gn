@@ -9,6 +9,7 @@ import("//build/testing/host_test_data.gni")
 dart_test("sl4f_test") {
   sources = [
     "audio_test.dart",
+    "client_test.dart",
     "component_search_test.dart",
     "device_log_test.dart",
     "diagnostics_test.dart",
