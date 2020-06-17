@@ -4,10 +4,14 @@
 
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects.h"
+
+using ::testing::AllOf;
+using ::testing::Field;
 
 namespace media::audio {
 namespace {
@@ -82,9 +86,12 @@ TEST_F(AudioTunerTest, GetAvailableAudioEffects) {
       [&available_effects](std::vector<fuchsia::media::tuning::AudioEffectType> effects) {
         available_effects = effects;
       });
-  EXPECT_EQ(available_effects.size(), 1u);
-  EXPECT_EQ(available_effects[0].module_name, testing::kTestEffectsModuleName);
-  EXPECT_EQ(available_effects[0].effect_name, "test_effect");
+
+  EXPECT_THAT(
+      available_effects,
+      Contains(AllOf(Field(&fuchsia::media::tuning::AudioEffectType::effect_name, "test_effect"),
+                     Field(&fuchsia::media::tuning::AudioEffectType::module_name,
+                           testing::kTestEffectsModuleName))));
 }
 
 TEST_F(AudioTunerTest, GetAudioDeviceTuningProfile) {
