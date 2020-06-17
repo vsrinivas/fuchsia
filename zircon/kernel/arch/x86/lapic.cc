@@ -344,7 +344,7 @@ void apic_send_mask_ipi(uint8_t vector, cpu_mask_t mask, enum apic_interrupt_del
 }
 
 void apic_issue_eoi(void) {
-  if (pv::PvEoi::get()->Eoi()) {
+  if (PvEoi::get()->Eoi()) {
     return;
   }
   // Write 0 to the EOI address to issue an EOI

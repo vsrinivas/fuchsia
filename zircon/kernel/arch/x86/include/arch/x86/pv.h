@@ -78,8 +78,6 @@ int pv_ipi(uint64_t mask_low, uint64_t mask_high, uint64_t start_id, uint64_t ic
 
 class MsrAccess;
 
-namespace pv {
-
 class PvEoi final {
  public:
   // Get the current CPU's PV_EOI state.
@@ -103,7 +101,5 @@ class PvEoi final {
 
   ktl::atomic<bool> enabled_;
 };
-
-}  // namespace pv
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_

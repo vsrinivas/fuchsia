@@ -183,7 +183,7 @@ void shutdown_interrupts(void) { pic_disable(); }
 void shutdown_interrupts_curr_cpu(void) {
   if (x86_hypervisor_has_pv_eoi()) {
     MsrAccess msr;
-    pv::PvEoi::get()->Disable(&msr);
+    PvEoi::get()->Disable(&msr);
   }
 
   // TODO(maniscalco): Walk interrupt redirection entries and make sure nothing targets this CPU.

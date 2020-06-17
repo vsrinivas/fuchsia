@@ -121,8 +121,6 @@ int pv_ipi(uint64_t mask_low, uint64_t mask_high, uint64_t start_id, uint64_t ic
   return ret;
 }
 
-namespace pv {
-
 static PvEoi g_pv_eoi[SMP_MAX_CPUS];
 
 PvEoi* PvEoi::get() { return &g_pv_eoi[arch_curr_cpu_num()]; }
@@ -155,5 +153,3 @@ bool PvEoi::Eoi() {
   uint64_t old_val = atomic_swap_u64(state_, 0u);
   return old_val != 0;
 }
-
-}  // namespace pv

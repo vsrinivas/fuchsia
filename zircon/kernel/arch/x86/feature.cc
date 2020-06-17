@@ -305,7 +305,7 @@ void x86_cpu_feature_late_init_percpu(void) {
 
   // If we are running under a hypervisor and paravirtual EOI (PV_EOI) is available, enable it.
   if (x86_hypervisor_has_pv_eoi()) {
-    pv::PvEoi::get()->Enable(&msr);
+    PvEoi::get()->Enable(&msr);
   }
 }
 
