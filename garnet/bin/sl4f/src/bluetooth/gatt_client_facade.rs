@@ -570,7 +570,7 @@ impl GattClientFacade {
         self.update_peripheral_id(&identifier, proxy);
         match &self.inner.read().central {
             Some(c) => {
-                let conn_opts = ConnectionOptions { bondable_mode: Some(true) };
+                let conn_opts = ConnectionOptions { bondable_mode: Some(true), service_filter: None };
                 let status = c.connect_peripheral(&mut identifier, conn_opts, server_end).await?;
                 match status.error {
                     Some(e) => {

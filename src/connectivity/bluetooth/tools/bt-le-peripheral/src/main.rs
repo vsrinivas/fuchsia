@@ -241,8 +241,11 @@ async fn main() -> Result<(), Error> {
     service_data.extend(binary_service_data);
     manufacturer_data.extend(binary_manufacturer_data);
 
-    let conn_opts =
-        if connectable { Some(ConnectionOptions { bondable_mode: Some(true) }) } else { None };
+    let conn_opts = if connectable {
+        Some(ConnectionOptions { bondable_mode: Some(true), service_filter: None })
+    } else {
+        None
+    };
     // unchanging advertising data used for the lifetime of the program
     let params = AdvertisingParameters {
         data: Some(AdvertisingData {
@@ -438,7 +441,10 @@ mod tests {
             scan_response: None,
             mode_hint: Some(AdvertisingModeHint::Slow),
             connectable: None,
-            connection_options: Some(ConnectionOptions { bondable_mode: Some(true) }),
+            connection_options: Some(ConnectionOptions {
+                bondable_mode: Some(true),
+                service_filter: None,
+            }),
         };
         let listen_task = listen(&proxy, input_parameters, &[]);
         let emulate_task = async {
@@ -467,7 +473,10 @@ mod tests {
             scan_response: None,
             mode_hint: Some(AdvertisingModeHint::Slow),
             connectable: None,
-            connection_options: Some(ConnectionOptions { bondable_mode: Some(true) }),
+            connection_options: Some(ConnectionOptions {
+                bondable_mode: Some(true),
+                service_filter: None,
+            }),
         };
 
         drop(server);

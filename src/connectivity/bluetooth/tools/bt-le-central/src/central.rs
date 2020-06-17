@@ -9,7 +9,10 @@ use {
     anyhow::Error,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, ConnectionOptions},
-    fuchsia_bluetooth::{error::Error as BTError, types::le::RemoteDevice},
+    fuchsia_bluetooth::{
+        error::Error as BTError,
+        types::{le::RemoteDevice, Uuid},
+    },
     futures::prelude::*,
     parking_lot::RwLock,
     std::{convert::TryFrom, process::exit, sync::Arc},
@@ -98,7 +101,7 @@ pub async fn listen_central_events(state: CentralStatePtr) {
                     } else if central.connect && device.connectable {
                         // Drop lock so it isn't held during .await
                         drop(central);
-                        match connect_peripheral(state, id).await {
+                        match connect_peripheral(state, id, None).await {
                             Ok(()) => Ok(()),
                             Err(_) => Ok(()),
                         }
@@ -122,10 +125,17 @@ pub async fn listen_central_events(state: CentralStatePtr) {
 
 // Attempts to connect to the peripheral with the given |id| and begins the
 // GATT REPL if this succeeds.
-pub async fn connect_peripheral(state: &CentralStatePtr, mut id: String) -> Result<(), Error> {
+pub async fn connect_peripheral(
+    state: &CentralStatePtr,
+    mut id: String,
+    optional_service_uuid: Option<Uuid>,
+) -> Result<(), Error> {
     let (proxy, server) =
         endpoints::create_proxy().map_err(|_| BTError::new("Failed to create Client pair"))?;
-    let conn_opts = ConnectionOptions { bondable_mode: Some(true) };
+    let conn_opts = ConnectionOptions {
+        bondable_mode: Some(true),
+        service_filter: optional_service_uuid.map(|u| u.into()),
+    };
     let connect_peripheral_fut = state.read().svc.connect_peripheral(&mut id, conn_opts, server);
 
     let status = connect_peripheral_fut

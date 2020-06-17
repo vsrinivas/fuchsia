@@ -289,7 +289,7 @@ impl BleAdvertiseFacade {
         let connectable: bool = conn_raw.as_bool().unwrap_or(false);
 
         let conn_opts =
-            if connectable { Some(ConnectionOptions { bondable_mode: Some(true) }) } else { None };
+            if connectable { Some(ConnectionOptions { bondable_mode: Some(true), service_filter: None }) } else { None };
 
         let parameters = AdvertisingParameters {
             data: advertising_data,

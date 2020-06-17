@@ -9,7 +9,9 @@ use {
         self as fasync,
         temp::Either::{Left, Right},
     },
-    fuchsia_bluetooth::{assigned_numbers::find_service_uuid, error::Error as BTError},
+    fuchsia_bluetooth::{
+        assigned_numbers::find_service_uuid, error::Error as BTError, types::Uuid,
+    },
     futures::{future, prelude::*},
     getopts::Options,
 };
@@ -131,12 +133,24 @@ fn do_scan(
 }
 
 async fn do_connect<'a>(state: CentralStatePtr, args: &'a [String]) -> Result<(), Error> {
-    if args.len() != 1 {
+    if args.len() < 1 {
         println!("connect: peer-id is required");
         return Err(BTError::new("invalid input").into());
     }
 
-    connect_peripheral(&state, args[0].clone()).await
+    let mut opts = Options::new();
+    opts.optopt("u", "uuid", "only discover services that match UUID", "UUID");
+
+    let matches = opts.parse(&args[1..])?;
+
+    let possible_uuid = matches.opt_str("u").map(|u| u.parse::<Uuid>());
+    let uuid = match possible_uuid {
+        None => None,
+        Some(Ok(uuid)) => Some(uuid),
+        Some(Err(_parse_error)) => return Err(BTError::new("invalid UUID").into()),
+    };
+
+    connect_peripheral(&state, args[0].clone(), uuid).await
 }
 
 fn usage(appname: &str) -> () {

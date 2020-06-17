@@ -4,6 +4,8 @@
 
 library fuchsia.bluetooth.le;
 
+using fuchsia.bluetooth;
+
 /// Represents parameters that are set on a per-connection basis by FIDL protocols that create
 /// Low Energy connections.
 table ConnectionOptions {
@@ -12,4 +14,8 @@ table ConnectionOptions {
     /// the connection defaults to bondable mode. When false, the connection operates in non-
     /// bondable mode, which means the local device only allows pairing that does not form a bond.
     1: bool bondable_mode;
+
+    /// When present, service discovery performed following the connection is restricted to primary
+    /// services that match this field. Otherwise, by default all available services are discovered.
+    2: fuchsia.bluetooth.Uuid service_filter;
 };
