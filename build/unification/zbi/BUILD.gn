@@ -20,9 +20,9 @@ group("tests") {
   deps = [
     "//src/bringup/bin/bootsvc/test:bootsvc-integration-tests",
     "//src/bringup/bin/bootsvc/test:bootsvc-root-job-test",
+    "//src/zircon/tests/mexec:zbi-child-image",
+    "//src/zircon/tests/mexec:zbi-parent-image",
     "//zircon/system/utest/core:core-tests",
-    "//zircon/system/utest/mexec:zbi-child-image",
-    "//zircon/system/utest/mexec:zbi-parent-image",
   ]
 
   if (current_cpu == "x64") {

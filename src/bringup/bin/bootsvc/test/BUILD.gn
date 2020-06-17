@@ -237,6 +237,6 @@ migrated_zbi_test("bootsvc-root-job-test") {
     "..",
 
     # Include the integration test binary, which bootsvc will launch.
-    "//zircon/system/utest/mexec:zbi-child",
+    "//src/zircon/tests/mexec:zbi-child",
   ]
 }
