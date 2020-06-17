@@ -103,25 +103,18 @@ class AgentContextImpl::FinishInitializeCall : public Operation<> {
 // If |is_teardown| is set to true, the agent will be torn down irrespective
 // of whether there is an open-connection. Returns |true| if the
 // agent was stopped, false otherwise.
-class AgentContextImpl::StopCall : public Operation<bool> {
+class AgentContextImpl::StopCall : public Operation<> {
  public:
-  StopCall(const bool is_teardown, AgentContextImpl* const agent_context_impl,
-           ResultCall result_call)
+  StopCall(AgentContextImpl* const agent_context_impl, ResultCall result_call)
       : Operation("AgentContextImpl::StopCall", std::move(result_call), agent_context_impl->url_),
-        agent_context_impl_(agent_context_impl),
-        is_teardown_(is_teardown) {}
+        agent_context_impl_(agent_context_impl) {}
 
  private:
   void Run() override {
-    FlowToken flow{this, &stopped_};
+    FlowToken flow{this};
 
     if (agent_context_impl_->state_ == State::TERMINATING ||
         agent_context_impl_->state_ == State::TERMINATED) {
-      return;
-    }
-
-    // Don't stop the agent if it has connections, unless it's being torn down.
-    if (!is_teardown_ && agent_context_impl_->agent_controller_bindings_.size() != 0) {
       return;
     }
 
@@ -152,7 +145,6 @@ class AgentContextImpl::StopCall : public Operation<bool> {
   }
 
   void Stop(FlowToken flow) {
-    stopped_ = true;
     agent_context_impl_->state_ = State::TERMINATED;
     agent_context_impl_->agent_.Unbind();
     agent_context_impl_->agent_context_bindings_.CloseAll();
@@ -160,9 +152,7 @@ class AgentContextImpl::StopCall : public Operation<bool> {
     agent_context_impl_->app_client_.reset();
   }
 
-  bool stopped_ = false;
   AgentContextImpl* const agent_context_impl_;
-  const bool is_teardown_;
 };
 
 class AgentContextImpl::OnAppErrorCall : public Operation<> {
@@ -302,9 +292,8 @@ void AgentContextImpl::GetComponentContext(
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {
   FX_LOGS(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
 
-  operation_queue_.Add(std::make_unique<StopCall>(
-      /*is_teardown=*/true, this, [this, callback = std::move(callback)](bool stopped) {
-        FX_DCHECK(stopped);
+  operation_queue_.Add(
+      std::make_unique<StopCall>(this, [this, callback = std::move(callback)] {
         agent_runner_->RemoveAgent(url_);
         callback();
         // |this| is no longer valid at this point.
