@@ -21,6 +21,7 @@
 #include <third_party/crashpad/util/file/string_file.h>
 
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
+#include "src/developer/feedback/testing/gmatchers.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
 
@@ -34,6 +35,7 @@ namespace {
 
 using fuchsia::exception::ExceptionInfo;
 using fuchsia::exception::ExceptionType;
+using testing::UnorderedElementsAreArray;
 
 // ExceptionBroker unit test -----------------------------------------------------------------------
 //
@@ -70,11 +72,17 @@ class StubIntrospect : public fuchsia::sys::internal::Introspect {
   void FindComponentByProcessKoid(uint64_t process_koid,
                                   FindComponentByProcessKoidCallback callback) {
     using namespace fuchsia::sys::internal;
-    if (pids_to_component_urls_.find(process_koid) == pids_to_component_urls_.end()) {
+    if (pids_to_component_infos_.find(process_koid) == pids_to_component_infos_.end()) {
       callback(Introspect_FindComponentByProcessKoid_Result::WithErr(ZX_ERR_NOT_FOUND));
     } else {
+      const auto& info = pids_to_component_infos_[process_koid];
+
       SourceIdentity source_identity;
-      source_identity.set_component_url(pids_to_component_urls_[process_koid]);
+      source_identity.set_component_url(info.component_url);
+
+      if (info.realm_path.has_value()) {
+        source_identity.set_realm_path(info.realm_path.value());
+      }
 
       callback(Introspect_FindComponentByProcessKoid_Result::WithResponse(
           Introspect_FindComponentByProcessKoid_Response(std::move(source_identity))));
@@ -87,12 +95,17 @@ class StubIntrospect : public fuchsia::sys::internal::Introspect {
     };
   }
 
-  void AddProcessKoidToComponentUrl(uint64_t process_koid, std::string component_url) {
-    pids_to_component_urls_[process_koid] = component_url;
+  struct ComponentInfo {
+    std::string component_url;
+    std::optional<std::vector<std::string>> realm_path;
+  };
+
+  void AddProcessKoidToComponentInfo(uint64_t process_koid, ComponentInfo component_info) {
+    pids_to_component_infos_[process_koid] = component_info;
   }
 
  private:
-  std::map<uint64_t, std::string> pids_to_component_urls_;
+  std::map<uint64_t, ComponentInfo> pids_to_component_infos_;
 
   fidl::BindingSet<fuchsia::sys::internal::Introspect> bindings_;
 };
@@ -156,7 +169,8 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
 // Utilities ---------------------------------------------------------------------------------------
 
 inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
-                           const std::string& program_name, bool validate_minidump) {
+                           const std::string& program_name,
+                           const std::optional<std::string>& realm_path, bool validate_minidump) {
   ASSERT_TRUE(report.has_program_name());
 
   ASSERT_TRUE(report.has_specific_report());
@@ -167,11 +181,18 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
 
   if (validate_minidump) {
     ASSERT_TRUE(report.has_annotations());
-    ASSERT_EQ(report.annotations().size(), 1u);
-
-    const fuchsia::feedback::Annotation& annotation = report.annotations().front();
-    EXPECT_EQ(annotation.key, "crash.process.name");
-    EXPECT_EQ(annotation.value, "crasher");
+    if (realm_path.has_value()) {
+      EXPECT_THAT(report.annotations(),
+                  UnorderedElementsAreArray({
+                      feedback::MatchesAnnotation("crash.process.name", "crasher"),
+                      feedback::MatchesAnnotation("crash.realm-path", realm_path.value().c_str()),
+                  }));
+    } else {
+      EXPECT_THAT(report.annotations(),
+                  UnorderedElementsAreArray({
+                      feedback::MatchesAnnotation("crash.process.name", "crasher"),
+                  }));
+    }
   }
 
   // If the broker could not get a minidump, it will not send a mem buffer.
@@ -203,6 +224,11 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
   ASSERT_TRUE(minidump_snapshot.Initialize(&string_file));
 }
 
+inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
+                           const std::string& program_name, bool validate_minidump) {
+  ValidateReport(report, program_name, std::nullopt, validate_minidump);
+}
+
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(ExceptionBroker, CallingMultipleExceptions) {
@@ -228,13 +254,19 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   infos[1] = ExceptionContextToExceptionInfo(excps[1]);
   infos[2] = ExceptionContextToExceptionInfo(excps[2]);
 
-  std::string component_urls[2];
-  component_urls[0] = "component_url_1";
-  component_urls[1] = "component_url_2";
+  StubIntrospect::ComponentInfo component_infos[2];
+  component_infos[0] = StubIntrospect::ComponentInfo{
+      .component_url = "component_url_1",
+      .realm_path = std::vector<std::string>({"realm", "path"}),
+  };
+  component_infos[1] = StubIntrospect::ComponentInfo{
+      .component_url = "component_url_2",
+      .realm_path = std::nullopt,
+  };
 
   for (size_t i = 0; i < 2; ++i) {
-    test_context->introspect->AddProcessKoidToComponentUrl(infos[i].process_koid,
-                                                           component_urls[i]);
+    test_context->introspect->AddProcessKoidToComponentInfo(infos[i].process_koid,
+                                                            component_infos[i]);
   }
 
   // It's not easy to pass array references to lambdas.
@@ -260,7 +292,7 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   EXPECT_EQ(broker->introspect_connections().size(), 0u);
 
   auto& reports = test_context->crash_reporter->reports();
-  ValidateReport(reports[0], "component_url_1", true);
+  ValidateReport(reports[0], "component_url_1", "/realm/path", true);
   ValidateReport(reports[1], "component_url_2", true);
   ValidateReport(reports[2], "crasher", true);
 

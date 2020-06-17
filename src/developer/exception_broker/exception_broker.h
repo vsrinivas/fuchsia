@@ -51,7 +51,8 @@ class ExceptionBroker : public fuchsia::exception::Handler {
 
  private:
   void FileCrashReport(fuchsia::exception::ProcessException);  // |use_limbo_| == false.
-  void FileCrashReport(uint64_t id, std::optional<std::string> component_url);
+  void FileCrashReport(uint64_t id, std::optional<std::string> component_url,
+                       std::optional<std::string> realm_path);
 
   ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services);
 

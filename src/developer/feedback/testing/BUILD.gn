@@ -23,6 +23,8 @@ source_set("cobalt_test_fixture") {
 source_set("gmatchers") {
   testonly = true
 
+  visibility += [ "//src/developer/exception_broker/tests/*" ]
+
   sources = [ "gmatchers.h" ]
 
   public_deps = [

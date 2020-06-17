@@ -111,6 +111,7 @@ executable("exception_broker_unittest") {
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/exception_broker:lib",
+    "//src/developer/feedback/testing:gmatchers",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

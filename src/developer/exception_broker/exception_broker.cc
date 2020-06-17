@@ -14,6 +14,7 @@
 #include "src/developer/exception_broker/json_utils.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 namespace exception {
 
@@ -60,8 +61,9 @@ fxl::WeakPtr<ExceptionBroker> ExceptionBroker::GetWeakPtr() { return weak_factor
 
 namespace {
 
-fuchsia::feedback::CrashReport CreateCrashReport(const std::optional<std::string> component_url,
-                                                 const std::string& process_name,
+fuchsia::feedback::CrashReport CreateCrashReport(const std::string& process_name,
+                                                 const std::optional<std::string> component_url,
+                                                 const std::optional<std::string> realm_path,
                                                  zx::vmo minidump_vmo) {
   using namespace fuchsia::feedback;
 
@@ -86,6 +88,13 @@ fuchsia::feedback::CrashReport CreateCrashReport(const std::optional<std::string
       .key = "crash.process.name",
       .value = process_name,
   });
+
+  if (realm_path.has_value()) {
+    crash_report.mutable_annotations()->push_back(Annotation{
+        .key = "crash.realm-path",
+        .value = realm_path.value(),
+    });
+  }
 
   return crash_report;
 }
@@ -134,7 +143,7 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
   auto& exception = process_exceptions_[id];
 
   if (!exception.has_info()) {
-    FileCrashReport(id, std::nullopt);
+    FileCrashReport(id, std::nullopt, std::nullopt);
     return;
   }
 
@@ -150,7 +159,7 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
     if (!broker)
       return;
 
-    broker->FileCrashReport(id, std::nullopt);
+    broker->FileCrashReport(id, std::nullopt, std::nullopt);
 
     // Remove the connection after we have filed the crash report. The connection must be removed at
     // the end of the function because the InterfacePtr that owns the lambda is destroyed when the
@@ -166,17 +175,25 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
         if (!broker)
           return;
 
-        // TODO(54196): Add the realm path as an annotation as a slash-joined list of strings.
         std::optional<std::string> component_url = std::nullopt;
-        if (result.is_err()) {
+        std::optional<std::string> realm_path = std::nullopt;
+        if (result.is_response()) {
+          if (!result.response().component_info.has_component_url()) {
+            FX_LOGS(ERROR) << "Did not receive a component url";
+          } else {
+            component_url = result.response().component_info.component_url();
+          }
+
+          if (!result.response().component_info.has_realm_path()) {
+            FX_LOGS(ERROR) << "Did not receive a realm path";
+          } else {
+            realm_path = "/" + fxl::JoinStrings(result.response().component_info.realm_path(), "/");
+          }
+        } else if (result.err() != ZX_ERR_NOT_FOUND) {
           FX_PLOGS(ERROR, result.err()) << "Failed FindComponentByProcessKoid";
-        } else if (!result.response().component_info.has_component_url()) {
-          FX_LOGS(ERROR) << "Did not receive a component url";
-        } else {
-          component_url = result.response().component_info.component_url();
         }
 
-        broker->FileCrashReport(id, component_url);
+        broker->FileCrashReport(id, component_url, realm_path);
 
         // Remove the connection after we have filed the crash report. The connection must be
         // removed at the end of the function because the InterfacePtr that owns the lambda, and the
@@ -185,7 +202,8 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
       });
 }
 
-void ExceptionBroker::FileCrashReport(uint64_t id, std::optional<std::string> component_url) {
+void ExceptionBroker::FileCrashReport(uint64_t id, std::optional<std::string> component_url,
+                                      std::optional<std::string> realm_path) {
   if (process_exceptions_.find(id) == process_exceptions_.end()) {
     return;
   }
@@ -220,11 +238,12 @@ void ExceptionBroker::FileCrashReport(uint64_t id, std::optional<std::string> co
     broker->crash_reporter_connections_.erase(id);
   });
 
+  fuchsia::feedback::CrashReport report =
+      CreateCrashReport(process_name, component_url, realm_path, std::move(minidump_vmo));
+
   const std::string program_name =
       (component_url.has_value()) ? component_url.value() : process_name;
 
-  fuchsia::feedback::CrashReport report =
-      CreateCrashReport(component_url, process_name, std::move(minidump_vmo));
   crash_reporter->File(std::move(report), [id, program_name, broker = GetWeakPtr()](
                                               fuchsia::feedback::CrashReporter_File_Result result) {
     if (result.is_err())
