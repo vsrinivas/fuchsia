@@ -109,11 +109,9 @@ void AgentRunner::PublishAgentServices(const std::string& requestor_url,
     const auto& service_name = index_entry.first;
     service_provider->AddServiceForName(
         [this, requestor_url, service_name](zx::channel channel) mutable {
-          fuchsia::modular::AgentControllerPtr agent_controller;
           fuchsia::modular::AgentServiceRequest agent_service_request;
           agent_service_request.set_service_name(service_name);
           agent_service_request.set_channel(std::move(channel));
-          agent_service_request.set_agent_controller(agent_controller.NewRequest());
           ConnectToAgentService(requestor_url, std::move(agent_service_request));
         },
         service_name);

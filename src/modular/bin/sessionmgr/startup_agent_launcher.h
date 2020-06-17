@@ -58,6 +58,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
     template <class Interface>
     void ConnectOrQueueServiceRequest(fidl::InterfaceRequest<Interface> request);
 
+    // Used to track the lifecycle of the agent and learn if it terminates.
     fuchsia::modular::AgentControllerPtr controller;
 
     fuchsia::sys::ServiceProviderPtr services;
@@ -99,10 +100,6 @@ class StartupAgentLauncher : public AgentServicesFactory {
 
   // Return |true| to avoid automatically restarting session_agents_.
   fit::function<bool()> is_terminating_cb_ = nullptr;
-
-  // Framework fuchsia::modular::Agent controllers. Hanging onto these tells the
-  // Framework we want the Agents to keep running.
-  std::vector<fuchsia::modular::AgentControllerPtr> agent_controllers_;
 
   // ServiceNamespace(s) backing the services provided to these agents via its
   // namespace.

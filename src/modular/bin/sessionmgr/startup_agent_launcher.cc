@@ -79,11 +79,9 @@ fuchsia::sys::ServiceList StartupAgentLauncher::GetServicesForAgent(std::string 
 }
 
 void StartupAgentLauncher::StartAgent(AgentRunner* agent_runner, const std::string& url) {
-  fuchsia::modular::AgentControllerPtr controller;
   fuchsia::sys::ServiceProviderPtr services;
   agent_runner->ConnectToAgent(kInternalAgentRunnerRequestorUrl, url, services.NewRequest(),
-                               controller.NewRequest());
-  agent_controllers_.push_back(std::move(controller));
+                               /*agent_controller=*/nullptr);
 }
 
 void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const std::string& url) {
