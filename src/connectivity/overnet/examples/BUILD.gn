@@ -3,11 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//build/testing/test_spec.gni")
 
 group("examples") {
   testonly = true
   deps = [
-    ":netemul_empty_binaries",
     ":overnet_examples_tests",
     "echo",
     "interface_passing",
@@ -15,15 +15,32 @@ group("examples") {
   ]
 }
 
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/overnet_echo_test", "")
-  write_file("$root_out_dir/overnet_interface_passing_test", "")
-  write_file("$root_out_dir/overnet_socket_passing_test", "")
+test_spec("overnet_echo_test") {
+  target = ":overnet_examples_tests"
+  package_url = "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_echo_test.cmx"
+}
+
+test_spec("overnet_interface_passing_test") {
+  target = ":overnet_examples_tests"
+  package_url = "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_interface_passing_test.cmx"
+}
+
+test_spec("overnet_socket_passing_test") {
+  target = ":overnet_examples_tests"
+  package_url = "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_socket_passing_test.cmx"
+}
+
+group("netemul_tests") {
+  testonly = true
+  deps = [
+    ":overnet_echo_test",
+    ":overnet_interface_passing_test",
+    ":overnet_socket_passing_test",
+  ]
 }
 
 test_package("overnet_examples_tests") {
   deps = [
-    ":netemul_empty_binaries",
     "echo:bin",
     "interface_passing:bin",
     "socket_passing:bin",
@@ -44,6 +61,18 @@ test_package("overnet_examples_tests") {
       path = rebase_path("meta/overnet_socket_passing.cmx")
       dest = "overnet_socket_passing.cmx"
     },
+    {
+      path = rebase_path("meta/overnet_echo_test.cmx")
+      dest = "overnet_echo_test.cmx"
+    },
+    {
+      path = rebase_path("meta/overnet_interface_passing_test.cmx")
+      dest = "overnet_interface_passing_test.cmx"
+    },
+    {
+      path = rebase_path("meta/overnet_socket_passing_test.cmx")
+      dest = "overnet_socket_passing_test.cmx"
+    },
   ]
 
   binaries = [
@@ -57,24 +86,13 @@ test_package("overnet_examples_tests") {
       name = "overnet_socket_passing"
     },
   ]
-
-  tests = [
-    {
-      name = "overnet_echo_test"
-    },
-    {
-      name = "overnet_interface_passing_test"
-    },
-    {
-      name = "overnet_socket_passing_test"
-    },
-  ]
 }
 
 # expose a "tests" group that includes the tests package and runtime dependencies
 group("tests") {
   testonly = true
   public_deps = [
+    ":netemul_tests",
     ":overnet_examples_tests",
     "//src/connectivity/network/mdns/service:mdns",
     "//src/connectivity/network/testing/netemul",
