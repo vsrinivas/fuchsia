@@ -4,3 +4,4 @@
 
 pub mod argument_parsing;
 pub mod files;
+pub mod gn;

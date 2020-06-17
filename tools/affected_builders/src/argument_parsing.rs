@@ -8,9 +8,13 @@ use argh::FromArgs;
 /// affected_builders uses build configuration and a list of files to
 /// determine whether or not the builder is affected by the changed files.
 pub struct Arguments {
-    #[argh(positional, short = 'b')]
     /// the path to the build directory
+    #[argh(positional, short = 'b')]
     pub build_directory: String,
+
+    /// the path to the gn tool
+    #[argh(positional, short = 'g')]
+    pub gn_path: String,
 
     /// the files that have been changed
     #[argh(positional, short = 'c')]
