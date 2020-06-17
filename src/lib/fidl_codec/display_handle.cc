@@ -60,41 +60,6 @@ void ObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer) {
   }
 }
 
-#define RightsNameCase(name)       \
-  if ((rights & (name)) != 0) {    \
-    printer << separator << #name; \
-    separator = " | ";             \
-  }
-
-void RightsName(zx_rights_t rights, PrettyPrinter& printer) {
-  if (rights == 0) {
-    printer << "ZX_RIGHT_NONE";
-    return;
-  }
-  const char* separator = "";
-  RightsNameCase(ZX_RIGHT_DUPLICATE);
-  RightsNameCase(ZX_RIGHT_TRANSFER);
-  RightsNameCase(ZX_RIGHT_READ);
-  RightsNameCase(ZX_RIGHT_WRITE);
-  RightsNameCase(ZX_RIGHT_EXECUTE);
-  RightsNameCase(ZX_RIGHT_MAP);
-  RightsNameCase(ZX_RIGHT_GET_PROPERTY);
-  RightsNameCase(ZX_RIGHT_SET_PROPERTY);
-  RightsNameCase(ZX_RIGHT_ENUMERATE);
-  RightsNameCase(ZX_RIGHT_DESTROY);
-  RightsNameCase(ZX_RIGHT_SET_POLICY);
-  RightsNameCase(ZX_RIGHT_GET_POLICY);
-  RightsNameCase(ZX_RIGHT_SIGNAL);
-  RightsNameCase(ZX_RIGHT_SIGNAL_PEER);
-  RightsNameCase(ZX_RIGHT_WAIT);
-  RightsNameCase(ZX_RIGHT_INSPECT);
-  RightsNameCase(ZX_RIGHT_MANAGE_JOB);
-  RightsNameCase(ZX_RIGHT_MANAGE_PROCESS);
-  RightsNameCase(ZX_RIGHT_MANAGE_THREAD);
-  RightsNameCase(ZX_RIGHT_APPLY_PROFILE);
-  RightsNameCase(ZX_RIGHT_SAME_RIGHTS);
-}
-
 void DisplayHandle(const zx_handle_info_t& handle, PrettyPrinter& printer) {
   printer << Red;
   if (handle.type != ZX_OBJ_TYPE_NONE) {
@@ -104,12 +69,12 @@ void DisplayHandle(const zx_handle_info_t& handle, PrettyPrinter& printer) {
   char buffer[kUint32Precision + 1];
   snprintf(buffer, sizeof(buffer), "%08x", handle.handle);
   printer << buffer;
+  printer << ResetColor;
   if (handle.rights != 0) {
-    printer << Blue << '(';
-    RightsName(handle.rights, printer);
+    printer << '(';
+    printer.DisplayRights(handle.rights);
     printer << ')';
   }
-  printer << ResetColor;
 }
 
 }  // namespace fidl_codec

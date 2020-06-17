@@ -149,6 +149,43 @@ void PrettyPrinter::DisplayDuration(zx_duration_t duration_ns) {
   *this << ResetColor;
 }
 
+#define RightsNameCase(name)     \
+  if ((rights & (name)) != 0) {  \
+    *this << separator << #name; \
+    separator = " | ";           \
+  }
+
+void PrettyPrinter::DisplayRights(uint32_t rights) {
+  *this << Blue;
+  if (rights == 0) {
+    *this << "ZX_RIGHT_NONE" << ResetColor;
+    return;
+  }
+  const char* separator = "";
+  RightsNameCase(ZX_RIGHT_DUPLICATE);
+  RightsNameCase(ZX_RIGHT_TRANSFER);
+  RightsNameCase(ZX_RIGHT_READ);
+  RightsNameCase(ZX_RIGHT_WRITE);
+  RightsNameCase(ZX_RIGHT_EXECUTE);
+  RightsNameCase(ZX_RIGHT_MAP);
+  RightsNameCase(ZX_RIGHT_GET_PROPERTY);
+  RightsNameCase(ZX_RIGHT_SET_PROPERTY);
+  RightsNameCase(ZX_RIGHT_ENUMERATE);
+  RightsNameCase(ZX_RIGHT_DESTROY);
+  RightsNameCase(ZX_RIGHT_SET_POLICY);
+  RightsNameCase(ZX_RIGHT_GET_POLICY);
+  RightsNameCase(ZX_RIGHT_SIGNAL);
+  RightsNameCase(ZX_RIGHT_SIGNAL_PEER);
+  RightsNameCase(ZX_RIGHT_WAIT);
+  RightsNameCase(ZX_RIGHT_INSPECT);
+  RightsNameCase(ZX_RIGHT_MANAGE_JOB);
+  RightsNameCase(ZX_RIGHT_MANAGE_PROCESS);
+  RightsNameCase(ZX_RIGHT_MANAGE_THREAD);
+  RightsNameCase(ZX_RIGHT_APPLY_PROFILE);
+  RightsNameCase(ZX_RIGHT_SAME_RIGHTS);
+  *this << ResetColor;
+}
+
 void PrettyPrinter::DisplayTime(zx_time_t time_ns) {
   if (time_ns == ZX_TIME_INFINITE) {
     (*this) << Blue << "ZX_TIME_INFINITE" << ResetColor;

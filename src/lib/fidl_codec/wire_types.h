@@ -231,7 +231,7 @@ class Uint16Type : public IntegralType<uint16_t> {
 
 class Uint32Type : public IntegralType<uint32_t> {
  public:
-  enum class Kind { kDecimal, kHexaDecimal, kBtiPerm, kCachePolicy, kClock };
+  enum class Kind { kDecimal, kHexaDecimal, kBtiPerm, kCachePolicy, kClock, kRights };
 
   explicit Uint32Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 

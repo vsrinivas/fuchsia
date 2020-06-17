@@ -2171,9 +2171,7 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kRights:
-      printer << fidl_codec::Blue;
-      fidl_codec::RightsName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayRights(value);
       break;
     case SyscallType::kRsrcKind:
       printer << fidl_codec::Blue;

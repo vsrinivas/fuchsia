@@ -16,7 +16,6 @@ namespace fidl_codec {
 
 void DisplayHandle(const zx_handle_info_t& handle, PrettyPrinter& printer);
 void ObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer);
-void RightsName(zx_rights_t rights, PrettyPrinter& printer);
 
 }  // namespace fidl_codec
 

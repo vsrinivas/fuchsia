@@ -77,11 +77,14 @@ class PrettyPrinter {
   // Displays a cache policy.
   void DisplayCachePolicy(uint32_t cache_policy);
 
-  // void Displays a clock.
+  // Displays a clock.
   void DisplayClock(zx_clock_t clock);
 
   // Displays a duration.
   void DisplayDuration(zx_duration_t duration_ns);
+
+  // Displays rights.
+  void DisplayRights(uint32_t rights);
 
   // Displays a time.
   void DisplayTime(zx_time_t time_ns);

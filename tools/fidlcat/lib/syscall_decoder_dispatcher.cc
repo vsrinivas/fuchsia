@@ -75,6 +75,8 @@ std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
       return std::make_unique<fidl_codec::HandleType>();
     case SyscallType::kBtiPerm:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kBtiPerm);
+    case SyscallType::kRights:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kRights);
     case SyscallType::kCachePolicy:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kCachePolicy);
     case SyscallType::kClock:

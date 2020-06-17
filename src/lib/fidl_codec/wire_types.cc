@@ -357,6 +357,8 @@ std::string Uint32Type::Name() const {
       return "zx.cache_policy";
     case Kind::kClock:
       return "zx.clock";
+    case Kind::kRights:
+      return "zx_rights_t";
   }
 }
 
@@ -382,6 +384,9 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kClock:
         printer.DisplayClock(absolute);
+        break;
+      case Kind::kRights:
+        printer.DisplayRights(absolute);
         break;
     }
   }
