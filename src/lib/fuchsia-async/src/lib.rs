@@ -27,6 +27,8 @@ pub use self::executor::{
 mod fifo;
 pub use self::fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry};
 pub mod net;
+mod task;
+pub use self::task::Task;
 
 // Re-export pin_mut as its used by the async proc macros
 pub use pin_utils::pin_mut;
