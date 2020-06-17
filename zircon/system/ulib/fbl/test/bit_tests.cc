@@ -5,7 +5,7 @@
 #include <atomic>
 #include <cstdint>
 
-#include <fbl/bitfield.h>
+#include <fbl/bits.h>
 #include <zxtest/zxtest.h>
 
 namespace {

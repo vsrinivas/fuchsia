@@ -27,7 +27,7 @@
 #include <utility>
 #include <variant>
 
-#include <fbl/bitfield.h>
+#include <fbl/bits.h>
 
 // The filesystem server exposes various FIDL protocols on top of the Vnode abstractions.
 // In order to achieve the following objectives:

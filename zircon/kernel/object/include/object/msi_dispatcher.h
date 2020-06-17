@@ -11,7 +11,7 @@
 #include <cstddef>
 
 #include <dev/interrupt.h>
-#include <fbl/bitfield.h>
+#include <fbl/bits.h>
 #include <fbl/canary.h>
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
-#define SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
+#define SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -26,7 +26,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/rawnand.h>
-#include <fbl/bitfield.h>
+#include <fbl/bits.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-rawnand.h>
 
@@ -201,4 +201,4 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 
 }  // namespace amlrawnand
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_

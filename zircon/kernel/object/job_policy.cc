@@ -12,7 +12,7 @@
 #include <zircon/syscalls/policy.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/bitfield.h>
+#include <fbl/bits.h>
 #include <kernel/deadline.h>
 #include <ktl/iterator.h>
 

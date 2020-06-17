@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FBL_BITFIELD_H_
-#define FBL_BITFIELD_H_
+#ifndef FBL_BITS_H_
+#define FBL_BITS_H_
 
 #include <zircon/assert.h>
 
@@ -122,4 +122,4 @@ class BitFieldMember {
 
 }  // namespace fbl
 
-#endif  // FBL_BITFIELD_H_
+#endif  // FBL_BITS_H_
