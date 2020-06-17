@@ -25,6 +25,9 @@ test("fake-dma-buffer") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(54280): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("fake-dma-buffer-package") {
