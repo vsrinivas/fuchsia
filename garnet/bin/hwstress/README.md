@@ -14,5 +14,5 @@ See also:
 *  `loadgen` (`src/zircon/bin/loadgen`) which has many threads performing
    cycles of idle / CPU work, useful for exercising the kernel's scheduler.
 
-*  `kstress` (`zircon/system/uapp/kstress`) which is designed to stress test
+*  `kstress` (`src/zircon/bin/kstress`) which is designed to stress test
    the kernel itself.

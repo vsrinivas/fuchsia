@@ -225,7 +225,7 @@ common_image_contents = [
   "//src/zircon/bin/ktrace",
   "//src/zircon/bin/loadgen",
   "//src/zircon/testing/mutex_pi_exerciser",
-  "//zircon/system/uapp/kstress",
+  "//src/zircon/bin/kstress",
   "//zircon/system/uapp/dd",
   "//zircon/system/uapp/trace-benchmark",
   "//zircon/system/uapp/trace-example",
