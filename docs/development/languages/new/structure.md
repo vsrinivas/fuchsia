@@ -164,12 +164,12 @@ deserialization, and dispatch.
 
 POSIX-style IO operations (e.g., `open`, `close`, `read`, and `write`) are
 layered on top of FIDL. If your language has C interop, you can use the
-[FDIO library](/zircon/system/ulib/fdio),
+[FDIO library](/sdk/lib/fdio),
 which translates familiar POSIX operations into the underlying `fuchsia.io` FIDL
 protocol. If your language does not have C interop, you will need to interface
 directly with `fuchsia.io` to provide POSIX-style IO.
 
-You can recover the underlying Zircon handles for file descriptors using [`lib/fdio/unsafe.h`](/zircon/system/ulib/fdio/include/lib/fdio/unsafe.h).
+You can recover the underlying Zircon handles for file descriptors using [`lib/fdio/unsafe.h`](/sdk/lib/fdio/include/lib/fdio/unsafe.h).
 Typically, languages have a tiny library that layers on top of the async library
 to perform asynchronous waits on file descriptors. This library typically
 provides a less error-prone interface that abstracts these "unsafe" FDIO

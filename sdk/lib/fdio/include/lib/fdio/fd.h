@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FDIO_FD_H_
-#define LIB_FDIO_FD_H_
+#ifndef LIB_FDIO_INCLUDE_LIB_FDIO_FD_H_
+#define LIB_FDIO_INCLUDE_LIB_FDIO_FD_H_
 
-#include <zircon/types.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -96,4 +96,4 @@ zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle);
 
 __END_CDECLS
 
-#endif  // LIB_FDIO_FD_H_
+#endif  // LIB_FDIO_INCLUDE_LIB_FDIO_FD_H_

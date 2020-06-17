@@ -77,7 +77,7 @@ TEST_fx-set-fuzz-with() {
   local output="$(${fx} set myproduct.myboard --no-goma --fuzz-with foosan)"
   local select_variant='select_variant=\['
   select_variant+='{variant="foosan-fuzzer" target_type=\["fuzzed_executable"\]},'
-  select_variant+='{variant="foosan" label=\["//zircon/system/ulib/fdio"\]},'
+  select_variant+='{variant="foosan" label=\["//sdk/lib/fdio"\]},'
   select_variant+='\]'
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" "$select_variant"
 }

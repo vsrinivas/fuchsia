@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_NAMESPACE_LOCAL_CONNECTION_H_
+#define LIB_FDIO_NAMESPACE_LOCAL_CONNECTION_H_
 
 #include <fbl/ref_ptr.h>
 
@@ -32,3 +33,5 @@ struct DirentIteratorState {
 };
 
 }  // namespace fdio_internal
+
+#endif  // LIB_FDIO_NAMESPACE_LOCAL_CONNECTION_H_

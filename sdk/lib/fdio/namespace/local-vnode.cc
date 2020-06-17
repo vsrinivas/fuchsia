@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "local-vnode.h"
+
+#include <lib/zx/channel.h>
+#include <zircon/types.h>
+
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
@@ -9,10 +14,6 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <lib/zx/channel.h>
-#include <zircon/types.h>
-
-#include "local-vnode.h"
 
 namespace fdio_internal {
 

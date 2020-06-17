@@ -91,7 +91,7 @@ lack a way to express the severity of a message.
 [Go logging]: /docs/development/languages/go/logging.md
 [Rust logging]: /docs/development/languages/rust/logging.md
 [kernel's shared ring buffer]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/zircon/kernel/lib/debuglog/debuglog.cc#37
-[bindable to file descriptors]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/zircon/system/ulib/fdio/include/lib/fdio/fdio.h#36
+[bindable to file descriptors]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/sdk/lib/fdio/include/lib/fdio/fdio.h#36
 [`debuglog_write`]: /docs/reference/syscalls/debuglog_write.md
 [`debuglog_read`]: /docs/reference/syscalls/debuglog_read.md
 [`zxlogf`]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/src/lib/ddk/include/ddk/debug.h#103

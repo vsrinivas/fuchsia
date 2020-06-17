@@ -15,7 +15,7 @@ Netstack serves as a back-end for fdio socket API.
         |                          |
         |   +----------------------v---------+
         |   |         BSD socket API         |
-        |   |  (//zircon/system/ulib/fdio)   |
+        |   |  (//sdk/lib/fdio)   |
         |   +---------+----------------------+
         |             |
      +--v-------------v----------------------+

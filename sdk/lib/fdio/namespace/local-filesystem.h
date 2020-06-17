@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_NAMESPACE_LOCAL_FILESYSTEM_H_
+#define LIB_FDIO_NAMESPACE_LOCAL_FILESYSTEM_H_
+
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/namespace.h>
+#include <lib/zx/channel.h>
+#include <lib/zxio/zxio.h>
 
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/namespace.h>
-#include <lib/zx/channel.h>
-#include <lib/zxio/zxio.h>
 
 #include "local-vnode.h"
 
@@ -87,3 +89,5 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   mutable fbl::Mutex lock_;
   fbl::RefPtr<LocalVnode> root_ __TA_GUARDED(lock_);
 };
+
+#endif  // LIB_FDIO_NAMESPACE_LOCAL_FILESYSTEM_H_

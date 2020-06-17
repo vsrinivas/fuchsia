@@ -4,7 +4,6 @@
 
 #include "garnet/lib/process/process_builder.h"
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -25,11 +24,13 @@
 #include <array>
 #include <string_view>
 
+#include <fbl/unique_fd.h>
+
 namespace process {
 
 namespace {
 
-// This should match the values used by zircon/system/ulib/fdio/spawn.c
+// This should match the values used by sdk/lib/fdio/spawn.c
 constexpr size_t kFdioResolvePrefixLen = 10;
 const char kFdioResolvePrefix[kFdioResolvePrefixLen + 1] = "#!resolve ";
 
@@ -58,10 +59,9 @@ void ProcessBuilder::LoadVMO(zx::vmo executable) {
 
 zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
   fbl::unique_fd fd;
-  zx_status_t status = fdio_open_fd(path.c_str(),
-                                    fuchsia::io::OPEN_RIGHT_READABLE |
-                                    fuchsia::io::OPEN_RIGHT_EXECUTABLE,
-                                    fd.reset_and_get_address());
+  zx_status_t status = fdio_open_fd(
+      path.c_str(), fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
+      fd.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }

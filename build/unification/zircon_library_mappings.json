@@ -1,6 +1,6 @@
 [
   {
-    "label": "//zircon/system/ulib/fdio:fdio",
+    "label": "//sdk/lib/fdio:fdio",
     "name": "fdio",
     "sdk": true
   }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
-#define ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
+#ifndef LIB_FDIO_PRIVATE_SOCKET_H_
+#define LIB_FDIO_PRIVATE_SOCKET_H_
 
 #include "private.h"
 
@@ -16,4 +16,4 @@
 
 bool fdio_is_socket(fdio_t* io);
 
-#endif  // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
+#endif  // LIB_FDIO_PRIVATE_SOCKET_H_

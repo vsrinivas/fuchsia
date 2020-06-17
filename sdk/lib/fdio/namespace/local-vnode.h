@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
-#define ZIRCON_SYSTEM_ULIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
+#ifndef LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
+#define LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 
 #include <lib/zx/channel.h>
 #include <limits.h>
@@ -140,4 +140,4 @@ zx_status_t EnumerateRemotes(const LocalVnode& vn, const EnumerateCallback& func
 
 }  // namespace fdio_internal
 
-#endif  // ZIRCON_SYSTEM_ULIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
+#endif  // LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_

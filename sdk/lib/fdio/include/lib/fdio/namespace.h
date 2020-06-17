@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FDIO_NAMESPACE_H_
-#define LIB_FDIO_NAMESPACE_H_
+#ifndef LIB_FDIO_INCLUDE_LIB_FDIO_NAMESPACE_H_
+#define LIB_FDIO_INCLUDE_LIB_FDIO_NAMESPACE_H_
 
 #include <stdint.h>
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -100,4 +99,4 @@ void fdio_ns_free_flat_ns(fdio_flat_namespace_t* ns);
 
 __END_CDECLS
 
-#endif  // LIB_FDIO_NAMESPACE_H_
+#endif  // LIB_FDIO_INCLUDE_LIB_FDIO_NAMESPACE_H_

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
@@ -14,6 +13,7 @@
 #include <unistd.h>
 #include <zircon/limits.h>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 TEST(FDIOTest, CreateNull) {

@@ -13,7 +13,7 @@ This repository contains the FIDL HTTP Service protocol and implementation.
             |                      |
      +------v----------------------v--+
      |         BSD socket API         |
-     |  (//zircon/system/ulib/fdio)   |
+     |  (//sdk/lib/fdio)   |
      +----------------+---------------+
                       |
      +----------------v----------------------+

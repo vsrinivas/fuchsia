@@ -16,7 +16,7 @@ Where does that request go?
 
 The ‘open’ call is a function, provided by a [standard library](libc.md). For
 C/C++ programs, this will normally be declared in `unistd.h`, which has a
-backing definition in [libfdio](/zircon/system/ulib/fdio/).
+backing definition in [libfdio](/sdk/lib/fdio/).
 For Go programs, there is an equivalent (but distinct) implementation in the Go
 standard library. For each language and runtime, developers may opt into their
 own definition of “open”.
@@ -49,7 +49,7 @@ over these handles?
 
 ## Fdio
 
-A library called [**fdio**](/zircon/system/ulib/fdio/)
+A library called [**fdio**](/sdk/lib/fdio/)
 is responsible for providing a unified interface to a variety of resources --
 files, sockets, services, pipes, and more. This layer defines a group of
 functions, such as **read, write, open, close, seek, etc** that may be used on

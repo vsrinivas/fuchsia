@@ -433,6 +433,7 @@ if (toolchain_variant.with_shared) {
         if (!defined(output_name)) {
           output_name = target_name
         }
+
         # Remove any "lib" prefix - this matches GN's behavior.
         _prefixless = string_replace("###$output_name", "###lib", "")
         if (_prefixless != "###$output_name") {
@@ -1246,7 +1247,7 @@ template("executable") {
       # Now that fdio is built in this very build, we can't get away with
       # simply pointing the linker at the place where we know the fdio binary
       # will reside: we need a proper dependency.
-      deps += [ "//zircon/system/ulib/fdio" ]
+      deps += [ "//sdk/lib/fdio" ]
     }
 
     # This ensures that non-Zircon host executables get __zx_panic.

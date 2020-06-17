@@ -26,7 +26,7 @@ use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned, U16, U32};
 use super::{context::InnerValue, StackContext};
 
 // Socket constants defined in FDIO in
-// `//zircon/system/ulib/fdio/private-socket.h`
+// `//sdk/lib/fdio/private-socket.h`
 // TODO(brunodalbo) Come back to this, see if we can have those definitions in a
 // public header from FDIO somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;

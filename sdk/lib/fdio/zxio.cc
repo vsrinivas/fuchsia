@@ -229,9 +229,7 @@ fdio_t* fdio_null_create(void) {
 }
 
 __EXPORT
-int fdio_fd_create_null(void) {
-  return fdio_bind_to_fd(fdio_null_create(), -1, 0);
-}
+int fdio_fd_create_null(void) { return fdio_bind_to_fd(fdio_null_create(), -1, 0); }
 
 // Remote ----------------------------------------------------------------------
 

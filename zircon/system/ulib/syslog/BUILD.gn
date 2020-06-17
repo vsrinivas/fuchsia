@@ -38,7 +38,7 @@ zx_library("syslog") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
   ]
-  runtime_deps = [ "//zircon/system/ulib/fdio:fdio_sdk" ]
+  runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]
 }
 
 # This static library should have no shared library dependencies,

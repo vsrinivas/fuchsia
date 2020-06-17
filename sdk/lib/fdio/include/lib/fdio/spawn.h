@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FDIO_SPAWN_H_
-#define LIB_FDIO_SPAWN_H_
-
-#include <zircon/compiler.h>
-#include <zircon/types.h>
+#ifndef LIB_FDIO_INCLUDE_LIB_FDIO_SPAWN_H_
+#define LIB_FDIO_INCLUDE_LIB_FDIO_SPAWN_H_
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -264,4 +263,4 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
 
 __END_CDECLS
 
-#endif  // LIB_FDIO_SPAWN_H_
+#endif  // LIB_FDIO_INCLUDE_LIB_FDIO_SPAWN_H_

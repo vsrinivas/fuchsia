@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FDIO_UNISTD_H_
-#define ZIRCON_SYSTEM_ULIB_FDIO_UNISTD_H_
+#ifndef LIB_FDIO_UNISTD_H_
+#define LIB_FDIO_UNISTD_H_
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
@@ -42,4 +42,4 @@ static inline int ERRNO(int e) {
   return -1;
 }
 
-#endif  // ZIRCON_SYSTEM_ULIB_FDIO_UNISTD_H_
+#endif  // LIB_FDIO_UNISTD_H_

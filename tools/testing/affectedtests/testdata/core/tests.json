@@ -2472,7 +2472,7 @@
   {
     "test": {
       "cpu": "x64",
-      "label": "//zircon/system/ulib/fdio/test/constructors:fdio-constructor(//zircon/public/gn/toolchain:user-x64-clang)",
+      "label": "//sdk/lib/fdio/test/constructors:fdio-constructor(//zircon/public/gn/toolchain:user-x64-clang)",
       "name": "fdio-constructor",
       "os": "fuchsia",
       "path": "test/sys/fdio-constructor-test"
@@ -10234,11 +10234,11 @@
     ],
     "test": {
       "cpu": "x64",
-      "label": "//zircon/system/ulib/fdio/test/host/fdio_hosttests:fdio_hosttests(//build/toolchain:host_x64)",
+      "label": "//sdk/lib/fdio/test/host/fdio_hosttests:fdio_hosttests(//build/toolchain:host_x64)",
       "name": "host_x64/fdio_hosttests",
       "os": "linux",
       "path": "host_x64/fdio_hosttests",
-      "runtime_deps": "host_x64/gen/zircon/system/ulib/fdio/test/host/fdio_hosttests.deps.json"
+      "runtime_deps": "host_x64/gen/sdk/lib/fdio/test/host/fdio_hosttests.deps.json"
     }
   },
   {

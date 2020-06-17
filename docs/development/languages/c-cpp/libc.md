@@ -46,4 +46,4 @@ libc.so is also the dynamic linker.
 
 [c11std]: https://en.wikipedia.org/wiki/C11_(C_standard_revision)
 [dotdot]: /docs/concepts/filesystems/dotdot.md
-[fdio]: /zircon/system/ulib/fdio
+[fdio]: /sdk/lib/fdio

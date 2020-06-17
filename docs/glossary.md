@@ -415,7 +415,7 @@ open(), close(), read(), write(), select(), poll(), etc, against the RemoteIO
 RPC protocol. These APIs are return- not-supported stubs in libc, and linking
 against libfdio overrides these stubs with functional implementations.
 
--   [Source](/zircon/system/ulib/fdio/)
+-   [Source](/sdk/lib/fdio/)
 
 ### **FIDL** {#fidl}
 

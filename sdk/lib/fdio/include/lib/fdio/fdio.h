@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FDIO_FDIO_H_
-#define LIB_FDIO_FDIO_H_
+#ifndef LIB_FDIO_INCLUDE_LIB_FDIO_FDIO_H_
+#define LIB_FDIO_INCLUDE_LIB_FDIO_FDIO_H_
 
-#include <zircon/types.h>
-#include <zircon/compiler.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -117,4 +117,4 @@ fdio_t* fdio_zxio_create(zxio_storage_t** out_storage);
 
 __END_CDECLS
 
-#endif  // LIB_FDIO_FDIO_H_
+#endif  // LIB_FDIO_INCLUDE_LIB_FDIO_FDIO_H_

@@ -156,12 +156,12 @@ executable("threads") {
   sources = [ "threads.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/fdio",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/task-utils",

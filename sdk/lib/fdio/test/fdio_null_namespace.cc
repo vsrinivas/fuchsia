@@ -6,9 +6,10 @@
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <stdlib.h>
-#include <zxtest/zxtest.h>
 
 #include <string>
+
+#include <zxtest/zxtest.h>
 
 static int64_t join(const zx::process& process) {
   zx_status_t status = process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);

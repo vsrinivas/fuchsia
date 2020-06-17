@@ -2,7 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "local-filesystem.h"
+
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/namespace.h>
+#include <lib/zx/channel.h>
+#include <lib/zxio/types.h>
+#include <zircon/device/vfs.h>
+#include <zircon/processargs.h>
 
 #include <new>
 
@@ -16,18 +26,9 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/namespace.h>
-#include <lib/zxio/types.h>
-#include <lib/zx/channel.h>
-#include <zircon/device/vfs.h>
-#include <zircon/processargs.h>
 
 #include "../private.h"
 #include "local-connection.h"
-#include "local-filesystem.h"
 #include "local-vnode.h"
 
 namespace fio = ::llcpp::fuchsia::io;

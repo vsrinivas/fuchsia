@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FDIO_VFS_H_
-#define LIB_FDIO_VFS_H_
+#ifndef LIB_FDIO_INCLUDE_LIB_FDIO_VFS_H_
+#define LIB_FDIO_INCLUDE_LIB_FDIO_VFS_H_
 
+#include <stdio.h>
+#include <unistd.h>  // ssize_t
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 #include <zircon/processargs.h>
 #include <zircon/types.h>
-
-#include <stdio.h>
-#include <unistd.h>  // ssize_t
 
 __BEGIN_CDECLS
 
@@ -84,4 +83,4 @@ typedef struct vdirent {
 
 __END_CDECLS
 
-#endif  // LIB_FDIO_VFS_H_
+#endif  // LIB_FDIO_INCLUDE_LIB_FDIO_VFS_H_
