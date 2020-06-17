@@ -118,6 +118,16 @@ struct percpu {
     Thread::Current::PreemptReenable();
   }
 
+  // Call |Func| once per CPU with each CPU's percpu struct.
+  //
+  // |Func| should accept |cpu_num| and |percpu*|.
+  template <typename Func>
+  static void ForEach(Func&& func) {
+    for (cpu_num_t cpu_num = 0; cpu_num < processor_count(); ++cpu_num) {
+      ktl::forward<Func>(func)(cpu_num, &Get(cpu_num));
+    }
+  }
+
  private:
   // Number of percpu entries.
   static size_t processor_count_;

@@ -13,10 +13,8 @@
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread_lock.h>
+#include <kernel/scheduler.h>
 #include <ktl/array.h>
-
-struct percpu;
-class Scheduler;
 
 // TODO(edcoyne): delete this override and default these on.
 #ifndef DISABLE_PERIODIC_LOAD_BALANCER
@@ -24,6 +22,9 @@ class Scheduler;
 #endif
 
 namespace load_balancer {
+
+constexpr zx_duration_t kAllowedRuntimeDeviation =
+    Scheduler::kDefaultTargetLatency.raw_value() / 4;
 
 // State stored on a per-cpu basis for the load balancer system.
 class CpuState {
@@ -151,7 +152,8 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
     }
   }
 
-  if (initial_runtime - lowest_runtime < (new_thread_runtime >> 1)) {
+  if (initial_cpu_available &&
+      (zx_duration_sub_duration(initial_runtime, lowest_runtime) < kAllowedRuntimeDeviation)) {
     // If the difference between the current cpu and the selected cpu's runtimes
     // is so low that there won't be a significant impact on the system's
     // balance by placing it on that cpu don't move it.
