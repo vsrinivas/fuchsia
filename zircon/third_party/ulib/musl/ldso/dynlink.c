@@ -126,7 +126,7 @@ struct gnu_note {
 
 #define NO_INLINE __attribute__((noinline))
 
-#define ADDEND_LIMIT 4096
+#define ADDEND_LIMIT 32
 static size_t *saved_addends, *apply_addends_to;
 
 static struct dso ldso, vdso;
@@ -1714,14 +1714,26 @@ __NO_SAFESTACK NO_ASAN __attribute__((__visibility__("hidden"))) dl_start_return
   decode_vec(ldso.l_map.l_ld, dyn, DT_NUM);
   size_t* rel = laddr(&ldso, dyn[DT_REL]);
   size_t rel_size = dyn[DT_RELSZ];
-  size_t symbolic_rel_cnt = 0;
+  size_t addend_rel_cnt = 0;
   apply_addends_to = rel;
-  for (; rel_size; rel += 2, rel_size -= 2 * sizeof(size_t))
-    if (R_TYPE(rel[1]) != REL_RELATIVE)
-      symbolic_rel_cnt++;
-  if (symbolic_rel_cnt >= ADDEND_LIMIT)
+  for (; rel_size; rel += 2, rel_size -= 2 * sizeof(size_t)) {
+    switch (R_TYPE(rel[1])) {
+      // These types do not need a saved addend.  Only REL_RELATIVE uses an
+      // addend at all, and all REL_RELATIVE relocs in ldso were already
+      // processed in phase 1 and are just skipped now.  Note this must
+      // match the logic in do_relocs so that the indices always match up.
+      case REL_RELATIVE:
+      case REL_GOT:
+      case REL_PLT:
+      case REL_COPY:
+        break;
+      default:
+        addend_rel_cnt++;
+    }
+  }
+  if (addend_rel_cnt >= ADDEND_LIMIT)
     __builtin_trap();
-  size_t addends[symbolic_rel_cnt + 1];
+  size_t addends[addend_rel_cnt];
   saved_addends = addends;
 
   head = &ldso;
