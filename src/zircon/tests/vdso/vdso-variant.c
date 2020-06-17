@@ -42,12 +42,16 @@ int main(void) {
   size_t action_count = 0;
 
   actions[action_count++] = (fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_SET_NAME,
-    .name = {.data = "vdso-variant-helper"},
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name = {.data = "vdso-variant-helper"},
   };
   actions[action_count++] = (fdio_spawn_action_t){
-    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-    .h = {.id = PA_HND(PA_VMO_VDSO, 0), .handle = vdso_vmo,},
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h =
+          {
+              .id = PA_HND(PA_VMO_VDSO, 0),
+              .handle = vdso_vmo,
+          },
   };
 
   const char* root_dir = getenv("TEST_ROOT_DIR");
@@ -60,8 +64,8 @@ int main(void) {
   strcat(path, kHelperPath);
 
   const char* args[] = {
-    "vdso-variant-helper",
-    NULL,
+      "vdso-variant-helper",
+      NULL,
   };
   zx_handle_t proc;
   char errmsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
