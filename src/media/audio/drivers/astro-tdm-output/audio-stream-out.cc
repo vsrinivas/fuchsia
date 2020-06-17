@@ -26,7 +26,7 @@ enum {
   FRAGMENT_COUNT,
 };
 
-constexpr size_t kNumberOfChannels = 2;
+constexpr size_t kNumberOfChannels = 1;
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
 // Calculate ring buffer size for 1 second of 16-bit, max rate.
@@ -48,16 +48,13 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   aml_audio_->Initialize();
   // Setup TDM.
 
-  // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, Mix L+R for lane0.
+  // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample.
   // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
   // to provide i2s framing
-  aml_audio_->ConfigTdmOutSlot(3, 1, 31, 15, 1);
+  aml_audio_->ConfigTdmOutSlot(3, 1, 31, 15, 0);
 
-  // Lane0 right channel.
-  aml_audio_->ConfigTdmOutSwaps(0x00000010);
-
-  // Lane 0, unmask first 2 slots (0x00000003),
-  status = aml_audio_->ConfigTdmOutLane(0, 0x00000003, 0);
+  // Lane 0, unmask first slot only (0x00000002),
+  status = aml_audio_->ConfigTdmOutLane(0, 0x00000002, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
     return status;
@@ -369,8 +366,8 @@ zx_status_t AstroAudioStreamOut::AddFormats() {
   // Add the range for basic audio support.
   audio_stream_format_range_t range;
 
-  range.min_channels = 2;
-  range.max_channels = 2;
+  range.min_channels = kNumberOfChannels;
+  range.max_channels = kNumberOfChannels;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   range.min_frames_per_second = kMinSampleRate;
   range.max_frames_per_second = kMaxSampleRate;
