@@ -55,58 +55,26 @@ void GetFidlDirectoryEntries(fuchsia::io::Directory* dir,
 
 };  // namespace
 
-class AgentContextImpl::InitializeCall : public Operation<> {
+class AgentContextImpl::FinishInitializeCall : public Operation<> {
  public:
-  InitializeCall(AgentContextImpl* const agent_context_impl, fuchsia::sys::Launcher* const launcher,
-                 fuchsia::modular::AppConfig agent_config)
+  FinishInitializeCall(AgentContextImpl* const agent_context_impl)
       : Operation(
-            "AgentContextImpl::InitializeCall", [] {}, agent_context_impl->url_),
-        agent_context_impl_(agent_context_impl),
-        launcher_(launcher),
-        agent_config_(std::move(agent_config)) {}
+            "AgentContextImpl::FinishInitializeCall", [] {}, agent_context_impl->url_),
+        agent_context_impl_(agent_context_impl) {}
 
  private:
   void Run() override {
     FX_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
-
     FlowToken flow{this};
-
-    // No agent services factory is available during testing. We want to
-    // keep going without it.
-    if (!agent_context_impl_->agent_services_factory_) {
-      auto service_list = fuchsia::sys::ServiceList::New();
-      Continue(std::move(service_list), flow);
-      return;
-    }
-
-    auto agent_service_list = agent_context_impl_->agent_services_factory_->GetServicesForAgent(
-        agent_context_impl_->url_);
-    auto service_list = fuchsia::sys::ServiceList::New();
-    service_list->names = std::move(agent_service_list.names);
-    agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
-        agent_service_list.provider.Bind());
-    Continue(std::move(service_list), flow);
-  }
-
-  void Continue(fuchsia::sys::ServiceListPtr service_list, FlowToken flow) {
-    service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
-    service_list->names.push_back(fuchsia::modular::AgentContext::Name_);
-    for (const auto& service_name : agent_context_impl_->agent_runner_->GetAgentServices()) {
-      service_list->names.push_back(service_name);
-    }
-
-    auto agent_url = agent_config_.url;
-    agent_context_impl_->service_provider_impl_.AddBinding(service_list->provider.NewRequest());
-    agent_context_impl_->app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-        launcher_, std::move(agent_config_), /*data_origin=*/"", std::move(service_list));
 
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
-    agent_context_impl_->agent_.set_error_handler([agent_url](zx_status_t status) {
-      FX_PLOGS(INFO, status) << "Agent " << agent_url
-                             << "closed its fuchsia.modular.Agent channel. "
-                             << "This is expected for agents that don't expose it.";
-    });
+    agent_context_impl_->agent_.set_error_handler(
+        [agent_url = agent_context_impl_->url_](zx_status_t status) {
+          FX_PLOGS(INFO, status) << "Agent " << agent_url
+                                 << "closed its fuchsia.modular.Agent channel. "
+                                 << "This is expected for agents that don't expose it.";
+        });
 
     // Enumerate the services that the agent has published in its outgoing directory.
     auto agent_outgoing_dir_handle =
@@ -120,12 +88,6 @@ class AgentContextImpl::InitializeCall : public Operation<> {
           std::make_move_iterator(entries.begin()), std::make_move_iterator(entries.end()));
     });
 
-    // We only want to use fuchsia::modular::Lifecycle if it exists.
-    agent_context_impl_->app_client_->lifecycle_service().set_error_handler(
-        [agent_context_impl = agent_context_impl_](zx_status_t status) {
-          agent_context_impl->app_client_->lifecycle_service().Unbind();
-        });
-
     // When the agent component dies, clean up.
     agent_context_impl_->app_client_->SetAppErrorHandler(
         [agent_context_impl = agent_context_impl_] { agent_context_impl->StopOnAppError(); });
@@ -134,8 +96,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   }
 
   AgentContextImpl* const agent_context_impl_;
-  fuchsia::sys::Launcher* const launcher_;
-  fuchsia::modular::AppConfig agent_config_;
+
   fuchsia::io::DirectoryPtr outgoing_dir_ptr_;
 };
 
@@ -245,24 +206,45 @@ AgentContextImpl::AgentContextImpl(
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)),
       session_restart_on_crash_controller_(session_restart_on_crash_controller) {
-  agent_runner_->PublishAgentServices(url_, &service_provider_impl_);
+  auto service_list = fuchsia::sys::ServiceList::New();
+  service_provider_impl_.AddBinding(service_list->provider.NewRequest());
+
+  // Agent services factory is unavailable during testing.
+  if (agent_services_factory_ != nullptr) {
+    auto agent_service_list = agent_services_factory_->GetServicesForAgent(url_);
+    service_list->names = std::move(agent_service_list.names);
+    service_provider_impl_.SetDefaultServiceProvider(agent_service_list.provider.Bind());
+  }
+
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
         component_context_impl_.Connect(std::move(request));
       });
+  service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
+
   service_provider_impl_.AddService<fuchsia::modular::AgentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::AgentContext> request) {
         agent_context_bindings_.AddBinding(this, std::move(request));
       });
+  service_list->names.push_back(fuchsia::modular::AgentContext::Name_);
+
   if (info.sessionmgr_context != nullptr) {
     service_provider_impl_.AddService<fuchsia::intl::PropertyProvider>(
         [info](fidl::InterfaceRequest<fuchsia::intl::PropertyProvider> request) {
           info.sessionmgr_context->svc()->Connect<fuchsia::intl::PropertyProvider>(
               std::move(request));
         });
+    service_list->names.push_back(fuchsia::intl::PropertyProvider::Name_);
   }
-  operation_queue_.Add(
-      std::make_unique<InitializeCall>(this, info.launcher, std::move(agent_config)));
+
+  agent_runner_->PublishAgentServices(url_, &service_provider_impl_);
+  for (const auto& service_name : agent_runner_->GetAgentServices()) {
+    service_list->names.push_back(service_name);
+  }
+
+  app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      info.launcher, std::move(agent_config), /*data_origin=*/"", std::move(service_list));
+  operation_queue_.Add(std::make_unique<FinishInitializeCall>(this));
 }
 
 AgentContextImpl::~AgentContextImpl() = default;

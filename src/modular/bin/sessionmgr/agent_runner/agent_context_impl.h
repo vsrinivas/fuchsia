@@ -147,7 +147,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   OperationQueue operation_queue_;
 
   // Operations implemented here.
-  class InitializeCall;
+  class FinishInitializeCall;
   class StopCall;
   class OnAppErrorCall;
 
