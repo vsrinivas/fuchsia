@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_KSTRESS_STRESS_TEST_H_
-#define ZIRCON_SYSTEM_UAPP_KSTRESS_STRESS_TEST_H_
+#ifndef SRC_ZIRCON_BIN_KSTRESS_STRESS_TEST_H_
+#define SRC_ZIRCON_BIN_KSTRESS_STRESS_TEST_H_
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -99,4 +99,4 @@ class StressTest {
 // factories for local tests
 std::unique_ptr<StressTest> CreateVmStressTest();
 
-#endif  // ZIRCON_SYSTEM_UAPP_KSTRESS_STRESS_TEST_H_
+#endif  // SRC_ZIRCON_BIN_KSTRESS_STRESS_TEST_H_

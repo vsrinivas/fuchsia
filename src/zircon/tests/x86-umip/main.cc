@@ -9,14 +9,16 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <mutex>
 #include <stdio.h>
 #include <threads.h>
 #include <zircon/compiler.h>
-#include <zircon/syscalls/exception.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
+
+#include <mutex>
+
 #include <zxtest/zxtest.h>
 
 enum class Instruction {
