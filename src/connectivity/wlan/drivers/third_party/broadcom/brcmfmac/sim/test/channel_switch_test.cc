@@ -32,9 +32,6 @@ class ChannelSwitchTest : public SimTest {
 
   void Init();
 
-  // Run through the join => auth => assoc flow
-  void StartAssoc();
-
   // Schedule a future SetChannel event for the first AP in list
   void ScheduleChannelSwitch(const wlan_channel_t& new_channel, zx::duration when);
 
@@ -51,55 +48,6 @@ class ChannelSwitchTest : public SimTest {
   // This is the interface we will use for our single client interface
   SimInterface client_ifc_;
   std::list<simulation::FakeAp*> aps_;
-
-  // All new channel numbers for channel switch received in wlanif
-  std::list<uint8_t> new_channel_list_;
-
- private:
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
-
-  // Event handlers
-  void OnJoinConf(const wlanif_join_confirm_t* resp);
-  void OnAuthConf(const wlanif_auth_confirm_t* resp);
-  void OnAssocConf(const wlanif_assoc_confirm_t* resp);
-  void OnChannelSwitch(const wlanif_channel_switch_info_t* ind);
-};
-
-// Since we're acting as wlanif, we need handlers for any protocol calls we may receive
-wlanif_impl_ifc_protocol_ops_t ChannelSwitchTest::sme_ops_ = {
-    .on_scan_result =
-        [](void* cookie, const wlanif_scan_result_t* result) {
-          // Ignore
-        },
-    .on_scan_end =
-        [](void* cookie, const wlanif_scan_end_t* end) {
-          // Ignore
-        },
-    .join_conf =
-        [](void* cookie, const wlanif_join_confirm_t* resp) {
-          static_cast<ChannelSwitchTest*>(cookie)->OnJoinConf(resp);
-        },
-    .auth_conf =
-        [](void* cookie, const wlanif_auth_confirm_t* resp) {
-          static_cast<ChannelSwitchTest*>(cookie)->OnAuthConf(resp);
-        },
-    .deauth_ind =
-        [](void* cookie, const wlanif_deauth_indication_t* ind) {
-          // Ignore
-        },
-    .assoc_conf =
-        [](void* cookie, const wlanif_assoc_confirm_t* resp) {
-          static_cast<ChannelSwitchTest*>(cookie)->OnAssocConf(resp);
-        },
-    .on_channel_switch =
-        [](void* cookie, const wlanif_channel_switch_info_t* ind) {
-          static_cast<ChannelSwitchTest*>(cookie)->OnChannelSwitch(ind);
-        },
-    .signal_report =
-        [](void* cookie, const wlanif_signal_report_indication* ind) {
-          // Ignore
-        },
 };
 
 void ChannelSwitchTest::SendFakeCSABeacon(wlan_channel_t& dst_channel) {
@@ -128,43 +76,7 @@ void ChannelSwitchTest::StartScan() {
 // Create our device instance and hook up the callbacks
 void ChannelSwitchTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
-}
-
-void ChannelSwitchTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
-  // Send auth request
-  wlanif_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
-  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
-}
-
-void ChannelSwitchTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
-  // Send assoc request
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
-  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
-}
-
-void ChannelSwitchTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
-  assoc_resp_count_++;
-  ASSERT_LE(assoc_resp_count_, 1U);
-  ASSERT_EQ(resp->result_code, WLAN_ASSOC_RESULT_SUCCESS);
-}
-
-void ChannelSwitchTest::OnChannelSwitch(const wlanif_channel_switch_info_t* ind) {
-  new_channel_list_.push_back(ind->new_channel);
-}
-
-void ChannelSwitchTest::StartAssoc() {
-  // Send join request
-  wlanif_join_req join_req = {};
-  std::memcpy(join_req.selected_bss.bssid, kDefaultBssid.byte, ETH_ALEN);
-  join_req.selected_bss.ssid.len = kDefaultSsid.len;
-  memcpy(join_req.selected_bss.ssid.data, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN);
-  join_req.selected_bss.chan = kDefaultChannel;
-  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 }
 
 // This function schedules a Setchannel() event for the first AP in AP list.
@@ -182,14 +94,13 @@ TEST_F(ChannelSwitchTest, ChannelSwitch) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(ap, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   env_->Run(kTestDuration);
 
   // Channel switch will only be triggered when assciated.
-  EXPECT_EQ(new_channel_list_.size(), 1U);
-  EXPECT_EQ(new_channel_list_.front(), kSwitchedChannel.primary);
-  new_channel_list_.pop_front();
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSwitchedChannel.primary);
 }
 
 // This test case verifies that in a single CSA beacon interval, if AP want to switch back to old
@@ -201,13 +112,13 @@ TEST_F(ChannelSwitchTest, SwitchBackInSingleInterval) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(ap, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   ScheduleChannelSwitch(kDefaultChannel, zx::msec(550));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(new_channel_list_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
 }
 
 // This test verifies that in a single CSA beacon interval, if sim-fake-ap change destination
@@ -219,15 +130,14 @@ TEST_F(ChannelSwitchTest, ChangeDstAddressWhenSwitching) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(ap, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   ScheduleChannelSwitch(kSecondSwitchedChannel, zx::msec(550));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(new_channel_list_.size(), 1U);
-  EXPECT_EQ(new_channel_list_.front(), kSecondSwitchedChannel.primary);
-  new_channel_list_.pop_front();
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSecondSwitchedChannel.primary);
 }
 
 // This test case verifies that two continuous channel switches will work as long as they are in two
@@ -239,7 +149,7 @@ TEST_F(ChannelSwitchTest, SwitchBackInDiffInterval) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(ap, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   // The default CSA beacon interval is 150 msec, so when it comes to 700 msec, it's the second time
   // CSA is triggered.
@@ -247,11 +157,10 @@ TEST_F(ChannelSwitchTest, SwitchBackInDiffInterval) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(new_channel_list_.size(), 2U);
-  EXPECT_EQ(new_channel_list_.front(), kSwitchedChannel.primary);
-  new_channel_list_.pop_front();
-  EXPECT_EQ(new_channel_list_.front(), kDefaultChannel.primary);
-  new_channel_list_.pop_front();
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 2U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSwitchedChannel.primary);
+  client_ifc_.stats_.csa_indications_.pop_front();
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kDefaultChannel.primary);
 }
 
 // This test verifies CSA beacons from APs which are not associated with client will not trigger
@@ -272,14 +181,14 @@ TEST_F(ChannelSwitchTest, NotSwitchForDifferentAP) {
   right_ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&right_ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(right_ap, zx::msec(10));
 
   // This will trigger SetChannel() for first AP in AP list, which is wrong_ap.
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(new_channel_list_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
 }
 
 // This test case verifies that when AP stop beaconing during CSA beacon interval, sim-fw will still
@@ -291,7 +200,7 @@ TEST_F(ChannelSwitchTest, StopStillSwitch) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(ap, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
 
   // Schedule DisableBeacon for sim-fake-ap
@@ -301,9 +210,8 @@ TEST_F(ChannelSwitchTest, StopStillSwitch) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(new_channel_list_.size(), 1U);
-  EXPECT_EQ(new_channel_list_.front(), kSwitchedChannel.primary);
-  new_channel_list_.pop_front();
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSwitchedChannel.primary);
 }
 
 // This test verifies that the CSA beacon will be ignored when its new channel is the same as
@@ -315,7 +223,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchToSameChannel) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(ap, zx::msec(10));
 
   // SendFakeCSABeacon() is using the ssid and bssid of the AP which client is associated to.
   auto callback = std::make_unique<std::function<void()>>();
@@ -324,7 +232,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchToSameChannel) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(new_channel_list_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
 }
 
 // This test verifies that the CSA beacon will be ignored when client is doing a passive scan while
@@ -336,7 +244,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
   ap.EnableBeacon(zx::msec(60));
   aps_.push_back(&ap);
 
-  SCHEDULE_CALL(&ChannelSwitchTest::StartAssoc, zx::msec(10));
+  client_ifc_.AssociateWith(ap, zx::msec(10));
 
   auto scan_handler = std::make_unique<std::function<void()>>();
   *scan_handler = std::bind(&ChannelSwitchTest::StartScan, this);
@@ -348,7 +256,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(new_channel_list_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
 }
 
 }  // namespace wlan::brcmfmac
