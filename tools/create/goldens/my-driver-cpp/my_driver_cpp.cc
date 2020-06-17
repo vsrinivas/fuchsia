@@ -12,6 +12,8 @@ zx_status_t MyDriverCpp::Bind(void* ctx, zx_device_t* dev) { return ZX_ERR_NOT_S
 
 zx_status_t MyDriverCpp::Bind() { return DdkAdd("my_driver_cpp"); }
 
+void MyDriverCpp::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
+
 void MyDriverCpp::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void MyDriverCpp::DdkRelease() { delete this; }

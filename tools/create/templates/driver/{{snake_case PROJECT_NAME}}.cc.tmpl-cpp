@@ -10,6 +10,8 @@ zx_status_t {{pascal_case PROJECT_NAME}}::Bind(void* ctx, zx_device_t* dev) { re
 
 zx_status_t {{pascal_case PROJECT_NAME}}::Bind() { return DdkAdd("{{snake_case PROJECT_NAME}}"); }
 
+void {{pascal_case PROJECT_NAME}}::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
+
 void {{pascal_case PROJECT_NAME}}::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void {{pascal_case PROJECT_NAME}}::DdkRelease() { delete this; }

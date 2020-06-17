@@ -22,6 +22,7 @@ class MyDriverCppTest : public zxtest::Test {
 TEST_F(MyDriverCppTest, LifetimeTest) {
   auto device = new MyDriverCpp(fake_ddk::kFakeParent);
   ASSERT_OK(device->Bind());
+  ASSERT_OK(ddk_.WaitUntilInitComplete());
   device->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   device->DdkRelease();
