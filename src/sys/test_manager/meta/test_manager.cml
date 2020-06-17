@@ -23,6 +23,7 @@
     collections: [
         {
             name: "tests",
+            environment: "#test-env",
             durability: "transient",
         },
     ],
@@ -63,16 +64,6 @@
                 "#rust_test_runner",
                 "#tests",
             ],
-        },
-        {
-            runner: "gtest_runner",
-            from: "#gtest_runner",
-            to: [ "#tests" ],
-        },
-        {
-            runner: "rust_test_runner",
-            from: "#rust_test_runner",
-            to: [ "#tests" ],
         },
         {
             storage: "data",
@@ -118,6 +109,22 @@
             name: "runner_storage",
             from: "#runner_memfs",
             path: "/memfs",
+        },
+    ],
+    environments: [
+        {
+            name: "test-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "gtest_runner",
+                    from: "#gtest_runner",
+                },
+                {
+                    runner: "rust_test_runner",
+                    from: "#rust_test_runner",
+                },
+            ],
         },
     ],
 }

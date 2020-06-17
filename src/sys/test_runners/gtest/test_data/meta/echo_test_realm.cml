@@ -19,11 +19,6 @@
     // Route Echo service from server to client.
     offer: [
         {
-            runner: "gtest_runner",
-            from: "realm",
-            to: [ "#echo_gtest_client" ],
-        },
-        {
             protocol: "/svc/fidl.examples.routing.echo.Echo",
             from: "#echo_server",
             to: [ "#echo_gtest_client" ],

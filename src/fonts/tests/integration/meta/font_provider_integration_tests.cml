@@ -11,11 +11,6 @@
     ],
     offer: [
         {
-            runner: "rust_test_runner",
-            from: "realm",
-            to: [ "#driver" ],
-        },
-        {
             protocol: "/svc/fuchsia.pkg.FontResolver",
             from: "#font_resolver",
             to: [ "#driver" ],

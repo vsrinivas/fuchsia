@@ -17,11 +17,6 @@
             rights: [ "rw*" ],
         },
         {
-            runner: "rust_test_runner",
-            from: "realm",
-            to: [ "#test-driver" ],
-        },
-        {
             protocol: "/svc/fuchsia.sys.Launcher",
             from: "#sys-launcher",
             to: [ "#test-driver" ],

@@ -19,16 +19,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "realm",
-            to: [ "#pwrbtn-monitor" ],
-        },
-        {
-            runner: "rust_test_runner",
-            from: "realm",
-            to: [ "#test-driver" ],
-        },
-        {
             directory: "/input",
             from: "self",
             to: [ "#pwrbtn-monitor" ],

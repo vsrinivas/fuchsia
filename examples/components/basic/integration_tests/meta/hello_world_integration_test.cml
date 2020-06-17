@@ -11,11 +11,6 @@
     ],
     offer: [
         {
-            runner: "rust_test_runner",
-            from: "realm",
-            to: [ "#driver" ],
-        },
-        {
             protocol: [
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",

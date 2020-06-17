@@ -42,11 +42,6 @@
     ],
     offer: [
         {
-            runner: "rust_test_runner",
-            from: "realm",
-            to: [ "#test-driver" ],
-        },
-        {
             protocol: [ "/svc/fuchsia.test.shutdownshim.Tests" ],
             from: "self",
             to: [ "#test-driver" ],
