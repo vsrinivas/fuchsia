@@ -1,12 +1,166 @@
 // This component ID index assigns instance IDs to component instances.
 // A component's instance ID is used to key its storage directory.
-// This index file hosts components in the `core` product.
+//
+// This file hosts commonly-used components from fuchsia.git. In the future,
+// this file may be split out into several files based on product configuration.
+// 
+// To add entries to this index, see https://fuchsia.dev/fuchsia-src/development/components/component_id_index
 {
     instances: [
         {
             instance_id: "e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "2e3e35640b0f45265e268204779f7314cf5acae5883ac0d028232859672a7152",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "e534c6322665ea3b4e7bf7bdce64d17bea86100be0eba25ed220a5e9b355c4ef",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "20b2c7aba6793929c252d4e933b8a1537f7bfe8e208ad228c50a896a18b2c4b5",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "b63d06982a705d04fcfc5f401db2b2f9faa640fa973ff99adb4f62a39f23d24f",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "796fc46a1898539f901c909c1ccf61c98660692fa45dabe474afaec84be6d720",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "bf29aeef2be5779e9181fcd68a3f6de53db15d8cc952407030063086671f2904",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "72967e62c92be6e9c6d1609eec1989be814f0daf0e9324a4d18f3d0b02a3bf94",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "e9c49c28c1a0543cbd3ad4233467838c5d808285fd020ea17c8f3a9aeb6161fd",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "ab7a3ec7a062f943c00f3f62eb1a0f4a2ad50356600efffab46c1969ce49f3d8",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "d577f733dfbe1787d272e43f7e4423a01108a71d7e3a89b4e97081ad39372e4e",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "ea59eb01e52454f12fab0b571008d2ba8518ae12508f46a3f3f0350b7bbea40f",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/stash#meta/stash2.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "946b2f9dbe2ee352b033a635b1c79fc680ef62f9c1b36a39e46404f95b58e6d5",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "c1a6d0aebbf7c092c53e8e696636af8ec0629ff39b7f2e548430b0034d809da4",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
+            instance_id: "8285f9d54645ea6baa7fd7b7905c7ae89a9daf8d5172be43b2587b166fd021af",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx",
                 realm_path: [
                     "app",
                     "sys"
