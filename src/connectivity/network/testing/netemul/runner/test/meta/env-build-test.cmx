@@ -1,7 +1,7 @@
 {
     "facets": {
         "fuchsia.netemul": {
-            "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/env-build.cmx",
             "environment": {
                 "children": [
                     {
@@ -22,7 +22,7 @@
                                     "-n",
                                     "child-1-url"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/env-build.cmx"
                             }
                         ]
                     },

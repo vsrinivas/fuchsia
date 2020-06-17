@@ -32,7 +32,7 @@ group("tests") {
     ":guest",
     ":netemul",
     "lib:netemul_lib_test",
-    "runner/test:netemul_guest_test",
-    "runner/test:netemul_sandbox_test",
+    "runner/test:netemul-guest-test",
+    "runner/test:netemul-sandbox-test",
   ]
 }

@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 
-rustc_binary("sandbox_service") {
+rustc_test("sandbox_service") {
   name = "sandbox_service"
   edition = "2018"
-  with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

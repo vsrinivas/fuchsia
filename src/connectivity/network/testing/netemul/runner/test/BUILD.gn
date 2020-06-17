@@ -2,15 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
   deps = [
-    ":netemul_empty_binaries",
-    ":netemul_guest_test",
-    ":netemul_sandbox_test",
+    ":netemul-guest-test",
+    ":netemul-sandbox-test",
     "dummy_proc",
     "dynamic_devices",
     "easy_netstack_cfg",
@@ -26,276 +24,202 @@ group("test") {
   ]
 }
 
-# netemul tests are defined only by their .cmx file.
-# currently, there's a limitation on runtests where every test
-# needs an associated binary. Some changes to how this is set up
-# are on the pipeline but not ready yet, so here we just
-# create some empty files and we'll use them as dummy binaries.
-# If you copy this pattern, try to use the name "netemul_empty_binaries"
-# as well, so when a better approach comes along I can hunt down
-# for this pattern and update it everywhere.
-# TODO(brunodalbo) migrate .cmx file handling
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/svc_list_test", "")
-  write_file("$root_out_dir/netstack_socks_test", "")
-  write_file("$root_out_dir/env_build_test", "")
-  write_file("$root_out_dir/easy_netstack_cfg_test", "")
-  write_file("$root_out_dir/inheritance_test", "")
-  write_file("$root_out_dir/dynamic_devices_test", "")
-  write_file("$root_out_dir/virtual_device_directory_test", "")
-  write_file("$root_out_dir/netstack_intermediary_multi_interface_test", "")
-  write_file("$root_out_dir/netstack_intermediary_test", "")
-  write_file("$root_out_dir/guest_test", "")
-  write_file("$root_out_dir/grpc_client_stress_test", "")
-  write_file("$root_out_dir/multiple_guests_test", "")
-  write_file("$root_out_dir/network_device_test", "")
+fuchsia_component("dynamic-devices-test") {
+  manifest = "meta/dynamic-devices-test.cmx"
+  testonly = true
+  deps = [ "dynamic_devices" ]
 }
 
-test_package("netemul_sandbox_test") {
+fuchsia_component("easy-netstack-cfg-test") {
+  manifest = "meta/easy-netstack-cfg-test.cmx"
+  testonly = true
+  deps = [ "easy_netstack_cfg" ]
+}
+
+fuchsia_component("env-build-test") {
+  manifest = "meta/env-build-test.cmx"
+  testonly = true
+  deps = [ "env_build" ]
+}
+
+fuchsia_component("inheritance-test") {
+  manifest = "meta/inheritance-test.cmx"
+  testonly = true
+  deps = [ "inheritance" ]
+}
+
+fuchsia_component("netstack-intermediary-multi-interface-test") {
+  manifest = "meta/netstack-intermediary-multi-interface-test.cmx"
+  testonly = true
+  deps = [ "netstack_intermediary" ]
+}
+
+fuchsia_component("netstack-intermediary-test") {
+  manifest = "meta/netstack-intermediary-test.cmx"
+  testonly = true
+  deps = [ "netstack_intermediary" ]
+}
+
+fuchsia_component("netstack-socks-test") {
+  manifest = "meta/netstack-socks-test.cmx"
+  testonly = true
+  deps = [ "netstack_socks" ]
+}
+
+fuchsia_component("svc-list-test") {
+  manifest = "meta/svc-list-test.cmx"
+  testonly = true
+  deps = [ "svc_list" ]
+}
+
+fuchsia_component("virtual-device-directory-test") {
+  manifest = "meta/virtual-device-directory-test.cmx"
+  testonly = true
+  deps = [ "virtual_device_directory" ]
+}
+
+fuchsia_component("network-device-test") {
+  manifest = "meta/network-device-test.cmx"
+  testonly = true
+  deps = [ "network_device" ]
+}
+
+fuchsia_component("sandbox-service") {
+  manifest = "meta/sandbox-service.cmx"
+  testonly = true
+  deps = [ "sandbox_service" ]
+}
+
+fuchsia_component("sandbox-unittest") {
+  manifest = "meta/sandbox-unittest.cmx"
+  testonly = true
+  deps =
+      [ "//src/connectivity/network/testing/netemul/runner:sandbox_unittest" ]
+}
+
+fuchsia_component("mock-device-settings") {
+  manifest = "meta/mock-device-settings.cmx"
+  testonly = true
+  deps = [ "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test" ]
+}
+
+fuchsia_component("model-unittest") {
+  manifest = "meta/model-unittest.cmx"
+  testonly = true
   deps = [
-    ":netemul_empty_binaries",
-    "dummy_proc",
-    "dynamic_devices",
-    "easy_netstack_cfg",
-    "env_build",
-    "inheritance",
-    "netstack_intermediary",
-    "netstack_socks",
-    "network_device",
-    "sandbox_service:sandbox_service_test",
-    "svc_list",
-    "virtual_device_directory",
-    "//src/connectivity/network/testing/netemul/runner:sandbox_unittest",
-    "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test",
     "//src/connectivity/network/testing/netemul/runner/model:model_unittest",
   ]
-
-  meta = [
-    {
-      path = rebase_path("meta/dummy_proc.cmx")
-      dest = "dummy_proc.cmx"
-    },
-    {
-      path = rebase_path("meta/dummy_proc_with_dev.cmx")
-      dest = "dummy_proc_with_dev.cmx"
-    },
-    {
-      path = rebase_path("meta/svc_list.cmx")
-      dest = "svc_list.cmx"
-    },
-    {
-      path = rebase_path("meta/netstack_socks.cmx")
-      dest = "netstack_socks.cmx"
-    },
-    {
-      path = rebase_path("meta/env_build.cmx")
-      dest = "env_build.cmx"
-    },
-    {
-      path = rebase_path("meta/easy_netstack_cfg.cmx")
-      dest = "easy_netstack_cfg.cmx"
-    },
-    {
-      path = rebase_path("meta/inheritance.cmx")
-      dest = "inheritance.cmx"
-    },
-    {
-      path = rebase_path("meta/dynamic_devices.cmx")
-      dest = "dynamic_devices.cmx"
-    },
-    {
-      path = rebase_path("meta/netstack_intermediary.cmx")
-      dest = "netstack_intermediary.cmx"
-    },
-    {
-      path = rebase_path("meta/virtual_device_directory.cmx")
-      dest = "virtual_device_directory.cmx"
-    },
-    {
-      path = rebase_path("meta/network_device.cmx")
-      dest = "network_device.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "dummy_proc"
-    },
-    {
-      name = "svc_list"
-    },
-    {
-      name = "netstack_socks"
-    },
-    {
-      name = "env_build"
-    },
-    {
-      name = "easy_netstack_cfg"
-    },
-    {
-      name = "inheritance"
-    },
-    {
-      name = "dynamic_devices"
-    },
-    {
-      name = "netstack_intermediary"
-    },
-    {
-      name = "virtual_device_directory"
-    },
-    {
-      name = "network_device"
-    },
-  ]
-
-  tests = [
-    {
-      name = "sandbox_unittest"
-      environments = [ emu_env ]
-    },
-    {
-      name = "model_unittest"
-    },
-    {
-      name = "sandbox_service_bin_test"
-      dest = "sandbox_service"
-      environments = [ emu_env ]
-    },
-    {
-      name = "svc_list_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "env_build_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_socks_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "easy_netstack_cfg_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "inheritance_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "dynamic_devices_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "mock_device_settings_bin_test"
-      dest = "mock_device_settings"
-    },
-    {
-      name = "netstack_intermediary_multi_interface_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_intermediary_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "virtual_device_directory_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "network_device_test"
-      environments = [ emu_env ]
-    },
-  ]
 }
 
-test_package("netemul_guest_test") {
+fuchsia_test_package("netemul-sandbox-test") {
+  test_components = [
+    ":dynamic-devices-test",
+    ":easy-netstack-cfg-test",
+    ":env-build-test",
+    ":inheritance-test",
+    ":mock-device-settings",
+    ":model-unittest",
+    ":netstack-intermediary-multi-interface-test",
+    ":netstack-intermediary-test",
+    ":netstack-socks-test",
+    ":network-device-test",
+    ":sandbox-service",
+    ":sandbox-unittest",
+    ":svc-list-test",
+    ":virtual-device-directory-test",
+  ]
   deps = [
-    ":netemul_empty_binaries",
-    "guest",
-    "guest_grpc_stress",
-    "multiple_guests",
+    "dummy_proc",
+    "dummy_proc:dummy_proc_with_dev",
   ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
+}
 
-  resources = [
-    {
-      path = "//src/virtualization/lib/guest_interaction/test/test_script.sh"
-      dest = "test_script.sh"
-    },
-    {
-      path = "multiple_guests/data/setup_linux_client.sh"
-      dest = "setup_linux_client.sh"
-    },
-    {
-      path = "multiple_guests/data/setup_linux_router.sh"
-      dest = "setup_linux_router.sh"
-    },
-  ]
+fuchsia_component("guest-test") {
+  manifest = "meta/guest-test.cmx"
+  testonly = true
+  deps = [ "guest" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/grpc_client_stress.cmx")
-      dest = "grpc_client_stress.cmx"
-    },
-    {
-      path = rebase_path("meta/guest.cmx")
-      dest = "guest.cmx"
-    },
-    {
-      path = rebase_path("meta/multiple_guests.cmx")
-      dest = "multiple_guests.cmx"
-    },
-  ]
+resource("test_script") {
+  sources = [ "//src/virtualization/lib/guest_interaction/test/test_script.sh" ]
+  outputs = [ "data/test_script.sh" ]
+}
 
-  binaries = [
-    {
-      name = "netemul_guest"
-    },
-    {
-      name = "grpc_client_stress"
-    },
-    {
-      name = "multiple_guests"
-    },
-  ]
+resource("setup_linux_client") {
+  sources = [ "multiple_guests/data/setup_linux_client.sh" ]
+  outputs = [ "data/setup_linux_client.sh" ]
+}
 
-  tests = [
-    {
-      # Running guests is resource intensive.  Limit this test to only run on NUCs.
-      name = "guest_test"
+resource("setup_linux_router") {
+  sources = [ "multiple_guests/data/setup_linux_router.sh" ]
+  outputs = [ "data/setup_linux_router.sh" ]
+}
 
-      # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-      environments = nuc_env_fails_on_asan
-    },
-    {
-      name = "grpc_client_stress_test"
+fuchsia_component("grpc-client-stress-test") {
+  manifest = "meta/grpc-client-stress-test.cmx"
+  testonly = true
+  deps = [ "guest_grpc_stress" ]
+}
 
-      # TODO(47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-      if (nuc_env_fails_on_asan != []) {
-        nuc_scope = nuc_env_fails_on_asan[0]
+fuchsia_component("multiple-guests-test") {
+  manifest = "meta/multiple-guests-test.cmx"
+  testonly = true
+  deps = [ "multiple_guests" ]
+}
 
-        environments = [
-          {
-            dimensions = nuc_scope.dimensions
+fuchsia_test("guest_test_spec") {
+  package = ":netemul-guest-test"
+  component = ":guest-test"
+  deps = [ ":guest-test" ]
 
-            # TODO(49752): test occasionally exceeds 5 minute timeout.
-            tags = [ "flaky" ]
-          },
-        ]
-      } else {
-        # Disable this test for all non-NUC environments.
-        environments = []
-      }
-    },
-    {
-      name = "multiple_guests_test"
+  # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  environments = nuc_env_fails_on_asan
+}
 
-      # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-      environments = nuc_env_fails_on_asan
+fuchsia_test("grpc_client_stress_test_spec") {
+  package = ":netemul-guest-test"
+  component = ":grpc-client-stress-test"
+  deps = [ ":grpc-client-stress-test" ]
 
-      # TODO(51063): test fails with ThinLTO.
-      disabled = true
-    },
+  # TODO(47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  if (nuc_env_fails_on_asan != []) {
+    nuc_scope = nuc_env_fails_on_asan[0]
+
+    environments = [
+      {
+        dimensions = nuc_scope.dimensions
+
+        # TODO(49752): test occasionally exceeds 5 minute timeout.
+        tags = [ "flaky" ]
+      },
+    ]
+  } else {
+    # Disable this test for all non-NUC environments.
+    environments = []
+  }
+}
+
+fuchsia_test("multiple_guests_test_spec") {
+  package = ":netemul-guest-test"
+  component = ":multiple-guests-test"
+  deps = [ ":multiple-guests-test" ]
+
+  # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  # TODO(51063): test fails with ThinLTO.
+  environments = []
+}
+
+fuchsia_package("netemul-guest-test") {
+  testonly = true
+  deps = [
+    ":grpc_client_stress_test_spec",
+    ":guest_test_spec",
+    ":multiple_guests_test_spec",
+    ":setup_linux_client",
+    ":setup_linux_router",
+    ":test_script",
   ]
 }

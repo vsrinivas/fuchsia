@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("easy_netstack_cfg") {
+rustc_binary("bin") {
   name = "easy_netstack_cfg"
   edition = "2018"
   deps = [
@@ -24,4 +24,11 @@ rustc_binary("easy_netstack_cfg") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+}
+
+fuchsia_component("easy_netstack_cfg") {
+  component_name = "easy-netstack-cfg"
+  manifest = "meta/easy-netstack-cfg.cmx"
+  testonly = true
+  deps = [ ":bin" ]
 }

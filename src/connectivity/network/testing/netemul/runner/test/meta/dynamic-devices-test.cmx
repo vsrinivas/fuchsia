@@ -6,7 +6,7 @@
                     "ep1"
                 ],
                 "test": [
-                    "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dynamic_devices.cmx"
+                    "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dynamic-devices.cmx"
                 ]
             },
             "networks": [

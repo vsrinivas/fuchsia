@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-fn main() {
-    // We're only using this binary to show rust unit tests using the sandbox_service.
-    panic!("This program does nothing");
-}
-
 #[cfg(test)]
 mod tests {
     use {

@@ -20,7 +20,7 @@ use {
     structopt::StructOpt,
 };
 
-const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/inheritance.cmx";
+const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/inheritance.cmx";
 
 #[derive(StructOpt, Debug)]
 enum Ops {

@@ -4,13 +4,14 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 fidl("counter") {
   name = "fuchsia.netemul.example"
   sources = [ "counter.fidl" ]
 }
 
-rustc_binary("inheritance") {
+rustc_binary("bin") {
   name = "inheritance"
   edition = "2018"
   deps = [
@@ -27,4 +28,10 @@ rustc_binary("inheritance") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
   ]
+}
+
+fuchsia_component("inheritance") {
+  manifest = "meta/inheritance.cmx"
+  testonly = true
+  deps = [ ":bin" ]
 }

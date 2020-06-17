@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/sandbox_unittest"
+        "binary": "bin/sandbox_unittest"
     },
     "sandbox": {
         "services": [

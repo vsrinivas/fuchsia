@@ -40,9 +40,9 @@ source_set("model") {
   ]
 }
 
-test("model_unittest") {
+executable("model_unittest") {
   sources = [ "model_unittest.cc" ]
-
+  testonly = true
   deps = [
     ":model",
     "//garnet/public/lib/gtest",

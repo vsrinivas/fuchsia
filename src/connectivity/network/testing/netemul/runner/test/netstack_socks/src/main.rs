@@ -26,7 +26,7 @@ use structopt::StructOpt;
 mod child;
 mod common;
 
-const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/netstack_socks.cmx";
+const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack-socks.cmx";
 const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
 const NETWORK_NAME: &str = "test-network";
 

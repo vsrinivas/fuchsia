@@ -211,7 +211,7 @@ TEST_F(SandboxTest, SimpleSuccess) {
   SetCmx(R"(
 {
    "environment" : {
-      "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+      "test" : [ "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx" ]
    }
 })");
   RunSandboxSuccess();
@@ -225,7 +225,7 @@ TEST_F(SandboxTest, MalformedFacet) {
 TEST_F(SandboxTest, SimpleFailure) {
   SetCmx(R"(
 {
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "environment" : {
       "test" : [ { "arguments": ["-f"] } ]
    }
@@ -237,7 +237,7 @@ TEST_F(SandboxTest, SimpleFailure) {
 TEST_F(SandboxTest, ConfirmOnBus) {
   SetCmx(R"(
 {
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "environment" : {
       "test" : [ { "arguments": ["-p", "3"] } ]
    }
@@ -252,7 +252,7 @@ TEST_F(SandboxTest, FastChildren) {
   // Make root test wait so children exits first
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "name" : "root",
       "test" : [ { "arguments": ["-p", "1", "-w", "30"] } ],
@@ -276,7 +276,7 @@ TEST_F(SandboxTest, FastRoot) {
   // Make child test wait so root exits first
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "name" : "root",
       "test" : [ { "arguments": ["-p", "1"] } ],
@@ -299,7 +299,7 @@ TEST_F(SandboxTest, FastRoot) {
 TEST_F(SandboxTest, FailedSetupCausesFailure) {
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "test" : [ { "arguments": ["-p", "1"] } ],
       "setup" : [{
@@ -320,7 +320,7 @@ TEST_F(SandboxTest, AppsAreLaunched) {
   // then Signal root with event 100
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "test" : [ { "arguments": ["-e", "100", "-p", "4"] } ],
       "apps" : [
@@ -361,7 +361,7 @@ TEST_F(SandboxTest, AppExitCodesAreIgnored) {
   // sandbox should ignore "app" exit codes
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "test" : [ { "arguments": ["-e", "100", "-p", "2"] } ],
       "apps" : [
@@ -393,7 +393,7 @@ TEST_F(SandboxTest, AppExitCodesAreIgnored) {
 TEST_F(SandboxTest, SetupProcsAreOperatedSequentially) {
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "test" : [ { "arguments": ["-p", "4"] } ],
       "setup" : [
@@ -448,7 +448,7 @@ TEST_F(SandboxTest, SetupProcsAreOperatedSequentially) {
 TEST_F(SandboxTest, SetupRunsBeforeTest) {
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "setup" : [
         {"arguments" : ["-p", "1", "-n", "setup1", "-w", "2"]}
@@ -489,7 +489,7 @@ TEST_F(SandboxTest, SetupRunsBeforeTestOnChildren) {
   // as "SetupRunsBeforeTest" but with an empty root environment.
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "children": [{
         "setup" : [
@@ -574,7 +574,7 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
   //   to asses that they were correctly put in place
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
        "test" : [ { "arguments": ["-e", "100", "-p", "1"] } ]
     },
@@ -670,7 +670,7 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
 
 TEST_F(SandboxTest, ManyTests) {
   std::stringstream ss;
-  ss << R"({ "default_url" : "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+  ss << R"({ "default_url" : "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
              "environment" : { "test" : [)";
   const int test_count = 10;
   std::vector<int32_t> expect;
@@ -694,7 +694,7 @@ TEST_F(SandboxTest, NoTestsIsFailedtest) {
   // if no |tests| are defined in any environments, we consider it a failure.
   SetCmx(R"(
   {
-    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
     "environment" : {
       "setup" : [
         {"arguments" : ["-n", "setup1"]}
@@ -713,7 +713,7 @@ TEST_F(SandboxTest, DisabledTestSucceeds) {
   SetCmx(R"(
 {
    "disabled" : true,
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "environment" : {
       "test" : [ { "arguments": ["-f"] } ]
    }
@@ -736,7 +736,7 @@ TEST_F(SandboxTest, NonexistentPackageUrl) {
 TEST_F(SandboxTest, TimeoutFires) {
   SetCmx(R"(
 {
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "timeout" : 1,
    "environment" : {
       "test" : [ { "arguments": ["-w", "10000"] } ]
@@ -753,7 +753,7 @@ TEST_F(SandboxTest, ProcessSucceedsBeforeTimeoutFires) {
 {
    "timeout" : 60,
    "environment" : {
-      "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+      "test" : [ "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx" ]
    }
 }
 )");
@@ -771,7 +771,7 @@ TEST_F(SandboxTest, BadServiceCausesFailure) {
         "fuchsia.dummy.service" : "fuchsia-pkg://fuchsia.com/bad_package#meta/bad_service.cmx"
       },
       "test": [{
-          "url" : "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+          "url" : "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
           "arguments" : ["-w", "5000", "-s", "fuchsia.dummy.service"]
       }]
    }
@@ -786,12 +786,12 @@ TEST_F(SandboxTest, ServiceExittingCausesFailure) {
    "environment" : {
      "services": {
         "fuchsia.dummy.service" : {
-           "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+           "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
            "arguments" : ["-f"]
         }
       },
       "test": [{
-          "url" : "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+          "url" : "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
           "arguments" : ["-w", "5000", "-s", "fuchsia.dummy.service"]
       }]
    }
@@ -807,7 +807,7 @@ TEST_F(SandboxTest, DestructorRunsCleanly) {
   // while it is still running.
   SetCmx(R"(
 {
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "environment" : {
       "test" : [ { "arguments": ["-w", "90000"] } ]
    }
@@ -829,11 +829,11 @@ TEST_F(SandboxTest, EnvironmentsWithSameNameFail) {
       "children" : [
        {
           "name" : "my-env",
-          "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+          "test" : [ "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx" ]
        },
        {
           "name" : "my-env",
-          "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+          "test" : [ "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx" ]
        }
       ]
    }
@@ -850,7 +850,7 @@ TEST_F(SandboxTest, SyslogWithNoKlog) {
 {
    "environment" : {
       "test" : [{
-         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
          "arguments" : ["-l", "hello", "-e", "100"]
       }],
       "logger_options": {
@@ -878,7 +878,7 @@ TEST_F(SandboxTest, SyslogWithKlog) {
 {
    "environment" : {
       "test" : [{
-         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
          "arguments" : ["-l", "hello", "-e", "100"]
       }],
       "logger_options": {
@@ -913,7 +913,7 @@ TEST_F(SandboxTest, InvalidEnvironmentDevice) {
   SetCmx(R"(
 {
    "environment" : {
-      "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ],
+      "test" : [ "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx" ],
       "devices": ["bad-ep"]
    },
    "networks": [{
@@ -934,12 +934,12 @@ TEST_F(SandboxTest, ServicesHaveVdev) {
   // available, we'd fail due to the dummy service "crashing")
   SetCmx(R"(
 {
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "environment": {
       "test" : [{"arguments":["-s", "fuchsia.dummy.service", "-e", "1", "-n", "test"]}],
       "services" : {
         "fuchsia.dummy.service": {
-            "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc_with_dev.cmx",
+            "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc-with-dev.cmx",
             "arguments": ["-P", "/vdev/class/ethernet/ep", "-p", "1", "-n", "svc"]
         }
       },
@@ -960,7 +960,7 @@ TEST_F(SandboxTest, NotAllServicesHaveVdev) {
   // field in the service's component manifest to decide whether it receives /vdev in its namespace
   SetCmx(R"(
 {
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "environment": {
       "test" : [{"arguments":["-s", "fuchsia.dummy.service", "-e", "1", "-n", "test"]}],
       "services" : {
@@ -983,7 +983,7 @@ TEST_F(SandboxTest, ExposesNetworkDevice) {
   // that it got mounted in /vdev
   SetCmx(R"(
 {
-   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc_with_dev.cmx",
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc-with-dev.cmx",
    "environment": {
       "test" : [{"arguments":["-P", "/vdev/class/network/ep"]}],
       "devices": ["ep"]

@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
-            "default_url": "fuchsia-pkg://fuchsia.com/netemul_guest_test#meta/guest.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/guest.cmx",
             "environment": {
                 "children": [
                     {

@@ -235,8 +235,6 @@ group("deprecated_package_underscore") {
     "//src/connectivity/network/netstack:netstack_gotests",
     "//src/connectivity/network/testing/netemul/lib:netemul_lib_test",
     "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
-    "//src/connectivity/network/testing/netemul/runner/test:netemul_guest_test",
-    "//src/connectivity/network/testing/netemul/runner/test:netemul_sandbox_test",
     "//src/connectivity/network/testing/netemul/runner:netemul_devmgr",
     "//src/connectivity/network/testing/netemul/runner:netemul_sandbox",
     "//src/connectivity/network/tests/benchmarks:netstack_benchmarks",

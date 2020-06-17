@@ -2,11 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("virtual_device_directory") {
+rustc_binary("bin") {
   name = "virtual_device_directory"
   edition = "2018"
   deps = [ "//third_party/rust_crates:anyhow" ]
+}
+
+fuchsia_component("virtual_device_directory") {
+  component_name = "virtual-device-directory"
+  manifest = "meta/virtual-device-directory.cmx"
+  testonly = true
+  deps = [ ":bin" ]
 }

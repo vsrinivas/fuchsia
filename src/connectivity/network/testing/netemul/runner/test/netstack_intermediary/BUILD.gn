@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("netstack_intermediary") {
+rustc_binary("bin") {
   name = "netstack_intermediary"
   edition = "2018"
   deps = [
@@ -26,4 +26,11 @@ rustc_binary("netstack_intermediary") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
   ]
+}
+
+fuchsia_component("netstack_intermediary") {
+  component_name = "netstack-intermediary"
+  manifest = "meta/netstack-intermediary.cmx"
+  testonly = true
+  deps = [ ":bin" ]
 }

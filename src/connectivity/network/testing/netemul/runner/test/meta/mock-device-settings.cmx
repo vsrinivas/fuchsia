@@ -15,7 +15,7 @@
         }
     },
     "program": {
-        "binary": "test/mock_device_settings"
+        "binary": "bin/mock_device_settings_bin_test"
     },
     "sandbox": {
         "services": [

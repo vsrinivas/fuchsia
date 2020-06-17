@@ -3,14 +3,14 @@
         "fuchsia.netemul": {
             "environment": {
                 "test": [
-                    "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/network_device.cmx"
+                    "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/svc-list.cmx"
                 ]
             },
             "timeout": 120
         }
     },
     "program": {
-        "binary": "test/network_device_test"
+        "binary": "test/svc_list_test"
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
 }

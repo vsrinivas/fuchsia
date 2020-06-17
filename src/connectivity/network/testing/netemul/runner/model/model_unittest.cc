@@ -42,7 +42,7 @@ TEST_F(ModelTest, ParseTest) {
   const char* json =
       R"(
     {
-      "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx",
+      "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/default.cmx",
       "guest": [
         {
           "label": "test_guest",
@@ -67,7 +67,7 @@ TEST_F(ModelTest, ParseTest) {
                   "-n",
                   "child-1-url"
                 ],
-                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build_run.cmx"
+                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/env_build_run.cmx"
               },
               {
                 "arguments": [
@@ -145,7 +145,7 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_TRUE(config.ParseFromJSON(doc, &parser)) << "Parse error: " << parser.error_str();
 
   EXPECT_EQ(config.default_url(),
-            "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx");
+            "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/default.cmx");
   EXPECT_EQ(config.disabled(), false);
   EXPECT_EQ(config.timeout(), zx::duration::infinite());
   EXPECT_EQ(config.capture(), CaptureMode::NONE);
@@ -216,7 +216,7 @@ TEST_F(ModelTest, ParseTest) {
   auto& t0 = c0.test()[0];
   auto& t1 = c0.test()[1];
   auto& t2 = c1.test()[0];
-  EXPECT_EQ(t0.url(), "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build_run.cmx");
+  EXPECT_EQ(t0.url(), "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/env_build_run.cmx");
   EXPECT_EQ(t0.arguments().size(), 4ul);
 
   EXPECT_TRUE(t1.url().empty());
