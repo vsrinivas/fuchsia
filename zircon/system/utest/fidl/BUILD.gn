@@ -25,7 +25,6 @@ if (is_fuchsia) {
       "fidl_align_tests.cc",
       "fidl_coded_types.cc",
       "handle_closing_tests.cc",
-      "linearizing_tests.cc",
       "llcpp_client_test.cc",
       "llcpp_gen_api_test.cc",
       "llcpp_server_test.cc",

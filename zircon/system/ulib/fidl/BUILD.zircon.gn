@@ -31,7 +31,6 @@ zx_library("fidl_base") {
     "encoding.cc",
     "formatting.cc",
     "internal.c",
-    "linearizing.cc",
     "message.cc",
     "message_buffer.cc",
     "message_builder.cc",

@@ -89,25 +89,6 @@ zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
 // See also http://www.unicode.org/versions/Unicode13.0.0/ch03.pdf#G7404
 zx_status_t fidl_validate_string(const char* data, uint64_t size);
 
-// Follow an object tree and copy the elements into the provided buffer, such that the
-// resulting buffer is ready for fidl_encode.
-//
-// Starting from the root of the objects specified in |value|,
-// This function assumes that |buffer| points to an uninitialized memory region
-// of size at least |num_bytes|, large enough to hold the entire encoded FIDL message.
-// It will follow pointers and pack secondary objects after the primary
-// as per the wire-format, in their correct order and ensuring alignment.
-// The resulting message length within the buffer is returned via |out_num_bytes|.
-//
-// Upon success, the handles in the object tree will be moved to the buffer;
-// the remaining contents in the original object tree are otherwise untouched.
-// In case of any failure, the handles in the original tree will stay intact.
-//
-// It will return ZX_ERR_BUFFER_TOO_SMALL if the provided buffer is not large enough
-// to hold the entire message.
-zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer,
-                           uint32_t num_bytes, uint32_t* out_num_bytes, const char** out_error_msg);
-
 // Stores the name of a fidl type into the provided buffer.
 // Truncates the name if it is too long to fit into the buffer.
 // Returns the number of characters written into the buffer.
