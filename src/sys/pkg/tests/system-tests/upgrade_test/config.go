@@ -134,7 +134,7 @@ func (c *config) getDowngradeBuild(ctx context.Context, dir string) (artifacts.B
 	var build artifacts.Build
 	if buildID != "" {
 		build, err = c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, sshPrivateKey.PublicKey())
-	} else if c.upgradeFuchsiaBuildDir != "" {
+	} else if c.downgradeFuchsiaBuildDir != "" {
 		build, err = artifacts.NewFuchsiaDirBuild(c.downgradeFuchsiaBuildDir, sshPrivateKey.PublicKey()), nil
 	}
 
