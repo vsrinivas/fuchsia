@@ -42,14 +42,12 @@ std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
   while (true) {
     char buf[kReadSize];
 
-    // Add a zero at the end just in case.
     size_t read_amount = stream.Read(buf, kReadSize);
     data.insert(data.end(), buf, buf + read_amount);
 
     if (read_amount < kReadSize)
       break;
   }
-
   return data;
 }
 
@@ -767,7 +765,8 @@ void DebuggedProcess::OnStderr(bool close) {
 
   auto data = ReadSocketInput(&stderr_);
   FX_DCHECK(!data.empty());
-  DEBUG_LOG(Process) << LogPreamble(this) << "Got stderr: " << data.data();
+  DEBUG_LOG(Process) << LogPreamble(this)
+                     << "Got stderr: " << std::string(data.data(), data.size());
   SendIO(debug_ipc::NotifyIO::Type::kStderr, std::move(data));
 }
 
