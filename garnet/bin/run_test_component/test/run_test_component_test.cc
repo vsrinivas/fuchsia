@@ -313,13 +313,18 @@ TEST_F(RunFixture, MaxSeverityInfo) {
   run_component(
       "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
       "logging_component_max_severity_info.cmx",
-      arg, 1, &got);
+      arg, 0, &got);
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
   auto err_start = got.find("unexpected high-severity logs:");
-
-  ASSERT_NE(err_start, std::string::npos) << "got: " << got;
-  // make sure that we again see this message in error logs
-  EXPECT_NE(got.find("WARNING: my warn message.", err_start), std::string::npos) << "got: " << got;
+  // flip switch in next CL when we actuially start failing tests.
+  if (true) {
+    ASSERT_EQ(err_start, std::string::npos) << "got: " << got;
+  } else {
+    ASSERT_NE(err_start, std::string::npos) << "got: " << got;
+    // make sure that we again see this message in error logs
+    EXPECT_NE(got.find("WARNING: my warn message.", err_start), std::string::npos)
+        << "got: " << got;
+  }
 
   // make sure it doesn't fail when flag is not passed.
   run_component(
@@ -361,13 +366,17 @@ TEST_F(RunFixture, MaxSeverityWarn) {
   run_component(
       "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
       "logging_component_max_severity_warn.cmx",
-      arg, 1, &got);
+      arg, 0, &got);
   EXPECT_NE(got.find("my error message."), std::string::npos) << "got: " << got;
   auto err_start = got.find("unexpected high-severity logs:");
-
-  ASSERT_NE(err_start, std::string::npos) << "got: " << got;
-  // make sure that we again see this message in error logs
-  EXPECT_NE(got.find("my error message.", err_start), std::string::npos) << "got: " << got;
+  // flip switch in next CL when we actuially start failing tests.
+  if (true) {
+    ASSERT_EQ(err_start, std::string::npos) << "got: " << got;
+  } else {
+    ASSERT_NE(err_start, std::string::npos) << "got: " << got;
+    // make sure that we again see this message in error logs
+    EXPECT_NE(got.find("my error message.", err_start), std::string::npos) << "got: " << got;
+  }
 
   // make sure it doesn't fail when flag is not passed.
   run_component(
