@@ -17,6 +17,7 @@
 
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
+#include <arch/arm64/uarch.h>
 #include <arch/exception.h>
 #include <arch/thread.h>
 #include <arch/user_copy.h>
@@ -161,6 +162,12 @@ static void arm64_brk_handler(arm64_iframe_t* iframe, uint exception_flags, uint
     exception_die(iframe, esr, __arm_rsr64("far_el1"), "BRK in kernel: PC at %#" PRIx64 "\n",
                   iframe->elr);
   }
+  // Spectre V2: If we took a BRK exception from EL0, but the ELR address is not a user address,
+  // invalidate the branch predictor. User code may be attempting to mistrain indirect branch
+  // prediction structures.
+  if (unlikely(!is_user_address(iframe->elr)) && arm64_uarch_needs_spectre_v2_mitigation()) {
+    arm64_uarch_do_spectre_v2_mitigation();
+  }
   try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
 
@@ -223,6 +230,13 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
   uint32_t iss = BITS(esr, 24, 0);
   bool is_user = !BIT(ec, 0);
+
+  // Spectre V2: If we took an instruction abort in EL0 but the faulting address is not a user
+  // address, invalidate the branch predictor. The $PC may have been updated before the abort is
+  // delivered, user code may be attempting to mistrain indirect branch prediction structures.
+  if (unlikely(is_user && !is_user_address(far)) && arm64_uarch_needs_spectre_v2_mitigation()) {
+    arm64_uarch_do_spectre_v2_mitigation();
+  }
 
   uint pf_flags = VMM_PF_FLAG_INSTRUCTION;
   pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
@@ -423,6 +437,14 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
 /* called from assembly */
 extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
   LTRACEF("iframe %p, flags %#x\n", iframe, exception_flags);
+  bool is_user = exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL;
+
+  // Spectre V2: If we took an interrupt while in EL0 but $PC was not a user address, invalidate
+  // the branch predictor. User code may be attempting to mistrain an indirect branch predictor.
+  if (unlikely(is_user && !is_user_address(iframe->elr)) &&
+      arm64_uarch_needs_spectre_v2_mitigation()) {
+    arm64_uarch_do_spectre_v2_mitigation();
+  }
 
   int_handler_saved_state_t state;
   int_handler_start(&state);
@@ -433,7 +455,7 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
   bool do_preempt = int_handler_finish(&state);
 
   /* if we came from user space, check to see if we have any signals to handle */
-  if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
+  if (is_user) {
     /* in the case of receiving a kill signal, this function may not return,
      * but the scheduler would have been invoked so it's fine.
      */
