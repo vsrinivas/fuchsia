@@ -29,14 +29,16 @@ protocol Discovery {
     compose Group;
     compose Selector;
 
+    [Deprecated, Transitional = "Deprecated in favor of WatchSessionBindings"]
+    GetNextSessionBinding() -> (SessionBindingWatchEvent event);
+
     /// Watches for bindings of media sessions to targets.
     ///
     /// A media session is rendered on the target to which it is bound.
     ///
-    /// First, existing bindings will be returned. Then, bindings added
-    /// and removed since connection will be returned as deltas on the
-    /// initial set.
-    GetNextSessionBinding() -> (SessionBindingWatchEvent event);
+    /// Bindings are returned as deltas between the watch calls, leave a
+    /// request hanging to get the latest updates.
+    WatchSessionBindings() -> (SessionBindingsWatchEvent event);
 
     /// Connects to a target by id. Drops the given channel if no such
     /// target exists.
@@ -50,6 +52,7 @@ struct SessionBinding {
     Id target_id;
 };
 
+// Deprecated data type
 union SessionBindingWatchEvent {
     /// An already existing binding at the time of connection.
     1: SessionBinding existing;
@@ -60,6 +63,16 @@ union SessionBindingWatchEvent {
     3: SessionBinding added;
     /// A binding removed.
     4: SessionBinding removed;
+};
+
+table SessionBindingsWatchEvent {
+    /// A list of active session bindings added or updated in the network
+    /// at any point in time.
+    1: vector<SessionBinding>:MAX updated;
+
+    /// A list of session bindings that are removed in the network since
+    /// notified.
+    2: vector<SessionBinding>:MAX removed;
 };
 
 /// A target is a device or group of devices on which media can be rendered,
@@ -92,18 +105,21 @@ protocol GroupEditor {
 
 /// A protocol for watching the members of a group.
 protocol Group {
+    [Deprecated, Transitional = "Deprecated in favor of WatchTargets API"]
+    GetNextTarget() -> (TargetWatchEvent target_watch_event);
+
     /// Watches for changes to the set of registered targets. Leave a request
     /// hanging to get replies when changes occur. New clients will be caught
     /// up with the state of the world.
     ///
-    /// First, existing targets will be returned. Then, targets added and removed
-    /// since connection will be returned as deltas on the initial set.
-    GetNextTarget() -> (TargetWatchEvent target_watch_event);
+    /// Targets are returned as deltas between the watch calls.
+    WatchTargets() -> (TargetsWatchEvent targets_watch_event);
 };
 
 struct Void {
 };
 
+// Deprecated data type
 union TargetWatchEvent {
     /// An already existing target at the time of connection.
     1: Description existing;
@@ -116,6 +132,14 @@ union TargetWatchEvent {
     4: Description updated;
     /// A target removed.
     5: Id removed;
+};
+
+table TargetsWatchEvent {
+    /// Targets added or updated on the network at any point in time.
+    1: vector<Description>:MAX updated;
+
+    /// Targets that are removed since last notified.
+    2: vector<Id>:MAX removed;
 };
 
 /// A protocol to control the volume of target.
