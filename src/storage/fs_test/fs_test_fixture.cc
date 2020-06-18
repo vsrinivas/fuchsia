@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fs_test_fixture.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
 
 namespace fs_test {
 

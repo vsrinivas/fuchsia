@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "fs_test_fixture.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
 
 namespace fs_test {
 namespace {

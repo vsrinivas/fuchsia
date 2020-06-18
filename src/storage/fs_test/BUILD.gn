@@ -107,6 +107,25 @@ fuchsia_component("attr-tests") {
   ]
 }
 
+executable("clone") {
+  testonly = true
+  sources = [ "clone.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("clone-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/clone.cml"
+  deps = [
+    ":clone",
+    ":manifests",
+  ]
+}
+
 executable("overflow") {
   testonly = true
   sources = [ "overflow.cc" ]
@@ -149,6 +168,7 @@ fuchsia_test_package("fs-tests") {
     ":access-tests",
     ":append-tests",
     ":attr-tests",
+    ":clone-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
@@ -185,6 +205,7 @@ action("manifests") {
     "$target_gen_dir/access.cml",
     "$target_gen_dir/append.cml",
     "$target_gen_dir/attr.cml",
+    "$target_gen_dir/clone.cml",
     "$target_gen_dir/max-file.cml",
     "$target_gen_dir/overflow.cml",
     "$target_gen_dir/read-write.cml",
