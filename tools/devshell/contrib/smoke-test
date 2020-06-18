@@ -17,6 +17,7 @@
 ##   --dry-run Finds affected tests but doesn't run them
 ##   --verbose Prints modified files and affected tests
 ##   --no-feedback Don't print feedback link
+##   --analysis-method {gn_analyze|ninja_graph} Select gn analyze or ninja -t graph (default)
 ##
 ##   Optionally add -- followed by arguments to be passed to `fx test`
 ##   if tests are run. For example:
@@ -48,6 +49,7 @@ REGENERATE=
 DRY_RUN=
 VERBOSE=
 NO_FEEDBACK=
+ANALYSIS_METHOD=ninja_graph
 
 fx-config-read
 
@@ -58,6 +60,10 @@ while [ $# -gt 0 ]; do
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
     --no-feedback) NO_FEEDBACK="1" ;;
+    --analysis-method)
+      shift
+      ANALYSIS_METHOD="$1"
+      ;;
     --) shift; break ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
@@ -77,22 +83,34 @@ if [[ -n "$REGENERATE" ]]; then
   fx-gen
 fi
 
-# Generate Ninja graph
-readonly GRAPH=$(mktemp -u)
-trap 'rm -f "$GRAPH"' EXIT
-mkfifo "$GRAPH"
-"$PREBUILT_NINJA" -C "$FUCHSIA_BUILD_DIR" -t graph > "${GRAPH}" &
 
 readonly TESTS_JSON="${FUCHSIA_BUILD_DIR}/tests.json"
 
-# Build `affectedtests` if needed
-readonly TOOL="${HOST_OUT_DIR}/affectedtests"
-if [[ ! -f $TOOL ]]; then
-  fx-command-run build "${TOOL#$FUCHSIA_BUILD_DIR/}"
+if [ "$ANALYSIS_METHOD" == "gn_analyze" ]; then
+
+  readonly TOOL="${FUCHSIA_DIR}/tools/testing/affectedtests/testanalyze.py"
+
+  AFFECTED=$("${TOOL}" analyze --gn-path "${PREBUILT_GN}" --tests-json "${TESTS_JSON}" --build-dir "${FUCHSIA_BUILD_DIR}" --changed-files "${MODIFIED}")
+
+else
+
+  # Generate Ninja graph
+  readonly GRAPH=$(mktemp -u)
+  trap 'rm -f "$GRAPH"' EXIT
+  mkfifo "$GRAPH"
+  "$PREBUILT_NINJA" -C "$FUCHSIA_BUILD_DIR" -t graph > "${GRAPH}" &
+
+  # Build `affectedtests` if needed
+  readonly TOOL="${HOST_OUT_DIR}/affectedtests"
+  if [[ ! -f $TOOL ]]; then
+    fx-command-run build "${TOOL#$FUCHSIA_BUILD_DIR/}"
+  fi
+
+  # Find affected tests
+  AFFECTED=$("${TOOL}" --srcs "${MODIFIED}" --tests_json "${TESTS_JSON}" --graph "${GRAPH}")
+
 fi
 
-# Find affected tests
-AFFECTED=$("${TOOL}" --srcs "${MODIFIED}" --tests_json "${TESTS_JSON}" --graph "${GRAPH}")
 if [[ -n "$VERBOSE" ]]; then
   if [[ -z "$AFFECTED" ]]; then
     printf "No affected tests.\n"
