@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
-#include <lib/zx/eventpair.h>
 #include <stddef.h>
+
+#ifdef __Fuchsia__
+#include <lib/zx/eventpair.h>
 #include <zircon/syscalls.h>
+#endif
 
 #include <memory>
 
@@ -72,6 +75,7 @@ uint32_t ArraySize(T const (&array)[N]) {
   return sizeof(array);
 }
 
+#ifdef __Fuchsia__
 // Check if the other end of the eventpair is valid
 bool IsPeerValid(const zx::unowned_eventpair handle) {
   zx_signals_t observed_signals = {};
@@ -86,6 +90,7 @@ bool IsPeerValid(const zx::unowned_eventpair handle) {
       return false;
   }
 }
+#endif
 
 bool decode_null_decode_parameters() {
   BEGIN_TEST;
@@ -282,6 +287,7 @@ bool decode_too_many_handles_specified_error() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
 bool decode_too_many_handles_specified_should_close_handles() {
   BEGIN_TEST;
 
@@ -347,6 +353,7 @@ bool decode_too_many_bytes_specified_should_close_handles() {
 
   END_TEST;
 }
+#endif
 
 bool decode_multiple_present_handles() {
   BEGIN_TEST;
@@ -449,6 +456,7 @@ bool decode_array_of_present_handles() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
 bool decode_array_of_present_handles_error_closes_handles() {
   BEGIN_TEST;
 
@@ -501,6 +509,7 @@ bool decode_array_of_present_handles_error_closes_handles() {
 
   END_TEST;
 }
+#endif
 
 bool decode_array_of_nonnullable_handles_some_absent_error() {
   BEGIN_TEST;
@@ -1829,6 +1838,7 @@ bool decode_single_present_handle_info_handle_rights_missing_required_rights() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
 bool decode_single_present_handle_info_handle_rights_too_many_rights() {
   BEGIN_TEST;
 
@@ -1863,6 +1873,7 @@ bool decode_single_present_handle_info_handle_rights_too_many_rights() {
 
   END_TEST;
 }
+#endif
 
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(decode_null_decode_parameters)
@@ -1877,8 +1888,11 @@ BEGIN_TEST_CASE(handles)
 RUN_TEST(decode_single_present_handle)
 RUN_TEST(decode_single_present_handle_check_trailing_padding)
 RUN_TEST(decode_too_many_handles_specified_error)
+#ifdef __Fuchsia__
+// Disabled on host due to syscall.
 RUN_TEST(decode_too_many_handles_specified_should_close_handles)
 RUN_TEST(decode_too_many_bytes_specified_should_close_handles)
+#endif
 RUN_TEST(decode_multiple_present_handles)
 RUN_TEST(decode_single_absent_handle)
 RUN_TEST(decode_multiple_absent_handles)
@@ -1886,7 +1900,10 @@ END_TEST_CASE(handles)
 
 BEGIN_TEST_CASE(arrays)
 RUN_TEST(decode_array_of_present_handles)
+#ifdef __Fuchsia__
+// Disabled on host due to syscall.
 RUN_TEST(decode_array_of_present_handles_error_closes_handles)
+#endif
 RUN_TEST(decode_array_of_nonnullable_handles_some_absent_error)
 RUN_TEST(decode_array_of_nullable_handles)
 RUN_TEST(decode_array_of_nullable_handles_with_insufficient_handles_error)
@@ -1948,7 +1965,10 @@ RUN_TEST(decode_single_present_handle_info_handle_rights_subtype_match)
 RUN_TEST(decode_single_present_handle_info_no_subtype_same_rights)
 RUN_TEST(decode_single_present_handle_info_handle_rights_wrong_subtype)
 RUN_TEST(decode_single_present_handle_info_handle_rights_missing_required_rights)
+#ifdef __Fuchsia__
+// Disabled on host due to syscall.
 RUN_TEST(decode_single_present_handle_info_handle_rights_too_many_rights)
+#endif
 END_TEST_CASE(fidl_decode_etc)
 
 }  // namespace

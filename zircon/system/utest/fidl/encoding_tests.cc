@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
-#include <lib/zx/eventpair.h>
 #include <limits.h>
 #include <stddef.h>
+
+#ifdef __Fuchsia__
+#include <lib/zx/eventpair.h>
 #include <zircon/syscalls.h>
+#endif
 
 #include <memory>
 
@@ -74,6 +77,7 @@ uint32_t ArraySize(T const (&array)[N]) {
   return sizeof(array);
 }
 
+#ifdef __Fuchsia__
 // Check if the other end of the eventpair is valid
 bool IsPeerValid(const zx::unowned_eventpair handle) {
   zx_signals_t observed_signals = {};
@@ -88,6 +92,7 @@ bool IsPeerValid(const zx::unowned_eventpair handle) {
       return false;
   }
 }
+#endif
 
 enum class Mode { EncodeOnly, LinearizeAndEncode };
 
@@ -270,6 +275,7 @@ bool linearize_and_encode_produces_actual_buffer_sizes() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
 bool encode_too_many_bytes_specified_should_close_handles() {
   BEGIN_TEST;
 
@@ -303,6 +309,7 @@ bool encode_too_many_bytes_specified_should_close_handles() {
 
   END_TEST;
 }
+#endif
 
 template <Mode mode>
 bool encode_single_present_handle_unaligned_error() {
@@ -596,6 +603,7 @@ bool encode_array_of_present_handles() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
 template <Mode mode>
 bool encode_array_of_present_handles_error_closes_handles() {
   BEGIN_TEST;
@@ -640,6 +648,7 @@ bool encode_array_of_present_handles_error_closes_handles() {
 
   END_TEST;
 }
+#endif
 
 template <Mode mode>
 bool encode_array_of_nullable_handles() {
@@ -2112,6 +2121,7 @@ bool encode_nested_nullable_structs() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
 bool encode_union_tracking_ptr_unowned() {
   BEGIN_TEST;
 
@@ -2306,6 +2316,7 @@ bool encode_string_view_tracking_ptr_heap_allocate() {
 
   END_TEST;
 }
+#endif
 
 bool linearize_and_encode_single_present_handle_disposition() {
   BEGIN_TEST;
@@ -2372,7 +2383,10 @@ END_TEST_CASE(null_parameters)
 
 BEGIN_TEST_CASE(buffer_sizes)
 RUN_TEST(linearize_and_encode_produces_actual_buffer_sizes);
+#ifdef __Fuchsia__
+// Disabled on host due to syscall.
 RUN_TEST(encode_too_many_bytes_specified_should_close_handles);
+#endif
 END_TEST_CASE(buffer_sizes)
 
 BEGIN_TEST_CASE(unaligned)
@@ -2401,13 +2415,19 @@ RUN_TEST(encode_array_of_nullable_handles<Mode::EncodeOnly>)
 RUN_TEST(encode_array_of_nullable_handles_with_insufficient_handles_error<Mode::EncodeOnly>)
 RUN_TEST(encode_array_of_array_of_present_handles<Mode::EncodeOnly>)
 RUN_TEST(encode_out_of_line_array_of_nonnullable_handles<Mode::EncodeOnly>)
+#ifdef __Fuchsia__
+// Disabled on host due to syscall.
 RUN_TEST(encode_array_of_present_handles_error_closes_handles<Mode::EncodeOnly>)
+#endif
 RUN_TEST(encode_array_of_present_handles<Mode::LinearizeAndEncode>)
 RUN_TEST(encode_array_of_nullable_handles<Mode::LinearizeAndEncode>)
 RUN_TEST(encode_array_of_nullable_handles_with_insufficient_handles_error<Mode::LinearizeAndEncode>)
 RUN_TEST(encode_array_of_array_of_present_handles<Mode::LinearizeAndEncode>)
 RUN_TEST(encode_out_of_line_array_of_nonnullable_handles<Mode::LinearizeAndEncode>)
+#ifdef __Fuchsia__
+// Disabled on host due to syscall.
 RUN_TEST(encode_array_of_present_handles_error_closes_handles<Mode::LinearizeAndEncode>)
+#endif
 END_TEST_CASE(arrays)
 
 BEGIN_TEST_CASE(strings)
@@ -2494,12 +2514,15 @@ RUN_TEST(encode_nested_nullable_structs<Mode::LinearizeAndEncode>)
 END_TEST_CASE(structs)
 
 BEGIN_TEST_CASE(tracking_ptr)
+#ifdef __Fuchsia__
+// Disabled for host because LLCPP fidl codegen currently doesn't support host.
 RUN_TEST(encode_union_tracking_ptr_unowned)
 RUN_TEST(encode_union_tracking_ptr_heap_allocate)
 RUN_TEST(encode_vector_view_tracking_ptr_unowned)
 RUN_TEST(encode_vector_view_tracking_ptr_heap_allocate)
 RUN_TEST(encode_string_view_tracking_ptr_unowned)
 RUN_TEST(encode_string_view_tracking_ptr_heap_allocate)
+#endif
 END_TEST_CASE(tracking_ptr)
 
 // Most fidl_linearize_and_encode_etc code paths are covered by the fidl_linearize_and_encode tests.

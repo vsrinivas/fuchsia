@@ -130,6 +130,7 @@ bool validate_null_validate_parameters() {
 }
 
 // TODO(fxb/52382) Move this test to GIDL.
+#ifdef __Fuchsia__
 bool validate_walker_recursive_struct_max_out_of_line_depth() {
   BEGIN_TEST;
 
@@ -153,8 +154,10 @@ bool validate_walker_recursive_struct_max_out_of_line_depth() {
 
   END_TEST;
 }
+#endif
 
 // TODO(fxb/52382) Move this test to GIDL.
+#ifdef __Fuchsia__
 bool validate_walker_table_max_out_of_line_depth_exceeded() {
   BEGIN_TEST;
 
@@ -210,6 +213,7 @@ bool validate_walker_table_max_out_of_line_depth_matched() {
 
   END_TEST;
 }
+#endif
 
 bool validate_single_present_handle() {
   BEGIN_TEST;
@@ -1386,6 +1390,7 @@ bool validate_nested_nullable_structs() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
 bool validate_valid_empty_nullable_xunion() {
   BEGIN_TEST;
 
@@ -1612,6 +1617,7 @@ bool validate_invalid_32bit_bits() {
 
   END_TEST;
 }
+#endif
 
 template <typename T>
 bool TestValidEnum(const fidl_type_t* coding_table) {
@@ -1656,6 +1662,7 @@ bool TestInvalidEnum(const fidl_type_t* coding_table) {
   END_HELPER;
 }
 
+#ifdef __Fuchsia__
 bool validate_int8_enum() {
   BEGIN_TEST;
   EXPECT_TRUE(TestValidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable));
@@ -1711,6 +1718,7 @@ bool validate_uint64_enum() {
   EXPECT_TRUE(TestInvalidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable));
   END_TEST;
 }
+#endif
 
 bool validate_primitives_struct() {
   BEGIN_TEST;
@@ -1830,11 +1838,14 @@ bool validate_primitives_struct() {
   END_TEST;
 }
 
+#ifdef __Fuchsia__
+// Disabled for host because they depend on fidl generated LLCPP code that can't run on host.
 BEGIN_TEST_CASE(walker)
 RUN_TEST(validate_walker_recursive_struct_max_out_of_line_depth)
 RUN_TEST(validate_walker_table_max_out_of_line_depth_exceeded)
 RUN_TEST(validate_walker_table_max_out_of_line_depth_matched)
 END_TEST_CASE(walker)
+#endif
 
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(validate_null_validate_parameters)
@@ -1903,6 +1914,8 @@ RUN_TEST(validate_nested_nonnullable_structs_check_padding)
 RUN_TEST(validate_nested_nullable_structs)
 END_TEST_CASE(structs)
 
+#ifdef __Fuchsia__
+// Disabled for host because they depend on fidl generated LLCPP code that can't run on host.
 BEGIN_TEST_CASE(xunions)
 RUN_TEST(validate_valid_empty_nullable_xunion)
 RUN_TEST(validate_empty_nonnullable_xunion)
@@ -1932,10 +1945,14 @@ RUN_TEST(validate_uint16_enum)
 RUN_TEST(validate_uint32_enum)
 RUN_TEST(validate_uint64_enum)
 END_TEST_CASE(enums)
+#endif
 
 BEGIN_TEST_CASE(primitives)
 RUN_TEST(validate_primitives_struct)
+#ifdef __Fuchsia__
+// Disabled for host because they depend on fidl generated LLCPP code that can't run on host.
 RUN_TEST(validate_invalid_bool)
+#endif
 END_TEST_CASE(primitives)
 
 }  // namespace

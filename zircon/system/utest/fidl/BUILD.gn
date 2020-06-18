@@ -132,8 +132,12 @@ if (is_fuchsia) {
     }
     sources = [
       "abi_tests.cc",
+      "decoding_tests.cc",
+      "encoding_tests.cc",
       "fidl_align_tests.cc",
+      "fidl_coded_types.cc",
       "validate_string_tests.cc",
+      "validating_tests.cc",
     ]
     deps = [
       "//zircon/public/lib/fidl_base",

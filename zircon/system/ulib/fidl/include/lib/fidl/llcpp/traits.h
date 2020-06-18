@@ -6,7 +6,9 @@
 #define LIB_FIDL_LLCPP_TRAITS_H_
 
 #include <lib/fidl/internal.h>
+#ifdef __Fuchsia__
 #include <lib/zx/object.h>
+#endif
 #include <stdint.h>
 #include <zircon/fidl.h>
 
@@ -54,8 +56,13 @@ struct IsFidlMessage : public std::false_type {};
 // A type trait that indicates whether the given type is allowed to appear in
 // generated binding APIs and can be encoded/decoded.
 // As a start, all handle types are supported.
+#ifdef __Fuchsia__
 template <typename T>
 struct IsFidlType : public std::is_base_of<zx::object_base, T> {};
+#else
+template <typename T>
+struct IsFidlType : public std::false_type {};
+#endif
 
 // Const-ness is not significant for determining IsFidlType.
 template <typename T>
