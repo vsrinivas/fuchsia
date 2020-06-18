@@ -15,31 +15,27 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-bool vdso_base_test(void) {
-  BEGIN_TEST;
-
+TEST(VdsoBaseTests, vdso_base_test) {
   char msg[128];
 
   struct link_map* lm = dlopen("libzircon.so", RTLD_NOLOAD);
   snprintf(msg, sizeof(msg), "dlopen(\"libzircon.so\") failed: %s", dlerror());
-  EXPECT_NONNULL(lm, msg);
+  EXPECT_NOT_NULL(lm, "%s", msg);
   uintptr_t rtld_vdso_base = lm->l_addr;
   int ok = dlclose(lm);
   snprintf(msg, sizeof(msg), "dlclose failed: %s", dlerror());
-  EXPECT_EQ(ok, 0, msg);
+  EXPECT_EQ(ok, 0, "%s", msg);
 
   uintptr_t prop_vdso_base;
   zx_status_t status = zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
                                               &prop_vdso_base, sizeof(prop_vdso_base));
   snprintf(msg, sizeof(msg), "zx_object_get_property failed: %d", status);
-  EXPECT_EQ(status, 0, msg);
+  EXPECT_EQ(status, 0, "%s", msg);
 
   EXPECT_EQ(rtld_vdso_base, prop_vdso_base,
             "rtld reported address != process property reported address");
-
-  END_TEST;
 }
 
 static int phdr_info_callback(struct dl_phdr_info* info, size_t size, void* data) {
@@ -51,16 +47,14 @@ static int phdr_info_callback(struct dl_phdr_info* info, size_t size, void* data
   return 0;
 }
 
-bool vdso_unmap_test(void) {
-  BEGIN_TEST;
-
+TEST(VdsoBaseTests, vdso_unmap_test) {
   char msg[128];
 
   uintptr_t prop_vdso_base;
   zx_status_t status = zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
                                               &prop_vdso_base, sizeof(prop_vdso_base));
   snprintf(msg, sizeof(msg), "zx_object_get_property failed: %d", status);
-  ASSERT_EQ(status, 0, msg);
+  ASSERT_EQ(status, 0, "%s", msg);
 
   struct dl_phdr_info info = {.dlpi_addr = prop_vdso_base};
   int ret = dl_iterate_phdr(&phdr_info_callback, &info);
@@ -85,13 +79,9 @@ bool vdso_unmap_test(void) {
   // Nor is removing a whole range overlapping the vDSO code.
   status = zx_vmar_unmap(zx_vmar_root_self(), vdso_code_start - PAGE_SIZE, PAGE_SIZE * 2);
   EXPECT_EQ(status, ZX_ERR_ACCESS_DENIED, "unmap range overlapping vDSO code");
-
-  END_TEST;
 }
 
-bool vdso_map_test(void) {
-  BEGIN_TEST;
-
+TEST(VdsoBaseTests, vdso_map_test) {
   zx_handle_t vmo = zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0));
   ASSERT_NE(vmo, ZX_HANDLE_INVALID, "zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
 
@@ -118,12 +108,4 @@ bool vdso_map_test(void) {
 
   zx_handle_close(proc);
   zx_handle_close(vmar);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(vdso_base_tests)
-RUN_TEST(vdso_base_test);
-RUN_TEST(vdso_unmap_test);
-RUN_TEST(vdso_map_test);
-END_TEST_CASE(vdso_base_tests)

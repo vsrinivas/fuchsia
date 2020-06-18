@@ -35,7 +35,7 @@ test("vdso-base") {
   sources = [ "vdso-base.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
   libs = [ "zircon" ]
 }
