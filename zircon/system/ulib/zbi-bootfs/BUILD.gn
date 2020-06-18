@@ -27,7 +27,7 @@ zx_library("zbi-bootfs") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/zstd",
     "//zircon/public/lib/zx",

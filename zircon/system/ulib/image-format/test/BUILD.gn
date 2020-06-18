@@ -25,7 +25,7 @@ test("image-format-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "image-format-test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",

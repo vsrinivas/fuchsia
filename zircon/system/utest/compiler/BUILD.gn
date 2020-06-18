@@ -32,7 +32,7 @@ test("compiler") {
   ]
   configs += [ ":integer-paranoia" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 }

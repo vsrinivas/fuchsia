@@ -10,7 +10,7 @@ test("register-state") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "register-state-test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 }

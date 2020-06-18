@@ -8,8 +8,8 @@ source_set("launcher") {
   visibility = [ ":*" ]
   sources = [ "fdio.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -42,8 +42,8 @@ source_set("fshost-registry") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/loader-service",
@@ -116,9 +116,9 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
+    "//sdk/lib/fdio",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
@@ -248,7 +248,7 @@ test("fshost-metrics-test") {
   deps = [
     ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",

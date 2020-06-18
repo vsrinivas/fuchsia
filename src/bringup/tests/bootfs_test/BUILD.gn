@@ -9,7 +9,7 @@ test("running_on_bootfs_test") {
   testonly = true
   sources = [ "running_on_bootfs_test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 }

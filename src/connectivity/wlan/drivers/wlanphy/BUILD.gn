@@ -20,11 +20,11 @@ wlanphy_deps = [
   "//sdk/banjo/ddk.protocol.wlanphyimpl",
   "//sdk/fidl/fuchsia.wlan.device",
   "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
+  "//sdk/lib/fdio",
   "//src/connectivity/wlan/lib/common/cpp:common",
   "//src/devices/lib/driver",
   "//src/lib/ddk",
   "//zircon/public/lib/async-cpp",
-  "//zircon/public/lib/fdio",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
 ]

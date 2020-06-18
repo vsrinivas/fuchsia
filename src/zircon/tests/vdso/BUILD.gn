@@ -10,9 +10,9 @@ test("vdso") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/elfload",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
@@ -34,7 +34,7 @@ test("vdso-base") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-base.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
   libs = [ "zircon" ]
@@ -57,7 +57,7 @@ test("vdso-variant") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-variant.c" ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
   data_deps = [ ":vdso-variant-helper" ]
   libs = [ "zircon" ]
 }
@@ -71,7 +71,7 @@ executable("vdso-variant-helper") {
   visibility = [ ":*" ]
   sources = [ "helper/vdso-variant-helper.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/unittest",
   ]
 }

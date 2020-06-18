@@ -54,7 +54,7 @@ test("fdio-constructor") {
 fdio_rspfile = "$target_gen_dir/fdio.rsp"
 link_output_rspfile("fdio-rspfile") {
   visibility = [ ":*" ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
   outputs = [ fdio_rspfile ]
 }
 

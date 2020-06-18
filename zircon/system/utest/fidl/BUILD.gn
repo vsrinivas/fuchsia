@@ -36,10 +36,10 @@ if (is_fuchsia) {
     include_dirs = [ "generated" ]
     public_deps = [
       ":fidl.test.coding_llcpp",
+      "//sdk/lib/fdio",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fbl",
-      "//zircon/public/lib/fdio",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/fidl-llcpp",
       "//zircon/public/lib/fit",

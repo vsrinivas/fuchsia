@@ -27,9 +27,9 @@ test("memfs-tests") {
   }
   sources = [ "memfs-tests.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",

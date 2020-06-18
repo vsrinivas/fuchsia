@@ -18,7 +18,7 @@ test("devcoordinator-namespace") {
   }
   sources = [ "namespace_test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 

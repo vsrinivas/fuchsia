@@ -7,6 +7,6 @@ executable("serial-test") {
   sources = [ "serial-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }

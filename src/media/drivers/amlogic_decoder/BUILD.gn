@@ -55,7 +55,7 @@ if (target_cpu == "arm64") {
       ":test_sources",
       ":test_support",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
-      "//zircon/public/lib/fdio",
+      "//sdk/lib/fdio",
     ]
     sources = [
       "test_binding.c",

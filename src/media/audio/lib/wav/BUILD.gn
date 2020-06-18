@@ -16,10 +16,10 @@ source_set("wav") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
   ]
 }
 

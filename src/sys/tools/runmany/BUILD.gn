@@ -19,7 +19,7 @@ executable("runn") {
   output_name = "runmany"
   sources = [ "src/runmany.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

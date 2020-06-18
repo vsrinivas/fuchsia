@@ -39,9 +39,9 @@ source_set("test_device_helper") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/lib/fdio",
     "//src/graphics/lib/magma/include:magma_abi",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 

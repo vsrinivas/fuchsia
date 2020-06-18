@@ -15,9 +15,9 @@ source_set("web_context") {
   ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
   ]
 
   public_deps = [

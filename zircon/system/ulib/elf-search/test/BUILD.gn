@@ -53,9 +53,9 @@ test("elf-search") {
     "elf.c",
   ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/elfload",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/elf-search",

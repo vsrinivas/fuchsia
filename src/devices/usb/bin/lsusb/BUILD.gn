@@ -21,7 +21,7 @@ test("bin") {
   sources = [ "test.cc" ]
 
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/runtime",
     "//zircon/public/lib/zxtest",
   ]
@@ -32,7 +32,7 @@ executable("lsusb") {
   sources = [ "lsusb.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/pretty",
   ]
 }

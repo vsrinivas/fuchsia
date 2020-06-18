@@ -28,7 +28,7 @@ test("util") {
   }
   sources = [ "listnode.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+      "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 }

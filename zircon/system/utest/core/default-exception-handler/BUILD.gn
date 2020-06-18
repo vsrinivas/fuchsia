@@ -12,7 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-
 source_set("default-exception-handler") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
@@ -21,7 +20,7 @@ source_set("default-exception-handler") {
   testonly = false
   sources = [ "default-exception-handler.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",

@@ -37,7 +37,7 @@ test("storage_operation") {
   output_name = "storage-operation-test"
   sources = [ "unbuffered_operations_builder_test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/storage/operation",
   ]

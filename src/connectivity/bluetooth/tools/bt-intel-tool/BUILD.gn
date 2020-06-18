@@ -17,10 +17,10 @@ executable("bt-intel-tool") {
 
   deps = [
     "../lib",
+    "//sdk/lib/fdio",
     "//src/connectivity/bluetooth/core/bt-host/common",
     "//src/connectivity/bluetooth/core/bt-host/gap",
     "//src/connectivity/bluetooth/core/bt-host/hci",
-    "//zircon/public/lib/fdio",
   ]
 
   public_deps = [

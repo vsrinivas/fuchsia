@@ -73,8 +73,8 @@ source_set("test-utils") {
   ]
   data_deps = [ ":test-binary" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/digest",
   ]
@@ -160,7 +160,7 @@ source_set("integration-fixtures") {
   sources = [ "integration/blobfs_fixtures.cc" ]
   deps = [
     ":test-utils",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
@@ -198,8 +198,8 @@ test("blobfs-integration") {
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/lib/fdio",
     "//src/devices/block/bin/ftl_proxy:ftl-util",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
@@ -222,8 +222,8 @@ source_set("load-generator") {
   testonly = false
   sources = [ "integration/load_generator.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-test-utils",
@@ -267,7 +267,7 @@ test("blobfs-integration-paged") {
     "integration/launch.cc",
   ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -313,8 +313,8 @@ executable("blobfs-load-generator") {
   sources = [ "integration/load_generator_main.cc" ]
   deps = [
     ":load-generator",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-test-utils",

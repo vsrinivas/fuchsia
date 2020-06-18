@@ -27,7 +27,7 @@ test("unittest") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "unittest-test.cpp" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/unittest",
   ]
 }

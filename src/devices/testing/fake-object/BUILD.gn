@@ -23,8 +23,8 @@ zx_library("fake-object") {
     "//zircon/public/lib/zxc",
   ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]

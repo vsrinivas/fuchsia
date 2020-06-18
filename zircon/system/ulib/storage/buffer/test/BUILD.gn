@@ -44,7 +44,7 @@ test("storage_buffer") {
     "vmoid_registry_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/storage/buffer",
   ]

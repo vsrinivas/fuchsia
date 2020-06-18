@@ -387,7 +387,7 @@ source_set("trace_provider") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
   ]
 
-  assert_no_deps = [ "//zircon/public/lib/fdio" ]
+  assert_no_deps = [ "//sdk/lib/fdio" ]
 }
 
 source_set("trace_provider_with_fdio") {
@@ -402,7 +402,7 @@ source_set("trace_provider_with_fdio") {
     ":trace_provider",
     "$magma_build_root/src/magma_util:macros",
     "..:trace_provider_with_fdio_header",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 
   public_deps = [ "//zircon/public/lib/fit" ]

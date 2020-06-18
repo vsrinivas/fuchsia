@@ -11,9 +11,9 @@ executable("bin") {
 
   deps = [
     "//garnet/examples/fidl/services:echo_llcpp",
+    "//sdk/lib/fdio",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

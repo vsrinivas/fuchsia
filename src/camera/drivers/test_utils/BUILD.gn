@@ -33,9 +33,9 @@ source_set("button_checker") {
   visibility = [ ":*" ]
   sources = [ "button_checker.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.input",

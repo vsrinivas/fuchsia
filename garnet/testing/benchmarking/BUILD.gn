@@ -13,8 +13,8 @@ source_set("benchmarking") {
   ]
 
   public_deps = [
+    "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 
@@ -28,8 +28,8 @@ source_set("is_vulkan_supported") {
   ]
 
   public_deps = [
+    "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 

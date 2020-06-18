@@ -15,10 +15,10 @@ driver_module("isolateddevmgr-test") {
   sources = [ "test-driver.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device.manager.test:fuchsia.device.manager.test_c",
+    "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fdio",
   ]
 }
 
@@ -28,9 +28,9 @@ test("isolateddevmgr") {
   sources = [ "test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device.manager.test:fuchsia.device.manager.test_c",
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",

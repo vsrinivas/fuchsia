@@ -12,16 +12,16 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-
 source_set("handle-dup") {
   configs += [ "//build/unification/config:zircon-migrated" ]
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   sources = [ "handle-dup.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

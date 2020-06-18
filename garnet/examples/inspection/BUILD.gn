@@ -41,8 +41,8 @@ executable("client") {
 
   deps = [
     "//garnet/examples/fidl/services:echo",
+    "//sdk/lib/fdio",
     "//src/lib/files",
-    "//zircon/public/lib/fdio",
   ]
 }
 

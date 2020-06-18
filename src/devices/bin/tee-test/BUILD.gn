@@ -6,7 +6,7 @@ executable("tee-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tee-test.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/tee-client-api",
   ]
   libs = [ "zircon" ]

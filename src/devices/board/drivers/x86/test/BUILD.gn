@@ -12,7 +12,7 @@ test("x86-board") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fdio-caller",

@@ -16,12 +16,12 @@ executable("vkext") {
     "../vkreadback:vkreadback_src",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/lib/fdio",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_impl",
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
     "//src/graphics/tests/common",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
   ]
 
   deps += [ "//src/lib/vulkan" ]

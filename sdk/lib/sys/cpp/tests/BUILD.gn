@@ -19,9 +19,9 @@ test("component_cpp_unittests") {
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
   ]
 }

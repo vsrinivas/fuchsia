@@ -7,7 +7,7 @@ executable("clock") {
   sources = [ "clock.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }
 
@@ -16,6 +16,6 @@ executable("clkctl") {
   sources = [ "clkctl.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }

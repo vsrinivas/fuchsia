@@ -30,9 +30,9 @@ executable("magma_abi_conformance_tests") {
     deps += [
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
       "//sdk/fidl/fuchsia.sysmem",
+      "//sdk/lib/fdio",
       "//src/graphics/lib/magma/src/magma_util/platform:logger",
       "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
-      "//zircon/public/lib/fdio",
       "//zircon/public/lib/fidl-llcpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
     ]

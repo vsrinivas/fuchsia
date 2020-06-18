@@ -15,12 +15,12 @@ source_set("src") {
   public_deps = [ "//zircon/system/ulib/devmgr-integration-test" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zx",
@@ -40,13 +40,13 @@ executable("isolated_devmgr") {
 
   deps = [
     ":src",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -70,10 +70,10 @@ static_library("usb-virtual-bus") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -99,12 +99,12 @@ executable("test_bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

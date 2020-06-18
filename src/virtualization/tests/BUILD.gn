@@ -430,8 +430,8 @@ executable("hypervisor_tests") {
   deps = [
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/unittest",
   ]

@@ -20,7 +20,7 @@ test("qsort") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "qsort.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 }

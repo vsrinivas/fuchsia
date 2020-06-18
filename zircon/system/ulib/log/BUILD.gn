@@ -27,8 +27,8 @@ target(default_library_type, "log") {
   public_configs = [ ":includes" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx-panic-libc",
   ]
 

@@ -13,9 +13,9 @@ executable("ram-info") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_llcpp",
+    "//sdk/lib/fdio",
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
@@ -31,9 +31,9 @@ test("ram-info-test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_llcpp",
+    "//sdk/lib/fdio",
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",

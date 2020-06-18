@@ -12,11 +12,11 @@ executable("vkloop") {
 
   deps = [
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//sdk/lib/fdio",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/graphics/tests/common",
-    "//zircon/public/lib/fdio",
   ]
   public_deps = [
     "//src/lib/fxl/test:test_settings",

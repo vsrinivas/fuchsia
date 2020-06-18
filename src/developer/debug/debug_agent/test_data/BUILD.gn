@@ -192,8 +192,8 @@ executable("process_spawner") {
   sources = [ "process_spawner.cc" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -205,8 +205,8 @@ executable("thread_signals") {
   sources = [ "thread_signals.cc" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

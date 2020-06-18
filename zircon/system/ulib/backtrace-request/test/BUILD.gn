@@ -25,7 +25,7 @@ test("backtrace-request") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/backtrace-request:backtrace-request-utils",
@@ -52,7 +52,7 @@ test("backtrace-request-integration") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-integration-test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/backtrace-request",
   ]

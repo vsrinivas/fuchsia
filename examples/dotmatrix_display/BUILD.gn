@@ -17,7 +17,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_c",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_c",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }
 
@@ -29,8 +29,8 @@ executable("bin2") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_c",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/fdio",
   ]
 }
 

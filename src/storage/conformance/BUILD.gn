@@ -89,7 +89,7 @@ test_package("io_fidl_conformance_tests") {
 #     "//zircon/system/ulib/async-loop:async-loop-cpp",
 #     "//zircon/system/ulib/async-loop:async-loop-default",
 #     "//zircon/public/lib/fbl",
-#     "//zircon/public/lib/fdio",
+#     "//sdk/lib/fdio",
 #     "//sdk/fidl/fuchsia.io",
 #   ]
 # }

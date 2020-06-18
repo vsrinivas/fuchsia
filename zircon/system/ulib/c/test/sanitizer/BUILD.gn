@@ -37,8 +37,8 @@ test("sanitizer-utils") {
   sources = [ "sanitizer-utils.cc" ]
   deps = [
     ":memory-snapshot-test",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/ldmsg",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",

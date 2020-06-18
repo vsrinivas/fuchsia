@@ -89,9 +89,9 @@ source_set("test_lib") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

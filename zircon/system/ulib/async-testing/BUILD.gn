@@ -37,9 +37,9 @@ zx_library("async-testing") {
     "//zircon/public/lib/zx",
   ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
   ]

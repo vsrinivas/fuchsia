@@ -9,7 +9,7 @@ executable("bin") {
 
   sources = [ "time.c" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 
   libs = [ "zircon" ]
 }

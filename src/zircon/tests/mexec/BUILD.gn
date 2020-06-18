@@ -74,7 +74,7 @@ test("zbi-parent") {
   data_deps = [ ":zbi-child-image-resource" ]
 
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zx",

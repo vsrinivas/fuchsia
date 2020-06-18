@@ -19,8 +19,8 @@ loadable_module("swapchain") {
   ]
   deps = [
     ":surface_header",
+    "//sdk/lib/fdio",
     "//src/lib/vulkan:micro_layer_common",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
@@ -37,10 +37,10 @@ source_set("display") {
     ":surface_header",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/fdio",
     "//src/lib/vulkan:micro_layer_common",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]

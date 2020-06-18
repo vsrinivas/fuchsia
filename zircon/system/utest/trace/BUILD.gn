@@ -46,7 +46,7 @@ source_set("common") {
 
     # fdio is here so that things like printf work.
     # Otherwise they silently fail (output is dropped).
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 
   # TODO(41900): UBSan has found an instance of undefined behavior in this target.

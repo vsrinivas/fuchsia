@@ -7,7 +7,7 @@ executable("run-vc") {
   sources = [ "main.c" ]
   deps = [
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zircon-internal",
   ]
 

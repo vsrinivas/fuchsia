@@ -21,10 +21,10 @@ test("logger") {
   sources = [ "test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

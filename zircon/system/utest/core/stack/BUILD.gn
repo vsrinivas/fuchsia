@@ -12,7 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-
 source_set("stack") {
   # configs += [ "//build/unification/config:zircon-migrated" ]
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -20,7 +19,7 @@ source_set("stack") {
   testonly = false
   sources = [ "stack-test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/runtime",
     "//zircon/public/lib/zxtest",
   ]
@@ -31,7 +30,7 @@ source_set("stack") {
     cflags += [ "-fsanitize=shadow-call-stack" ]
   }
 
-  if (select_variant + ["gcc"] - ["gcc"] != select_variant) {
+  if (select_variant + [ "gcc" ] - [ "gcc" ] != select_variant) {
     cflags += [ "-fno-sanitize=safe-stack" ]
   }
 }

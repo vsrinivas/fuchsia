@@ -29,5 +29,5 @@ executable("fsck-msdosfs") {
     "fat.c",
     "main.c",
   ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }

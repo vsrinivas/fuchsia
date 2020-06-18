@@ -25,7 +25,7 @@ executable("zxc_unittests") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/fdio" ]
+    deps += [ "//sdk/lib/fdio" ]
   }
 }
 

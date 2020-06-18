@@ -21,7 +21,7 @@ test("ctor") {
   sources = [ "ctor.cc" ]
   deps = [
     ":dso-ctor",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/unittest",
   ]
 }

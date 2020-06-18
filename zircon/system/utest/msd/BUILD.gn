@@ -17,6 +17,6 @@ executable("msd") {
   output_name = "msd-test"
   testonly = false
   sources = [ "msd.c" ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
   libs = [ "zircon" ]
 }

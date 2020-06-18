@@ -44,7 +44,7 @@ test("fit-unittest") {
   ]
   configs += [ ":shadow" ]
   if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/fdio" ]
+    deps += [ "//sdk/lib/fdio" ]
   }
 }
 
@@ -92,7 +92,7 @@ test("fit") {
   configs += [ ":shadow" ]
   if (is_fuchsia) {
     deps += [
-      "//zircon/public/lib/fdio",
+      "//sdk/lib/fdio",
       "//zircon/system/ulib/unittest",
     ]
   } else {

@@ -104,7 +104,7 @@ trace_provider_fdio_sources = [
 ]
 
 trace_provider_fdio_connect_source_deps = [
-  "//zircon/public/lib/fdio",
+  "//sdk/lib/fdio",
   "//zircon/public/lib/zx",
 ]
 
@@ -168,7 +168,7 @@ trace_provider_library("trace-provider-with-static-engine") {
 
   # This is used by magma client drivers, so it can't depend on fdio (or other shared libraries
   # besides libc).
-  assert_no_deps = [ "//zircon/public/lib/fdio" ]
+  assert_no_deps = [ "//sdk/lib/fdio" ]
 }
 
 # Version for the DDK.

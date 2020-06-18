@@ -30,7 +30,7 @@ zx_library("inet6") {
     ":netifc-discover",
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zircon-internal",
   ]
   defines = [ "_ALL_SOURCE" ]
@@ -44,6 +44,6 @@ zx_library("netifc-discover") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }

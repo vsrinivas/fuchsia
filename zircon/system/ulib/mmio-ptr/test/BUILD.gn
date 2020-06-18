@@ -25,8 +25,8 @@ test("mmio-ptr-unittest") {
   testonly = true
   sources = [ "mmio-ptr-unittest.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//src/devices/lib/mmio",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/mmio-ptr-fake",
     "//zircon/public/lib/zxtest",
   ]

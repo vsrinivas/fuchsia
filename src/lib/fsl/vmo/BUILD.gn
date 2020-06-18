@@ -17,7 +17,7 @@ source_set("vmo") {
     "vmo.cc",
   ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.mem",

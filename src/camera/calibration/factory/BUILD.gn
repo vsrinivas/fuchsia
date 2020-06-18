@@ -11,12 +11,12 @@ source_set("factory") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files:files",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
   ]
 
   public_deps = [

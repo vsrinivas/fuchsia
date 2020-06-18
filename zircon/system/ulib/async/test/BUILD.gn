@@ -39,10 +39,10 @@ test("async") {
     "wait_tests.cc",
   ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

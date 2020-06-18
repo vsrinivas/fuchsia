@@ -21,9 +21,9 @@ test("dlfcn") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlfcn.c" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/elfload",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/ldmsg",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",

@@ -22,9 +22,9 @@ executable("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -36,7 +36,7 @@ executable("spawn_child_util") {
 
   sources = [ "spawn_child_util.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -51,7 +51,7 @@ executable("fake_launcher_util") {
     "fake_launcher_util.h",
   ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

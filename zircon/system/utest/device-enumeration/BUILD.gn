@@ -21,9 +21,9 @@ test("device-enumeration") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
+    "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

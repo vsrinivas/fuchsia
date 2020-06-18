@@ -52,7 +52,7 @@ static_library("debugger_utils") {
     public_deps += [
       "//garnet/lib/process",
       "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-      "//zircon/public/lib/fdio",
+      "//sdk/lib/fdio",
       "//zircon/public/lib/zx",
     ]
   } else {

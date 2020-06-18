@@ -12,7 +12,7 @@ source_set("log") {
 
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 
   public_deps = [ "//zircon/system/ulib/syslog" ]

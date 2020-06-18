@@ -24,6 +24,6 @@ executable("syscall-check") {
     }
   }
   sources = [ "main.cc" ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
   libs = [ "zircon" ]
 }

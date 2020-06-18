@@ -6,6 +6,6 @@ executable("evil") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "evil-tests"
   sources = [ "evil.c" ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
   libs = [ "zircon" ]
 }

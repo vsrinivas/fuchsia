@@ -223,6 +223,7 @@ executable("server_daemon_test") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
@@ -231,7 +232,6 @@ executable("server_daemon_test") {
     "//src/virtualization/tests:fake_netstack",
     "//src/virtualization/tests:guest_console",
     "//third_party/grpc:grpc++",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fzl",
   ]
 
@@ -263,13 +263,13 @@ executable("guest_discovery_service_bin") {
     ":platform_interface_posix",
     ":proto",
     "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/virtualization/lib/grpc:grpc",
     "//third_party/grpc:grpc++",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -310,6 +310,7 @@ executable("guest_interaction_service_test") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
@@ -317,7 +318,6 @@ executable("guest_interaction_service_test") {
     "//third_party/googletest:gmock",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_full",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fzl",
   ]
 }

@@ -13,12 +13,12 @@ zx_library("fake_ddk") {
     "fidl-helper.cc",
   ]
   deps = [
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",

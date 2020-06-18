@@ -193,8 +193,8 @@ static_library("console") {
 
   if (current_toolchain != host_toolchain) {
     deps += [
+      "//sdk/lib/fdio",
       "//src/lib/fxl",
-      "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
     ]
   }

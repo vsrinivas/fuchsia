@@ -12,7 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-
 source_set("object-info") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
@@ -28,8 +27,8 @@ source_set("object-info") {
     "vmar-object-info-test.cc",
   ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",

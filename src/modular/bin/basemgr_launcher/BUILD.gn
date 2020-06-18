@@ -24,9 +24,9 @@ executable("basemgr_launcher_bin") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/async-default",
   ]
 }

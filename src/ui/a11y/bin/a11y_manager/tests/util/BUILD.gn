@@ -12,10 +12,10 @@ source_set("util") {
 
   deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/lib/fdio",
     "//sdk/lib/vfs/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/async-loop",
   ]
 }

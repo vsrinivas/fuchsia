@@ -20,7 +20,7 @@ test("thread-safe-deleter") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "thread-safe-deleter-test.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

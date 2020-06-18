@@ -23,7 +23,7 @@ zx_library("svc") {
   sources = [ "outgoing.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
   public_deps = [
     "//zircon/public/lib/async",

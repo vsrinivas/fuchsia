@@ -26,7 +26,7 @@ zx_library("task-utils") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

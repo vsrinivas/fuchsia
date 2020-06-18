@@ -30,7 +30,7 @@ test("fidl-utils") {
   sources = [ "binding_tests.cc" ]
   deps = [
     ":fidl.test.fidlutils_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/unittest",
   ]

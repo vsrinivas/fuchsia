@@ -7,6 +7,6 @@ executable("dlog") {
   sources = [ "dlog.c" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }

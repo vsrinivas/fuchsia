@@ -262,8 +262,8 @@ template("go_build") {
 
       if (is_fuchsia) {
         deps += [
+          "//sdk/lib/fdio",
           "//third_party/go:go_runtime",
-          "//zircon/public/lib/fdio",
         ]
 
         if (!carchive && output_breakpad_syms && host_os != "mac") {

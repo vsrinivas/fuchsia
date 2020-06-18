@@ -56,7 +56,7 @@ executable("publish-data-helper") {
   visibility = [ ":*" ]
   sources = [ "helper/publish-data-helper.cc" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
@@ -77,8 +77,8 @@ executable("profile-helper") {
   sources = [ "helper/profile-helper.cc" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
@@ -88,7 +88,8 @@ resource("packaged-publish-data-helper") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
   deps = [ ":publish-data-helper" ]
-  outputs = [ "test/sys/runtests-utils-testdata/publish-data/publish-data-helper" ]
+  outputs =
+      [ "test/sys/runtests-utils-testdata/publish-data/publish-data-helper" ]
   sources = [ "$root_out_dir/publish-data-helper" ]
 }
 
@@ -103,7 +104,9 @@ resource("packaged-profile-helper") {
 resource("packaged-raw-profile") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
-  outputs = [ "test/sys/runtests-utils-testdata/profile/15822697145192797690.profraw" ]
+  outputs = [
+    "test/sys/runtests-utils-testdata/profile/15822697145192797690.profraw",
+  ]
   sources = [ "helper/15822697145192797690.profraw" ]
 }
 
@@ -150,7 +153,8 @@ template("runtests_test_script") {
     # TODO(44278): restore to true when properly convert to GN idioms.
     testonly = false
     deps = [ ":${target_name}.txt" ]
-    outputs = [ "test/sys/runtests-utils-testdata/${subdirectory}${target_name}" ]
+    outputs =
+        [ "test/sys/runtests-utils-testdata/${subdirectory}${target_name}" ]
     sources = [ genfile ]
   }
 }

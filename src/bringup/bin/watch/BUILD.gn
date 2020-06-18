@@ -15,5 +15,5 @@ assert(!defined(zx) || zx != "/",
 executable("watch") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "watch.c" ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }

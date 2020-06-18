@@ -11,8 +11,8 @@ executable("thermal-cli") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -38,7 +38,7 @@ test("thermal-cli-test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

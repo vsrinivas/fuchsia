@@ -16,10 +16,10 @@ executable("pwrbtn-monitor") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid-parser",

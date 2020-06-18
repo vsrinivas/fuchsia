@@ -47,7 +47,7 @@ source_set("cobalt-collector") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
   public_configs = [ ":includes" ]
 }
 

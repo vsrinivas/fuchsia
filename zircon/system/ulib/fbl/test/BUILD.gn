@@ -90,7 +90,7 @@ test("fbl") {
       "slab_allocator_tests.cc",
     ]
     deps += [
-      "//zircon/public/lib/fdio",
+      "//sdk/lib/fdio",
       "//zircon/public/lib/zx",
     ]
   }

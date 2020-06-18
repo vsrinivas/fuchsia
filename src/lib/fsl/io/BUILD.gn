@@ -17,7 +17,7 @@ source_set("io") {
   libs = [ "zircon" ]
 
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fdio-caller",
   ]

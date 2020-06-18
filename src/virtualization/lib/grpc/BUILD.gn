@@ -21,8 +21,8 @@ source_set("grpc") {
     "//zircon/public/lib/fit",
   ]
   deps = [
+    "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
   ]
 }
 

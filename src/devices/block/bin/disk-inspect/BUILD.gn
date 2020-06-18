@@ -7,7 +7,7 @@ executable("disk-inspect") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/minfs",
   ]

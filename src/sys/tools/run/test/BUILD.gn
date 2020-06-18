@@ -25,11 +25,11 @@ executable("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
@@ -47,9 +47,9 @@ executable("run_return_value_test") {
   libs = [ "zircon" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fdio",
   ]
 
   # TODO(46837): Fix the leaks and remove this.

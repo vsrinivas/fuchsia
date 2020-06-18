@@ -32,8 +32,8 @@ test("fs-recovery") {
   sources = [ "recovery.cc" ]
   deps = [
     ":zxcrypt_config.txt",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",

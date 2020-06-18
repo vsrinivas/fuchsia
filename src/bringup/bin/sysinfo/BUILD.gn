@@ -23,9 +23,9 @@ executable("sysinfo") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
@@ -39,8 +39,8 @@ test("test") {
   sources = [ "sysinfo-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

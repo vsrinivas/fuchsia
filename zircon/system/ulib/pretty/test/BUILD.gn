@@ -33,7 +33,7 @@ test("pretty-test") {
   }
   sources = [ "test.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/pretty",
     "//zircon/system/ulib/unittest",
   ]

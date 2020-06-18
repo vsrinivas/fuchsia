@@ -9,7 +9,7 @@ executable("sockettest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("keepalivetest") {
@@ -19,7 +19,7 @@ executable("keepalivetest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("mctest") {
@@ -29,7 +29,7 @@ executable("mctest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("nbiotest") {
@@ -39,7 +39,7 @@ executable("nbiotest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("polltest") {
@@ -49,7 +49,7 @@ executable("polltest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("selecttest") {
@@ -59,7 +59,7 @@ executable("selecttest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("udptest") {
@@ -69,7 +69,7 @@ executable("udptest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("sockopttest") {
@@ -79,7 +79,7 @@ executable("sockopttest") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("gethostbyname_test") {
@@ -89,5 +89,5 @@ executable("gethostbyname_test") {
 
   libs = [ "zircon" ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 }

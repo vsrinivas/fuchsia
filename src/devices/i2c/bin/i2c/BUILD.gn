@@ -7,6 +7,6 @@ executable("i2c") {
   sources = [ "i2c.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }

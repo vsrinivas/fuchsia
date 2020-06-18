@@ -44,6 +44,7 @@ test("bma253-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -54,7 +55,6 @@ test("bma253-test") {
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",

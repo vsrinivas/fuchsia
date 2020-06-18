@@ -37,7 +37,7 @@ package("fs-management-devmgr") {
 
 test("fs-management-test") {
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/ramdevice-client",

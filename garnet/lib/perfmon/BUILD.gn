@@ -55,8 +55,8 @@ static_library("perfmon") {
     }
 
     deps += [
+      "//sdk/lib/fdio",
       "//zircon/public/lib/fbl",
-      "//zircon/public/lib/fdio",
       "//zircon/system/ulib/fzl",
     ]
 
@@ -84,10 +84,10 @@ executable("perfmon_tests_app") {
 
   deps = [
     ":perfmon",
+    "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 

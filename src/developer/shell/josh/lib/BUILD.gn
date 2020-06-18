@@ -24,13 +24,13 @@ static_library("lib") {
   public_deps = [
     ":fidl",
     ":zx",
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/developer/shell/mirror:client",
     "//src/lib/fidl_codec",
     "//src/lib/line_input",
     "//third_party/quickjs:qjs-lib",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/zx",
   ]
@@ -97,6 +97,7 @@ source_set("tests") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp:test_support",
     "//sdk/lib/fidl/cpp/test",
     "//sdk/lib/sys/cpp",
@@ -105,7 +106,6 @@ source_set("tests") {
     "//src/lib/fidl_codec:json_for_test",
     "//src/sys/component_index/fidl:index",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

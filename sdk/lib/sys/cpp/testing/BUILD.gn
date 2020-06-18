@@ -32,7 +32,7 @@ sdk_source_set("unit") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [ "//sdk/lib/fdio" ]
 
   public_configs = [ "//sdk/config" ]
 }

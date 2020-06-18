@@ -12,7 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-
 source_set("threads") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
@@ -25,7 +24,7 @@ source_set("threads") {
   ]
   deps = [
     ":thread-functions",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/runtime",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

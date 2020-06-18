@@ -11,10 +11,10 @@ executable("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.input.report",
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/framebuffer",
     "//zircon/system/ulib/fzl",
   ]

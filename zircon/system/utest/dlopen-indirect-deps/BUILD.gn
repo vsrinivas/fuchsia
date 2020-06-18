@@ -20,7 +20,7 @@ test("dlopen-indirect-deps") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlopen-indirect-deps.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
   data_deps = [ ":dlopen-indirect-deps-test-module" ]

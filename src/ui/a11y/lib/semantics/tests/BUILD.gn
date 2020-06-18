@@ -137,8 +137,8 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

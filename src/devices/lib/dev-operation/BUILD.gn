@@ -31,10 +31,10 @@ test("operation-test") {
   ]
   deps = [
     ":dev-operation",
+    "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 

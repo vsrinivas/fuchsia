@@ -37,8 +37,8 @@ test("linenoise-test") {
   sources = [ "linenoise_tests.cc" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/third_party/ulib/linenoise",
   ]

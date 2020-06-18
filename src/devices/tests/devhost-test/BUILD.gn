@@ -20,14 +20,14 @@ driver_module("devhost-test") {
   sources = [ "test-driver.cc" ]
   deps = [
     ":fuchsia.device.devhost.test_llcpp",
+    "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fdio",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  # Tests fail when using #"//zircon/public/lib/fdio:static",
+  # Tests fail when using #"//sdk/lib/fdio:static",
   #deprecated_inhibit_driver_shlib_allowlist = true
 }
 
@@ -40,14 +40,14 @@ driver_module("devhost-test-manual") {
   sources = [ "test-driver-manual-bind.cc" ]
   deps = [
     ":fuchsia.device.devhost.test_llcpp",
+    "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fdio",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  # Tests fail when using #"//zircon/public/lib/fdio:static",
+  # Tests fail when using #"//sdk/lib/fdio:static",
   #deprecated_inhibit_driver_shlib_allowlist = true
 }
 
@@ -59,10 +59,10 @@ driver_module("devhost-test-child") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver-child.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fdio",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.

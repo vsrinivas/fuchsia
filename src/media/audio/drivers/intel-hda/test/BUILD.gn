@@ -20,7 +20,7 @@ source_set("test_libs") {
   public_deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

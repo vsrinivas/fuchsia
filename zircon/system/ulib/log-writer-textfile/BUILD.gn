@@ -21,8 +21,8 @@ zx_library("log-writer-textfile") {
   host = true
   sources = [ "log-writer-textfile.cc" ]
   deps = [
+    "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/system/ulib/log",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

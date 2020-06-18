@@ -21,7 +21,7 @@ test("kernel-unittests") {
   sources = [ "kernel-unittests.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

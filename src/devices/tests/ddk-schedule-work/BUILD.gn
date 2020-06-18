@@ -20,17 +20,17 @@ driver_module("ddk-schedule-work-test") {
   sources = [ "test-driver.cc" ]
   deps = [
     ":fuchsia.device.schedule.work.test_llcpp",
+    "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  # Tests fail when using #"//zircon/public/lib/fdio:static",
+  # Tests fail when using #"//sdk/lib/fdio:static",
   #deprecated_inhibit_driver_shlib_allowlist = true
 }
 
@@ -42,9 +42,9 @@ test("ddk-schedule-work") {
   sources = [ "test.cc" ]
   deps = [
     ":fuchsia.device.schedule.work.test_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
@@ -61,9 +61,9 @@ executable("ddk-schedule-work-perf") {
   sources = [ "perf-test.cc" ]
   deps = [
     ":fuchsia.device.schedule.work.test_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",

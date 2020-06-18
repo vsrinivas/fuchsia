@@ -7,6 +7,6 @@ executable("lsdev") {
   sources = [ "lsdev.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }

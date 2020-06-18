@@ -18,7 +18,7 @@ executable("driverinfo") {
   }
   sources = [ "driver-info-app.c" ]
   deps = [
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/driver-info",
   ]
 }

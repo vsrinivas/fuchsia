@@ -103,6 +103,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -110,7 +111,6 @@ source_set("lib") {
     "//src/ui/lib/input_report_reader",
     "//src/ui/lib/key_util",
     "//src/ui/scenic/lib/scenic/util:rk4_spring_simulation",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/trace",
@@ -188,7 +188,7 @@ source_set("factory_reset_manager") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//zircon/public/lib/fdio",
+    "//sdk/lib/fdio",
   ]
 }
 

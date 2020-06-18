@@ -86,12 +86,12 @@ executable("cmd_unittests") {
 
   deps = [
     ":lib",
+    "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 

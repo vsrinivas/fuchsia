@@ -15,9 +15,9 @@ test("test_magma_vsi_exec_bin") {
   include_dirs = [ "//third_party/etnaviv_gpu_tests/src/" ]
 
   deps = [
+    "//sdk/lib/fdio",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }

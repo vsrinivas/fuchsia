@@ -18,8 +18,8 @@ executable("waitfor") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/gpt",
   ]
