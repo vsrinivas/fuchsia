@@ -20,8 +20,9 @@ Top::ResultOf::GetFoo_Impl<Top::GetFooResponse>::GetFoo_Impl(
     ::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)]{};
-  auto& _request = *reinterpret_cast<GetFooRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)];
+  auto& _request = *new (_request_buffer) GetFooRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<GetFooRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -48,7 +49,7 @@ Top::UnownedResultOf::GetFoo_Impl<Top::GetFooResponse>::GetFoo_Impl(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFooRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, GetFooRequest::PrimarySize);
+  new (_request_buffer.data()) GetFooRequest{};
   _request_buffer.set_actual(sizeof(GetFooRequest));
   ::fidl::DecodedMessage<GetFooRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<GetFooRequest>(std::move(_msg));
@@ -137,7 +138,8 @@ Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
     GetFooResponseContext* _context) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFooRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, GetFooRequest::PrimarySize);
+  new (_request_buffer.data()) GetFooRequest{};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(GetFooRequest));
   ::fidl::DecodedMessage<GetFooRequest> _decoded_request(
@@ -233,13 +235,9 @@ bool Top::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 void Top::Interface::GetFooCompleterBase::Reply(::llcpp::bottom::Foo foo) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetFooResponse)]{};
-  auto& _response = *reinterpret_cast<GetFooResponse*>(_response_buffer);
-  Top::SetTransactionHeaderFor::GetFooResponse(
-      ::fidl::DecodedMessage<GetFooResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), GetFooResponse::PrimarySize,
-          GetFooResponse::PrimarySize)));
-  _response.foo = std::move(foo);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetFooResponse)];
+  auto& _response = *new (_response_buffer) GetFooResponse{foo};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<GetFooResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -256,12 +254,7 @@ void Top::Interface::GetFooCompleterBase::Reply(::fidl::BytePart _buffer,
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetFooResponse*>(_buffer.data());
-  Top::SetTransactionHeaderFor::GetFooResponse(
-      ::fidl::DecodedMessage<GetFooResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), GetFooResponse::PrimarySize,
-          GetFooResponse::PrimarySize)));
-  _response.foo = std::move(foo);
+  new (_buffer.data()) GetFooResponse{foo};
   _buffer.set_actual(sizeof(GetFooResponse));
   CompleterBase::SendReply(
       ::fidl::DecodedMessage<GetFooResponse>(std::move(_buffer)));
@@ -269,7 +262,9 @@ void Top::Interface::GetFooCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Top::Interface::GetFooCompleterBase::Reply(
     ::fidl::DecodedMessage<GetFooResponse> params) {
-  Top::SetTransactionHeaderFor::GetFooResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == kTop_GetFoo_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -283,15 +278,9 @@ void Top::SetTransactionHeaderFor::GetFooRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kTop_GetFoo_Ordinal);
 }
-void Top::SetTransactionHeaderFor::GetFooResponse(
-    const ::fidl::DecodedMessage<Top::GetFooResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTop_GetFoo_Ordinal);
-}
-void Top::SetTransactionHeaderFor::GetFooResponse(
-    const ::fidl::EncodedMessage<Top::GetFooResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kTop_GetFoo_Ordinal);
+
+void Top::GetFooResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kTop_GetFoo_Ordinal);
 }
 
 }  // namespace top

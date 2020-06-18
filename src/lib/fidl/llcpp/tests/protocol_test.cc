@@ -202,14 +202,9 @@ TEST(MagicNumberTest, EventRead) {
                                          fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> write_bytes_unique_ptr(new uint8_t[kWriteAllocSize]);
   uint8_t* write_bytes = write_bytes_unique_ptr.get();
-  test::Frobinator::HrobResponse _response = {};
-  test::Frobinator::SetTransactionHeaderFor::HrobResponse(
-      fidl::DecodedMessage<test::Frobinator::HrobResponse>(fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), test::Frobinator::HrobResponse::PrimarySize,
-          test::Frobinator::HrobResponse::PrimarySize)));
+  test::Frobinator::HrobResponse _response(fidl::unowned_str(s));
   // Set an incompatible magic number
-  reinterpret_cast<fidl_message_header_t*>(&_response)->magic_number = 0;
-  _response.value = fidl::unowned_str(s);
+  _response._hdr.magic_number = 0;
   auto encode_result =
       fidl::LinearizeAndEncode(&_response, fidl::BytePart(write_bytes, kWriteAllocSize));
   ASSERT_EQ(fidl::Write(zx::unowned_channel(h1), std::move(encode_result.message)), ZX_OK);

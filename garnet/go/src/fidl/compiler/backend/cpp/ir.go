@@ -41,6 +41,22 @@ var Kinds = struct {
 
 type Decl interface{}
 
+type FamilyKind string
+
+const (
+	// TrivialCopy identifies values for whom a copy is trivial (like integers)
+	TrivialCopy FamilyKind = "TrivialCopy"
+	// Reference identifies values with a non trivial copy for which we use a reference on the
+	// caller argument.
+	Reference FamilyKind = "Reference"
+	// String identifies string values for which we can use a const reference and for which we can
+	// optimize the field construction.
+	String FamilyKind = "String"
+	// Vector identifies vector values for which we can use a reference and for which we can
+	// optimize the field construction.
+	Vector FamilyKind = "Vector"
+)
+
 type Type struct {
 	// Use Type.Decl when you want to _declare_ a class/struct, e.g. "class Foo { … }". If you need
 	// to reference a class by its name (e.g. "new Foo"), use the Type.Identifier() method instead.
@@ -49,6 +65,10 @@ type Type struct {
 	// for "C++ elaborated type specifier" for more details.
 	Decl   string
 	LLDecl string
+
+	// Defines what operation we should use to pass a value without a move (LLCPP). It also
+	// defines the way we should initialize a field.
+	LLFamily FamilyKind
 
 	// NeedsDtor indicates whether this type needs to be destructed explicitely
 	// or not.
@@ -636,6 +656,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
+		r.LLFamily = Reference
 		r.NeedsDtor = true
 		r.IsArray = true
 		r.ElementType = &t
@@ -643,6 +664,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
+		r.LLFamily = Vector
 		if val.Nullable {
 			r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
 		} else {
@@ -653,6 +675,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.ElementType = &t
 	case types.StringType:
 		r.LLDecl = "::fidl::StringView"
+		r.LLFamily = String
 		if val.Nullable {
 			r.Decl = "::fidl::StringPtr"
 		} else {
@@ -663,15 +686,18 @@ func (c *compiler) compileType(val types.Type) Type {
 		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.LLDecl = r.Decl
+		r.LLFamily = Reference
 		r.NeedsDtor = true
 	case types.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
 		r.LLDecl = "::zx::channel"
+		r.LLFamily = Reference
 		r.NeedsDtor = true
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.LLDecl = r.Decl
+		r.LLFamily = TrivialCopy
 		r.IsPrimitive = true
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
@@ -712,9 +738,15 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.LLDecl = ft
 				r.NeedsDtor = true
 			}
+			if declType.IsPrimitive() {
+				r.LLFamily = TrivialCopy
+			} else {
+				r.LLFamily = Reference
+			}
 		case types.ProtocolDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.LLDecl = "::zx::channel"
+			r.LLFamily = Reference
 			r.NeedsDtor = true
 		default:
 			log.Fatal("Unknown declaration type: ", declType)

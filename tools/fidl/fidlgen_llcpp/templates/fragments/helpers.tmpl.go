@@ -5,14 +5,6 @@
 package fragments
 
 const Helpers = `
-{{- define "SetTransactionHeaderForResponse" }}
-  {{ .LLProps.ProtocolName }}::SetTransactionHeaderFor::{{ .Name }}Response(
-      ::fidl::DecodedMessage<{{ .Name }}Response>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              {{ .Name }}Response::PrimarySize,
-              {{ .Name }}Response::PrimarySize)));
-{{- end }}
-
 {{- define "SetTransactionHeaderForRequestMethodDeclarationSignatureDecodedMessage" }}
 {{- $protocol_name := .LLProps.ProtocolName -}}
 {{- .Name }}Request(const ::fidl::DecodedMessage<{{ $protocol_name}}::{{ .Name }}Request>& _msg, zx_txid_t _txid = 0)
@@ -41,26 +33,6 @@ void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionH
 void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodDefinitionSignatureEncodedMessage" . }} {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, {{ .OrdinalName }});
-}
-{{- end }}
-
-{{- define "SetTransactionHeaderForResponseMethodSignatureDecodedMessage" }}
-{{- $protocol_name := .LLProps.ProtocolName -}}
-{{- .Name }}Response(const ::fidl::DecodedMessage<{{ $protocol_name}}::{{ .Name }}Response>& _msg)
-{{- end }}
-{{- define "SetTransactionHeaderForResponseMethodSignatureEncodedMessage" }}
-{{- $protocol_name := .LLProps.ProtocolName -}}
-{{- .Name }}Response(const ::fidl::EncodedMessage<{{ $protocol_name}}::{{ .Name }}Response>& _msg)
-{{- end }}
-
-{{- define "SetTransactionHeaderForResponseMethodDefinition" -}}
-{{- $protocol_name := .LLProps.ProtocolName -}}
-void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignatureDecodedMessage" . }} {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, {{ .OrdinalName }});
-}
-void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignatureEncodedMessage" . }} {
-  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, {{ .OrdinalName }});
 }
 {{- end }}
 `

@@ -2416,6 +2416,12 @@ class TestProtocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictBoundedXUnion xu;
 
+    explicit StrictXUnionHenceResponseMayBeStackAllocatedResponse(
+        ::llcpp::fidl::test::json::StrictBoundedXUnion& xu)
+        : xu(std::move(xu)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -2426,6 +2432,9 @@ class TestProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using StrictXUnionHenceResponseMayBeStackAllocatedRequest =
       ::fidl::AnyZeroArgMessage;
@@ -2434,6 +2443,12 @@ class TestProtocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::OlderSimpleUnion xu;
+
+    explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
+        ::llcpp::fidl::test::json::OlderSimpleUnion& xu)
+        : xu(std::move(xu)) {
+      _InitHeader();
+    }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
@@ -2445,6 +2460,9 @@ class TestProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest =
       ::fidl::AnyZeroArgMessage;
@@ -2766,14 +2784,6 @@ class TestProtocol final {
             TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>&
             _msg,
         zx_txid_t _txid = 0);
-    static void StrictXUnionHenceResponseMayBeStackAllocatedResponse(
-        const ::fidl::DecodedMessage<
-            TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>&
-            _msg);
-    static void StrictXUnionHenceResponseMayBeStackAllocatedResponse(
-        const ::fidl::EncodedMessage<
-            TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>&
-            _msg);
     static void FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
         const ::fidl::DecodedMessage<
             TestProtocol::
@@ -2784,14 +2794,6 @@ class TestProtocol final {
             TestProtocol::
                 FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
-        const ::fidl::DecodedMessage<
-            TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg);
-    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
-        const ::fidl::EncodedMessage<
-            TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg);
   };
 };
 

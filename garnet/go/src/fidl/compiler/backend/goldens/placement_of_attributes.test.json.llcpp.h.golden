@@ -433,6 +433,9 @@ class ExampleProtocol final {
     fidl_message_header_t _hdr;
     ::llcpp::exampleusing::Empty arg;
 
+    explicit MethodRequest(::llcpp::exampleusing::Empty& arg)
+        : arg(std::move(arg)) {}
+
     static constexpr const fidl_type_t* Type =
         &example_ExampleProtocolMethodRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;

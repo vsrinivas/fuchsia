@@ -23,9 +23,9 @@ Parent::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
                                          ::zx::channel request) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)]{};
-  auto& _request = *reinterpret_cast<FirstRequest*>(_request_buffer);
-  _request.request = std::move(request);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
+  auto& _request = *new (_request_buffer) FirstRequest{request};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<FirstRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -57,9 +57,7 @@ Parent::UnownedResultOf::First_Impl::First_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, FirstRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<FirstRequest*>(_request_buffer.data());
-  _request.request = std::move(request);
+  new (_request_buffer.data()) FirstRequest{request};
   _request_buffer.set_actual(sizeof(FirstRequest));
   ::fidl::DecodedMessage<FirstRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<FirstRequest>(std::move(_msg));
@@ -205,9 +203,9 @@ Child::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
                                         ::zx::channel request) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)]{};
-  auto& _request = *reinterpret_cast<FirstRequest*>(_request_buffer);
-  _request.request = std::move(request);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
+  auto& _request = *new (_request_buffer) FirstRequest{request};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<FirstRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -239,9 +237,7 @@ Child::UnownedResultOf::First_Impl::First_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, FirstRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<FirstRequest*>(_request_buffer.data());
-  _request.request = std::move(request);
+  new (_request_buffer.data()) FirstRequest{request};
   _request_buffer.set_actual(sizeof(FirstRequest));
   ::fidl::DecodedMessage<FirstRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<FirstRequest>(std::move(_msg));
@@ -298,9 +294,9 @@ Child::ResultOf::Second_Impl::Second_Impl(::zx::unowned_channel _client_end,
                                           ::zx::channel request) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)]{};
-  auto& _request = *reinterpret_cast<SecondRequest*>(_request_buffer);
-  _request.request = std::move(request);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
+  auto& _request = *new (_request_buffer) SecondRequest{request};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<SecondRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -332,9 +328,7 @@ Child::UnownedResultOf::Second_Impl::Second_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, SecondRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SecondRequest*>(_request_buffer.data());
-  _request.request = std::move(request);
+  new (_request_buffer.data()) SecondRequest{request};
   _request_buffer.set_actual(sizeof(SecondRequest));
   ::fidl::DecodedMessage<SecondRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<SecondRequest>(std::move(_msg));

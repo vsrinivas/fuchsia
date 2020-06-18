@@ -50,9 +50,9 @@ Transitional::ResultOf::Request_Impl<Transitional::RequestResponse>::
     Request_Impl(::zx::unowned_channel _client_end, int64_t x) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(RequestRequest)]{};
-  auto& _request = *reinterpret_cast<RequestRequest*>(_request_buffer);
-  _request.x = std::move(x);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(RequestRequest)];
+  auto& _request = *new (_request_buffer) RequestRequest{x};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<RequestRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -86,9 +86,7 @@ Transitional::UnownedResultOf::Request_Impl<Transitional::RequestResponse>::
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, RequestRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<RequestRequest*>(_request_buffer.data());
-  _request.x = std::move(x);
+  new (_request_buffer.data()) RequestRequest{x};
   _request_buffer.set_actual(sizeof(RequestRequest));
   ::fidl::DecodedMessage<RequestRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<RequestRequest>(std::move(_msg));
@@ -151,9 +149,9 @@ Transitional::ResultOf::OneWay_Impl::OneWay_Impl(
     ::zx::unowned_channel _client_end, int64_t x) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(OneWayRequest)]{};
-  auto& _request = *reinterpret_cast<OneWayRequest*>(_request_buffer);
-  _request.x = std::move(x);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(OneWayRequest)];
+  auto& _request = *new (_request_buffer) OneWayRequest{x};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<OneWayRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -184,9 +182,7 @@ Transitional::UnownedResultOf::OneWay_Impl::OneWay_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, OneWayRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<OneWayRequest*>(_request_buffer.data());
-  _request.x = std::move(x);
+  new (_request_buffer.data()) OneWayRequest{x};
   _request_buffer.set_actual(sizeof(OneWayRequest));
   ::fidl::DecodedMessage<OneWayRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<OneWayRequest>(std::move(_msg));
@@ -296,9 +292,8 @@ Transitional::UnownedResultOf::Request Transitional::ClientImpl::Request_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  memset(_request_buffer.data(), 0, RequestRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<RequestRequest*>(_request_buffer.data());
-  _request.x = std::move(x);
+  new (_request_buffer.data()) RequestRequest{x};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(RequestRequest));
   ::fidl::DecodedMessage<RequestRequest> _decoded_request(
@@ -520,13 +515,9 @@ bool Transitional::Dispatch(Interface* impl, fidl_msg_t* msg,
 void Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(RequestResponse)]{};
-  auto& _response = *reinterpret_cast<RequestResponse*>(_response_buffer);
-  Transitional::SetTransactionHeaderFor::RequestResponse(
-      ::fidl::DecodedMessage<RequestResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), RequestResponse::PrimarySize,
-          RequestResponse::PrimarySize)));
-  _response.y = std::move(y);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(RequestResponse)];
+  auto& _response = *new (_response_buffer) RequestResponse{y};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<RequestResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -543,12 +534,7 @@ void Transitional::Interface::RequestCompleterBase::Reply(
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<RequestResponse*>(_buffer.data());
-  Transitional::SetTransactionHeaderFor::RequestResponse(
-      ::fidl::DecodedMessage<RequestResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), RequestResponse::PrimarySize,
-          RequestResponse::PrimarySize)));
-  _response.y = std::move(y);
+  new (_buffer.data()) RequestResponse{y};
   _buffer.set_actual(sizeof(RequestResponse));
   CompleterBase::SendReply(
       ::fidl::DecodedMessage<RequestResponse>(std::move(_buffer)));
@@ -556,7 +542,10 @@ void Transitional::Interface::RequestCompleterBase::Reply(
 
 void Transitional::Interface::RequestCompleterBase::Reply(
     ::fidl::DecodedMessage<RequestResponse> params) {
-  Transitional::SetTransactionHeaderFor::RequestResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kTransitional_Request_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -564,13 +553,9 @@ zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _chan,
                                          int64_t x) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventResponse)]{};
-  auto& _response = *reinterpret_cast<EventResponse*>(_response_buffer);
-  Transitional::SetTransactionHeaderFor::EventResponse(
-      ::fidl::DecodedMessage<EventResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), EventResponse::PrimarySize,
-          EventResponse::PrimarySize)));
-  _response.x = std::move(x);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventResponse)];
+  auto& _response = *new (_response_buffer) EventResponse{x};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<EventResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -586,12 +571,7 @@ zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _chan,
   if (_buffer.capacity() < EventResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  auto& _response = *reinterpret_cast<EventResponse*>(_buffer.data());
-  Transitional::SetTransactionHeaderFor::EventResponse(
-      ::fidl::DecodedMessage<EventResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), EventResponse::PrimarySize,
-          EventResponse::PrimarySize)));
-  _response.x = std::move(x);
+  new (_buffer.data()) EventResponse{x};
   _buffer.set_actual(sizeof(EventResponse));
   return ::fidl::Write(
       ::zx::unowned_channel(_chan),
@@ -600,7 +580,9 @@ zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _chan,
 
 zx_status_t Transitional::SendEventEvent(
     ::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventResponse> params) {
-  Transitional::SetTransactionHeaderFor::EventResponse(params);
+  ZX_ASSERT(params.message()->_hdr.magic_number ==
+            kFidlWireFormatMagicNumberInitial);
+  ZX_ASSERT(params.message()->_hdr.ordinal == kTransitional_Event_Ordinal);
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -617,15 +599,9 @@ void Transitional::SetTransactionHeaderFor::RequestRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kTransitional_Request_Ordinal);
 }
-void Transitional::SetTransactionHeaderFor::RequestResponse(
-    const ::fidl::DecodedMessage<Transitional::RequestResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTransitional_Request_Ordinal);
-}
-void Transitional::SetTransactionHeaderFor::RequestResponse(
-    const ::fidl::EncodedMessage<Transitional::RequestResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kTransitional_Request_Ordinal);
+
+void Transitional::RequestResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kTransitional_Request_Ordinal);
 }
 
 void Transitional::SetTransactionHeaderFor::OneWayRequest(
@@ -642,15 +618,8 @@ void Transitional::SetTransactionHeaderFor::OneWayRequest(
   fidl_init_txn_header(hdr, _txid, kTransitional_OneWay_Ordinal);
 }
 
-void Transitional::SetTransactionHeaderFor::EventResponse(
-    const ::fidl::DecodedMessage<Transitional::EventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTransitional_Event_Ordinal);
-}
-void Transitional::SetTransactionHeaderFor::EventResponse(
-    const ::fidl::EncodedMessage<Transitional::EventResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kTransitional_Event_Ordinal);
+void Transitional::EventResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kTransitional_Event_Ordinal);
 }
 
 namespace {
@@ -678,10 +647,9 @@ ChannelProtocol::ResultOf::MethodA_Impl::MethodA_Impl(
     ::zx::unowned_channel _client_end, int64_t a, int64_t b) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodARequest)]{};
-  auto& _request = *reinterpret_cast<MethodARequest*>(_request_buffer);
-  _request.a = std::move(a);
-  _request.b = std::move(b);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodARequest)];
+  auto& _request = *new (_request_buffer) MethodARequest{a, b};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodARequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -714,10 +682,7 @@ ChannelProtocol::UnownedResultOf::MethodA_Impl::MethodA_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, MethodARequest::PrimarySize);
-  auto& _request = *reinterpret_cast<MethodARequest*>(_request_buffer.data());
-  _request.a = std::move(a);
-  _request.b = std::move(b);
+  new (_request_buffer.data()) MethodARequest{a, b};
   _request_buffer.set_actual(sizeof(MethodARequest));
   ::fidl::DecodedMessage<MethodARequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<MethodARequest>(std::move(_msg));
@@ -777,10 +742,9 @@ ChannelProtocol::ResultOf::MethodB_Impl<ChannelProtocol::MethodBResponse>::
     MethodB_Impl(::zx::unowned_channel _client_end, int64_t a, int64_t b) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodBRequest)]{};
-  auto& _request = *reinterpret_cast<MethodBRequest*>(_request_buffer);
-  _request.a = std::move(a);
-  _request.b = std::move(b);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodBRequest)];
+  auto& _request = *new (_request_buffer) MethodBRequest{a, b};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodBRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -816,10 +780,7 @@ ChannelProtocol::UnownedResultOf::
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, MethodBRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<MethodBRequest*>(_request_buffer.data());
-  _request.a = std::move(a);
-  _request.b = std::move(b);
+  new (_request_buffer.data()) MethodBRequest{a, b};
   _request_buffer.set_actual(sizeof(MethodBRequest));
   ::fidl::DecodedMessage<MethodBRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<MethodBRequest>(std::move(_msg));
@@ -884,9 +845,9 @@ ChannelProtocol::ResultOf::
         ::zx::unowned_channel _client_end, ::zx::socket a) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MutateSocketRequest)]{};
-  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_request_buffer);
-  _request.a = std::move(a);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MutateSocketRequest)];
+  auto& _request = *new (_request_buffer) MutateSocketRequest{a};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MutateSocketRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -922,10 +883,7 @@ ChannelProtocol::UnownedResultOf::
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, MutateSocketRequest::PrimarySize);
-  auto& _request =
-      *reinterpret_cast<MutateSocketRequest*>(_request_buffer.data());
-  _request.a = std::move(a);
+  new (_request_buffer.data()) MutateSocketRequest{a};
   _request_buffer.set_actual(sizeof(MutateSocketRequest));
   ::fidl::DecodedMessage<MutateSocketRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<MutateSocketRequest>(std::move(_msg));
@@ -1068,10 +1026,8 @@ ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BytePart _request_buffer,
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  memset(_request_buffer.data(), 0, MethodBRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<MethodBRequest*>(_request_buffer.data());
-  _request.a = std::move(a);
-  _request.b = std::move(b);
+  new (_request_buffer.data()) MethodBRequest{a, b};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(MethodBRequest));
   ::fidl::DecodedMessage<MethodBRequest> _decoded_request(
@@ -1155,10 +1111,8 @@ ChannelProtocol::ClientImpl::MutateSocket_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  memset(_request_buffer.data(), 0, MutateSocketRequest::PrimarySize);
-  auto& _request =
-      *reinterpret_cast<MutateSocketRequest*>(_request_buffer.data());
-  _request.a = std::move(a);
+  new (_request_buffer.data()) MutateSocketRequest{a};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(MutateSocketRequest));
   ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(
@@ -1385,14 +1339,9 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan,
                                              int64_t a, int64_t b) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventAResponse)]{};
-  auto& _response = *reinterpret_cast<EventAResponse*>(_response_buffer);
-  ChannelProtocol::SetTransactionHeaderFor::EventAResponse(
-      ::fidl::DecodedMessage<EventAResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), EventAResponse::PrimarySize,
-          EventAResponse::PrimarySize)));
-  _response.a = std::move(a);
-  _response.b = std::move(b);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventAResponse)];
+  auto& _response = *new (_response_buffer) EventAResponse{a, b};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<EventAResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -1409,13 +1358,7 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan,
   if (_buffer.capacity() < EventAResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  auto& _response = *reinterpret_cast<EventAResponse*>(_buffer.data());
-  ChannelProtocol::SetTransactionHeaderFor::EventAResponse(
-      ::fidl::DecodedMessage<EventAResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), EventAResponse::PrimarySize,
-          EventAResponse::PrimarySize)));
-  _response.a = std::move(a);
-  _response.b = std::move(b);
+  new (_buffer.data()) EventAResponse{a, b};
   _buffer.set_actual(sizeof(EventAResponse));
   return ::fidl::Write(
       ::zx::unowned_channel(_chan),
@@ -1425,20 +1368,18 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan,
 zx_status_t ChannelProtocol::SendEventAEvent(
     ::zx::unowned_channel _chan,
     ::fidl::DecodedMessage<EventAResponse> params) {
-  ChannelProtocol::SetTransactionHeaderFor::EventAResponse(params);
+  ZX_ASSERT(params.message()->_hdr.magic_number ==
+            kFidlWireFormatMagicNumberInitial);
+  ZX_ASSERT(params.message()->_hdr.ordinal == kChannelProtocol_EventA_Ordinal);
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
 void ChannelProtocol::Interface::MethodBCompleterBase::Reply(int64_t result) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MethodBResponse)]{};
-  auto& _response = *reinterpret_cast<MethodBResponse*>(_response_buffer);
-  ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(
-      ::fidl::DecodedMessage<MethodBResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), MethodBResponse::PrimarySize,
-          MethodBResponse::PrimarySize)));
-  _response.result = std::move(result);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MethodBResponse)];
+  auto& _response = *new (_response_buffer) MethodBResponse{result};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodBResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -1455,12 +1396,7 @@ void ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<MethodBResponse*>(_buffer.data());
-  ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(
-      ::fidl::DecodedMessage<MethodBResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), MethodBResponse::PrimarySize,
-          MethodBResponse::PrimarySize)));
-  _response.result = std::move(result);
+  new (_buffer.data()) MethodBResponse{result};
   _buffer.set_actual(sizeof(MethodBResponse));
   CompleterBase::SendReply(
       ::fidl::DecodedMessage<MethodBResponse>(std::move(_buffer)));
@@ -1468,7 +1404,10 @@ void ChannelProtocol::Interface::MethodBCompleterBase::Reply(
 
 void ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     ::fidl::DecodedMessage<MethodBResponse> params) {
-  ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kChannelProtocol_MethodB_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1476,14 +1415,9 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MutateSocketResponse)]{};
-  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_response_buffer);
-  ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(
-      ::fidl::DecodedMessage<MutateSocketResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           MutateSocketResponse::PrimarySize,
-                           MutateSocketResponse::PrimarySize)));
-  _response.b = std::move(b);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MutateSocketResponse)];
+  auto& _response = *new (_response_buffer) MutateSocketResponse{b};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MutateSocketResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -1500,13 +1434,7 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_buffer.data());
-  ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(
-      ::fidl::DecodedMessage<MutateSocketResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           MutateSocketResponse::PrimarySize,
-                           MutateSocketResponse::PrimarySize)));
-  _response.b = std::move(b);
+  new (_buffer.data()) MutateSocketResponse{b};
   _buffer.set_actual(sizeof(MutateSocketResponse));
   CompleterBase::SendReply(
       ::fidl::DecodedMessage<MutateSocketResponse>(std::move(_buffer)));
@@ -1514,7 +1442,10 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
 
 void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::fidl::DecodedMessage<MutateSocketResponse> params) {
-  ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kChannelProtocol_MutateSocket_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1532,16 +1463,8 @@ void ChannelProtocol::SetTransactionHeaderFor::MethodARequest(
   fidl_init_txn_header(hdr, _txid, kChannelProtocol_MethodA_Ordinal);
 }
 
-void ChannelProtocol::SetTransactionHeaderFor::EventAResponse(
-    const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kChannelProtocol_EventA_Ordinal);
-}
-void ChannelProtocol::SetTransactionHeaderFor::EventAResponse(
-    const ::fidl::EncodedMessage<ChannelProtocol::EventAResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kChannelProtocol_EventA_Ordinal);
+void ChannelProtocol::EventAResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kChannelProtocol_EventA_Ordinal);
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(
@@ -1557,16 +1480,9 @@ void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kChannelProtocol_MethodB_Ordinal);
 }
-void ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(
-    const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kChannelProtocol_MethodB_Ordinal);
-}
-void ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(
-    const ::fidl::EncodedMessage<ChannelProtocol::MethodBResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kChannelProtocol_MethodB_Ordinal);
+
+void ChannelProtocol::MethodBResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kChannelProtocol_MethodB_Ordinal);
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(
@@ -1582,16 +1498,9 @@ void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kChannelProtocol_MutateSocket_Ordinal);
 }
-void ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(
-    const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kChannelProtocol_MutateSocket_Ordinal);
-}
-void ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(
-    const ::fidl::EncodedMessage<ChannelProtocol::MutateSocketResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
+
+void ChannelProtocol::MutateSocketResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
 }
 
 namespace {
@@ -1659,9 +1568,9 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse_Impl::
     NoRequestNoResponse_Impl(::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(NoRequestNoResponseRequest)]{};
-  auto& _request =
-      *reinterpret_cast<NoRequestNoResponseRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(NoRequestNoResponseRequest)];
+  auto& _request = *new (_request_buffer) NoRequestNoResponseRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<NoRequestNoResponseRequest>(
           &_request);
@@ -1714,10 +1623,9 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse_Impl<
     NoRequestEmptyResponse_Impl(::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t
-      _request_buffer[sizeof(NoRequestEmptyResponseRequest)]{};
-  auto& _request =
-      *reinterpret_cast<NoRequestEmptyResponseRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(NoRequestEmptyResponseRequest)];
+  auto& _request = *new (_request_buffer) NoRequestEmptyResponseRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<NoRequestEmptyResponseRequest>(
           &_request);
@@ -1774,10 +1682,9 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse_Impl<
     NoRequestWithResponse_Impl(::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t
-      _request_buffer[sizeof(NoRequestWithResponseRequest)]{};
-  auto& _request =
-      *reinterpret_cast<NoRequestWithResponseRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(NoRequestWithResponseRequest)];
+  auto& _request = *new (_request_buffer) NoRequestWithResponseRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<NoRequestWithResponseRequest>(
           &_request);
@@ -1812,7 +1719,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse_Impl<
   FIDL_ALIGNDECL uint8_t
       _write_bytes[sizeof(NoRequestWithResponseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, NoRequestWithResponseRequest::PrimarySize);
+  new (_request_buffer.data()) NoRequestWithResponseRequest{};
   _request_buffer.set_actual(sizeof(NoRequestWithResponseRequest));
   ::fidl::DecodedMessage<NoRequestWithResponseRequest> _msg(
       std::move(_request_buffer));
@@ -1870,8 +1777,8 @@ WithAndWithoutRequestResponse::InPlace::NoRequestWithResponse(
 WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse_Impl::
     WithRequestNoResponse_Impl(::zx::unowned_channel _client_end,
                                ::fidl::StringView arg) {
-  WithRequestNoResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestNoResponseRequest _request{arg};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<WithRequestNoResponseRequest>(
           &_request);
@@ -1910,8 +1817,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse_Impl::
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  WithRequestNoResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestNoResponseRequest _request{arg};
   auto _encode_result =
       ::fidl::LinearizeAndEncode<WithRequestNoResponseRequest>(
           &_request, std::move(_request_buffer));
@@ -1976,8 +1882,8 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse_Impl<
     WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>::
     WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
                                   ::fidl::StringView arg) {
-  WithRequestEmptyResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestEmptyResponseRequest _request{arg};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<WithRequestEmptyResponseRequest>(
           &_request);
@@ -2021,8 +1927,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse_Impl<
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  WithRequestEmptyResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestEmptyResponseRequest _request{arg};
   auto _encode_result =
       ::fidl::LinearizeAndEncode<WithRequestEmptyResponseRequest>(
           &_request, std::move(_request_buffer));
@@ -2097,8 +2002,8 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse_Impl<
     WithAndWithoutRequestResponse::WithRequestWithResponseResponse>::
     WithRequestWithResponse_Impl(::zx::unowned_channel _client_end,
                                  ::fidl::StringView arg) {
-  WithRequestWithResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestWithResponseRequest _request{arg};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<WithRequestWithResponseRequest>(
           &_request);
@@ -2142,8 +2047,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse_Impl<
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  WithRequestWithResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestWithResponseRequest _request{arg};
   auto _encode_result =
       ::fidl::LinearizeAndEncode<WithRequestWithResponseRequest>(
           &_request, std::move(_request_buffer));
@@ -2261,7 +2165,8 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
   FIDL_ALIGNDECL uint8_t
       _write_bytes[sizeof(NoRequestEmptyResponseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, NoRequestEmptyResponseRequest::PrimarySize);
+  new (_request_buffer.data()) NoRequestEmptyResponseRequest{};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(NoRequestEmptyResponseRequest));
   ::fidl::DecodedMessage<NoRequestEmptyResponseRequest> _decoded_request(
@@ -2340,7 +2245,8 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse(
   FIDL_ALIGNDECL uint8_t
       _write_bytes[sizeof(NoRequestWithResponseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, NoRequestWithResponseRequest::PrimarySize);
+  new (_request_buffer.data()) NoRequestWithResponseRequest{};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(NoRequestWithResponseRequest));
   ::fidl::DecodedMessage<NoRequestWithResponseRequest> _decoded_request(
@@ -2452,8 +2358,8 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  WithRequestEmptyResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestEmptyResponseRequest _request{arg};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   auto _encode_request_result =
       ::fidl::LinearizeAndEncode<WithRequestEmptyResponseRequest>(
@@ -2543,8 +2449,8 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  WithRequestWithResponseRequest _request = {};
-  _request.arg = std::move(arg);
+  WithRequestWithResponseRequest _request{arg};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   auto _encode_request_result =
       ::fidl::LinearizeAndEncode<WithRequestWithResponseRequest>(
@@ -2849,15 +2755,9 @@ void WithAndWithoutRequestResponse::Interface::
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t
-      _response_buffer[sizeof(NoRequestEmptyResponseResponse)]{};
-  auto& _response =
-      *reinterpret_cast<NoRequestEmptyResponseResponse*>(_response_buffer);
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      NoRequestEmptyResponseResponse(
-          ::fidl::DecodedMessage<NoRequestEmptyResponseResponse>(
-              ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                               NoRequestEmptyResponseResponse::PrimarySize,
-                               NoRequestEmptyResponseResponse::PrimarySize)));
+      _response_buffer[sizeof(NoRequestEmptyResponseResponse)];
+  auto& _response = *new (_response_buffer) NoRequestEmptyResponseResponse{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<NoRequestEmptyResponseResponse>(
           &_response);
@@ -2871,14 +2771,8 @@ void WithAndWithoutRequestResponse::Interface::
 
 void WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  NoRequestWithResponseResponse _response = {};
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      NoRequestWithResponseResponse(
-          ::fidl::DecodedMessage<NoRequestWithResponseResponse>(
-              ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                               NoRequestWithResponseResponse::PrimarySize,
-                               NoRequestWithResponseResponse::PrimarySize)));
-  _response.ret = std::move(ret);
+  NoRequestWithResponseResponse _response{ret};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<NoRequestWithResponseResponse>(
           &_response);
@@ -2897,14 +2791,7 @@ void WithAndWithoutRequestResponse::Interface::
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  NoRequestWithResponseResponse _response = {};
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      NoRequestWithResponseResponse(
-          ::fidl::DecodedMessage<NoRequestWithResponseResponse>(
-              ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                               NoRequestWithResponseResponse::PrimarySize,
-                               NoRequestWithResponseResponse::PrimarySize)));
-  _response.ret = std::move(ret);
+  NoRequestWithResponseResponse _response{ret};
   auto _encode_result =
       ::fidl::LinearizeAndEncode<NoRequestWithResponseResponse>(
           &_response, std::move(_buffer));
@@ -2918,8 +2805,10 @@ void WithAndWithoutRequestResponse::Interface::
 void WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(
         ::fidl::DecodedMessage<NoRequestWithResponseResponse> params) {
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      NoRequestWithResponseResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2928,15 +2817,9 @@ void WithAndWithoutRequestResponse::Interface::
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t
-      _response_buffer[sizeof(WithRequestEmptyResponseResponse)]{};
-  auto& _response =
-      *reinterpret_cast<WithRequestEmptyResponseResponse*>(_response_buffer);
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      WithRequestEmptyResponseResponse(
-          ::fidl::DecodedMessage<WithRequestEmptyResponseResponse>(
-              ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                               WithRequestEmptyResponseResponse::PrimarySize,
-                               WithRequestEmptyResponseResponse::PrimarySize)));
+      _response_buffer[sizeof(WithRequestEmptyResponseResponse)];
+  auto& _response = *new (_response_buffer) WithRequestEmptyResponseResponse{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<WithRequestEmptyResponseResponse>(
           &_response);
@@ -2950,14 +2833,8 @@ void WithAndWithoutRequestResponse::Interface::
 
 void WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  WithRequestWithResponseResponse _response = {};
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      WithRequestWithResponseResponse(
-          ::fidl::DecodedMessage<WithRequestWithResponseResponse>(
-              ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                               WithRequestWithResponseResponse::PrimarySize,
-                               WithRequestWithResponseResponse::PrimarySize)));
-  _response.ret = std::move(ret);
+  WithRequestWithResponseResponse _response{ret};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<WithRequestWithResponseResponse>(
           &_response);
@@ -2976,14 +2853,7 @@ void WithAndWithoutRequestResponse::Interface::
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  WithRequestWithResponseResponse _response = {};
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      WithRequestWithResponseResponse(
-          ::fidl::DecodedMessage<WithRequestWithResponseResponse>(
-              ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                               WithRequestWithResponseResponse::PrimarySize,
-                               WithRequestWithResponseResponse::PrimarySize)));
-  _response.ret = std::move(ret);
+  WithRequestWithResponseResponse _response{ret};
   auto _encode_result =
       ::fidl::LinearizeAndEncode<WithRequestWithResponseResponse>(
           &_response, std::move(_buffer));
@@ -2997,8 +2867,11 @@ void WithAndWithoutRequestResponse::Interface::
 void WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(
         ::fidl::DecodedMessage<WithRequestWithResponseResponse> params) {
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      WithRequestWithResponseResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(
+      params.message()->_hdr.ordinal ==
+      kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -3006,14 +2879,9 @@ zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
     ::zx::unowned_channel _chan) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(OnEmptyResponseResponse)]{};
-  auto& _response =
-      *reinterpret_cast<OnEmptyResponseResponse*>(_response_buffer);
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      OnEmptyResponseResponse(::fidl::DecodedMessage<OnEmptyResponseResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           OnEmptyResponseResponse::PrimarySize,
-                           OnEmptyResponseResponse::PrimarySize)));
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(OnEmptyResponseResponse)];
+  auto& _response = *new (_response_buffer) OnEmptyResponseResponse{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<OnEmptyResponseResponse>(
           &_response);
@@ -3027,13 +2895,8 @@ zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
 
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
     ::zx::unowned_channel _chan, ::fidl::StringView ret) {
-  OnWithResponseResponse _response = {};
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      OnWithResponseResponse(::fidl::DecodedMessage<OnWithResponseResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           OnWithResponseResponse::PrimarySize,
-                           OnWithResponseResponse::PrimarySize)));
-  _response.ret = std::move(ret);
+  OnWithResponseResponse _response{ret};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<OnWithResponseResponse>(
           &_response);
@@ -3051,13 +2914,7 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
   if (_buffer.capacity() < OnWithResponseResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  OnWithResponseResponse _response = {};
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      OnWithResponseResponse(::fidl::DecodedMessage<OnWithResponseResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           OnWithResponseResponse::PrimarySize,
-                           OnWithResponseResponse::PrimarySize)));
-  _response.ret = std::move(ret);
+  OnWithResponseResponse _response{ret};
   auto _encode_result = ::fidl::LinearizeAndEncode<OnWithResponseResponse>(
       &_response, std::move(_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -3070,8 +2927,10 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
     ::zx::unowned_channel _chan,
     ::fidl::DecodedMessage<OnWithResponseResponse> params) {
-  WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-      OnWithResponseResponse(params);
+  ZX_ASSERT(params.message()->_hdr.magic_number ==
+            kFidlWireFormatMagicNumberInitial);
+  ZX_ASSERT(params.message()->_hdr.ordinal ==
+            kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -3115,24 +2974,11 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
       hdr, _txid,
       kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
 }
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    NoRequestEmptyResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
-            _msg) {
+
+void WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
-}
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    NoRequestEmptyResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
-            _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
+      &_hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3154,24 +3000,11 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_init_txn_header(
       hdr, _txid, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
 }
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    NoRequestWithResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
-            _msg) {
+
+void WithAndWithoutRequestResponse::NoRequestWithResponseResponse::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
-}
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    NoRequestWithResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
-            _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
+      &_hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3216,24 +3049,12 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
       hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
 }
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    WithRequestEmptyResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
-            _msg) {
+
+void WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_hdr, 0,
       kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
-}
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    WithRequestEmptyResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
-            _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3258,57 +3079,20 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
       hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
 }
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    WithRequestWithResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
-            _msg) {
+
+void WithAndWithoutRequestResponse::WithRequestWithResponseResponse::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
-}
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    WithRequestWithResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
-            _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
+      &_hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    OnEmptyResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
-}
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    OnEmptyResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0,
+void WithAndWithoutRequestResponse::OnEmptyResponseResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0,
                        kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    OnWithResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
-}
-void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
-    OnWithResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0,
+void WithAndWithoutRequestResponse::OnWithResponseResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0,
                        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
 }
 
@@ -3348,8 +3132,9 @@ WithErrorSyntax::ResultOf::ResponseAsStruct_Impl<
     ResponseAsStruct_Impl(::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ResponseAsStructRequest)]{};
-  auto& _request = *reinterpret_cast<ResponseAsStructRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ResponseAsStructRequest)];
+  auto& _request = *new (_request_buffer) ResponseAsStructRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<ResponseAsStructRequest>(
           &_request);
@@ -3381,7 +3166,7 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct_Impl<
                           ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ResponseAsStructRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ResponseAsStructRequest::PrimarySize);
+  new (_request_buffer.data()) ResponseAsStructRequest{};
   _request_buffer.set_actual(sizeof(ResponseAsStructRequest));
   ::fidl::DecodedMessage<ResponseAsStructRequest> _msg(
       std::move(_request_buffer));
@@ -3438,8 +3223,9 @@ WithErrorSyntax::ResultOf::ErrorAsPrimitive_Impl<
     ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsPrimitiveRequest)]{};
-  auto& _request = *reinterpret_cast<ErrorAsPrimitiveRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsPrimitiveRequest)];
+  auto& _request = *new (_request_buffer) ErrorAsPrimitiveRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<ErrorAsPrimitiveRequest>(
           &_request);
@@ -3471,7 +3257,7 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive_Impl<
                           ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ErrorAsPrimitiveRequest::PrimarySize);
+  new (_request_buffer.data()) ErrorAsPrimitiveRequest{};
   _request_buffer.set_actual(sizeof(ErrorAsPrimitiveRequest));
   ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> _msg(
       std::move(_request_buffer));
@@ -3528,8 +3314,9 @@ WithErrorSyntax::ResultOf::
         ::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsEnumRequest)]{};
-  auto& _request = *reinterpret_cast<ErrorAsEnumRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsEnumRequest)];
+  auto& _request = *new (_request_buffer) ErrorAsEnumRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<ErrorAsEnumRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -3559,7 +3346,7 @@ WithErrorSyntax::UnownedResultOf::
         ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ErrorAsEnumRequest::PrimarySize);
+  new (_request_buffer.data()) ErrorAsEnumRequest{};
   _request_buffer.set_actual(sizeof(ErrorAsEnumRequest));
   ::fidl::DecodedMessage<ErrorAsEnumRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<ErrorAsEnumRequest>(std::move(_msg));
@@ -3661,7 +3448,8 @@ WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync(
     ResponseAsStructResponseContext* _context) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ResponseAsStructRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ResponseAsStructRequest::PrimarySize);
+  new (_request_buffer.data()) ResponseAsStructRequest{};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(ResponseAsStructRequest));
   ::fidl::DecodedMessage<ResponseAsStructRequest> _decoded_request(
@@ -3745,7 +3533,8 @@ WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync(
     ErrorAsPrimitiveResponseContext* _context) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ErrorAsPrimitiveRequest::PrimarySize);
+  new (_request_buffer.data()) ErrorAsPrimitiveRequest{};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(ErrorAsPrimitiveRequest));
   ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> _decoded_request(
@@ -3827,7 +3616,8 @@ WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync(
     ErrorAsEnumResponseContext* _context) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ErrorAsEnumRequest::PrimarySize);
+  new (_request_buffer.data()) ErrorAsEnumRequest{};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(ErrorAsEnumRequest));
   ::fidl::DecodedMessage<ErrorAsEnumRequest> _decoded_request(
@@ -3962,13 +3752,8 @@ bool WithErrorSyntax::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
-  ResponseAsStructResponse _response = {};
-  WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
-      ::fidl::DecodedMessage<ResponseAsStructResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           ResponseAsStructResponse::PrimarySize,
-                           ResponseAsStructResponse::PrimarySize)));
-  _response.result = std::move(result);
+  ResponseAsStructResponse _response{result};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<ResponseAsStructResponse>(
           &_response);
@@ -4002,13 +3787,7 @@ void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  ResponseAsStructResponse _response = {};
-  WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
-      ::fidl::DecodedMessage<ResponseAsStructResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           ResponseAsStructResponse::PrimarySize,
-                           ResponseAsStructResponse::PrimarySize)));
-  _response.result = std::move(result);
+  ResponseAsStructResponse _response{result};
   auto _encode_result = ::fidl::LinearizeAndEncode<ResponseAsStructResponse>(
       &_response, std::move(_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -4031,19 +3810,17 @@ void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
 
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::fidl::DecodedMessage<ResponseAsStructResponse> params) {
-  WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kWithErrorSyntax_ResponseAsStruct_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
-  ErrorAsPrimitiveResponse _response = {};
-  WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
-      ::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           ErrorAsPrimitiveResponse::PrimarySize,
-                           ErrorAsPrimitiveResponse::PrimarySize)));
-  _response.result = std::move(result);
+  ErrorAsPrimitiveResponse _response{result};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<ErrorAsPrimitiveResponse>(
           &_response);
@@ -4073,13 +3850,7 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  ErrorAsPrimitiveResponse _response = {};
-  WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
-      ::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           ErrorAsPrimitiveResponse::PrimarySize,
-                           ErrorAsPrimitiveResponse::PrimarySize)));
-  _response.result = std::move(result);
+  ErrorAsPrimitiveResponse _response{result};
   auto _encode_result = ::fidl::LinearizeAndEncode<ErrorAsPrimitiveResponse>(
       &_response, std::move(_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -4099,18 +3870,17 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
 
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params) {
-  WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
-  ErrorAsEnumResponse _response = {};
-  WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
-      ::fidl::DecodedMessage<ErrorAsEnumResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response),
-          ErrorAsEnumResponse::PrimarySize, ErrorAsEnumResponse::PrimarySize)));
-  _response.result = std::move(result);
+  ErrorAsEnumResponse _response{result};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<ErrorAsEnumResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -4139,12 +3909,7 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  ErrorAsEnumResponse _response = {};
-  WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
-      ::fidl::DecodedMessage<ErrorAsEnumResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response),
-          ErrorAsEnumResponse::PrimarySize, ErrorAsEnumResponse::PrimarySize)));
-  _response.result = std::move(result);
+  ErrorAsEnumResponse _response{result};
   auto _encode_result = ::fidl::LinearizeAndEncode<ErrorAsEnumResponse>(
       &_response, std::move(_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -4163,7 +3928,10 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(
 
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::fidl::DecodedMessage<ErrorAsEnumResponse> params) {
-  WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kWithErrorSyntax_ErrorAsEnum_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4182,18 +3950,9 @@ void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kWithErrorSyntax_ResponseAsStruct_Ordinal);
 }
-void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
-    const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
-        _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithErrorSyntax_ResponseAsStruct_Ordinal);
-}
-void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
-    const ::fidl::EncodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
-        _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ResponseAsStruct_Ordinal);
+
+void WithErrorSyntax::ResponseAsStructResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ResponseAsStruct_Ordinal);
 }
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(
@@ -4211,18 +3970,9 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
 }
-void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
-    const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
-        _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
-}
-void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
-    const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
-        _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
+
+void WithErrorSyntax::ErrorAsPrimitiveResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
 }
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(
@@ -4238,16 +3988,9 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
-void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
-    const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithErrorSyntax_ErrorAsEnum_Ordinal);
-}
-void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
-    const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
+
+void WithErrorSyntax::ErrorAsEnumResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
 
 }  // namespace name

@@ -68,6 +68,9 @@ class EmptyProtocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
 
+    explicit SendRequest(::llcpp::fidl::test::json::Empty& e)
+        : e(std::move(e)) {}
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolSendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -87,6 +90,11 @@ class EmptyProtocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
 
+    explicit ReceiveResponse(::llcpp::fidl::test::json::Empty& e)
+        : e(std::move(e)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolReceiveEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -97,11 +105,19 @@ class EmptyProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct SendAndReceiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
+
+    explicit SendAndReceiveResponse(::llcpp::fidl::test::json::Empty& e)
+        : e(std::move(e)) {
+      _InitHeader();
+    }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
@@ -113,11 +129,17 @@ class EmptyProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct SendAndReceiveRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
+
+    explicit SendAndReceiveRequest(::llcpp::fidl::test::json::Empty& e)
+        : e(std::move(e)) {}
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
@@ -429,10 +451,6 @@ class EmptyProtocol final {
     static void SendRequest(
         const ::fidl::EncodedMessage<EmptyProtocol::SendRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void ReceiveResponse(
-        const ::fidl::DecodedMessage<EmptyProtocol::ReceiveResponse>& _msg);
-    static void ReceiveResponse(
-        const ::fidl::EncodedMessage<EmptyProtocol::ReceiveResponse>& _msg);
     static void SendAndReceiveRequest(
         const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveRequest>&
             _msg,
@@ -441,12 +459,6 @@ class EmptyProtocol final {
         const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveRequest>&
             _msg,
         zx_txid_t _txid = 0);
-    static void SendAndReceiveResponse(
-        const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveResponse>&
-            _msg);
-    static void SendAndReceiveResponse(
-        const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveResponse>&
-            _msg);
   };
 };
 

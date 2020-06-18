@@ -17,12 +17,14 @@ void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ templa
   }
 
   {{- if .LLProps.LinearizeResponse }}
-  {{ .Name }}Response _response = {};
+  {{ .Name }}Response _response{
+  {{- template "PassthroughParams" .Response -}}
+  };
   {{- else }}
-  auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_buffer.data());
+  new (_buffer.data()) {{ .Name }}Response{
+  {{- template "PassthroughParams" .Response -}}
+};
   {{- end }}
-  {{- template "SetTransactionHeaderForResponse" . }}
-  {{- template "FillResponseStructMembers" .Response -}}
 
   {{- if .LLProps.LinearizeResponse }}
   auto _encode_result = ::fidl::LinearizeAndEncode<{{ .Name }}Response>(&_response, std::move(_buffer));

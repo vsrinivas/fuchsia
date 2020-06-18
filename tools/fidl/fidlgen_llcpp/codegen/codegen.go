@@ -61,6 +61,18 @@ func NewGenerator() *Generator {
 		"StackUse": func(props cpp.LLContextProps) int {
 			return props.StackUseRequest + props.StackUseResponse
 		},
+		"TrivialCopy": func() cpp.FamilyKind {
+			return cpp.TrivialCopy
+		},
+		"Reference": func() cpp.FamilyKind {
+			return cpp.Reference
+		},
+		"String": func() cpp.FamilyKind {
+			return cpp.String
+		},
+		"Vector": func() cpp.FamilyKind {
+			return cpp.Vector
+		},
 	})
 	templates := []string{
 		fragments.Bits,

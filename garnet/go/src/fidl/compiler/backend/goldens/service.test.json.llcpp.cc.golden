@@ -23,8 +23,9 @@ SecondProtocol::ResultOf::MethodOnSecond_Impl::MethodOnSecond_Impl(
     ::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnSecondRequest)]{};
-  auto& _request = *reinterpret_cast<MethodOnSecondRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnSecondRequest)];
+  auto& _request = *new (_request_buffer) MethodOnSecondRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodOnSecondRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -147,8 +148,9 @@ FirstProtocol::ResultOf::MethodOnFirst_Impl::MethodOnFirst_Impl(
     ::zx::unowned_channel _client_end) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnFirstRequest)]{};
-  auto& _request = *reinterpret_cast<MethodOnFirstRequest*>(_request_buffer);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnFirstRequest)];
+  auto& _request = *new (_request_buffer) MethodOnFirstRequest{};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodOnFirstRequest>(&_request);
   auto& _encode_result = _encoded.result();

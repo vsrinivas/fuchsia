@@ -44,14 +44,14 @@ const ClientAsyncMethods = `
   {{- end }}
 
   {{- if .LLProps.LinearizeRequest }}
-  {{ .Name }}Request _request = {};
+  {{ .Name }}Request _request{
+  {{- template "PassthroughParams" .Request -}}
+  };
   {{- else }}
-  memset(_request_buffer.data(), 0, {{ .Name }}Request::PrimarySize);
-    {{- if .Request }}
-  auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_request_buffer.data());
-    {{- end }}
+  new (_request_buffer.data()) {{ .Name }}Request{
+  {{- template "PassthroughParams" .Request -}}
+  };
   {{- end }}
-  {{- template "FillRequestStructMembers" .Request -}}
 
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{- if .LLProps.LinearizeRequest }}

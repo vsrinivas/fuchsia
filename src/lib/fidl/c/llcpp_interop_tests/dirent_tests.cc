@@ -113,8 +113,7 @@ class Server {
         count++;
       }
     }
-    gen::DirEntTestInterface::CountNumDirectoriesResponse response = {};
-    response.num_dir = count;
+    gen::DirEntTestInterface::CountNumDirectoriesResponse response(count);
     response._hdr.txid = request._hdr.txid;
     fidl::DecodedMessage<gen::DirEntTestInterface::CountNumDirectoriesResponse> response_msg;
     response_msg.Reset(
@@ -125,9 +124,9 @@ class Server {
   zx_status_t DoReadDir(fidl_txn_t* txn,
                         fidl::DecodedMessage<gen::DirEntTestInterface::ReadDirRequest> decoded) {
     read_dir_num_calls_.fetch_add(1);
-    gen::DirEntTestInterface::ReadDirResponse response = {};
+    auto golden = golden_dirents();
+    gen::DirEntTestInterface::ReadDirResponse response(golden);
     response._hdr.txid = decoded.message()->_hdr.txid;
-    response.dirents = golden_dirents();
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
     auto encode_result = fidl::LinearizeAndEncode(&response, buffer.view());
     if (encode_result.status != ZX_OK) {
@@ -145,7 +144,7 @@ class Server {
       fidl::DecodedMessage<gen::DirEntTestInterface::ConsumeDirectoriesRequest> decoded) {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(decoded.message()->dirents.count(), 3);
-    gen::DirEntTestInterface::ConsumeDirectoriesResponse response = {};
+    gen::DirEntTestInterface::ConsumeDirectoriesResponse response;
     fidl_init_txn_header(&response._hdr, 0, decoded.message()->_hdr.ordinal);
     fidl::DecodedMessage<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_msg;
     response_msg.Reset(
@@ -354,8 +353,7 @@ class InPlaceServer : public ServerBase {
         count++;
       }
     }
-    gen::DirEntTestInterface::CountNumDirectoriesResponse response = {};
-    response.num_dir = count;
+    gen::DirEntTestInterface::CountNumDirectoriesResponse response(count);
     fidl::DecodedMessage<gen::DirEntTestInterface::CountNumDirectoriesResponse> response_msg;
     response_msg.Reset(
         fidl::BytePart(reinterpret_cast<uint8_t*>(&response), sizeof(response), sizeof(response)));
@@ -364,8 +362,8 @@ class InPlaceServer : public ServerBase {
 
   void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
-    gen::DirEntTestInterface::ReadDirResponse response = {};
-    response.dirents = golden_dirents();
+    auto golden = golden_dirents();
+    gen::DirEntTestInterface::ReadDirResponse response(golden);
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
     auto encode_result = fidl::LinearizeAndEncode(&response, buffer.view());
     if (encode_result.status != ZX_OK) {
@@ -640,8 +638,8 @@ void InPlaceConsumeDirectories() {
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesRequest> request_buffer;
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_buffer;
-  gen::DirEntTestInterface::ConsumeDirectoriesRequest request = {};
-  request.dirents = golden_dirents();
+  auto golden = golden_dirents();
+  gen::DirEntTestInterface::ConsumeDirectoriesRequest request(golden);
   auto encode_result = fidl::LinearizeAndEncode(&request, request_buffer.view());
   ASSERT_OK(encode_result.status);
   ASSERT_OK(gen::DirEntTestInterface::InPlace::ConsumeDirectories(
@@ -702,9 +700,8 @@ void InPlaceOneWayDirents() {
     ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
     ASSERT_EQ(server.OneWayDirentsNumCalls(), iter);
     fidl::Buffer<gen::DirEntTestInterface::OneWayDirentsRequest> buffer;
-    gen::DirEntTestInterface::OneWayDirentsRequest request = {};
-    request.dirents = golden_dirents();
-    request.ep = std::move(server_ep);
+    auto golden = golden_dirents();
+    gen::DirEntTestInterface::OneWayDirentsRequest request(golden, server_ep);
     auto encode_result = fidl::LinearizeAndEncode(&request, buffer.view());
     ASSERT_OK(encode_result.status);
     ASSERT_OK(gen::DirEntTestInterface::InPlace::OneWayDirents(
@@ -791,8 +788,8 @@ TEST(DirentServerTest, InPlaceSendOnDirents) {
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto buffer = std::make_unique<fidl::Buffer<gen::DirEntTestInterface::OnDirentsResponse>>();
-  ::gen::DirEntTestInterface::OnDirentsResponse event = {};
-  event.dirents = fidl::unowned_vec(dirents);
+  auto dirent_vec = fidl::unowned_vec(dirents);
+  ::gen::DirEntTestInterface::OnDirentsResponse event(dirent_vec);
   auto encode_result = ::fidl::LinearizeAndEncode(&event, buffer->view());
   ASSERT_OK(encode_result.status, "%s", encode_result.error);
   auto decode_result = ::fidl::Decode(std::move(encode_result.message));

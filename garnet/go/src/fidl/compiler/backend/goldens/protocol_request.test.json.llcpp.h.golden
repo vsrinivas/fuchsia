@@ -54,6 +54,10 @@ class Parent final {
     fidl_message_header_t _hdr;
     ::zx::channel c;
 
+    explicit GetChildResponse(::zx::channel& c) : c(std::move(c)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &test_name_ParentGetChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -64,6 +68,9 @@ class Parent final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using GetChildRequest = ::fidl::AnyZeroArgMessage;
 
@@ -71,6 +78,10 @@ class Parent final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel r;
+
+    explicit GetChildRequestResponse(::zx::channel& r) : r(std::move(r)) {
+      _InitHeader();
+    }
 
     static constexpr const fidl_type_t* Type =
         &test_name_ParentGetChildRequestResponseTable;
@@ -82,6 +93,9 @@ class Parent final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using GetChildRequestRequest = ::fidl::AnyZeroArgMessage;
 
@@ -89,6 +103,8 @@ class Parent final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel c;
+
+    explicit TakeChildRequest(::zx::channel& c) : c(std::move(c)) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_ParentTakeChildRequestTable;
@@ -108,6 +124,8 @@ class Parent final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel r;
+
+    explicit TakeChildRequestRequest(::zx::channel& r) : r(std::move(r)) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_ParentTakeChildRequestRequestTable;
@@ -511,20 +529,12 @@ class Parent final {
     static void GetChildRequest(
         const ::fidl::EncodedMessage<Parent::GetChildRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void GetChildResponse(
-        const ::fidl::DecodedMessage<Parent::GetChildResponse>& _msg);
-    static void GetChildResponse(
-        const ::fidl::EncodedMessage<Parent::GetChildResponse>& _msg);
     static void GetChildRequestRequest(
         const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg,
         zx_txid_t _txid = 0);
     static void GetChildRequestRequest(
         const ::fidl::EncodedMessage<Parent::GetChildRequestRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void GetChildRequestResponse(
-        const ::fidl::DecodedMessage<Parent::GetChildRequestResponse>& _msg);
-    static void GetChildRequestResponse(
-        const ::fidl::EncodedMessage<Parent::GetChildRequestResponse>& _msg);
     static void TakeChildRequest(
         const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg,
         zx_txid_t _txid = 0);

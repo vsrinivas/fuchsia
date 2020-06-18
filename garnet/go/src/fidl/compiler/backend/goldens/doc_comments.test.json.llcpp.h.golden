@@ -395,7 +395,26 @@ class Interface final {
  public:
   using MethodRequest = ::fidl::AnyZeroArgMessage;
 
-  using OnEventResponse = ::fidl::AnyZeroArgMessage;
+  struct OnEventResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+
+    explicit OnEventResponse() { _InitHeader(); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
+  };
 
   struct EventHandlers {
     // event comment #1
@@ -582,10 +601,6 @@ class Interface final {
     static void MethodRequest(
         const ::fidl::EncodedMessage<Interface::MethodRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void OnEventResponse(
-        const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg);
-    static void OnEventResponse(
-        const ::fidl::EncodedMessage<Interface::OnEventResponse>& _msg);
   };
 };
 
@@ -689,6 +704,15 @@ static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
 static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
 static_assert(sizeof(::llcpp::test::name::Struct) ==
               ::llcpp::test::name::Struct::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::Interface::OnEventResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::Interface::OnEventResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Interface::OnEventResponse) ==
+              ::llcpp::test::name::Interface::OnEventResponse::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::test::name::MyEnum> : public std::true_type {};

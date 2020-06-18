@@ -40,6 +40,8 @@ struct AnyZeroArgMessage final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
 
+  AnyZeroArgMessage() = default;
+
   static constexpr const fidl_type_t* Type = &_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = sizeof(fidl_message_header_t);

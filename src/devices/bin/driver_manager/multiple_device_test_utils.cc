@@ -290,13 +290,8 @@ void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_
       fidl::internal::ClampedMessageSize<fdm::DeviceController::UnbindResponse,
                                          fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t write_bytes[kWriteAllocSize];
-  fdm::DeviceController::UnbindResponse resp;
-  fdm::DeviceController::SetTransactionHeaderFor::UnbindResponse(
-      fidl::DecodedMessage<fdm::DeviceController::UnbindResponse>(fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&resp), fdm::DeviceController::UnbindResponse::PrimarySize,
-          fdm::DeviceController::UnbindResponse::PrimarySize)));
+  fdm::DeviceController::UnbindResponse resp(result);
   resp._hdr.txid = txid;
-  resp.result = std::move(result);
   auto encode_result =
       fidl::LinearizeAndEncode(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
   ASSERT_OK(encode_result.status);
@@ -345,14 +340,8 @@ void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_
       fidl::internal::ClampedMessageSize<fdm::DeviceController::CompleteRemovalResponse,
                                          fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t write_bytes[kWriteAllocSize];
-  fdm::DeviceController::CompleteRemovalResponse resp;
-  fdm::DeviceController::SetTransactionHeaderFor::CompleteRemovalResponse(
-      fidl::DecodedMessage<fdm::DeviceController::CompleteRemovalResponse>(
-          fidl::BytePart(reinterpret_cast<uint8_t*>(&resp),
-                         fdm::DeviceController::CompleteRemovalResponse::PrimarySize,
-                         fdm::DeviceController::CompleteRemovalResponse::PrimarySize)));
+  fdm::DeviceController::CompleteRemovalResponse resp(result);
   resp._hdr.txid = txid;
-  resp.result = std::move(result);
   auto encode_result =
       fidl::LinearizeAndEncode(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
   ASSERT_OK(encode_result.status);

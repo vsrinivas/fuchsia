@@ -21,9 +21,9 @@ ExampleProtocol::ResultOf::Method_Impl::Method_Impl(
     ::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty arg) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)]{};
-  auto& _request = *reinterpret_cast<MethodRequest*>(_request_buffer);
-  _request.arg = std::move(arg);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
+  auto& _request = *new (_request_buffer) MethodRequest{arg};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -56,9 +56,7 @@ ExampleProtocol::UnownedResultOf::Method_Impl::Method_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, MethodRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<MethodRequest*>(_request_buffer.data());
-  _request.arg = std::move(arg);
+  new (_request_buffer.data()) MethodRequest{arg};
   _request_buffer.set_actual(sizeof(MethodRequest));
   ::fidl::DecodedMessage<MethodRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<MethodRequest>(std::move(_msg));

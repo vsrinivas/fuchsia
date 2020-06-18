@@ -497,6 +497,8 @@ class Transitional final {
     fidl_message_header_t _hdr;
     int64_t y;
 
+    explicit RequestResponse(int64_t y) : y(y) { _InitHeader(); }
+
     static constexpr const fidl_type_t* Type =
         &test_name_TransitionalRequestResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -507,11 +509,16 @@ class Transitional final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct RequestRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t x;
+
+    explicit RequestRequest(int64_t x) : x(x) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_TransitionalRequestRequestTable;
@@ -533,6 +540,8 @@ class Transitional final {
     fidl_message_header_t _hdr;
     int64_t x;
 
+    explicit OneWayRequest(int64_t x) : x(x) {}
+
     static constexpr const fidl_type_t* Type =
         &test_name_TransitionalOneWayRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -552,6 +561,8 @@ class Transitional final {
     fidl_message_header_t _hdr;
     int64_t x;
 
+    explicit EventResponse(int64_t x) : x(x) { _InitHeader(); }
+
     static constexpr const fidl_type_t* Type =
         &test_name_TransitionalEventEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -562,6 +573,9 @@ class Transitional final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
 
   struct EventHandlers {
@@ -854,20 +868,12 @@ class Transitional final {
     static void RequestRequest(
         const ::fidl::EncodedMessage<Transitional::RequestRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void RequestResponse(
-        const ::fidl::DecodedMessage<Transitional::RequestResponse>& _msg);
-    static void RequestResponse(
-        const ::fidl::EncodedMessage<Transitional::RequestResponse>& _msg);
     static void OneWayRequest(
         const ::fidl::DecodedMessage<Transitional::OneWayRequest>& _msg,
         zx_txid_t _txid = 0);
     static void OneWayRequest(
         const ::fidl::EncodedMessage<Transitional::OneWayRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void EventResponse(
-        const ::fidl::DecodedMessage<Transitional::EventResponse>& _msg);
-    static void EventResponse(
-        const ::fidl::EncodedMessage<Transitional::EventResponse>& _msg);
   };
 };
 
@@ -890,6 +896,8 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
+    explicit MethodARequest(int64_t a, int64_t b) : a(a), b(b) {}
+
     static constexpr const fidl_type_t* Type =
         &test_name_ChannelProtocolMethodARequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -910,6 +918,10 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
+    explicit EventAResponse(int64_t a, int64_t b) : a(a), b(b) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &test_name_ChannelProtocolEventAEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -920,11 +932,16 @@ class ChannelProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct MethodBResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t result;
+
+    explicit MethodBResponse(int64_t result) : result(result) { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &test_name_ChannelProtocolMethodBResponseTable;
@@ -936,12 +953,17 @@ class ChannelProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct MethodBRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
     int64_t b;
+
+    explicit MethodBRequest(int64_t a, int64_t b) : a(a), b(b) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_ChannelProtocolMethodBRequestTable;
@@ -963,6 +985,10 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     ::zx::socket b;
 
+    explicit MutateSocketResponse(::zx::socket& b) : b(std::move(b)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &test_name_ChannelProtocolMutateSocketResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -973,11 +999,16 @@ class ChannelProtocol final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct MutateSocketRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket a;
+
+    explicit MutateSocketRequest(::zx::socket& a) : a(std::move(a)) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_ChannelProtocolMutateSocketRequestTable;
@@ -1376,20 +1407,12 @@ class ChannelProtocol final {
     static void MethodARequest(
         const ::fidl::EncodedMessage<ChannelProtocol::MethodARequest>& _msg,
         zx_txid_t _txid = 0);
-    static void EventAResponse(
-        const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg);
-    static void EventAResponse(
-        const ::fidl::EncodedMessage<ChannelProtocol::EventAResponse>& _msg);
     static void MethodBRequest(
         const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg,
         zx_txid_t _txid = 0);
     static void MethodBRequest(
         const ::fidl::EncodedMessage<ChannelProtocol::MethodBRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void MethodBResponse(
-        const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg);
-    static void MethodBResponse(
-        const ::fidl::EncodedMessage<ChannelProtocol::MethodBResponse>& _msg);
     static void MutateSocketRequest(
         const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>&
             _msg,
@@ -1398,12 +1421,6 @@ class ChannelProtocol final {
         const ::fidl::EncodedMessage<ChannelProtocol::MutateSocketRequest>&
             _msg,
         zx_txid_t _txid = 0);
-    static void MutateSocketResponse(
-        const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>&
-            _msg);
-    static void MutateSocketResponse(
-        const ::fidl::EncodedMessage<ChannelProtocol::MutateSocketResponse>&
-            _msg);
   };
 };
 
@@ -1446,13 +1463,37 @@ class WithAndWithoutRequestResponse final {
  public:
   using NoRequestNoResponseRequest = ::fidl::AnyZeroArgMessage;
 
-  using NoRequestEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
+  struct NoRequestEmptyResponseResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+
+    explicit NoRequestEmptyResponseResponse() { _InitHeader(); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
+  };
   using NoRequestEmptyResponseRequest = ::fidl::AnyZeroArgMessage;
 
   struct NoRequestWithResponseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
+
+    explicit NoRequestWithResponseResponse(const ::fidl::StringView& ret)
+        : ret(::fidl::unowned_ptr_t<const char>(ret.data()), ret.size()) {
+      _InitHeader();
+    }
 
     static constexpr const fidl_type_t* Type =
         &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
@@ -1464,6 +1505,9 @@ class WithAndWithoutRequestResponse final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using NoRequestWithResponseRequest = ::fidl::AnyZeroArgMessage;
 
@@ -1471,6 +1515,9 @@ class WithAndWithoutRequestResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
+
+    explicit WithRequestNoResponseRequest(const ::fidl::StringView& arg)
+        : arg(::fidl::unowned_ptr_t<const char>(arg.data()), arg.size()) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
@@ -1486,11 +1533,33 @@ class WithAndWithoutRequestResponse final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
 
-  using WithRequestEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
+  struct WithRequestEmptyResponseResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+
+    explicit WithRequestEmptyResponseResponse() { _InitHeader(); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
+  };
   struct WithRequestEmptyResponseRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
+
+    explicit WithRequestEmptyResponseRequest(const ::fidl::StringView& arg)
+        : arg(::fidl::unowned_ptr_t<const char>(arg.data()), arg.size()) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
@@ -1511,6 +1580,11 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
+    explicit WithRequestWithResponseResponse(const ::fidl::StringView& ret)
+        : ret(::fidl::unowned_ptr_t<const char>(ret.data()), ret.size()) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1521,11 +1595,17 @@ class WithAndWithoutRequestResponse final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct WithRequestWithResponseRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
+
+    explicit WithRequestWithResponseRequest(const ::fidl::StringView& arg)
+        : arg(::fidl::unowned_ptr_t<const char>(arg.data()), arg.size()) {}
 
     static constexpr const fidl_type_t* Type =
         &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
@@ -1542,11 +1622,35 @@ class WithAndWithoutRequestResponse final {
     using ResponseType = WithRequestWithResponseResponse;
   };
 
-  using OnEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
+  struct OnEmptyResponseResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+
+    explicit OnEmptyResponseResponse() { _InitHeader(); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
+  };
   struct OnWithResponseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
+
+    explicit OnWithResponseResponse(const ::fidl::StringView& ret)
+        : ret(::fidl::unowned_ptr_t<const char>(ret.data()), ret.size()) {
+      _InitHeader();
+    }
 
     static constexpr const fidl_type_t* Type =
         &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
@@ -1558,6 +1662,9 @@ class WithAndWithoutRequestResponse final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
 
   struct EventHandlers {
@@ -2199,14 +2306,6 @@ class WithAndWithoutRequestResponse final {
         const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void NoRequestEmptyResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
-            _msg);
-    static void NoRequestEmptyResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
-            _msg);
     static void NoRequestWithResponseRequest(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg,
@@ -2215,14 +2314,6 @@ class WithAndWithoutRequestResponse final {
         const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void NoRequestWithResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
-            _msg);
-    static void NoRequestWithResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
-            _msg);
     static void WithRequestNoResponseRequest(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg,
@@ -2241,14 +2332,6 @@ class WithAndWithoutRequestResponse final {
             WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>&
             _msg,
         zx_txid_t _txid = 0);
-    static void WithRequestEmptyResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
-            _msg);
-    static void WithRequestEmptyResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
-            _msg);
     static void WithRequestWithResponseRequest(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestWithResponseRequest>&
@@ -2259,26 +2342,6 @@ class WithAndWithoutRequestResponse final {
             WithAndWithoutRequestResponse::WithRequestWithResponseRequest>&
             _msg,
         zx_txid_t _txid = 0);
-    static void WithRequestWithResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
-            _msg);
-    static void WithRequestWithResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
-            _msg);
-    static void OnEmptyResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg);
-    static void OnEmptyResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg);
-    static void OnWithResponseResponse(
-        const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg);
-    static void OnWithResponseResponse(
-        const ::fidl::EncodedMessage<
-            WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg);
   };
 };
 
@@ -2302,6 +2365,12 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result;
 
+    explicit ResponseAsStructResponse(
+        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result& result)
+        : result(std::move(result)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &test_name_WithErrorSyntaxResponseAsStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -2312,6 +2381,9 @@ class WithErrorSyntax final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using ResponseAsStructRequest = ::fidl::AnyZeroArgMessage;
 
@@ -2319,6 +2391,12 @@ class WithErrorSyntax final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result;
+
+    explicit ErrorAsPrimitiveResponse(
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& result)
+        : result(std::move(result)) {
+      _InitHeader();
+    }
 
     static constexpr const fidl_type_t* Type =
         &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
@@ -2330,6 +2408,9 @@ class WithErrorSyntax final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using ErrorAsPrimitiveRequest = ::fidl::AnyZeroArgMessage;
 
@@ -2337,6 +2418,12 @@ class WithErrorSyntax final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result;
+
+    explicit ErrorAsEnumResponse(
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result& result)
+        : result(std::move(result)) {
+      _InitHeader();
+    }
 
     static constexpr const fidl_type_t* Type =
         &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
@@ -2348,6 +2435,9 @@ class WithErrorSyntax final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using ErrorAsEnumRequest = ::fidl::AnyZeroArgMessage;
 
@@ -2713,12 +2803,6 @@ class WithErrorSyntax final {
         const ::fidl::EncodedMessage<WithErrorSyntax::ResponseAsStructRequest>&
             _msg,
         zx_txid_t _txid = 0);
-    static void ResponseAsStructResponse(
-        const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
-            _msg);
-    static void ResponseAsStructResponse(
-        const ::fidl::EncodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
-            _msg);
     static void ErrorAsPrimitiveRequest(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>&
             _msg,
@@ -2727,24 +2811,12 @@ class WithErrorSyntax final {
         const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>&
             _msg,
         zx_txid_t _txid = 0);
-    static void ErrorAsPrimitiveResponse(
-        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
-            _msg);
-    static void ErrorAsPrimitiveResponse(
-        const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
-            _msg);
     static void ErrorAsEnumRequest(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg,
         zx_txid_t _txid = 0);
     static void ErrorAsEnumRequest(
         const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void ErrorAsEnumResponse(
-        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>&
-            _msg);
-    static void ErrorAsEnumResponse(
-        const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsEnumResponse>&
-            _msg);
   };
 };
 
@@ -2941,6 +3013,19 @@ static_assert(
 
 template <>
 struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
+                      NoRequestEmptyResponseResponse> : public std::true_type {
+};
+template <>
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
+                         NoRequestEmptyResponseResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         NoRequestEmptyResponseResponse) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  NoRequestEmptyResponseResponse::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
                       NoRequestWithResponseResponse> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
@@ -2987,6 +3072,19 @@ static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
 
 template <>
 struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
+                      WithRequestEmptyResponseResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestEmptyResponseResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestEmptyResponseResponse) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  WithRequestEmptyResponseResponse::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
                       WithRequestWithResponseRequest> : public std::true_type {
 };
 template <>
@@ -3016,6 +3114,19 @@ static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
 static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
                            WithRequestWithResponseResponse,
                        ret) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::test::name::WithAndWithoutRequestResponse::OnEmptyResponseResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::test::name::WithAndWithoutRequestResponse::OnEmptyResponseResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         OnEmptyResponseResponse) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  OnEmptyResponseResponse::PrimarySize);
 
 template <>
 struct IsFidlType<

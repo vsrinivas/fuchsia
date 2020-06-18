@@ -13,18 +13,20 @@ Send{{ .Name }}Event(::zx::unowned_channel _chan {{- if .Response }}, {{ end }}{
 zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCFlavorMethodSignature" . }} {
   {{- if .LLProps.LinearizeResponse }}
   {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
-  {{ .Name }}Response _response = {};
+  {{ .Name }}Response _response{
+  {{- template "PassthroughParams" .Response -}}
+  };
   {{- else }}
   {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
   This is ok because there are no tracking_ptrs, since LinearizeResponse is true when
   there are pointers in the object. */}}
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof({{ .Name }}Response)]{};
-  auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_response_buffer);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof({{ .Name }}Response)];
+  auto& _response = *new (_response_buffer) {{ .Name }}Response{
+  {{- template "PassthroughParams" .Response -}}
+  };
   {{- end }}
-  {{- template "SetTransactionHeaderForResponse" . }}
-  {{- template "FillResponseStructMembers" .Response -}}
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<{{ .Name }}Response>(&_response);
   auto& _encode_result = _encoded.result();

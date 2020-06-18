@@ -178,6 +178,11 @@ class Example final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Example_foo_Result result;
 
+    explicit fooResponse(::llcpp::fidl::test::json::Example_foo_Result& result)
+        : result(std::move(result)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ExamplefooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -188,11 +193,17 @@ class Example final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct fooRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
+
+    explicit fooRequest(const ::fidl::StringView& s)
+        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {}
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ExamplefooRequestTable;
@@ -403,10 +414,6 @@ class Example final {
     static void fooRequest(
         const ::fidl::EncodedMessage<Example::fooRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void fooResponse(
-        const ::fidl::DecodedMessage<Example::fooResponse>& _msg);
-    static void fooResponse(
-        const ::fidl::EncodedMessage<Example::fooResponse>& _msg);
   };
 };
 

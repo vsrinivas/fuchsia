@@ -5,6 +5,38 @@
 package fragments
 
 const Protocol = `
+{{- /* Defines the arguments for a message method/constructor. */}}
+{{- define "MessagePrototype" -}}
+  {{- range $index, $param := . -}}
+    {{- if $index }}, {{- end}}
+    {{- if eq $param.Type.LLFamily TrivialCopy }}
+    {{ $param.Type.LLDecl }} {{ $param.Name }}
+    {{- else if eq $param.Type.LLFamily Reference }}
+    {{ $param.Type.LLDecl }}& {{ $param.Name }}
+    {{- else if eq $param.Type.LLFamily String }}
+    const {{ $param.Type.LLDecl }}& {{ $param.Name }}
+    {{- else if eq $param.Type.LLFamily Vector }}
+    {{ $param.Type.LLDecl }}& {{ $param.Name }}
+    {{- end }}
+  {{- end -}}
+{{- end }}
+
+{{- /* Defines the initialization of all the fields for a message constructor. */}}
+{{- define "InitMessage" -}}
+  {{- range $index, $param := . }}
+  {{- if $index }}, {{- else }}: {{- end}}
+    {{- if eq $param.Type.LLFamily TrivialCopy }}
+      {{ $param.Name }}({{ $param.Name }})
+    {{- else if eq $param.Type.LLFamily Reference }}
+      {{ $param.Name }}(std::move({{ $param.Name }}))
+    {{- else if eq $param.Type.LLFamily String }}
+      {{ $param.Name }}(::fidl::unowned_ptr_t<const char>({{ $param.Name }}.data()), {{ $param.Name }}.size())
+    {{- else if eq $param.Type.LLFamily Vector }}
+      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType.LLDecl }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "ProtocolForwardDeclaration" }}
 class {{ .Name }};
 {{- end }}
@@ -17,10 +49,19 @@ class {{ .Name }};
 &{{ .ResponseTypeName }}
 {{- end }}
 
+{{- /* All the parameters for a method which value content. */}}
 {{- define "ForwardParams" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}} std::move({{ $param.Name }})
   {{- end -}}
+{{- end }}
+
+{{- /* All the parameters for a method/constructor which uses values with references or */}}
+{{- /* trivial copy. */}}
+{{- define "PassthroughParams" -}}
+  {{- range $index, $param := . }}
+    {{- if $index }}, {{- end }} {{ $param.Name }}
+  {{- end }}
 {{- end }}
 
 {{- define "ClientAllocationComment" -}}
@@ -63,7 +104,6 @@ class {{ .Name }} final {
   {{- range .Methods }}
 
     {{- if .HasResponse }}
-      {{- if .Response }}
   struct {{ .Name }}Response final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
@@ -72,7 +112,17 @@ class {{ .Name }} final {
     {{ $param.Type.LLDecl }} {{ $param.Name }};
         {{- end }}
 
-    static constexpr const fidl_type_t* Type = {{ template "ResponseCodingTable" . }};
+    explicit {{ .Name }}Response({{ template "MessagePrototype" .Response }})
+    {{ template "InitMessage" .Response }} {
+      _InitHeader();
+    }
+
+    static constexpr const fidl_type_t* Type =
+    {{- if .Response }}
+      {{ template "ResponseCodingTable" . }};
+    {{- else }}
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    {{- end }}
     static constexpr uint32_t MaxNumHandles = {{ .ResponseMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .ResponseSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .ResponseMaxOutOfLine }};
@@ -81,10 +131,10 @@ class {{ .Name }} final {
     static constexpr bool IsResource = {{ .ResponseIsResource }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
-      {{- else }}
-  using {{ .Name }}Response = ::fidl::AnyZeroArgMessage;
-      {{- end }}
     {{- end }}
 
     {{- if .HasRequest }}
@@ -96,6 +146,9 @@ class {{ .Name }} final {
         {{- range $index, $param := .Request }}
     {{ $param.Type.LLDecl }} {{ $param.Name }};
         {{- end }}
+
+    explicit {{ .Name }}Request({{ template "MessagePrototype" .Request }})
+    {{ template "InitMessage" .Request }} {}
 
     static constexpr const fidl_type_t* Type = {{ template "RequestCodingTable" . }};
     static constexpr uint32_t MaxNumHandles = {{ .RequestMaxHandles }};
@@ -425,10 +478,6 @@ class {{ .Name }} final {
     static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignatureDecodedMessage" . }};
     static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignatureEncodedMessage" . }};
     {{- end }}
-    {{- if .HasResponse }}
-    static void {{ template "SetTransactionHeaderForResponseMethodSignatureDecodedMessage" . }};
-    static void {{ template "SetTransactionHeaderForResponseMethodSignatureEncodedMessage" . }};
-    {{- end }}
   {{- end }}
   };
 };
@@ -450,7 +499,7 @@ static_assert(sizeof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }
 static_assert(offsetof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
-{{- if and .HasResponse .Response }}
+{{- if .HasResponse }}
 
 template <>
 struct IsFidlType<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response> : public std::true_type {};
@@ -462,18 +511,6 @@ static_assert(sizeof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }
 static_assert(offsetof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
-{{- end }}
-{{- end }}
-
-{{- define "FillRequestStructMembers" }}
-{{- range $param := . }}
-  _request.{{ $param.Name }} = std::move({{ $param.Name }});
-{{- end }}
-{{- end }}
-
-{{- define "FillResponseStructMembers" }}
-{{- range $param := . }}
-  _response.{{ $param.Name }} = std::move({{ $param.Name }});
 {{- end }}
 {{- end }}
 
@@ -589,7 +626,9 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
     {{- end }}
     {{- if .HasResponse }}
 {{ "" }}
-      {{- template "SetTransactionHeaderForResponseMethodDefinition" . }}
+    void {{ .LLProps.ProtocolName }}::{{ .Name }}Response::_InitHeader() {
+      fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
+    }
     {{- end }}
   {{- end }}
 {{- end }}

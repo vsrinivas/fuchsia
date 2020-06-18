@@ -20,8 +20,8 @@ extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 template <>
 super::ResultOf::foo_Impl<super::fooResponse>::foo_Impl(
     ::zx::unowned_channel _client_end, ::fidl::StringView s) {
-  fooRequest _request = {};
-  _request.s = std::move(s);
+  fooRequest _request{s};
+
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<fooRequest>(&_request);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
@@ -53,8 +53,7 @@ super::UnownedResultOf::foo_Impl<super::fooResponse>::foo_Impl(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  fooRequest _request = {};
-  _request.s = std::move(s);
+  fooRequest _request{s};
   auto _encode_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -167,8 +166,8 @@ super::UnownedResultOf::foo super::ClientImpl::foo_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  fooRequest _request = {};
-  _request.s = std::move(s);
+  fooRequest _request{s};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   auto _encode_request_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
@@ -264,13 +263,9 @@ bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
 void super::Interface::fooCompleterBase::Reply(int64_t y) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)]{};
-  auto& _response = *reinterpret_cast<fooResponse*>(_response_buffer);
-  super::SetTransactionHeaderFor::fooResponse(
-      ::fidl::DecodedMessage<fooResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), fooResponse::PrimarySize,
-          fooResponse::PrimarySize)));
-  _response.y = std::move(y);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
+  auto& _response = *new (_response_buffer) fooResponse{y};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<fooResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -287,12 +282,7 @@ void super::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<fooResponse*>(_buffer.data());
-  super::SetTransactionHeaderFor::fooResponse(
-      ::fidl::DecodedMessage<fooResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), fooResponse::PrimarySize,
-          fooResponse::PrimarySize)));
-  _response.y = std::move(y);
+  new (_buffer.data()) fooResponse{y};
   _buffer.set_actual(sizeof(fooResponse));
   CompleterBase::SendReply(
       ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
@@ -300,7 +290,9 @@ void super::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void super::Interface::fooCompleterBase::Reply(
     ::fidl::DecodedMessage<fooResponse> params) {
-  super::SetTransactionHeaderFor::fooResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == ksuper_foo_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -314,15 +306,9 @@ void super::SetTransactionHeaderFor::fooRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, ksuper_foo_Ordinal);
 }
-void super::SetTransactionHeaderFor::fooResponse(
-    const ::fidl::DecodedMessage<super::fooResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, ksuper_foo_Ordinal);
-}
-void super::SetTransactionHeaderFor::fooResponse(
-    const ::fidl::EncodedMessage<super::fooResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, ksuper_foo_Ordinal);
+
+void super::fooResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, ksuper_foo_Ordinal);
 }
 
 namespace {
@@ -335,8 +321,8 @@ extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 template <>
 sub::ResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
     ::zx::unowned_channel _client_end, ::fidl::StringView s) {
-  fooRequest _request = {};
-  _request.s = std::move(s);
+  fooRequest _request{s};
+
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<fooRequest>(&_request);
   auto& _encode_result = _encoded.result();
   if (_encode_result.status != ZX_OK) {
@@ -368,8 +354,7 @@ sub::UnownedResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  fooRequest _request = {};
-  _request.s = std::move(s);
+  fooRequest _request{s};
   auto _encode_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -483,8 +468,8 @@ sub::UnownedResultOf::foo sub::ClientImpl::foo_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  fooRequest _request = {};
-  _request.s = std::move(s);
+  fooRequest _request{s};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   auto _encode_request_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
@@ -579,12 +564,9 @@ bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 void sub::Interface::fooCompleterBase::Reply(int64_t y) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)]{};
-  auto& _response = *reinterpret_cast<fooResponse*>(_response_buffer);
-  sub::SetTransactionHeaderFor::fooResponse(::fidl::DecodedMessage<fooResponse>(
-      ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                       fooResponse::PrimarySize, fooResponse::PrimarySize)));
-  _response.y = std::move(y);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
+  auto& _response = *new (_response_buffer) fooResponse{y};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<fooResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -601,11 +583,7 @@ void sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<fooResponse*>(_buffer.data());
-  sub::SetTransactionHeaderFor::fooResponse(::fidl::DecodedMessage<fooResponse>(
-      ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                       fooResponse::PrimarySize, fooResponse::PrimarySize)));
-  _response.y = std::move(y);
+  new (_buffer.data()) fooResponse{y};
   _buffer.set_actual(sizeof(fooResponse));
   CompleterBase::SendReply(
       ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
@@ -613,7 +591,9 @@ void sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void sub::Interface::fooCompleterBase::Reply(
     ::fidl::DecodedMessage<fooResponse> params) {
-  sub::SetTransactionHeaderFor::fooResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == ksub_foo_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -627,15 +607,9 @@ void sub::SetTransactionHeaderFor::fooRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, ksub_foo_Ordinal);
 }
-void sub::SetTransactionHeaderFor::fooResponse(
-    const ::fidl::DecodedMessage<sub::fooResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, ksub_foo_Ordinal);
-}
-void sub::SetTransactionHeaderFor::fooResponse(
-    const ::fidl::EncodedMessage<sub::fooResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, ksub_foo_Ordinal);
+
+void sub::fooResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, ksub_foo_Ordinal);
 }
 
 }  // namespace json

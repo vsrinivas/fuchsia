@@ -270,6 +270,12 @@ class Protocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::FlexibleFoo f;
 
+    explicit RequestStrictResponseFlexibleResponse(
+        ::llcpp::fidl::test::json::FlexibleFoo& f)
+        : f(std::move(f)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -280,11 +286,18 @@ class Protocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct RequestStrictResponseFlexibleRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictFoo s;
+
+    explicit RequestStrictResponseFlexibleRequest(
+        ::llcpp::fidl::test::json::StrictFoo& s)
+        : s(std::move(s)) {}
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
@@ -306,6 +319,12 @@ class Protocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictFoo f;
 
+    explicit RequestFlexibleResponseStrictResponse(
+        ::llcpp::fidl::test::json::StrictFoo& f)
+        : f(std::move(f)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -316,11 +335,18 @@ class Protocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct RequestFlexibleResponseStrictRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::FlexibleFoo s;
+
+    explicit RequestFlexibleResponseStrictRequest(
+        ::llcpp::fidl::test::json::FlexibleFoo& s)
+        : s(std::move(s)) {}
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
@@ -660,12 +686,6 @@ class Protocol final {
         const ::fidl::EncodedMessage<
             Protocol::RequestStrictResponseFlexibleRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void RequestStrictResponseFlexibleResponse(
-        const ::fidl::DecodedMessage<
-            Protocol::RequestStrictResponseFlexibleResponse>& _msg);
-    static void RequestStrictResponseFlexibleResponse(
-        const ::fidl::EncodedMessage<
-            Protocol::RequestStrictResponseFlexibleResponse>& _msg);
     static void RequestFlexibleResponseStrictRequest(
         const ::fidl::DecodedMessage<
             Protocol::RequestFlexibleResponseStrictRequest>& _msg,
@@ -674,12 +694,6 @@ class Protocol final {
         const ::fidl::EncodedMessage<
             Protocol::RequestFlexibleResponseStrictRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void RequestFlexibleResponseStrictResponse(
-        const ::fidl::DecodedMessage<
-            Protocol::RequestFlexibleResponseStrictResponse>& _msg);
-    static void RequestFlexibleResponseStrictResponse(
-        const ::fidl::EncodedMessage<
-            Protocol::RequestFlexibleResponseStrictResponse>& _msg);
   };
 };
 

@@ -48,6 +48,10 @@ class Top final {
     fidl_message_header_t _hdr;
     ::llcpp::bottom::Foo foo;
 
+    explicit GetFooResponse(::llcpp::bottom::Foo& foo) : foo(std::move(foo)) {
+      _InitHeader();
+    }
+
     static constexpr const fidl_type_t* Type = &top_TopGetFooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
@@ -57,6 +61,9 @@ class Top final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   using GetFooRequest = ::fidl::AnyZeroArgMessage;
 
@@ -237,10 +244,6 @@ class Top final {
     static void GetFooRequest(
         const ::fidl::EncodedMessage<Top::GetFooRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void GetFooResponse(
-        const ::fidl::DecodedMessage<Top::GetFooResponse>& _msg);
-    static void GetFooResponse(
-        const ::fidl::EncodedMessage<Top::GetFooResponse>& _msg);
   };
 };
 

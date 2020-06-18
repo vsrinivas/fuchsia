@@ -49,6 +49,8 @@ class super final {
     fidl_message_header_t _hdr;
     int64_t y;
 
+    explicit fooResponse(int64_t y) : y(y) { _InitHeader(); }
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_superfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -59,11 +61,17 @@ class super final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct fooRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
+
+    explicit fooRequest(const ::fidl::StringView& s)
+        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {}
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_superfooRequestTable;
@@ -270,10 +278,6 @@ class super final {
     static void fooRequest(
         const ::fidl::EncodedMessage<super::fooRequest>& _msg,
         zx_txid_t _txid = 0);
-    static void fooResponse(
-        const ::fidl::DecodedMessage<super::fooResponse>& _msg);
-    static void fooResponse(
-        const ::fidl::EncodedMessage<super::fooResponse>& _msg);
   };
 };
 
@@ -289,6 +293,8 @@ class sub final {
     fidl_message_header_t _hdr;
     int64_t y;
 
+    explicit fooResponse(int64_t y) : y(y) { _InitHeader(); }
+
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_subfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -299,11 +305,17 @@ class sub final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
+
+   private:
+    void _InitHeader();
   };
   struct fooRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
+
+    explicit fooRequest(const ::fidl::StringView& s)
+        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {}
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_subfooRequestTable;
@@ -508,10 +520,6 @@ class sub final {
                            zx_txid_t _txid = 0);
     static void fooRequest(const ::fidl::EncodedMessage<sub::fooRequest>& _msg,
                            zx_txid_t _txid = 0);
-    static void fooResponse(
-        const ::fidl::DecodedMessage<sub::fooResponse>& _msg);
-    static void fooResponse(
-        const ::fidl::EncodedMessage<sub::fooResponse>& _msg);
   };
 };
 

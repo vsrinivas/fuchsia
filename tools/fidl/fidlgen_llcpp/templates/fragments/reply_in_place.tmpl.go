@@ -11,7 +11,8 @@ Reply(::fidl::DecodedMessage<{{ .Name }}Response> params)
 
 {{- define "ReplyInPlaceMethodDefinition" }}
 void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyInPlaceMethodSignature" . }} {
-  {{ .LLProps.ProtocolName }}::SetTransactionHeaderFor::{{ .Name }}Response(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number == kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == {{ .OrdinalName }});
   CompleterBase::SendReply(std::move(params));
 }
 {{- end }}

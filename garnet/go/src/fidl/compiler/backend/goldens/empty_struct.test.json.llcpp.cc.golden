@@ -33,9 +33,9 @@ EmptyProtocol::ResultOf::Send_Impl::Send_Impl(
     ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty e) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)]{};
-  auto& _request = *reinterpret_cast<SendRequest*>(_request_buffer);
-  _request.e = std::move(e);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)];
+  auto& _request = *new (_request_buffer) SendRequest{e};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<SendRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -67,9 +67,7 @@ EmptyProtocol::UnownedResultOf::Send_Impl::Send_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, SendRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SendRequest*>(_request_buffer.data());
-  _request.e = std::move(e);
+  new (_request_buffer.data()) SendRequest{e};
   _request_buffer.set_actual(sizeof(SendRequest));
   ::fidl::DecodedMessage<SendRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<SendRequest>(std::move(_msg));
@@ -129,9 +127,9 @@ EmptyProtocol::ResultOf::SendAndReceive_Impl<
                         ::llcpp::fidl::test::json::Empty e) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)]{};
-  auto& _request = *reinterpret_cast<SendAndReceiveRequest*>(_request_buffer);
-  _request.e = std::move(e);
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)];
+  auto& _request = *new (_request_buffer) SendAndReceiveRequest{e};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<SendAndReceiveRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -169,10 +167,7 @@ EmptyProtocol::UnownedResultOf::SendAndReceive_Impl<
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, SendAndReceiveRequest::PrimarySize);
-  auto& _request =
-      *reinterpret_cast<SendAndReceiveRequest*>(_request_buffer.data());
-  _request.e = std::move(e);
+  new (_request_buffer.data()) SendAndReceiveRequest{e};
   _request_buffer.set_actual(sizeof(SendAndReceiveRequest));
   ::fidl::DecodedMessage<SendAndReceiveRequest> _msg(
       std::move(_request_buffer));
@@ -319,10 +314,8 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  memset(_request_buffer.data(), 0, SendAndReceiveRequest::PrimarySize);
-  auto& _request =
-      *reinterpret_cast<SendAndReceiveRequest*>(_request_buffer.data());
-  _request.e = std::move(e);
+  new (_request_buffer.data()) SendAndReceiveRequest{e};
+
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(SendAndReceiveRequest));
   ::fidl::DecodedMessage<SendAndReceiveRequest> _decoded_request(
@@ -527,13 +520,9 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
     ::zx::unowned_channel _chan, ::llcpp::fidl::test::json::Empty e) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(ReceiveResponse)]{};
-  auto& _response = *reinterpret_cast<ReceiveResponse*>(_response_buffer);
-  EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
-      ::fidl::DecodedMessage<ReceiveResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), ReceiveResponse::PrimarySize,
-          ReceiveResponse::PrimarySize)));
-  _response.e = std::move(e);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(ReceiveResponse)];
+  auto& _response = *new (_response_buffer) ReceiveResponse{e};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<ReceiveResponse>(&_response);
   auto& _encode_result = _encoded.result();
@@ -550,12 +539,7 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
   if (_buffer.capacity() < ReceiveResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  auto& _response = *reinterpret_cast<ReceiveResponse*>(_buffer.data());
-  EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
-      ::fidl::DecodedMessage<ReceiveResponse>(::fidl::BytePart(
-          reinterpret_cast<uint8_t*>(&_response), ReceiveResponse::PrimarySize,
-          ReceiveResponse::PrimarySize)));
-  _response.e = std::move(e);
+  new (_buffer.data()) ReceiveResponse{e};
   _buffer.set_actual(sizeof(ReceiveResponse));
   return ::fidl::Write(
       ::zx::unowned_channel(_chan),
@@ -565,7 +549,9 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
 zx_status_t EmptyProtocol::SendReceiveEvent(
     ::zx::unowned_channel _chan,
     ::fidl::DecodedMessage<ReceiveResponse> params) {
-  EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(params);
+  ZX_ASSERT(params.message()->_hdr.magic_number ==
+            kFidlWireFormatMagicNumberInitial);
+  ZX_ASSERT(params.message()->_hdr.ordinal == kEmptyProtocol_Receive_Ordinal);
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -573,15 +559,9 @@ void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::llcpp::fidl::test::json::Empty e) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(SendAndReceiveResponse)]{};
-  auto& _response =
-      *reinterpret_cast<SendAndReceiveResponse*>(_response_buffer);
-  EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
-      ::fidl::DecodedMessage<SendAndReceiveResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           SendAndReceiveResponse::PrimarySize,
-                           SendAndReceiveResponse::PrimarySize)));
-  _response.e = std::move(e);
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(SendAndReceiveResponse)];
+  auto& _response = *new (_response_buffer) SendAndReceiveResponse{e};
+
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<SendAndReceiveResponse>(
           &_response);
@@ -599,13 +579,7 @@ void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<SendAndReceiveResponse*>(_buffer.data());
-  EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
-      ::fidl::DecodedMessage<SendAndReceiveResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-                           SendAndReceiveResponse::PrimarySize,
-                           SendAndReceiveResponse::PrimarySize)));
-  _response.e = std::move(e);
+  new (_buffer.data()) SendAndReceiveResponse{e};
   _buffer.set_actual(sizeof(SendAndReceiveResponse));
   CompleterBase::SendReply(
       ::fidl::DecodedMessage<SendAndReceiveResponse>(std::move(_buffer)));
@@ -613,7 +587,10 @@ void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
 
 void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::fidl::DecodedMessage<SendAndReceiveResponse> params) {
-  EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(params);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
+                  kFidlWireFormatMagicNumberInitial);
+  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
+                  kEmptyProtocol_SendAndReceive_Ordinal);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -631,16 +608,8 @@ void EmptyProtocol::SetTransactionHeaderFor::SendRequest(
   fidl_init_txn_header(hdr, _txid, kEmptyProtocol_Send_Ordinal);
 }
 
-void EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
-    const ::fidl::DecodedMessage<EmptyProtocol::ReceiveResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kEmptyProtocol_Receive_Ordinal);
-}
-void EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
-    const ::fidl::EncodedMessage<EmptyProtocol::ReceiveResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kEmptyProtocol_Receive_Ordinal);
+void EmptyProtocol::ReceiveResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kEmptyProtocol_Receive_Ordinal);
 }
 
 void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
@@ -656,16 +625,9 @@ void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kEmptyProtocol_SendAndReceive_Ordinal);
 }
-void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
-    const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kEmptyProtocol_SendAndReceive_Ordinal);
-}
-void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
-    const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveResponse>& _msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kEmptyProtocol_SendAndReceive_Ordinal);
+
+void EmptyProtocol::SendAndReceiveResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kEmptyProtocol_SendAndReceive_Ordinal);
 }
 
 }  // namespace json

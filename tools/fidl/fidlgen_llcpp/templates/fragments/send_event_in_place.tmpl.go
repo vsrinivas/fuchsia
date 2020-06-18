@@ -11,7 +11,8 @@ Send{{ .Name }}Event(::zx::unowned_channel _chan, ::fidl::DecodedMessage<{{ .Nam
 
 {{- define "SendEventInPlaceMethodDefinition" }}
 zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventInPlaceMethodSignature" . }} {
-  {{ .LLProps.ProtocolName }}::SetTransactionHeaderFor::{{ .Name }}Response(params);
+  ZX_ASSERT(params.message()->_hdr.magic_number == kFidlWireFormatMagicNumberInitial);
+  ZX_ASSERT(params.message()->_hdr.ordinal == {{ .OrdinalName }});
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 {{- end }}
