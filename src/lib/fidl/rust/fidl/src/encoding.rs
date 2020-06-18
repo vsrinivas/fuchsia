@@ -564,6 +564,27 @@ pub trait Encodable: LayoutObject {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()>;
+
+    /// Encodes 0 or more objects inline as a FIDL array.
+    ///
+    /// Some types override the default implementation to be more efficient.
+    /// Once Rust specialization stabilizes (RFC 1210), this method could be
+    /// eliminated in favor of specializing Encodable on types like `Vec<u8>`.
+    fn encode_array(
+        slice: &mut [Self],
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()>
+    where
+        Self: Sized,
+    {
+        let stride = encoder.inline_size_of::<Self>();
+        for (i, item) in slice.iter_mut().enumerate() {
+            item.encode(encoder, offset + i * stride, recursion_depth)?;
+        }
+        Ok(())
+    }
 }
 
 assert_obj_safe!(Encodable);
@@ -608,14 +629,14 @@ macro_rules! impl_layout_forall_T {
 }
 
 // The FIDL type `vector<T>` becomes `&mut dyn ExactSizeIterator<Item = T>`
-// (borrowed) or `Vec<T>` (owned) for most types `T`. As an optimization, for
-// primitive numeric types `T` we use the borrowed form `&[T]`, allowing us to
-// encode with a straight memcpy. This optimization precludes encoding slices in
-// any other manner (for example, as an ergonomic alternative to using
-// ExactSizeIterator for all types). Once specialization stabilizes (RFC 1210),
-// this problem will go away, and optimizing will be much easier. For example,
-// we could specialize `Decodable` on vectors of primitives, making both
-// encoding and decoding efficient.
+// (borrowed) or `Vec<T>` (owned) for most types `T`. The former is a poor fit
+// for vectors of primitives: they ought to encode by simple memcpy, but we
+// cannot do this with an iterator. For this reason, vectors of primitives are
+// special-cased in fidlgen to use `&[T]` as the borrowed type. In this macro,
+// we implement efficient encoding for `&[T]`.
+//
+// This is distinct from `Encodable::encode_array` used to optimize the encoding
+// of `Vec<T>` for primitives `T`; there is no easy way to combine them.
 macro_rules! impl_slice_encoding_by_copy {
     ($prim_ty:ty) => {
         impl Layout for &[$prim_ty] {
@@ -692,6 +713,22 @@ macro_rules! impl_codable_num { ($($prim_ty:ty,)*) => { $(
             encoder.buf[offset..offset+mem::size_of::<Self>()].copy_from_slice(&self.to_le_bytes());
             Ok(())
         }
+
+        fn encode_array(slice: &mut [Self], encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+            // Get a &[u8] view on the slice using zerocopy::AsBytes.
+            //
+            // NOTE: We are assuming the data layout of &[$prim_ty] in Rust
+            // on this platform matches the FIDL wire format. In particular,
+            // we are assuming a packed array, little-endian byte order,
+            // two's complement integers, and IEEE-754 floats.
+            //
+            // For more information:
+            // https://doc.rust-lang.org/reference/type-layout.html#primitive-data-layout
+            // https://doc.rust-lang.org/reference/types/numeric.html
+            let bytes = slice.as_bytes();
+            encoder.buf[offset..offset+bytes.len()].copy_from_slice(bytes);
+            Ok(())
+        }
     }
 
     impl Decodable for $prim_ty {
@@ -756,6 +793,18 @@ impl Encodable for u8 {
         encoder.buf[offset] = *self;
         Ok(())
     }
+
+    fn encode_array(
+        slice: &mut [Self],
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        _recursion_depth: usize,
+    ) -> Result<()> {
+        // See the comment on `encode_array` in the `impl_codable_num` macro
+        // for information about the assumptions made here.
+        encoder.buf[offset..offset + slice.len()].copy_from_slice(slice);
+        Ok(())
+    }
 }
 
 impl Decodable for u8 {
@@ -782,6 +831,19 @@ impl Encodable for i8 {
         encoder.buf[offset] = *self as u8;
         Ok(())
     }
+
+    fn encode_array(
+        slice: &mut [Self],
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        _recursion_depth: usize,
+    ) -> Result<()> {
+        // See the comment on `encode_array` in the `impl_codable_num` macro
+        // for information about the assumptions made here.
+        let bytes = slice.as_bytes();
+        encoder.buf[offset..offset + bytes.len()].copy_from_slice(bytes);
+        Ok(())
+    }
 }
 
 impl Decodable for i8 {
@@ -793,19 +855,6 @@ impl Decodable for i8 {
         *self = decoder.buf[offset] as i8;
         Ok(())
     }
-}
-
-fn encode_array<T: Encodable>(
-    encoder: &mut Encoder<'_>,
-    slice: &mut [T],
-    offset: usize,
-    recursion_depth: usize,
-) -> Result<()> {
-    let stride = encoder.inline_size_of::<T>();
-    for (i, item) in slice.iter_mut().enumerate() {
-        item.encode(encoder, offset + i * stride, recursion_depth)?;
-    }
-    Ok(())
 }
 
 fn decode_array<T: Decodable>(decoder: &mut Decoder<'_>, slice: &mut [T]) -> Result<()> {
@@ -823,7 +872,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
 
     impl<T: Encodable> Encodable for [T; $len] {
         fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
-            encode_array(encoder, self, offset, recursion_depth)
+            T::encode_array(self, encoder, offset, recursion_depth)
         }
     }
 
@@ -860,7 +909,46 @@ impl_codable_for_fixed_array!(64,);
 // Hack for FIDL library fuchsia.net
 impl_codable_for_fixed_array!(256,);
 
-fn encode_byte_slice(
+/// Encode an optional vector-like component.
+pub fn encode_vector<T: Encodable>(
+    encoder: &mut Encoder<'_>,
+    offset: usize,
+    recursion_depth: usize,
+    slice_opt: Option<&mut [T]>,
+) -> Result<()> {
+    match slice_opt {
+        None => encode_absent_vector(encoder, offset, recursion_depth),
+        Some(slice) => {
+            // Two u64: (len, present)
+            (slice.len() as u64).encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            if slice.len() == 0 {
+                return Ok(());
+            }
+            let bytes_len = slice.len() * encoder.inline_size_of::<T>();
+            encoder.write_out_of_line(
+                bytes_len,
+                recursion_depth,
+                |encoder, offset, recursion_depth| {
+                    T::encode_array(slice, encoder, offset, recursion_depth)
+                },
+            )
+        }
+    }
+}
+
+/// Encode an missing vector-like component.
+pub fn encode_absent_vector(
+    encoder: &mut Encoder<'_>,
+    offset: usize,
+    recursion_depth: usize,
+) -> Result<()> {
+    0u64.encode(encoder, offset, recursion_depth)?;
+    ALLOC_ABSENT_U64.encode(encoder, offset + 8, recursion_depth)
+}
+
+/// Like `encode_vector`, but optimized for `&[u8]`.
+fn encode_vector_from_bytes(
     encoder: &mut Encoder<'_>,
     offset: usize,
     recursion_depth: usize,
@@ -879,18 +967,8 @@ fn encode_byte_slice(
     }
 }
 
-/// Encode an missing vector-like component.
-pub fn encode_absent_vector(
-    encoder: &mut Encoder<'_>,
-    offset: usize,
-    recursion_depth: usize,
-) -> Result<()> {
-    0u64.encode(encoder, offset, recursion_depth)?;
-    ALLOC_ABSENT_U64.encode(encoder, offset + 8, recursion_depth)
-}
-
-/// Encode an optional iterator over encodable elements into a FIDL vector-like representation.
-pub fn encode_encodable_iter<Iter, T>(
+/// Like `encode_vector`, but encodes from an iterator.
+pub fn encode_vector_from_iter<Iter, T>(
     encoder: &mut Encoder<'_>,
     offset: usize,
     recursion_depth: usize,
@@ -990,7 +1068,7 @@ impl Encodable for &str {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_byte_slice(encoder, offset, recursion_depth, Some(self.as_bytes()))
+        encode_vector_from_bytes(encoder, offset, recursion_depth, Some(self.as_bytes()))
     }
 }
 
@@ -1003,7 +1081,7 @@ impl Encodable for String {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_byte_slice(encoder, offset, recursion_depth, Some(self.as_bytes()))
+        encode_vector_from_bytes(encoder, offset, recursion_depth, Some(self.as_bytes()))
     }
 }
 
@@ -1030,7 +1108,12 @@ impl Encodable for Option<&str> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_byte_slice(encoder, offset, recursion_depth, self.as_ref().map(|x| x.as_bytes()))
+        encode_vector_from_bytes(
+            encoder,
+            offset,
+            recursion_depth,
+            self.as_ref().map(|x| x.as_bytes()),
+        )
     }
 }
 
@@ -1043,7 +1126,12 @@ impl Encodable for Option<String> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_byte_slice(encoder, offset, recursion_depth, self.as_ref().map(|x| x.as_bytes()))
+        encode_vector_from_bytes(
+            encoder,
+            offset,
+            recursion_depth,
+            self.as_ref().map(|x| x.as_bytes()),
+        )
     }
 }
 
@@ -1074,7 +1162,7 @@ impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_encodable_iter(encoder, offset, recursion_depth, Some(self))
+        encode_vector_from_iter(encoder, offset, recursion_depth, Some(self))
     }
 }
 
@@ -1087,7 +1175,7 @@ impl<T: Encodable> Encodable for Vec<T> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_encodable_iter(encoder, offset, recursion_depth, Some(self.iter_mut()))
+        encode_vector(encoder, offset, recursion_depth, Some(self))
     }
 }
 
@@ -1114,7 +1202,7 @@ impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_encodable_iter(encoder, offset, recursion_depth, self.as_mut().map(|x| &mut **x))
+        encode_vector_from_iter(encoder, offset, recursion_depth, self.as_mut().map(|x| &mut **x))
     }
 }
 
@@ -1127,7 +1215,7 @@ impl<T: Encodable> Encodable for Option<Vec<T>> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        encode_encodable_iter(encoder, offset, recursion_depth, self.as_mut().map(|x| x.iter_mut()))
+        encode_vector(encoder, offset, recursion_depth, self.as_deref_mut())
     }
 }
 
@@ -1150,8 +1238,8 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
 }
 
 /// An shorthand macro for calling `Encodable::encode()` from generated code
-// with full parameters, without importing the `Encodable` trait.
-// This is intended to be used only by generated code.
+/// with full parameters, without importing the `Encodable` trait.
+/// This is intended to be used only by generated code.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! fidl_encode {
@@ -1162,7 +1250,7 @@ macro_rules! fidl_encode {
 
 /// A shorthand macro for calling `Decodable::decode()` on a type
 /// without importing the `Decodable` trait.
-// This is intended to be used only by generated code.
+/// This is intended to be used only by generated code.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! fidl_decode {
@@ -1901,10 +1989,10 @@ macro_rules! fidl_table {
                 encoder.write_out_of_line(bytes_len, recursion_depth, |encoder, offset, recursion_depth| {
                     // Write at offset+(ordinal-1)*16, since ordinals are one-based and envelopes are 16 bytes.
                     // An empty envelope is all zeros, so we don't need to write anything for empty/reserved
-                        for (ref ordinal, encodable) in members.iter_mut() {
-                            $crate::encoding::encode_in_envelope(encodable, encoder, offset + (*ordinal as usize - 1) * 16, recursion_depth)?;
-                        }
-                        Ok(())
+                    for (ordinal, encodable) in members.iter_mut() {
+                        $crate::encoding::encode_in_envelope(encodable, encoder, offset + (*ordinal as usize - 1) * 16, recursion_depth)?;
+                    }
+                    Ok(())
                 })
             }
         }
