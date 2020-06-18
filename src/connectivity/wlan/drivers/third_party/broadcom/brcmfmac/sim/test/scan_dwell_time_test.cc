@@ -140,9 +140,7 @@ void ScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
   if (scans_remaining_ > 0) {
     // Schedule next scan
     ap_info_->beacons_seen_count_ = 0;
-    auto scan_handler = std::make_unique<std::function<void()>>();
-    *scan_handler = std::bind(&ScanTest::StartScan, this);
-    env_->ScheduleNotification(std::move(scan_handler), kScanGapTime);
+    SCHEDULE_CALL(kScanGapTime, &ScanTest::StartScan, this);
   }
 }
 
@@ -157,14 +155,10 @@ TEST_F(ScanTest, PassiveDwellTime) {
   StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel, kBeaconInterval);
 
   // Start scans
-  auto scan_handler = std::make_unique<std::function<void()>>();
-  *scan_handler = std::bind(&ScanTest::StartScan, this);
-  env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
+  SCHEDULE_CALL(kScanStartTime, &ScanTest::StartScan, this);
 
   // Request a future notification so we can shut down the test
-  auto end_handler = std::make_unique<std::function<void()>>();
-  *end_handler = std::bind(&ScanTest::EndSimulation, this);
-  env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
+  SCHEDULE_CALL(kDefaultTestDuration, &ScanTest::EndSimulation, this);
 
   env_->Run();
 

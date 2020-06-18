@@ -139,7 +139,7 @@ void TimeoutTest::StartDeauth() {
 void TimeoutTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
-  SCHEDULE_CALL(&TimeoutTest::Finish, kTestDuration);
+  SCHEDULE_CALL(kTestDuration, &TimeoutTest::Finish, this);
 }
 
 void TimeoutTest::Finish() {
@@ -192,7 +192,7 @@ TEST_F(TimeoutTest, ScanTimeout) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, client_ifc_.iface_id_);
 
-  SCHEDULE_CALL(&TimeoutTest::StartScan, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &TimeoutTest::StartScan, this);
 
   env_->Run();
 
@@ -212,7 +212,7 @@ TEST_F(TimeoutTest, AssocTimeout) {
   // Ignore association req in sim-fw.
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_.iface_id_);
-  SCHEDULE_CALL(&TimeoutTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &TimeoutTest::StartAssoc, this);
 
   env_->Run();
 
@@ -231,7 +231,7 @@ TEST_F(TimeoutTest, DisassocTimeout) {
   // Ignore disassociation req in sim-fw.
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_DISASSOC, ZX_OK, client_ifc_.iface_id_);
-  SCHEDULE_CALL(&TimeoutTest::StartDeauth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &TimeoutTest::StartDeauth, this);
 
   env_->Run();
 
@@ -253,9 +253,9 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_.iface_id_);
   // There are three timers for them, and all have been cancelled.
-  SCHEDULE_CALL(&TimeoutTest::StartAssoc, zx::msec(10));
-  SCHEDULE_CALL(&TimeoutTest::StartDeauth, zx::sec(1));
-  SCHEDULE_CALL(&TimeoutTest::StartScan, zx::sec(3));
+  SCHEDULE_CALL(zx::msec(10), &TimeoutTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::sec(1), &TimeoutTest::StartDeauth, this);
+  SCHEDULE_CALL(zx::sec(3), &TimeoutTest::StartScan, this);
 
   env_->Run();
 

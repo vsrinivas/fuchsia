@@ -188,9 +188,7 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
   wlan_channel_t channel = ap.GetChannel();
 
   if (delay) {
-    auto cb_fn = std::make_unique<std::function<void()>>();
-    *cb_fn = std::bind(&SimInterface::StartAssoc, this, bssid, ssid, channel);
-    env_->ScheduleNotification(std::move(cb_fn), *delay);
+    SCHEDULE_CALL(*delay, &SimInterface::StartAssoc, this, bssid, ssid, channel);
   } else {
     StartAssoc(ap.GetBssid(), ap.GetSsid(), ap.GetChannel());
   }

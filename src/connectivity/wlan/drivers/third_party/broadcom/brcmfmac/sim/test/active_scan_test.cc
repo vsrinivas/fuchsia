@@ -236,14 +236,10 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
       .num_ssids = 0,
   };
 
-  auto scan_handler = std::make_unique<std::function<void()>>();
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req);
-  env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
 
   // Schedule scan end in environment
-  auto end_handler = std::make_unique<std::function<void()>>();
-  *end_handler = std::bind(&ActiveScanTest::EndSimulation, this);
-  env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
+  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
 
   env_->Run();
 
@@ -271,21 +267,15 @@ TEST_F(ActiveScanTest, ScanTwice) {
       .num_ssids = 0,
   };
 
-  auto scan_handler = std::make_unique<std::function<void()>>();
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req);
-  env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
 
   env_->Run();
 
   VerifyScanResults();
 
-  scan_handler = std::make_unique<std::function<void()>>();
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req);
-  env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
 
-  auto end_handler = std::make_unique<std::function<void()>>();
-  *end_handler = std::bind(&ActiveScanTest::EndSimulation, this);
-  env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
+  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
 
   env_->Run();
 
@@ -340,17 +330,10 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
                                            .ssid_list = {valid_scan_ssid, invalid_scan_ssid}};
 
   // Two active scans are scheduled,
-  auto scan_handler = std::make_unique<std::function<void()>>();
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid);
-  env_->ScheduleNotification(std::move(scan_handler), kFirstScanStartTime);
+  SCHEDULE_CALL(kFirstScanStartTime, &ActiveScanTest::StartScan, this, &req_break_ssid);
+  SCHEDULE_CALL(kSecondScanStartTime, &ActiveScanTest::StartScan, this, &req_break_ssid_list);
 
-  scan_handler = std::make_unique<std::function<void()>>();
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid_list);
-  env_->ScheduleNotification(std::move(scan_handler), kSecondScanStartTime);
-
-  auto end_handler = std::make_unique<std::function<void()>>();
-  *end_handler = std::bind(&ActiveScanTest::EndSimulation, this);
-  env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
+  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
 
   env_->Run();
 

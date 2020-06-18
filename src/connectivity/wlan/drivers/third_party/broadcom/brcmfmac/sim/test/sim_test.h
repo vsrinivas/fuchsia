@@ -147,10 +147,10 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
 };
 
 // Schedule a call from within a SimTest to a member function that takes no arguments
-#define SCHEDULE_CALL(member_fn, when)                      \
+#define SCHEDULE_CALL(when, ...)                            \
   do {                                                      \
     auto cb_fn = std::make_unique<std::function<void()>>(); \
-    *cb_fn = std::bind(member_fn, this);                    \
+    *cb_fn = std::bind(__VA_ARGS__);                        \
     env_->ScheduleNotification(std::move(cb_fn), when);     \
   } while (0)
 

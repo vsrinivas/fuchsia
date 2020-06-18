@@ -43,9 +43,6 @@ class DynamicIfTest : public SimTest {
   void StartAssoc();
 
   void ChannelCheck();
-  // Schedule an event to stop the test. This is needed to stop any beaconing APs, since the test
-  // won't end until all events are processed.
-  void ScheduleTestEnd(zx::duration when);
   void TxAssocReq();
 
   void VerifyAssocWithSoftAP();
@@ -228,7 +225,9 @@ void DynamicIfTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 void DynamicIfTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   context_.assoc_resp_count = 0;
-  ScheduleTestEnd(kTestDuration);
+  // Schedule an event to stop the test. This is needed to stop any beaconing APs, since the test
+  // won't end until all events are processed.
+  SCHEDULE_CALL(kTestDuration, &DynamicIfTest::Finish, this);
 }
 
 void DynamicIfTest::Finish() {
@@ -236,12 +235,6 @@ void DynamicIfTest::Finish() {
     ap->DisableBeacon();
   }
   aps_.clear();
-}
-
-void DynamicIfTest::ScheduleTestEnd(zx::duration when) {
-  auto end_test_fn = std::make_unique<std::function<void()>>();
-  *end_test_fn = std::bind(&DynamicIfTest::Finish, this);
-  env_->ScheduleNotification(std::move(end_test_fn), when);
 }
 
 void DynamicIfTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
@@ -429,9 +422,9 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Associate to FakeAp
-  SCHEDULE_CALL(&DynamicIfTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &DynamicIfTest::StartAssoc, this);
   // Associate to SoftAP
-  SCHEDULE_CALL(&DynamicIfTest::TxAssocReq, zx::msec(100));
+  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAssocReq, this);
 
   env_->Run();
 
@@ -461,12 +454,12 @@ TEST_F(DynamicIfTest, StopAPDisassocsClientIF) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Associate to FakeAp
-  SCHEDULE_CALL(&DynamicIfTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &DynamicIfTest::StartAssoc, this);
   // Associate to SoftAP
-  SCHEDULE_CALL(&DynamicIfTest::TxAssocReq, zx::msec(100));
+  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAssocReq, this);
 
   // Verify Assoc with SoftAP succeeded
-  SCHEDULE_CALL(&DynamicIfTest::VerifyAssocWithSoftAP, zx::msec(150));
+  SCHEDULE_CALL(zx::msec(150), &DynamicIfTest::VerifyAssocWithSoftAP, this);
   env_->Run();
 
   // Check if the client's assoc with FakeAP succeeded
@@ -541,16 +534,16 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
 
   zx::duration delay = zx::msec(10);
   // Associate to FakeAp
-  SCHEDULE_CALL(&DynamicIfTest::StartAssoc, delay);
+  SCHEDULE_CALL(delay, &DynamicIfTest::StartAssoc, this);
   // Start our SoftAP
   delay += zx::msec(10);
-  SCHEDULE_CALL(&DynamicIfTest::StartSoftAP, delay);
+  SCHEDULE_CALL(delay, &DynamicIfTest::StartSoftAP, this);
 
   // Wait until SIM FW sends AP Start confirmation. This is set as a
   // scheduled event to ensure test runs until AP Start confirmation is
   // received.
   delay += kStartAPConfDelay + zx::msec(10);
-  SCHEDULE_CALL(&DynamicIfTest::ChannelCheck, delay);
+  SCHEDULE_CALL(delay, &DynamicIfTest::ChannelCheck, this);
   env_->Run();
   // ChannelCheck();
 }

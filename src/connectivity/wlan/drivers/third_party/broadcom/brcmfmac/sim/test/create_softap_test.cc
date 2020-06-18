@@ -30,14 +30,6 @@ class CreateSoftAPTest : public SimTest {
   uint32_t DeviceCount();
   void TxAssocReq();
   void TxDisassocReq();
-  void ScheduleStartSoftAP(zx::duration when);
-  void ScheduleVerifyStartAPConf(zx::duration when, uint8_t status);
-  void ScheduleStopSoftAP(zx::duration when);
-  void ScheduleAssocReq(zx::duration when);
-  void ScheduleAssocDisassocReq(zx::duration when);
-  void ScheduleVerifyAssoc(zx::duration when);
-  void ScheduleVerifyDisassoc(zx::duration when);
-  void ScheduleClearAssocInd(zx::duration when);
   void CleanupInterface();
   void VerifyAssoc();
   void VerifyDisassoc();
@@ -253,48 +245,6 @@ void CreateSoftAPTest::TxDisassocReq() {
   env_->Tx(disassoc_req_frame, tx_info_, this);
 }
 
-void CreateSoftAPTest::ScheduleStartSoftAP(zx::duration when) {
-  auto start_softap_fn = std::make_unique<std::function<void()>>();
-  *start_softap_fn = std::bind(&CreateSoftAPTest::StartSoftAP, this);
-  env_->ScheduleNotification(std::move(start_softap_fn), when);
-}
-
-void CreateSoftAPTest::ScheduleVerifyStartAPConf(zx::duration when, uint8_t status) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&CreateSoftAPTest::VerifyStartAPConf, this, status);
-  env_->ScheduleNotification(std::move(fn), when);
-}
-
-void CreateSoftAPTest::ScheduleStopSoftAP(zx::duration when) {
-  auto stop_softap_fn = std::make_unique<std::function<void()>>();
-  *stop_softap_fn = std::bind(&CreateSoftAPTest::StopSoftAP, this);
-  env_->ScheduleNotification(std::move(stop_softap_fn), when);
-}
-
-void CreateSoftAPTest::ScheduleAssocReq(zx::duration when) {
-  auto start_assoc_fn = std::make_unique<std::function<void()>>();
-  *start_assoc_fn = std::bind(&CreateSoftAPTest::TxAssocReq, this);
-  env_->ScheduleNotification(std::move(start_assoc_fn), when);
-}
-
-void CreateSoftAPTest::ScheduleAssocDisassocReq(zx::duration when) {
-  auto start_disassoc_fn = std::make_unique<std::function<void()>>();
-  *start_disassoc_fn = std::bind(&CreateSoftAPTest::TxDisassocReq, this);
-  env_->ScheduleNotification(std::move(start_disassoc_fn), when);
-}
-
-void CreateSoftAPTest::ScheduleVerifyAssoc(zx::duration when) {
-  auto verify_assoc_fn = std::make_unique<std::function<void()>>();
-  *verify_assoc_fn = std::bind(&CreateSoftAPTest::VerifyAssoc, this);
-  env_->ScheduleNotification(std::move(verify_assoc_fn), when);
-}
-
-void CreateSoftAPTest::ScheduleVerifyDisassoc(zx::duration when) {
-  auto verify_disassoc_fn = std::make_unique<std::function<void()>>();
-  *verify_disassoc_fn = std::bind(&CreateSoftAPTest::VerifyDisassoc, this);
-  env_->ScheduleNotification(std::move(verify_disassoc_fn), when);
-}
-
 void CreateSoftAPTest::VerifyAssoc() {
   // Verify the event indications were received and
   // the number of clients
@@ -306,12 +256,6 @@ void CreateSoftAPTest::VerifyAssoc() {
 }
 
 void CreateSoftAPTest::ClearAssocInd() { assoc_ind_recv_ = false; }
-
-void CreateSoftAPTest::ScheduleClearAssocInd(zx::duration when) {
-  auto cleanup_fn = std::make_unique<std::function<void()>>();
-  *cleanup_fn = std::bind(&CreateSoftAPTest::ClearAssocInd, this);
-  env_->ScheduleNotification(std::move(cleanup_fn), when);
-}
 
 void CreateSoftAPTest::VerifyDisassoc() {
   // Verify the event indications were received and
@@ -344,11 +288,11 @@ TEST_F(CreateSoftAPTest, CreateSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   zx::duration delay = zx::msec(10);
-  ScheduleStartSoftAP(delay);
+  SCHEDULE_CALL(delay, &CreateSoftAPTest::StartSoftAP, this);
   delay += kStartAPConfDelay + zx::msec(10);
-  ScheduleStopSoftAP(delay);
+  SCHEDULE_CALL(delay, &CreateSoftAPTest::StopSoftAP, this);
   // Wait until SoftAP start conf is received
-  // ScheduleVerifyStartAPConf(delay, WLAN_START_RESULT_SUCCESS);
+  // SCHEDULE_CALL(delay, &CreateSoftAPTest::VerifyStartAPConf, this, WLAN_START_RESULT_SUCCESS);
   env_->Run();
   VerifyStartAPConf(WLAN_START_RESULT_SUCCESS);
   CleanupInterface();
@@ -359,7 +303,7 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   InjectStartAPError();
-  ScheduleStartSoftAP(zx::msec(50));
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::StartSoftAP, this);
   env_->Run();
   VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
 }
@@ -386,8 +330,8 @@ TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  ScheduleAssocReq(zx::msec(10));
-  ScheduleVerifyAssoc(zx::msec(50));
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
   env_->Run();
   CleanupInterface();
 }
@@ -397,12 +341,12 @@ TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  ScheduleAssocReq(zx::msec(10));
-  ScheduleVerifyAssoc(zx::msec(50));
-  ScheduleClearAssocInd(zx::msec(75));
+  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
+  SCHEDULE_CALL(zx::msec(75), &CreateSoftAPTest::ClearAssocInd, this);
   // Reassoc
-  ScheduleAssocReq(zx::msec(100));
-  ScheduleVerifyAssoc(zx::msec(150));
+  SCHEDULE_CALL(zx::msec(100), &CreateSoftAPTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::msec(150), &CreateSoftAPTest::VerifyAssoc, this);
   env_->Run();
   CleanupInterface();
 }
@@ -412,8 +356,8 @@ TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  ScheduleAssocDisassocReq(zx::msec(50));
-  ScheduleVerifyDisassoc(zx::msec(75));
+  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::TxDisassocReq, this);
+  SCHEDULE_CALL(zx::msec(75), &CreateSoftAPTest::VerifyDisassoc, this);
   env_->Run();
   CleanupInterface();
 }

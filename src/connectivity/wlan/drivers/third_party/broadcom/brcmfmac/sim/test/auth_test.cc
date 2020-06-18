@@ -49,7 +49,6 @@ class AuthTest : public SimTest {
 
   // Start the process of authentication
   void StartAuth();
-  void ScheduleEvent(void (AuthTest::*fn)(), zx::duration delay);
 
   void VerifyAuthFrames();
   void SecErrorInject();
@@ -184,12 +183,6 @@ void AuthTest::StartAuth() {
   memcpy(join_req.selected_bss.ssid.data, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = kDefaultChannel;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
-}
-
-void AuthTest::ScheduleEvent(void (AuthTest::*fn)(), zx::duration delay) {
-  auto handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(fn, this);
-  env_->ScheduleNotification(std::move(handler), delay);
 }
 
 void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {
@@ -409,7 +402,7 @@ TEST_F(AuthTest, WEP104) {
   sec_type_ = SEC_TYPE_WEP_SHARED104;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
   // The first SHARED KEY authentication request will fail, and switch to OPEN SYSTEM automatically.
@@ -426,7 +419,7 @@ TEST_F(AuthTest, WEP40) {
   sec_type_ = SEC_TYPE_WEP_SHARED40;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
   // It should be a successful shared_key authentication
@@ -442,7 +435,7 @@ TEST_F(AuthTest, WEPOPEN) {
   sec_type_ = SEC_TYPE_WEP_OPEN;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
 
@@ -458,7 +451,7 @@ TEST_F(AuthTest, AuthFail) {
                    .sec_type = simulation::SEC_PROTO_TYPE_OPEN});
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, client_ifc_.iface_id_);
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
   EXPECT_NE(auth_status_, WLAN_AUTH_RESULT_SUCCESS);
@@ -471,7 +464,7 @@ TEST_F(AuthTest, IgnoreTest) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
 
@@ -496,7 +489,7 @@ TEST_F(AuthTest, WPA1Test) {
   sec_type_ = SEC_TYPE_WPA1;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
 
@@ -514,7 +507,7 @@ TEST_F(AuthTest, WPA1Fail) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, client_ifc_.iface_id_);
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
 
@@ -527,7 +520,7 @@ TEST_F(AuthTest, WPA2Test) {
   sec_type_ = SEC_TYPE_WPA2;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
 
@@ -544,7 +537,7 @@ TEST_F(AuthTest, WPA2TestFail) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
   SecErrorInject();
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
   // Make sure that OnAssocConf is called, so the check inside is called.
@@ -559,7 +552,7 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   sec_type_ = SEC_TYPE_WPA1;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
 

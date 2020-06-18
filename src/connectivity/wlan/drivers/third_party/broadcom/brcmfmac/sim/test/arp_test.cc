@@ -69,15 +69,12 @@ class ArpTest : public SimTest {
   zx_status_t StartSoftAP();
   zx_status_t StopSoftAP();
   zx_status_t SetMulticastPromisc(bool enable);
-  void ScheduleSetMulticastPromisc(bool enable, zx::duration when);
 
   // Simulation of client associating to a SoftAP interface
   void TxAssocReq();
   void VerifyAssoc();
 
   // Frame processing
-  void ScheduleTx(const common::MacAddr& dstAddr, const common::MacAddr& srcAddr,
-                  const std::vector<uint8_t>& ethFrame, zx::duration when);
   void ScheduleArpFrameTx(zx::duration when, bool expect_rx);
   void ScheduleNonArpFrameTx(zx::duration when);
   static std::vector<uint8_t> CreateEthernetFrame(common::MacAddr dstAddr, common::MacAddr srcAddr,
@@ -162,12 +159,6 @@ zx_status_t ArpTest::SetMulticastPromisc(bool enable) {
   return ops->set_multicast_promisc(ctx, enable);
 }
 
-void ArpTest::ScheduleSetMulticastPromisc(bool enable, zx::duration when) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&ArpTest::SetMulticastPromisc, this, enable);
-  env_->ScheduleNotification(std::move(fn), when);
-}
-
 zx_status_t ArpTest::StopSoftAP() {
   wlanif_stop_req_t stop_req{
       .ssid = {.len = 6, .data = "Sim_AP"},
@@ -197,13 +188,6 @@ void ArpTest::CleanupApInterface() {
   ASSERT_EQ(device_->WlanphyImplDestroyIface(sim_ifc_.iface_id_), ZX_OK);
 }
 
-void ArpTest::ScheduleTx(const common::MacAddr& dstAddr, const common::MacAddr& srcAddr,
-                         const std::vector<uint8_t>& ethFrame, zx::duration when) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&ArpTest::Tx, this, ethFrame);
-  env_->ScheduleNotification(std::move(fn), when);
-}
-
 void ArpTest::Tx(const std::vector<uint8_t>& ethFrame) {
   const ethhdr* eth_hdr = reinterpret_cast<const ethhdr*>(ethFrame.data());
   common::MacAddr dst(eth_hdr->h_dest);
@@ -223,13 +207,13 @@ void ArpTest::ScheduleArpFrameTx(zx::duration when, bool expect_rx) {
   std::vector<uint8_t> frame_bytes =
       CreateEthernetFrame(common::kBcastMac, kTheirMac, ETH_P_ARP,
                           reinterpret_cast<const uint8_t*>(&arp_frame), sizeof(arp_frame));
-  ScheduleTx(kOurMac, kTheirMac, frame_bytes, when);
+  SCHEDULE_CALL(when, &ArpTest::Tx, this, frame_bytes);
 }
 
 void ArpTest::ScheduleNonArpFrameTx(zx::duration when) {
   std::vector<uint8_t> frame_bytes =
       CreateEthernetFrame(kOurMac, kTheirMac, 0, kDummyData.data(), kDummyData.size());
-  ScheduleTx(kOurMac, kTheirMac, frame_bytes, when);
+  SCHEDULE_CALL(when, &ArpTest::Tx, this, frame_bytes);
 }
 
 // Verify that an ARP frame received by an AP interface is not offloaded, even after multicast
@@ -241,21 +225,21 @@ TEST_F(ArpTest, SoftApArpOffload) {
   EXPECT_EQ(StartSoftAP(), ZX_OK);
 
   // Have the test associate with the AP
-  SCHEDULE_CALL(&ArpTest::TxAssocReq, zx::sec(1));
-  SCHEDULE_CALL(&ArpTest::VerifyAssoc, zx::sec(2));
+  SCHEDULE_CALL(zx::sec(1), &ArpTest::TxAssocReq, this);
+  SCHEDULE_CALL(zx::sec(2), &ArpTest::VerifyAssoc, this);
 
   // Send an ARP frame that we expect to be received
   ScheduleArpFrameTx(zx::sec(3), true);
   ScheduleNonArpFrameTx(zx::sec(4));
 
-  ScheduleSetMulticastPromisc(true, zx::sec(5));
+  SCHEDULE_CALL(zx::sec(5), &ArpTest::SetMulticastPromisc, this, true);
 
   // Send an ARP frame that we expect to be received
   ScheduleArpFrameTx(zx::sec(6), true);
   ScheduleNonArpFrameTx(zx::sec(7));
 
   // Stop AP and remove interface
-  SCHEDULE_CALL(&ArpTest::CleanupApInterface, zx::sec(8));
+  SCHEDULE_CALL(zx::sec(8), &ArpTest::CleanupApInterface, this);
 
   env_->Run(kTestDuration);
 
@@ -283,7 +267,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   ScheduleArpFrameTx(zx::sec(2), false);
   ScheduleNonArpFrameTx(zx::sec(3));
 
-  ScheduleSetMulticastPromisc(true, zx::sec(4));
+  SCHEDULE_CALL(zx::sec(4), &ArpTest::SetMulticastPromisc, this, true);
 
   // Send an ARP frame that we expect to be offloaded
   ScheduleArpFrameTx(zx::sec(5), false);

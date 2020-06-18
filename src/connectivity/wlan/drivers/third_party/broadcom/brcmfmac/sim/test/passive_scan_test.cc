@@ -170,14 +170,10 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
   StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
 
   // Request a future scan
-  auto scan_handler = std::make_unique<std::function<void()>>();
-  *scan_handler = std::bind(&PassiveScanTest::StartScan, this);
-  env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
+  SCHEDULE_CALL(kScanStartTime, &PassiveScanTest::StartScan, this);
 
   // Request a future notification so we can shut down the test
-  auto end_handler = std::make_unique<std::function<void()>>();
-  *end_handler = std::bind(&PassiveScanTest::EndSimulation, this);
-  env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
+  SCHEDULE_CALL(kDefaultTestDuration, &PassiveScanTest::EndSimulation, this);
 
   env_->Run();
 

@@ -272,13 +272,9 @@ void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   EXPECT_EQ(resp->result_code, context_.expected_results.front());
   context_.expected_results.pop_front();
   if (start_disassoc_) {
-    auto callback = std::make_unique<std::function<void()>>();
-    *callback = std::bind(&AssocTest::StartDisassoc, this);
-    env_->ScheduleNotification(std::move(callback), zx::msec(200));
+    SCHEDULE_CALL(zx::msec(200), &AssocTest::StartDisassoc, this);
   } else if (start_deauth_) {
-    auto callback = std::make_unique<std::function<void()>>();
-    *callback = std::bind(&AssocTest::StartDeauth, this);
-    env_->ScheduleNotification(std::move(callback), zx::msec(200));
+    SCHEDULE_CALL(zx::msec(200), &AssocTest::StartDeauth, this);
   }
 }
 
@@ -320,7 +316,7 @@ TEST_F(AssocTest, SignalReportTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -421,7 +417,7 @@ TEST_F(AssocTest, NoAps) {
   context_.ssid = {.len = 6, .ssid = "TestAP"};
   context_.tx_info.channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -440,7 +436,7 @@ TEST_F(AssocTest, SimpleTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -461,7 +457,7 @@ TEST_F(AssocTest, SsidTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -491,7 +487,7 @@ TEST_F(AssocTest, WrongIds) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -516,9 +512,9 @@ TEST_F(AssocTest, RepeatedAssocTest) {
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(11));
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(12));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::msec(11), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::msec(12), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -537,7 +533,7 @@ TEST_F(AssocTest, ApIgnoredRequest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -560,7 +556,7 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -592,7 +588,7 @@ TEST_F(AssocTest, SimFwIgnoreAssocReq) {
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
   AssocErrorInject();
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(50));
+  SCHEDULE_CALL(zx::msec(50), &AssocTest::StartAssoc, this);
   env_->Run(kTestDuration);
 
   // We should not have received a assoc response from SIM FW
@@ -638,7 +634,7 @@ TEST_F(AssocTest, IgnoreRespMismatch) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendBadResp, this);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -680,7 +676,7 @@ TEST_F(AssocTest, IgnoreExtraResp) {
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
   context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -700,7 +696,7 @@ TEST_F(AssocTest, AssocWhileScanning) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   wlanif_scan_req_t scan_req = {
       .txn_id = 42,
@@ -730,7 +726,7 @@ TEST_F(AssocTest, DisassocFromSelfTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
   start_disassoc_ = true;
 
   env_->Run(kTestDuration);
@@ -750,8 +746,8 @@ TEST_F(AssocTest, DisassocWithoutAssocTest) {
 
   // Attempt to disassociate. In this case client is not associated. AP
   // will not transmit the disassoc request
-  SCHEDULE_CALL(&AssocTest::StartDisassoc, zx::msec(10));
-  SCHEDULE_CALL(&AssocTest::TxFakeDisassocReq, zx::msec(50));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartDisassoc, this);
+  SCHEDULE_CALL(zx::msec(50), &AssocTest::TxFakeDisassocReq, this);
 
   env_->Run(kTestDuration);
 
@@ -770,7 +766,7 @@ TEST_F(AssocTest, DisassocNotSelfTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
   start_disassoc_ = true;
   disassoc_self_ = false;
 
@@ -791,7 +787,7 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
@@ -813,7 +809,7 @@ TEST_F(AssocTest, LinkEventTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
@@ -837,7 +833,7 @@ TEST_F(AssocTest, deauth_from_ap) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
   deauth_from_ap_ = true;
   start_deauth_ = true;
 
@@ -859,7 +855,7 @@ TEST_F(AssocTest, deauth_from_self) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
   deauth_from_ap_ = false;
   start_deauth_ = true;
 
@@ -885,7 +881,7 @@ TEST_F(AssocTest, AssocMaxRetries) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
                          sizeof(max_assoc_retries));
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -918,7 +914,7 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
                          sizeof(max_assoc_retries));
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
@@ -944,7 +940,7 @@ TEST_F(AssocTest, AssocNoRetries) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
                          sizeof(max_assoc_retries));
-  SCHEDULE_CALL(&AssocTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 

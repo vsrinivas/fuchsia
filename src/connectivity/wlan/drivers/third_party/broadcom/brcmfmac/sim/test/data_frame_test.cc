@@ -71,10 +71,6 @@ class DataFrameTest : public SimTest {
   // Run through the join => auth => assoc flow
   void StartAssoc();
 
-  // Schedule a future transmission
-  void ScheduleTx(std::vector<uint8_t>& ethFrame, zx::duration when);
-  void ScheduleEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
-                            const std::vector<uint8_t>& eapol, zx::duration when);
   // Send a data frame
   void Tx(std::vector<uint8_t>& ethFrame);
   // Send a eapol request
@@ -85,18 +81,12 @@ class DataFrameTest : public SimTest {
   void ClientAuth();
   // Have test assoc with ap
   void ClientAssoc();
-  // Schedule a data frame to the ap
-  void ScheduleClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
-                        std::vector<uint8_t>& ethFrame, size_t num_pkts, zx::duration when);
   // Send a data frame to the ap
   void ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr, std::vector<uint8_t>& ethFrame,
                 size_t num_pkts);
-  // Schedule rssi error injection in SIM FW
-  void ScheduleRssiErrInj(zx::duration when);
   void EnableRssiErrInj();
 
   void SendStatsQuery();
-  void ScheduleStatsQuery(zx::duration when);
 
  protected:
   struct AssocContext {
@@ -249,7 +239,7 @@ void DataFrameTest::Init() {
 
   // Schedule a time to terminate execution. Simulation runs until no more events are scheduled,
   // and since we have a beaconing fake AP, that means forever if we don't stop it.
-  SCHEDULE_CALL(&DataFrameTest::Finish, kTestDuration);
+  SCHEDULE_CALL(kTestDuration, &DataFrameTest::Finish, this);
 }
 
 void DataFrameTest::Finish() {
@@ -335,12 +325,6 @@ void DataFrameTest::SendStatsQuery() {
   client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
 }
 
-void DataFrameTest::ScheduleStatsQuery(zx::duration when) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&DataFrameTest::SendStatsQuery, this);
-  env_->ScheduleNotification(std::move(fn), when);
-}
-
 void DataFrameTest::StartAssoc() {
   // Send join request
   BRCMF_DBG(SIM, "Start assoc: @ %lu\n", env_->GetTime().get());
@@ -351,19 +335,6 @@ void DataFrameTest::StartAssoc() {
   join_req.selected_bss.chan = assoc_context_.channel;
   join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
-}
-
-void DataFrameTest::ScheduleTx(std::vector<uint8_t>& ethFrame, zx::duration when) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&DataFrameTest::Tx, this, ethFrame);
-  env_->ScheduleNotification(std::move(fn), when);
-}
-
-void DataFrameTest::ScheduleEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
-                                         const std::vector<uint8_t>& eapol, zx::duration when) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&DataFrameTest::TxEapolRequest, this, dstAddr, srcAddr, eapol);
-  env_->ScheduleNotification(std::move(fn), when);
 }
 
 void DataFrameTest::TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf) {
@@ -401,24 +372,11 @@ void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcA
   eapol_req.data_count = eapol.size();
   client_ifc_.if_impl_ops_->eapol_req(client_ifc_.if_impl_ctx_, &eapol_req);
 }
-void DataFrameTest::ScheduleRssiErrInj(zx::duration when) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&DataFrameTest::EnableRssiErrInj, this);
-  env_->ScheduleNotification(std::move(fn), when);
-}
 
 void DataFrameTest::EnableRssiErrInj() {
   brcmf_simdev* sim = device_->GetSim();
   // Enable error injection in SIM FW - set RSSI to 0 in signal
   sim->sim_fw->err_inj_.SetSignalErrInj(true);
-}
-
-void DataFrameTest::ScheduleClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
-                                     std::vector<uint8_t>& ethFrame, size_t num_pkts,
-                                     zx::duration when) {
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&DataFrameTest::ClientTx, this, dstAddr, srcAddr, ethFrame, num_pkts);
-  env_->ScheduleNotification(std::move(fn), when);
 }
 
 void DataFrameTest::ClientAuth() {
@@ -477,12 +435,12 @@ TEST_F(DataFrameTest, TxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &DataFrameTest::StartAssoc, this);
 
   // Simulate sending a data frame from driver to the AP
   data_context_.expected_sent_data.push_back(
       CreateEthernetFrame(kClientMacAddress, ifc_mac_, htobe16(ETH_P_IP), kSampleEthBody));
-  ScheduleTx(data_context_.expected_sent_data.front(), zx::sec(1));
+  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, data_context_.expected_sent_data.front());
   recv_addr_capture_filter = ap.GetBssid();
 
   env_->Run();
@@ -515,11 +473,11 @@ TEST_F(DataFrameTest, TxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &DataFrameTest::StartAssoc, this);
 
   // Simulate sending a illegal ethernet frame from us to the AP
   std::vector<uint8_t> ethFrame = {0x20, 0x43};
-  ScheduleTx(ethFrame, zx::sec(1));
+  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, ethFrame);
 
   env_->Run();
 
@@ -540,11 +498,12 @@ TEST_F(DataFrameTest, TxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(10));
+  SCHEDULE_CALL(zx::msec(10), &DataFrameTest::StartAssoc, this);
 
   // Simulate sending a EAPOL packet from us to the AP
   data_context_.expected_sent_data.push_back(kSampleEapol);
-  ScheduleEapolRequest(kClientMacAddress, ifc_mac_, kSampleEapol, zx::sec(1));
+  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::TxEapolRequest, this, kClientMacAddress, ifc_mac_,
+                kSampleEapol);
   recv_addr_capture_filter = ap.GetBssid();
 
   env_->Run();
@@ -574,19 +533,19 @@ TEST_F(DataFrameTest, RxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
 
   // Want test to associate with fake AP
-  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
-  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
+  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(
       CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody));
-  ScheduleClientTx(ifc_mac_, kClientMacAddress, data_context_.expected_received_data.back(), 1,
-                   zx::msec(100));
+  SCHEDULE_CALL(zx::msec(100), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
+                data_context_.expected_received_data.back(), 1);
 
-  ScheduleStatsQuery(zx::msec(500));
+  SCHEDULE_CALL(zx::msec(500), &DataFrameTest::SendStatsQuery, this);
   // Run
   env_->Run();
 
@@ -611,22 +570,22 @@ TEST_F(DataFrameTest, CheckRssiInStatsQueryResp) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
 
   // Want test to associate with fake AP
-  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
-  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
+  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
 
   // Want to send some packets from test to driver
   data_context_.expected_received_data.push_back(
       CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody));
-  ScheduleClientTx(ifc_mac_, kClientMacAddress, data_context_.expected_received_data.back(), 10,
-                   zx::msec(100));
+  SCHEDULE_CALL(zx::msec(100), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
+                data_context_.expected_received_data.back(), 10);
 
-  ScheduleRssiErrInj(zx::msec(300));
-  ScheduleClientTx(ifc_mac_, kClientMacAddress, data_context_.expected_received_data.back(), 10,
-                   zx::msec(400));
-  ScheduleStatsQuery(zx::msec(1000));
+  SCHEDULE_CALL(zx::msec(300), &DataFrameTest::EnableRssiErrInj, this);
+  SCHEDULE_CALL(zx::msec(400), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
+                data_context_.expected_received_data.back(), 10);
+  SCHEDULE_CALL(zx::msec(1000), &DataFrameTest::SendStatsQuery, this);
   // Run
   env_->Run();
 
@@ -649,17 +608,18 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
 
   // Want test to associate with fake AP
-  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
-  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
+  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
 
   // ethernet frame too small to hold ethernet header
   std::vector<uint8_t> ethFrame = {0x00, 0x45};
 
   // Want to send packet from test to driver
-  ScheduleClientTx(ifc_mac_, kClientMacAddress, ethFrame, 1, zx::sec(10));
+  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, ethFrame,
+                1);
 
   // Run
   env_->Run();
@@ -681,17 +641,17 @@ TEST_F(DataFrameTest, RxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, zx::msec(30));
+  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
 
   // Want test to associate with fake AP
-  SCHEDULE_CALL(&DataFrameTest::ClientAuth, zx::msec(50));
-  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, zx::msec(60));
+  SCHEDULE_CALL(zx::msec(50), &DataFrameTest::ClientAuth, this);
+  SCHEDULE_CALL(zx::msec(60), &DataFrameTest::ClientAssoc, this);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
   auto frame = CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_PAE), kSampleEapol);
 
-  ScheduleClientTx(ifc_mac_, kClientMacAddress, frame, 1, zx::sec(10));
+  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame, 1);
 
   // Run
   env_->Run();
@@ -716,13 +676,13 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(&DataFrameTest::StartAssoc, delay);
+  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
 
   // Want test to associate with fake AP
   delay = delay + zx::msec(10);
-  SCHEDULE_CALL(&DataFrameTest::ClientAuth, delay);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientAuth, this);
   delay = delay + zx::msec(10);
-  SCHEDULE_CALL(&DataFrameTest::ClientAssoc, delay);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientAssoc, this);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
@@ -730,7 +690,7 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Send the packet before the SSID event is sent from SIM FW
   delay = delay + kSsidEventDelay / 2;
-  ScheduleClientTx(ifc_mac_, kClientMacAddress, frame, 1, delay);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame, 1);
   assoc_check_for_eapol_rx_ = true;
   // Run
   env_->Run();
