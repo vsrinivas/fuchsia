@@ -306,16 +306,12 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
         reader.SetBytesRemaining(bytes_remaining - data_size);
       }
     } break;
-    case DnsType::kNSec: {
+    case DnsType::kNSec:
       new (&value.txt_) DnsResourceDataNSec();
-      size_t bytes_remaining = reader.bytes_remaining();
-      reader.SetBytesRemaining(data_size);
-      reader >> value.nsec_;
-      if (reader.healthy()) {
-        FX_DCHECK(reader.bytes_remaining() == 0);
-        reader.SetBytesRemaining(bytes_remaining - data_size);
-      }
-    } break;
+      // Skip parsing this resource, which we ignore anyway. The Mac Mini produces messages with
+      // bad NSec resources, and we'd reject those messages if we tried to parse this resource.
+      reader.Bytes(data_size);
+      break;
     default:
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 #ifndef NDEBUG
