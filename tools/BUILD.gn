@@ -82,6 +82,7 @@ group("tests") {
     "//tools/component_id_index:tests($host_toolchain)",
     "//tools/create:tests($host_toolchain)",
     "//tools/debug:tests($host_toolchain)",
+    "//tools/devshell:tests($host_toolchain)",
     "//tools/doc_checker:tests",
     "//tools/fidl:tests",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
