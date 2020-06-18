@@ -150,7 +150,7 @@ impl RoutingTestBuilder {
         self
     }
 
-    /// Add the given runner as a "builtin runner", offered to the root component
+    /// Add the given runner as a "builtin runner", registered in the root realm's environment
     /// under the given name.
     pub fn add_builtin_runner(mut self, name: &str, runner: Arc<dyn BuiltinRunnerFactory>) -> Self {
         self.builtin_runners.insert(name.into(), runner);

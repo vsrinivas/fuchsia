@@ -129,10 +129,7 @@ mod tests {
             testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
         },
         anyhow::Error,
-        cm_rust::{
-            self, CapabilityName, ChildDecl, ComponentDecl, OfferDecl, OfferRunnerDecl,
-            OfferRunnerSource, OfferTarget, UseDecl, UseRunnerDecl,
-        },
+        cm_rust::{self, CapabilityName, ChildDecl, ComponentDecl, UseDecl, UseRunnerDecl},
         fidl_fuchsia_sys2 as fsys,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
@@ -281,65 +278,6 @@ mod tests {
 
         // Ensure the instance starts up.
         mock_runner.wait_for_url("test:///a_resolved").await;
-    }
-
-    //   (cm)
-    //    |
-    //    a
-    //    |
-    //    b
-    //
-    // a: offers runner "elf" to "b"
-    // b: uses runner "elf".
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn offer_runner_from_component_manager() {
-        let mock_runner = Arc::new(MockRunner::new());
-
-        let components = vec![
-            (
-                "a",
-                ComponentDecl {
-                    uses: vec![UseDecl::Runner(UseRunnerDecl {
-                        source_name: CapabilityName("elf".to_string()),
-                    })],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                        environment: None,
-                    }],
-                    offers: vec![OfferDecl::Runner(OfferRunnerDecl {
-                        source: OfferRunnerSource::Realm,
-                        source_name: CapabilityName("elf".to_string()),
-                        target: OfferTarget::Child("b".to_string()),
-                        target_name: CapabilityName("dwarf".to_string()),
-                    })],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![UseDecl::Runner(UseRunnerDecl {
-                        source_name: CapabilityName("dwarf".to_string()),
-                    })],
-                    ..default_component_decl()
-                },
-            ),
-        ];
-
-        // Set up the system.
-        let universe = RoutingTestBuilder::new("a", components)
-            .add_builtin_runner("elf", mock_runner.clone())
-            .build()
-            .await;
-
-        // Bind the root component.
-        universe.bind_instance(&vec!["b:0"].into()).await.expect("bind failed");
-
-        // Ensure the instances started up.
-        mock_runner.wait_for_url("test:///a_resolved").await;
-        mock_runner.wait_for_url("test:///b_resolved").await;
     }
 
     //   (cm)

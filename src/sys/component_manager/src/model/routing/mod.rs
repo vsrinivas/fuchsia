@@ -607,12 +607,11 @@ async fn find_environment_capability_source<'a>(
                     };
                     Ok(Some((cap_source, cap_state)))
                 }
-                None => {
-                    // If no matching runner was found in the environment, fall back to regular
-                    // capability routing instead.
-                    // TODO: Once all clients are migrated, return an error instead.
-                    Ok(None)
-                }
+                None => Err(ModelError::from(RoutingError::use_from_environment_not_found(
+                    &target_realm.abs_moniker,
+                    "runner",
+                    source_name.to_string(),
+                ))),
             }
         }
         _ => Ok(None),

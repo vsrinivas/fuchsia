@@ -303,6 +303,7 @@ fn get_child_monikers(
 /// capability routing where either the source or target is not present in this
 /// ComponentDecl. Panics are not expected because ComponentDecls should be
 /// validated before this function is called.
+// TODO(52727): Account for environments in shutdown order.
 pub fn process_component_dependencies(
     decl: &ComponentDecl,
 ) -> HashMap<DependencyNode, HashSet<DependencyNode>> {

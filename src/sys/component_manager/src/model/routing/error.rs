@@ -112,6 +112,20 @@ pub enum RoutingError {
     UseFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
     #[error(
+        "A `use` declaration was found at `{}` for {} `{}`, but no matching \
+        {} registration was found in the component's environment",
+        moniker,
+        capability_type,
+        capability_id,
+        capability_type
+    )]
+    UseFromEnvironmentNotFound {
+        moniker: AbsoluteMoniker,
+        capability_type: String,
+        capability_id: String,
+    },
+
+    #[error(
         "An `environment` {} registration from `realm` was found at `{}` for `{}`, but no \
         matching `offer` declaration was found in the parent",
         capability_type,
@@ -346,6 +360,18 @@ impl RoutingError {
         capability_id: impl Into<String>,
     ) -> Self {
         Self::UseFromRealmNotFound { moniker: moniker.clone(), capability_id: capability_id.into() }
+    }
+
+    pub fn use_from_environment_not_found(
+        moniker: &AbsoluteMoniker,
+        capability_type: impl Into<String>,
+        capability_id: impl Into<String>,
+    ) -> Self {
+        Self::UseFromEnvironmentNotFound {
+            moniker: moniker.clone(),
+            capability_type: capability_type.into(),
+            capability_id: capability_id.into(),
+        }
     }
 
     pub fn environment_from_realm_not_found(

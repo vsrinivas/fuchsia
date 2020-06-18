@@ -1852,142 +1852,6 @@ async fn expose_directory_with_subdir() {
     .await;
 }
 
-///   a
-///    \
-///     b
-///      \
-///       c
-///
-/// a: declares runner "elf" as service "/svc/runner" from self.
-/// a: offers runner "elf" from self to "b" as "dwarf".
-/// b: offers runner "dwarf" from parent to "c" as "hobbit".
-/// c: uses runner "hobbit".
-#[fuchsia_async::run_singlethreaded(test)]
-async fn use_runner_from_grandparent() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Runner(OfferRunnerDecl {
-                    source: OfferRunnerSource::Self_,
-                    source_name: CapabilityName("elf".to_string()),
-                    target: OfferTarget::Child("b".to_string()),
-                    target_name: CapabilityName("dwarf".to_string()),
-                }))
-                .add_lazy_child("b")
-                .runner(RunnerDecl {
-                    name: "elf".into(),
-                    source: RunnerSource::Self_,
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
-                })
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Runner(OfferRunnerDecl {
-                    source: OfferRunnerSource::Realm,
-                    source_name: CapabilityName("dwarf".to_string()),
-                    target: OfferTarget::Child("c".to_string()),
-                    target_name: CapabilityName("hobbit".to_string()),
-                }))
-                .add_lazy_child("c")
-                .build(),
-        ),
-        ("c", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
-    ];
-
-    // Set up the system.
-    let (runner_service, mut receiver) =
-        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
-    let universe = RoutingTestBuilder::new("a", components)
-        // Component "a" exposes a runner service.
-        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
-        .build()
-        .await;
-
-    join!(
-        // Bind "c:0". We expect to see a call to our runner service for the new component.
-        async move {
-            universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
-        },
-        // Wait for a request, and ensure it has the correct URL.
-        async move {
-            assert_eq!(
-                wait_for_runner_request(&mut receiver).await.resolved_url,
-                Some("test:///c_resolved".to_string())
-            );
-        }
-    );
-}
-
-///   a
-///  / \
-/// r   b
-///
-/// r: declares runner "elf" as service "/svc/runner" from self.
-/// r: exposes runner "elf" to "a" as "dwarf".
-/// a: offers runner "dwarf" from "r" to "b" as "hobbit".
-/// b: uses runner "hobbit".
-#[fuchsia_async::run_singlethreaded(test)]
-async fn use_runner_from_sibling() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Runner(OfferRunnerDecl {
-                    source: OfferRunnerSource::Child("r".to_string()),
-                    source_name: CapabilityName("dwarf".to_string()),
-                    target: OfferTarget::Child("b".to_string()),
-                    target_name: CapabilityName("hobbit".to_string()),
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("r")
-                .build(),
-        ),
-        (
-            "r",
-            ComponentDeclBuilder::new()
-                .expose(ExposeDecl::Runner(ExposeRunnerDecl {
-                    source: ExposeSource::Self_,
-                    source_name: CapabilityName("elf".to_string()),
-                    target: ExposeTarget::Realm,
-                    target_name: CapabilityName("dwarf".to_string()),
-                }))
-                .runner(RunnerDecl {
-                    name: "elf".into(),
-                    source: RunnerSource::Self_,
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
-                })
-                .build(),
-        ),
-        ("b", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
-    ];
-
-    // Set up the system.
-    let (runner_service, mut receiver) =
-        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
-    let universe = RoutingTestBuilder::new("a", components)
-        // Component "r" exposes a runner service.
-        .add_outgoing_path("r", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
-        .build()
-        .await;
-
-    join!(
-        // Bind "b:0". We expect to see a call to our runner service for the new component.
-        async move {
-            universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
-        },
-        // Wait for a request, and ensure it has the correct URL.
-        async move {
-            assert_eq!(
-                wait_for_runner_request(&mut receiver).await.resolved_url,
-                Some("test:///b_resolved".to_string())
-            );
-        }
-    );
-}
-
 ///  a
 ///   \
 ///    b
@@ -2398,9 +2262,15 @@ async fn use_runner_from_environment_not_found() {
     assert_matches!(
         universe.bind_instance(&vec!["b:0"].into()).await,
         Err(ModelError::RoutingError {
-            err: RoutingError::UseFromRealmNotFound { moniker, capability_id }
+            err: RoutingError::UseFromEnvironmentNotFound {
+                moniker,
+                capability_type,
+                capability_id,
+            }
         })
-        if moniker == AbsoluteMoniker::from(vec!["b:0"]) && capability_id == "hobbit".to_string());
+        if moniker == AbsoluteMoniker::from(vec!["b:0"]) &&
+        capability_type == "runner".to_string() &&
+        capability_id == "hobbit".to_string());
 }
 
 // TODO: Write a test for environment that extends from None. Currently, this is not

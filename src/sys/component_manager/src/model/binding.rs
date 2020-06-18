@@ -143,8 +143,8 @@ mod tests {
             },
         },
         cm_rust::{
-            CapabilityName, CapabilityPath, ComponentDecl, OfferDecl, OfferRunnerDecl,
-            OfferRunnerSource, OfferTarget, RunnerDecl, RunnerSource,
+            CapabilityPath, ComponentDecl, RegistrationSource, RunnerDecl, RunnerRegistration,
+            RunnerSource,
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::prelude::*,
@@ -467,18 +467,30 @@ mod tests {
                 (
                     "a",
                     ComponentDeclBuilder::new()
-                        .add_eager_child("b")
+                        .add_child(
+                            ChildDeclBuilder::new()
+                                .name("b")
+                                .url("test:///b")
+                                .startup(fsys::StartupMode::Eager)
+                                .environment("env")
+                                .build(),
+                        )
                         .runner(RunnerDecl {
                             name: "foo".into(),
                             source: RunnerSource::Self_,
                             source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                         })
-                        .offer(OfferDecl::Runner(OfferRunnerDecl {
-                            source: OfferRunnerSource::Self_,
-                            source_name: CapabilityName("foo".to_string()),
-                            target: OfferTarget::Child("b".to_string()),
-                            target_name: CapabilityName("foo".to_string()),
-                        }))
+                        .add_environment(
+                            EnvironmentDeclBuilder::new()
+                                .extends(fsys::EnvironmentExtends::Realm)
+                                .name("env")
+                                .add_runner(RunnerRegistration {
+                                    source_name: "foo".into(),
+                                    source: RegistrationSource::Self_,
+                                    target_name: "foo".into(),
+                                })
+                                .build(),
+                        )
                         .build(),
                 ),
                 ("b", ComponentDeclBuilder::new_empty_component().use_runner("foo").build()),
