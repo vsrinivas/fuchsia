@@ -6,7 +6,6 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
-import 'package:io/ansi.dart';
 import 'package:meta/meta.dart';
 import 'package:pedantic/pedantic.dart';
 
@@ -72,12 +71,6 @@ class FuchsiaTestCommandCli {
 
   Future<void> run() async {
     _cmd = createCommand();
-    if (testsConfig.flags.shouldRebuild) {
-      _cmd.emitEvent(
-        TestInfo(wrapWith('> fx build', [green, styleBold])),
-      );
-      await fxCommandRun(FuchsiaLocator.shared.fx, 'build');
-    }
 
     // Without waiting, start the command.
     unawaited(

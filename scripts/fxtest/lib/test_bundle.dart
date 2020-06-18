@@ -69,6 +69,31 @@ class TestBundle {
         !hostTestTypes.contains(e.testDefinition.executionHandle.testType));
   }
 
+  /// Calculate the minimal set of build targets based on tests in [testBundles]
+  /// Returns null for a full build.
+  static Set<String> calculateMinimalBuildTargets(
+      List<TestBundle> testBundles) {
+    Set<String> targets = {};
+    for (var e in testBundles) {
+      switch (e.testDefinition.executionHandle.testType) {
+        case TestType.component:
+        case TestType.suite:
+          targets.add('updates');
+          break;
+        case TestType.command:
+        case TestType.host:
+          targets.add(e.testDefinition.path);
+          break;
+        case TestType.e2e:
+          // The presence of an e2e test requires a full build
+          return null;
+        default:
+          break;
+      }
+    }
+    return targets;
+  }
+
   TestBundle(
     this.testDefinition, {
     @required this.testRunner,

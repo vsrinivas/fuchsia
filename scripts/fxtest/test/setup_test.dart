@@ -422,4 +422,145 @@ void main() {
       expect(builtDirectory, false);
     });
   });
+
+  group('build targets', () {
+    List<TestBundle> createBundlesFromJson(
+      List<Map<String, dynamic>> json,
+    ) {
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (testsConfig) => TestRunner(),
+      );
+
+      return json
+          .map((e) => cmd.testBundleBuilder(TestDefinition.fromJson(e,
+              buildDir: '/whatever', fx: '/whatever/fx')))
+          .toList();
+    }
+
+    test('host tests only build the tests path', () async {
+      expect(
+          TestBundle.calculateMinimalBuildTargets(createBundlesFromJson([
+            {
+              'environments': [],
+              'test': {
+                'command': ['some', 'command'],
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'linux',
+                'path': 'host_x64/lib_tests',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            }
+          ])),
+          equals(['host_x64/lib_tests']));
+    });
+
+    test('component tests only build updates', () async {
+      expect(
+          TestBundle.calculateMinimalBuildTargets(createBundlesFromJson([
+            {
+              'environments': [],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'fuchsia',
+                'package_url':
+                    'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            }
+          ])),
+          equals(['updates']));
+    });
+
+    test(
+        'mixed host and component tests build both updates and the host test path',
+        () async {
+      expect(
+          TestBundle.calculateMinimalBuildTargets(createBundlesFromJson([
+            {
+              'environments': [],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'fuchsia',
+                'package_url':
+                    'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            },
+            {
+              'environments': [],
+              'test': {
+                'command': ['some', 'command'],
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'linux',
+                'path': 'host_x64/lib_tests',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            }
+          ])),
+          unorderedEquals(['updates', 'host_x64/lib_tests']));
+    });
+
+    test('an e2e test forces a full rebuild (default target)', () async {
+      expect(
+          TestBundle.calculateMinimalBuildTargets(createBundlesFromJson([
+            // e2e test
+            {
+              'environments': [
+                {
+                  'dimensions': {
+                    'device_type': 'asdf',
+                  },
+                },
+              ],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/e2e:e2e_tests(//build/toolchain:host_x64)',
+                'name': 'e2e_tests',
+                'os': 'linux',
+                'path': 'path/to/e2e_tests',
+                'runtime_deps': 'host_x64/gen/scripts/e2e/e2e_tests.deps.json'
+              }
+            },
+            // component test
+            {
+              'environments': [],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'fuchsia',
+                'package_url':
+                    'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            },
+            // host test
+            {
+              'environments': [],
+              'test': {
+                'command': ['some', 'command'],
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'linux',
+                'path': 'host_x64/lib_tests',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            }
+          ])),
+          // calculateMinimalBuildTargets returns null for a full build
+          // (default target)
+          isNull);
+    });
+  });
 }

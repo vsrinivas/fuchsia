@@ -162,6 +162,20 @@ class FuchsiaTestCommand {
       parsedManifest.testBundles.shuffle();
     }
 
+    if (testsConfig.flags.shouldRebuild) {
+      Set<String> buildTargets =
+          TestBundle.calculateMinimalBuildTargets(parsedManifest.testBundles);
+      emitEvent(TestInfo(testsConfig.wrapWith(
+          '> fx build ${buildTargets?.join(' ') ?? ''}', [green, styleBold])));
+      try {
+        await fxCommandRun(fuchsiaLocator.fx, 'build', buildTargets.toList());
+      } on FxRunException {
+        emitEvent(FatalError(
+            '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
+        return;
+      }
+    }
+
     try {
       // Let the output formatter know that we're done parsing and
       // emitting preliminary events
