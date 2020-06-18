@@ -212,3 +212,8 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mas
     }
   }
 }
+
+zx_signals_t Dispatcher::PollSignals() const {
+  Guard<Mutex> guard{get_lock()};
+  return signals_;
+}

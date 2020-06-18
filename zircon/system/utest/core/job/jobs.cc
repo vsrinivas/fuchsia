@@ -20,6 +20,13 @@
 
 extern zx_handle_t root_job;
 
+// Job signal that is active when a job has no children (i.e., no child jobs and no child
+// processes).
+//
+// TODO(fxb/53986): This is a temporary signal that we don't want userspace using (yet?).
+// The kernel doesn't export it, but we declare it here to allow it to be tested.
+#define ZX_JOB_NO_CHILDREN  __ZX_OBJECT_SIGNAL_6
+
 namespace {
 
 constexpr char kProcessName[] = "job-test-p";
@@ -70,6 +77,45 @@ TEST(JobTest, CreateTest) {
   ASSERT_OK(zx_handle_close(process2));
   ASSERT_OK(zx_handle_close(vmar1));
   ASSERT_OK(zx_handle_close(vmar2));
+}
+
+zx_signals_t GetActiveSignals(zx_handle_t object) {
+  zx_signals_t observed = 0;
+  EXPECT_EQ(zx_object_wait_one(object, 0x0, ZX_TIME_INFINITE_PAST, &observed), ZX_ERR_TIMED_OUT);
+  return observed;
+}
+
+TEST(JobTest, JobSignals) {
+  zx_handle_t job;
+  ASSERT_OK(zx_job_create(zx_job_default(), 0u, &job));
+
+  // A new job should have the NO_{JOBS,PROCESSES,CHILDREN} signals set.
+  EXPECT_EQ(GetActiveSignals(job), ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
+
+  // Create a child process.
+  zx_handle_t child_process, vmar;
+  ASSERT_OK(zx_process_create(job, kProcessName, sizeof(kProcessName), 0u, &child_process, &vmar));
+
+  // Expect only the NO_JOBS signal now.
+  EXPECT_EQ(GetActiveSignals(job), ZX_JOB_NO_JOBS);
+
+  // Create a child job.
+  zx_handle_t child_job;
+  ASSERT_OK(zx_job_create(job, 0u, &child_job));
+
+  // Expect no signals.
+  EXPECT_EQ(GetActiveSignals(job), 0);
+
+  // Kill the process. We expect the NO_PROCESSES signal to activate.
+  ASSERT_OK(zx_handle_close(child_process));
+  EXPECT_EQ(GetActiveSignals(job), ZX_JOB_NO_PROCESSES);
+
+  // Kill the job. We expect the NO_JOBS and NO_CHILDREN signal to also become active.
+  ASSERT_OK(zx_handle_close(child_job));
+  EXPECT_EQ(GetActiveSignals(job), ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
+
+  ASSERT_OK(zx_handle_close(vmar));
+  ASSERT_OK(zx_handle_close(job));
 }
 
 TEST(JobTest, CreateMissingRightsTest) {
@@ -260,7 +306,8 @@ TEST(JobTest, KillTest) {
   ASSERT_EQ(signals, ZX_TASK_TERMINATED);
 
   ASSERT_OK(zx_object_wait_one(job_child, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
-  ASSERT_EQ(signals, ZX_TASK_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  ASSERT_EQ(signals,
+            ZX_TASK_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
 
   // Process should be in the dead state here.
   zx_info_job_t job_info;
@@ -394,7 +441,8 @@ TEST(JobTest, KillJobChain) {
                                   {jobs[4], 0, 0}};
   ASSERT_OK(zx_object_wait_many(wait_items, countof(wait_items), ZX_TIME_INFINITE));
   for (const zx_wait_item_t& wait_item : wait_items) {
-    EXPECT_EQ(wait_item.pending, ZX_TASK_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+    EXPECT_EQ(wait_item.pending,
+              ZX_TASK_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
   }
 
   ASSERT_OK(zx_handle_close_many(jobs, countof(jobs)));
@@ -416,7 +464,8 @@ TEST(JobTest, OneCriticalProcessKillsOneJob) {
 
   zx_signals_t observed;
   ASSERT_OK(job.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed));
-  EXPECT_EQ(observed, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  EXPECT_EQ(observed,
+            ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
 
   zx_info_job_t job_info;
   ASSERT_OK(job.get_info(ZX_INFO_JOB, &job_info, sizeof(job_info), nullptr, nullptr));
@@ -442,7 +491,8 @@ TEST(JobTest, ManyCriticalProcessesKillOneJob) {
 
   zx_signals_t observed;
   ASSERT_OK(job.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed));
-  EXPECT_EQ(observed, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  EXPECT_EQ(observed,
+            ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
 
   zx_info_job_t job_info;
   ASSERT_OK(job.get_info(ZX_INFO_JOB, &job_info, sizeof(job_info), nullptr, nullptr));
@@ -476,8 +526,10 @@ TEST(JobTest, OneCriticalProcessKillsJobTree) {
   zx_signals_t observed1, observed2;
   ASSERT_OK(job1.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed1));
   ASSERT_OK(job2.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed2));
-  EXPECT_EQ(observed1, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
-  EXPECT_EQ(observed2, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  EXPECT_EQ(observed1,
+            ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
+  EXPECT_EQ(observed2,
+            ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
 
   zx_info_job_t job_info1, job_info2;
   ASSERT_OK(job1.get_info(ZX_INFO_JOB, &job_info1, sizeof(job_info1), nullptr, nullptr));
@@ -506,7 +558,7 @@ TEST(JobTest, OneCriticalProcessKillsOneJobIfRetcodeNonzero) {
 
   zx_signals_t observed;
   ASSERT_OK(job.wait_one(ZX_JOB_NO_PROCESSES, zx::time::infinite(), &observed));
-  EXPECT_EQ(observed, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  EXPECT_EQ(observed, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
 }
 
 TEST(JobTest, CriticalProcessNotInAncestor) {
@@ -541,7 +593,8 @@ TEST(JobTest, CriticalProcessAlreadySet) {
 
   zx_signals_t observed;
   ASSERT_OK(job.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed));
-  EXPECT_EQ(observed, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  EXPECT_EQ(observed,
+            ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
 
   zx_info_job_t job_info;
   ASSERT_OK(job.get_info(ZX_INFO_JOB, &job_info, sizeof(job_info), nullptr, nullptr));
@@ -590,7 +643,7 @@ TEST(JobTest, WaitTest) {
   ASSERT_OK(zx_task_kill(process));
 
   ASSERT_OK(zx_object_wait_one(job_child, ZX_JOB_NO_PROCESSES, ZX_TIME_INFINITE, &signals));
-  ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
 
   ASSERT_OK(zx_handle_close(thread));
   ASSERT_OK(zx_handle_close(process));

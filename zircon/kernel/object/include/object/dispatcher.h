@@ -183,6 +183,12 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // owner makes sense.
   virtual void set_owner(zx_koid_t new_owner) {}
 
+  // Poll the currently active signals on this object.
+  //
+  // By the time the result of the function is inspected, the signals may have already
+  // changed. Typically should only be used for tests or logging.
+  zx_signals_t PollSignals() const TA_EXCL(get_lock());
+
  protected:
   // At construction, the object's state tracker is asserting |signals|.
   explicit Dispatcher(zx_signals_t signals);

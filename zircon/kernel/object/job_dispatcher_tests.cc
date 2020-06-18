@@ -7,6 +7,8 @@
 #include <lib/unittest/unittest.h>
 
 #include <object/job_dispatcher.h>
+#include <object/process_dispatcher.h>
+#include <object/vm_address_region_dispatcher.h>
 
 namespace {
 
@@ -97,8 +99,54 @@ static bool TestJobEnumerator() {
   END_TEST;
 }
 
+bool TestJobNoChildrenSignal() {
+  BEGIN_TEST;
+
+  // Create a new job.
+  KernelHandle<JobDispatcher> root;
+  zx_rights_t rights;
+  ASSERT_EQ(JobDispatcher::Create(0, /*parent=*/GetRootJobDispatcher(), &root, &rights), ZX_OK);
+
+  // Ensure all three NO_{JOBS,PROCESSES,CHILDREN} signals are active.
+  EXPECT_EQ(root.dispatcher()->PollSignals(),
+            ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
+
+  // Create a child job.
+  KernelHandle<JobDispatcher> child_job;
+  ASSERT_EQ(JobDispatcher::Create(0, root.dispatcher(), &child_job, &rights), ZX_OK);
+
+  // Ensure the NO_CHILDREN and NO_JOBS signals have cleared.
+  EXPECT_EQ(root.dispatcher()->PollSignals(), ZX_JOB_NO_PROCESSES);
+
+  // Create a child process.
+  KernelHandle<ProcessDispatcher> child_process;
+  KernelHandle<VmAddressRegionDispatcher> vmar;
+  zx_rights_t process_rights;
+  zx_rights_t vmar_rights;
+  ASSERT_EQ(ProcessDispatcher::Create(root.dispatcher(), "test-process", /*flags=*/0u,
+                                      &child_process, &process_rights, &vmar, &vmar_rights),
+            ZX_OK);
+
+  // Ensure the NO_PROCESS signal has cleared.
+  EXPECT_EQ(root.dispatcher()->PollSignals(), 0u);
+
+  // Kill the child job. Ensure NO_JOBS is active again.
+  child_job.dispatcher()->Kill(0);
+  EXPECT_EQ(root.dispatcher()->PollSignals(), ZX_JOB_NO_JOBS);
+
+  // Kill the child process. Ensure all three signals are active again.
+  child_process.dispatcher()->Kill(0);
+  EXPECT_EQ(root.dispatcher()->PollSignals(),
+            ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
+
+  root.dispatcher()->Kill(0);
+  END_TEST;
+}
+
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(job_dispatcher_tests)
 UNITTEST("JobDispatcherJobEnumerator", TestJobEnumerator)
+UNITTEST("JobNoChildrenSignal", TestJobNoChildrenSignal)
 UNITTEST_END_TESTCASE(job_dispatcher_tests, "job_dispatcher_tests", "JobDispatcher tests")
