@@ -26,6 +26,8 @@ struct VmoMetadata {
   bool contiguous = false;
 };
 
+static bool unpinned = false;
+
 class VmoWrapper : public fake_object::Object {
  public:
   explicit VmoWrapper(zx::vmo vmo) : vmo_(std::move(vmo)) {}
@@ -124,64 +126,84 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
   *out = ZX_HANDLE_INVALID;
   return ZX_OK;
 }
+
+zx_status_t zx_pmt_unpin(zx_handle_t handle) {
+  if (handle == ZX_HANDLE_INVALID) {
+    unpinned = true;
+  }
+  return ZX_OK;
+}
+
 }  // extern "C"
 
 }  // namespace
 
 namespace dma_buffer {
 TEST(DmaBufferTests, InitWithCacheEnabled) {
-  std::unique_ptr<ContiguousBuffer> buffer;
-  const size_t size = ZX_PAGE_SIZE * 4;
-  const size_t alignment = 2;
-  auto factory = CreateBufferFactory();
-  ASSERT_OK(factory->CreateContiguous(kFakeBti, size, alignment, &buffer));
-  auto test_f = [&buffer](fake_object::Object* obj) -> bool {
-    auto vmo = static_cast<VmoWrapper*>(obj);
-    ZX_ASSERT(vmo->metadata().alignment_log2 == alignment);
-    ZX_ASSERT(vmo->metadata().bti_handle == kFakeBti.get());
-    ZX_ASSERT(vmo->metadata().cache_policy == 0);
-    ZX_ASSERT(vmo->metadata().size == size);
-    ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
-    ZX_ASSERT(buffer->size() == vmo->metadata().size);
-    ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
-    return false;
-  };
-  fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+  unpinned = false;
+  {
+    std::unique_ptr<ContiguousBuffer> buffer;
+    const size_t size = ZX_PAGE_SIZE * 4;
+    const size_t alignment = 2;
+    auto factory = CreateBufferFactory();
+    ASSERT_OK(factory->CreateContiguous(kFakeBti, size, alignment, &buffer));
+    auto test_f = [&buffer](fake_object::Object* obj) -> bool {
+      auto vmo = static_cast<VmoWrapper*>(obj);
+      ZX_ASSERT(vmo->metadata().alignment_log2 == alignment);
+      ZX_ASSERT(vmo->metadata().bti_handle == kFakeBti.get());
+      ZX_ASSERT(vmo->metadata().cache_policy == 0);
+      ZX_ASSERT(vmo->metadata().size == size);
+      ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
+      ZX_ASSERT(buffer->size() == vmo->metadata().size);
+      ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
+      return false;
+    };
+    fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+  }
+  ASSERT_TRUE(unpinned);
 }
 
 TEST(DmaBufferTests, InitWithCacheDisabled) {
-  std::unique_ptr<PagedBuffer> buffer;
-  auto factory = CreateBufferFactory();
-  ASSERT_OK(factory->CreatePaged(kFakeBti, ZX_PAGE_SIZE, false, &buffer));
-  auto test_f = [&buffer](fake_object::Object* object) -> bool {
-    auto vmo = static_cast<VmoWrapper*>(object);
-    ZX_ASSERT(vmo->metadata().alignment_log2 == 0);
-    ZX_ASSERT(vmo->metadata().cache_policy == ZX_CACHE_POLICY_UNCACHED_DEVICE);
-    ZX_ASSERT(vmo->metadata().size == ZX_PAGE_SIZE);
-    ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
-    ZX_ASSERT(buffer->size() == vmo->metadata().size);
-    ZX_ASSERT(buffer->phys()[0] == vmo->metadata().start_phys);
-    return false;
-  };
-  fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+  unpinned = false;
+  {
+    std::unique_ptr<PagedBuffer> buffer;
+    auto factory = CreateBufferFactory();
+    ASSERT_OK(factory->CreatePaged(kFakeBti, ZX_PAGE_SIZE, false, &buffer));
+    auto test_f = [&buffer](fake_object::Object* object) -> bool {
+      auto vmo = static_cast<VmoWrapper*>(object);
+      ZX_ASSERT(vmo->metadata().alignment_log2 == 0);
+      ZX_ASSERT(vmo->metadata().cache_policy == ZX_CACHE_POLICY_UNCACHED_DEVICE);
+      ZX_ASSERT(vmo->metadata().size == ZX_PAGE_SIZE);
+      ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
+      ZX_ASSERT(buffer->size() == vmo->metadata().size);
+      ZX_ASSERT(buffer->phys()[0] == vmo->metadata().start_phys);
+      return false;
+    };
+    fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+  }
+  ASSERT_TRUE(unpinned);
 }
 
 TEST(DmaBufferTests, InitCachedMultiPageBuffer) {
-  std::unique_ptr<ContiguousBuffer> buffer;
-  auto factory = CreateBufferFactory();
-  ASSERT_OK(factory->CreateContiguous(kFakeBti, ZX_PAGE_SIZE * 4, 0, &buffer));
-  auto test_f = [&buffer](fake_object::Object* object) -> bool {
-    auto vmo = static_cast<VmoWrapper*>(object);
-    ZX_ASSERT(vmo->metadata().alignment_log2 == 0);
-    ZX_ASSERT(vmo->metadata().cache_policy == 0);
-    ZX_ASSERT(vmo->metadata().bti_handle == kFakeBti.get());
-    ZX_ASSERT(vmo->metadata().size == ZX_PAGE_SIZE * 4);
-    ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
-    ZX_ASSERT(buffer->size() == vmo->metadata().size);
-    ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
-    return false;
-  };
-  fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+  unpinned = false;
+  {
+    std::unique_ptr<ContiguousBuffer> buffer;
+    auto factory = CreateBufferFactory();
+    ASSERT_OK(factory->CreateContiguous(kFakeBti, ZX_PAGE_SIZE * 4, 0, &buffer));
+    auto test_f = [&buffer](fake_object::Object* object) -> bool {
+      auto vmo = static_cast<VmoWrapper*>(object);
+      ZX_ASSERT(vmo->metadata().alignment_log2 == 0);
+      ZX_ASSERT(vmo->metadata().cache_policy == 0);
+      ZX_ASSERT(vmo->metadata().bti_handle == kFakeBti.get());
+      ZX_ASSERT(vmo->metadata().size == ZX_PAGE_SIZE * 4);
+      ZX_ASSERT(buffer->virt() == vmo->metadata().virt);
+      ZX_ASSERT(buffer->size() == vmo->metadata().size);
+      ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
+      return false;
+    };
+    fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+  }
+  ASSERT_TRUE(unpinned);
 }
 
 }  // namespace dma_buffer

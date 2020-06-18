@@ -20,6 +20,7 @@ class ContiguousBufferImpl : public ContiguousBuffer {
   void* virt() const override { return virt_; }
 
   zx_paddr_t phys() const override { return phys_; }
+  ~ContiguousBufferImpl() { pmt_.unpin(); }
 
  private:
   size_t size_;
@@ -41,6 +42,7 @@ class PagedBufferImpl : public PagedBuffer {
   void* virt() const override { return virt_; }
 
   const zx_paddr_t* phys() const override { return phys_.data(); }
+  ~PagedBufferImpl() { pmt_.unpin(); }
 
  private:
   size_t size_;
