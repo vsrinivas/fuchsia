@@ -377,7 +377,19 @@ protocol Flatland {
     /// Despite having a return type, this function is still feed-forward like LinkToParent() and
     /// requires a call to Present() to be executed. The ContentLinkToken will be returned after the
     /// presented operations have been executed.
-    ReleaseLink(ContentId id) -> (ContentLinkToken token);
+    ReleaseLink(ContentId link_id) -> (ContentLinkToken token);
+
+    /// Deregistered buffer collections will be garbage collected by the system when they are no
+    /// longer referenced by any Images, and thus no longer necessary for rendering. This includes
+    /// references from released Images that have not yet been fully garbage collected, such as
+    /// Images still referenced by a Transform or Images involved in a current or pending render.
+    ///
+    /// Once released, the id immediately goes out of scope for future function calls and can be
+    /// reused when creating new BufferCollections.
+    ///
+    /// It is an error to call functions with a released id (unless that id has been reused to
+    /// construct a new buffer collection).
+    DeregisterBufferCollection(BufferCollectionId id);
 
     /// Released Images will be garbage collected by the system once they are no longer necessary
     /// for rendering. For Images, this means the Image is no longer attached to any Transform and
@@ -390,5 +402,5 @@ protocol Flatland {
     ///
     /// It is an error to call functions with a released id (unless that id has been reused to
     /// construct a new Image).
-    ReleaseImage(ContentId id);
+    ReleaseImage(ContentId image_id);
 };

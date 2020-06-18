@@ -2450,6 +2450,174 @@ TEST_F(FlatlandTest, ImagesAppearInTopologicalOrder) {
   EXPECT_EQ(data.image_vector[1].collection_id, global_collection_id1);
 }
 
+TEST_F(FlatlandTest, DeregisterBufferCollectionErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  // Zero is not a buffer collection ID.
+  flatland.DeregisterBufferCollection(0);
+  PRESENT(flatland, false);
+
+  // The buffer collection ID must exist.
+  flatland.DeregisterBufferCollection(1);
+  PRESENT(flatland, false);
+
+  // A buffer collection cannot be deregistered twice.
+  const GlobalBufferCollectionId kGlobalBufferCollectionId = 2;
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
+      .WillOnce(Return(kGlobalBufferCollectionId));
+
+  const BufferCollectionId kBufferCollectionId = 3;
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+  flatland.RegisterBufferCollection(kBufferCollectionId, std::move(token));
+  PRESENT(flatland, true);
+
+  flatland.DeregisterBufferCollection(kBufferCollectionId);
+  PRESENT(flatland, true);
+
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId)).Times(1);
+  flatland.SignalBufferReleaseFence();
+  RunLoopUntilIdle();
+
+  flatland.DeregisterBufferCollection(kBufferCollectionId);
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, DeregisterMultipleBufferCollectionsSameEvent) {
+  Flatland flatland = CreateFlatland();
+
+  // Register the first buffer collection.
+  const GlobalBufferCollectionId kGlobalBufferCollectionId1 = 1;
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
+      .WillOnce(Return(kGlobalBufferCollectionId1));
+
+  const BufferCollectionId kBufferCollectionId1 = 2;
+  {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(kBufferCollectionId1, std::move(token));
+  }
+
+  // Register the second buffer collection.
+  const GlobalBufferCollectionId kGlobalBufferCollectionId2 = 3;
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
+      .WillOnce(Return(kGlobalBufferCollectionId2));
+
+  const BufferCollectionId kBufferCollectionId2 = 4;
+  {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(kBufferCollectionId2, std::move(token));
+  }
+
+  PRESENT(flatland, true);
+
+  // Deregister both buffer collections so they're both witing on the release fence. Do it one at a
+  // time so the Waits are registered on different calls to Present().
+  flatland.DeregisterBufferCollection(kBufferCollectionId1);
+  PRESENT(flatland, true);
+
+  flatland.DeregisterBufferCollection(kBufferCollectionId2);
+  PRESENT(flatland, true);
+
+  // Signal the release fence.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(1);
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId2)).Times(1);
+  flatland.SignalBufferReleaseFence();
+  RunLoopUntilIdle();
+}
+
+TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
+  Flatland flatland = CreateFlatland();
+
+  // Create a valid BufferCollectionId.
+  const GlobalBufferCollectionId kGlobalBufferCollectionId1 = 1;
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
+      .WillOnce(Return(kGlobalBufferCollectionId1));
+
+  const BufferCollectionId kBufferCollectionId = 2;
+  {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(kBufferCollectionId, std::move(token));
+    PRESENT(flatland, true);
+  }
+
+  // Deregister it, but don't signal the release fence yet.
+  flatland.DeregisterBufferCollection(kBufferCollectionId);
+  PRESENT(flatland, true);
+
+  // Register another buffer collection with that same ID.
+  const GlobalBufferCollectionId kGlobalBufferCollectionId2 = 3;
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
+      .WillOnce(Return(kGlobalBufferCollectionId2));
+
+  {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(kBufferCollectionId, std::move(token));
+    PRESENT(flatland, true);
+  }
+
+  // Signal the release fences, which should result deregister the first one from the renderer.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(1);
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId2)).Times(0);
+  flatland.SignalBufferReleaseFence();
+  RunLoopUntilIdle();
+
+  // Deregister the second one, signal the release fences, and verify the second global id was
+  // deregistered.
+  flatland.DeregisterBufferCollection(kBufferCollectionId);
+  PRESENT(flatland, true);
+
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId2)).Times(1);
+  flatland.SignalBufferReleaseFence();
+  RunLoopUntilIdle();
+}
+
+// Tests that a buffer collection is not deregistered from the Renderer until it is not referenced
+// by any active Image (including released Images still on Transforms) and the release fence is
+// signaled.
+TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
+  Flatland flatland = CreateFlatland();
+
+  // Setup a valid buffer collection and Image.
+  const ContentId kImageId = 1;
+  const BufferCollectionId kBufferCollectionId = 2;
+
+  ImageProperties properties;
+  properties.set_width(100);
+  properties.set_height(200);
+
+  const GlobalBufferCollectionId global_collection_id =
+      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
+
+  // Attach the Image to a transform.
+  const TransformId kTransformId = 3;
+  flatland.CreateTransform(kTransformId);
+  flatland.SetRootTransform(kTransformId);
+  flatland.SetContentOnTransform(kImageId, kTransformId);
+  PRESENT(flatland, true);
+
+  // Deregister the buffer collection, but ensure that the deregistration call on the Renderer has
+  // not happened.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(0);
+  flatland.DeregisterBufferCollection(kBufferCollectionId);
+  PRESENT(flatland, true);
+
+  // Release the Image that referenced the buffer collection. Because the Image is still attached
+  // to a Transform, the deregestration call should still not happen.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(0);
+  flatland.ReleaseImage(kImageId);
+  PRESENT(flatland, true);
+
+  // Remove the Image from the transform. This triggers the creation of the release fence, but
+  // still does not result in a deregestration call.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(0);
+  flatland.SetContentOnTransform(0, kTransformId);
+  PRESENT(flatland, true);
+
+  // Signal the release fences, which results in the deregistration call,
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(1);
+  flatland.SignalBufferReleaseFence();
+  RunLoopUntilIdle();
+}
+
 TEST_F(FlatlandTest, ReleaseImageErrorCases) {
   Flatland flatland = CreateFlatland();
 

@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
@@ -107,12 +108,20 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   void ReleaseLink(ContentId link_id,
                    fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void DeregisterBufferCollection(BufferCollectionId collection_id) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseImage(ContentId image_id) override;
 
   // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
   // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
   // currently linked to a parent, that means the link_origin. If not, that means the local_root_.
   TransformHandle GetRoot() const;
+
+  // TODO(53330): remove this function when FrameScheduler is integrated.
+  // For signaling the buffer collection release fence in tests only. Calling this function will
+  // signal the zx::event required for buffer collection deregistration. Each call will signal
+  // the event once.
+  void SignalBufferReleaseFence();
 
  private:
   // Users are not allowed to use zero as a transform ID.
@@ -219,15 +228,30 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // identity matrix for its transform.
   std::unordered_map<TransformHandle, MatrixData> matrices_;
 
-  // The Renderer-generated ID for a buffer collection and, if it has been successfully validated
-  // in a CreateImage() call, the metadata associated with that collection.
+  // A mapping from user-generated buffer collection IDs to Renderer-generated buffer collection
+  // IDs.
+  std::unordered_map<BufferCollectionId, GlobalBufferCollectionId> buffer_collection_ids_;
+
+  // The metadata associated with a particular buffer collection and the number of Images that
+  // currently reference that buffer collection.
   struct BufferCollectionData {
-    GlobalBufferCollectionId collection_id;
     std::optional<BufferCollectionMetadata> metadata;
+    size_t image_count = 0;
   };
 
-  // A mapping from user-generated ID to BufferCollectionData.
-  std::unordered_map<BufferCollectionId, BufferCollectionData> buffer_collections_;
+  // A mapping from Renderer-generated buffer collection ID to the data associated with each
+  // collection.
+  std::unordered_map<GlobalBufferCollectionId, BufferCollectionData> buffer_collections_;
+
+  // The set of GlobalBufferCollectionIds associated with released BufferCollectionIds that have
+  // not yet been garbage collected.
+  std::unordered_set<GlobalBufferCollectionId> released_buffer_collection_ids_;
+
+  // TODO(53330): remove this event when FrameScheduler is integrated.
+  // For testing purposes only. When a deregistered buffer collection is ready for garbage
+  // collection, the deregister call is placed in a Wait that runs when this event is signaled.
+  // Tests can call SignalBufferReleaseFence() to signal this event.
+  zx::event buffer_collection_release_fence_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, ImageMetadata> image_metadatas_;

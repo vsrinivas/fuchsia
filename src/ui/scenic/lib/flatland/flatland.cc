@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
+#include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/eventpair.h>
 
@@ -36,9 +37,16 @@ Flatland::Flatland(const std::shared_ptr<Renderer>& renderer,
       sysmem_allocator_(std::move(sysmem_allocator)),
       instance_id_(uber_struct_system_->GetNextInstanceId()),
       transform_graph_(instance_id_),
-      local_root_(transform_graph_.CreateTransform()) {}
+      local_root_(transform_graph_.CreateTransform()) {
+  zx_status_t status = zx::event::create(0, &buffer_collection_release_fence_);
+  FX_DCHECK(status == ZX_OK);
+}
 
-Flatland::~Flatland() { uber_struct_system_->ClearUberStruct(instance_id_); }
+Flatland::~Flatland() {
+  // TODO(53330): remove this function call when FrameScheduler is integrated.
+  SignalBufferReleaseFence();
+  uber_struct_system_->ClearUberStruct(instance_id_);
+}
 
 void Flatland::Present(PresentCallback callback) {
   bool success = true;
@@ -70,8 +78,54 @@ void Flatland::Present(PresentCallback callback) {
     // Cleanup released resources.
     for (const auto& dead_handle : data.dead_transforms) {
       matrices_.erase(dead_handle);
-      // TODO(52052): clean up the Renderer's image resources as well.
-      image_metadatas_.erase(dead_handle);
+
+      auto image_kv = image_metadatas_.find(dead_handle);
+      if (image_kv != image_metadatas_.end()) {
+        // The buffer collection metadata referenced by the image must still be alive. Decrement
+        // its usage count, which may trigger garbage collection if the collection has been
+        // released.
+        auto buffer_data_kv = buffer_collections_.find(image_kv->second.collection_id);
+        FX_DCHECK(buffer_data_kv != buffer_collections_.end());
+
+        --buffer_data_kv->second.image_count;
+
+        image_metadatas_.erase(image_kv);
+      }
+    }
+
+    // Check if deregistered buffer collections can be garbage collected with the Renderer. Use the
+    // default dispatcher since that is the same one Present() is running on.
+    auto dispatcher = async_get_default_dispatcher();
+    for (auto released_iter = released_buffer_collection_ids_.begin();
+         released_iter != released_buffer_collection_ids_.end();) {
+      const auto global_collection_id = *released_iter;
+      auto buffer_data_kv = buffer_collections_.find(global_collection_id);
+      FX_DCHECK(buffer_data_kv != buffer_collections_.end());
+
+      // If a buffer collection is no longer referenced by any Images, wait on a release fence to
+      // deregister it from the Renderer.
+      if (buffer_data_kv->second.image_count == 0) {
+        // Use a self-referencing async::WaitOnce to perform Renderer deregistration. This is
+        // primarily so the handler does not have to live in the Flatland instance, which may be
+        // destroyed before the release fence is signaled. WaitOnce moves the handler to the stack
+        // prior to invoking it, so it is safe for the handler to delete the WaitOnce on exit.
+        auto wait = std::make_shared<async::WaitOnce>(buffer_collection_release_fence_.get(),
+                                                      ZX_EVENT_SIGNALED);
+        zx_status_t status = wait->Begin(
+            dispatcher, [copy_ref = wait, renderer_ref = renderer_, global_collection_id](
+                            async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
+                            const zx_packet_signal_t* /*signal*/) mutable {
+              FX_DCHECK(status == ZX_OK);
+              renderer_ref->DeregisterCollection(global_collection_id);
+            });
+        FX_DCHECK(status == ZX_OK);
+
+        // Delete local references to the GlobalBufferCollectionId.
+        buffer_collections_.erase(buffer_data_kv);
+        released_iter = released_buffer_collection_ids_.erase(released_iter);
+      } else {
+        ++released_iter;
+      }
     }
 
     auto uber_struct = std::make_unique<UberStruct>();
@@ -436,7 +490,7 @@ void Flatland::RegisterBufferCollection(
     return;
   }
 
-  if (buffer_collections_.count(collection_id)) {
+  if (buffer_collection_ids_.count(collection_id)) {
     pending_operations_.push_back([=]() {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with pre-existing collection_id "
                      << collection_id;
@@ -447,18 +501,20 @@ void Flatland::RegisterBufferCollection(
 
   // Register the texture collection immediately since the client may block on buffers being
   // allocated before calling Present().
-  auto renderer_collection_id =
+  auto global_collection_id =
       renderer_->RegisterTextureCollection(sysmem_allocator_.get(), std::move(token));
 
   // But don't allow the collection to be referenced in other function calls until presented.
   pending_operations_.push_back([=]() {
-    if (renderer_collection_id == Renderer::kInvalidId) {
+    if (global_collection_id == Renderer::kInvalidId) {
       FX_LOGS(ERROR)
           << "RegisterBufferCollection failed to register the sysmem token with the renderer.";
       return false;
     }
+    FX_DCHECK(!buffer_collections_.count(global_collection_id));
 
-    buffer_collections_[collection_id].collection_id = renderer_collection_id;
+    buffer_collection_ids_[collection_id] = global_collection_id;
+    buffer_collections_[global_collection_id] = BufferCollectionData();
 
     return true;
   });
@@ -479,19 +535,24 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id,
       return false;
     }
 
-    auto buffer_kv = buffer_collections_.find(collection_id);
+    auto buffer_id_kv = buffer_collection_ids_.find(collection_id);
 
-    if (buffer_kv == buffer_collections_.end()) {
+    if (buffer_id_kv == buffer_collection_ids_.end()) {
       FX_LOGS(ERROR) << "CreateImage failed, collection_id " << collection_id << " not found.";
       return false;
     }
 
-    auto& buffer_data = buffer_kv->second;
+    const auto global_collection_id = buffer_id_kv->second;
+
+    auto buffer_collection_kv = buffer_collections_.find(global_collection_id);
+    FX_DCHECK(buffer_collection_kv != buffer_collections_.end());
+
+    auto& buffer_data = buffer_collection_kv->second;
 
     // If the buffer hasn't been validated yet, try to validate it. If validation fails, it will be
     // impossible to render this image.
     if (!buffer_data.metadata.has_value()) {
-      auto metadata = renderer_->Validate(buffer_data.collection_id);
+      auto metadata = renderer_->Validate(global_collection_id);
       if (!metadata.has_value()) {
         FX_LOGS(ERROR) << "CreateImage failed, collection_id " << collection_id
                        << " has not been allocated yet.";
@@ -540,10 +601,13 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id,
     content_handles_[image_id] = handle;
 
     auto& metadata = image_metadatas_[handle];
-    metadata.collection_id = buffer_data.collection_id;
+    metadata.collection_id = global_collection_id;
     metadata.vmo_idx = vmo_index;
     metadata.width = width;
     metadata.height = height;
+
+    // Increment the buffer's usage count.
+    ++buffer_data.image_count;
 
     return true;
   });
@@ -727,10 +791,38 @@ void Flatland::ReleaseLink(ContentId link_id,
     bool content_released = transform_graph_.ReleaseTransform(link_kv->second.link.graph_handle);
     FX_DCHECK(content_released);
 
-    child_links_.erase(link_kv->second.link.graph_handle);
-    content_handles_.erase(link_id);
+    child_links_.erase(link_kv);
+    content_handles_.erase(content_kv);
 
     callback(std::move(return_token));
+
+    return true;
+  });
+}
+
+void Flatland::DeregisterBufferCollection(BufferCollectionId collection_id) {
+  pending_operations_.push_back([=]() {
+    if (collection_id == kInvalidId) {
+      FX_LOGS(ERROR) << "DeregisterBufferCollection called with collection_id zero";
+      return false;
+    }
+
+    auto buffer_id_kv = buffer_collection_ids_.find(collection_id);
+
+    if (buffer_id_kv == buffer_collection_ids_.end()) {
+      FX_LOGS(ERROR) << "DeregisterBufferCollection failed, collection_id " << collection_id
+                     << " not found";
+      return false;
+    }
+
+    auto global_collection_id = buffer_id_kv->second;
+    FX_DCHECK(buffer_collections_.count(global_collection_id));
+
+    // Erase the user-facing mapping of the ID and queue the global ID for garbage collection. The
+    // actual buffer collection data will be cleared once all Images reference the collection are
+    // released and garbage collected.
+    buffer_collection_ids_.erase(buffer_id_kv);
+    released_buffer_collection_ids_.insert(global_collection_id);
 
     return true;
   });
@@ -762,7 +854,7 @@ void Flatland::ReleaseImage(ContentId image_id) {
 
     // Even though the handle is released, it may still be referenced by client Transforms. The
     // image_metadatas_ map preserves the entry until it shows up in the dead_transforms list.
-    content_handles_.erase(image_id);
+    content_handles_.erase(content_kv);
 
     return true;
   });
@@ -770,6 +862,10 @@ void Flatland::ReleaseImage(ContentId image_id) {
 
 TransformHandle Flatland::GetRoot() const {
   return parent_link_ ? parent_link_->link_origin : local_root_;
+}
+
+void Flatland::SignalBufferReleaseFence() {
+  buffer_collection_release_fence_.signal(0, ZX_EVENT_SIGNALED);
 }
 
 void Flatland::UpdateLinkScale(const ChildLinkData& link_data) {
