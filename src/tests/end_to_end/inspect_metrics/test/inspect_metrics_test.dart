@@ -38,5 +38,13 @@ void main() {
         await getInspectValues(inspect,
             'archivist.cmx:root/data_stats/global_data/stats:used_bytes'),
         singleValue(isNonZero));
+    expect(
+        await getInspectValues(
+            inspect, 'bootstrap/fshost:root/data_stats/data/cache:size'),
+        singleValue(isNonZero));
+    expect(
+        await getInspectValues(
+            inspect, 'bootstrap/fshost:root/data_stats/stats:used_bytes'),
+        singleValue(isNonZero));
   });
 }
