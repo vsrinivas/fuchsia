@@ -17,12 +17,18 @@ go_library("host-target-testing") {
     "//tools/lib/retry",
     "//tools/net/sshutil",
   ]
+  non_go_deps = [
+    ":copy_avbtool",
+    ":copy_zbitool",
+  ]
 }
 
 test_packages = [
+  "avb",
   "packages",
   "paver",
   "omaha",
+  "zbi",
 ]
 foreach(testpkg, test_packages) {
   go_test("host-target-testing-${testpkg}-test") {
@@ -37,13 +43,14 @@ copy("copy_avbtool") {
   outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
 }
 
-go_test("host-target-testing-avb-test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb" ]
-  deps = [ ":host-target-testing" ]
-  non_go_deps = [ ":copy_avbtool" ]
+zircon_tools_dir =
+    get_label_info("//zircon/public/tool($host_toolchain)", "root_out_dir")
+copy("copy_zbitool") {
+  testonly = true
+  sources = [ "${zircon_tools_dir}/zbi" ]
+  outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
+  deps = [ "//zircon/public/tool/zbi($host_toolchain)" ]
 }
-test_packages += [ "avb" ]
 
 group("tests") {
   testonly = true
