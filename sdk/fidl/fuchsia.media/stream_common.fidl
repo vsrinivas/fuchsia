@@ -561,13 +561,39 @@ struct AacEncoderSettings {
     AacAudioObjectType aot;
 };
 
+/// Customization of h264 encoder parameters for macroblock quantization. The values
+/// can range from 0 to 51, with lower numbers indicating higher
+/// quality/bitrate. While encoders should support these fields if feasible,
+/// some encoders may ignore these fields. It's ok to not set this table, or
+/// not set some of the fields in this table, as encoders can determine their
+/// own defaults. If the targeted bitrate can't be achieved with the specified values,
+/// then the user should expect the resulting encoded stream bitrate to differ from
+/// the requested bitrate.
+table H264QuantizationParameters {
+    /// Starting value for quantization of key frames.
+    1: uint32 qp_i_base;
+    /// Smallest allowed value for quantization of key frames.
+    2: uint32 qp_i_min;
+    /// Largest allowed value for quantization of key frames.
+    3: uint32 qp_i_max;
+    /// Starting value for quantization of predicted frames.
+    4: uint32 qp_p_base;
+    /// Smallest allowed value for quantization of predicted frames.
+    5: uint32 qp_p_min;
+    /// Largest allowed value for quantization of predicted frames.
+    6: uint32 qp_p_max;
+};
+
+/// Settings for H264 Encoders.
 table H264EncoderSettings {
     /// Target bits per second for encoded stream. Defaults to 200,000 if
     /// omitted.
     1: uint32 bit_rate;
     /// Target frames per second for encoded stream. Defaults to 30 if omitted.
     2: uint32 frame_rate;
-    /// Number of pictures per keyframe. Defaults to 8 if omitted.
+    /// Number of pictures per keyframe. Defaults to 8 if omitted. Setting to 0
+    /// will disable key frame encoding, except for if force_key_frame is set to
+    /// true.
     3: uint32 gop_size;
     /// Whether to enable frame rate adjustments in order to meet target bitrate.
     /// False if omitted.
@@ -575,6 +601,13 @@ table H264EncoderSettings {
     /// Lowest frame rate allowed if `variable_frame_rate` is enabled. Defaults
     /// to 10 if omitted.
     5: uint32 min_frame_rate;
+    /// If true, next frame encoded will be a key frame. If omitted, defaults to
+    /// false.
+    6: bool force_key_frame;
+    /// Allow customization of quantization parameters for encoding. Each frame
+    /// submitted after setting this will use the new values. If omitted, no
+    /// change from encoder defaults is made.
+    7: H264QuantizationParameters qp_params;
 };
 
 /// Settings for encoders that tell them how to encode raw
