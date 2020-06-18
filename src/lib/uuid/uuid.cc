@@ -40,33 +40,37 @@ bool IsValidInternal(const std::string& guid, bool strict) {
 
 }  // namespace
 
-std::string Generate() {
-  uint64_t bytes[2];
-  zx_cprng_draw(bytes, sizeof(bytes));
+Uuid Uuid::Generate() {
+  // We generate a 128-bit (pseudo) random UUID in the form of version 4 as described
+  // in RFC 4122, section 4.4.
 
-  // Set the UUID to version 4 as described in RFC 4122, section 4.4.
-  // The format of UUID version 4 must be xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx,
-  // where y is one of [8, 9, A, B].
-  // Clear the version bits and set the version to 4:
-  bytes[0] &= 0xffffffffffff0fffULL;
-  bytes[0] |= 0x0000000000004000ULL;
+  // Generate 16 random bytes.
+  Uuid result;
+  zx_cprng_draw(&result.raw_, sizeof(result));
 
-  // Set the two most significant bits (bits 6 and 7) of the
-  // clock_seq_hi_and_reserved to zero and one, respectively:
-  bytes[1] &= 0x3fffffffffffffffULL;
-  bytes[1] |= 0x8000000000000000ULL;
+  // Set the version field (bits 12 through 15 of |time_hi_and_version|) to 4.
+  result.raw_.time_hi_and_version = (result.raw_.time_hi_and_version & 0x0fffu) | 0x4000u;
 
-  return fxl::StringPrintf("%08x-%04x-%04x-%04x-%012llx", static_cast<unsigned int>(bytes[0] >> 32),
-                           static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
-                           static_cast<unsigned int>(bytes[0] & 0x0000ffff),
-                           static_cast<unsigned int>(bytes[1] >> 48),
-                           bytes[1] & 0x0000ffffffffffffULL);
+  // Set the reserved bits (bits 6 and 7) of |clock_seq_hi_and_reserved| to zero
+  // and one, respectively.
+  result.raw_.clock_seq_hi_and_reserved = (result.raw_.clock_seq_hi_and_reserved & 0x3fu) | 0x80u;
+
+  // Return the UUID.
+  return result;
 }
 
-bool IsValid(const std::string& guid) { return IsValidInternal(guid, false /* strict */); }
-
-bool IsValidOutputString(const std::string& guid) {
-  return IsValidInternal(guid, true /* strict */);
+std::string Uuid::ToString() const {
+  // Print the string.
+  return fxl::StringPrintf("%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x", raw_.time_low,
+                           raw_.time_mid, raw_.time_hi_and_version, raw_.clock_seq_hi_and_reserved,
+                           raw_.clock_seq_low, raw_.node[0], raw_.node[1], raw_.node[2],
+                           raw_.node[3], raw_.node[4], raw_.node[5]);
 }
+
+std::string Generate() { return Uuid::Generate().ToString(); }
+
+bool IsValid(const std::string& guid) { return IsValidInternal(guid, /*strict=*/false); }
+
+bool IsValidOutputString(const std::string& guid) { return IsValidInternal(guid, /*strict=*/true); }
 
 }  // namespace uuid
