@@ -448,7 +448,7 @@ TEST_P(UpSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvents(DownEvents(finger, {}));
   }
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
-    SendPointerEvent({finger, Phase::MOVE, {0, .1f}});
+    SendPointerEvent({finger, Phase::MOVE, {0, .3f}});
   }
 
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
@@ -478,7 +478,7 @@ TEST_P(DownSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvents(DownEvents(finger, {}));
   }
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
-    SendPointerEvent({finger, Phase::MOVE, {0, -.1f}});
+    SendPointerEvent({finger, Phase::MOVE, {0, -.3f}});
   }
 
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
@@ -508,7 +508,7 @@ TEST_P(RightSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvents(DownEvents(finger, {}));
   }
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
-    SendPointerEvent({finger, Phase::MOVE, {-.1f, 0}});
+    SendPointerEvent({finger, Phase::MOVE, {-.3f, 0}});
   }
 
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
@@ -538,7 +538,7 @@ TEST_P(LeftSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvents(DownEvents(finger, {}));
   }
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
-    SendPointerEvent({finger, Phase::MOVE, {.1f, 0}});
+    SendPointerEvent({finger, Phase::MOVE, {.3f, 0}});
   }
 
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);

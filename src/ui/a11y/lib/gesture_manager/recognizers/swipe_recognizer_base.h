@@ -28,9 +28,9 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // considered a swipe.
   static constexpr float kMinSwipeDistance = 2.f / 8;
 
-  // Max distance (in NDC) between finger down and finger up events for gesture to be considered
+  // Max distance between finger down and finger up events for gesture to be considered
   // a swipe.
-  static constexpr float kMaxSwipeDistance = 1;
+  static constexpr float kMaxSwipeDistance = 1.5;
 
   // Maximum duration of swipe (in milliseconds).
   static constexpr zx::duration kDefaultSwipeGestureTimeout = zx::msec(500);
@@ -72,19 +72,24 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // Determines whether a gesture's is close enough to up, down, left, or right to be
   // remain in consideration as a swipe. Returns true if so, false otherwise.
   bool ValidateSwipePath(
-      const uint32_t& pointer_id,
+      uint32_t pointer_id,
       const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
 
   // Checks if the distance between the start and end points of a swipe fall within the accepted
   // range.
   bool ValidateSwipeDistance(
-      const uint32_t& pointer_id,
+      uint32_t pointer_id,
+      const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
+
+  // Checks if the distance between the start and end points of a swipe is more than
+  // kMinSwipeDistance.
+  bool MinSwipeLengthAchieved(
+      uint32_t pointer_id,
       const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
 
   // Helper function to save GestureInfo for last pointer position.
   void UpdateLastPointerPosition(
-      const uint32_t& pointer_id,
-      const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+      uint32_t pointer_id, const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;

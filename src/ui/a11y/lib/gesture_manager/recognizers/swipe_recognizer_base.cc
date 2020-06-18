@@ -104,12 +104,15 @@ void SwipeRecognizerBase::HandleEvent(
       }
 
       // Check that fingers are moving in the direction of swipe recognizer only when all the
-      // fingers are detected and there is no up event seen so far.
+      // fingers are detected, there is no up event seen so far and length of swipe so far is longer
+      // than kMinSwipeDistance.
       if ((gesture_info_map_.size() == number_of_fingers_) && !number_of_up_event_detected_) {
-        if (!ValidateSwipePath(pointer_id, pointer_event)) {
+        if (MinSwipeLengthAchieved(pointer_id, pointer_event) &&
+            !ValidateSwipePath(pointer_id, pointer_event)) {
           contest_->member->Reject();
           break;
         }
+
       } else {
         // Make sure that until all the Down events are detected finger movement is not more than
         // that of a tap gesture. Also, If an up event is seen before, make sure all fingers come
@@ -164,7 +167,7 @@ void SwipeRecognizerBase::OnWin() { swipe_gesture_callback_(gesture_context_); }
 void SwipeRecognizerBase::OnDefeat() { contest_.reset(); }
 
 bool SwipeRecognizerBase::ValidateSwipePath(
-    const uint32_t& pointer_id,
+    uint32_t pointer_id,
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
   // Verify that slope of line containing gesture start point and current pointer event location
   // falls within a pre-specified range.
@@ -179,7 +182,7 @@ bool SwipeRecognizerBase::ValidateSwipePath(
 }
 
 bool SwipeRecognizerBase::ValidateSwipeDistance(
-    const uint32_t& pointer_id,
+    uint32_t pointer_id,
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
   // Check if the distance between the pointer event and the start point is within the allowable
   // range.
@@ -187,12 +190,26 @@ bool SwipeRecognizerBase::ValidateSwipeDistance(
   if (it == gesture_info_map_.end()) {
     return false;
   }
-  auto dx = pointer_event.ndc_point().x - it->second.starting_ndc_position.x;
-  auto dy = pointer_event.ndc_point().y - it->second.starting_ndc_position.y;
+  float dx = pointer_event.ndc_point().x - it->second.starting_ndc_position.x;
+  float dy = pointer_event.ndc_point().y - it->second.starting_ndc_position.y;
 
-  auto d2 = dx * dx + dy * dy;
+  float d2 = dx * dx + dy * dy;
 
   return d2 >= kMinSwipeDistance * kMinSwipeDistance && d2 <= kMaxSwipeDistance * kMaxSwipeDistance;
+}
+
+bool SwipeRecognizerBase::MinSwipeLengthAchieved(
+    uint32_t pointer_id,
+    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
+  auto it = gesture_info_map_.find(pointer_id);
+  if (it == gesture_info_map_.end()) {
+    return false;
+  }
+  float dx = pointer_event.ndc_point().x - it->second.starting_ndc_position.x;
+  float dy = pointer_event.ndc_point().y - it->second.starting_ndc_position.y;
+
+  float d2 = dx * dx + dy * dy;
+  return d2 >= kMinSwipeDistance * kMinSwipeDistance;
 }
 
 void SwipeRecognizerBase::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
@@ -204,8 +221,7 @@ void SwipeRecognizerBase::OnContestStarted(std::unique_ptr<ContestMember> contes
 }
 
 void SwipeRecognizerBase::UpdateLastPointerPosition(
-    const uint32_t& pointer_id,
-    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
+    uint32_t pointer_id, const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   GestureInfo gesture_info;
   GestureContext dummy_context;
   if (!InitGestureInfo(pointer_event, &gesture_info, &dummy_context)) {

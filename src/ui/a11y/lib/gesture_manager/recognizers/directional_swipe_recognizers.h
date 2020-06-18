@@ -50,9 +50,9 @@ class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
 // In the NDC coordinate space, a downward swipe moves toward +y.
 class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
  public:
-  // A line with a slope of -1.732 has an angle of elevation below the x-axis of ~60 degrees,
-  // so in order for a swipe to be recognized as "down", it must fall within 30 degrees of vertical.
-  static constexpr float kMinDownSwipeSlopeMagnitude = 1.732f;
+  // A line with a slope of -1.2 has an angle of elevation below the x-axis of ~50 degrees,
+  // so in order for a swipe to be recognized as "down", it must fall within 40 degrees of vertical.
+  static constexpr float kMinDownSwipeSlopeMagnitude = 1.2f;
 
   static constexpr char kDownSwipeRecognizerName[] = "Down Swipe Gesture Recognizer";
 
