@@ -19,6 +19,13 @@ enum WlanScanType : uint8 {
 /// IEEE Std 802.11-2016, 9.4.2.2
 const uint32 WLAN_SCAN_MAX_SSIDS = 32;
 
+// LINT.IfChange
+/// WFA WMM v1.2, 2.2.2 Table 5
+/// Length of the WMM Parameter Element body. This does not include IE and vendor IE headers,
+/// and only includes the QoS Info, reserved, and AC parameters fields.
+const uint32 WLAN_WMM_PARAM_LEN = 18;
+// LINT.ThenChange(//sdk/fidl/fuchsia.wlan.mlme/wlan_mlme.fidl)
+
 struct WlanifSsid {
     uint8 len;
     array<uint8>:WLAN_MAX_SSID_LEN data;
@@ -351,6 +358,8 @@ enum WlanAssocResult : uint8 {
 struct WlanifAssocConfirm {
     WlanAssocResult result_code;
     uint16 association_id;
+    bool wmm_param_present;
+    array<uint8>:WLAN_WMM_PARAM_LEN wmm_param;
 };
 
 struct WlanifAssocResp {

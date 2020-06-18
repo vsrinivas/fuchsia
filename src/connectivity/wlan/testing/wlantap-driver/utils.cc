@@ -125,6 +125,9 @@ uint32_t ConvertCaps(const ::std::vector<wlan_device::Capability>& caps) {
       case wlan_device::Capability::SIMULTANEOUS_CLIENT_AP:
         ret |= WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP;
         break;
+      case wlan_device::Capability::QOS_CAPABLE:
+        ret |= WLAN_INFO_HARDWARE_CAPABILITY_QOS_CAPABLE;
+        break;
     }
   }
   return ret;
