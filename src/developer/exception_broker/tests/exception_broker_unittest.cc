@@ -22,6 +22,7 @@
 
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/developer/feedback/testing/gmatchers.h"
+#include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
 
@@ -181,18 +182,18 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
 
   if (validate_minidump) {
     ASSERT_TRUE(report.has_annotations());
+    auto matchers = std::vector({feedback::MatchesAnnotation("crash.process.name", "crasher")});
+
     if (realm_path.has_value()) {
-      EXPECT_THAT(report.annotations(),
-                  UnorderedElementsAreArray({
-                      feedback::MatchesAnnotation("crash.process.name", "crasher"),
-                      feedback::MatchesAnnotation("crash.realm-path", realm_path.value().c_str()),
-                  }));
-    } else {
-      EXPECT_THAT(report.annotations(),
-                  UnorderedElementsAreArray({
-                      feedback::MatchesAnnotation("crash.process.name", "crasher"),
-                  }));
+      matchers.push_back(
+          feedback::MatchesAnnotation("crash.realm-path", realm_path.value().c_str()));
     }
+
+    if (program_name == "crasher") {
+      matchers.push_back(feedback::MatchesAnnotation("debug.crash.component.url.set", "false"));
+    }
+
+    EXPECT_THAT(report.annotations(), UnorderedElementsAreArray(matchers));
   }
 
   // If the broker could not get a minidump, it will not send a mem buffer.

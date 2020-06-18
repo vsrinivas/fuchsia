@@ -39,6 +39,13 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
       .value = process_name_,
   });
 
+  if (!component_url_.has_value()) {
+    crash_report.mutable_annotations()->push_back(Annotation{
+        .key = "debug.crash.component.url.set",
+        .value = "false",
+    });
+  }
+
   if (realm_path_.has_value()) {
     crash_report.mutable_annotations()->push_back(Annotation{
         .key = "crash.realm-path",

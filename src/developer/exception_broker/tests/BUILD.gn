@@ -112,6 +112,7 @@ executable("exception_broker_unittest") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/exception_broker:lib",
     "//src/developer/feedback/testing:gmatchers",
+    "//src/developer/feedback/testing:gpretty_printers",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

@@ -37,6 +37,8 @@ source_set("gmatchers") {
 source_set("gpretty_printers") {
   testonly = true
 
+  visibility += [ "//src/developer/exception_broker/tests/*" ]
+
   sources = [ "gpretty_printers.h" ]
 
   public_deps = [
