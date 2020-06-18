@@ -145,6 +145,10 @@
          "max_severity": "FATAL"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/exception-broker-tests#meta/exception_broker_integration_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/exception-broker-tests#meta/exception_broker_unittest.cmx",
          "max_severity": "ERROR"
       },
@@ -329,7 +333,7 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/sandbox_service.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/sandbox-service.cmx",
          "max_severity": "ERROR"
       },
       {
@@ -345,15 +349,15 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netstack_integration_tests#meta/netstack_cobalt_integration_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack_cobalt_integration_test.cmx",
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netstack_integration_tests#meta/netstack_fidl_integration_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack_fidl_integration_test.cmx",
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netstack_integration_tests#meta/netstack_integration_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack_integration_test.cmx",
          "max_severity": "ERROR"
       },
       {
