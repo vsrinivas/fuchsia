@@ -6,6 +6,7 @@
 #define SRC_STORAGE_FS_TEST_FS_TEST_H_
 
 #include <lib/zx/status.h>
+#include <lib/zx/time.h>
 
 #include <string>
 
@@ -55,6 +56,7 @@ class FileSystem {
  public:
   struct Traits {
     bool can_unmount = false;
+    zx::duration timestamp_granularity = zx::nsec(1);
   };
 
   virtual zx::status<std::unique_ptr<FileSystemInstance>> Make(
@@ -121,6 +123,8 @@ class __EXPORT TestFileSystem {
   // Runs fsck on the file system. Does not automatically unmount, so Unmount should be
   // called first if that is required.
   zx::status<> Fsck();
+
+  const FileSystem::Traits& GetTraits() const { return options_.file_system->GetTraits(); }
 
  private:
   TestFileSystem(const TestFileSystemOptions& options,

@@ -43,6 +43,7 @@ shared_library("fs_test") {
   ]
   public_deps = [
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs-management",
   ]
@@ -83,6 +84,25 @@ fuchsia_component("append-tests") {
   manifest = "$target_gen_dir/append.cml"
   deps = [
     ":append",
+    ":manifests",
+  ]
+}
+
+executable("attr") {
+  testonly = true
+  sources = [ "attr.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("attr-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/attr.cml"
+  deps = [
+    ":attr",
     ":manifests",
   ]
 }
@@ -128,6 +148,7 @@ fuchsia_test_package("fs-tests") {
   test_components = [
     ":access-tests",
     ":append-tests",
+    ":attr-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
@@ -163,6 +184,7 @@ action("manifests") {
   outputs = [
     "$target_gen_dir/access.cml",
     "$target_gen_dir/append.cml",
+    "$target_gen_dir/attr.cml",
     "$target_gen_dir/max-file.cml",
     "$target_gen_dir/overflow.cml",
     "$target_gen_dir/read-write.cml",
