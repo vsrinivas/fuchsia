@@ -6,6 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "setui_client"
@@ -103,5 +104,34 @@ test_package("setui_client_interface_test") {
       name = "setui_client_interface_test"
       environments = basic_envs
     },
+  ]
+}
+
+rustc_test("setui_client_integration_test") {
+  edition = "2018"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+  source_root = "src/integration_test.rs"
+}
+
+fuchsia_component("setui-client-integration-test") {
+  testonly = true
+  deps = [ ":setui_client_integration_test" ]
+  manifest = "meta/setui_client_integration_test.cmx"
+}
+
+fuchsia_test_package("setui-client-integration-tests") {
+  test_components = [":setui-client-integration-test"]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":setui_client_tests",
+    ":setui-client-integration-tests",
+    ":setui_client_interface_test",
   ]
 }

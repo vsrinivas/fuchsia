@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/setui_client_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
