@@ -20,9 +20,6 @@ rustc_test("audio_device_tests_bin") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
   ]
-
-  # TODO(48455): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("audio_device_tests") {
