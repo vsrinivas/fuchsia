@@ -33,8 +33,7 @@ test("test") {
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
-  # TODO(54180): restore name once tests are run at the appropriate time.
-  output_name = "xacpidump-test"
+  output_name = "acpidump-test"
   sources = [ "acpidump_test.cc" ]
   include_dirs = [ "." ]
   deps = [

@@ -10,6 +10,7 @@
 #include <lib/cmdline/args_parser.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -194,12 +195,45 @@ void PrintHex(const char* name, const fbl::Array<uint8_t>& data) {
   putchar('\n');
 }
 
+// Open the ACPI device, waiting until it appears if necessary (e.g., if we run shortly
+// after system boot).
+static fbl::unique_fd OpenAcpiDevice() {
+  zx::duration poll_delay = zx::msec(1);
+  bool first_poll = true;
+
+  while (true) {
+    // Attempt to open the device.
+    fbl::unique_fd fd{open(kAcpiDevicePath, O_RDWR)};
+    if (fd.is_valid()) {
+      return fd;
+    }
+
+    // If we have an error (other than "file not found") print an error and return.
+    if (errno != ENOENT) {
+      fprintf(stderr, "Failed to open '%s': %s\n", kAcpiDevicePath, strerror(errno));
+      return fbl::unique_fd();
+    }
+
+    // If we couldn't open it because it doesn't exist, it might just be that
+    // ACPI hasn't been enumerated yet. Poll the file every so often.
+    //
+    // TODO(dgreenaway): Instead of polling, using the Watch API.
+    if (first_poll) {
+      fprintf(stderr, "ACPI device '%s' not found. Waiting for it to appear...\n", kAcpiDevicePath);
+      first_poll = false;
+    }
+
+    // Poll with exponential backoff, up to a 1 second polling interval.
+    zx::nanosleep(zx::deadline_after(poll_delay));
+    poll_delay = std::min(poll_delay * 2, zx::sec(1));
+  }
+}
+
 zx_status_t AcpiDump(const Args& args) {
   // Open up channel to ACPI device.
-  fbl::unique_fd fd{open(kAcpiDevicePath, O_RDWR)};
+  fbl::unique_fd fd = OpenAcpiDevice();
   if (!fd.is_valid()) {
-    fprintf(stderr, "Failed to open '%s': %s\n", kAcpiDevicePath, strerror(errno));
-    return ZX_ERR_NOT_FOUND;
+    return ZX_ERR_UNAVAILABLE;
   }
   fdio_cpp::FdioCaller dev(std::move(fd));
 
