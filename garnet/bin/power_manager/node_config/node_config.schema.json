@@ -179,19 +179,26 @@
           "config": {
             "type": "object",
             "properties": {
-              "service_path": {
+              "component_manager_path": {
                 "type": "string"
+              },
+              "shutdown_timeout_s": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
               }
             },
-            "additionalProperties": false,
             "required": [
-              "service_path"
+              "component_manager_path"
             ]
           },
           "dependencies": {
             "type": "object",
             "properties": {
               "driver_manager_handler_node": {
+                "type": "string"
+              },
+              "shutdown_watcher_node": {
                 "type": "string"
               }
             },

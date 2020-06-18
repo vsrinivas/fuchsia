@@ -80,8 +80,8 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
     ) -> Self {
         #[derive(Deserialize)]
         struct Config {
-            service_path: String,
-            shutdown_timeout: Option<f64>,
+            component_manager_path: String,
+            shutdown_timeout_s: Option<f64>,
         };
 
         #[derive(Deserialize)]
@@ -99,10 +99,10 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         let data: JsonData = json::from_value(json_data).unwrap();
         let mut builder = Self::new(nodes[&data.dependencies.driver_manager_handler_node].clone())
             .with_service_fs(service_fs)
-            .with_component_mgr_path(data.config.service_path);
+            .with_component_mgr_path(data.config.component_manager_path);
 
-        if data.config.shutdown_timeout.is_some() {
-            builder = builder.with_shutdown_timeout(Seconds(data.config.shutdown_timeout.unwrap()))
+        if let Some(timeout) = data.config.shutdown_timeout_s {
+            builder = builder.with_shutdown_timeout(Seconds(timeout))
         }
 
         if let Some(watcher_name) = data.dependencies.shutdown_watcher_node {
@@ -183,8 +183,8 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         });
 
         // Publish the service only if we were provided with a ServiceFs
-        if self.service_fs.is_some() {
-            node.clone().publish_fidl_service(self.service_fs.unwrap());
+        if let Some(service_fs) = self.service_fs {
+            node.clone().publish_fidl_service(service_fs);
         }
 
         // Populate the config data into Inspect
@@ -319,8 +319,8 @@ impl SystemShutdownHandler {
         }
 
         // Handle the shutdown using a timeout if one is present in the config
-        let result = if self.shutdown_timeout.is_some() {
-            self.shutdown_with_timeout(request, self.shutdown_timeout.unwrap()).await
+        let result = if let Some(timeout) = self.shutdown_timeout {
+            self.shutdown_with_timeout(request, timeout).await
         } else {
             self.shutdown(request).await
         };
@@ -481,7 +481,7 @@ mod tests {
             "type": "SystemShutdownHandler",
             "name": "system_shutdown_handler",
             "config": {
-                "service_path": "/svc/fake"
+                "component_manager_path": "/svc/fake"
             },
             "dependencies": {
                 "driver_manager_handler_node": "dev_mgr"
