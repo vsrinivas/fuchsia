@@ -14,9 +14,6 @@ use {
 
 /// `Gn` is a wrapper around a GN binary and a given build directory.
 pub trait Gn {
-    /// Creates a new `Gn` instance for the GN binary at `binary_path`.
-    fn new(binary_path: &str, build_directory: &str) -> Self;
-
     /// Calls `gn analyze` with the provided `GnAnalyzeInput` and returns
     /// the result.
     fn analyze(&self, input: GnAnalyzeInput) -> Result<GnAnalyzeOutput, Error>;
@@ -30,15 +27,22 @@ pub struct DefaultGn {
     build_directory: String,
 }
 
-impl Gn for DefaultGn {
-    fn new(binary_path: &str, build_directory: &str) -> Self {
+impl DefaultGn {
+    pub fn new(build_directory: &str, binary_path: &str) -> Self {
         DefaultGn {
             binary_path: binary_path.to_string(),
             build_directory: build_directory.to_string(),
         }
     }
+}
 
+impl Gn for DefaultGn {
     fn analyze(&self, input: GnAnalyzeInput) -> Result<GnAnalyzeOutput, Error> {
+        println!("Analyzing...");
+        println!("Build Directory: {:?}", self.build_directory);
+        println!("GN Path: {:?}", self.binary_path);
+        println!("Changed Files: {:?}", input.files);
+
         let serialized_input = serde_json::to_string(&input)?;
 
         let mut gn_child = Command::new(&self.binary_path)
@@ -105,20 +109,20 @@ pub enum GnAnalyzeStatus {
 pub struct GnAnalyzeOutput {
     /// A list of targets that are impacted by the input files.
     /// See `gn help analyze` for more information.
-    compile_targets: Option<Vec<String>>,
+    pub compile_targets: Option<Vec<String>>,
 
     /// A list of labels for test targets that are impacted by the input
     /// files.
     /// See `gn help analyze` for more information.
-    test_targets: Option<Vec<String>>,
+    pub test_targets: Option<Vec<String>>,
 
     /// A list of names from the input that do not exist in the build graph.
     /// See `gn help analyze` for more information.
-    invalid_targets: Option<Vec<String>>,
+    pub invalid_targets: Option<Vec<String>>,
 
     /// The status of the analyze call.
-    status: Option<GnAnalyzeStatus>,
+    pub status: Option<GnAnalyzeStatus>,
 
     /// The error, if present, associated with the analyze call.
-    error: Option<String>,
+    pub error: Option<String>,
 }

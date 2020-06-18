@@ -3,17 +3,11 @@
 // found in the LICENSE file.
 
 use affected_builders_lib::{
-    argument_parsing::Arguments,
-    gn::{DefaultGn, Gn, GnAnalyzeInput},
+    analysis::is_build_required, argument_parsing::ProgramArguments, gn::DefaultGn,
 };
 
 fn main() {
-    let Arguments { build_directory, gn_path, changed_files } = Arguments::parse();
-    println!("Checking if builder is affected by changes.");
-    println!("Build Directory: {:?}", build_directory);
-    println!("GN Path: {:?}", gn_path);
-    println!("Changed Files: {:?}", changed_files);
+    let ProgramArguments { build_directory, gn_path, changed_files } = ProgramArguments::parse();
 
-    let input = GnAnalyzeInput::all_targets(changed_files);
-    println!("{:?}", DefaultGn::new(&build_directory, &gn_path).analyze(input));
+    println!("{:?}", is_build_required(changed_files, DefaultGn::new(&build_directory, &gn_path)));
 }

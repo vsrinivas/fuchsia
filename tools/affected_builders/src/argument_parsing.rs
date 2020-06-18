@@ -7,7 +7,7 @@ use argh::FromArgs;
 #[derive(FromArgs)]
 /// affected_builders uses build configuration and a list of files to
 /// determine whether or not the builder is affected by the changed files.
-pub struct Arguments {
+pub struct ProgramArguments {
     /// the path to the build directory
     #[argh(positional, short = 'b')]
     pub build_directory: String,
@@ -21,8 +21,8 @@ pub struct Arguments {
     pub changed_files: Vec<String>,
 }
 
-impl Arguments {
-    pub fn parse() -> Arguments {
+impl ProgramArguments {
+    pub fn parse() -> ProgramArguments {
         argh::from_env()
     }
 }

@@ -36,12 +36,29 @@ impl FromStr for FileType {
 /// For `FileType::Unknown`, the associated string will be used to check for equality. That
 /// means that for unsupported file types, all files will be considered the same if they share
 /// the same file extension, or if none of the files have an extension.
-pub fn are_all_files_of_type(files: &[&str], file_type: FileType) -> bool {
+pub fn are_all_files_of_type<I, S>(files: I, file_type: FileType) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
     !files
-        .iter()
-        .map(|file| FileType::from_str(*file))
+        .into_iter()
+        .map(|file| FileType::from_str(file.as_ref()))
         .filter_map(Result::ok) // FileType::from_str only returns Ok, so this filter is fine.
         .any(|parsed_file_type| parsed_file_type != file_type)
+}
+
+/// Returns true if all `files` are of a type supported by `affected_builders`.
+///
+/// If this returns true, it is safe to continue analyzing the build, and potentially
+/// short-circuit the builder. If it's false, the tool does not support the analysis
+/// of the provided files, and can't short-circuit the builder.
+pub fn file_types_are_supported<I, S>(files: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    are_all_files_of_type(files, FileType::Cpp)
 }
 
 #[cfg(test)]
