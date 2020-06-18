@@ -86,7 +86,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void GetStoryProvider(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void Logout() override;
   void Restart() override;
-  void Shutdown();
+  void RestartDueToCriticalFailure();
 
   // Called during initialization. Schedules the given action to be executed
   // during termination. This allows to create something like an asynchronous

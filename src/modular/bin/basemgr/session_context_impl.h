@@ -28,9 +28,9 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
  public:
   enum class ShutDownReason {
     // normal mode of shutdown
-    LOGGED_OUT,
+    CLIENT_REQUEST,
     // sessionmgr or session_shell crashed.
-    CRASHED
+    CRITICAL_FAILURE
   };
 
   // Called after performing shutdown of the session, to signal our completion
@@ -69,13 +69,10 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   fuchsia::sys::FlatNamespacePtr MakeConfigNamespace(zx::channel config_handle);
 
   // |fuchsia::modular::internal::SessionContext|
-  void Logout() override;
-
-  // |fuchsia::modular::internal::SessionContext|
   void Restart() override;
 
   // |fuchsia::modular::internal::SessionContext|
-  void Shutdown() override;
+  void RestartDueToCriticalFailure() override;
 
   // |fuchsia::modular::internal::SessionContext|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;

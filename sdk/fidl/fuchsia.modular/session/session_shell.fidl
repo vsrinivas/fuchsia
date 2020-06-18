@@ -60,12 +60,12 @@ protocol SessionShellContext {
     GetPresentation(request<fuchsia.ui.policy.Presentation> request);
     GetStoryProvider(request<StoryProvider> request);
 
-    /// Requests logout of the user. This causes the basemgr to tear down the
-    /// `Sessionmgr` instance of the user.
-    Logout();
-
-    /// Restarts the session without logging out the user.
+    /// Restarts the session.
     Restart();
+
+    /// Deprecated: Equivalent to Restart().
+    [Transitional]
+    Logout();
 };
 
 /// Session shell provides this service to the framework which may plumb it to

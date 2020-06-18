@@ -160,7 +160,7 @@ SessionContextImpl::SessionContextImpl(
     // apply here because sessionmgr crashed. Move |on_session_shutdown_| on to the stack before
     // invoking it, in case the |on_session_shutdown_| deletes |this|.
     auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
-    on_session_shutdown(ShutDownReason::CRASHED);
+    on_session_shutdown(ShutDownReason::CRITICAL_FAILURE);
     // Don't touch |this|.
   });
 }
@@ -182,8 +182,6 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace(zx::chann
   return flat_namespace;
 }
 
-// TODO(MF-120): Replace method in favor of letting sessionmgr launch base
-// shell via SessionUserProvider.
 void SessionContextImpl::Shutdown(ShutDownReason reason, fit::function<void()> callback) {
   shutdown_callbacks_.push_back(std::move(callback));
   if (shutdown_callbacks_.size() > 1) {
@@ -192,7 +190,8 @@ void SessionContextImpl::Shutdown(ShutDownReason reason, fit::function<void()> c
     return;
   }
 
-  // This should prevent us from receiving any further requests.
+  // Close the SessionContext channel to ensure no more requests from the
+  // channel are processed.
   session_context_binding_.Unbind();
 
   sessionmgr_app_->Teardown(kSessionmgrTimeout, [weak_this = weak_factory_.GetWeakPtr(), reason] {
@@ -214,16 +213,12 @@ void SessionContextImpl::GetPresentation(
   get_presentation_(std::move(request));
 }
 
-void SessionContextImpl::Logout() {
-  Shutdown(ShutDownReason::LOGGED_OUT, [] {});
-}
-
 void SessionContextImpl::Restart() {
-  Shutdown(ShutDownReason::CRASHED, [] {});
+  Shutdown(ShutDownReason::CLIENT_REQUEST, [] {});
 }
 
-void SessionContextImpl::Shutdown() {
-  Shutdown(ShutDownReason::CRASHED, [] {});
+void SessionContextImpl::RestartDueToCriticalFailure() {
+  Shutdown(ShutDownReason::CRITICAL_FAILURE, [] {});
 }
 
 }  // namespace modular

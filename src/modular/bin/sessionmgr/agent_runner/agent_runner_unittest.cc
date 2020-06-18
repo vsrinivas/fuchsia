@@ -78,21 +78,6 @@ static zx_koid_t get_object_koid(zx_handle_t handle) {
   return info.koid;
 }
 
-// A fake |SessionRestartController| that invokes a callback on |Restart()|.
-class FakeSessionRestartController : public fuchsia::modular::SessionRestartController {
- public:
-  using OnRestartCallback = fit::function<void()>;
-
-  explicit FakeSessionRestartController(OnRestartCallback on_restart_callback)
-      : on_restart_callback_(std::move(on_restart_callback)) {}
-
-  // |fuchsia::modular::SessionRestartController|
-  void Restart() override { on_restart_callback_(); }
-
- private:
-  OnRestartCallback on_restart_callback_;
-};
-
 class TestAgent : fuchsia::modular::Agent,
                   fuchsia::modular::Lifecycle,
                   public fuchsia::sys::ComponentController {
@@ -187,20 +172,19 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
 
   void TearDown() override {
     agent_runner_.reset();
-    session_restart_controller_.reset();
-
     gtest::RealLoopFixture::TearDown();
   }
 
  protected:
   modular::AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
-      if (session_restart_controller_ == nullptr) {
-        set_on_session_restart_callback([] {});
-      }
-
       agent_runner_ = std::make_unique<modular::AgentRunner>(
-          &launcher_, /*agent_services_factory=*/nullptr, &node_, session_restart_controller_.get(),
+          &launcher_, /*agent_services_factory=*/nullptr, &node_, /*on_critical_agent_crash=*/
+          [this] {
+            if (on_session_restart_callback_) {
+              on_session_restart_callback_();
+            }
+          },
           std::move(agent_service_index_),
           /*session_agents=*/std::vector<std::string>(),
           std::move(restart_session_on_agent_crash_));
@@ -216,10 +200,8 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
     restart_session_on_agent_crash_ = std::move(restart_session_on_agent_crash);
   }
 
-  void set_on_session_restart_callback(
-      FakeSessionRestartController::OnRestartCallback on_session_restart_callback) {
-    session_restart_controller_ =
-        std::make_unique<FakeSessionRestartController>(std::move(on_session_restart_callback));
+  void set_on_session_restart_callback(std::function<void()> on_session_restart_callback) {
+    on_session_restart_callback_ = std::move(on_session_restart_callback);
   }
 
   template <typename Interface>
@@ -310,7 +292,7 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   std::unique_ptr<modular::AgentRunner> agent_runner_;
   std::map<std::string, std::string> agent_service_index_;
   std::vector<std::string> restart_session_on_agent_crash_;
-  std::unique_ptr<fuchsia::modular::SessionRestartController> session_restart_controller_;
+  std::function<void()> on_session_restart_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };

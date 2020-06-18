@@ -50,7 +50,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   explicit AgentContextImpl(
       const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
       inspect::Node agent_node,
-      fuchsia::modular::SessionRestartController* session_restart_on_crash_controller = nullptr);
+      std::function<void()> on_crash = nullptr);
   ~AgentContextImpl() override;
 
   // Stops the running agent. Calls into |AgentRunner::RemoveAgent()| to remove itself.
@@ -136,11 +136,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   inspect::Node agent_node_;
 
-  // Optional controller used to restart the session when this agent unexpectedly terminates.
-  // If this is a nullptr, the session will not be restarted.
-  //
-  // Not owned.
-  fuchsia::modular::SessionRestartController* session_restart_on_crash_controller_;
+  // Called if this agent terminates unexpectedly. Can be uninitialized.
+  std::function<void()> on_crash_;
 
   State state_ = State::INITIALIZING;
 

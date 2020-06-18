@@ -23,18 +23,19 @@ namespace modular {
 
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
-AgentRunner::AgentRunner(
-    fuchsia::sys::Launcher* const launcher, AgentServicesFactory* const agent_services_factory,
-    inspect::Node* const session_inspect_node,
-    fuchsia::modular::SessionRestartController* const session_restart_controller,
-    std::map<std::string, std::string> agent_service_index, std::vector<std::string> session_agents,
-    std::vector<std::string> restart_session_on_agent_crash,
-    sys::ComponentContext* const sessionmgr_context)
+AgentRunner::AgentRunner(fuchsia::sys::Launcher* const launcher,
+                         AgentServicesFactory* const agent_services_factory,
+                         inspect::Node* const session_inspect_node,
+                         std::function<void()> on_critical_agent_crash,
+                         std::map<std::string, std::string> agent_service_index,
+                         std::vector<std::string> session_agents,
+                         std::vector<std::string> restart_session_on_agent_crash,
+                         sys::ComponentContext* const sessionmgr_context)
     : launcher_(launcher),
       agent_services_factory_(agent_services_factory),
       terminating_(std::make_shared<bool>(false)),
       session_inspect_node_(session_inspect_node),
-      session_restart_controller_(session_restart_controller),
+      on_critical_agent_crash_(on_critical_agent_crash),
       agent_service_index_(std::move(agent_service_index)),
       session_agents_(std::move(session_agents)),
       restart_session_on_agent_crash_(std::move(restart_session_on_agent_crash)),
@@ -148,19 +149,17 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 
-  // AgentContextImpl will restart the session if this agent is listed
+  // AgentContextImpl will call on_critical_agent_crash if this agent is listed
   // in |restart_session_on_agent_crash_| and terminates unexpectedly.
   bool restart_session_on_crash =
       std::find(restart_session_on_agent_crash_.begin(), restart_session_on_agent_crash_.end(),
                 agent_url) != restart_session_on_agent_crash_.end();
-  auto* session_restart_on_crash_controller =
-      restart_session_on_crash ? session_restart_controller_ : nullptr;
 
   FX_CHECK(running_agents_
                .emplace(agent_url, std::make_unique<AgentContextImpl>(
                                        info, std::move(agent_config),
                                        session_inspect_node_->CreateChild(agent_url),
-                                       session_restart_on_crash_controller))
+                                       restart_session_on_crash ? on_critical_agent_crash_ : nullptr))
                .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);

@@ -32,15 +32,15 @@ class AgentContextImpl;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
-//
-// If |sessionmgr_context| is provided, services from that context can be exposed to agents.
-// This is used to make the fuchsia::intl::PropertyProvider available, which may not be necessary
-// for some test environments that construct AgentRunner outside of a Sessionmgr.
 class AgentRunner {
  public:
+    // If |sessionmgr_context| is provided, fuchsia.intl.PropertyProvider is exposed to agents.
+    // |on_critical_agent_crash| is called when a "critical agent" (all agents
+    // with entries in |restart_session_on_agent_crash|). It is expected to
+    // restart the session.
   AgentRunner(fuchsia::sys::Launcher* launcher, AgentServicesFactory* agent_services_factory,
               inspect::Node* session_inspect_node,
-              fuchsia::modular::SessionRestartController* session_restart_controller,
+              std::function<void()> on_critical_agent_crash,
               std::map<std::string, std::string> agent_service_index = {},
               std::vector<std::string> session_agents = {},
               std::vector<std::string> restart_session_on_agent_crash = {},
@@ -131,11 +131,9 @@ class AgentRunner {
   // Not owned. This is the parent node to the agent nodes.
   inspect::Node* session_inspect_node_;
 
-  // The protocol by which AgentRunner restarts the session when an agent listed in
-  // |restart_session_on_agent_crash_| terminates.
-  //
-  // Not owned.
-  fuchsia::modular::SessionRestartController* session_restart_controller_;
+  // Called when an agent listed in |restart_session_on_agent_crash_|
+  // terminates.
+  std::function<void()> on_critical_agent_crash_;
 
   // Services mapped to agents that provide those services. Used when a service is requested
   // without specifying the handling agent. May be empty.

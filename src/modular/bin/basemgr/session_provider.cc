@@ -107,7 +107,7 @@ void SessionProvider::Teardown(fit::function<void()> callback) {
 
   // Shutdown will execute the given |callback|, then destroy
   // |session_context_|.
-  session_context_->Shutdown(ShutDownReason::CRASHED, std::move(callback));
+  session_context_->Shutdown(ShutDownReason::CRITICAL_FAILURE, std::move(callback));
 }
 
 void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) {
@@ -116,11 +116,11 @@ void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) 
   }
 
   // Shutting down a session effectively restarts the session.
-  session_context_->Shutdown(ShutDownReason::CRASHED, std::move(on_restart_complete));
+  session_context_->Shutdown(ShutDownReason::CRITICAL_FAILURE, std::move(on_restart_complete));
 }
 
 void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason) {
-  if (shutdown_reason == SessionContextImpl::ShutDownReason::CRASHED) {
+  if (shutdown_reason == SessionContextImpl::ShutDownReason::CRITICAL_FAILURE) {
     if (session_crash_recovery_counter_ != 0) {
       zx::duration duration = zx::clock::get_monotonic() - last_crash_time_;
       // If last retry is 1 hour ago, the counter will be reset

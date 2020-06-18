@@ -176,10 +176,10 @@ class AgentContextImpl::OnAppErrorCall : public Operation<> {
     agent_context_impl_->agent_context_bindings_.CloseAll();
     agent_context_impl_->app_client_.reset();
 
-    if (agent_context_impl_->session_restart_on_crash_controller_) {
+    if (agent_context_impl_->on_crash_) {
       FX_LOGS(WARNING) << "Agent " << agent_context_impl_->url_
                        << " unexpectedly terminated. Restarting the session.";
-      agent_context_impl_->session_restart_on_crash_controller_->Restart();
+      agent_context_impl_->on_crash_();
     }
   }
 
@@ -189,13 +189,13 @@ class AgentContextImpl::OnAppErrorCall : public Operation<> {
 AgentContextImpl::AgentContextImpl(
     const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
     inspect::Node agent_node,
-    fuchsia::modular::SessionRestartController* session_restart_on_crash_controller)
+    std::function<void()> on_crash)
     : url_(agent_config.url),
       component_context_impl_(info.component_context_info, url_, url_),
       agent_runner_(info.component_context_info.agent_runner),
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)),
-      session_restart_on_crash_controller_(session_restart_on_crash_controller) {
+      on_crash_(std::move(on_crash)) {
   auto service_list = fuchsia::sys::ServiceList::New();
   service_provider_impl_.AddBinding(service_list->provider.NewRequest());
 

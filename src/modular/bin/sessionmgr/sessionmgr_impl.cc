@@ -259,7 +259,8 @@ void SessionmgrImpl::InitializeAgentRunner() {
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
   agent_runner_.reset(new AgentRunner(
       agent_runner_launcher_.get(), startup_agent_launcher_.get(), &inspect_root_node_,
-      /*session_restart_controller=*/this, std::move(agent_service_index), config_.session_agents(),
+      /*on_critical_agent_crash=*/[this] { RestartDueToCriticalFailure(); },
+      std::move(agent_service_index), config_.session_agents(),
       config_.restart_session_on_agent_crash(), sessionmgr_context_));
   OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 }
@@ -273,8 +274,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                                        config_.startup_agents());
 
   session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
-      component_context_info, session_shell_url.value_or(""),
-      session_shell_url.value_or(""));
+      component_context_info, session_shell_url.value_or(""), session_shell_url.value_or(""));
 
   OnTerminate(Reset(&session_shell_component_context_impl_));
 
@@ -301,12 +301,11 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   session_storage_ = std::make_unique<SessionStorage>();
   OnTerminate(Reset(&session_storage_));
 
-  story_provider_impl_.reset(
-      new StoryProviderImpl(session_environment_.get(), session_storage_.get(),
-                            std::move(story_shell_config), std::move(story_shell_factory_ptr),
-                            component_context_info, std::move(focus_provider_story_provider),
-                            startup_agent_launcher_.get(), presentation_provider_impl_.get(),
-                            &inspect_root_node_));
+  story_provider_impl_.reset(new StoryProviderImpl(
+      session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
+      std::move(story_shell_factory_ptr), component_context_info,
+      std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
+      presentation_provider_impl_.get(), &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
@@ -413,7 +412,7 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
   session_shell_app_->SetAppErrorHandler([this] {
     FX_LOGS(ERROR) << "Session Shell seems to have crashed unexpectedly."
                    << " Shutting down.";
-    Shutdown();
+    RestartDueToCriticalFailure();
   });
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -466,11 +465,13 @@ void SessionmgrImpl::GetStoryProvider(
   story_provider_impl_->Connect(std::move(request));
 }
 
-void SessionmgrImpl::Logout() { session_context_->Logout(); }
+void SessionmgrImpl::Logout() { Restart(); }
 
 void SessionmgrImpl::Restart() { session_context_->Restart(); }
 
-void SessionmgrImpl::Shutdown() { session_context_->Shutdown(); }
+void SessionmgrImpl::RestartDueToCriticalFailure() {
+  session_context_->RestartDueToCriticalFailure();
+}
 
 void SessionmgrImpl::OnTerminate(fit::function<void(fit::function<void()>)> action) {
   on_terminate_cbs_.emplace_back(std::move(action));
