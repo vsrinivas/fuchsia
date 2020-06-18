@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
+#include <thread>
 
 #include <audio-proto-utils/format-utils.h>
 #include <audio-utils/audio-device-stream.h>
@@ -60,7 +61,10 @@ enum class Command {
   PLAY,
   LOOP,
   RECORD,
+  DUPLEX,
 };
+
+enum class Type : uint8_t { INPUT, OUTPUT, DUPLEX };
 
 static std::optional<uint32_t> GetUint32(const char* arg) {
   char* end = nullptr;
@@ -80,8 +84,8 @@ void usage(const char* prog_name) {
          "  arguments.  Valid options include...\n"
          "  -d <device id>   : Dev node id for the audio device to use.  Defaults to 0.\n"
          "  -t <device type> : The type of device to open, either input or output.  Ignored if\n"
-         "                     the command given is direction specific (play, record, etc).\n"
-         "                     Otherwise, defaults to output.\n"
+         "                     the command given implies the device type (play, record, duplex,\n"
+         "                     etc). Otherwise, defaults to output.\n"
          "  -r <frame rate>  : Frame rate to use.  Defaults to 48000 Hz\n"
          "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
          "  -c <channels>    : Number of channels to use.  Defaults to 2\n"
@@ -128,6 +132,9 @@ void usage(const char* prog_name) {
          "         Record to the specified WAV file from the selected input.\n"
          "         Duration is specified in seconds.\n"
          "         If duration is unspecified records until a key is pressed.\n");
+  printf("duplex : Params : <play-file> <record-file>\n"
+         "         Play play-file on the selected output and record record-file from\n"
+         "         the selected input.\n");
   // clang-format on
 }
 
@@ -135,15 +142,15 @@ void dump_formats(const audio::utils::AudioDeviceStream& stream) {
   stream.GetSupportedFormats(
       [](const ::llcpp::fuchsia::hardware::audio::SupportedFormats& formats) {
         auto& pcm = formats.pcm_supported_formats();
-        printf("\nNumber of channels:");
+        printf("\nNumber of channels      :");
         for (auto i : pcm.number_of_channels) {
           printf(" %u", i);
         }
-        printf("\nFrame rate        :");
+        printf("\nFrame rate              :");
         for (auto i : pcm.frame_rates) {
           printf(" %uHz", i);
         }
-        printf("\nBits per channel   :");
+        printf("\nBits per channel        :");
         for (auto i : pcm.bytes_per_sample) {
           printf(" %u", 8 * i);
         }
@@ -184,6 +191,119 @@ static void FixupStringRequest(audio_stream_cmd_get_string_resp_t* resp, zx_stat
   resp->str[i] = 0;
 }
 
+int Play(std::unique_ptr<audio::utils::AudioDeviceStream> stream, const char* play_wav_filename,
+         uint32_t active, const audio::utils::Duration& duration_config) {
+  WAVSource wav_source;
+  auto res = wav_source.Initialize(play_wav_filename, active, duration_config);
+  if (res != ZX_OK)
+    return res;
+
+  return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
+}
+
+int Record(std::unique_ptr<audio::utils::AudioDeviceStream> stream, const char* record_wav_filename,
+           uint32_t frame_rate, uint32_t channels, uint32_t active,
+           audio_sample_format_t sample_format, const audio::utils::Duration& duration_config) {
+  auto res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), active, sample_format);
+  if (res != ZX_OK) {
+    printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n", frame_rate, channels,
+           sample_format, res);
+    return -1;
+  }
+
+  WAVSink wav_sink;
+  res = wav_sink.Initialize(record_wav_filename);
+  if (res != ZX_OK)
+    return res;
+
+  return static_cast<audio::utils::AudioInput*>(stream.get())->Record(wav_sink, duration_config);
+}
+
+int Duplex(std::unique_ptr<audio::utils::AudioDeviceStream> play_stream,
+           std::unique_ptr<audio::utils::AudioDeviceStream> record_stream,
+           const char* play_wav_filename, const char* record_wav_filename, uint32_t frame_rate,
+           uint32_t channels, uint32_t active, audio_sample_format_t sample_format) {
+  // Initialize recording.
+  auto res =
+      record_stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), active, sample_format);
+  if (res != ZX_OK) {
+    printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n", frame_rate, channels,
+           sample_format, res);
+    return -1;
+  }
+
+  WAVSink wav_sink;
+  res = wav_sink.Initialize(record_wav_filename);
+  if (res != ZX_OK)
+    return res;
+
+  auto input = static_cast<audio::utils::AudioInput*>(record_stream.get());
+  res = input->RecordPrepare(wav_sink);
+  if (res != ZX_OK)
+    return res;
+
+  // Initialize playback.
+  WAVSource wav_source;
+  // duration not in loop mode, unused.
+  float unused_duration = 0.f;
+  res = wav_source.Initialize(play_wav_filename, active, unused_duration);
+  if (res != ZX_OK)
+    return res;
+
+  auto output = static_cast<audio::utils::AudioOutput*>(play_stream.get());
+  res = output->PlayPrepare(wav_source);
+  if (res != ZX_OK)
+    return res;
+
+  // Start recording and playback.
+  res = input->StartRingBuffer();
+  auto res2 = output->StartRingBuffer();
+
+  if (res != ZX_OK) {
+    printf("Failed to start capture (res %d)\n", res);
+    return res;
+  }
+  if (res2 != ZX_OK) {
+    printf("Failed to start playback (res %d)\n", res);
+    return res;
+  }
+  int64_t record_start = input->start_time();
+  int64_t playback_start = output->start_time();
+
+  // Complete recording and playback.
+  zx_status_t play_completion_error = ZX_ERR_INTERNAL;
+  std::atomic<bool> play_done = {};
+  auto th = std::thread([&]() {
+    play_completion_error = output->PlayToCompletion(wav_source);
+    play_done.store(true);
+  });
+  res = input->RecordToCompletion(wav_sink, [&]() -> bool { return !play_done.load(); });
+  if (res != ZX_OK) {
+    printf("Failed to complete recording (res %d)\n", res);
+    th.join();
+    return res;
+  }
+  th.join();
+  if (play_completion_error != ZX_OK) {
+    printf("Failed to complete playback (res %d)\n", play_completion_error);
+    return play_completion_error;
+  }
+
+  // Now report known delays.
+  printf(
+      "Duplex delays:\n"
+      "  Play start      : %ld usecs\n"
+      "  Input external  : %ld usecs\n"
+      "  Output external : %ld usecs\n"
+      "  Total           : %ld usecs\n",
+      (playback_start - record_start) / 1000, input->external_delay_nsec() / 1000,
+      output->external_delay_nsec() / 1000,
+      (playback_start - record_start + input->external_delay_nsec() +
+       output->external_delay_nsec()) /
+          1000);
+
+  return res;
+}
 zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
   zx_status_t res;
   printf("Info for audio %s at \"%s\"\n", stream.input() ? "input" : "output", stream.name());
@@ -264,7 +384,7 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
 }
 
 int main(int argc, const char** argv) {
-  bool input = false;
+  Type type = Type::OUTPUT;
   uint32_t dev_id = 0;
   uint32_t frame_rate = DEFAULT_FRAME_RATE;
   uint32_t bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
@@ -309,6 +429,7 @@ int main(int argc, const char** argv) {
     { "play",   Command::PLAY,          true,  false },
     { "loop",   Command::LOOP,          true,  false },
     { "record", Command::RECORD,        false, true  },
+    { "duplex", Command::DUPLEX,        false, false },
       // clang-format on
   };
 
@@ -343,9 +464,9 @@ int main(int argc, const char** argv) {
       if (++arg >= argc)
         return -1;
       if (!strcmp("input", argv[arg])) {
-        input = true;
+        type = Type::INPUT;
       } else if (!strcmp("output", argv[arg])) {
-        input = false;
+        type = Type::OUTPUT;
       } else {
         printf("Invalid input/output specifier \"%s\".\n", argv[arg]);
         return -1;
@@ -363,9 +484,9 @@ int main(int argc, const char** argv) {
         arg++;
 
         if (entry.force_out)
-          input = false;
+          type = Type::OUTPUT;
         if (entry.force_in)
-          input = true;
+          type = Type::INPUT;
 
         break;
       }
@@ -410,7 +531,8 @@ int main(int argc, const char** argv) {
   float duration;
   bool play_loop = false;
   float amplitude = DEFAULT_PLAY_AMPLITUDE;
-  const char* wav_filename = nullptr;
+  const char* play_wav_filename = nullptr;
+  const char* record_wav_filename = nullptr;
   float target_gain = -100.0;
   bool enb_agc = false;
 
@@ -485,21 +607,26 @@ int main(int argc, const char** argv) {
       break;
 
     case Command::PLAY:
+      if (arg >= argc)
+        return -1;
+      play_wav_filename = argv[arg];
+      arg++;
+
+      break;
+
     case Command::RECORD:
       if (arg >= argc)
         return -1;
-      wav_filename = argv[arg];
+      record_wav_filename = argv[arg];
       arg++;
 
-      if (cmd == Command::RECORD) {
-        duration = DEFAULT_RECORD_DURATION;
-        if (arg < argc) {
-          if (sscanf(argv[arg], "%f", &duration) != 1) {
-            printf("Failed to parse record duration \"%s\"\n", argv[arg]);
-            return -1;
-          }
-          arg++;
+      duration = DEFAULT_RECORD_DURATION;
+      if (arg < argc) {
+        if (sscanf(argv[arg], "%f", &duration) != 1) {
+          printf("Failed to parse record duration \"%s\"\n", argv[arg]);
+          return -1;
         }
+        arg++;
       }
 
       break;
@@ -507,10 +634,22 @@ int main(int argc, const char** argv) {
     case Command::LOOP:
       if (arg >= argc)
         return -1;
-      wav_filename = argv[arg];
+      play_wav_filename = argv[arg];
       play_loop = true;
       arg++;
 
+      break;
+
+    case Command::DUPLEX:
+      if (arg >= argc)
+        return -1;
+      play_wav_filename = argv[arg];
+      arg++;
+      if (arg >= argc)
+        return -1;
+      record_wav_filename = argv[arg];
+      arg++;
+      type = Type::DUPLEX;
       break;
 
     default:
@@ -527,10 +666,28 @@ int main(int argc, const char** argv) {
 
   // Open the selected stream.
   std::unique_ptr<audio::utils::AudioDeviceStream> stream;
-  if (input)
-    stream = audio::utils::AudioInput::Create(dev_id);
-  else
-    stream = audio::utils::AudioOutput::Create(dev_id);
+  std::unique_ptr<audio::utils::AudioDeviceStream> stream_duplex_record;
+  switch (type) {
+    case Type::INPUT:
+      stream = audio::utils::AudioInput::Create(dev_id);
+      break;
+    case Type::OUTPUT:
+      stream = audio::utils::AudioOutput::Create(dev_id);
+      break;
+    case Type::DUPLEX: {
+      stream_duplex_record = audio::utils::AudioInput::Create(dev_id);
+      if (stream_duplex_record == nullptr) {
+        printf("Out of memory!\n");
+        return ZX_ERR_NO_MEMORY;
+      }
+      // No need to log in the case of failure.  Open has already done so.
+      zx_status_t res = stream_duplex_record->Open();
+      if (res != ZX_OK) {
+        return res;
+      }
+      stream = audio::utils::AudioOutput::Create(dev_id);
+    } break;
+  }
   if (stream == nullptr) {
     printf("Out of memory!\n");
     return ZX_ERR_NO_MEMORY;
@@ -616,55 +773,41 @@ int main(int argc, const char** argv) {
       return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(noise_source);
     }
 
-    case Command::PLAY: {
+    case Command::PLAY:
       if (stream->input()) {
         printf("The \"play\" command can only be used on output streams.\n");
         return -1;
       }
+      return Play(std::move(stream), play_wav_filename, active, duration_config);
 
-      WAVSource wav_source;
-      res = wav_source.Initialize(wav_filename, active, duration_config);
-      if (res != ZX_OK)
-        return res;
-
-      return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
-    }
-
-    case Command::LOOP: {
+    case Command::LOOP:
       if (stream->input()) {
         printf("The \"loop\" command can only be used on output streams.\n");
         return -1;
       }
-
-      WAVSource wav_source;
       duration_config = loop_done;
-      res = wav_source.Initialize(wav_filename, active, duration_config);
-      if (res != ZX_OK)
-        return res;
-      printf("Looping %s until a key is pressed\n", wav_filename);
-      return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
-    }
+      printf("Looping %s until a key is pressed\n", play_wav_filename);
+      return Play(std::move(stream), play_wav_filename, active, duration_config);
 
-    case Command::RECORD: {
+    case Command::RECORD:
       if (!stream->input()) {
         printf("The \"record\" command can only be used on input streams.\n");
         return -1;
       }
+      if (interactive) {
+        printf("Recording until a key is pressed\n");
+      }
+      return Record(std::move(stream), record_wav_filename, frame_rate, channels, active,
+                    sample_format, duration_config);
 
-      res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), active, sample_format);
-      if (res != ZX_OK) {
-        printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n", frame_rate,
-               channels, sample_format, res);
+    case Command::DUPLEX: {
+      if (stream->input() || !stream_duplex_record || !stream_duplex_record->input()) {
+        printf("The \"duplex\" command can only be used on one output and one input stream.\n");
         return -1;
       }
 
-      WAVSink wav_sink;
-      res = wav_sink.Initialize(wav_filename);
-      if (res != ZX_OK)
-        return res;
-
-      return static_cast<audio::utils::AudioInput*>(stream.get())
-          ->Record(wav_sink, duration_config);
+      return Duplex(std::move(stream), std::move(stream_duplex_record), play_wav_filename,
+                    record_wav_filename, frame_rate, channels, active, sample_format);
     }
 
     default:

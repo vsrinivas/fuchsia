@@ -285,6 +285,7 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
       return ZX_ERR_BAD_STATE;
     }
     fifo_depth_ = result->properties.fifo_depth();
+    external_delay_nsec_ = result->properties.external_delay();
   }
 
   // Get a VMO representing the ring buffer we will share with the audio driver.

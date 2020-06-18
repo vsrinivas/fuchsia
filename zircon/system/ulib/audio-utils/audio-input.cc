@@ -41,6 +41,18 @@ std::unique_ptr<AudioInput> AudioInput::Create(const char* dev_path) {
 }
 
 zx_status_t AudioInput::Record(AudioSink& sink, Duration duration) {
+  auto res = RecordPrepare(sink);
+  if (res != ZX_OK)
+    return res;
+  res = StartRingBuffer();
+  if (res != ZX_OK) {
+    printf("Failed to start capture (res %d)\n", res);
+    return res;
+  }
+  return RecordToCompletion(sink, duration);
+}
+
+zx_status_t AudioInput::RecordPrepare(AudioSink& sink) {
   AudioStream::Format fmt = {
       .frame_rate = frame_rate_,
       .channels = static_cast<uint16_t>(channel_cnt_),
@@ -69,22 +81,19 @@ zx_status_t AudioInput::Record(AudioSink& sink, Duration duration) {
     return res;
   }
 
+  return res;
+}
+
+zx_status_t AudioInput::RecordToCompletion(AudioSink& sink, Duration duration) {
+  zx_status_t res = ZX_OK;
   long frames_expected = 0;
   int64_t bytes_expected = 0;
   const bool loop = std::holds_alternative<LoopingDoneCallback>(duration);
-  if (loop) {
-    printf("Recording until a key is pressed\n");
-  } else {
+  if (!loop) {
     std::get<float>(duration) = std::clamp(std::get<float>(duration), MIN_DURATION, MAX_DURATION);
     printf("Recording for %.1f seconds\n", std::get<float>(duration));
     frames_expected = std::lround(frame_rate_ * std::get<float>(duration));
     bytes_expected = frame_sz_ * frames_expected;
-  }
-
-  res = StartRingBuffer();
-  if (res != ZX_OK) {
-    printf("Failed to start capture (res %d)\n", res);
-    return res;
   }
 
   uint32_t rd_ptr = 0;    // Our read ptr for the ring buffer.

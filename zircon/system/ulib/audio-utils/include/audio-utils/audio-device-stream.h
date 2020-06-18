@@ -65,11 +65,11 @@ class AudioDeviceStream {
   uint32_t sample_size() const { return sample_size_; }
   uint32_t channel_cnt() const { return channel_cnt_; }
   uint32_t frame_sz() const { return frame_sz_; }
-  uint64_t fifo_depth() const { return fifo_depth_; }
+  uint32_t fifo_depth() const { return fifo_depth_; }
   uint32_t ring_buffer_bytes() const { return rb_sz_; }
   void* ring_buffer() const { return rb_virt_; }
-  uint64_t start_time() const { return start_time_; }
-  uint64_t external_delay_nsec() const { return external_delay_nsec_; }
+  int64_t start_time() const { return start_time_; }
+  int64_t external_delay_nsec() const { return external_delay_nsec_; }
 
  protected:
   friend class std::default_delete<AudioDeviceStream>;
@@ -88,8 +88,8 @@ class AudioDeviceStream {
   char name_[64] = {0};
 
   audio_sample_format_t sample_format_;
-  uint64_t start_time_ = 0;
-  uint64_t external_delay_nsec_ = 0;
+  int64_t start_time_ = 0;
+  int64_t external_delay_nsec_ = 0;
   uint32_t frame_rate_ = 0;
   uint8_t sample_size_ = 0;
   uint8_t channel_size_ = 0;
