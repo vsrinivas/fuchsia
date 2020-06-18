@@ -83,7 +83,7 @@ class Scheduler {
   // Return true if the thread was placed on the current cpu's run queue.
   // This usually means the caller should locally reschedule soon.
   static bool Unblock(Thread* thread) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
-  static bool Unblock(list_node* thread_list) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
+  static bool Unblock(WaitQueueSublist thread_list) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
   static void UnblockIdle(Thread* idle_thread) TA_REQ(thread_lock);
 
   static void Migrate(Thread* thread) TA_REQ(thread_lock);

@@ -49,6 +49,23 @@ enum class ResourceOwnership {
 // the priority change should be propagated down the PI chain (if any) or not.
 enum class PropagatePI : bool { No = false, Yes };
 
+// A trait for Threads that are the head of a wait queue sublist.
+struct WaitQueueHeadsTrait {
+  using NodeState = fbl::DoublyLinkedListNodeState<Thread*>;
+  static NodeState& node_state(Thread& thread);
+};
+using WaitQueueHeads = fbl::DoublyLinkedListCustomTraits<Thread*, WaitQueueHeadsTrait>;
+
+// A trait for Threads on a wait queue sublist.
+//
+// Threads can be removed from a sublist without knowing which sublist they are on.
+struct WaitQueueSublistTrait {
+  using NodeState =
+      fbl::DoublyLinkedListNodeState<Thread*, fbl::NodeOptions::AllowRemoveFromContainer>;
+  static NodeState& node_state(Thread& thread);
+};
+using WaitQueueSublist = fbl::DoublyLinkedListCustomTraits<Thread*, WaitQueueSublistTrait>;
+
 // Encapsulation of all the per-thread state for the wait queue data structure.
 struct WaitQueueState {
   WaitQueueState() = default;
@@ -57,8 +74,8 @@ struct WaitQueueState {
   WaitQueueState(const WaitQueueState&) = delete;
   WaitQueueState& operator=(const WaitQueueState&) = delete;
 
-  bool IsHead() const { return list_in_list(&heads_node_); }
-  bool InWaitQueue() const { return IsHead() || list_in_list(&sublist_node_); }
+  bool IsHead() const { return heads_node_.InContainer(); }
+  bool InWaitQueue() const { return IsHead() || sublist_node_.InContainer(); }
 
   // Any given thread is either a WaitQueue head (in which case
   // sublist_ is in use, and may be non-empty), or not (in which case
@@ -70,15 +87,15 @@ struct WaitQueueState {
   //
   // This storage is also used for Scheduler::Unblock()ing multiple
   // Threads from a WaitQueue at once.
-  struct list_node sublist_node_ = LIST_INITIAL_CLEARED_VALUE;
+  WaitQueueSublistTrait::NodeState sublist_node_;
 
   // The Thread's sublist. This is only used when the Thread is a
   // WaitQueue head (and so, when IsHead() is true).
-  struct list_node sublist_ = LIST_INITIAL_VALUE(sublist_);
+  WaitQueueSublist sublist_;
 
   // The Thread's position in a WaitQueue heads list. If active, this
   // Thread is a WaitQueue head (and so, IsHead() is true).
-  struct list_node heads_node_ = LIST_INITIAL_CLEARED_VALUE;
+  WaitQueueHeadsTrait::NodeState heads_node_;
 };
 
 // Encapsulation of the data structure backing the wait queue.
@@ -127,12 +144,12 @@ struct WaitQueueCollection {
   // it so.
 
   // Insert |new_head| by making inserting it in |private_heads_|,
-  // before the list_node at |before| (which may be an element of the
-  // list or the list itself).
-  inline void InsertQueueHead(Thread* new_head, list_node* before);
+  // before the iterator at |before| (which may correspond to and
+  // element or to the end of the heads list).
+  inline void InsertQueueHead(Thread* new_head, WaitQueueHeads::iterator before);
 
   // Insert |thread| by appending it to |sublist|.
-  inline void InsertIntoSublist(Thread* thread, list_node* sublist);
+  inline void InsertIntoSublist(Thread* thread, WaitQueueSublist* sublist);
 
   // Remove |thread| from this collection, which must be a queue head.
   inline void RemoveQueueHead(Thread* thread);
@@ -142,7 +159,7 @@ struct WaitQueueCollection {
   inline void RemoveFromSublist(Thread* thread);
 
   int private_count_ = 0;
-  struct list_node private_heads_ = LIST_INITIAL_VALUE(private_heads_);
+  WaitQueueHeads private_heads_;
 };
 
 // NOTE: must be inside critical section when using these
@@ -881,5 +898,13 @@ class ScopedThreadExceptionContext {
   bool need_to_remove_;
   bool need_to_restore_;
 };
+
+// These come last, after the definitions of both Thread and WaitQueue.
+inline WaitQueueHeadsTrait::NodeState& WaitQueueHeadsTrait::node_state(Thread& thread) {
+  return thread.wait_queue_state_.heads_node_;
+}
+inline WaitQueueSublistTrait::NodeState& WaitQueueSublistTrait::node_state(Thread& thread) {
+  return thread.wait_queue_state_.sublist_node_;
+}
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_

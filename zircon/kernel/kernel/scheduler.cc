@@ -1202,18 +1202,16 @@ bool Scheduler::Unblock(Thread* thread) {
   }
 }
 
-bool Scheduler::Unblock(list_node* list) {
+bool Scheduler::Unblock(WaitQueueSublist list) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock_list"_stringref};
 
-  DEBUG_ASSERT(list);
   DEBUG_ASSERT(thread_lock.IsHeld());
 
   const SchedTime now = CurrentTime();
 
   cpu_mask_t cpus_to_reschedule_mask = 0;
   Thread* thread;
-  while ((thread = list_remove_tail_type(list, Thread, wait_queue_state_.sublist_node_)) !=
-         nullptr) {
+  while ((thread = list.pop_back()) != nullptr) {
     DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
     DEBUG_ASSERT(!thread->IsIdle());
 
