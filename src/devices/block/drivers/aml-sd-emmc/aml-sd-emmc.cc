@@ -60,97 +60,97 @@ namespace sdmmc {
 
 void AmlSdEmmc::DumpRegs() {
   uint32_t clk = GET_REG_FROM_MMIO(AmlSdEmmcClock);
-  AML_SD_EMMC_TRACE("sd_emmc_clock : 0x%x\n", clk);
+  AML_SD_EMMC_TRACE("sd_emmc_clock : 0x%x", clk);
   DumpSdmmcClock(clk);
-  AML_SD_EMMC_TRACE("sd_emmc_delay1 : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcDelay1)));
-  AML_SD_EMMC_TRACE("sd_emmc_delay2 : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcDelay2)));
-  AML_SD_EMMC_TRACE("sd_emmc_adjust : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcAdjust)));
-  AML_SD_EMMC_TRACE("sd_emmc_calout : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCalout)));
-  AML_SD_EMMC_TRACE("sd_emmc_start : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcStart)));
+  AML_SD_EMMC_TRACE("sd_emmc_delay1 : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcDelay1)));
+  AML_SD_EMMC_TRACE("sd_emmc_delay2 : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcDelay2)));
+  AML_SD_EMMC_TRACE("sd_emmc_adjust : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcAdjust)));
+  AML_SD_EMMC_TRACE("sd_emmc_calout : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCalout)));
+  AML_SD_EMMC_TRACE("sd_emmc_start : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcStart)));
   uint32_t config = GET_REG_FROM_MMIO(AmlSdEmmcCfg);
-  AML_SD_EMMC_TRACE("sd_emmc_cfg : 0x%x\n", config);
+  AML_SD_EMMC_TRACE("sd_emmc_cfg : 0x%x", config);
   DumpSdmmcCfg(config);
-  AML_SD_EMMC_TRACE("sd_emmc_status : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcStatus)));
-  AML_SD_EMMC_TRACE("sd_emmc_irq_en : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcIrqEn)));
-  AML_SD_EMMC_TRACE("sd_emmc_cmd_cfg : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdCfg)));
-  AML_SD_EMMC_TRACE("sd_emmc_cmd_arg : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdArg)));
-  AML_SD_EMMC_TRACE("sd_emmc_cmd_dat : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdDat)));
-  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp)));
-  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp1 : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp1)));
-  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp2 : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp2)));
-  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp3 : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp3)));
-  AML_SD_EMMC_TRACE("bus_err : 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCmdBusErr)));
-  AML_SD_EMMC_TRACE("sd_emmc_cur_cfg: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCurCfg)));
-  AML_SD_EMMC_TRACE("sd_emmc_cur_arg: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCurArg)));
-  AML_SD_EMMC_TRACE("sd_emmc_cur_dat: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCurDat)));
-  AML_SD_EMMC_TRACE("sd_emmc_cur_rsp: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcCurResp)));
-  AML_SD_EMMC_TRACE("sd_emmc_next_cfg: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcNextCfg)));
-  AML_SD_EMMC_TRACE("sd_emmc_next_arg: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcNextArg)));
-  AML_SD_EMMC_TRACE("sd_emmc_next_dat: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcNextDat)));
-  AML_SD_EMMC_TRACE("sd_emmc_next_rsp: 0x%x\n", (GET_REG_FROM_MMIO(AmlSdEmmcNextResp)));
+  AML_SD_EMMC_TRACE("sd_emmc_status : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcStatus)));
+  AML_SD_EMMC_TRACE("sd_emmc_irq_en : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcIrqEn)));
+  AML_SD_EMMC_TRACE("sd_emmc_cmd_cfg : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdCfg)));
+  AML_SD_EMMC_TRACE("sd_emmc_cmd_arg : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdArg)));
+  AML_SD_EMMC_TRACE("sd_emmc_cmd_dat : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdDat)));
+  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp)));
+  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp1 : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp1)));
+  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp2 : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp2)));
+  AML_SD_EMMC_TRACE("sd_emmc_cmd_resp3 : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdResp3)));
+  AML_SD_EMMC_TRACE("bus_err : 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCmdBusErr)));
+  AML_SD_EMMC_TRACE("sd_emmc_cur_cfg: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCurCfg)));
+  AML_SD_EMMC_TRACE("sd_emmc_cur_arg: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCurArg)));
+  AML_SD_EMMC_TRACE("sd_emmc_cur_dat: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCurDat)));
+  AML_SD_EMMC_TRACE("sd_emmc_cur_rsp: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcCurResp)));
+  AML_SD_EMMC_TRACE("sd_emmc_next_cfg: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcNextCfg)));
+  AML_SD_EMMC_TRACE("sd_emmc_next_arg: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcNextArg)));
+  AML_SD_EMMC_TRACE("sd_emmc_next_dat: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcNextDat)));
+  AML_SD_EMMC_TRACE("sd_emmc_next_rsp: 0x%x", (GET_REG_FROM_MMIO(AmlSdEmmcNextResp)));
 }
 
 void AmlSdEmmc::DumpSdmmcStatus(uint32_t status) const {
   auto st = AmlSdEmmcStatus::Get().FromValue(status);
-  AML_SD_EMMC_TRACE("Dumping sd_emmc_status 0x%0x\n", status);
-  AML_SD_EMMC_TRACE("    RXD_ERR: %d\n", st.rxd_err());
-  AML_SD_EMMC_TRACE("    TXD_ERR: %d\n", st.txd_err());
-  AML_SD_EMMC_TRACE("    DESC_ERR: %d\n", st.txd_err());
-  AML_SD_EMMC_TRACE("    RESP_ERR: %d\n", st.resp_err());
-  AML_SD_EMMC_TRACE("    RESP_TIMEOUT: %d\n", st.resp_timeout());
-  AML_SD_EMMC_TRACE("    DESC_TIMEOUT: %d\n", st.desc_timeout());
-  AML_SD_EMMC_TRACE("    END_OF_CHAIN: %d\n", st.end_of_chain());
-  AML_SD_EMMC_TRACE("    DESC_IRQ: %d\n", st.resp_status());
-  AML_SD_EMMC_TRACE("    IRQ_SDIO: %d\n", st.irq_sdio());
-  AML_SD_EMMC_TRACE("    DAT_I: %d\n", st.dat_i());
-  AML_SD_EMMC_TRACE("    CMD_I: %d\n", st.cmd_i());
-  AML_SD_EMMC_TRACE("    DS: %d\n", st.ds());
-  AML_SD_EMMC_TRACE("    BUS_FSM: %d\n", st.bus_fsm());
-  AML_SD_EMMC_TRACE("    BUS_DESC_BUSY: %d\n", st.desc_busy());
-  AML_SD_EMMC_TRACE("    CORE_RDY: %d\n", st.core_busy());
+  AML_SD_EMMC_TRACE("Dumping sd_emmc_status 0x%0x", status);
+  AML_SD_EMMC_TRACE("    RXD_ERR: %d", st.rxd_err());
+  AML_SD_EMMC_TRACE("    TXD_ERR: %d", st.txd_err());
+  AML_SD_EMMC_TRACE("    DESC_ERR: %d", st.txd_err());
+  AML_SD_EMMC_TRACE("    RESP_ERR: %d", st.resp_err());
+  AML_SD_EMMC_TRACE("    RESP_TIMEOUT: %d", st.resp_timeout());
+  AML_SD_EMMC_TRACE("    DESC_TIMEOUT: %d", st.desc_timeout());
+  AML_SD_EMMC_TRACE("    END_OF_CHAIN: %d", st.end_of_chain());
+  AML_SD_EMMC_TRACE("    DESC_IRQ: %d", st.resp_status());
+  AML_SD_EMMC_TRACE("    IRQ_SDIO: %d", st.irq_sdio());
+  AML_SD_EMMC_TRACE("    DAT_I: %d", st.dat_i());
+  AML_SD_EMMC_TRACE("    CMD_I: %d", st.cmd_i());
+  AML_SD_EMMC_TRACE("    DS: %d", st.ds());
+  AML_SD_EMMC_TRACE("    BUS_FSM: %d", st.bus_fsm());
+  AML_SD_EMMC_TRACE("    BUS_DESC_BUSY: %d", st.desc_busy());
+  AML_SD_EMMC_TRACE("    CORE_RDY: %d", st.core_busy());
 }
 
 void AmlSdEmmc::DumpSdmmcCfg(uint32_t config) const {
   auto cfg = AmlSdEmmcCfg::Get().FromValue(config);
-  AML_SD_EMMC_TRACE("Dumping sd_emmc_cfg 0x%0x\n", config);
-  AML_SD_EMMC_TRACE("    BUS_WIDTH: %d\n", cfg.bus_width());
-  AML_SD_EMMC_TRACE("    DDR: %d\n", cfg.ddr());
-  AML_SD_EMMC_TRACE("    DC_UGT: %d\n", cfg.dc_ugt());
-  AML_SD_EMMC_TRACE("    BLOCK LEN: %d\n", cfg.blk_len());
+  AML_SD_EMMC_TRACE("Dumping sd_emmc_cfg 0x%0x", config);
+  AML_SD_EMMC_TRACE("    BUS_WIDTH: %d", cfg.bus_width());
+  AML_SD_EMMC_TRACE("    DDR: %d", cfg.ddr());
+  AML_SD_EMMC_TRACE("    DC_UGT: %d", cfg.dc_ugt());
+  AML_SD_EMMC_TRACE("    BLOCK LEN: %d", cfg.blk_len());
 }
 
 void AmlSdEmmc::DumpSdmmcClock(uint32_t clock) const {
   auto clk = AmlSdEmmcClock::Get().FromValue(clock);
-  AML_SD_EMMC_TRACE("Dumping clock 0x%0x\n", clock);
-  AML_SD_EMMC_TRACE("   DIV: %d\n", clk.cfg_div());
-  AML_SD_EMMC_TRACE("   SRC: %d\n", clk.cfg_src());
-  AML_SD_EMMC_TRACE("   CORE_PHASE: %d\n", clk.cfg_co_phase());
-  AML_SD_EMMC_TRACE("   TX_PHASE: %d\n", clk.cfg_tx_phase());
-  AML_SD_EMMC_TRACE("   RX_PHASE: %d\n", clk.cfg_rx_phase());
-  AML_SD_EMMC_TRACE("   TX_DELAY: %d\n", clk.cfg_tx_delay());
-  AML_SD_EMMC_TRACE("   RX_DELAY: %d\n", clk.cfg_rx_delay());
-  AML_SD_EMMC_TRACE("   ALWAYS_ON: %d\n", clk.cfg_always_on());
+  AML_SD_EMMC_TRACE("Dumping clock 0x%0x", clock);
+  AML_SD_EMMC_TRACE("   DIV: %d", clk.cfg_div());
+  AML_SD_EMMC_TRACE("   SRC: %d", clk.cfg_src());
+  AML_SD_EMMC_TRACE("   CORE_PHASE: %d", clk.cfg_co_phase());
+  AML_SD_EMMC_TRACE("   TX_PHASE: %d", clk.cfg_tx_phase());
+  AML_SD_EMMC_TRACE("   RX_PHASE: %d", clk.cfg_rx_phase());
+  AML_SD_EMMC_TRACE("   TX_DELAY: %d", clk.cfg_tx_delay());
+  AML_SD_EMMC_TRACE("   RX_DELAY: %d", clk.cfg_rx_delay());
+  AML_SD_EMMC_TRACE("   ALWAYS_ON: %d", clk.cfg_always_on());
 }
 
 void AmlSdEmmc::DumpSdmmcCmdCfg(uint32_t cmd_desc) const {
   auto cmd = AmlSdEmmcCmdCfg::Get().FromValue(cmd_desc);
-  AML_SD_EMMC_TRACE("Dumping cmd_cfg 0x%0x\n", cmd_desc);
-  AML_SD_EMMC_TRACE("   REQ_LEN: %d\n", cmd.len());
-  AML_SD_EMMC_TRACE("   BLOCK_MODE: %d\n", cmd.block_mode());
-  AML_SD_EMMC_TRACE("   R1B: %d\n", cmd.r1b());
-  AML_SD_EMMC_TRACE("   END_OF_CHAIN: %d\n", cmd.end_of_chain());
-  AML_SD_EMMC_TRACE("   TIMEOUT: %d\n", cmd.timeout());
-  AML_SD_EMMC_TRACE("   NO_RESP: %d\n", cmd.no_resp());
-  AML_SD_EMMC_TRACE("   NO_CMD: %d\n", cmd.no_cmd());
-  AML_SD_EMMC_TRACE("   DATA_IO: %d\n", cmd.data_io());
-  AML_SD_EMMC_TRACE("   DATA_WR: %d\n", cmd.data_wr());
-  AML_SD_EMMC_TRACE("   RESP_NO_CRC: %d\n", cmd.resp_no_crc());
-  AML_SD_EMMC_TRACE("   RESP_128: %d\n", cmd.resp_128());
-  AML_SD_EMMC_TRACE("   RESP_NUM: %d\n", cmd.resp_num());
-  AML_SD_EMMC_TRACE("   DATA_NUM: %d\n", cmd.data_num());
-  AML_SD_EMMC_TRACE("   CMD_IDX: %d\n", cmd.cmd_idx());
-  AML_SD_EMMC_TRACE("   ERROR: %d\n", cmd.error());
-  AML_SD_EMMC_TRACE("   OWNER: %d\n", cmd.owner());
+  AML_SD_EMMC_TRACE("Dumping cmd_cfg 0x%0x", cmd_desc);
+  AML_SD_EMMC_TRACE("   REQ_LEN: %d", cmd.len());
+  AML_SD_EMMC_TRACE("   BLOCK_MODE: %d", cmd.block_mode());
+  AML_SD_EMMC_TRACE("   R1B: %d", cmd.r1b());
+  AML_SD_EMMC_TRACE("   END_OF_CHAIN: %d", cmd.end_of_chain());
+  AML_SD_EMMC_TRACE("   TIMEOUT: %d", cmd.timeout());
+  AML_SD_EMMC_TRACE("   NO_RESP: %d", cmd.no_resp());
+  AML_SD_EMMC_TRACE("   NO_CMD: %d", cmd.no_cmd());
+  AML_SD_EMMC_TRACE("   DATA_IO: %d", cmd.data_io());
+  AML_SD_EMMC_TRACE("   DATA_WR: %d", cmd.data_wr());
+  AML_SD_EMMC_TRACE("   RESP_NO_CRC: %d", cmd.resp_no_crc());
+  AML_SD_EMMC_TRACE("   RESP_128: %d", cmd.resp_128());
+  AML_SD_EMMC_TRACE("   RESP_NUM: %d", cmd.resp_num());
+  AML_SD_EMMC_TRACE("   DATA_NUM: %d", cmd.data_num());
+  AML_SD_EMMC_TRACE("   CMD_IDX: %d", cmd.cmd_idx());
+  AML_SD_EMMC_TRACE("   ERROR: %d", cmd.error());
+  AML_SD_EMMC_TRACE("   OWNER: %d", cmd.owner());
 }
 
 uint32_t AmlSdEmmc::GetClkFreq(uint32_t clk_src) const {
@@ -176,7 +176,7 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
   zx_status_t status = WaitForInterruptImpl();
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: WaitForInterruptImpl got %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::WaitForInterrupt: WaitForInterruptImpl got %d", status);
     return status;
   }
 
@@ -190,30 +190,30 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
 
   if (rxd_err) {
     if (req->probe_tuning_cmd) {
-      AML_SD_EMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n", req->cmd_idx,
+      AML_SD_EMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req->cmd_idx,
                         status_irq.reg_value(), rxd_err);
     } else {
-      AML_SD_EMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n", req->cmd_idx,
+      AML_SD_EMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req->cmd_idx,
                         status_irq.reg_value(), rxd_err);
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.txd_err()) {
-    AML_SD_EMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR\n", req->cmd_idx,
+    AML_SD_EMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR", req->cmd_idx,
                       status_irq.reg_value());
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.desc_err()) {
-    AML_SD_EMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x\n", req->cmd_idx,
+    AML_SD_EMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x", req->cmd_idx,
                       status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
   if (status_irq.resp_err()) {
     if (req->probe_tuning_cmd) {
-      AML_SD_EMMC_TRACE("Response CRC Error, cmd%d, status=0x%x\n", req->cmd_idx,
+      AML_SD_EMMC_TRACE("Response CRC Error, cmd%d, status=0x%x", req->cmd_idx,
                         status_irq.reg_value());
     } else {
-      AML_SD_EMMC_ERROR("Response CRC Error, cmd%d, status=0x%x\n", req->cmd_idx,
+      AML_SD_EMMC_ERROR("Response CRC Error, cmd%d, status=0x%x", req->cmd_idx,
                         status_irq.reg_value());
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
@@ -221,22 +221,22 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
   if (status_irq.resp_timeout()) {
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
     if (req->probe_tuning_cmd) {
-      AML_SD_EMMC_TRACE("No response received before time limit, cmd%d, status=0x%x\n",
+      AML_SD_EMMC_TRACE("No response received before time limit, cmd%d, status=0x%x",
                         req->cmd_idx, status_irq.reg_value());
     } else {
-      AML_SD_EMMC_ERROR("No response received before time limit, cmd%d, status=0x%x\n",
+      AML_SD_EMMC_ERROR("No response received before time limit, cmd%d, status=0x%x",
                         req->cmd_idx, status_irq.reg_value());
     }
     return ZX_ERR_TIMED_OUT;
   }
   if (status_irq.desc_timeout()) {
-    AML_SD_EMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x\n", req->cmd_idx,
+    AML_SD_EMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x", req->cmd_idx,
                       status_irq.reg_value());
     return ZX_ERR_TIMED_OUT;
   }
 
   if (!(status_irq.end_of_chain())) {
-    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: END OF CHAIN bit is not set status:0x%x",
+    AML_SD_EMMC_ERROR("AmlSdEmmc::WaitForInterrupt: END OF CHAIN bit is not set status:0x%x",
            status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
@@ -443,7 +443,7 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
   bool is_read = req->cmd_flags & SDMMC_CMD_READ;
   uint64_t pagecount = ((req->buf_offset & PAGE_MASK) + req_len + PAGE_MASK) / PAGE_SIZE;
   if (pagecount > SDMMC_PAGES_COUNT) {
-    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: too many pages %lu vs %lu", pagecount,
+    AML_SD_EMMC_ERROR("AmlSdEmmc::SetupDataDescsDma: too many pages %lu vs %lu", pagecount,
            SDMMC_PAGES_COUNT);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -456,7 +456,7 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
   zx_status_t st = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~PAGE_MASK,
                               pagecount * PAGE_SIZE, phys, pagecount, &req->pmt);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: bti-pin failed with error %d", st);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::SetupDataDescsDma: bti-pin failed with error %d", st);
     return st;
   }
 
@@ -468,7 +468,7 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
     st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset, req_len, NULL, 0);
   }
   if (st != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: cache clean failed with error  %d", st);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::SetupDataDescsDma: cache clean failed with error  %d", st);
     return st;
   }
 
@@ -494,14 +494,14 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
         *last_desc = desc;
         break;
       } else {
-        zxlogf(DEBUG, "AmlSdEmmc::SetupDataDescsDma: empty descriptor list!");
+        AML_SD_EMMC_ERROR("AmlSdEmmc::SetupDataDescsDma: empty descriptor list!");
         return ZX_ERR_NOT_SUPPORTED;
       }
     } else if (length > PAGE_SIZE) {
-      zxlogf(DEBUG, "AmlSdEmmc::SetupDataDescsDma: chunk size > %zu is unsupported", length);
+      AML_SD_EMMC_ERROR("AmlSdEmmc::SetupDataDescsDma: chunk size > %zu is unsupported", length);
       return ZX_ERR_NOT_SUPPORTED;
     } else if ((++count) > AML_DMA_DESC_MAX_COUNT) {
-      zxlogf(DEBUG,
+      AML_SD_EMMC_ERROR(
              "AmlSdEmmc::SetupDataDescsDma: request with more than %d chunks "
              "is unsupported\n",
              AML_DMA_DESC_MAX_COUNT);
@@ -542,18 +542,18 @@ zx_status_t AmlSdEmmc::SetupDataDescsPio(sdmmc_req_t* req, aml_sd_emmc_desc_t* d
   uint32_t length = req->blockcount * req->blocksize;
 
   if (length > AML_SD_EMMC_MAX_PIO_DATA_SIZE) {
-    zxlogf(ERROR,
+    AML_SD_EMMC_ERROR(
            "AmlSdEmmc::SetupDataDescsPio: Request transfer size is greater than "
-           "max transfer size\n");
+           "max transfer size");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (length == 0 || ((length % 4) != 0)) {
     // From Amlogic documentation, Ping and Pong buffers in sram can be accessed only 4 bytes
     // at a time.
-    zxlogf(ERROR,
+    AML_SD_EMMC_ERROR(
            "AmlSdEmmc::SetupDataDescsPio: Request sizes that are not multiple of "
-           "4 are not supported in PIO mode\n");
+           "4 are not supported in PIO mode");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -630,13 +630,13 @@ zx_status_t AmlSdEmmc::FinishReq(sdmmc_req_t* req) {
       st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset, req_len,
                            NULL, 0);
       if (st != ZX_OK) {
-        zxlogf(ERROR, "AmlSdEmmc::FinishReq: cache clean failed with error  %d", st);
+        AML_SD_EMMC_ERROR("AmlSdEmmc::FinishReq: cache clean failed with error  %d", st);
       }
     }
 
     st = zx_pmt_unpin(req->pmt);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "AmlSdEmmc::FinishReq: error %d in pmt_unpin", st);
+      AML_SD_EMMC_ERROR("AmlSdEmmc::FinishReq: error %d in pmt_unpin", st);
     }
     req->pmt = ZX_HANDLE_INVALID;
   }
@@ -662,7 +662,7 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
   if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
     status = SetupDataDescs(req, desc, &last_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "AmlSdEmmc::SdmmcRequest: Failed to setup data descriptors");
+      AML_SD_EMMC_ERROR("AmlSdEmmc::SdmmcRequest: Failed to setup data descriptors");
       return status;
     }
   }
@@ -670,7 +670,7 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
   auto cmd_info = AmlSdEmmcCmdCfg::Get().FromValue(last_desc->cmd_info);
   cmd_info.set_end_of_chain(1);
   last_desc->cmd_info = cmd_info.reg_value();
-  AML_SD_EMMC_TRACE("SUBMIT req:%p cmd_idx: %d cmd_cfg: 0x%x cmd_dat: 0x%x cmd_arg: 0x%x\n", req,
+  AML_SD_EMMC_TRACE("SUBMIT req:%p cmd_idx: %d cmd_cfg: 0x%x cmd_dat: 0x%x cmd_arg: 0x%x", req,
                     req->cmd_idx, desc->cmd_info, desc->data_addr, desc->cmd_arg);
 
   zx_paddr_t desc_phys;
@@ -769,7 +769,7 @@ AmlSdEmmc::TuneWindow AmlSdEmmc::TuneDelayParam(fbl::Span<const uint8_t> tuning_
     best_window = {current_window.start, current_window.size + first_size};
   }
 
-  AML_SD_EMMC_INFO("Tuning results: %s\n", tuning_results);
+  AML_SD_EMMC_INFO("Tuning results: %s", tuning_results);
 
   return best_window;
 }
@@ -833,7 +833,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     tuning_blk = fbl::Span<const uint8_t>(aml_sd_emmc_tuning_blk_pattern_8bit,
                                           sizeof(aml_sd_emmc_tuning_blk_pattern_8bit));
   } else {
-    zxlogf(ERROR, "AmlSdEmmc::SdmmcPerformTuning: Tuning at wrong buswidth: %d", bw);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::SdmmcPerformTuning: Tuning at wrong buswidth: %d", bw);
     return ZX_ERR_INTERNAL;
   }
 
@@ -876,7 +876,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   }
 
   if (adj_delay_window.size == 0) {
-    AML_SD_EMMC_ERROR("No window found for any phase\n");
+    AML_SD_EMMC_ERROR("No window found for any phase");
     return ZX_ERR_IO;
   }
 
@@ -890,14 +890,14 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
       TuneDelayParam(tuning_blk, tuning_cmd_idx, max_delay(), set_delay_lines);
 
   if (delay_window.size == 0) {
-    AML_SD_EMMC_ERROR("No delay window found\n");
+    AML_SD_EMMC_ERROR("No delay window found");
     return ZX_ERR_IO;
   }
 
   const uint32_t best_delay = delay_window.middle() % (max_delay() + 1);
   set_delay_lines(best_delay);
 
-  AML_SD_EMMC_INFO("Clock divider %u, clock phase %u, adj delay %u, delay %u\n", clk.cfg_div(),
+  AML_SD_EMMC_INFO("Clock divider %u, clock phase %u, adj delay %u, delay %u", clk.cfg_div(),
                    best_phase, best_adj_delay, best_delay);
 
   return ZX_OK;
@@ -925,7 +925,7 @@ zx_status_t AmlSdEmmc::Init() {
         descs_buffer_.Init(bti_.get(), AML_DMA_DESC_MAX_COUNT * sizeof(aml_sd_emmc_desc_t),
                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "AmlSdEmmc::Init: Failed to allocate dma descriptors");
+      AML_SD_EMMC_ERROR("AmlSdEmmc::Init: Failed to allocate dma descriptors");
       return status;
     }
     dev_info_.max_transfer_size = AML_DMA_DESC_MAX_COUNT * PAGE_SIZE;
@@ -944,7 +944,7 @@ zx_status_t AmlSdEmmc::Bind() {
   zx_status_t status = DdkAdd("aml-sd-emmc");
   if (status != ZX_OK) {
     irq_.destroy();
-    zxlogf(ERROR, "AmlSdEmmc::Bind: DdkAdd failed");
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Bind: DdkAdd failed");
   }
   return status;
 }
@@ -954,7 +954,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "AmlSdEmmc::Could not get composite protocol");
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -963,26 +963,26 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   composite.GetFragments(fragments, std::size(fragments), &fragment_count);
   // Only pdev fragment is required.
   if (fragment_count < 1) {
-    zxlogf(ERROR, "AmlSdEmmc: Could not get fragments");
+    AML_SD_EMMC_ERROR("AmlSdEmmc: Could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Could not get pdev: %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Could not get pdev: %d", status);
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx::bti bti;
   if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get BTI: %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Failed to get BTI: %d", status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get mmio: %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Failed to get mmio: %d", status);
     return status;
   }
 
@@ -990,7 +990,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   std::optional<ddk::MmioPinnedBuffer> pinned_mmio;
   status = mmio->Pin(bti, &pinned_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to pin mmio: %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Failed to pin mmio: %d", status);
     return status;
   }
 
@@ -1000,19 +1000,19 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   status =
       device_get_metadata(parent, DEVICE_METADATA_EMMC_CONFIG, &config, sizeof(config), &actual);
   if (status != ZX_OK || actual != sizeof(config)) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get metadata: %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Failed to get metadata: %d", status);
     return status;
   }
 
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get interrupt: %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Failed to get interrupt: %d", status);
     return status;
   }
 
   pdev_device_info_t dev_info;
   if ((status = pdev.GetDeviceInfo(&dev_info)) != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get device info: %d", status);
+    AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Failed to get device info: %d", status);
     return status;
   }
 
@@ -1020,7 +1020,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   if (fragment_count > FRAGMENT_GPIO_RESET) {
     reset_gpio = fragments[FRAGMENT_GPIO_RESET];
     if (!reset_gpio.is_valid()) {
-      zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get GPIO");
+      AML_SD_EMMC_ERROR("AmlSdEmmc::Create: Failed to get GPIO");
       return ZX_ERR_NO_RESOURCES;
     }
   }
