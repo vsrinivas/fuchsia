@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context as _, Result},
+    anyhow::{Context as _, Result},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_net_dhcpv6::{
         ClientMarker, ClientProviderRequest, ClientProviderRequestStream, NewClientParams,
-        OperationalModels,
     },
     futures::{Future, StreamExt as _, TryStreamExt as _},
 };
@@ -37,9 +36,9 @@ where
 mod tests {
     use {
         super::*,
-        anyhow::Error,
+        anyhow::{anyhow, Error},
         fidl::endpoints::create_endpoints,
-        fidl_fuchsia_net_dhcpv6::ClientProviderMarker,
+        fidl_fuchsia_net_dhcpv6::{ClientProviderMarker, OperationalModels},
         fuchsia_async as fasync,
         futures::{join, try_join},
         net_declare::fidl_socket_addr_v6,

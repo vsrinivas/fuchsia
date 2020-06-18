@@ -15,12 +15,15 @@ rustc_library("dhcpv6") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
+  ]
+  test_deps = [
+    "//src/connectivity/lib/net-declare",
+    "//third_party/rust_crates:matches",
   ]
 }
 

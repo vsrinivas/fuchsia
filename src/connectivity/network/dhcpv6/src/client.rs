@@ -10,7 +10,7 @@ use {
     },
     packet::serialize::InnerPacketBuilder,
     rand::Rng,
-    std::{default::Default, time::Duration},
+    std::{default::Default, net::Ipv6Addr, time::Duration},
     zerocopy::ByteSlice,
 };
 
@@ -110,6 +110,7 @@ pub enum Action {
     SendMessage(Vec<u8>),
     ScheduleTimer(Dhcpv6ClientTimerType, Duration),
     CancelTimer(Dhcpv6ClientTimerType),
+    UpdateDnsServers(Vec<Ipv6Addr>),
 }
 
 pub type Actions = Vec<Action>;
@@ -189,38 +190,43 @@ impl InformationRequesting {
     ///
     /// [RFC 8415, Section 18.2.10.4]: https://tools.ietf.org/html/rfc8415#section-18.2.10.4
     fn reply_message_received<B: ByteSlice>(self, msg: Dhcpv6Message<'_, B>) -> Transition {
-        let actions_from_options = msg.options.iter().filter_map(|opt| match opt {
-            Dhcpv6Option::InformationRefreshTime(refresh_time) => Some(Action::ScheduleTimer(
-                Dhcpv6ClientTimerType::Refresh,
-                Duration::from_secs(u64::from(refresh_time)),
-            )),
-            // TODO(jayzhuang): emit more actions for other options received.
-            _ => None,
-        });
+        let mut information_refresh_time = IRT_DEFAULT;
+        let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
 
-        // Use default refresh timer if the response didn't include one.
-        let maybe_schedule_default_timer = if msg.options.iter().any(|opt| match opt {
-            Dhcpv6Option::InformationRefreshTime(_) => true,
-            _ => false,
-        }) {
-            None
-        } else {
-            Some(Action::ScheduleTimer(Dhcpv6ClientTimerType::Refresh, IRT_DEFAULT))
-        };
+        for opt in msg.options.iter() {
+            match opt {
+                Dhcpv6Option::InformationRefreshTime(refresh_time) => {
+                    information_refresh_time = Duration::from_secs(u64::from(refresh_time))
+                }
+                Dhcpv6Option::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
+                // TODO(https://fxbug.dev/48867): emit more actions for other options received.
+                _ => (),
+            }
+        }
 
-        let actions = vec![Action::CancelTimer(Dhcpv6ClientTimerType::Retransmission)]
-            .into_iter()
-            .chain(maybe_schedule_default_timer)
-            .chain(actions_from_options)
-            .collect::<Vec<_>>();
+        let actions = vec![
+            Action::CancelTimer(Dhcpv6ClientTimerType::Retransmission),
+            Action::ScheduleTimer(Dhcpv6ClientTimerType::Refresh, information_refresh_time),
+        ]
+        .into_iter()
+        .chain(dns_servers.clone().map(|server_addrs| Action::UpdateDnsServers(server_addrs)))
+        .collect::<Vec<_>>();
 
-        (Dhcpv6ClientState::InformationReceived(InformationReceived {}), actions)
+        (
+            Dhcpv6ClientState::InformationReceived(InformationReceived {
+                dns_servers: dns_servers.unwrap_or(Vec::new()),
+            }),
+            actions,
+        )
     }
 }
 
 /// Provides methods for handling state transitions from information received state.
 #[derive(Debug)]
-struct InformationReceived {}
+struct InformationReceived {
+    /// Stores the DNS servers received from the reply.
+    dns_servers: Vec<Ipv6Addr>,
+}
 
 impl InformationReceived {
     /// Refreshes information by starting another round of information request.
@@ -293,6 +299,13 @@ impl Dhcpv6ClientState {
             state => (state, vec![]),
         }
     }
+
+    fn get_dns_servers(&self) -> Vec<Ipv6Addr> {
+        match self {
+            Dhcpv6ClientState::InformationReceived(s) => s.dns_servers.clone(),
+            _ => Vec::new(),
+        }
+    }
 }
 
 /// The DHCPv6 core state machine.
@@ -304,10 +317,18 @@ impl Dhcpv6ClientState {
 /// imperative shell should take to complete the transition.
 #[derive(Debug)]
 pub struct Dhcpv6ClientStateMachine<R: Rng> {
+    /// [Transaction ID](https://tools.ietf.org/html/rfc8415#section-16.1) the client is using to
+    /// communicate with servers.
     transaction_id: [u8; 3],
+    /// Options to include in
+    /// [Option Request Option](https://tools.ietf.org/html/rfc8415#section-21.7).
     options_to_request: Vec<Dhcpv6OptionCode>,
+    /// Current state of the client, must not be `None`.
+    ///
+    /// Using an `Option` here allows the client to consume and replace the state during
+    /// transitions.
     state: Option<Dhcpv6ClientState>,
-
+    /// Used by the client to generate random numbers.
     rng: R,
 }
 
@@ -324,6 +345,10 @@ impl<R: Rng> Dhcpv6ClientStateMachine<R> {
         let (state, actions) =
             InformationRequesting::start(transaction_id, &options_to_request, &mut rng);
         (Self { state: Some(state), transaction_id, options_to_request, rng }, actions)
+    }
+
+    pub fn get_dns_servers(&self) -> Vec<Ipv6Addr> {
+        return self.state.as_ref().expect("state should not be empty").get_dns_servers();
     }
 
     /// Handles a timeout event, dispatches based on timeout type.
@@ -389,7 +414,10 @@ impl<R: Rng> Dhcpv6ClientStateMachine<R> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, packet::ParsablePacket, rand::rngs::mock::StepRng};
+    use {
+        super::*, matches::assert_matches, net_declare::std_ip_v6, packet::ParsablePacket,
+        rand::rngs::mock::StepRng,
+    };
 
     #[test]
     fn test_information_request_and_reply() {
@@ -430,7 +458,10 @@ mod tests {
             );
 
             let test_dhcp_refresh_time = 42u32;
-            let options = [Dhcpv6Option::InformationRefreshTime(test_dhcp_refresh_time)];
+            let options = [
+                Dhcpv6Option::InformationRefreshTime(test_dhcp_refresh_time),
+                Dhcpv6Option::DnsServers(vec![std_ip_v6!(ff01::0102), std_ip_v6!(ff01::0304)]),
+            ];
             let builder = Dhcpv6MessageBuilder::new(
                 Dhcpv6MessageType::Reply,
                 client.transaction_id,
@@ -453,6 +484,7 @@ mod tests {
                         Dhcpv6ClientTimerType::Refresh,
                         Duration::from_secs(u64::from(test_dhcp_refresh_time)),
                     ),
+                    Action::UpdateDnsServers(vec![std_ip_v6!(ff01::0102), std_ip_v6!(ff01::0304)]),
                 ]
             );
         }

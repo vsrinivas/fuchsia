@@ -9,13 +9,15 @@ use {
         client::{Action, Actions, Dhcpv6ClientStateMachine, Dhcpv6ClientTimerType},
         protocol::{Dhcpv6Message, Dhcpv6OptionCode, ProtocolError},
     },
+    dns_server_watcher::DEFAULT_DNS_PORT,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcpv6::{
         ClientMarker, ClientRequest, ClientRequestStream, ClientWatchServersResponder,
-        NewClientParams, OperationalModels, RequestableOptionCode, Stateless, DEFAULT_CLIENT_PORT,
+        NewClientParams, OperationalModels, RequestableOptionCode, Stateless,
     },
-    fidl_fuchsia_net_ext as fnetext, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     futures::{
         future::{AbortHandle, Abortable},
         select, stream,
@@ -26,8 +28,12 @@ use {
     packet::ParsablePacket,
     rand::{rngs::StdRng, thread_rng, FromEntropy, Rng},
     std::{
-        collections::{hash_map::Entry, HashMap},
+        collections::{
+            hash_map::{DefaultHasher, Entry},
+            HashMap,
+        },
         convert::TryFrom,
+        hash::{Hash, Hasher},
         net::{IpAddr, Ipv6Addr, SocketAddr},
         num::TryFromIntError,
         pin::Pin,
@@ -106,6 +112,13 @@ impl Future for TimerFut {
 
 /// A DHCPv6 client.
 pub(crate) struct Dhcpv6Client {
+    /// The interface the client is running on.
+    interface_id: u64,
+    /// Stores the hash of the last observed version of DNS servers by a watcher.
+    ///
+    /// The client uses this hash to determine whether new changes in DNS servers are observed and
+    /// updates should be replied to the watcher.
+    last_observed_dns_hash: u64,
     /// Stores a responder to send DNS server updates.
     dns_responder: Option<ClientWatchServersResponder>,
     /// Maintains the state for the client.
@@ -149,6 +162,13 @@ fn create_state_machine(
     }
 }
 
+/// Calculates a hash for the input.
+fn hash<H: Hash>(h: &H) -> u64 {
+    let mut dh = DefaultHasher::new();
+    let () = h.hash(&mut dh);
+    dh.finish()
+}
+
 impl Dhcpv6Client {
     /// Starts the client in `models`.
     ///
@@ -156,6 +176,7 @@ impl Dhcpv6Client {
     pub(crate) async fn start(
         transaction_id: [u8; 3],
         models: OperationalModels,
+        interface_id: u64,
         socket: fasync::net::UdpSocket,
         server_addr: SocketAddr,
         request_stream: ClientRequestStream,
@@ -163,11 +184,15 @@ impl Dhcpv6Client {
         let (state_machine, actions) = create_state_machine(transaction_id, models)?;
         let mut client = Self {
             state_machine,
+            interface_id,
             socket,
             server_addr,
             request_stream,
             timer_abort_handles: HashMap::new(),
             timer_futs: FuturesUnordered::new(),
+            // Server watcher's API requires blocking if the first call would return an empty list,
+            // so initialize this field with a hash of an empty list.
+            last_observed_dns_hash: hash(&Vec::<Ipv6Addr>::new()),
             dns_responder: None,
         };
         let () = client.run_actions(actions).await?;
@@ -180,16 +205,71 @@ impl Dhcpv6Client {
             .map(Ok)
             .try_fold(self, |client, action| async move {
                 match action {
-                    Action::SendMessage(buf) => client.send_message(&buf).await?,
-                    Action::ScheduleTimer(timer_type, timeout) => {
-                        client.schedule_timer(timer_type, timeout)?
+                    Action::SendMessage(buf) => {
+                        let () = client.send_message(&buf).await?;
                     }
-                    Action::CancelTimer(timer_type) => client.cancel_timer(timer_type)?,
+                    Action::ScheduleTimer(timer_type, timeout) => {
+                        let () = client.schedule_timer(timer_type, timeout)?;
+                    }
+                    Action::CancelTimer(timer_type) => {
+                        let () = client.cancel_timer(timer_type)?;
+                    }
+                    Action::UpdateDnsServers(servers) => {
+                        let () = client.maybe_send_dns_server_updates(servers)?;
+                    }
                 };
                 Ok(client)
             })
             .await
             .map(|_: &mut Dhcpv6Client| ())
+    }
+
+    /// Sends the latest DNS servers iff a watcher is watching, and the latest set of servers are
+    /// different from what the watcher has observed last time.
+    fn maybe_send_dns_server_updates(&mut self, servers: Vec<Ipv6Addr>) -> Result<(), ClientError> {
+        let servers_hash = hash(&servers);
+        if servers_hash == self.last_observed_dns_hash {
+            Ok(())
+        } else {
+            Ok(match self.dns_responder.take() {
+                Some(responder) => {
+                    self.send_dns_server_updates(responder, servers, servers_hash)?
+                }
+                None => (),
+            })
+        }
+    }
+
+    /// Sends a list of DNS servers to a watcher through the input responder and updates the last
+    /// observed hash.
+    fn send_dns_server_updates(
+        &mut self,
+        responder: ClientWatchServersResponder,
+        servers: Vec<Ipv6Addr>,
+        hash: u64,
+    ) -> Result<(), ClientError> {
+        responder
+            .send(&mut servers.iter().map(|addr| {
+                let address = fnet::Ipv6Address { addr: addr.octets() };
+                let zone_index =
+                    if is_unicast_link_local_strict(&address) { self.interface_id } else { 0 };
+
+                fnetname::DnsServer_ {
+                    address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+                        address,
+                        zone_index,
+                        port: DEFAULT_DNS_PORT,
+                    })),
+                    source: Some(fnetname::DnsServerSource::Dhcpv6(
+                        fnetname::Dhcpv6DnsServerSource {
+                            source_interface: Some(self.interface_id),
+                        },
+                    )),
+                }
+            }))
+            .map_err(ClientError::Fidl)?;
+        self.last_observed_dns_hash = hash;
+        Ok(())
     }
 
     /// Multicasts a message to neighboring relay agents and servers.
@@ -259,7 +339,16 @@ impl Dhcpv6Client {
                     Err(ClientError::DoubleWatch())
                 }
                 None => {
-                    self.dns_responder = Some(responder);
+                    let dns_servers = self.state_machine.get_dns_servers();
+                    let servers_hash = hash(&dns_servers);
+                    if servers_hash != self.last_observed_dns_hash {
+                        // Something has changed from the last time, update the watcher.
+                        let () =
+                            self.send_dns_server_updates(responder, dns_servers, servers_hash)?;
+                    } else {
+                        // Nothing has changed, update the watcher later.
+                        self.dns_responder = Some(responder);
+                    }
                     Ok(())
                 }
             },
@@ -357,6 +446,7 @@ pub(crate) async fn start_client(
         let mut client = Dhcpv6Client::start(
             transaction_id(),
             models,
+            interface_id,
             create_socket(addr).await?,
             SocketAddr::new(ALL_DHCP_AGENTS_AND_SERVERS, DHCPV6_AGENT_AND_SERVER_PORT),
             request.into_stream().context("getting new client request stream from channel")?,
@@ -381,12 +471,15 @@ pub(crate) async fn start_client(
 mod tests {
     use {
         super::*,
-        dhcpv6::protocol::{Dhcpv6MessageBuilder, Dhcpv6MessageType},
+        dhcpv6::protocol::{Dhcpv6MessageBuilder, Dhcpv6MessageType, Dhcpv6Option},
         fidl::endpoints::create_endpoints,
-        fidl_fuchsia_net_name as fnetname,
-        futures::join,
+        fidl_fuchsia_net_dhcpv6::{ClientMarker, OperationalModels, DEFAULT_CLIENT_PORT},
+        fuchsia_async as fasync,
+        futures::{channel::mpsc, join},
         matches::assert_matches,
-        net_declare::{fidl_ip_v6, fidl_socket_addr_v6, std_socket_addr},
+        net_declare::{
+            fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, std_ip_v6, std_socket_addr,
+        },
         packet::serialize::InnerPacketBuilder,
         std::{collections::HashSet, task::Poll},
     };
@@ -565,6 +658,268 @@ mod tests {
         assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!(fe81::)), false);
     }
 
+    fn create_test_dns_server(
+        address: fnet::Ipv6Address,
+        source_interface: u64,
+        zone_index: u64,
+    ) -> fnetname::DnsServer_ {
+        fnetname::DnsServer_ {
+            address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+                address,
+                zone_index,
+                port: DEFAULT_DNS_PORT,
+            })),
+            source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
+                source_interface: Some(source_interface),
+            })),
+        }
+    }
+
+    async fn send_reply_with_options(
+        socket: &fasync::net::UdpSocket,
+        to_addr: SocketAddr,
+        transaction_id: [u8; 3],
+        options: &[Dhcpv6Option<'_>],
+    ) -> Result<()> {
+        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Reply, transaction_id, options);
+        let mut buf = vec![0u8; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let _: usize = socket.send_to(&buf, to_addr).await?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_client_should_respond_to_dns_watch_requests() {
+        let mut exec = fasync::Executor::new().expect("failed to create test ecexutor");
+        let transaction_id = [1, 2, 3];
+
+        let (client_end, server_end) =
+            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
+        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
+        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+
+        let (client_socket, client_addr) = create_test_socket();
+        let (server_socket, server_addr) = create_test_socket();
+        let mut client: Dhcpv6Client = exec
+            .run_singlethreaded(Dhcpv6Client::start(
+                transaction_id,
+                OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+                1, /* interface ID */
+                client_socket,
+                server_addr,
+                client_stream,
+            ))
+            .expect("failed to create test client");
+
+        let (mut signal_client_to_refresh, mut client_should_refresh) = mpsc::channel::<()>(1);
+
+        let client_fut = async {
+            let mut buf = vec![0u8; MAX_UDP_DATAGRAM_SIZE];
+            loop {
+                select! {
+                    res = client.handle_next_event(&mut buf).fuse() => {
+                        match res.expect("test client failed to handle next event") {
+                            Some(()) => (),
+                            None => break (),
+                        };
+                    }
+                    _ = client_should_refresh.next() => {
+                        // Make the client ready for another reply immediately on signal, so it can
+                        // start receiving updates without waiting for the full refresh timeout
+                        // which is unrealistic test.
+                        if client.timer_abort_handles.contains_key(&Dhcpv6ClientTimerType::Refresh) {
+                            let () = client
+                                .handle_timeout(Dhcpv6ClientTimerType::Refresh)
+                                .await
+                                .expect("test client failed to handle timeout");
+                        } else {
+                            panic!("no refresh timer is scheduled and refresh is requested in test");
+                        }
+                    },
+                }
+            }
+        }.fuse();
+        futures::pin_mut!(client_fut);
+
+        macro_rules! build_test_fut {
+            ($test_fut:ident) => {
+                let $test_fut = async {
+                    select! {
+                        () = client_fut => panic!("test client returned unexpectly"),
+                        r = client_proxy.watch_servers() => r,
+                    }
+                };
+                futures::pin_mut!($test_fut);
+            };
+        }
+
+        {
+            // No DNS configurations received yet.
+            build_test_fut!(test_fut);
+            assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+            // Send an empty list to the client, should not update watcher.
+            let () = exec
+                .run_singlethreaded(send_reply_with_options(
+                    &server_socket,
+                    client_addr,
+                    transaction_id,
+                    &[Dhcpv6Option::DnsServers(Vec::new())],
+                ))
+                .expect("failed to send test reply");
+            assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+            // Send a list of DNS servers, the watcher should be updated accordingly.
+            let () = signal_client_to_refresh
+                .try_send(())
+                .expect("failed to signal test client to refresh");
+            let () = exec
+                .run_singlethreaded(send_reply_with_options(
+                    &server_socket,
+                    client_addr,
+                    transaction_id,
+                    &[Dhcpv6Option::DnsServers(vec![std_ip_v6!(fe80::1:2)])],
+                ))
+                .expect("failed to send test reply");
+            let want_servers = vec![create_test_dns_server(
+                fidl_ip_v6!(fe80::1:2),
+                1, /* source interface */
+                1, /* zone index */
+            )];
+            assert_matches!(
+                exec.run_until_stalled(&mut test_fut),
+                Poll::Ready(Ok(servers)) if servers == want_servers
+            );
+        } // drop `test_fut` so `client_fut` is no longer mutably borrowed.
+
+        {
+            // No new changes, should not update watcher.
+            build_test_fut!(test_fut);
+            assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+            // Send the same list of DNS servers, should not update watcher.
+            let () = signal_client_to_refresh
+                .try_send(())
+                .expect("failed to signal test client to refresh");
+            let () = exec
+                .run_singlethreaded(send_reply_with_options(
+                    &server_socket,
+                    client_addr,
+                    transaction_id,
+                    &[Dhcpv6Option::DnsServers(vec![std_ip_v6!(fe80::1:2)])],
+                ))
+                .expect("failed to send test reply");
+            assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+            // Send a different list of DNS servers, should update watcher.
+            let () = signal_client_to_refresh
+                .try_send(())
+                .expect("failed to signal test client to refresh");
+            let () = exec
+                .run_singlethreaded(send_reply_with_options(
+                    &server_socket,
+                    client_addr,
+                    transaction_id,
+                    &[Dhcpv6Option::DnsServers(vec![std_ip_v6!(fe80::1:2), std_ip_v6!(1234::5:6)])],
+                ))
+                .expect("failed to send test reply");
+            let want_servers = vec![
+                create_test_dns_server(
+                    fidl_ip_v6!(fe80::1:2),
+                    1, /* source interface */
+                    1, /* zone index */
+                ),
+                // Only set zone index for link local addresses.
+                create_test_dns_server(
+                    fidl_ip_v6!(1234::5:6),
+                    1, /* source interface */
+                    0, /* zone index */
+                ),
+            ];
+            assert_matches!(
+                exec.run_until_stalled(&mut test_fut),
+                Poll::Ready(Ok(servers)) if servers == want_servers
+            );
+        } // drop `test_fut` so `client_fut` is no longer mutably borrowed.
+
+        {
+            // Send an empty list of DNS servers, should update watcher, because this is different from
+            // what the watcher has seen last time.
+            let () = signal_client_to_refresh
+                .try_send(())
+                .expect("failed to signal test client to refresh");
+            let () = exec
+                .run_singlethreaded(send_reply_with_options(
+                    &server_socket,
+                    client_addr,
+                    transaction_id,
+                    &[Dhcpv6Option::DnsServers(Vec::new())],
+                ))
+                .expect("failed to send test reply");
+            build_test_fut!(test_fut);
+            let want_servers = Vec::<fnetname::DnsServer_>::new();
+            assert_matches!(
+                exec.run_until_stalled(&mut test_fut),
+                Poll::Ready(Ok(servers)) if servers == want_servers
+            );
+        } // drop `test_fut` so `client_fut` is no longer mutably borrowed.
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_client_should_respond_with_dns_servers_on_first_watch_if_non_empty() {
+        let transaction_id = [1, 2, 3];
+
+        let (client_end, server_end) =
+            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
+        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
+        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+
+        let (client_socket, client_addr) = create_test_socket();
+        let (server_socket, server_addr) = create_test_socket();
+        let mut client: Dhcpv6Client = Dhcpv6Client::start(
+            transaction_id,
+            OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            1, /* interface ID */
+            client_socket,
+            server_addr,
+            client_stream,
+        )
+        .await
+        .expect("failed to create test client");
+
+        let () = send_reply_with_options(
+            &server_socket,
+            client_addr,
+            transaction_id,
+            &[Dhcpv6Option::DnsServers(vec![std_ip_v6!(fe80::1:2), std_ip_v6!(1234::5:6)])],
+        )
+        .await
+        .expect("failed to send test message");
+
+        // Receive non-empty DNS servers before watch.
+        let mut buf = vec![0u8; MAX_UDP_DATAGRAM_SIZE];
+        assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
+        // Emit aborted timer.
+        assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
+
+        let want_servers = vec![
+            create_test_dns_server(
+                fidl_ip_v6!(fe80::1:2),
+                1, /* source interface */
+                1, /* zone index */
+            ),
+            create_test_dns_server(
+                fidl_ip_v6!(1234::5:6),
+                1, /* source interface */
+                0, /* zone index */
+            ),
+        ];
+        assert_matches!(
+            join!(client.handle_next_event(&mut buf), client_proxy.watch_servers()),
+            (Ok(Some(())), Ok(servers)) if servers == want_servers
+        );
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_client_schedule_and_cancel_timers() {
         let (_client_end, server_end) =
@@ -574,14 +929,15 @@ mod tests {
         let (client_socket, _client_addr) = create_test_socket();
         let (_server_socket, server_addr) = create_test_socket();
         let mut client: Dhcpv6Client = Dhcpv6Client::start(
-            [1, 2, 3],
+            [1, 2, 3], /* transaction ID */
             OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            1, /* interface ID */
             client_socket,
             server_addr,
             client_stream,
         )
         .await
-        .expect("creating test client");
+        .expect("failed to create test client");
 
         // Stateless DHCP client starts by scheduling a retransmission timer.
         assert_eq!(
@@ -656,14 +1012,15 @@ mod tests {
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
         let mut client: Dhcpv6Client = Dhcpv6Client::start(
-            [1, 2, 3],
+            [1, 2, 3], /* transaction ID */
             OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            1, /* interface ID */
             client_socket,
             server_addr,
             client_stream,
         )
         .await
-        .expect("creating test client");
+        .expect("failed to create test client");
 
         // Starting the client in stateless should send an information request out.
         assert_received_information_request(&server_socket, client_addr).await;
@@ -682,13 +1039,9 @@ mod tests {
         );
 
         // Message targeting another transaction ID should be ignored.
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Reply, [5, 6, 7], &[]);
-        let mut buf = vec![0u8; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let _: usize = server_socket
-            .send_to(&buf, client_addr)
+        let () = send_reply_with_options(&server_socket, client_addr, [5, 6, 7], &[])
             .await
-            .expect("failed to send test message to test socket");
+            .expect("failed to send test message");
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),
@@ -696,13 +1049,9 @@ mod tests {
         );
 
         // Message targeting this client should cause the client to transition state.
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Reply, [1, 2, 3], &[]);
-        let mut buf = vec![0u8; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let _: usize = server_socket
-            .send_to(&buf, client_addr)
+        let () = send_reply_with_options(&server_socket, client_addr, [1, 2, 3], &[])
             .await
-            .expect("failed to send test message to test socket");
+            .expect("failed to send test message");
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),
@@ -729,12 +1078,6 @@ mod tests {
             vec![&Dhcpv6ClientTimerType::Retransmission]
         );
 
-        // Test FIDL client requests are propagated.
-        let test_sockaddr = fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-            address: fnet::Ipv6Address { addr: [42; 16] },
-            port: 321,
-            zone_index: 42,
-        });
         let test_fut = async {
             assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
             client
@@ -742,7 +1085,7 @@ mod tests {
                 .take()
                 .expect("test client did not get a channel responder")
                 .send(&mut std::iter::once(fnetname::DnsServer_ {
-                    address: Some(test_sockaddr),
+                    address: Some(fidl_socket_addr!([fe01::2:3]:42)),
                     source: Some(fnetname::DnsServerSource::Dhcpv6(
                         fnetname::Dhcpv6DnsServerSource { source_interface: Some(42) },
                     )),
@@ -754,7 +1097,7 @@ mod tests {
         assert_eq!(
             servers,
             vec![fnetname::DnsServer_ {
-                address: Some(test_sockaddr),
+                address: Some(fidl_socket_addr!([fe01::2:3]:42)),
                 source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
                     source_interface: Some(42)
                 },)),
@@ -775,14 +1118,15 @@ mod tests {
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
         let mut client: Dhcpv6Client = Dhcpv6Client::start(
-            [1, 2, 3],
+            [1, 2, 3], /* transaction ID */
             OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            1, /* interface ID */
             client_socket,
             server_addr,
             client_stream,
         )
         .await
-        .expect("creating test client");
+        .expect("failed to create test client");
 
         let mut buf = vec![0u8; MAX_UDP_DATAGRAM_SIZE];
         // A retransmission timer is scheduled when starting the client in stateless mode. Cancel
@@ -802,13 +1146,9 @@ mod tests {
 
         // Trigger a message receive, the message is later discarded because transaction ID doesn't
         // match.
-        let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Reply, [5, 6, 7], &[]);
-        let mut buf = vec![0u8; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let _: usize = server_socket
-            .send_to(&buf, client_addr)
+        let () = send_reply_with_options(&server_socket, client_addr, [5, 6, 7], &[])
             .await
-            .expect("failed to send test message to test socket");
+            .expect("failed to send test message");
         // There are now two pending events, the message receive is handled first because the timer
         // is far into the future.
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
