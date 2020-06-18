@@ -327,52 +327,65 @@ where
                 let app_set = server.borrow().app_set.clone();
                 if channel.is_empty() {
                     // TODO: Remove this when fxb/36608 is fixed.
-                    warn!(
-                        "Empty channel passed to SetTarget, erasing all channel data in SysConfig."
-                    );
                     if server.borrow().support_sysconfig {
+                        warn!(
+                            "Empty channel passed to SetTarget, erasing all channel data in SysConfig."
+                        );
                         write_partition(SysconfigPartition::Config, &[])?;
                     } else {
                         warn!("sysconfig not supported.");
                     }
-                    let target_channel = match &server.borrow().channel_configs {
-                        Some(channel_configs) => channel_configs.default_channel.clone(),
+                    let default_channel_cfg = match &server.borrow().channel_configs {
+                        Some(cfgs) => cfgs.get_default_channel(),
                         None => None,
                     };
-                    app_set.set_target_channel(target_channel).await;
+                    let (channel_name, appid) = match default_channel_cfg {
+                        Some(cfg) => (Some(cfg.name), cfg.appid.clone()),
+                        None => (None, None),
+                    };
+                    if let Some(name) = &channel_name {
+                        warn!(
+                            "setting device to default channel: '{}' with app id: '{:?}'",
+                            name, appid
+                        );
+                    }
+                    app_set.set_target_channel(channel_name, appid).await;
                 } else {
                     let server = server.borrow();
-                    let tuf_repo = if let Some(channel_configs) = &server.channel_configs {
-                        if let Some(channel_config) = channel_configs
-                            .known_channels
-                            .iter()
-                            .find(|channel_config| channel_config.name == channel)
-                        {
-                            &channel_config.repo
-                        } else {
+                    let channel_cfg = match &server.channel_configs {
+                        Some(cfgs) => cfgs.get_channel(&channel),
+                        None => None,
+                    };
+                    let (tuf_repo, appid) = match channel_cfg {
+                        Some(cfg) => (cfg.repo.clone(), cfg.appid.clone()),
+                        None => {
                             error!(
                                 "Channel {} not found in known channels, using channel name as \
                                  TUF repo name.",
                                 &channel
                             );
-                            &channel
+                            (channel.clone(), None)
                         }
-                    } else {
-                        warn!("No channel configs found, using channel name as TUF repo name.");
-                        &channel
                     };
                     if server.support_sysconfig {
                         let config = OtaUpdateChannelConfig::new(&channel, tuf_repo)?;
                         write_channel_config(&config)?;
                     } else {
-                        warn!("sysconfig not supported.");
+                        info!("sysconfig not supported.");
                     }
 
                     let storage_ref = Rc::clone(&server.storage_ref);
                     // Don't borrow server across await.
                     drop(server);
                     let mut storage = storage_ref.lock().await;
-                    app_set.set_target_channel(Some(channel)).await;
+
+                    if let Some(id) = &appid {
+                        if id != &app_set.get_current_app_id().await {
+                            warn!("Changing app id to: {}", id);
+                        }
+                    }
+
+                    app_set.set_target_channel(Some(channel), appid).await;
                     app_set.persist(&mut *storage).await;
                     storage.commit_or_log().await;
                 }
@@ -914,7 +927,7 @@ mod tests {
                 default_channel: None,
                 known_channels: vec![
                     ChannelConfig::new("some-channel"),
-                    ChannelConfig::new("target-channel"),
+                    ChannelConfig::with_appid("target-channel", "target-id"),
                 ],
             })
             .build()
@@ -928,6 +941,7 @@ mod tests {
         let fidl = fidl.borrow();
         let apps = fidl.app_set.to_vec().await;
         assert_eq!("target-channel", apps[0].get_target_channel());
+        assert_eq!("target-id", apps[0].id);
         let storage = fidl.storage_ref.lock().await;
         storage.get_string(&apps[0].id).await.unwrap();
         assert!(storage.committed());
@@ -938,7 +952,7 @@ mod tests {
         let fidl = FidlServerBuilder::new()
             .with_channel_configs(ChannelConfigs {
                 default_channel: Some("default-channel".to_string()),
-                known_channels: vec![],
+                known_channels: vec![ChannelConfig::with_appid("default-channel", "default-app")],
             })
             .build()
             .await;
@@ -951,6 +965,7 @@ mod tests {
         let fidl = fidl.borrow();
         let apps = fidl.app_set.to_vec().await;
         assert_eq!("default-channel", apps[0].get_target_channel());
+        assert_eq!("default-app", apps[0].id);
         let storage = fidl.storage_ref.lock().await;
         // Default channel should not be persisted to storage.
         assert_eq!(None, storage.get_string(&apps[0].id).await);

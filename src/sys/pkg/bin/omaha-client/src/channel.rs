@@ -41,6 +41,17 @@ impl ChannelConfigs {
         }
         Ok(self)
     }
+
+    pub fn get_default_channel(&self) -> Option<ChannelConfig> {
+        self.default_channel.as_ref().and_then(|default| self.get_channel(&default))
+    }
+
+    pub fn get_channel(&self, name: &str) -> Option<ChannelConfig> {
+        self.known_channels
+            .iter()
+            .find(|channel_config| channel_config.name == name)
+            .map(|c| c.clone())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -162,6 +173,54 @@ mod tests {
 }"#;
         let config = get_configs_from(json.as_bytes());
         assert!(config.is_err());
+    }
+
+    #[test]
+    fn test_channel_configs_get_default() {
+        let configs = ChannelConfigs {
+            default_channel: Some("default_channel".to_string()),
+            known_channels: vec![
+                ChannelConfig::new("some_channel"),
+                ChannelConfig::new("default_channel"),
+                ChannelConfig::new("other"),
+            ],
+        };
+        assert_eq!(configs.get_default_channel().unwrap(), configs.known_channels[1]);
+    }
+
+    #[test]
+    fn test_channel_configs_get_default_none() {
+        let configs = ChannelConfigs {
+            default_channel: None,
+            known_channels: vec![ChannelConfig::new("some_channel")],
+        };
+        assert_eq!(configs.get_default_channel(), None);
+    }
+
+    #[test]
+    fn test_channel_configs_get_channel() {
+        let configs = ChannelConfigs {
+            default_channel: Some("default_channel".to_string()),
+            known_channels: vec![
+                ChannelConfig::new("some_channel"),
+                ChannelConfig::new("default_channel"),
+                ChannelConfig::new("other"),
+            ],
+        };
+        assert_eq!(configs.get_channel("other").unwrap(), configs.known_channels[2]);
+    }
+
+    #[test]
+    fn test_channel_configs_get_channel_missing() {
+        let configs = ChannelConfigs {
+            default_channel: Some("default_channel".to_string()),
+            known_channels: vec![
+                ChannelConfig::new("some_channel"),
+                ChannelConfig::new("default_channel"),
+                ChannelConfig::new("other"),
+            ],
+        };
+        assert_eq!(configs.get_channel("missing"), None);
     }
 
     #[test]

@@ -297,8 +297,11 @@ impl App {
     }
 
     /// Set the cohort hint to |channel|.
-    pub fn set_target_channel(&mut self, channel: Option<String>) {
+    pub fn set_target_channel(&mut self, channel: Option<String>, id: Option<String>) {
         self.cohort.hint = channel;
+        if let Some(id) = id {
+            self.id = id;
+        }
     }
 
     pub fn valid(&self) -> bool {
@@ -360,11 +363,11 @@ impl AppSet {
         apps[0].get_target_channel().to_string()
     }
 
-    /// Set the cohort hint of all apps to |channel|.
-    pub async fn set_target_channel(&self, channel: Option<String>) {
+    /// Set the cohort hint of all apps to |channel| and |id|.
+    pub async fn set_target_channel(&self, channel: Option<String>, id: Option<String>) {
         let mut apps = self.apps.lock().await;
         for app in apps.iter_mut() {
-            app.set_target_channel(channel.clone());
+            app.set_target_channel(channel.clone(), id.clone());
         }
     }
 
@@ -962,10 +965,22 @@ mod tests {
     fn test_app_set_target_channel() {
         let mut app = App::builder("some_id", [0, 1]).build();
         assert_eq!("", app.get_target_channel());
-        app.set_target_channel(Some("new-target-channel".to_string()));
+        app.set_target_channel(Some("new-target-channel".to_string()), None);
         assert_eq!("new-target-channel", app.get_target_channel());
-        app.set_target_channel(None);
+        app.set_target_channel(None, None);
         assert_eq!("", app.get_target_channel());
+    }
+
+    #[test]
+    fn test_app_set_target_channel_and_id() {
+        let mut app = App::builder("some_id", [0, 1]).build();
+        assert_eq!("", app.get_target_channel());
+        app.set_target_channel(Some("new-target-channel".to_string()), Some("new-id".to_string()));
+        assert_eq!("new-target-channel", app.get_target_channel());
+        assert_eq!("new-id", app.id);
+        app.set_target_channel(None, None);
+        assert_eq!("", app.get_target_channel());
+        assert_eq!("new-id", app.id);
     }
 
     #[test]
