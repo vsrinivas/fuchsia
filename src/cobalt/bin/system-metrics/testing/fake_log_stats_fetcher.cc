@@ -11,17 +11,20 @@ namespace cobalt {
 FakeLogStatsFetcher::FakeLogStatsFetcher(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}
 
-void FakeLogStatsFetcher::AddErrorCount(int error_count) { error_count_ += error_count; }
+void FakeLogStatsFetcher::AddErrorCount(int error_count) {
+  pending_metrics_.error_count += error_count;
+}
+
+void FakeLogStatsFetcher::AddComponentErrorCount(ComponentEventCode component_id,
+                                                 uint64_t error_count) {
+  pending_metrics_.per_component_error_count[component_id] += error_count;
+}
 
 void FakeLogStatsFetcher::FetchMetrics(MetricsCallback metrics_callback) {
   metrics_callback_ = std::move(metrics_callback);
   async::PostTask(dispatcher_, [this]() {
-    LogStatsFetcher::Metrics metrics;
-    metrics.error_count = error_count_;
-    bool res = metrics_callback_(metrics);
-    if (res) {
-      error_count_ = 0;
-    }
+    metrics_callback_(pending_metrics_);
+    pending_metrics_ = Metrics();
   });
 }
 

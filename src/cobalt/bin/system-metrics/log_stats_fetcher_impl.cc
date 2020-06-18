@@ -8,11 +8,31 @@
 
 namespace cobalt {
 
+namespace {
+
+// A map from components urls in the approve-list to the corresponding Cobalt event
+// codes (as defined in metrics.yaml).
+const std::unordered_map<std::string, ComponentEventCode> kComponentCodeMap{
+    {"fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
+     ComponentEventCode::RootPresenter},
+    {"fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
+     ComponentEventCode::PkgResolver},
+    {"fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm", ComponentEventCode::Appmgr},
+    {"fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx", ComponentEventCode::Sysmgr}};
+
+}  // namespace
+
 LogStatsFetcherImpl::LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
     : executor_(dispatcher),
       archive_reader_(context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
-                      {"archivist.cmx:root/log_stats:error_logs"}) {}
+                      {"archivist.cmx:root/log_stats:error_logs",
+                       "archivist.cmx:root/log_stats/by_component/*:error_logs"}) {
+  // This establishes a baseline for error counts so that the next call to FetchMetrics() only
+  // includes logs since the daemon started as opposed to since the  boot time. This is especially
+  // important if the daemon had previously crashed and has been relaunched.
+  FetchMetrics([](const Metrics& metrics) {});
+}
 
 void LogStatsFetcherImpl::FetchMetrics(MetricsCallback metrics_callback) {
   metrics_callback_ = std::move(metrics_callback);
@@ -28,27 +48,84 @@ void LogStatsFetcherImpl::FetchMetrics(MetricsCallback metrics_callback) {
 
 void LogStatsFetcherImpl::OnInspectSnapshotReady(
     const std::vector<inspect::contrib::DiagnosticsData>& data_vector) {
+  // Since we only asked for one component's inspect, there shouldn't be more
+  // than one entry in the result.
   if (data_vector.size() != 1u) {
     FX_LOGS(ERROR) << "Expected 1 archive, received " << data_vector.size();
     return;
   }
 
-  const rapidjson::Value& value = data_vector[0].GetByPath({"root", "log_stats", "error_logs"});
+  LogStatsFetcher::Metrics metrics;
 
-  if (!value.IsInt()) {
-    FX_LOGS(ERROR) << "error_logs doesn't exist or is not an integer";
+  // Populate per-component log stats.
+  const rapidjson::Value& component_list =
+      data_vector[0].GetByPath({"root", "log_stats", "by_component"});
+  if (!component_list.IsObject()) {
+    FX_LOGS(ERROR) << "root/log_stats/by_component doesn't exist or is not an object";
     return;
   }
+  for (auto& component_member : component_list.GetObject()) {
+    std::string component_url = component_member.name.GetString();
 
-  LogStatsFetcher::Metrics metrics;
-  metrics.error_count = value.GetInt() - last_reported_error_count_;
+    auto code_it = kComponentCodeMap.find(component_url);
+    // Ignore components not in the whitelist.
+    if (code_it == kComponentCodeMap.end())
+      continue;
 
-  FX_LOGS(DEBUG) << "Current error count: " << value.GetInt()
-                 << ", since last report: " << metrics.error_count;
+    ComponentEventCode component_code = code_it->second;
 
-  if (metrics_callback_(metrics)) {
-    last_reported_error_count_ = value.GetInt();
+    if (!component_member.value.IsObject()) {
+      FX_LOGS(ERROR) << "Component member must be an object: " << component_member.name.GetString();
+      return;
+    }
+
+    const auto& component_object = component_member.value.GetObject();
+
+    auto error_logs_it = component_object.FindMember("error_logs");
+    if (error_logs_it == component_object.MemberEnd()) {
+      FX_LOGS(ERROR) << component_url << " does not have error_logs";
+      return;
+    }
+
+    if (!error_logs_it->value.IsUint64()) {
+      FX_LOGS(ERROR) << "error_logs for component " << component_url << "is not uint64";
+      return;
+    }
+
+    uint64_t new_count = error_logs_it->value.GetUint64();
+    uint64_t last_count = per_component_error_count_[component_code];
+
+    // If the new error count is lower, the component must have restarted, so
+    // assume all errors are new.
+    uint64_t diff = new_count < last_count ? new_count : new_count - last_count;
+    if (diff > 0) {
+      FX_LOGS(DEBUG) << "Found " << diff << " new error logs for component " << component_url
+                     << ", total is " << new_count;
+    }
+    metrics.per_component_error_count[component_code] = diff;
+    per_component_error_count_[component_code] = new_count;
   }
+
+  // Find the total error count.
+  const rapidjson::Value& new_count_value =
+      data_vector[0].GetByPath({"root", "log_stats", "error_logs"});
+  if (!new_count_value.IsUint64()) {
+    FX_LOGS(ERROR) << "error_logs doesn't exist or is not a uint64";
+    return;
+  }
+  uint64_t new_count = new_count_value.GetUint64();
+  // If the new error count is lower, Archivist  must have restarted, so
+  // assume all errors are new.
+  if (new_count < last_reported_error_count_) {
+    metrics.error_count = new_count;
+  } else {
+    metrics.error_count = new_count - last_reported_error_count_;
+  }
+  FX_LOGS(DEBUG) << "Current aggregated error count: " << new_count
+                 << ", since last report: " << metrics.error_count;
+  last_reported_error_count_ = new_count;
+
+  metrics_callback_(metrics);
 }
 
 }  // namespace cobalt

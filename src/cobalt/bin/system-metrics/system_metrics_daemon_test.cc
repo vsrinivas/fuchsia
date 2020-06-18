@@ -123,7 +123,7 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
 
-  seconds LogLogStats() { return daemon_->LogLogStats(); }
+  void LogLogStats() { daemon_->LogLogStats(); }
 
   void PrepareForLogCpuUsage() {
     daemon_->cpu_data_stored_ = 599;
@@ -714,11 +714,22 @@ TEST_F(SystemMetricsDaemonTest, LogLogStats) {
   fake_log_stats_fetcher_->AddErrorCount(5);
   LogLogStats();
   RunLoopUntilIdle();
-  CheckValues(cobalt::kLogEventCount, 1, fuchsia_system_metrics::kErrorLogCountMetricId, 0, -1, 5);
+  CheckValues(cobalt::kLogCobaltEvents, 1, fuchsia_system_metrics::kErrorLogCountMetricId, -1, -1,
+              1);
+  EXPECT_EQ(5u, fake_logger_.logged_events()[0].payload.event_count().count);
+
+  fake_logger_.reset_logged_events();
   fake_log_stats_fetcher_->AddErrorCount(4);
+  fake_log_stats_fetcher_->AddComponentErrorCount(cobalt::ComponentEventCode::Appmgr, 3);
   LogLogStats();
   RunLoopUntilIdle();
-  CheckValues(cobalt::kLogEventCount, 2, fuchsia_system_metrics::kErrorLogCountMetricId, 0, -1, 4);
+  CheckValues(cobalt::kLogCobaltEvents, 2,
+              fuchsia_system_metrics::kPerComponentErrorLogCountMetricId,
+              cobalt::ComponentEventCode::Appmgr, -1, 2);
+  EXPECT_EQ(4u, fake_logger_.logged_events()[0].payload.event_count().count);
+  EXPECT_EQ(fuchsia_system_metrics::kErrorLogCountMetricId,
+            fake_logger_.logged_events()[0].metric_id);
+  EXPECT_EQ(3u, fake_logger_.logged_events()[1].payload.event_count().count);
 }
 
 class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {

@@ -144,9 +144,14 @@ void SystemMetricsDaemon::RepeatedlyLogCpuUsage() {
 }
 
 void SystemMetricsDaemon::RepeatedlyLogLogStats() {
-  std::chrono::seconds seconds_to_sleep = LogLogStats();
+  // Repeatedly run LogLogStats every 15 minutes.
   async::PostDelayedTask(
-      dispatcher_, [this]() { RepeatedlyLogLogStats(); }, zx::sec(seconds_to_sleep.count()));
+      dispatcher_,
+      [this]() {
+        LogLogStats();
+        RepeatedlyLogLogStats();
+      },
+      zx::sec(900));
 }
 
 void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
@@ -406,26 +411,33 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
   return std::chrono::seconds(1);
 }
 
-std::chrono::seconds SystemMetricsDaemon::LogLogStats() {
+void SystemMetricsDaemon::LogLogStats() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogLogStats");
   if (!logger_) {
     FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
-    return std::chrono::minutes(5);
+    return;
   }
-  log_stats_fetcher_->FetchMetrics([this](cobalt::LogStatsFetcher::Metrics metrics) {
+  log_stats_fetcher_->FetchMetrics([this](const cobalt::LogStatsFetcher::Metrics& metrics) {
+    std::vector<CobaltEvent> events;
+
+    events.push_back(CobaltEventBuilder(fuchsia_system_metrics::kErrorLogCountMetricId)
+                         .as_count_event(0, metrics.error_count));
+
+    for (auto& it : metrics.per_component_error_count) {
+      events.push_back(
+          CobaltEventBuilder(fuchsia_system_metrics::kPerComponentErrorLogCountMetricId)
+              .with_event_code(it.first)
+              .as_count_event(0, it.second));
+    }
+
     fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-    ReinitializeIfPeerClosed(logger_->LogEventCount(fuchsia_system_metrics::kErrorLogCountMetricId,
-                                                    0, "", 0, metrics.error_count, &status));
+    ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
     if (status != fuchsia::cobalt::Status::OK) {
-      FX_LOGS(ERROR) << "LogEventCount() for error log stats returned status="
+      FX_LOGS(ERROR) << "LogCobaltEvents() for error log stats returned status="
                      << StatusToString(status);
-      return false;
-    } else {
-      return true;
     }
   });
-  return std::chrono::minutes(15);
 }
 
 void SystemMetricsDaemon::StoreCpuData(double cpu_percentage) {

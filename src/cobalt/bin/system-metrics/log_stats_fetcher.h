@@ -8,19 +8,29 @@
 #include <lib/fit/function.h>
 #include <stdint.h>
 
+#include <unordered_map>
+
+#include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
+
 namespace cobalt {
+
+using ComponentEventCode =
+    fuchsia_system_metrics::PerComponentErrorLogCountMetricDimensionComponent;
 
 // An abstract interface for fetching component log statistics.
 class LogStatsFetcher {
  public:
   struct Metrics {
-    // This is defined as a struct to allow adding more fields.
+    // The number of new error logs across all components since the last call to
+    // FetchMetrics().
     uint64_t error_count = 0;
+
+    // A map from component event codes (as defined in metrics.yaml) to the
+    // number of error logs since the last call to FetchMetrics().
+    std::unordered_map<ComponentEventCode, uint64_t> per_component_error_count;
   };
 
-  // A callback that the client provides to FetchMetrics. The callback is expected to return true if
-  // the metrics were successfully reported, and false if the reporting failed.
-  using MetricsCallback = fit::function<bool(Metrics)>;
+  using MetricsCallback = fit::function<void(const Metrics&)>;
 
   virtual ~LogStatsFetcher() = default;
 

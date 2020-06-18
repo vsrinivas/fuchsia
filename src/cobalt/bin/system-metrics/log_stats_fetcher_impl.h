@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "src/cobalt/bin/system-metrics/log_stats_fetcher.h"
@@ -26,10 +27,13 @@ class LogStatsFetcherImpl : public LogStatsFetcher {
  private:
   void OnInspectSnapshotReady(const std::vector<inspect::contrib::DiagnosticsData>& data_vector);
 
-  uint32_t last_reported_error_count_ = 0;
+  uint64_t last_reported_error_count_ = 0;
   MetricsCallback metrics_callback_;
   async::Executor executor_;
   inspect::contrib::ArchiveReader archive_reader_;
+
+  // Map from component event codes (as defined in metrics.yaml) to the last known error count
+  std::unordered_map<ComponentEventCode, uint64_t> per_component_error_count_;
 };
 
 }  // namespace cobalt

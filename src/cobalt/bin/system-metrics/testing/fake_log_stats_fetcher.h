@@ -16,6 +16,7 @@ class FakeLogStatsFetcher : public LogStatsFetcher {
   FakeLogStatsFetcher(async_dispatcher_t* dispatcher);
 
   void AddErrorCount(int error_count);
+  void AddComponentErrorCount(ComponentEventCode component_id, uint64_t error_count);
 
   // Overridden from LogStatsFetcher:
   void FetchMetrics(MetricsCallback metrics_callback) override;
@@ -23,7 +24,7 @@ class FakeLogStatsFetcher : public LogStatsFetcher {
  private:
   async_dispatcher_t* dispatcher_;
   MetricsCallback metrics_callback_;
-  int error_count_ = 0;
+  Metrics pending_metrics_;
 };
 
 }  // namespace cobalt

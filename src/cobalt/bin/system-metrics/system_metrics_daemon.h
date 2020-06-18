@@ -164,9 +164,7 @@ class SystemMetricsDaemon {
   std::chrono::seconds LogCpuUsage();
 
   // Fetches and logs the number of error log messages across all components.
-  //
-  // Returns the amount of time before this method needs to be invoked again.
-  std::chrono::seconds LogLogStats();
+  void LogLogStats();
 
   // Helper function to store the fetched CPU data and store until flush.
   void StoreCpuData(double cpu_percentage);  // histogram, flush every 10 min
