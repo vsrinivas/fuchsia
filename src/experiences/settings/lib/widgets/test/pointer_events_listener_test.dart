@@ -151,7 +151,7 @@ void main() {
     expect(result[1].change, ui.PointerChange.up);
   });
 
-  test('move without a previous pointer down.', () {
+  test('move without a previous pointer down', () {
     final event0 =
         _createSimulatedPointerEvent(PointerEventPhase.move, 1000, 0.0, 0.0);
     final event1 =
@@ -212,6 +212,70 @@ void main() {
     expect(result[1].physicalX, 25.0 * ui.window.devicePixelRatio);
     expect(result[1].physicalY, 0.0);
     expect(result[1].physicalDeltaX, 20.0 * ui.window.devicePixelRatio);
+    expect(result[1].physicalDeltaY, 0.0);
+  });
+
+  test('skip ahead', () {
+    final event0 =
+        _createSimulatedPointerEvent(PointerEventPhase.down, 1000, 0.0, 0.0);
+    final event1 =
+        _createSimulatedPointerEvent(PointerEventPhase.move, 2000, 10.0, 0.0);
+    final event2 =
+        _createSimulatedPointerEvent(PointerEventPhase.move, 3000, 20.0, 0.0);
+    final event3 =
+        _createSimulatedPointerEvent(PointerEventPhase.up, 4000, 30.0, 0.0);
+
+    var frameTime = Duration(milliseconds: 6);
+    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
+
+    pointerEventsListener
+      ..onPointerEvent(event0)
+      ..onPointerEvent(event1)
+      ..onPointerEvent(event2)
+      ..onPointerEvent(event3);
+
+    // No pointer events should have been dispatched yet.
+    expect(result.isEmpty, true);
+
+    // Frame callback should have been requested.
+    FrameCallback callback =
+        verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
+            .captured
+            .single;
+    verify(scheduler.scheduleFrame());
+    clearInteractions(scheduler);
+
+    frameTime = Duration(milliseconds: 7);
+    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
+    callback(Duration());
+
+    // One pointer event should have been dispatched.
+    expect(result.length, 1);
+    expect(result[0].timeStamp, frameTime + _samplingOffset);
+    expect(result[0].change, ui.PointerChange.down);
+    expect(result[0].physicalX, 5.0 * ui.window.devicePixelRatio);
+    expect(result[0].physicalY, 0.0);
+    expect(result[0].physicalDeltaX, 0.0);
+    expect(result[0].physicalDeltaY, 0.0);
+
+    // Another frame callback should have been requested.
+    callback = verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
+        .captured
+        .single;
+    verify(scheduler.scheduleFrame());
+    clearInteractions(scheduler);
+
+    frameTime = Duration(milliseconds: 16);
+    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
+    callback(Duration());
+
+    // Last pointer event should have been dispatched.
+    expect(result.length, 2);
+    expect(result[1].timeStamp, frameTime + _samplingOffset);
+    expect(result[1].change, ui.PointerChange.up);
+    expect(result[1].physicalX, 30.0 * ui.window.devicePixelRatio);
+    expect(result[1].physicalY, 0.0);
+    expect(result[1].physicalDeltaX, 25.0 * ui.window.devicePixelRatio);
     expect(result[1].physicalDeltaY, 0.0);
   });
 }

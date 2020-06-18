@@ -249,7 +249,15 @@ class PointerEventsListener extends PointerCaptureListenerHack {
             break;
           case PointerEventPhase.up:
           case PointerEventPhase.cancel:
-            _downPointers.remove(event.p.pointerId);
+            final p = _downPointers[event.p.pointerId];
+            if (p != null) {
+              // Remove _DownPointer if `up` phase has been handled.
+              if (p.last.p.phase == PointerEventPhase.up) {
+                _downPointers.remove(event.p.pointerId);
+              } else {
+                _downPointers[event.p.pointerId].next = event;
+              }
+            }
             break;
           case PointerEventPhase.add:
           case PointerEventPhase.remove:
