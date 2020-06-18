@@ -107,6 +107,8 @@ class AmlRamDeviceTest : public zxtest::Test {
     auto device = static_cast<amlogic_ram::AmlRam*>(ddk_.args().ctx);
     device->DdkAsyncRemove();
     EXPECT_TRUE(ddk_.Ok());
+
+    device->DdkRelease();
   }
 
  protected:

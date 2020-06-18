@@ -118,6 +118,7 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
+  // It's now the responsibility of |DdkRelease| to free this object.
   __UNUSED auto* dummy = device.release();
   return ZX_OK;
 }
