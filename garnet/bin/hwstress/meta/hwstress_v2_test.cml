@@ -1,0 +1,52 @@
+{
+    program: {
+        binary: "test/hwstress_v2_test",
+    },
+    use: [
+        { runner: "gtest_runner" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        {
+            directory: "/tmp",
+            rights: [
+                "admin",
+                "rw*",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+
+    // Start up an isolated devmgr.
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+            from: "realm",
+            to: [ "#isolated_devmgr" ],
+        },
+    ],
+}

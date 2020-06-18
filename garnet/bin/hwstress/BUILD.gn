@@ -60,6 +60,7 @@ package("hwstress") {
   ]
 }
 
+# Tests using CFv1.
 executable("hwstress_test") {
   testonly = true
 
@@ -90,19 +91,50 @@ executable("hwstress_test") {
   ]
 }
 
+# Tests requiring support from the CFv2 (or requiring support from libraries that depend on CFv2).
+executable("hwstress_v2_test") {
+  testonly = true
+
+  sources = [ "flash_stress_test.cc" ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/isolated_devmgr/v2_component",  # requires CFv2.
+    "//src/lib/testing/predicates",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+  ]
+}
+
 test_package("hwstress_test_pkg") {
   package_name = "hwstress-tests"
 
-  deps = [ ":hwstress_test" ]
+  deps = [
+    ":hwstress_test",
+    ":hwstress_v2_test",
+  ]
 
   tests = [
     {
       name = "hwstress_test"
     },
   ]
+
+  v2_tests = [
+    {
+      name = "hwstress_v2_test"
+    },
+  ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":hwstress_test_pkg" ]
+  public_deps = [
+    ":hwstress_test_pkg",
+    "//src/lib/isolated_devmgr/v2_component",
+  ]
 }
