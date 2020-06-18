@@ -110,6 +110,20 @@ TEST_F(FakeResource, ExclusiveBoundsTest) {
   ASSERT_OK(zx_handle_close(second));
 }
 
+TEST_F(FakeResource, ExclusiveNewAfterExisting) {
+  zx_handle_t first, second;
+  std::array<char, ZX_MAX_NAME_LEN> first_name = {"first"};
+  std::array<char, ZX_MAX_NAME_LEN> second_name = {"second"};
+  uintptr_t first_base = 0x1000;
+  uintptr_t size = 0x4000;
+  uint32_t flags = ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE;
+
+  ASSERT_OK(zx_resource_create(root_resource(), flags, first_base, size, first_name.data(),
+                               first_name.size(), &first));
+  ASSERT_OK(zx_resource_create(root_resource(), flags, first_base + size, size, second_name.data(),
+                               second_name.size(), &second));
+}
+
 TEST_F(FakeResource, IOPortTest) {
   zx_handle_t io_child;
   zx_handle_t null_child;
