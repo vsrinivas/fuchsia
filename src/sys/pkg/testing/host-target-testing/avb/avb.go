@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -39,7 +40,7 @@ func newAVBToolWithStdout(avbToolPath string, keyPath string, keyMetadataPath st
 	}, nil
 }
 
-func (a *AVBTool) MakeVBMetaImage(ctx context.Context, destPath string, srcPath string, propFiles map[string]string) error {
+func (a *AVBTool) MakeVBMetaImage(ctx context.Context, destPath string, srcPath string, props map[string]string) error {
 	path, err := exec.LookPath(a.avbToolPath)
 	if err != nil {
 		return err
@@ -54,12 +55,22 @@ func (a *AVBTool) MakeVBMetaImage(ctx context.Context, destPath string, srcPath 
 		"--include_descriptors_from_image", srcPath,
 	}
 
-	for key, path := range propFiles {
-		if _, err := os.Stat(path); err != nil {
+	for key, value := range props {
+		propertyFile, err := ioutil.TempFile("", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(propertyFile.Name())
+
+		if _, err := propertyFile.WriteString(value); err != nil {
 			return err
 		}
 
-		args = append(args, "--prop_from_file", fmt.Sprintf("%s:%s", key, path))
+		if err := propertyFile.Close(); err != nil {
+			return err
+		}
+
+		args = append(args, "--prop_from_file", fmt.Sprintf("%s:%s", key, propertyFile.Name()))
 	}
 
 	log.Printf("running: %s %q", path, args)
