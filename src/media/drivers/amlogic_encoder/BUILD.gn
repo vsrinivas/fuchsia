@@ -51,6 +51,7 @@ if (target_cpu == "arm64") {
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/fidl-utils",
+      "//zircon/system/ulib/trace:trace-driver",
     ]
   }
 

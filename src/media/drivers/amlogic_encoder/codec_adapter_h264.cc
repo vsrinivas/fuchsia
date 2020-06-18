@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/media/codec_impl/codec_frame.h>
+#include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 
 #include "src/media/drivers/amlogic_encoder/device_ctx.h"
@@ -98,6 +99,7 @@ void CodecAdapterH264::CoreCodecInit(
 
   output_sink_.emplace(/*sender=*/
                        [this](CodecPacket* output_packet) {
+                         TRACE_DURATION("media", "Media:PacketSent");
                          events_->onCoreCodecOutputPacket(output_packet,
                                                           /*error_detected_before=*/false,
                                                           /*error_detected_during=*/false);
@@ -105,6 +107,7 @@ void CodecAdapterH264::CoreCodecInit(
                        },
                        /*writer_thread=*/input_processing_thread_);
 
+  TRACE_DURATION("media", "Media:Start");
   result = device_->EncoderInit(initial_input_format_details_);
   if (result != ZX_OK) {
     events_->onCoreCodecFailCodec("In CodecAdapterH264::CoreCodecInit(), EncoderInit failed");
@@ -148,6 +151,7 @@ void CodecAdapterH264::CoreCodecQueueInputEndOfStream() {
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
 void CodecAdapterH264::CoreCodecStopStream() {
+  TRACE_DURATION("media", "Media:Stop");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
 
@@ -557,6 +561,8 @@ void CodecAdapterH264::ProcessInput() {
       events_->onCoreCodecOutputEndOfStream(/*error_detected_before=*/false);
       continue;
     }
+
+    TRACE_DURATION("media", "Media:PacketReceived");
 
     auto return_packet =
         fit::defer([this, &item] { events_->onCoreCodecInputPacketDone(item.packet()); });
