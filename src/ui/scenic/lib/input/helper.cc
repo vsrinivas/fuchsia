@@ -167,6 +167,7 @@ InternalPointerEvent GfxPointerEventToInternalEvent(
   internal_event.target = scene_koid;
   internal_event.trace_id = PointerTraceHACK(event.radius_major, event.radius_minor);
   internal_event.phase = GfxPhaseToInternalPhase(event.phase);
+  internal_event.buttons = event.buttons;
 
   return internal_event;
 }
@@ -179,6 +180,7 @@ GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalPointerEvent
   event.device_id = internal_event.device_id;
   event.pointer_id = internal_event.pointer_id;
   event.type = type;
+  event.buttons = internal_event.buttons;
 
   // Convert to view-local coordinates.
   const glm::mat4 view_from_viewport_transform =

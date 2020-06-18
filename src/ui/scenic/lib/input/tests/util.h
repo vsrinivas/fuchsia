@@ -156,7 +156,8 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
 class PointerCommandGenerator {
  public:
   PointerCommandGenerator(scenic_impl::ResourceId compositor_id, uint32_t device_id,
-                          uint32_t pointer_id, fuchsia::ui::input::PointerEventType type);
+                          uint32_t pointer_id, fuchsia::ui::input::PointerEventType type,
+                          uint32_t buttons = 0);
   ~PointerCommandGenerator() = default;
 
   fuchsia::ui::input::Command Add(float x, float y);
@@ -196,7 +197,8 @@ class KeyboardCommandGenerator {
 bool PointerMatches(
     const fuchsia::ui::input::PointerEvent& event, uint32_t pointer_id,
     fuchsia::ui::input::PointerEventPhase phase, float x, float y,
-    fuchsia::ui::input::PointerEventType type = fuchsia::ui::input::PointerEventType::TOUCH);
+    fuchsia::ui::input::PointerEventType type = fuchsia::ui::input::PointerEventType::TOUCH,
+    uint32_t buttons = 0);
 
 }  // namespace lib_ui_input_tests
 

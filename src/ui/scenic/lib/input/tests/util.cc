@@ -253,11 +253,13 @@ void InputSystemTest::TearDown() {
 }
 
 PointerCommandGenerator::PointerCommandGenerator(ResourceId compositor_id, uint32_t device_id,
-                                                 uint32_t pointer_id, PointerEventType type)
+                                                 uint32_t pointer_id, PointerEventType type,
+                                                 uint32_t buttons)
     : compositor_id_(compositor_id) {
   blank_.device_id = device_id;
   blank_.pointer_id = pointer_id;
   blank_.type = type;
+  blank_.buttons = buttons;
 }
 
 InputCommand PointerCommandGenerator::Add(float x, float y) {
@@ -375,13 +377,18 @@ InputCommand KeyboardCommandGenerator::MakeInputCommand(KeyboardEvent event) {
 }
 
 bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEventPhase phase,
-                    float x, float y, fuchsia::ui::input::PointerEventType type) {
+                    float x, float y, fuchsia::ui::input::PointerEventType type, uint32_t buttons) {
   using fuchsia::ui::input::operator<<;
 
   bool result = true;
   if (event.type != type) {
     FX_LOGS(ERROR) << "  Actual type: " << event.type;
     FX_LOGS(ERROR) << "Expected type: " << type;
+    result = false;
+  }
+  if (event.buttons != buttons) {
+    FX_LOGS(ERROR) << "  Actual buttons: " << event.buttons;
+    FX_LOGS(ERROR) << "Expected buttons: " << buttons;
     result = false;
   }
   if (event.pointer_id != pointer_id) {

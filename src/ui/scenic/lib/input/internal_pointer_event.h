@@ -59,6 +59,8 @@ struct InternalPointerEvent {
   // Coordinates in Viewport space. Pointer events do not necessarily need to stay within the
   // Viewport's extents, but are counted as a hit test miss when outside.
   glm::vec2 position_in_viewport = glm::vec2(0, 0);
+  // Integer describing mouse buttons. From gfx SessionListener API.
+  uint32_t buttons = 0;
 };
 
 }  // namespace input

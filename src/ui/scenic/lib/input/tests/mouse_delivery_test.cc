@@ -117,7 +117,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
     scenic::Session* const session = root_session.session();
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
-                                    /*pointer id*/ 1, PointerEventType::MOUSE);
+                                    /*pointer id*/ 1, PointerEventType::MOUSE, /*buttons*/ 1);
     // A touch sequence that starts at the (0.5,6.5) location of the 7x7 display and
     // ends in the (6.5,0.5) location. Sent in as device (display) coordinates.
     session->Enqueue(pointer.Move(0.5, 6.5));
@@ -138,30 +138,30 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
 
     EXPECT_TRUE(events[1].is_pointer());
     EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
 
     EXPECT_TRUE(events[2].is_pointer());
     EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
 
     EXPECT_TRUE(events[3].is_focus());
     EXPECT_TRUE(events[3].focus().focused);
 
     EXPECT_TRUE(events[4].is_pointer());
     EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
 
     EXPECT_TRUE(events[5].is_pointer());
     EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
 
     EXPECT_TRUE(events[6].is_pointer());
     EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
   }
 
   // Verify client 2's input has one mouse event.
@@ -172,7 +172,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
   }
 }
 
@@ -236,7 +236,7 @@ TEST_F(MouseDeliveryTest, OffViewClickTriggersUnfocusEvent) {
     scenic::Session* const session = root_session.session();
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
-                                    /*pointer id*/ 1, PointerEventType::MOUSE);
+                                    /*pointer id*/ 1, PointerEventType::MOUSE, /*buttons*/ 1);
     // A touch sequence that starts at the (0,0) location of the 7x7 display; sent in as device
     // (display) coordinates.
     session->Enqueue(pointer.Down(0, 0));
@@ -319,7 +319,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
     scenic::Session* const session = root_session.session();
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
-                                    /*pointer id*/ 1, PointerEventType::MOUSE);
+                                    /*pointer id*/ 1, PointerEventType::MOUSE, /*buttons*/ 2);
     // A touch sequence that starts at the (0.5,6.5) location of the 7x7 display and
     // ends in the (6.5,0.5) location. Sent in as device (display) coordinates.
     session->Enqueue(pointer.Move(0.5, 6.5));
@@ -340,27 +340,27 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
 
     EXPECT_TRUE(events[1].is_pointer());
     EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
 
     EXPECT_TRUE(events[2].is_pointer());
     EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
 
     EXPECT_TRUE(events[3].is_pointer());
     EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
 
     EXPECT_TRUE(events[4].is_pointer());
     EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
 
     EXPECT_TRUE(events[5].is_pointer());
     EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
   }
 
   // Verify client 2's input has one mouse event.
@@ -371,7 +371,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
-                               fuchsia::ui::input::PointerEventType::MOUSE));
+                               fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
   }
 }
 
