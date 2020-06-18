@@ -179,7 +179,7 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
 
   Thread* last_queue_head = nullptr;
 
-  for (Thread& queue_head : private_heads_) {
+  for (Thread& queue_head : heads_) {
     if ((last_queue_head != nullptr) && !consider_queue(last_queue_head)) {
       return;
     }

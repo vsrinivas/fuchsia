@@ -107,7 +107,7 @@ struct WaitQueueCollection {
   constexpr WaitQueueCollection() {}
 
   // The number of threads currently in the collection.
-  uint32_t Count() const TA_REQ(thread_lock) { return private_count_; }
+  uint32_t Count() const TA_REQ(thread_lock) { return count_; }
 
   // Peek at the first Thread in the collection.
   Thread* Peek() TA_REQ(thread_lock);
@@ -140,9 +140,7 @@ struct WaitQueueCollection {
   WaitQueueCollection(const WaitQueueCollection&) = delete;
   WaitQueueCollection& operator=(const WaitQueueCollection&) = delete;
 
-  // These are morally private. Eventually, Thread will not be required to be POD, and we can make
-  // it so.
-
+ private:
   // Insert |new_head| by making inserting it in |private_heads_|,
   // before the iterator at |before| (which may correspond to and
   // element or to the end of the heads list).
@@ -158,8 +156,8 @@ struct WaitQueueCollection {
   // and not a queue head.
   inline void RemoveFromSublist(Thread* thread);
 
-  int private_count_ = 0;
-  WaitQueueHeads private_heads_;
+  int count_ = 0;
+  WaitQueueHeads heads_;
 };
 
 // NOTE: must be inside critical section when using these

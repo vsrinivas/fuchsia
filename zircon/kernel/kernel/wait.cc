@@ -126,21 +126,21 @@ void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t, zx_status_t 
 }  // namespace internal
 
 Thread* WaitQueueCollection::Peek() {
-  if (private_heads_.is_empty()) {
+  if (heads_.is_empty()) {
     return nullptr;
   }
-  return &private_heads_.front();
+  return &heads_.front();
 }
 
 const Thread* WaitQueueCollection::Peek() const {
-  if (private_heads_.is_empty()) {
+  if (heads_.is_empty()) {
     return nullptr;
   }
-  return &private_heads_.front();
+  return &heads_.front();
 }
 
 void WaitQueueCollection::InsertQueueHead(Thread* new_head, WaitQueueHeads::iterator before) {
-  private_heads_.insert(before, new_head);
+  heads_.insert(before, new_head);
 }
 
 void WaitQueueCollection::InsertIntoSublist(Thread* thread, WaitQueueSublist* sublist) {
@@ -151,7 +151,7 @@ void WaitQueueCollection::RemoveQueueHead(Thread* thread) {
   if (thread->wait_queue_state_.sublist_.is_empty()) {
     // If there's no new queue head, the only work we have to do is
     // removing |thread| from the heads list.
-    private_heads_.erase(*thread);
+    heads_.erase(*thread);
   } else {
     // To migrate to the new queue head, we need to:
     // - update the sublist for this priority, by removing |newhead|.
@@ -165,7 +165,7 @@ void WaitQueueCollection::RemoveQueueHead(Thread* thread) {
     newhead->wait_queue_state_.sublist_ = ktl::move(thread->wait_queue_state_.sublist_);
 
     // Patch in the new head into the queue head list.
-    private_heads_.replace(*thread, newhead);
+    heads_.replace(*thread, newhead);
   }
 }
 
@@ -175,16 +175,16 @@ void WaitQueueCollection::RemoveFromSublist(Thread* thread) {
 
 void WaitQueueCollection::Insert(Thread* thread) {
   // Regardless of the state of the collection, the count goes up one.
-  ++private_count_;
+  ++count_;
 
-  if (unlikely(!private_heads_.is_empty())) {
+  if (unlikely(!heads_.is_empty())) {
     const int pri = thread->scheduler_state_.effective_priority();
 
     // Walk through the sorted list of wait queue heads.
-    for (Thread& head : private_heads_) {
+    for (Thread& head : heads_) {
       if (pri > head.scheduler_state_.effective_priority()) {
         // Insert ourself here as a new queue head, before |head|.
-        InsertQueueHead(thread, private_heads_.make_iterator(head));
+        InsertQueueHead(thread, heads_.make_iterator(head));
         return;
       } else if (head.scheduler_state_.effective_priority() == pri) {
         // Same priority, add ourself to the tail of this queue.
@@ -196,12 +196,12 @@ void WaitQueueCollection::Insert(Thread* thread) {
 
   // We're the first thread, or we walked off the end, so add ourself
   // as a new queue head at the end.
-  InsertQueueHead(thread, private_heads_.end());
+  InsertQueueHead(thread, heads_.end());
 }
 
 void WaitQueueCollection::Remove(Thread* thread) {
   // Either way, the count goes down one.
-  --private_count_;
+  --count_;
 
   if (!thread->wait_queue_state_.IsHead()) {
     // We're just in a queue, not a head.
@@ -215,7 +215,7 @@ void WaitQueueCollection::Remove(Thread* thread) {
 void WaitQueueCollection::Validate() const {
   // Validate that the queue is sorted properly
   const Thread* last_head = nullptr;
-  for (const Thread& head : private_heads_) {
+  for (const Thread& head : heads_) {
     DEBUG_ASSERT(head.magic_ == THREAD_MAGIC);
 
     // Validate that the queue heads are sorted high to low priority.
