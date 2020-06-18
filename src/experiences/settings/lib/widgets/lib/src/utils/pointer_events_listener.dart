@@ -206,7 +206,7 @@ class PointerEventsListener extends PointerCaptureListenerHack {
     Timeline.timeSync('PointerEventsListener.dispatchQueuedEvents', () {
       _consumePendingEvents();
       _updateDownPointers();
-      _dispatchMoveChanges();
+      _dispatchResampledChanges();
 
       // Schedule frame callback if down pointers exists or events are
       // still queued. We need the frame callback to determine sample
@@ -245,10 +245,7 @@ class PointerEventsListener extends PointerCaptureListenerHack {
             if (!_downPointers.containsKey(event.p.pointerId)) {
               _downPointers[event.p.pointerId] = _DownPointer(event, event);
             }
-
-            // Move changes will be re-sampled instead of dispatched directly.
             _downPointers[event.p.pointerId].next = event;
-            dispatchEvent = false;
             break;
           case PointerEventPhase.up:
           case PointerEventPhase.cancel:
@@ -259,6 +256,9 @@ class PointerEventsListener extends PointerCaptureListenerHack {
           case PointerEventPhase.hover:
             break;
         }
+
+        // Touch changes will be re-sampled instead of dispatched directly.
+        dispatchEvent = false;
       }
 
       if (dispatchEvent) {
@@ -307,14 +307,14 @@ class PointerEventsListener extends PointerCaptureListenerHack {
     }
   }
 
-  void _dispatchMoveChanges() {
+  void _dispatchResampledChanges() {
     final packets = <ui.PointerData>[];
 
-    // Add move changes for [_downPointers].
+    // Add resampled changes for [_downPointers].
     for (var v in _downPointers.values) {
       var x = v.next.p.x;
       var y = v.next.p.y;
-      var eventTime = v.next.p.eventTime;
+
       // Re-sample if next time stamp is past sample time.
       if (v.next.p.eventTime > _sampleTimeNs &&
           v.next.p.eventTime > v.last.p.eventTime) {
@@ -328,20 +328,33 @@ class PointerEventsListener extends PointerCaptureListenerHack {
               (_sampleTimeNs - v.last.p.eventTime).toDouble() / interval;
           x = v.last.p.x + (v.next.p.x - v.last.p.x) * scalar;
           y = v.last.p.y + (v.next.p.y - v.last.p.y) * scalar;
-          eventTime = _sampleTimeNs;
         }, arguments: resampleArguments);
       }
 
-      // Add move change if time stamp is greater than last event.
-      if (eventTime > v.last.p.eventTime) {
-        final event = _clone(v.next.p, PointerEventPhase.move, x, y, eventTime);
+      // Add resampled change if time stamp is greater than last event.
+      if (_sampleTimeNs > v.last.p.eventTime) {
+        final event = _clone(v.next.p, v.next.p.phase, x, y, _sampleTimeNs);
         final eventArguments = <String, int>{
-          'eventTimeUs': eventTime ~/ 1000,
+          'eventTimeUs': _sampleTimeNs ~/ 1000,
         };
-        Timeline.timeSync('PointerEventsListener.addMoveEvent', () {
-          final packet = _getPacket(event);
-          if (packet != null) {
-            packets.add(packet);
+        Timeline.timeSync('PointerEventsListener.addResampledEvents', () {
+          var addMove = true;
+          // Add `down` event if needed.
+          if (_downEvent[v.next.p.pointerId] != true) {
+            final event =
+                _clone(v.next.p, PointerEventPhase.down, x, y, _sampleTimeNs);
+            final packet = _getPacket(event);
+            if (packet != null) {
+              packets.add(packet);
+            }
+            // Skip `move` phase if we already added a `down` event.
+            addMove = false;
+          }
+          if (addMove || v.next.p.phase != PointerEventPhase.move) {
+            final packet = _getPacket(event);
+            if (packet != null) {
+              packets.add(packet);
+            }
           }
         }, arguments: eventArguments, flow: Flow.end(v.last.flow2.id));
 

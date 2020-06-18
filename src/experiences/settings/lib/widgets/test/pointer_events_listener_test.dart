@@ -78,21 +78,14 @@ void main() {
     when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
     callback(Duration());
 
-    // Two pointer events should have been dispatched.
-    expect(result.length, 2);
-    expect(result[0].timeStamp, Duration(milliseconds: 1));
+    // One pointer event should have been dispatched.
+    expect(result.length, 1);
+    expect(result[0].timeStamp, frameTime + _samplingOffset);
     expect(result[0].change, ui.PointerChange.down);
-    expect(result[0].physicalX, 0.0);
+    expect(result[0].physicalX, 5.0 * ui.window.devicePixelRatio);
     expect(result[0].physicalY, 0.0);
     expect(result[0].physicalDeltaX, 0.0);
     expect(result[0].physicalDeltaY, 0.0);
-
-    expect(result[1].timeStamp, frameTime + _samplingOffset);
-    expect(result[1].change, ui.PointerChange.move);
-    expect(result[1].physicalX, 5.0 * ui.window.devicePixelRatio);
-    expect(result[1].physicalY, 0.0);
-    expect(result[1].physicalDeltaX, 5.0 * ui.window.devicePixelRatio);
-    expect(result[1].physicalDeltaY, 0.0);
 
     // Another frame callback should have been requested.
     callback = verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
@@ -106,46 +99,35 @@ void main() {
     callback(Duration());
 
     // Another pointer event should have been dispatched.
-    expect(result.length, 3);
-    expect(result[2].timeStamp, frameTime + _samplingOffset);
-    expect(result[2].change, ui.PointerChange.move);
-    expect(result[2].physicalX, 25.0 * ui.window.devicePixelRatio);
-    expect(result[2].physicalY, 0.0);
-    expect(result[2].physicalDeltaX, 20.0 * ui.window.devicePixelRatio);
-    expect(result[2].physicalDeltaY, 0.0);
-
-    // Another frame callback should have been requested.
-    callback = verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
-        .captured
-        .single;
-    verify(scheduler.scheduleFrame());
-    clearInteractions(scheduler);
-
-    frameTime = Duration(milliseconds: 11);
-    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
-    callback(Duration());
-
-    // Last pointer event should have been dispatched.
-    expect(result.length, 4);
-    expect(result[3].timeStamp, Duration(milliseconds: 4));
-    expect(result[3].change, ui.PointerChange.up);
-    expect(result[3].physicalX, 30.0 * ui.window.devicePixelRatio);
-    expect(result[3].physicalY, 0.0);
-    expect(result[3].physicalDeltaX, 5.0 * ui.window.devicePixelRatio);
-    expect(result[3].physicalDeltaY, 0.0);
+    expect(result.length, 2);
+    expect(result[1].timeStamp, frameTime + _samplingOffset);
+    expect(result[1].change, ui.PointerChange.up);
+    expect(result[1].physicalX, 25.0 * ui.window.devicePixelRatio);
+    expect(result[1].physicalY, 0.0);
+    expect(result[1].physicalDeltaX, 20.0 * ui.window.devicePixelRatio);
+    expect(result[1].physicalDeltaY, 0.0);
   });
 
   test('bad event time', () {
     const _badEventTimeUs = 9999999;
     final event0 = _createSimulatedPointerEvent(
         PointerEventPhase.down, _badEventTimeUs, 0.0, 0.0);
-    final event1 = _createSimulatedPointerEvent(
-        PointerEventPhase.up, _badEventTimeUs, 0.0, 0.0);
 
     var frameTime = Duration(milliseconds: 6);
     when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
 
-    pointerEventsListener..onPointerEvent(event0)..onPointerEvent(event1);
+    pointerEventsListener.onPointerEvent(event0);
+
+    // No pointer events should have been dispatched yet.
+    expect(result.isEmpty, true);
+
+    final event1 =
+        _createSimulatedPointerEvent(PointerEventPhase.up, 7000, 0.0, 0.0);
+
+    frameTime = Duration(milliseconds: 7);
+    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
+
+    pointerEventsListener.onPointerEvent(event1);
 
     // No pointer events should have been dispatched yet.
     expect(result.isEmpty, true);
@@ -158,18 +140,18 @@ void main() {
     verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
-    frameTime = Duration(milliseconds: 20);
+    frameTime = Duration(milliseconds: 12);
     when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
     callback(Duration());
 
-    // Event time stamps should have been ignored and two pointer events
+    // First event time stamp should have been ignored and two pointer events
     // should have been dispatched.
     expect(result.length, 2);
     expect(result[0].change, ui.PointerChange.down);
     expect(result[1].change, ui.PointerChange.up);
   });
 
-  test('Handle a move without a previous pointer down.', () {
+  test('move without a previous pointer down.', () {
     final event0 =
         _createSimulatedPointerEvent(PointerEventPhase.move, 1000, 0.0, 0.0);
     final event1 =
@@ -203,10 +185,10 @@ void main() {
     when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
     callback(Duration());
 
-    // Two pointer events should have been dispatched.
+    // One pointer event should have been dispatched.
     expect(result.length, 1);
     expect(result[0].timeStamp, frameTime + _samplingOffset);
-    expect(result[0].change, ui.PointerChange.add);
+    expect(result[0].change, ui.PointerChange.down);
     expect(result[0].physicalX, 5.0 * ui.window.devicePixelRatio);
     expect(result[0].physicalY, 0.0);
     expect(result[0].physicalDeltaX, 0.0);
@@ -226,30 +208,10 @@ void main() {
     // Another pointer event should have been dispatched.
     expect(result.length, 2);
     expect(result[1].timeStamp, frameTime + _samplingOffset);
-    expect(result[1].change, ui.PointerChange.down);
+    expect(result[1].change, ui.PointerChange.up);
     expect(result[1].physicalX, 25.0 * ui.window.devicePixelRatio);
     expect(result[1].physicalY, 0.0);
     expect(result[1].physicalDeltaX, 20.0 * ui.window.devicePixelRatio);
     expect(result[1].physicalDeltaY, 0.0);
-
-    // Another frame callback should have been requested.
-    callback = verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
-        .captured
-        .single;
-    verify(scheduler.scheduleFrame());
-    clearInteractions(scheduler);
-
-    frameTime = Duration(milliseconds: 11);
-    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
-    callback(Duration());
-
-    // Last pointer event should have been dispatched.
-    expect(result.length, 3);
-    expect(result[2].timeStamp, Duration(milliseconds: 4));
-    expect(result[2].change, ui.PointerChange.up);
-    expect(result[2].physicalX, 30.0 * ui.window.devicePixelRatio);
-    expect(result[2].physicalY, 0.0);
-    expect(result[2].physicalDeltaX, 5.0 * ui.window.devicePixelRatio);
-    expect(result[2].physicalDeltaY, 0.0);
   });
 }
