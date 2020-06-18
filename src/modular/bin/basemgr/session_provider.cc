@@ -116,7 +116,7 @@ void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) 
   }
 
   // Shutting down a session effectively restarts the session.
-  session_context_->Shutdown(ShutDownReason::CRITICAL_FAILURE, std::move(on_restart_complete));
+  session_context_->Shutdown(ShutDownReason::CLIENT_REQUEST, std::move(on_restart_complete));
 }
 
 void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason) {

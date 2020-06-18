@@ -221,11 +221,16 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
   fuchsia::modular::internal::BasemgrDebugPtr basemgr;
   fdio_service_connect(path.c_str(), basemgr.NewRequest().TakeChannel().release());
 
-  bool session_restarted = false;
-  basemgr->RestartSession([&] { session_restarted = true; });
-  RunLoopUntil([&] { return !session_shell->is_running(); });
-  RunLoopUntil([&] { return session_restarted && session_shell->is_running(); });
-  EXPECT_FALSE(mock_admin.suspend_called());
+  // Restart the session 4 times and show that device suspend is NOT invoked.
+  for (int i = 0; i < 4; i++) {
+    bool session_restarted = false;
+    basemgr->RestartSession([&] { session_restarted = true; });
+    RunLoopUntil([&] { return !session_shell->is_running(); });
+    RunLoopUntil([&] { return session_restarted; });
+    ASSERT_FALSE(mock_admin.suspend_called()) << "Suspend called on iteration #" << i;
+    RunLoopUntil([&] { return session_shell->is_running(); });
+  }
+  ASSERT_FALSE(mock_admin.suspend_called());
 }
 
 TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {

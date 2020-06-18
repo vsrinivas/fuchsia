@@ -58,8 +58,8 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
 
   ~SessionContextImpl() override = default;
 
-  // This will effectively tear down the entire instance by calling
-  // |on_session_shutdown_|.
+  // Calls |on_session_shutdown_|, which normally also results in a new
+  // session being started. Calls |callback| when complete.
   void Shutdown(ShutDownReason reason, fit::function<void()> callback);
 
  private:
