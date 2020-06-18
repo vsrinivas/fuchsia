@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod graph;
+mod graph_controller;
 mod http;
 mod jsons;
 mod package_reader;

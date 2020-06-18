@@ -46,7 +46,7 @@ impl CollectorPool {
     pub fn schedule(&self) -> Result<()> {
         info!("Collector Pool: Scheduling {} Tasks", self.collectors.len());
         for instance in self.collectors.iter() {
-            instance.collector.collect(Arc::clone(&self.model))?;
+            instance.collector.collect(Arc::clone(&self.model)).unwrap();
         }
         Ok(())
     }

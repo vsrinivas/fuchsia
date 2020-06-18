@@ -7,11 +7,12 @@ use {
         engine::hook::PluginHooks,
         engine::plugin::{Plugin, PluginDescriptor},
         model::collector::DataCollector,
-        model::model::DataModel,
-        plugins::components::{http::HttpGetter, package_reader::*, types::*, util},
+        model::model::{Component, DataModel, Manifest, Route},
+        plugins::components::{
+            graph_controller::*, http::HttpGetter, package_reader::*, types::*, util,
+        },
     },
     anyhow::{anyhow, Result},
-    futures_executor::block_on,
     lazy_static::lazy_static,
     log::{info, warn},
     regex::Regex,
@@ -27,53 +28,6 @@ lazy_static! {
 }
 pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
 
-/* ---- TAKEN FROM CL 389350 ---- */
-
-/// Defines a component. Each component has a unique id which is used to link
-/// it in the Route table. Each component also has a url and a version. This
-/// structure is intended to be lightweight and general purpose if you need to
-/// append additional information about a component make another table and
-/// index it on the `component.id`.
-pub struct Component {
-    pub id: i32,
-    pub url: String,
-    pub version: i32,
-    // Added fields below
-    pub inferred: bool,
-    // End added fields
-}
-
-/// Defines a component manifest. The `component_id` maps 1:1 to
-/// `component.id` indexes. This is stored in a different table as most queries
-/// don't need the raw manifest.
-pub struct Manifest {
-    pub component_id: i32,
-    pub manifest: String,
-    // Added fields below
-    pub uses: Vec<String>,
-    // End added fields
-}
-
-/// Defines a link between two components. The `src_id` is the `component.id`
-/// of the component giving a service or directory to the `dst_id`. The
-/// `protocol_id` refers to the Protocol with this link.
-pub struct Route {
-    pub id: i32,
-    pub src_id: i32,
-    pub dst_id: i32,
-    pub protocol_id: i32,
-}
-
-/// Defines either a FIDL or Directory protocol with some interface name such
-/// as fuchshia.foo.Bar and an optional path such as "/dev".
-pub struct Protocol {
-    pub id: i32,
-    pub interface: String,
-    pub path: String,
-}
-
-/* ---- END COPY ---- */
-
 // TODO: make this impl the DataCollector trait and actually do the collection
 // and hand off to model creation.
 pub struct PackageDataCollector {
@@ -81,22 +35,22 @@ pub struct PackageDataCollector {
 }
 
 impl PackageDataCollector {
-    async fn get_packages(&self) -> Result<Vec<PackageDefinition>> {
+    fn get_packages(&self) -> Result<Vec<PackageDefinition>> {
         // Retrieve the json packages definition from the package server.
-        let targets = self.package_reader.read_targets().await?;
+        let targets = self.package_reader.read_targets()?;
 
         let mut pkgs: Vec<PackageDefinition> = Vec::new();
         for (name, target) in targets.signed.targets.iter() {
             let pkg_def =
-                self.package_reader.read_package_definition(&name, &target.custom.merkle).await?;
+                self.package_reader.read_package_definition(&name, &target.custom.merkle)?;
             pkgs.push(pkg_def);
         }
 
         Ok(pkgs)
     }
 
-    async fn get_builtins(&self) -> Result<(Vec<PackageDefinition>, ServiceMapping)> {
-        let builtins = self.package_reader.read_builtins().await?;
+    fn get_builtins(&self) -> Result<(Vec<PackageDefinition>, ServiceMapping)> {
+        let builtins = self.package_reader.read_builtins()?;
 
         let mut packages = Vec::new();
         for package in builtins.packages {
@@ -129,30 +83,9 @@ impl PackageDataCollector {
         })
     }
 
-    /// Collects and builds a DAG of component nodes (with manifests) and routes that
-    /// connect the nodes.
-    async fn collect_manifests(&self) -> Result<()> {
-        let served_packages = self.get_packages().await?;
-
-        let (builtin_packages, builtin_services) = self.get_builtins().await?;
-
-        let services = self.merge_services(&served_packages, builtin_services).await?;
-
-        info!(
-            "Done collecting. Found {} services, {} served packages, and {} builtin packages.",
-            services.keys().len(),
-            served_packages.len(),
-            builtin_packages.len()
-        );
-
-        // TODO: Push to data model
-        PackageDataCollector::build_model(served_packages, builtin_packages, services).await?;
-        Ok(())
-    }
-
     // Combine service name->url mappings from builtins and those defined in config-data.
     // This consumes the builtins ServiceMapping as part of building the combined map.
-    async fn merge_services(
+    fn merge_services(
         &self,
         served: &Vec<PackageDefinition>,
         builtins: ServiceMapping,
@@ -165,7 +98,7 @@ impl PackageDataCollector {
                 for (name, merkle) in &pkg_def.contents {
                     if SERVICE_CONFIG_RE.is_match(&name) {
                         let service_pkg =
-                            self.package_reader.read_service_package_definition(merkle).await?;
+                            self.package_reader.read_service_package_definition(merkle)?;
 
                         if let Some(services) = service_pkg.services {
                             for (service_name, service_url) in services {
@@ -203,7 +136,7 @@ impl PackageDataCollector {
     /// Function to build the component graph model out of the packages and services retrieved
     /// by this collector.
     /// TODO: Move this to a DataModel.
-    async fn build_model(
+    fn build_model(
         served_pkgs: Vec<PackageDefinition>,
         _builtin_pkgs: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
@@ -327,14 +260,48 @@ impl PackageDataCollector {
 }
 
 impl DataCollector for PackageDataCollector {
-    fn collect(&self, _: Arc<DataModel>) -> Result<()> {
-        block_on(self.collect_manifests())
+    /// Collects and builds a DAG of component nodes (with manifests) and routes that
+    /// connect the nodes.
+    fn collect(&self, model: Arc<DataModel>) -> Result<()> {
+        let served_packages = self.get_packages()?;
+
+        let (builtin_packages, builtin_services) = self.get_builtins()?;
+
+        let services = self.merge_services(&served_packages, builtin_services)?;
+
+        info!(
+            "Done collecting. Found {} services, {} served packages, and {} builtin packages.",
+            services.keys().len(),
+            served_packages.len(),
+            builtin_packages.len()
+        );
+
+        // TODO: Push to data model
+        let (components, mut manifests, mut routes) =
+            PackageDataCollector::build_model(served_packages, builtin_packages, services)?;
+        let mut model_comps = model.components().write().unwrap();
+        for (_, val) in components.into_iter() {
+            model_comps.push(val);
+        }
+        let mut model_manifests = model.manifests().write().unwrap();
+        model_manifests.append(&mut manifests);
+        let mut model_routes = model.routes().write().unwrap();
+        model_routes.append(&mut routes);
+
+        Ok(())
     }
 }
 
 plugin!(
     ComponentGraphPlugin,
-    PluginHooks::new(vec![Arc::new(PackageDataCollector::new().unwrap())], controller_hooks! {}),
+    PluginHooks::new(
+        vec![Arc::new(PackageDataCollector::new().unwrap())],
+        controller_hooks! {
+            "/components" => ComponentGraphController::default(),
+            "/routes" => RouteGraphController::default(),
+            "/manifests" => ManifestGraphController::default(),
+        }
+    ),
     vec![]
 );
 
@@ -346,50 +313,46 @@ plugin!(
 // building logic.
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, crate::plugins::components::jsons::*, async_trait::async_trait,
-        std::cell::RefCell,
-    };
+    use {super::*, crate::plugins::components::jsons::*, std::sync::RwLock};
 
     struct MockPackageReader {
-        targets: RefCell<Vec<TargetsJson>>,
-        package_defs: RefCell<Vec<PackageDefinition>>,
-        service_package_defs: RefCell<Vec<ServicePackageDefinition>>,
-        builtins: RefCell<Vec<BuiltinsJson>>,
+        targets: RwLock<Vec<TargetsJson>>,
+        package_defs: RwLock<Vec<PackageDefinition>>,
+        service_package_defs: RwLock<Vec<ServicePackageDefinition>>,
+        builtins: RwLock<Vec<BuiltinsJson>>,
     }
 
     impl MockPackageReader {
         fn new() -> Self {
             Self {
-                targets: RefCell::new(Vec::new()),
-                package_defs: RefCell::new(Vec::new()),
-                service_package_defs: RefCell::new(Vec::new()),
-                builtins: RefCell::new(Vec::new()),
+                targets: RwLock::new(Vec::new()),
+                package_defs: RwLock::new(Vec::new()),
+                service_package_defs: RwLock::new(Vec::new()),
+                builtins: RwLock::new(Vec::new()),
             }
         }
 
         // Adds values to the FIFO queue for targets
         fn _append_target(&self, target: TargetsJson) {
-            self.targets.borrow_mut().push(target);
+            self.targets.write().unwrap().push(target);
         }
         // Adds values to the FIFO queue for package_defs
         fn _append_pkg_def(&self, package_def: PackageDefinition) {
-            self.package_defs.borrow_mut().push(package_def);
+            self.package_defs.write().unwrap().push(package_def);
         }
         // Adds values to the FIFO queue for service_package_defs
         fn append_service_pkg_def(&self, svc_pkg_def: ServicePackageDefinition) {
-            self.service_package_defs.borrow_mut().push(svc_pkg_def);
+            self.service_package_defs.write().unwrap().push(svc_pkg_def);
         }
         // Adds values to the FIFO queue for builtins
         fn _append_builtin(&self, builtin: BuiltinsJson) {
-            self.builtins.borrow_mut().push(builtin);
+            self.builtins.write().unwrap().push(builtin);
         }
     }
 
-    #[async_trait(?Send)]
     impl PackageReader for MockPackageReader {
-        async fn read_targets(&self) -> Result<TargetsJson> {
-            let mut borrow = self.targets.borrow_mut();
+        fn read_targets(&self) -> Result<TargetsJson> {
+            let mut borrow = self.targets.write().unwrap();
             {
                 if borrow.len() == 0 {
                     return Err(anyhow!("No more targets left to return. Maybe append more?"));
@@ -397,12 +360,13 @@ mod tests {
                 Ok(borrow.remove(0))
             }
         }
-        async fn read_package_definition(
+
+        fn read_package_definition(
             &self,
             _pkg_name: &str,
             _merkle: &str,
         ) -> Result<PackageDefinition> {
-            let mut borrow = self.package_defs.borrow_mut();
+            let mut borrow = self.package_defs.write().unwrap();
             {
                 if borrow.len() == 0 {
                     return Err(anyhow!("No more package_defs left to return. Maybe append more?"));
@@ -411,11 +375,11 @@ mod tests {
             }
         }
 
-        async fn read_service_package_definition(
+        fn read_service_package_definition(
             &self,
             _merkle: &str,
         ) -> Result<ServicePackageDefinition> {
-            let mut borrow = self.service_package_defs.borrow_mut();
+            let mut borrow = self.service_package_defs.write().unwrap();
             {
                 if borrow.len() == 0 {
                     return Err(anyhow!(
@@ -426,8 +390,8 @@ mod tests {
             }
         }
 
-        async fn read_builtins(&self) -> Result<BuiltinsJson> {
-            let mut borrow = self.builtins.borrow_mut();
+        fn read_builtins(&self) -> Result<BuiltinsJson> {
+            let mut borrow = self.builtins.write().unwrap();
             {
                 if borrow.len() == 0 {
                     return Err(anyhow!("No more builtins left to return. Maybe append more?"));
@@ -518,7 +482,7 @@ mod tests {
         let served = vec![pkg];
         let builtins = HashMap::new();
 
-        let result = block_on(collector.merge_services(&served, builtins)).unwrap();
+        let result = collector.merge_services(&served, builtins).unwrap();
         assert_eq!(0, result.len());
     }
 
@@ -535,7 +499,7 @@ mod tests {
         let served = vec![pkg];
         let builtins = HashMap::new();
 
-        let result = block_on(collector.merge_services(&served, builtins)).unwrap();
+        let result = collector.merge_services(&served, builtins).unwrap();
         assert_eq!(0, result.len());
     }
 
@@ -561,7 +525,7 @@ mod tests {
         let served = vec![pkg];
         let builtins = HashMap::new();
 
-        let result = block_on(collector.merge_services(&served, builtins)).unwrap();
+        let result = collector.merge_services(&served, builtins).unwrap();
         assert_eq!(1, result.len());
         assert!(result.contains_key("fuchsia.test.foo.bar"));
         assert_eq!(
@@ -594,7 +558,7 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/foo#meta/builtin.cmx"),
         );
 
-        let result = block_on(collector.merge_services(&served, builtins)).unwrap();
+        let result = collector.merge_services(&served, builtins).unwrap();
         assert_eq!(1, result.len());
         assert!(result.contains_key("fuchsia.test.foo.bar"));
         assert_eq!(
@@ -631,7 +595,7 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/foo#meta/builtin.cmx"),
         );
 
-        let result = block_on(collector.merge_services(&served, builtins)).unwrap();
+        let result = collector.merge_services(&served, builtins).unwrap();
         assert_eq!(3, result.len());
     }
 
@@ -649,7 +613,7 @@ mod tests {
         let services = HashMap::new();
 
         let (components, manifests, routes) =
-            block_on(PackageDataCollector::build_model(served, builtins, services)).unwrap();
+            PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(2, components.len());
         assert_eq!(1, manifests.len());
@@ -674,7 +638,7 @@ mod tests {
         );
 
         let (components, manifests, routes) =
-            block_on(PackageDataCollector::build_model(served, builtins, services)).unwrap();
+            PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(2, components.len());
         assert_eq!(1, manifests.len());
@@ -698,7 +662,7 @@ mod tests {
         let services = HashMap::new();
 
         let (components, manifests, routes) =
-            block_on(PackageDataCollector::build_model(served, builtins, services)).unwrap();
+            PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(0, components.len());
         assert_eq!(0, manifests.len());
@@ -723,7 +687,7 @@ mod tests {
         let services = HashMap::new();
 
         let (components, manifests, routes) =
-            block_on(PackageDataCollector::build_model(served, builtins, services)).unwrap();
+            PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(3, components.len());
         assert_eq!(2, manifests.len());
@@ -753,7 +717,7 @@ mod tests {
         );
 
         let (components, manifests, routes) =
-            block_on(PackageDataCollector::build_model(served, builtins, services)).unwrap();
+            PackageDataCollector::build_model(served, builtins, services).unwrap();
 
         assert_eq!(2, components.len());
         assert_eq!(2, manifests.len());

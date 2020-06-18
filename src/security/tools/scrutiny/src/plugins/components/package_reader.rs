@@ -5,7 +5,6 @@
 use {
     crate::plugins::components::{http::*, jsons::*, types::*, util},
     anyhow::Result,
-    async_trait::async_trait,
     fuchsia_archive::Reader as FarReader,
     std::collections::HashMap,
     std::fs::File,
@@ -18,28 +17,20 @@ pub const CM_EXTENSIONS: &[&str] = &[".cm", ".cmx"];
 
 /// Trait that defines functions for the retrieval of the bytes that define package definitions.
 /// Used primarily to allow for nicer testing via mocking out the backing `fx serve` instance.
-#[async_trait(?Send)]
-pub trait PackageReader {
+pub trait PackageReader: Send + Sync {
     /// Returns information for all packages served by an `fx serve` instance.
-    async fn read_targets(&self) -> Result<TargetsJson>;
+    fn read_targets(&self) -> Result<TargetsJson>;
     /// Takes a package name and a merkle hash and returns the package definition
     /// for the specified merkle hash. All valid CF files specified by the FAR
     /// archive pointed to by the merkle hash are parsed and returned.
     /// The package name is not validated.
     ///
     /// Currently only CFv1 is supported, CFv2 support is tracked here (fxb/53347).
-    async fn read_package_definition(
-        &self,
-        pkg_name: &str,
-        merkle: &str,
-    ) -> Result<PackageDefinition>;
+    fn read_package_definition(&self, pkg_name: &str, merkle: &str) -> Result<PackageDefinition>;
     /// Reads the service package defined by the merkle hash.
-    async fn read_service_package_definition(
-        &self,
-        merkle: &str,
-    ) -> Result<ServicePackageDefinition>;
+    fn read_service_package_definition(&self, merkle: &str) -> Result<ServicePackageDefinition>;
     /// Reads the preset builtins definition file as a json blob.
-    async fn read_builtins(&self) -> Result<BuiltinsJson>;
+    fn read_builtins(&self) -> Result<BuiltinsJson>;
 }
 
 pub struct PackageServerReader {
@@ -52,27 +43,22 @@ impl PackageServerReader {
         Self { fuchsia_root: fuchsia_root, pkg_getter: pkg_getter }
     }
 
-    async fn read_blob_raw(&self, merkle: &str) -> Result<Vec<u8>> {
-        Ok(self.pkg_getter.read_raw(&format!("/blobs/{}", merkle)[..]).await?)
+    fn read_blob_raw(&self, merkle: &str) -> Result<Vec<u8>> {
+        Ok(self.pkg_getter.read_raw(&format!("/blobs/{}", merkle)[..])?)
     }
 }
 
-#[async_trait(?Send)]
 impl PackageReader for PackageServerReader {
-    async fn read_targets(&self) -> Result<TargetsJson> {
-        let resp_b = self.pkg_getter.read_raw("/targets.json").await?;
+    fn read_targets(&self) -> Result<TargetsJson> {
+        let resp_b = self.pkg_getter.read_raw("/targets.json")?;
         let resp = str::from_utf8(&resp_b)?;
 
         Ok(serde_json::from_str(&resp)?)
     }
 
-    async fn read_package_definition(
-        &self,
-        pkg_name: &str,
-        merkle: &str,
-    ) -> Result<PackageDefinition> {
+    fn read_package_definition(&self, pkg_name: &str, merkle: &str) -> Result<PackageDefinition> {
         // Retrieve the far archive from the package server.
-        let resp_b = self.read_blob_raw(merkle).await?;
+        let resp_b = self.read_blob_raw(merkle)?;
         let mut cursor = Cursor::new(resp_b);
         let mut far = FarReader::new(&mut cursor)?;
 
@@ -120,17 +106,14 @@ impl PackageReader for PackageServerReader {
         Ok(pkg_def)
     }
 
-    async fn read_service_package_definition(
-        &self,
-        merkle: &str,
-    ) -> Result<ServicePackageDefinition> {
-        let cfg_pkg_b = self.read_blob_raw(&merkle).await?;
+    fn read_service_package_definition(&self, merkle: &str) -> Result<ServicePackageDefinition> {
+        let cfg_pkg_b = self.read_blob_raw(&merkle)?;
         let mut cfg_pkg_str = str::from_utf8(&cfg_pkg_b)?;
 
         Ok(serde_json::from_str(&mut cfg_pkg_str)?)
     }
 
-    async fn read_builtins(&self) -> Result<BuiltinsJson> {
+    fn read_builtins(&self) -> Result<BuiltinsJson> {
         let file = File::open(&format!(
             "{}/scripts/component_graph/server/static/builtins.json",
             self.fuchsia_root
@@ -146,30 +129,28 @@ mod tests {
     use {
         super::*,
         fuchsia_archive::write,
-        futures_executor::block_on,
-        std::cell::RefCell,
         std::collections::BTreeMap,
         std::io::{Cursor, Error, ErrorKind, Read},
+        std::sync::RwLock,
     };
 
     struct MockPackageGetter {
-        bytes: RefCell<Vec<Vec<u8>>>,
+        bytes: RwLock<Vec<Vec<u8>>>,
     }
 
     impl MockPackageGetter {
         fn new() -> Self {
-            Self { bytes: RefCell::new(Vec::new()) }
+            Self { bytes: RwLock::new(Vec::new()) }
         }
 
         fn append_bytes(&self, byte_vec: Vec<u8>) {
-            self.bytes.borrow_mut().push(byte_vec);
+            self.bytes.write().unwrap().push(byte_vec);
         }
     }
 
-    #[async_trait(?Send)]
     impl PackageGetter for MockPackageGetter {
-        async fn read_raw(&self, _path: &str) -> std::io::Result<Vec<u8>> {
-            let mut borrow = self.bytes.borrow_mut();
+        fn read_raw(&self, _path: &str) -> std::io::Result<Vec<u8>> {
+            let mut borrow = self.bytes.write().unwrap();
             {
                 if borrow.len() == 0 {
                     return Err(Error::new(
@@ -213,7 +194,7 @@ mod tests {
         mock_getter.append_bytes(target.into_inner());
 
         let pkg_reader = PackageServerReader::new(String::from("/"), Box::new(mock_getter));
-        let result = block_on(pkg_reader.read_package_definition("foo", "bar")).unwrap();
+        let result = pkg_reader.read_package_definition("foo", "bar").unwrap();
         assert_eq!(result.contents.len(), 3);
         assert_eq!(result.contents["a"], "b");
         assert_eq!(result.contents["c"], "d");

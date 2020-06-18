@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait,
     lazy_static::lazy_static,
     regex::Regex,
     std::io::{BufRead, BufReader, Error, ErrorKind, Read, Result, Write},
@@ -19,9 +18,8 @@ lazy_static! {
 }
 const HTTP_200: usize = 200;
 
-#[async_trait(?Send)]
-pub trait PackageGetter {
-    async fn read_raw(&self, path: &str) -> Result<Vec<u8>>;
+pub trait PackageGetter: Send + Sync {
+    fn read_raw(&self, path: &str) -> Result<Vec<u8>>;
 }
 
 /// HTTP Getter object meant to make a simple HTTP GET request to a provided address and path.
@@ -36,9 +34,8 @@ impl HttpGetter {
     }
 }
 
-#[async_trait(?Send)]
 impl PackageGetter for HttpGetter {
-    async fn read_raw(&self, path: &str) -> Result<Vec<u8>> {
+    fn read_raw(&self, path: &str) -> Result<Vec<u8>> {
         // Connect to package server
         let mut stream = TcpStream::connect(&self.address)?;
         stream.set_read_timeout(*READ_TIMEOUT)?;
