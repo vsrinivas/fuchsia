@@ -171,7 +171,7 @@ common_test_contents = [
   "//zircon/system/utest/core:vmar",
   "//zircon/system/utest/core:vmo",
   "//zircon/system/utest/dlfcn",
-  "//zircon/system/utest/evil",
+  "//src/zircon/tests/evil",
   "//zircon/system/utest/fidl:fidl-handle-policy-test-app",
   "//zircon/system/utest/fidl",
   "//zircon/system/utest/fs",
