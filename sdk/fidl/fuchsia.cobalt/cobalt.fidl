@@ -751,15 +751,9 @@ protocol SystemDataUpdater {
     SetExperimentState(vector<Experiment>:MAX experiments)
         -> (Status status);
 
-    /// Sets Cobalt's view of the system-wide channel replacing the existing values.
-    ///
-    /// `current_channel` The channel that the device last used as an update source. This value may
-    /// be empty to indicate that the device is not currently associated with any channel.
-    SetChannel(string:MAX_CHANNEL_NAME_LENGTH current_channel) -> (Status status);
-
     /// Sets Cobalt's view of the system-wide distribution information replacing the
     /// existing values.
     ///
     /// `info` The specifications of the current system's software distribution.
-    [Transitional] SetSoftwareDistributionInfo(SoftwareDistributionInfo info) -> (Status status);
+    SetSoftwareDistributionInfo(SoftwareDistributionInfo info) -> (Status status);
 };

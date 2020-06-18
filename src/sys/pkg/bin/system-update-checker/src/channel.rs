@@ -573,14 +573,6 @@ mod tests {
                         fasync::spawn_local(async move {
                             while let Some(req) = stream.try_next().await.unwrap() {
                                 match req {
-                                    SystemDataUpdaterRequest::SetChannel {
-                                        current_channel,
-                                        responder,
-                                    } => {
-                                        state.lock().call_count += 1;
-                                        state.lock().channel = Some(current_channel);
-                                        responder.send(CobaltStatus::Ok).unwrap();
-                                    }
                                     SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
                                         info,
                                         responder,
@@ -679,10 +671,6 @@ mod tests {
             fasync::spawn_local(async move {
                 while let Some(req) = stream.try_next().await.unwrap_or(None) {
                     match req {
-                        SystemDataUpdaterRequest::SetChannel { current_channel, responder } => {
-                            *chan.lock() = Some(current_channel);
-                            responder.send(CobaltStatus::Ok).unwrap();
-                        }
                         SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
                             info,
                             responder,

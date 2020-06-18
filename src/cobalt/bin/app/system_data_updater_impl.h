@@ -27,8 +27,6 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   void SetExperimentState(std::vector<fuchsia::cobalt::Experiment> experiments,
                           SetExperimentStateCallback callback) override;
 
-  void SetChannel(std::string current_channel, SetChannelCallback callback) override;
-
   void SetSoftwareDistributionInfo(fuchsia::cobalt::SoftwareDistributionInfo current_info,
                                    SetSoftwareDistributionInfoCallback callback) override;
 

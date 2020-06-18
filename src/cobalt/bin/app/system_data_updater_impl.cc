@@ -78,13 +78,6 @@ void SystemDataUpdaterImpl::DeleteData(const std::string& suffix) {
   }
 }
 
-void SystemDataUpdaterImpl::SetChannel(std::string current_channel, SetChannelCallback callback) {
-  fuchsia::cobalt::SoftwareDistributionInfo current_info;
-  current_info.set_current_channel(std::move(current_channel));
-  SetSoftwareDistributionInfo(std::move(current_info),
-                              [&callback](Status status) { callback(status); });
-}
-
 void SystemDataUpdaterImpl::SetSoftwareDistributionInfo(
     fuchsia::cobalt::SoftwareDistributionInfo current_info,
     SetSoftwareDistributionInfoCallback callback) {

@@ -132,22 +132,6 @@ TEST_F(SystemDataUpdaterImplTests, UpdateExperimentState) {
   EXPECT_EQ(experiments().front().arm_id(), kUpdatedArmId);
 }
 
-TEST_F(SystemDataUpdaterImplTests, SetChannel) {
-  SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
-
-  EXPECT_EQ(channel(), "<unset>");
-
-  system_data_updater->SetChannel("", [](Status s) {});
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(channel(), "<unknown>");
-
-  system_data_updater->SetChannel("fishfood", [](Status s) {});
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(channel(), "fishfood");
-}
-
 TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
   SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
 
@@ -192,26 +176,6 @@ std::unique_ptr<SystemDataUpdaterImpl> make_updater(SystemData* data) {
 }
 
 }  // namespace
-
-TEST(SystemDataUpdaterImpl, TestChannelPersistence) {
-  auto system_data = make_data();
-  auto updater = make_updater(system_data.get());
-
-  EXPECT_EQ(system_data->system_profile().channel(), "<unset>");
-  updater->SetChannel("fishfood", [](Status s) {});
-  EXPECT_EQ(system_data->system_profile().channel(), "fishfood");
-
-  // Test restoring data.
-  system_data = make_data();
-  updater = make_updater(system_data.get());
-  EXPECT_EQ(system_data->system_profile().channel(), "fishfood");
-
-  // Test default behavior with no data.
-  updater->ClearData();
-  system_data = make_data();
-  updater = make_updater(system_data.get());
-  EXPECT_EQ(system_data->system_profile().channel(), "<unset>");
-}
 
 TEST(SystemDataUpdaterImpl, TestSoftwareDistributionInfoPersistence) {
   auto system_data = make_data();

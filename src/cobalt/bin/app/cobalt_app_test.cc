@@ -224,16 +224,20 @@ TEST_F(CobaltAppTest, LogEvent) {
   EXPECT_EQ(event.event_occurred_event().event_code(), 2);
 }
 
-TEST_F(CobaltAppTest, SetChannel) {
+TEST_F(CobaltAppTest, SetSoftwareDistributionInfo) {
   fuchsia::cobalt::SystemDataUpdaterPtr system_data_updater;
   context_provider_.ConnectToPublicService(system_data_updater.NewRequest());
 
   Status status = Status::INTERNAL_ERROR;
-  system_data_updater->SetChannel("new-channel-name",
-                                  [&](fuchsia::cobalt::Status status_) { status = status_; });
+  fuchsia::cobalt::SoftwareDistributionInfo info;
+  info.set_current_channel("new-channel-name");
+  info.set_current_realm("new-realm-name");
+  system_data_updater->SetSoftwareDistributionInfo(
+      std::move(info), [&](fuchsia::cobalt::Status status_) { status = status_; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, fuchsia::cobalt::Status::OK);
   EXPECT_EQ(fake_service_->system_data()->channel(), "new-channel-name");
+  EXPECT_EQ(fake_service_->system_data()->realm(), "new-realm-name");
 }
 
 TEST_F(CobaltAppTest, CreateMetricEventLogger) {

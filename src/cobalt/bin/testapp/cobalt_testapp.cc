@@ -85,12 +85,6 @@ bool CobaltTestApp::RunTests() {
   return true;
 }
 
-void CobaltTestApp::SetChannel(const std::string &current_channel) {
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  system_data_updater_->SetChannel(current_channel, &status);
-  FX_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set channel";
-}
-
 bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
   // TODO(fxb/52750) We try each of these tests twice in case the failure
   // reason is that the calendar date has changed mid-test.
@@ -179,7 +173,12 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
       << "CreateLoggerSimple() => " << StatusToString(status);
 
   services.Connect(system_data_updater_.NewRequest());
-  SetChannel("devhost");
+  status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  fuchsia::cobalt::SoftwareDistributionInfo info;
+  info.set_current_channel("devhost");
+  info.set_current_realm("");
+  system_data_updater_->SetSoftwareDistributionInfo(std::move(info), &status);
+  FX_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set software distribution info";
 
   services.Connect(cobalt_controller_.NewRequest());
 
