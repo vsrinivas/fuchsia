@@ -2,8 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia-sdk.gni")
 import("//build/shellscript_test.gni")
+import("//third_party/fuchsia-sdk/build/build_id_dir.gni")
+import("//third_party/fuchsia-sdk/build/cipd.gni")
 import("//third_party/fuchsia-sdk/build/component.gni")
 import("//third_party/fuchsia-sdk/build/package.gni")
 
@@ -120,13 +123,56 @@ fuchsia_package("resource_pkg") {
   deps = [ ":with_resources" ]
 }
 
+# Test the CIPD packaging and build-id dir generation.
+
+fuchsia_cipd_package("cipd_package") {
+  package_definition_name = "cipd.yaml"
+  package = "test/fuchsia/cipd-\${targetarch}"
+  description = "Test package for CIPD rule template."
+
+  deps = [ ":package" ]
+
+  sources = [ "${root_gen_dir}/tests/package/package/package.far" ]
+}
+
+#
+# Create a .build-id directory to contain all the unstripped binaries
+# for the Fucshia packages being uploaded to CIPD.
+#
+_build_ids_path = "${root_build_dir}/cipd/.build-id"
+build_id_dir(".build-id") {
+  output_path = _build_ids_path
+
+  # Include symbols from clang as well
+  build_id_dirs = [ "${clang_base_path}/lib/debug/.build-id" ]
+  deps = [ ":package" ]
+}
+
+#
+# Package all the symbols for all Fuchsia packages into a single
+# CIPD package.
+fuchsia_cipd_package("debug_symbols") {
+  package_definition_name = "debug_symbols.yaml"
+  package_definition_dir = "${target_gen_dir}/${target_name}"
+  package = "test/fuchsia/debug-symbols-\${targetarch}"
+  description = "Debugging symbols for prebuilt binaries from tests."
+  package_root = _build_ids_path
+
+  # Include the .build-id directory, which is at the root.
+  directories = [ "." ]
+
+  deps = [ ":.build-id" ]
+}
+
 # Copy far.sh to the output dir. This script is used
 # in the static analysis test.
 # manifest_check.sh looks for a specific manifest file.
 copy("copy_test_scripts") {
   sources = [
+    "//tests/package/cipd_check.sh",
     "//tests/package/far.sh",
     "//tests/package/manifest_check.sh",
+    "//tests/package/symbol_check.sh",
   ]
   outputs = [ "${target_gen_dir}/{{source_file_part}}" ]
 }
@@ -230,12 +276,38 @@ shellscript_test("vk_check_test") {
   ]
 }
 
+shellscript_test("verify_cipd") {
+  script_template_file = "run_verify_cipd_template.txt"
+  template_keys = [
+    "cipd_script_path",
+    "cipd_package",
+    "symbols_script_path",
+    "symbols_package",
+    "out_dir",
+  ]
+  template_data = {
+    cipd_script_path = rebase_path("${target_gen_dir}/cipd_check.sh")
+    cipd_package =
+        rebase_path("${root_gen_dir}/tests/package/cipd_package/cipd.yaml")
+    symbols_script_path = rebase_path("${target_gen_dir}/symbol_check.sh")
+    symbols_package = rebase_path(
+            "${root_gen_dir}/tests/package/debug_symbols/debug_symbols.yaml")
+    out_dir = rebase_path(root_build_dir)
+  }
+  data_deps = [
+    ":cipd_package",
+    ":copy_test_scripts",
+    ":debug_symbols",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":manifest_check_test",
     ":resource_check_test",
     ":validate_merged",
+    ":verify_cipd",
     ":vk_check_test",
   ]
   foreach(pkg, _packages) {

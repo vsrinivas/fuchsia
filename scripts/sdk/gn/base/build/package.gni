@@ -158,6 +158,11 @@ template("fuchsia_package") {
       }
     }
     write_runtime_deps = _runtime_deps_file
+
+    # Allows ids.txt paths to be collected by dependent targets.
+    metadata = {
+      ids_txt_paths = [ _build_ids_file ]
+    }
   }
 
   # Creates a Fuchsia metadata package.

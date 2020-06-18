@@ -13,8 +13,8 @@ fi
 
 NUM_FILES=$(bzcat "${ARCHIVE}" | tar t | wc -l)
 
-if (( "${NUM_FILES}" != 4 )); then
-    echo "ERROR: Expected 4 file in ${ARCHIVE}, but got ${NUM_FILES}"
+if (( "${NUM_FILES}" != 3 )); then
+    echo "ERROR: Expected 3 file in ${ARCHIVE}, but got ${NUM_FILES}"
     echo "Listing of archive:"
     bzcat "${ARCHIVE}" | tar tv
     exit 2

@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eu
+
+if [[ -e "{cipd_script_path}" ]]; then
+    "{cipd_script_path}" "{out_dir}" "{cipd_package}"
+else
+    echo "Error! {cipd_script_path} not found!"
+    exit 2
+fi
+
+if [[ -e "{symbols_script_path}" ]]; then
+    "{symbols_script_path}" "{out_dir}" "{symbols_package}"
+else
+    echo "Error! {symbols_script_path} not found!"
+      exit 2
+fi
+exit 0
