@@ -6,6 +6,8 @@ import("//build/package.gni")
 
 source_set("lib") {
   sources = [
+    "crash_report_builder.cc",
+    "crash_report_builder.h",
     "crash_report_generation.cc",
     "crash_report_generation.h",
     "exception_broker.cc",

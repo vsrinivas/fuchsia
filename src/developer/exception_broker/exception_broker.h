@@ -12,6 +12,7 @@
 
 #include <optional>
 
+#include "src/developer/exception_broker/crash_report_builder.h"
 #include "src/developer/exception_broker/process_limbo_manager.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -51,8 +52,7 @@ class ExceptionBroker : public fuchsia::exception::Handler {
 
  private:
   void FileCrashReport(fuchsia::exception::ProcessException);  // |use_limbo_| == false.
-  void FileCrashReport(uint64_t id, std::optional<std::string> component_url,
-                       std::optional<std::string> realm_path);
+  void FileCrashReport(uint64_t id);
 
   ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services);
 
@@ -61,7 +61,7 @@ class ExceptionBroker : public fuchsia::exception::Handler {
   // As we create a new connection each time an exception is passed on to us, we need to
   // keep track of all the current outstanding connections.
   // These will be deleted as soon as the call returns or fails.
-  std::map<uint64_t, fuchsia::exception::ProcessException> process_exceptions_;
+  std::map<uint64_t, CrashReportBuilder> crash_report_builders_;
   std::map<uint64_t, fuchsia::feedback::CrashReporterPtr> crash_reporter_connections_;
   std::map<uint64_t, fuchsia::sys::internal::IntrospectPtr> introspect_connections_;
   uint64_t next_connection_id_ = 1;
