@@ -9,13 +9,13 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_sys as sys;
-use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_component::client::AppBuilder;
 use fuchsia_zircon as zx;
 
 use anyhow::{self, Context};
-use futures::future::{self, Future, FutureExt, TryFutureExt};
-use futures::stream::TryStreamExt;
+use futures::future::{self, Future, FutureExt as _};
+use futures::stream::TryStreamExt as _;
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
@@ -276,7 +276,7 @@ async fn sends_router_solicitations<E: Endpoint>(name: &str) -> Result {
                 )
             })
             .try_next()
-            .map_err(|e| anyhow::anyhow!("error getting OnData event: {}", e))
+            .map(|r| r.context("error getting OnData event"))
             .on_timeout((EXPECTED_ROUTER_SOLICITATION_INTERVAL + extra_timeout).after_now(), || {
                 // If we already observed `EXPECTED_ROUTER_SOLICIATIONS` RS, then we shouldn't
                 // have gotten any more; the timeout is expected.
@@ -356,7 +356,7 @@ async fn slaac_with_privacy_extensions<E: Endpoint>(name: &str) -> Result {
             )
         })
         .try_next()
-        .map_err(|e| anyhow::anyhow!("error getting OnData event: {}", e))
+        .map(|r| r.context("error getting OnData event"))
         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
             Err(anyhow::anyhow!("timed out waiting for RS packet"))
         })
@@ -422,7 +422,7 @@ async fn slaac_with_privacy_extensions<E: Endpoint>(name: &str) -> Result {
             future::ok(None)
         })
         .try_next()
-        .map_err(|e| anyhow::anyhow!("error getting OnInterfaceChanged event: {}", e))
+        .map(|r| r.context("error getting OnInterfaceChanged event"))
         .on_timeout(
             (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
                 + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
@@ -481,7 +481,7 @@ async fn add_address_for_dad<
             )
         })
         .try_next()
-        .map_err(|e| anyhow::anyhow!("error getting OnData event: {}", e))
+        .map(|r| r.context("error getting OnData event"))
         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
             Err(anyhow::anyhow!(
                 "timed out waiting for a neighbor solicitation targetting {}",
@@ -608,7 +608,7 @@ async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
             future::ok(None)
         })
         .try_next()
-        .map_err(|e| anyhow::anyhow!("error getting OnInterfaceChanged event: {}", e))
+        .map(|r| r.context("error getting OnInterfaceChanged event"))
         .on_timeout(
             (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
                 + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)

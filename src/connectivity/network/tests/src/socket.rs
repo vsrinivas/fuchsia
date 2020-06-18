@@ -5,7 +5,7 @@
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
-use futures::{TryFutureExt as _, TryStreamExt as _};
+use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
 use netstack_testing_macros::variants_test;
 use packet::Serializer;
@@ -255,9 +255,9 @@ async fn test_ip_endpoints_socket() -> Result {
     // able to complete for IPv6 addresses.
     let (_client_id, _server_id) = futures::future::try_join(
         install_ip_device(&client, client_device, &mut [CLIENT_ADDR_V4, CLIENT_ADDR_V6])
-            .map_err(|e| e.context("client setup failed")),
+            .map(|r| r.context("client setup failed")),
         install_ip_device(&server, server_device, &mut [SERVER_ADDR_V4, SERVER_ADDR_V6])
-            .map_err(|e| e.context("server setup failed")),
+            .map(|r| r.context("server setup failed")),
     )
     .await
     .context("setup failed")?;

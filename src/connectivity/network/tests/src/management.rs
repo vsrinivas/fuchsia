@@ -7,6 +7,7 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_dhcp as dhcp;
 use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_stack as net_stack;
+use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netstack as netstack;
 use fuchsia_async as fasync;
 
@@ -306,10 +307,8 @@ async fn test_wlan_ap_dhcp_server() -> Result {
         let () = stack
             .del_ethernet_interface(wlan_ap_id.into())
             .await
-            .context("delete interface request")?
-            .map_err(|e| {
-                anyhow::anyhow!("failed to delete interface with id = {}: {:?}", wlan_ap_id, e)
-            })?;
+            .squash_result()
+            .with_context(|| format!("failed to delete interface with id = {}", wlan_ap_id))?;
         let () = check_dhcp_status(&dhcp_server, false)
             .await
             .context("check DHCP server stopped after interface removed")?;

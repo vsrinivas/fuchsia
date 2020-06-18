@@ -68,7 +68,7 @@ where
             future::ok(None)
         })
         .try_next()
-        .map_err(|e| anyhow::anyhow!("error getting OnInterfaceChanged event: {}", e))
+        .map_err(|e: S::Error| anyhow::anyhow!("error getting OnInterfaceChanged event: {}", e))
         .on_timeout(timeout.after_now(), || {
             Err(anyhow::anyhow!("timed out waiting for interface up event"))
         })

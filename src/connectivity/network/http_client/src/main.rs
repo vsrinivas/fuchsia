@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context as _, Error},
     fidl_fuchsia_net_http as net_http,
-    fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_async::{self as fasync, TimeoutExt as _},
     fuchsia_component::server::ServiceFs,
     fuchsia_hyper as fhyper,
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -219,7 +219,7 @@ impl Loader {
                 Some(net_http::Body::Stream(socket)) => {
                     let mut stream = fasync::Socket::from_socket(socket)?
                         .into_datagram_stream()
-                        .map_err(|status| Error::from(status));
+                        .map(|r| r.context("reading from datagram stream"));
                     let mut bytes = Vec::new();
                     while let Some(chunk) = stream.next().await {
                         bytes.extend(chunk?);

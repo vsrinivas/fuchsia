@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     dns::{
         async_resolver::{Handle, Resolver},
-        policy::{ServerConfigSink, ServerList},
+        policy::{ServerConfigSink, ServerConfigSinkError, ServerList},
     },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext as net_ext,
@@ -20,7 +20,7 @@ use {
     futures::{
         channel::mpsc,
         task::{Context, Poll},
-        FutureExt, Sink, SinkExt, StreamExt, TryFutureExt, TryStreamExt,
+        FutureExt as _, Sink, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
     },
     parking_lot::RwLock,
     std::pin::Pin,
@@ -423,10 +423,10 @@ fn create_policy_fut<T: ResolverLookup>(
             .sink_map_err(never::Never::into_any::<anyhow::Error>),
         config_state,
     );
-    let policy_fut = servers_config_source
-        .map(Ok)
-        .forward(policy)
-        .map_err(|e| anyhow::anyhow!("Sink error {:?}", e));
+    let policy_fut = servers_config_source.map(Ok).forward(policy).map_err(|e| match e {
+        ServerConfigSinkError::InvalidArg => anyhow::anyhow!("Sink error {:?}", e),
+        ServerConfigSinkError::SinkError(e) => e.context("Sink error"),
+    });
     (servers_config_sink, policy_fut)
 }
 

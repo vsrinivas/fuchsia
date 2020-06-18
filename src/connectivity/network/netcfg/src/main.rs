@@ -22,11 +22,11 @@ use fidl_fuchsia_hardware_ethernet as feth;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
-use fidl_fuchsia_net_ext as fnet_ext;
-use fidl_fuchsia_net_ext::IntoExt as _;
+use fidl_fuchsia_net_ext::{self as fnet_ext, IntoExt as _};
 use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
+use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
 use fuchsia_component::client::connect_to_service;
@@ -648,7 +648,7 @@ impl<'a> NetCfg<'a> {
                 let client = device
                     .into_channel()
                     .map_err(|feth::DeviceProxy { .. }| {
-                        anyhow::anyhow!("failed to convert device proxy into channel",)
+                        anyhow::anyhow!("failed to convert device proxy into channel")
                     })?
                     .into_zx_channel();
 
@@ -748,20 +748,16 @@ impl<'a> NetCfg<'a> {
                 .stack
                 .enable_packet_filter(nic_id.into())
                 .await
-                .context("couldn't call enable_packet_filter")?
-                .map_err(|e: fnet_stack::Error| {
-                    anyhow::anyhow!("failed to enable packet filter with error = {:?}", e)
-                })?;
+                .squash_result()
+                .context("failed to enable packet filter")?;
         } else {
             info!("disable filter for nic {}", nic_id);
             let () = self
                 .stack
                 .disable_packet_filter(nic_id.into())
                 .await
-                .context("couldn't call disable_packet_filter")?
-                .map_err(|e: fnet_stack::Error| {
-                    anyhow::anyhow!("failed to disable packet filter with error = {:?}", e)
-                })?;
+                .squash_result()
+                .context("couldn't call disable_packet_filter")?;
         };
 
         match config.ip_address_config {

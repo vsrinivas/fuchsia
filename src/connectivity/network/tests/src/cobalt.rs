@@ -36,8 +36,11 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         let (events, more) = watch
             .await
             .context("failed to call watch_logs")?
-            // fidl_fuchsia_cobalt::QueryError doesn't implement thiserror::Error.
-            .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+            // fidl_fuchsia_cobalt_test::QueryError doesn't implement thiserror::Error and
+            // anyhow::context::ext::StdError.
+            .map_err(|e: fidl_fuchsia_cobalt_test::QueryError| {
+                anyhow::format_err!("queryerror: {:?}", e)
+            })?;
         assert!(!more);
         Ok((res, events))
     }
