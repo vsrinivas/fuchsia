@@ -325,6 +325,10 @@ bool set_migrate_fn_test() {
         break;
       case Thread::MigrateStage::After:
         migrate_state.next_stage = Thread::MigrateStage::Exiting;
+        if (thread->LastCpuLocked() != current_cpu) {
+          UNITTEST_FAIL_TRACEF("Expected last CPU to be current CPU after migrate.");
+          migrate_state.success = false;
+        }
         break;
       case Thread::MigrateStage::Exiting:
         break;

@@ -743,16 +743,17 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                 fair_run_queue_.is_empty() ? "[none]" : fair_run_queue_.front().name_,
                 deadline_run_queue_.is_empty() ? "[none]" : deadline_run_queue_.front().name_);
 
-  // Call the migrate function if the thread has moved between CPUs.
-  if (next_state->last_cpu_ != INVALID_CPU && next_state->last_cpu_ != next_state->curr_cpu_) {
-    next_thread->CallMigrateFnLocked(Thread::MigrateStage::After);
-  }
-
   // Update the state of the current and next thread.
   current_thread->preempt_pending_ = false;
   next_thread->state_ = THREAD_RUNNING;
+  const cpu_num_t last_cpu = next_state->last_cpu_;
   next_state->last_cpu_ = current_cpu;
   next_state->curr_cpu_ = current_cpu;
+
+  // Call the migrate function if the thread has moved between CPUs.
+  if (last_cpu != INVALID_CPU && last_cpu != current_cpu) {
+    next_thread->CallMigrateFnLocked(Thread::MigrateStage::After);
+  }
 
   active_thread_ = next_thread;
 
