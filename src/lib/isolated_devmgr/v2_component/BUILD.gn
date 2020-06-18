@@ -78,6 +78,7 @@ source_set("client") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.device",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
