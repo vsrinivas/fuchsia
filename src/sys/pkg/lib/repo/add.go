@@ -21,12 +21,10 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
-
-	"golang.org/x/crypto/ssh"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
 const (
-	repoAddCmdTemplate = "pkgctl repo add --file %s"
 	defaultInstallPath = "/tmp/config.json"
 	rootJSON           = "root.json"
 
@@ -38,7 +36,7 @@ const (
 
 // AddFromConfig writes the given config to the given remote install path and
 // adds it as an update source.
-func AddFromConfig(ctx context.Context, client *ssh.Client, config *Config) error {
+func AddFromConfig(ctx context.Context, client *sshutil.Client, config *Config) error {
 	sh, err := newRemoteShell(client)
 	if err != nil {
 		return err
@@ -78,22 +76,22 @@ func addFromConfig(ctx context.Context, config *Config, sh shell, installPath st
 	return sh.run(ctx, repoAddCmd(installPath))
 }
 
-func repoAddCmd(file string) string {
-	return fmt.Sprintf(repoAddCmdTemplate, file)
+func repoAddCmd(file string) []string {
+	return []string{"pkgctl", "repo", "add", "--file", file}
 }
 
 type shell interface {
 	writerAt(string) (io.WriteCloser, error)
-	run(context.Context, string) error
+	run(context.Context, []string) error
 }
 
 type remoteShell struct {
-	sshClient  *ssh.Client
+	sshClient  *sshutil.Client
 	sftpClient *sftp.Client
 }
 
-func newRemoteShell(sshClient *ssh.Client) (*remoteShell, error) {
-	sftpClient, err := sftp.NewClient(sshClient)
+func newRemoteShell(sshClient *sshutil.Client) (*remoteShell, error) {
+	sftpClient, err := sshClient.NewSFTPClient()
 	if err != nil {
 		return nil, err
 	}
@@ -107,16 +105,8 @@ func (sh remoteShell) writerAt(remote string) (io.WriteCloser, error) {
 	return sh.sftpClient.Create(remote)
 }
 
-func (sh remoteShell) run(ctx context.Context, cmd string) error {
-	session, err := sh.sshClient.NewSession()
-	if err != nil {
-		return err
-	}
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	defer session.Close()
-	logger.Debugf(ctx, "running command: %v", cmd)
-	return session.Run(cmd)
+func (sh remoteShell) run(ctx context.Context, cmd []string) error {
+	return sh.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
 
 // GetRootKeysInsecurely returns the list of public key config objects from a package

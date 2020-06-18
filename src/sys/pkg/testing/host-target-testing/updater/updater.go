@@ -6,6 +6,7 @@ package updater
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -70,7 +71,8 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 			// us the command ran, it will tell us the session
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
-			if _, ok := err.(*ssh.ExitMissingError); !ok {
+			var errExitMissing *ssh.ExitMissingError
+			if !errors.As(err, &errExitMissing) {
 				return fmt.Errorf("failed to trigger OTA: %w", err)
 			}
 		}

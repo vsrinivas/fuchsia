@@ -174,6 +174,16 @@ func ConnectToNodeDeprecated(ctx context.Context, nodename string, config *ssh.C
 	return ConnectDeprecated(ctx, addr, config)
 }
 
+// ConnectToNode connects to the device with the given nodename.
+func ConnectToNode(ctx context.Context, nodename string, config *ssh.ClientConfig) (*Client, error) {
+	addr, err := netutil.GetNodeAddress(ctx, nodename, true)
+	if err != nil {
+		return nil, err
+	}
+	addr.Port = SSHPort
+	return NewClient(ctx, addr, config, defaultConnectBackoff)
+}
+
 // DefaultSSHConfig returns a basic SSH client configuration.
 func DefaultSSHConfig(privateKey []byte) (*ssh.ClientConfig, error) {
 	signer, err := ssh.ParsePrivateKey(privateKey)

@@ -17,6 +17,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -216,6 +217,7 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 		case *ssh.ExitMissingError:
 			log = "ssh command failed with no exit code"
 			level = logger.DebugLevel
+			err = ConnectionError{err}
 		default:
 			log = fmt.Sprintf("ssh command failed with error: %v", err)
 			level = logger.ErrorLevel
@@ -249,6 +251,16 @@ func (c *Conn) RegisterDisconnectListener(ch chan struct{}) {
 		c.disconnectionListeners = append(c.disconnectionListeners, ch)
 	}
 	c.mu.Unlock()
+}
+
+// NewSFTPClient returns an SFTP client that uses the currently underlying
+// ssh.Client. The SFTP client will become unresponsive if the ssh connection is
+// closed and/or refreshed.
+func (c *Conn) NewSFTPClient() (*sftp.Client, error) {
+	c.mu.Lock()
+	client := c.Client
+	c.mu.Unlock()
+	return sftp.NewClient(client)
 }
 
 // disconnect from ssh, and notify anyone waiting for disconnection.

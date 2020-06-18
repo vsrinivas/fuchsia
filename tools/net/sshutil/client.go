@@ -12,6 +12,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -111,4 +112,22 @@ func (c *Client) Run(ctx context.Context, command []string, stdout io.Writer, st
 	c.mu.Unlock()
 
 	return conn.Run(ctx, command, stdout, stderr)
+}
+
+// LocalAddr returns the local address being used by the underlying ssh.Client.
+func (c *Client) LocalAddr() net.Addr {
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+	return conn.LocalAddr()
+}
+
+// NewSFTPClient returns an SFTP client that uses the currently underlying
+// ssh.Client. The SFTP client will become unresponsive if the ssh connection is
+// closed and/or refreshed.
+func (c *Client) NewSFTPClient() (*sftp.Client, error) {
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+	return conn.NewSFTPClient()
 }

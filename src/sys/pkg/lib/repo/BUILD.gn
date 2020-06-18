@@ -18,6 +18,7 @@ go_library("repo") {
       "//third_party/golibs:golang.org/x/crypto",
       "//tools/lib/logger",
       "//tools/lib/retry",
+      "//tools/net/sshutil",
     ]
   }
 }

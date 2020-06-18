@@ -8,6 +8,7 @@ import("//build/go/go_test.gni")
 go_library("sshutil") {
   name = "go.fuchsia.dev/fuchsia/tools/net/sshutil"
   deps = [
+    "//third_party/golibs:github.com/pkg/sftp",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/lib/logger",
     "//tools/lib/retry",

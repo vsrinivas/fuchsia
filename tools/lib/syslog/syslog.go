@@ -10,11 +10,8 @@ import (
 	"log"
 	"time"
 
-	"golang.org/x/crypto/ssh"
-
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
-	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
@@ -30,21 +27,19 @@ const (
 
 // Syslogger streams systems logs from a Fuchsia instance.
 type Syslogger struct {
-	r                 sshRunner
-	reconnectInterval time.Duration
+	client sshClient
 }
 
-type sshRunner interface {
+type sshClient interface {
 	Run(context.Context, []string, io.Writer, io.Writer) error
-	Reconnect(context.Context) (*ssh.Client, error)
-	Close() error
+	ReconnectWithBackoff(context.Context, retry.Backoff) error
+	Close()
 }
 
 // NewSyslogger creates a new Syslogger, given an SSH session with a Fuchsia instance.
-func NewSyslogger(client *ssh.Client, config *ssh.ClientConfig) *Syslogger {
+func NewSyslogger(client *sshutil.Client) *Syslogger {
 	return &Syslogger{
-		r:                 runner.NewSSHRunner(client, config),
-		reconnectInterval: defaultReconnectInterval,
+		client: client,
 	}
 }
 
@@ -52,10 +47,10 @@ func NewSyslogger(client *ssh.Client, config *ssh.ClientConfig) *Syslogger {
 // is terminated or a Done is signaled. The syslogger streams from the very
 // beggining of the system's uptime.
 func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
+	cmd := []string{logListener}
 	for {
-		cmd := []string{logListener}
 		// Note: Fuchsia's log_listener does not write to stderr.
-		err := s.r.Run(ctx, cmd, output, nil)
+		err := s.client.Run(ctx, cmd, output, nil)
 		// We need not attempt to reconnect if the context was canceled or if we
 		// hit an error unrelated to the connection.
 		if err != nil {
@@ -66,25 +61,18 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 			return err
 		}
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)
-		err = retry.Retry(ctx, retry.NewConstantBackoff(s.reconnectInterval), func() error {
-			_, err := s.r.Reconnect(ctx)
-			if err != nil {
-				logger.Debugf(ctx, "syslog: failed to refresh SSH client, will try again after %s: %v", s.reconnectInterval, err)
-			} else {
-				logger.Infof(ctx, "syslog: refreshed ssh connection")
-			}
-			return err
-		}, nil)
-		if err != nil {
+		if err := s.client.ReconnectWithBackoff(ctx, retry.NewConstantBackoff(defaultReconnectInterval)); err != nil {
 			// The context probably got cancelled before we were able to
 			// reconnect.
 			return err
 		}
+		logger.Infof(ctx, "syslog: refreshed ssh connection")
 		io.WriteString(output, "\n\n<< SYSLOG STREAM INTERRUPTED; RECONNECTING NOW >>\n\n")
 	}
 }
 
 // Close tidies up the system logging session with the corresponding fuchsia instance.
-func (s *Syslogger) Close() error {
-	return s.r.Close()
+// TODO(olivernewman): This is unused and can be deleted.
+func (s *Syslogger) Close() {
+	s.client.Close()
 }

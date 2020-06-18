@@ -32,7 +32,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/serial"
 
 	"github.com/google/subcommands"
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -293,13 +292,13 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 			return err
 		}
 
-		var client *ssh.Client
+		var client *sshutil.Client
 		// TODO(fxb/52397): Determine whether this is necessary or there is a better
 		// way to address this bug.
 		if err = retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 2), func() error {
 			// TODO(fxb/52397): Remove after done debugging.
 			logger.Debugf(ctx, "creating SSH connection")
-			client, err = sshutil.ConnectToNodeDeprecated(ctx, t.Nodename(), config)
+			client, err = sshutil.ConnectToNode(ctx, t.Nodename(), config)
 			if err != nil {
 				return err
 			}
@@ -315,7 +314,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 			}
 
 			if r.repoURL != "" {
-				if err := botanist.AddPackageRepository(ctx, client, config, r.repoURL, r.blobURL); err != nil {
+				if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
 					logger.Errorf(ctx, "failed to set up a package repository: %v", err)
 					client.Close()
 					return err
@@ -337,8 +336,8 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 			}
 			defer s.Close()
 
-			// Note: the sylogger takes ownership of the SSH client.
-			syslogger := syslog.NewSyslogger(client, config)
+			// Note: the syslogger takes ownership of the SSH client.
+			syslogger := syslog.NewSyslogger(client)
 			var wg sync.WaitGroup
 			ctx, cancel := context.WithCancel(ctx)
 			defer func() {

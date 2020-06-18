@@ -11,19 +11,20 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"reflect"
 	"testing"
 )
 
 type mockShell struct {
 	writer *mockWriteCloser
-	cmds   []string
+	cmds   [][]string
 }
 
-func (sh *mockShell) writerAt(installPath string) (io.WriteCloser, error) {
+func (sh *mockShell) writerAt(_ string) (io.WriteCloser, error) {
 	return sh.writer, nil
 }
 
-func (sh *mockShell) run(_ context.Context, cmd string) error {
+func (sh *mockShell) run(_ context.Context, cmd []string) error {
 	sh.cmds = append(sh.cmds, cmd)
 	return nil
 }
@@ -75,8 +76,8 @@ func TestAddFromConfig(t *testing.T) {
 
 	if len(sh.cmds) == 0 || len(sh.cmds) > 1 {
 		t.Errorf("%d commands run; expected 1", len(sh.cmds))
-	} else if sh.cmds[0] != repoAddCmd(installPath) {
-		t.Errorf("expected: %s;\nactual:%s", repoAddCmd(installPath), sh.cmds[0])
+	} else if !reflect.DeepEqual(sh.cmds[0], repoAddCmd(installPath)) {
+		t.Errorf("expected: %v;\nactual:%v", repoAddCmd(installPath), sh.cmds[0])
 	}
 	if !sh.writer.closed {
 		t.Errorf("writer was not closed")

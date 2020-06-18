@@ -12,9 +12,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/runner"
-
-	"golang.org/x/crypto/ssh"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
 const (
@@ -27,7 +25,7 @@ const (
 // In either URL, a host of "localhost" will be resolved and scoped as
 // appropriate when dealing with the address from the host and target
 // perspectives.
-func AddPackageRepository(ctx context.Context, client *ssh.Client, config *ssh.ClientConfig, repoURL, blobURL string) error {
+func AddPackageRepository(ctx context.Context, client *sshutil.Client, repoURL, blobURL string) error {
 	localhost := strings.Contains(repoURL, localhostPlaceholder) || strings.Contains(blobURL, localhostPlaceholder)
 
 	lScopedRepoURL := repoURL
@@ -40,7 +38,7 @@ func AddPackageRepository(ctx context.Context, client *ssh.Client, config *ssh.C
 	rScopedRepoURL := repoURL
 	rScopedBlobURL := blobURL
 	if localhost {
-		host, err := remoteScopedLocalHost(ctx, client, config)
+		host, err := remoteScopedLocalHost(ctx, client)
 		if err != nil {
 			return err
 		}
@@ -75,16 +73,15 @@ func localScopedLocalHost(laddr string) string {
 	return escapePercentSign(host)
 }
 
-func remoteScopedLocalHost(ctx context.Context, client *ssh.Client, config *ssh.ClientConfig) (string, error) {
+func remoteScopedLocalHost(ctx context.Context, client *sshutil.Client) (string, error) {
 	// From the ssh man page:
 	// "SSH_CONNECTION identifies the client and server ends of the connection.
 	// The variable contains four space-separated values: client IP address,
 	// client port number, server IP address, and server port number."
 	// We wish to obtain the client IP address, as will be scoped from the
 	// remote address.
-	sshr := runner.NewSSHRunner(client, config)
 	var stdout bytes.Buffer
-	if err := sshr.Run(ctx, []string{"echo", "${SSH_CONNECTION}"}, &stdout, nil); err != nil {
+	if err := client.Run(ctx, []string{"echo", "${SSH_CONNECTION}"}, &stdout, nil); err != nil {
 		return "", fmt.Errorf("failed to derive $SSH_CONNECTION: %w", err)
 	}
 	val := string(stdout.Bytes())
