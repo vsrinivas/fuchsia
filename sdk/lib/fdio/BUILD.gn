@@ -93,6 +93,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/zxio",
+      "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
     public_configs = [ "//build/config:Wno-unused-function" ]
   }

@@ -21,6 +21,7 @@
 #include <fbl/auto_call.h>
 
 #include "private.h"
+#include "src/network/getifaddrs.h"
 #include "unistd.h"
 
 namespace fio = ::llcpp::fuchsia::io;
