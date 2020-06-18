@@ -4,6 +4,8 @@
 
 import 'dart:async';
 
+import 'package:logging/logging.dart';
+
 import 'sl4f_client.dart';
 
 class Inspect {
@@ -23,6 +25,8 @@ class Inspect {
   ///   a/*/test.cmx:root
   ///
   /// See: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.diagnostics/selector.fidl
+  ///
+  /// Returns an empty list if nothing is found.
   Future<List<Map<String, dynamic>>> snapshot(List<String> selectors) async {
     final hierarchyList =
         await sl4f.request('diagnostics_facade.SnapshotInspect', {
@@ -33,17 +37,29 @@ class Inspect {
   }
 
   /// Gets the inspect data for all components currently running in the system.
+  ///
+  /// Returns an empty list if nothing is found.
   Future<List<Map<String, dynamic>>> snapshotAll() async {
     return await snapshot([]);
   }
 
-  /// Gets the data of the first found hierarchy matching the given selectors
-  /// under root. Returns null of no hierarchy was found.
+  /// Gets the payload of the first found hierarchy matching the given selectors
+  /// under root.
+  ///
+  /// Returns null if no hierarchy was found.
   Future<Map<String, dynamic>> snapshotRoot(String componentSelector) async {
     final hierarchies = await snapshot(['$componentSelector:root']);
     if (hierarchies.isEmpty) {
       return null;
     }
-    return hierarchies[0]['payload']['root'];
+    final resultHierarchy = hierarchies.first;
+    if (resultHierarchy['payload'] == null) {
+      _log.warning('Got null payload for "$componentSelector:root". '
+          'Metadata: ${resultHierarchy['metadata']}');
+      return null;
+    }
+    return resultHierarchy['payload']['root'];
   }
 }
+
+final _log = Logger('Inspect');

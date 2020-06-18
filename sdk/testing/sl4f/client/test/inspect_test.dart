@@ -168,4 +168,71 @@ void main(List<String> args) {
     final result = await Inspect(sl4f).snapshotRoot('test.cmx');
     expect(result, equals({'a': 1}));
   });
+
+  test('snapshot inspect root no hierarchy', () async {
+    const resultHierarchies = [];
+
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
+      expect(body['params']['selectors'], ['test.cmx:root']);
+      req.response.write(jsonEncode({
+        'id': body['id'],
+        'result': resultHierarchies,
+        'error': null,
+      }));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    final result = await Inspect(sl4f).snapshotRoot('test.cmx');
+    expect(result, isNull);
+  });
+
+  test('snapshot inspect root no payload', () async {
+    final resultHierarchies = [
+      {
+        'moniker': 'test.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': null,
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
+      },
+      {
+        'moniker': 'other.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': null,
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
+      }
+    ];
+
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
+      expect(body['params']['selectors'], ['test.cmx:root']);
+      req.response.write(jsonEncode({
+        'id': body['id'],
+        'result': resultHierarchies,
+        'error': null,
+      }));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    final result = await Inspect(sl4f).snapshotRoot('test.cmx');
+    expect(result, isNull);
+  });
 }
