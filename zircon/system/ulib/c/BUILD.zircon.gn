@@ -115,10 +115,6 @@ zx_library("c") {
             "zircon/device/audio.h",
           ]
 
-          foreach(fidl, all_syscall_fidl_files) {
-            headers += [ "../../vdso/" + fidl ]
-          }
-
           if (!exclude_testonly_syscalls) {
             headers += [ "zircon/testonly-syscalls.h" ]
           }
