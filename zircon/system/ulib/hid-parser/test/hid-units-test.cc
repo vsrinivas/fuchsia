@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <iterator>
+
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
@@ -34,7 +36,7 @@ TEST(HidUnitsTest, InsertExtractBalanced) {
 
   uint8_t report;
 
-  for (size_t i = 0; i < countof(units); i++) {
+  for (size_t i = 0; i < std::size(units); i++) {
     double initial_value = 50;
     double out_value;
     attr.unit = GetUnitFromUnitType(units[i]);
@@ -58,7 +60,7 @@ TEST(HidUnitsTest, InsertExtractBalancedExp) {
 
   uint8_t report;
 
-  for (size_t i = 0; i < countof(units); i++) {
+  for (size_t i = 0; i < std::size(units); i++) {
     int32_t initial_value = 10;
     int32_t out_int;
 

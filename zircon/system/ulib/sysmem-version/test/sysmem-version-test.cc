@@ -7,6 +7,7 @@
 #include <lib/sysmem-make-tracking/make_tracking.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
+#include <iterator>
 #include <memory>
 #include <random>
 
@@ -194,7 +195,7 @@ void random<v1::HeapType>(v1::HeapType* field) {
   };
   uint32_t index;
   random(&index);
-  index %= countof(valid);
+  index %= std::size(valid);
   *field = static_cast<v1::HeapType>(valid[index]);
 }
 
@@ -219,7 +220,7 @@ void random<v1::PixelFormatType>(v1::PixelFormatType* field) {
   };
   uint32_t index;
   random(&index);
-  index %= countof(valid);
+  index %= std::size(valid);
   *field = static_cast<v1::PixelFormatType>(valid[index]);
 }
 
@@ -239,7 +240,7 @@ void random<v1::ColorSpaceType>(v1::ColorSpaceType* field) {
   };
   uint32_t index;
   random(&index);
-  index %= countof(valid);
+  index %= std::size(valid);
   *field = static_cast<v1::ColorSpaceType>(valid[index]);
 }
 
@@ -253,7 +254,7 @@ void random<v1::CoherencyDomain>(v1::CoherencyDomain* field) {
   };
   uint32_t index;
   random(&index);
-  index %= countof(valid);
+  index %= std::size(valid);
   *field = static_cast<v1::CoherencyDomain>(valid[index]);
 }
 

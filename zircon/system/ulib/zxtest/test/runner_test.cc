@@ -7,6 +7,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <iterator>
 #include <memory>
 #include <set>
 #include <utility>
@@ -497,7 +498,7 @@ void RunnerRunReturnsZeroOnAssertionsDisabled() {
 void RunnerRunReturnsNonZeroOnAssertionsReEnabled() {
   Runner runner(MakeSilentReporter());
   runner.RegisterTest<Test, FailingTest2>(kTestCaseName, kTestName, kFileName, kLineNumber,
-                                            FailingTest2::MakeFactory(&runner));
+                                          FailingTest2::MakeFactory(&runner));
 
   ZX_ASSERT_MSG(runner.Run(Runner::kDefaultOptions) != 0,
                 "Runner::Run must return non zero when assertions are re-enabled.\n");
@@ -634,7 +635,7 @@ void RunnerOptionsParseFromCmdLineShort() {
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =
-      Runner::Options::FromArgs(countof(kArgs), const_cast<char**>(kArgs), &errors);
+      Runner::Options::FromArgs(std::size(kArgs), const_cast<char**>(kArgs), &errors);
 
   // Just in case it returns errors, this will give insight into where the problem is.
   for (const auto& error : errors) {
@@ -673,7 +674,7 @@ void RunnerOptionsParseFromCmdLineLong() {
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =
-      Runner::Options::FromArgs(countof(kArgs), const_cast<char**>(kArgs), &errors);
+      Runner::Options::FromArgs(std::size(kArgs), const_cast<char**>(kArgs), &errors);
 
   // Just in case it returns errors, this will give insight into where the problem is.
   for (const auto& error : errors) {
@@ -700,7 +701,7 @@ void RunnerOptionsParseFromCmdLineErrors() {
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =
-      Runner::Options::FromArgs(countof(kArgs), const_cast<char**>(kArgs), &errors);
+      Runner::Options::FromArgs(std::size(kArgs), const_cast<char**>(kArgs), &errors);
 
   // Just in case it returns errors, this will give insight into where the problem is.
   ZX_ASSERT_MSG(!errors.is_empty(), "Runner::Options::FromArgs should return error.\n.");

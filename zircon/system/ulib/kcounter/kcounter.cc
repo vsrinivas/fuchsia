@@ -16,6 +16,7 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
+#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -165,7 +166,7 @@ bool VmoToInspectMapper::ShouldInclude(const counters::Descriptor& entry) {
       "handles.made",             //
   };
 
-  for (size_t i = 0; i < countof(kByName); ++i) {
+  for (size_t i = 0; i < std::size(kByName); ++i) {
     if (strcmp(kByName[i], entry.name) == 0) {
       return true;
     }
@@ -181,7 +182,7 @@ bool VmoToInspectMapper::ShouldInclude(const counters::Descriptor& entry) {
       "boot.timeline.",   //
       "thread.suspend",   //
   };
-  for (size_t i = 0; i < countof(kByPrefix); ++i) {
+  for (size_t i = 0; i < std::size(kByPrefix); ++i) {
     if (strncmp(kByPrefix[i], entry.name, strlen(kByPrefix[i])) == 0) {
       return true;
     }

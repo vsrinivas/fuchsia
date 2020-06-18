@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <zircon/compiler.h>
 
+#include <iterator>
+
 #include <hid-parser/units.h>
 
 namespace {
@@ -367,7 +369,7 @@ static UnitConversion defined_units[] = {
 };
 
 Unit GetUnitFromUnitType(UnitType type) {
-  for (size_t i = 0; i < countof(defined_units); i++) {
+  for (size_t i = 0; i < std::size(defined_units); i++) {
     if (defined_units[i].unit_type == type) {
       return defined_units[i].unit;
     }
@@ -377,7 +379,7 @@ Unit GetUnitFromUnitType(UnitType type) {
 }
 
 UnitType GetUnitTypeFromUnit(const Unit& unit) {
-  for (size_t i = 0; i < countof(defined_units); i++) {
+  for (size_t i = 0; i < std::size(defined_units); i++) {
     if (CanConvertUnits(defined_units[i].unit, unit)) {
       return defined_units[i].unit_type;
     }
@@ -391,7 +393,7 @@ UnitType GetUnitTypeFromUnit(const Unit& unit) {
 double ConvertValToUnitType(const Unit& unit_in, double val_in) {
   double val_out;
 
-  for (size_t i = 0; i < countof(defined_units); i++) {
+  for (size_t i = 0; i < std::size(defined_units); i++) {
     if (ConvertUnits(unit_in, val_in, defined_units[i].unit, &val_out)) {
       return val_out;
     }

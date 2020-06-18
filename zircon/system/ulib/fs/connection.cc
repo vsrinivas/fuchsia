@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <zircon/assert.h>
 
+#include <iterator>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -230,7 +231,7 @@ bool Connection::OnMessage() {
       .num_bytes = 0,
       .num_handles = 0,
   };
-  zx_status_t r = binding->channel().read(0, bytes, handles, countof(bytes), countof(handles),
+  zx_status_t r = binding->channel().read(0, bytes, handles, std::size(bytes), std::size(handles),
                                           &msg.num_bytes, &msg.num_handles);
   if (r != ZX_OK) {
     return false;
