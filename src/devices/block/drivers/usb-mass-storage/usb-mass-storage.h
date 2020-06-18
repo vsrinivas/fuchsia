@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
 
 #include <inttypes.h>
 #include <lib/async-loop/default.h>
@@ -74,8 +74,7 @@ struct UsbRequestContext {
 using MassStorageDeviceType = ddk::Device<UsbMassStorageDevice, ddk::UnbindableDeprecated>;
 class UsbMassStorageDevice : public MassStorageDeviceType {
  public:
-  explicit UsbMassStorageDevice(fbl::RefPtr<WaiterInterface> waiter,
-                                zx_device_t* parent = nullptr)
+  explicit UsbMassStorageDevice(fbl::RefPtr<WaiterInterface> waiter, zx_device_t* parent = nullptr)
       : MassStorageDeviceType(parent), waiter_(waiter) {}
 
   ~UsbMassStorageDevice() {}
@@ -94,14 +93,22 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
  private:
   zx_status_t Reset();
 
-  void SendCbw(uint8_t lun, uint32_t transfer_length, uint8_t flags, uint8_t command_len,
-               void* command);
+  // Sends a Command Block Wrapper (command portion of request)
+  // to a USB mass storage device.
+  zx_status_t SendCbw(uint8_t lun, uint32_t transfer_length, uint8_t flags, uint8_t command_len,
+                      void* command);
 
+  // Reads a Command Status Wrapper from a USB mass storage device
+  // and validates that the command index in the response matches the index
+  // in the previous request.
   zx_status_t ReadCsw(uint32_t* out_residue);
 
+  // Validates the command index and signature of a command status wrapper.
   csw_status_t VerifyCsw(usb_request_t* csw_request, uint32_t* out_residue);
 
   void QueueRead(uint16_t transfer_length);
+
+  zx_status_t ReadSync(uint16_t transfer_length);
 
   zx_status_t Inquiry(uint8_t lun, uint8_t* out_data);
 
@@ -181,4 +188,4 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
 };
 }  // namespace ums
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_

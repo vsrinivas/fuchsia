@@ -38,7 +38,8 @@ const usb_descriptor kDescriptors[] = {
 struct Packet;
 struct Packet : fbl::DoublyLinkedListable<fbl::RefPtr<Packet>>, fbl::RefCounted<Packet> {
   explicit Packet(fbl::Array<unsigned char>&& source) { data = std::move(source); }
-
+  explicit Packet() { stall = true; }
+  bool stall = false;
   fbl::Array<unsigned char> data;
 };
 
@@ -55,6 +56,14 @@ class FakeTimer : public ums::WaiterInterface {
  private:
   fit::function<zx_status_t(sync_completion_t*, zx_duration_t)> timeout_handler_;
 };
+
+enum ErrorInjection {
+  NoFault,
+  RejectCacheCbw,
+  RejectCacheDataStage,
+};
+
+constexpr auto kInitialTagValue = 8;
 
 struct Context {
   Context* parent;
@@ -76,7 +85,9 @@ struct Context {
   uint8_t transfer_type;
   uint8_t transfer_lun;
   size_t pending_write;
+  ErrorInjection failure_mode;
   fbl::RefPtr<Packet> last_transfer;
+  uint32_t tag = kInitialTagValue;
 };
 
 class Binder : public fake_ddk::Bind {
@@ -161,17 +172,27 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
     usb_request_mmap(usb_request, &data);
     memcpy(context->last_transfer->data.data(), data, context->pending_write);
     context->pending_write = 0;
+    usb_request->response.status = ZX_OK;
     complete_cb->callback(complete_cb->ctx, usb_request);
     return;
   }
   if ((usb_request->header.ep_address & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
     if (context->pending_packets.begin() == context->pending_packets.end()) {
+      usb_request->response.status = ZX_OK;
       complete_cb->callback(complete_cb->ctx, usb_request);
     } else {
       auto packet = context->pending_packets.pop_front();
+      if (packet->stall) {
+        usb_request->response.actual = 0;
+        usb_request->response.status = ZX_ERR_IO_REFUSED;
+        complete_cb->callback(complete_cb->ctx, usb_request);
+        return;
+      }
       size_t len =
           usb_request->size < packet->data.size() ? usb_request->size : packet->data.size();
       usb_request_copy_to(usb_request, packet->data.data(), len, 0);
+      usb_request->response.actual = len;
+      usb_request->response.status = ZX_OK;
       complete_cb->callback(complete_cb->ctx, usb_request);
     }
     return;
@@ -186,6 +207,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
       ums_cbw_t cbw;
       memcpy(&cbw, data, sizeof(cbw));
       if (cbw.bCBWLUN > 3) {
+        usb_request->response.status = ZX_OK;
         complete_cb->callback(complete_cb->ctx, usb_request);
         return;
       }
@@ -208,7 +230,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           // Push CSW
           fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
           context->csw.dCSWDataResidue = 0;
-          context->csw.dCSWTag = cbw.dCBWTag;
+          context->csw.dCSWTag = context->tag++;
           context->csw.bmCSWStatus = CSW_SUCCESS;
           memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
@@ -224,6 +246,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           context->transfer_offset = be64toh(cmd.lba);
           context->transfer_type = cbw.CBWCB[0];
           DataTransfer();
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -236,6 +259,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           context->transfer_offset = be32toh(cmd.lba);
           context->transfer_type = cbw.CBWCB[0];
           DataTransfer();
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -249,6 +273,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           context->transfer_offset = be32toh(cmd.lba);
           context->transfer_type = cbw.CBWCB[0];
           DataTransfer();
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -256,12 +281,13 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           // Push CSW
           fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
           context->csw.dCSWDataResidue = 0;
-          context->csw.dCSWTag = cbw.dCBWTag;
+          context->csw.dCSWTag = context->tag++;
           context->csw.bmCSWStatus = CSW_SUCCESS;
           context->transfer_lun = cbw.bCBWLUN;
           context->transfer_type = cbw.CBWCB[0];
           memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -284,11 +310,12 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
             // Push CSW
             fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
             context->csw.dCSWDataResidue = 0;
-            context->csw.dCSWTag = cbw.dCBWTag;
+            context->csw.dCSWTag = context->tag++;
             context->csw.bmCSWStatus = CSW_SUCCESS;
             memcpy(csw.data(), &context->csw, sizeof(context->csw));
             context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
           }
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -296,10 +323,11 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           // Push CSW
           fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
           context->csw.dCSWDataResidue = 0;
-          context->csw.dCSWTag = cbw.dCBWTag;
+          context->csw.dCSWTag = context->tag++;
           context->csw.bmCSWStatus = CSW_SUCCESS;
           memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -316,11 +344,12 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
             // Push CSW
             fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
             context->csw.dCSWDataResidue = 0;
-            context->csw.dCSWTag = cbw.dCBWTag;
+            context->csw.dCSWTag = context->tag++;
             context->csw.bmCSWStatus = CSW_SUCCESS;
             memcpy(csw.data(), &context->csw, sizeof(context->csw));
             context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
           }
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -339,10 +368,11 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           // Push CSW
           fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
           context->csw.dCSWDataResidue = 0;
-          context->csw.dCSWTag = cbw.dCBWTag;
+          context->csw.dCSWTag = context->tag++;
           context->csw.bmCSWStatus = CSW_SUCCESS;
           memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
+          usb_request->response.status = ZX_OK;
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
         }
@@ -361,30 +391,45 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
               fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)],
                                             sizeof(ums_csw_t));
               context->csw.dCSWDataResidue = 0;
-              context->csw.dCSWTag = cbw.dCBWTag;
+              context->csw.dCSWTag = context->tag++;
               context->csw.bmCSWStatus = CSW_SUCCESS;
               memcpy(csw.data(), &context->csw, sizeof(context->csw));
               context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
+              usb_request->response.status = ZX_OK;
               complete_cb->callback(complete_cb->ctx, usb_request);
               break;
             }
             case 0x08: {
+              if (context->failure_mode == RejectCacheCbw) {
+                usb_request->response.status = ZX_ERR_IO_REFUSED;
+                usb_request->response.actual = 0;
+                complete_cb->callback(complete_cb->ctx, usb_request);
+                return;
+              }
               fbl::Array<unsigned char> reply(new unsigned char[20], 20);
               memset(reply.data(), 0, 20);
               reply[6] = 1 << 2;
-              context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(reply)));
+              if (context->failure_mode == RejectCacheDataStage) {
+                complete_cb->callback(complete_cb->ctx, usb_request);
+                context->pending_packets.push_back(fbl::MakeRefCounted<Packet>());
+                return;
+              } else {
+                context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(reply)));
+              }
               // Push CSW
               fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)],
                                             sizeof(ums_csw_t));
               context->csw.dCSWDataResidue = 0;
-              context->csw.dCSWTag = cbw.dCBWTag;
+              context->csw.dCSWTag = context->tag++;
               context->csw.bmCSWStatus = CSW_SUCCESS;
               memcpy(csw.data(), &context->csw, sizeof(context->csw));
               context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
+              usb_request->response.status = ZX_OK;
               complete_cb->callback(complete_cb->ctx, usb_request);
               break;
             }
             default:
+              usb_request->response.status = ZX_OK;
               complete_cb->callback(complete_cb->ctx, usb_request);
           }
           break;
@@ -405,10 +450,11 @@ static void CompletionCallback(void* ctx, zx_status_t status, block_op_t* op) {
   sync_completion_signal(&context->completion);
 }
 
-static zx_status_t Setup(Context* context, ums::UsbMassStorageDevice* dev,
-                         usb_protocol_ops_t* ops) {
+static zx_status_t Setup(Context* context, ums::UsbMassStorageDevice* dev, usb_protocol_ops_t* ops,
+                         ErrorInjection inject_failure = NoFault) {
   zx_status_t status = ZX_OK;
   // Device paramaters for physical (parent) device
+  context->failure_mode = inject_failure;
   context->parent = nullptr;
   context->ums_device = dev;
   context->block_devs = 0;
@@ -592,6 +638,58 @@ TEST(Ums, TestFlush) {
     EXPECT_EQ(i, parent_dev.transfer_lun);
     EXPECT_EQ(xfer_type, parent_dev.transfer_type);
   }
+  // Unbind
+  dev.DdkUnbindDeprecated();
+  ASSERT_FALSE(has_zero_duration);
+  EXPECT_EQ(4, parent_dev.block_devs);
+}
+
+TEST(Ums, CbwStallDoesNotFreezeDriver) {
+  // Setup
+  Binder bind;
+  Context parent_dev;
+  auto timer = fbl::MakeRefCounted<FakeTimer>();
+  bool has_zero_duration = false;
+  timer->set_timeout_handler([&](sync_completion_t* completion, zx_duration_t duration) {
+    if (duration == 0) {
+      has_zero_duration = true;
+    }
+    // Wait for the sync_completion_t if given an infinite timeout
+    // (infinite timeouts are used for synchronization)
+    if (duration == ZX_TIME_INFINITE) {
+      return sync_completion_wait(completion, duration);
+    }
+    return ZX_OK;
+  });
+  ums::UsbMassStorageDevice dev(timer, reinterpret_cast<zx_device_t*>(&parent_dev));
+  usb_protocol_ops_t ops;
+  Setup(&parent_dev, &dev, &ops, RejectCacheCbw);
+  // Unbind
+  dev.DdkUnbindDeprecated();
+  ASSERT_FALSE(has_zero_duration);
+  EXPECT_EQ(4, parent_dev.block_devs);
+}
+
+TEST(Ums, DataStageStallDoesNotFreezeDriver) {
+  // Setup
+  Binder bind;
+  Context parent_dev;
+  auto timer = fbl::MakeRefCounted<FakeTimer>();
+  bool has_zero_duration = false;
+  timer->set_timeout_handler([&](sync_completion_t* completion, zx_duration_t duration) {
+    if (duration == 0) {
+      has_zero_duration = true;
+    }
+    // Wait for the sync_completion_t if given an infinite timeout
+    // (infinite timeouts are used for synchronization)
+    if (duration == ZX_TIME_INFINITE) {
+      return sync_completion_wait(completion, duration);
+    }
+    return ZX_OK;
+  });
+  ums::UsbMassStorageDevice dev(timer, reinterpret_cast<zx_device_t*>(&parent_dev));
+  usb_protocol_ops_t ops;
+  Setup(&parent_dev, &dev, &ops, RejectCacheDataStage);
   // Unbind
   dev.DdkUnbindDeprecated();
   ASSERT_FALSE(has_zero_duration);
