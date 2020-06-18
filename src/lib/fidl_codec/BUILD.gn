@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//third_party/protobuf/proto_library.gni")
 
 static_library("fidl_codec") {
   friend = [ ":tests" ]
@@ -20,6 +21,7 @@ static_library("fidl_codec") {
     "memory_helpers.h",
     "message_decoder.h",
     "printer.h",
+    "proto_value.h",
     "semantic.h",
     "semantic_parser.h",
     "status.h",
@@ -37,6 +39,7 @@ static_library("fidl_codec") {
     "library_loader.cc",
     "message_decoder.cc",
     "printer.cc",
+    "proto_value.cc",
     "semantic.cc",
     "semantic_parser.cc",
     "status.cc",
@@ -47,10 +50,19 @@ static_library("fidl_codec") {
 
   public_deps = [ "//src/lib/fxl" ]
   deps = [
+    ":value_proto",
     "//third_party/rapidjson",
     "//zircon/public/lib/fidl_base",
     "//zircon/system/public",
   ]
+}
+
+proto_library("value_proto") {
+  sources = [ "proto/value.proto" ]
+
+  generate_python = false
+
+  deps = [ "//third_party/protobuf:protobuf_full" ]
 }
 
 executable("fidl_codec_test_bin") {
@@ -61,6 +73,7 @@ executable("fidl_codec_test_bin") {
     "library_loader_test.cc",
     "message_decoder_test.cc",
     "printer_test.cc",
+    "proto_test.cc",
     "semantic_parser_test.cc",
     "wire_object_test.cc",
     "wire_parser_test.cc",
@@ -71,6 +84,7 @@ executable("fidl_codec_test_bin") {
     ":fidl_codec",
     ":json_for_test",
     ":list_for_test",
+    ":value_proto",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp:test_support",
     "//sdk/lib/fidl/cpp/test",

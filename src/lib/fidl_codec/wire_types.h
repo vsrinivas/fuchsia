@@ -22,7 +22,9 @@ namespace fidl_codec {
 
 class LibraryLoader;
 class StructType;
+class TableType;
 class TypeVisitor;
+class UnionType;
 
 // A FIDL type.  Provides methods for generating instances of this type.
 class Type {
@@ -36,7 +38,9 @@ class Type {
   // Returns a detailed representation of the type.
   std::string ToString(bool expand = false) const;
 
+  virtual const UnionType* AsUnionType() const { return nullptr; }
   virtual const StructType* AsStructType() const { return nullptr; }
+  virtual const TableType* AsTableType() const { return nullptr; }
 
   // Returns true if the type is a ArrayType.
   virtual bool IsArray() const { return false; }
@@ -274,6 +278,29 @@ class NumericType : public Type {
     }
     return std::make_unique<DoubleValue>(*reinterpret_cast<const T*>(got));
   }
+};
+
+class Float32Type : public NumericType<float> {
+ public:
+  Float32Type() = default;
+  std::string Name() const override;
+
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override {
+    double result;
+    if (!value->GetDoubleValue(&result)) {
+      printer << Red << "invalid" << ResetColor;
+    } else {
+      printer << Blue << std::to_string(static_cast<float>(result)) << ResetColor;
+    }
+  }
+
+  void Visit(TypeVisitor* visitor) const override;
+};
+
+class Float64Type : public NumericType<double> {
+ public:
+  Float64Type() = default;
+  std::string Name() const override;
 
   void PrettyPrint(const Value* value, PrettyPrinter& printer) const override {
     double result;
@@ -283,19 +310,7 @@ class NumericType : public Type {
       printer << Blue << std::to_string(result) << ResetColor;
     }
   }
-};
 
-class Float32Type : public NumericType<float> {
- public:
-  Float32Type() = default;
-  std::string Name() const override;
-  void Visit(TypeVisitor* visitor) const override;
-};
-
-class Float64Type : public NumericType<double> {
- public:
-  Float64Type() = default;
-  std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
@@ -373,6 +388,8 @@ class UnionType : public Type {
       : union_definition_(union_definition), nullable_(nullable) {}
 
   const Union& union_definition() const { return union_definition_; }
+
+  const UnionType* AsUnionType() const override { return this; }
 
   std::string Name() const override;
 
@@ -472,6 +489,8 @@ class TableType : public Type {
   explicit TableType(const Table& table_definition) : table_definition_(table_definition) {}
 
   const Table& table_definition() const { return table_definition_; }
+
+  const TableType* AsTableType() const override { return this; }
 
   std::string Name() const override;
 

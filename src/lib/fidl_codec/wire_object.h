@@ -151,6 +151,10 @@ class IntegerValue : public Value {
  public:
   IntegerValue(uint64_t absolute_value, bool negative)
       : absolute_value_(absolute_value), negative_(negative) {}
+  explicit IntegerValue(int64_t value)
+      : absolute_value_((value < 0) ? -static_cast<uint64_t>(value) : value),
+        negative_(value < 0) {}
+  explicit IntegerValue(uint64_t value) : absolute_value_(value), negative_(false) {}
 
   uint64_t absolute_value() const { return absolute_value_; }
   bool negative() const { return negative_; }
@@ -391,11 +395,44 @@ class FidlMessageValue : public Value {
   FidlMessageValue(fidl_codec::DecodedMessage* message, std::string global_errors,
                    const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
                    uint32_t num_handles);
+  FidlMessageValue(zx_txid_t txid, uint64_t ordinal, const std::string& global_errors,
+                   const std::string& epitaph_error, bool received, bool is_request,
+                   bool unknown_direction, const fidl_codec::InterfaceMethod* method,
+                   const uint8_t* bytes, size_t byte_size, const std::string& request_errors,
+                   const std::string& response_errors)
+      : txid_(txid),
+        ordinal_(ordinal),
+        global_errors_(global_errors),
+        epitaph_error_(epitaph_error),
+        received_(received),
+        is_request_(is_request),
+        unknown_direction_(unknown_direction),
+        method_(method),
+        bytes_(bytes, bytes + byte_size),
+        request_errors_(request_errors),
+        response_errors_(response_errors) {}
 
+  zx_txid_t txid() const { return txid_; }
+  uint64_t ordinal() const { return ordinal_; }
+  const std::string& global_errors() const { return global_errors_; }
+  const std::string& epitaph_error() const { return epitaph_error_; }
+  bool received() const { return received_; }
   bool is_request() const { return is_request_; }
+  bool unknown_direction() const { return unknown_direction_; }
   const fidl_codec::InterfaceMethod* method() const { return method_; }
+  const std::vector<uint8_t> bytes() const { return bytes_; }
+  const std::vector<zx_handle_info_t> handles() const { return handles_; }
+  void add_handle(const zx_handle_info_t& handle) { handles_.emplace_back(handle); }
   const StructValue* decoded_request() const { return decoded_request_.get(); }
+  void set_decoded_request(std::unique_ptr<StructValue> decoded_request) {
+    decoded_request_ = std::move(decoded_request);
+  }
+  const std::string& request_errors() const { return request_errors_; }
   const StructValue* decoded_response() const { return decoded_response_.get(); }
+  void set_decoded_response(std::unique_ptr<StructValue> decoded_response) {
+    decoded_response_ = std::move(decoded_response);
+  }
+  const std::string& response_errors() const { return response_errors_; }
   bool matched_request() const { return (decoded_request_ != nullptr) && request_errors_.empty(); }
   bool matched_response() const {
     return (decoded_response_ != nullptr) && response_errors_.empty();

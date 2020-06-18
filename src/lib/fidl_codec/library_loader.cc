@@ -415,7 +415,7 @@ bool Library::DecodeAll() {
   return !has_errors_;
 }
 
-std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string& identifier) {
+std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, const std::string& identifier) {
   auto str = structs_.find(identifier);
   if (str != structs_.end()) {
     str->second->DecodeStructTypes();

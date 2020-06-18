@@ -384,7 +384,7 @@ int TableValue::DisplaySize(const Type* for_type, int remaining_size) const {
   for (const auto& member : table_definition_.members()) {
     if ((member != nullptr) && !member->reserved()) {
       auto it = members_.find(member.get());
-      if ((it == members_.end()) || it->second->IsNull())
+      if ((it == members_.end()) || (it->second == nullptr) || it->second->IsNull())
         continue;
       // Two characters for the separator ("{ " or ", "), three characters for " = ".
       size += static_cast<int>(member->name().size()) + 2 + 3;
@@ -410,7 +410,7 @@ void TableValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const
     for (const auto& member : table_definition_.members()) {
       if ((member != nullptr) && !member->reserved()) {
         auto it = members_.find(member.get());
-        if ((it == members_.end()) || it->second->IsNull())
+        if ((it == members_.end()) || (it->second == nullptr) || it->second->IsNull())
           continue;
         printer << separator << member->name() << ": " << Green << member->type()->Name()
                 << ResetColor << " = ";
@@ -426,7 +426,7 @@ void TableValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const
       for (const auto& member : table_definition_.members()) {
         if ((member != nullptr) && !member->reserved()) {
           auto it = members_.find(member.get());
-          if ((it == members_.end()) || it->second->IsNull())
+          if ((it == members_.end()) || (it->second == nullptr) || it->second->IsNull())
             continue;
           std::string type_name = member->type()->Name();
           printer << member->name() << ": " << Green << type_name << ResetColor << " = ";

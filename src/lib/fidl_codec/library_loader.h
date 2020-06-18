@@ -182,6 +182,15 @@ class Union {
 
   const UnionMember* MemberWithOrdinal(Ordinal32 ordinal) const;
 
+  UnionMember* SearchMember(std::string_view name) const {
+    for (const auto& member : members_) {
+      if (member->name() == name) {
+        return member.get();
+      }
+    }
+    return nullptr;
+  }
+
  private:
   Union(Library* enclosing_library, const rapidjson::Value* json_definition);
 
@@ -301,7 +310,7 @@ class Table {
   }
   const TableMember* GetMember(std::string_view name) const {
     for (const auto& member : members_) {
-      if (member->name() == name) {
+      if ((member != nullptr) && (member->name() == name)) {
         return member.get();
       }
     }
@@ -411,7 +420,7 @@ class Library {
   // Decode all the content of this FIDL file.
   bool DecodeAll();
 
-  std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable, std::string& identifier);
+  std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable, const std::string& identifier);
 
   // The size of the type with name |identifier| when it is inline (e.g.,
   // embedded in an array)

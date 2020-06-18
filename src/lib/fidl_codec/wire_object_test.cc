@@ -73,7 +73,7 @@ class WireObjectTest : public ::testing::Test {
 class TableValueWithNullFields : public TableValue {
  public:
   TableValueWithNullFields(LibraryLoader* loader) : TableValue(GetTableDefinition(loader)) {
-    AddMember("first_int16", nullptr);
+    AddMember("first_int16", std::make_unique<IntegerValue>(1000, true));
     AddMember("third_union", nullptr);
   }
 
@@ -87,7 +87,9 @@ class TableValueWithNullFields : public TableValue {
   }
 };
 
-TEST_PRINT_OBJECT(TableValue, TableValueWithNullFields(loader()), "{}", "{}");
+TEST_PRINT_OBJECT(TableValue, TableValueWithNullFields(loader()),
+                  "{ first_int16: #gre#int16#rst# = #blu#-1000#rst# }",
+                  "{\"first_int16\":\"-1000\"}");
 
 TEST_PRINT_OBJECT(InvalidValue, InvalidValue(), "#red#invalid#rst#", "\"(invalid)\"");
 

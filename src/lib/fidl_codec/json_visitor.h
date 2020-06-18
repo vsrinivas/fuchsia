@@ -75,7 +75,7 @@ class JsonVisitor : public Visitor {
     for (const auto& member : node->table_definition().members()) {
       if ((member != nullptr) && !member->reserved()) {
         auto it = node->members().find(member.get());
-        if ((it == node->members().end()) || it->second->IsNull())
+        if ((it == node->members().end()) || (it->second == nullptr) || it->second->IsNull())
           continue;
         rapidjson::Value key;
         key.SetString(member->name().c_str(), *allocator_);
