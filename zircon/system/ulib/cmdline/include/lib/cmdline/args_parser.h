@@ -5,7 +5,7 @@
 #ifndef CMDLINE_ARGS_PARSER_H_
 #define CMDLINE_ARGS_PARSER_H_
 
-#include <lib/cmdline/optional_bool.h>
+#include <lib/cmdline/optional.h>
 #include <lib/cmdline/status.h>
 
 #include <functional>
@@ -149,6 +149,9 @@ class ArgsParser : public GeneralArgsParser {
   //   };
   //   ArgsParser<MyOptions> parser;
   //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
+  //
+  // For optional values of other types, use the cmdline::Optional type, in
+  // "lib/cmdline/optional.h".
   void AddSwitch(const char* long_name, const char short_name, const char* help,
                  std::optional<std::string> ResultStruct::*value,
                  StringCallback validator = nullptr) {
@@ -165,25 +168,25 @@ class ArgsParser : public GeneralArgsParser {
                      });
   }
 
-  // Sets a OptionalBool with the value if the switch is present. The value
+  // Sets a Optional<bool> with the value if the switch is present. The value
   // will be required.
   //
   // Note that std::optional<bool> is not supported because this type can
   // facilitate error-prone uses. std::optional<> implements |operator bool()|
   // to return true if the value is set. The compiler will, thus, allow a
-  // std_optional<bool> to be used in a boolean expression, which might appear
+  // std::optional<bool> to be used in a boolean expression, which might appear
   // to resolve to the value, but is not. The boolean expression would
   // evaluate the wrong boolean, creating a bug that is hard to detect
   // when reviewing the code.
   //
   // Example
   //   struct MyOptions {
-  //     OptionalBool foo;
+  //     Optional<bool> foo;
   //   };
   //   ArgsParser<MyOptions> parser;
   //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
   void AddSwitch(const char* long_name, const char short_name, const char* help,
-                 OptionalBool ResultStruct::*value) {
+                 Optional<bool> ResultStruct::*value) {
     AddGeneralSwitch(
         long_name, short_name, help, [this, value]() { result_.*value = true; },
         [this, value]() { result_.*value = false; });

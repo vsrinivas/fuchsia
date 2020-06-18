@@ -184,7 +184,7 @@ TEST(ArgsParser, OptStruct) {
     double double_val = 2.718;
     char char_val = 'A';
     std::string not_optional_str;  // but empty if not present
-    OptionalBool optional_bool;
+    Optional<bool> optional_bool;
     std::string validated_format = "text";
   };
   ArgsParser<MyOptions> parser;
@@ -298,6 +298,82 @@ TEST(ArgsParser, OptStruct) {
   status = parser.Parse(2, invalid_value_trailing_chars, &options, &params);
   EXPECT_TRUE(status.has_error(), "%s", status.error_message().c_str());
   EXPECT_STRING_EQ("Invalid trailing characters 'ello' for --char", status.error_message());
+}
+
+TEST(ArgsParser, OptionalTypes) {
+  struct MyOptions {
+    Optional<std::string> present_string;
+    Optional<std::string> missing_string;
+
+    Optional<int> present_int;
+    Optional<int> missing_int;
+
+    Optional<double> present_double;
+    Optional<double> missing_double;
+
+    Optional<char> present_char;
+    Optional<char> missing_char;
+  };
+
+  ArgsParser<MyOptions> parser;
+  parser.AddSwitch("present_string", 0, "", &MyOptions::present_string);
+  parser.AddSwitch("missing_string", 0, "", &MyOptions::missing_string);
+  parser.AddSwitch("present_int", 0, "", &MyOptions::present_int);
+  parser.AddSwitch("missing_int", 0, "", &MyOptions::missing_int);
+  parser.AddSwitch("present_double", 0, "", &MyOptions::present_double);
+  parser.AddSwitch("missing_double", 0, "", &MyOptions::missing_double);
+  parser.AddSwitch("present_char", 0, "", &MyOptions::present_char);
+  parser.AddSwitch("missing_char", 0, "", &MyOptions::missing_char);
+
+  const char* args[] = {"program", "--present_string=foo",
+    "--present_int=3",
+    "--present_double=1.5",
+    "--present_char=x"};
+
+  MyOptions options;
+  std::vector<std::string> params;
+  Status status = parser.Parse(5, args, &options, &params);
+  ASSERT_TRUE(status.ok());
+
+  EXPECT_FALSE(options.missing_string.has_value());
+  EXPECT_FALSE(options.missing_int.has_value());
+  EXPECT_FALSE(options.missing_double.has_value());
+  EXPECT_FALSE(options.missing_char.has_value());
+
+  EXPECT_STRING_EQ(options.present_string.value(), "foo");
+  EXPECT_EQ(options.present_int.value(), 3);
+  EXPECT_EQ(options.present_double.value(), 1.5);
+  EXPECT_EQ(options.present_char.value(), 'x');
+}
+
+TEST(ArgsParser, OptionalTypeWithDefault) {
+  struct MyOptions {
+    std::optional<std::string> present_string = "x";
+    std::optional<std::string> missing_string = "y";
+
+    Optional<int> present_int = 1;
+    Optional<int> missing_int = 2;
+  };
+
+  ArgsParser<MyOptions> parser;
+  parser.AddSwitch("present_string", 0, "", &MyOptions::present_string);
+  parser.AddSwitch("missing_string", 0, "", &MyOptions::missing_string);
+  parser.AddSwitch("present_int", 0, "", &MyOptions::present_int);
+  parser.AddSwitch("missing_int", 0, "", &MyOptions::missing_int);
+
+  const char* args[] = {"program", "--present_string=foo",
+    "--present_int=3"};
+
+  MyOptions options;
+  std::vector<std::string> params;
+  Status status = parser.Parse(3, args, &options, &params);
+  ASSERT_TRUE(status.ok());
+
+  EXPECT_STRING_EQ(options.present_string.value(), "foo");
+  EXPECT_EQ(options.present_int.value(), 3);
+
+  EXPECT_STRING_EQ(options.missing_string.value(), "y");
+  EXPECT_EQ(options.missing_int.value(), 2);
 }
 
 }  // namespace
