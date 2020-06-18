@@ -7,4 +7,13 @@
 zx_library("pow2_range_allocator") {
   kernel = true
   sources = [ "pow2_range_allocator.cc" ]
+  deps = [ ":tests" ]
+}
+
+source_set("tests") {
+  sources = [ "pow2_range_allocator_tests.cc" ]
+  deps = [
+    ":headers",
+    "$zx/kernel/lib/unittest",
+  ]
 }

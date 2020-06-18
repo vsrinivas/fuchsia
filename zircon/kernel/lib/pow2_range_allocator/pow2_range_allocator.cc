@@ -270,7 +270,7 @@ zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
 
   p2ra_block_t* block;
   while ((block = list_remove_head_type(&new_blocks, p2ra_block_t, node)) != NULL)
-    p2ra_return_free_block(state, block, false);
+    p2ra_return_free_block(state, block, true);
 
   return ret;
 }
