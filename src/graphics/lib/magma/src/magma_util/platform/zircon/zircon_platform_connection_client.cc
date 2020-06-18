@@ -5,6 +5,7 @@
 #include "zircon_platform_connection_client.h"
 
 #include "magma_common_defs.h"
+#include "magma_util/dlog.h"
 #include "platform_connection_client.h"
 #include "zircon_platform_handle.h"
 
@@ -220,9 +221,8 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
 
   while (true) {
     if (wait) {
-      DMESSAGE(
-          "Flow control: waiting message count %lu (max %lu) bytes %lu (max %lu) new_bytes %lu",
-          count, max_inflight_messages_, bytes, max_inflight_bytes_, new_bytes);
+      DLOG("Flow control: waiting message count %lu (max %lu) bytes %lu (max %lu) new_bytes %lu",
+           count, max_inflight_messages_, bytes, max_inflight_bytes_, new_bytes);
     }
 
     zx_signals_t pending = {};
@@ -263,13 +263,11 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
     }
 
     if (wait) {
-      MAGMA_LOG(
-          INFO,
-          "Flow control: waited %lld us message count %lu (max %lu) imported bytes %lu (max %lu)",
-          std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() -
-                                                                wait_time_start)
-              .count(),
-          count, max_inflight_messages_, bytes, max_inflight_bytes_);
+      DLOG("Flow control: waited %lld us message count %lu (max %lu) imported bytes %lu (max %lu)",
+           std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() -
+                                                                 wait_time_start)
+               .count(),
+           count, max_inflight_messages_, bytes, max_inflight_bytes_);
     }
 
     std::tie(wait, count, bytes) = ShouldWait(new_bytes);
