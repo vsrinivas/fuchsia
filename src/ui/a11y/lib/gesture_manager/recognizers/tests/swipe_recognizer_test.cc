@@ -21,15 +21,18 @@ namespace {
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using Phase = fuchsia::ui::input::PointerEventPhase;
 
+constexpr char kSwipeRecognizerName[] = "test_swipe_recognizer";
+
 class TestSwipeRecognizer : public a11y::SwipeRecognizerBase {
  public:
   TestSwipeRecognizer(SwipeGestureCallback callback, uint32_t number_of_fingers)
       : SwipeRecognizerBase(std::move(callback), number_of_fingers,
-                            SwipeRecognizerBase::kDefaultSwipeGestureTimeout) {}
+                            SwipeRecognizerBase::kDefaultSwipeGestureTimeout,
+                            kSwipeRecognizerName) {}
 
   void set_valid(bool valid) { valid_ = valid; }
 
-  std::string DebugName() const override { return "test_swipe_recognizer"; };
+  std::string DebugName() const override { return kSwipeRecognizerName; };
 
  private:
   bool SwipeHasValidSlopeAndDirection(float x_displacement, float y_displacement) const override {

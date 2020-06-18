@@ -8,6 +8,8 @@
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <utility>
+
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 
@@ -25,10 +27,12 @@ struct SwipeRecognizerBase::Contest {
 };
 
 SwipeRecognizerBase::SwipeRecognizerBase(SwipeGestureCallback callback, uint32_t number_of_fingers,
-                                         zx::duration swipe_gesture_timeout)
+                                         zx::duration swipe_gesture_timeout,
+                                         const std::string& debug_name)
     : swipe_gesture_callback_(std::move(callback)),
       swipe_gesture_timeout_(swipe_gesture_timeout),
-      number_of_fingers_(number_of_fingers) {}
+      number_of_fingers_(number_of_fingers),
+      debug_name_(debug_name) {}
 
 SwipeRecognizerBase::~SwipeRecognizerBase() = default;
 
@@ -37,7 +41,7 @@ void SwipeRecognizerBase::HandleEvent(
   FX_DCHECK(contest_);
 
   if (!pointer_event.has_phase()) {
-    FX_LOGS(INFO) << "Pointer event is missing phase information.";
+    FX_LOGS(INFO) << debug_name_ << ": Pointer event is missing phase information.";
     return;
   }
 
@@ -47,13 +51,15 @@ void SwipeRecognizerBase::HandleEvent(
     case fuchsia::ui::input::PointerEventPhase::DOWN:
       // Check that Up event is not detected before any Down event.
       if (number_of_up_event_detected_) {
-        FX_LOGS(INFO) << "Down Event detected after 'Up' event. Dropping current event.";
+        FX_LOGS(INFO) << debug_name_
+                      << ": Down Event detected after 'Up' event. Dropping current event.";
         contest_->member->Reject();
         break;
       }
 
       if (!InitGestureInfo(pointer_event, &gesture_info, &gesture_context_)) {
-        FX_LOGS(INFO) << "Pointer Event is missing required fields. Dropping current event.";
+        FX_LOGS(INFO) << debug_name_
+                      << ": Pointer Event is missing required fields. Dropping current event.";
         contest_->member->Reject();
         break;
       }
@@ -61,11 +67,13 @@ void SwipeRecognizerBase::HandleEvent(
       // For the first down event, make sure the contest is not in progress. For subsequent down
       // events, contest should be in progress.
       if (gesture_info_map_.empty() == contest_->in_progress) {
+        FX_LOGS(INFO) << debug_name_ << ": Failed because contest was already in progress.";
         contest_->member->Reject();
         break;
       }
 
       if (!ValidatePointerEvent(gesture_info, pointer_event)) {
+        FX_LOGS(INFO) << debug_name_ << ": Failed because of pointer event validation.";
         contest_->member->Reject();
         break;
       }
@@ -73,7 +81,8 @@ void SwipeRecognizerBase::HandleEvent(
       gesture_info_map_[pointer_id] = std::move(gesture_info);
 
       if (gesture_info_map_.size() > number_of_fingers_) {
-        FX_LOGS(INFO) << "More fingers detected than expected. Dropping current event.";
+        FX_LOGS(INFO) << debug_name_
+                      << ": More fingers detected than expected. Dropping current event.";
         contest_->member->Reject();
       } else if (gesture_info_map_.size() == 1) {
         // Schedule a task to declare defeat with a timeout equal to swipe_gesture_timeout_.
@@ -121,6 +130,8 @@ void SwipeRecognizerBase::HandleEvent(
 
       // Check if the all the Down events are detected.
       if (gesture_info_map_.size() != number_of_fingers_) {
+        FX_LOGS(INFO) << debug_name_
+                      << ": Failed because an up event is detected before all the down events.";
         contest_->member->Reject();
         break;
       }
@@ -130,6 +141,7 @@ void SwipeRecognizerBase::HandleEvent(
       if (!(ValidatePointerEvent(it->second, pointer_event) &&
             ValidateSwipePath(pointer_id, pointer_event) &&
             ValidateSwipeDistance(pointer_id, pointer_event))) {
+        FX_LOGS(INFO) << debug_name_ << ": Failed while validating pointer events.";
         contest_->member->Reject();
         break;
       }
@@ -197,7 +209,8 @@ void SwipeRecognizerBase::UpdateLastPointerPosition(
   GestureInfo gesture_info;
   GestureContext dummy_context;
   if (!InitGestureInfo(pointer_event, &gesture_info, &dummy_context)) {
-    FX_LOGS(INFO) << "Pointer Event is missing required fields. Dropping current event.";
+    FX_LOGS(INFO) << debug_name_
+                  << ": Pointer Event is missing required fields. Dropping current event.";
     contest_->member->Reject();
     return;
   }

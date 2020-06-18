@@ -45,7 +45,7 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // gesture arena. |number_of_fingers| is the number of fingers that will be used to perform the
   // swipe gesture.
   SwipeRecognizerBase(SwipeGestureCallback callback, uint32_t number_of_fingers,
-                      zx::duration swipe_gesture_timeout);
+                      zx::duration swipe_gesture_timeout, const std::string& debug_name);
   ~SwipeRecognizerBase() override;
 
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;
@@ -109,6 +109,9 @@ class SwipeRecognizerBase : public GestureRecognizer {
 
   // Number of fingers that will be used to perform the swipe gesture.
   uint32_t number_of_fingers_ = kDefaultNumberOfFingers;
+
+  // String name of the recognizer, to be used in logs only.
+  const std::string debug_name_;
 
   std::unique_ptr<Contest> contest_;
 };
