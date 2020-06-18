@@ -16,13 +16,11 @@
 
 #include <elfload/elfload.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "util.h"
 
-static bool stdio_pipe_test(void) {
-  BEGIN_TEST;
-
+TEST(StdioTests, stdio_pipe_test) {
   int fds[2];
   ASSERT_EQ(pipe(fds), 0, "pipe creation failed");
 
@@ -38,8 +36,6 @@ static bool stdio_pipe_test(void) {
 
   ASSERT_EQ(close(fds[0]), 0, "");
   ASSERT_EQ(close(fds[1]), 0, "");
-
-  END_TEST;
 }
 
 static zx_handle_t handle_from_fd(int fd) {
@@ -50,9 +46,7 @@ static zx_handle_t handle_from_fd(int fd) {
   return handle;
 }
 
-static bool stdio_advanced_pipe_test(void) {
-  BEGIN_TEST;
-
+TEST(StdioTests, stdio_advanced_pipe_test) {
   const char* file = "/boot/bin/stdio-test-util";
 
   zx_handle_t fdio_job = zx_job_default();
@@ -120,8 +114,6 @@ static bool stdio_advanced_pipe_test(void) {
   ASSERT_EQ(proc_info.return_code, 0, "lsusb must return 0");
 
   zx_handle_close(p);
-
-  END_TEST;
 }
 
 typedef struct ThreadData {
@@ -139,13 +131,11 @@ static void* thread_func_do_some_printing(void* arg) {
 
 // This is a crash regression test, multithreaded access to FILE* was racy and
 // could crash. If this test is "flaky", this has regressed. See ZX-4278.
-static bool stdio_race_on_file_access(void) {
-  BEGIN_TEST;
-
+TEST(StdioTests, stdio_race_on_file_access) {
   zx_time_t start_time = zx_clock_get_monotonic();
   while (zx_clock_get_monotonic() - start_time < ZX_SEC(5)) {
     FILE* f = tmpfile();
-    ASSERT_NONNULL(f, "tmpfile failed");
+    ASSERT_NOT_NULL(f, "tmpfile failed");
 
     pthread_t threads[100];
     ThreadData thread_data[countof(threads)];
@@ -166,12 +156,4 @@ static bool stdio_race_on_file_access(void) {
 
     fclose(f);
   }
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(stdio_tests)
-RUN_TEST(stdio_pipe_test);
-RUN_TEST(stdio_advanced_pipe_test);
-RUN_TEST(stdio_race_on_file_access);
-END_TEST_CASE(stdio_tests)

@@ -27,7 +27,7 @@ test("stdio-test") {
     "//zircon/public/lib/elfload",
     "//zircon/public/lib/runtime",
     "//zircon/system/ulib/test-utils",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
 }
 

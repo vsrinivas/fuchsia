@@ -10,8 +10,6 @@
 #include <strings.h>
 #include <unistd.h>
 
-#include <unittest/unittest.h>
-
 // readable: is the pipe readable on the child side?
 // returns [our_fd, child_fd]
 int stdio_pipe(int pipe_fds[2], bool readable) {
