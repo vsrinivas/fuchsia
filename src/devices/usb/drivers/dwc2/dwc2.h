@@ -155,6 +155,12 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   dwc2_metadata_t metadata_;
   bool connected_ = false;
   bool configured_ = false;
+  // Raw IRQ timestamp from kernel
+  zx::time irq_timestamp_;
+  // Timestamp we were dispatched at
+  zx::time irq_dispatch_timestamp_;
+  // Timestamp when we started waiting for the interrupt
+  zx::time wait_start_time_;
 };
 
 }  // namespace dwc2

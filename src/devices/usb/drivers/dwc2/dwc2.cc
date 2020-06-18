@@ -4,6 +4,7 @@
 
 #include "dwc2.h"
 
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
 #include <ddk/metadata.h>
@@ -241,13 +242,22 @@ zx_status_t Dwc2::HandleSetupRequest(size_t* out_actual) {
 
   auto* setup = &cur_setup_;
   auto* buffer = ep0_buffer_.virt();
-
+  zx::duration elapsed;
+  zx::time now;
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) {
     // Handle some special setup requests in this driver
     switch (setup->bRequest) {
       case USB_REQ_SET_ADDRESS:
         zxlogf(SERIAL, "SET_ADDRESS %d", setup->wValue);
         SetAddress(static_cast<uint8_t>(setup->wValue));
+        now = zx::clock::get_monotonic();
+        elapsed = now - irq_timestamp_;
+        zxlogf(INFO,
+               "Took %i microseconds to reply to SET_ADDRESS interrupt\nStarted waiting at %p\nGot "
+               "hardware IRQ at %p\nFinished processing at %p",
+               static_cast<int>(elapsed.to_usecs()),
+               reinterpret_cast<void*>(wait_start_time_.get()),
+               reinterpret_cast<void*>(irq_timestamp_.get()), reinterpret_cast<void*>(now.get()));
         *out_actual = 0;
         return ZX_OK;
       case USB_REQ_SET_CONFIGURATION:
@@ -911,7 +921,9 @@ int Dwc2::IrqThread() {
   auto* mmio = get_mmio();
 
   while (1) {
-    auto wait_res = irq_.wait(nullptr);
+    wait_start_time_ = zx::clock::get_monotonic();
+    auto wait_res = irq_.wait(&irq_timestamp_);
+    irq_dispatch_timestamp_ = zx::clock::get_monotonic();
     if (wait_res == ZX_ERR_CANCELED) {
       break;
     } else if (wait_res != ZX_OK) {
