@@ -204,47 +204,50 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
 
   Status EnterEnvelope(Position envelope_position, EnvelopePointer envelope,
                        const fidl_type_t* payload_type) {
-    if (envelope->presence == kAllocAbsenceMarker &&
-        (envelope->num_bytes != 0 || envelope->num_handles != 0)) {
-      SetError("Envelope has absent data pointer, yet has data and/or handles");
-      return Status::kConstraintViolationError;
+    if (envelope->presence == kAllocAbsenceMarker) {
+      return Status::kSuccess;
     }
-    if (envelope->presence != kAllocAbsenceMarker && envelope->num_bytes == 0) {
-      SetError("Envelope has present data pointer, but zero byte count");
-      return Status::kConstraintViolationError;
-    }
-    uint32_t expected_handle_count;
-    if (add_overflow(handle_idx_, envelope->num_handles, &expected_handle_count) ||
-        expected_handle_count > num_handles_) {
-      SetError("Envelope has more handles than expected");
-      return Status::kConstraintViolationError;
-    }
+
     // Remember the current watermark of bytes and handles, so that after processing
     // the envelope, we can validate that the claimed num_bytes/num_handles matches the reality.
     if (!envelope_frames_.Push(EnvelopeState(next_out_of_line_, handle_idx_))) {
       SetError("Overly deep nested envelopes");
       return Status::kConstraintViolationError;
     }
-    // If we do not have the coding table for this payload,
-    // treat it as unknown and close its contained handles
-    if (envelope->presence != kAllocAbsenceMarker && payload_type == nullptr &&
-        envelope->num_handles > 0) {
-      if (has_handles()) {
-        memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
-               envelope->num_handles * sizeof(zx_handle_t));
-        handle_idx_ += envelope->num_handles;
-        unknown_handle_idx_ += envelope->num_handles;
-      } else if (has_handle_infos()) {
-        uint32_t end = handle_idx_ + envelope->num_handles;
-        for (; handle_idx_ < end; handle_idx_++, unknown_handle_idx_++) {
-          unknown_handles_[unknown_handle_idx_] = handle_infos()[handle_idx_].handle;
+
+    if (envelope->num_handles > 0) {
+      uint32_t expected_handle_count;
+      if (add_overflow(handle_idx_, envelope->num_handles, &expected_handle_count) ||
+          expected_handle_count > num_handles_) {
+        SetError("Envelope has more handles than expected");
+        return Status::kConstraintViolationError;
+      }
+
+      // If we do not have the coding table for this payload,
+      // treat it as unknown and close its contained handles
+      if (payload_type == nullptr) {
+        if (has_handles()) {
+          memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
+                 envelope->num_handles * sizeof(zx_handle_t));
+          handle_idx_ += envelope->num_handles;
+          unknown_handle_idx_ += envelope->num_handles;
+        } else if (has_handle_infos()) {
+          uint32_t end = handle_idx_ + envelope->num_handles;
+          for (; handle_idx_ < end; handle_idx_++, unknown_handle_idx_++) {
+            unknown_handles_[unknown_handle_idx_] = handle_infos()[handle_idx_].handle;
+          }
         }
       }
     }
+
     return Status::kSuccess;
   }
 
   Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
+    if (envelope->presence == kAllocAbsenceMarker) {
+      return Status::kSuccess;
+    }
+
     // Now that the envelope has been consumed, check the correctness of the envelope header.
     auto& starting_state = envelope_frames_.Pop();
     uint32_t num_bytes = next_out_of_line_ - starting_state.bytes_so_far;

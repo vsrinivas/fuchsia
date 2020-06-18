@@ -200,22 +200,8 @@ class FidlEncoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
 
   Status EnterEnvelope(Position envelope_position, EnvelopePointer envelope,
                        const fidl_type_t* payload_type) {
-    if (mode == Mode::EncodeOnly) {
-      // Validate envelope data/bytes invariants
-      if (envelope->data == nullptr && (envelope->num_bytes != 0 || envelope->num_handles != 0)) {
-        SetError("Envelope has absent data pointer, yet has data and/or handles");
-        return Status::kConstraintViolationError;
-      }
-      if (envelope->data != nullptr && envelope->num_bytes == 0) {
-        SetError("Envelope has present data pointer, but zero byte count");
-        return Status::kConstraintViolationError;
-      }
-      if (envelope->data != nullptr && envelope->num_handles > 0 && payload_type == nullptr) {
-        // Since we do not know the shape of the objects in this envelope,
-        // we cannot move the handles scattered in the message.
-        SetError("Does not know how to encode for this ordinal");
-        return Status::kConstraintViolationError;
-      }
+    if (envelope->data == nullptr) {
+      return Status::kSuccess;
     }
     // Remember the current watermark of bytes and handles, so that after processing
     // the envelope, we can either:
@@ -230,9 +216,16 @@ class FidlEncoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
 
   Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
     // Now that the envelope has been consumed, check the correctness of the envelope header.
-    auto& starting_state = envelope_frames_.Pop();
-    uint32_t num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
-    uint32_t num_handles = handle_idx_ - starting_state.handles_so_far;
+    uint32_t num_bytes;
+    uint32_t num_handles;
+    if (envelope->data != nullptr) {
+      auto& starting_state = envelope_frames_.Pop();
+      num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
+      num_handles = handle_idx_ - starting_state.handles_so_far;
+    } else {
+      num_bytes = 0;
+      num_handles = 0;
+    }
     if (mode == Mode::LinearizeAndEncode) {
       // Write the num_bytes/num_handles.
       envelope->num_bytes = num_bytes;
