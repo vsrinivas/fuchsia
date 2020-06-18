@@ -220,6 +220,11 @@ impl Streams {
         Self { streams, ..Default::default() }
     }
 
+    /// Returns true if there are no streams in the set.
+    pub fn is_empty(&self) -> bool {
+        self.streams.is_empty()
+    }
+
     /// Inserts a stream, indexing it by the local endpoint id.
     /// It replaces any other stream with the same endpoint id.
     pub fn insert(&mut self, stream: Stream) {

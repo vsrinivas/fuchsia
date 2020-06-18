@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    bt_a2dp::stream::Streams,
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{
         self as avdtp, MediaCodecType, ServiceCapability, ServiceCategory, StreamEndpoint,
@@ -13,7 +14,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
@@ -29,7 +30,6 @@ use {
 };
 
 use crate::inspect_types::RemotePeerInspect;
-use crate::Streams;
 
 pub(crate) struct Peer {
     /// The id of the peer we are connected to.
@@ -60,7 +60,7 @@ impl Peer {
 
         let res = Self {
             id,
-            inner: Arc::new(Mutex::new(PeerInner::new(peer, streams, inspect, cobalt_sender))),
+            inner: Arc::new(Mutex::new(PeerInner::new(id, peer, streams, inspect, cobalt_sender))),
             profile,
             descriptor: None,
         };
@@ -265,6 +265,8 @@ fn a2dp_version_check(profile: ProfileDescriptor) -> bool {
 struct PeerInner {
     /// AVDTP peer communicating to this.
     peer: Arc<avdtp::Peer>,
+    /// The peer id that `peer` is connected to.
+    peer_id: PeerId,
     /// Some(id) if we are opening a StreamEndpoint but haven't finished yet.
     /// This is the local ID.
     /// AVDTP Sec 6.11 - only up to one stream can be in this state.
@@ -285,21 +287,17 @@ struct PeerInner {
 
 impl PeerInner {
     fn new(
+        peer_id: PeerId,
         peer: avdtp::Peer,
         mut streams: Streams,
         inspect: inspect::Node,
         cobalt_sender: CobaltSender,
     ) -> Self {
         // Setup inspect nodes for the remote peer and for each of the streams that it holds
-        let mut inspect = RemotePeerInspect::new(inspect);
-        for (id, stream) in streams.iter_mut() {
-            let stream_state_property = inspect.create_stream_state_inspect(id);
-            let callback =
-                move |stream: &StreamEndpoint| stream_state_property.set(&format!("{:?}", stream));
-            stream.set_endpoint_update_callback(Some(Box::new(callback)));
-        }
+        let inspect = RemotePeerInspect::new(inspect, &mut streams);
         Self {
             peer: Arc::new(peer),
+            peer_id,
             opening: None,
             local: streams,
             inspect,
@@ -307,13 +305,6 @@ impl PeerInner {
             cobalt_sender,
             cached_remote_endpoints: None,
         }
-    }
-
-    /// Returns an endpoint from the local set or a BadAcpSeid error if it doesn't exist.
-    fn get_mut(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<&mut StreamEndpoint> {
-        self.local
-            .get_endpoint(&local_id)
-            .ok_or(avdtp::Error::RequestInvalid(avdtp::ErrorCode::BadAcpSeid))
     }
 
     /// Configures the remote stream endpoint with the provided capabilities and
@@ -324,11 +315,14 @@ impl PeerInner {
         remote_id: &StreamEndpointId,
         capabilities: Vec<ServiceCapability>,
     ) -> avdtp::Result<()> {
-        let stream = self.get_mut(&local_id)?;
+        let stream = self
+            .local
+            .get_mut(&local_id)
+            .ok_or(avdtp::Error::RequestInvalid(avdtp::ErrorCode::BadAcpSeid))?;
         stream
-            .configure(&remote_id, capabilities)
+            .configure(&self.peer_id, &remote_id, capabilities)
             .map_err(|(_, c)| avdtp::Error::RequestInvalid(c))?;
-        stream.establish().or(Err(avdtp::Error::InvalidState))?;
+        stream.endpoint_mut().establish().or(Err(avdtp::Error::InvalidState))?;
         self.opening = Some(local_id.clone());
         Ok(())
     }
@@ -353,12 +347,7 @@ impl PeerInner {
 
     // Starts the media decoding task for a stream |seid|.
     fn start_endpoint(&mut self, seid: &StreamEndpointId) -> Result<(), avdtp::ErrorCode> {
-        let inspect = &mut self.inspect;
-        let cobalt_sender = self.cobalt_sender.clone();
-        self.local.get_mut(&seid).and_then(|stream| {
-            let inspect = inspect.create_streaming_inspect_data(&seid);
-            stream.start(inspect, cobalt_sender).or(Err(avdtp::ErrorCode::BadState))
-        })
+        self.local.get_mut(&seid).ok_or(avdtp::ErrorCode::BadAcpSeid)?.start()
     }
 
     /// To be called when the peer disconnects. Wakes waiters on the closed peer.
@@ -373,10 +362,13 @@ impl PeerInner {
     /// L2CAP channel after the first.
     fn receive_channel(&mut self, channel: zx::Socket) -> avdtp::Result<()> {
         let stream_id = self.opening.as_ref().cloned().ok_or(avdtp::Error::InvalidState)?;
-        let stream = self.get_mut(&stream_id)?;
+        let stream = self
+            .local
+            .get_mut(&stream_id)
+            .ok_or(avdtp::Error::RequestInvalid(avdtp::ErrorCode::BadAcpSeid))?;
         let channel =
             fasync::Socket::from_socket(channel).or_else(|e| Err(avdtp::Error::ChannelSetup(e)))?;
-        if !stream.receive_channel(channel)? {
+        if !stream.endpoint_mut().receive_channel(channel)? {
             self.opening = None;
         }
         fx_log_info!("Transport channel connected to seid {}", stream_id);
@@ -390,25 +382,23 @@ impl PeerInner {
             avdtp::Request::Discover { responder } => responder.send(&self.local.information()),
             avdtp::Request::GetCapabilities { responder, stream_id }
             | avdtp::Request::GetAllCapabilities { responder, stream_id } => {
-                match self.local.get_endpoint(&stream_id) {
+                match self.local.get(&stream_id) {
                     None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => responder.send(stream.capabilities()),
+                    Some(stream) => responder.send(stream.endpoint().capabilities()),
                 }
             }
-            avdtp::Request::Open { responder, stream_id } => {
-                match self.local.get_endpoint(&stream_id) {
-                    None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => match stream.establish() {
-                        Ok(()) => {
-                            self.opening = Some(stream_id);
-                            responder.send()
-                        }
-                        Err(_) => responder.reject(avdtp::ErrorCode::BadState),
-                    },
-                }
-            }
+            avdtp::Request::Open { responder, stream_id } => match self.local.get_mut(&stream_id) {
+                None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
+                Some(stream) => match stream.endpoint_mut().establish() {
+                    Ok(()) => {
+                        self.opening = Some(stream_id);
+                        responder.send()
+                    }
+                    Err(_) => responder.reject(avdtp::ErrorCode::BadState),
+                },
+            },
             avdtp::Request::Close { responder, stream_id } => {
-                match self.local.get_endpoint(&stream_id) {
+                match self.local.get_mut(&stream_id) {
                     None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
                     Some(stream) => stream.release(responder, &self.peer).await,
                 }
@@ -419,40 +409,39 @@ impl PeerInner {
                 remote_stream_id,
                 capabilities,
             } => {
-                let stream = match self.local.get_endpoint(&local_stream_id) {
+                let stream = match self.local.get_mut(&local_stream_id) {
                     None => {
                         return responder
                             .reject(ServiceCategory::None, avdtp::ErrorCode::BadAcpSeid)
                     }
                     Some(stream) => stream,
                 };
-                match stream.configure(&remote_stream_id, capabilities.clone()) {
+                match stream.configure(&self.peer_id, &remote_stream_id, capabilities.clone()) {
                     Ok(_) => responder.send(),
                     Err((cat, code)) => responder.reject(cat, code),
                 }
             }
             avdtp::Request::GetConfiguration { stream_id, responder } => {
-                let stream = match self.local.get_endpoint(&stream_id) {
+                let stream = match self.local.get(&stream_id) {
                     None => return responder.reject(avdtp::ErrorCode::BadAcpSeid),
                     Some(stream) => stream,
                 };
-                match stream.get_configuration() {
+                match stream.endpoint().get_configuration() {
                     Some(c) => responder.send(&c),
                     None => responder.reject(avdtp::ErrorCode::BadState),
                 }
             }
             avdtp::Request::Reconfigure { responder, local_stream_id, capabilities } => {
-                let stream = match self.local.get_endpoint(&local_stream_id) {
+                let stream = match self.local.get_mut(&local_stream_id) {
                     None => {
                         return responder
                             .reject(ServiceCategory::None, avdtp::ErrorCode::BadAcpSeid)
                     }
                     Some(stream) => stream,
                 };
-                // TODO(40768): Actually tweak the codec parameters.
                 match stream.reconfigure(capabilities) {
                     Ok(_) => responder.send(),
-                    Err(_) => responder.reject(ServiceCategory::None, avdtp::ErrorCode::BadState),
+                    Err((cat, code)) => responder.reject(cat, code),
                 }
             }
             avdtp::Request::Start { responder, stream_ids } => {
@@ -469,7 +458,8 @@ impl PeerInner {
                     let res = self
                         .local
                         .get_mut(&seid)
-                        .and_then(|x| x.stop().or(Err(avdtp::ErrorCode::BadState)));
+                        .map(|x| x.suspend())
+                        .unwrap_or(Err(avdtp::ErrorCode::BadAcpSeid));
                     if let Err(code) = res {
                         return responder.reject(&seid, code);
                     }
@@ -477,17 +467,13 @@ impl PeerInner {
                 responder.send()
             }
             avdtp::Request::Abort { responder, stream_id } => {
-                let stream = match self.local.get_endpoint(&stream_id) {
+                let stream = match self.local.get_mut(&stream_id) {
                     // No response shall be sent if the SEID is not valid. AVDTP 8.16.2
                     None => return Ok(()),
                     Some(stream) => stream,
                 };
                 stream.abort(None).await;
                 self.opening = self.opening.take().filter(|id| id != &stream_id);
-                let _ = self
-                    .local
-                    .get_mut(&stream_id)
-                    .and_then(|x| x.stop().or(Err(avdtp::ErrorCode::BadState)));
                 responder.send()
             }
         }
@@ -513,7 +499,9 @@ fn codectype_to_availability_metric(
 mod tests {
 
     use super::*;
+    use bt_a2dp::media_task::tests::TestMediaTaskBuilder;
     use bt_a2dp::media_types::*;
+    use bt_a2dp::stream;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_bluetooth_bredr::{
         Channel, ProfileMarker, ProfileRequest, ServiceClassProfileIdentifier,
@@ -539,7 +527,7 @@ mod tests {
     }
 
     fn create_streams() -> Streams {
-        let mut s = Streams::new();
+        let mut streams = Streams::new();
         let sbc_media_codec_info = SbcCodecInfo::new(
             SbcSamplingFrequency::MANDATORY_SNK,
             SbcChannelMode::MANDATORY_SNK,
@@ -564,8 +552,10 @@ mod tests {
             ],
         )
         .expect("Building endpoint shoul work");
-        s.insert(sbc_stream);
-        s
+
+        let stream = stream::Stream::build(sbc_stream, TestMediaTaskBuilder::new().builder());
+        streams.insert(stream);
+        streams
     }
 
     fn receive_simple_accept(remote: &zx::Socket, signal_id: u8) {
@@ -730,7 +720,7 @@ mod tests {
                 let sbc_seid: StreamEndpointId = SBC_SEID.try_into().unwrap();
                 assert_eq!(sbc_seid, stream_id);
                 responder
-                    .send(streams.get_endpoint(&stream_id).unwrap().capabilities().as_slice())
+                    .send(streams.get(&stream_id).unwrap().endpoint().capabilities().as_slice())
                     .expect("get capabilities response success");
             }
             x => panic!("Expected an avdtp get capabilities request, got {:?}", x),

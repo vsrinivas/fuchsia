@@ -5,6 +5,7 @@
 use {
     anyhow::format_err,
     bt_a2dp::media_types::*,
+    bt_a2dp::stream::Streams,
     bt_avdtp as avdtp,
     fidl_fuchsia_bluetooth_bredr::{Channel, ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
@@ -19,7 +20,7 @@ use {
     std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
 };
 
-use crate::{avrcp_relay::AvrcpRelay, peer, Streams, SBC_SEID};
+use crate::{avrcp_relay::AvrcpRelay, peer, SBC_SEID};
 
 /// ConnectedPeers owns the set of connected peers and manages peers based on
 /// discovery, connections and disconnections.
@@ -149,7 +150,7 @@ impl ConnectedPeers {
                 let mut peer = peer::Peer::create(
                     id,
                     avdtp_peer,
-                    self.streams.clone(),
+                    self.streams.as_new(),
                     self.profile.clone(),
                     self.inspect.create_child(inspect::unique_name("peer_")),
                     self.cobalt_sender.clone(),
@@ -178,7 +179,7 @@ impl ConnectedPeers {
                     let weak_peer = self.connected.get(&id).expect("just added");
                     fuchsia_async::spawn_local(async move {
                         if let Err(e) = ConnectedPeers::start_streaming(&weak_peer).await {
-                            fx_vlog!(tag: "a2dp-sink", 1, "Streaming task ended: {:?}", e);
+                            fx_vlog!(1, "Streaming task ended: {:?}", e);
                             weak_peer.detach();
                         }
                     });
@@ -188,8 +189,9 @@ impl ConnectedPeers {
                 let detached_peer = self.connected.get(&id).expect("just added");
                 let mut descriptors = self.descriptors.clone();
                 let disconnected_id = id.clone();
-                fasync::spawn(async move {
+                fasync::spawn_local(async move {
                     closed_fut.await;
+                    fx_log_info!("Peer {:?} disconnected", detached_peer.key());
                     detached_peer.detach();
                     descriptors.remove(&disconnected_id);
                     // Captures the relay to extend the lifetime until after the peer clooses.

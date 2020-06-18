@@ -50,6 +50,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-contrib",
+    "//src/lib/inspect/rust/fuchsia-inspect-derive",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
