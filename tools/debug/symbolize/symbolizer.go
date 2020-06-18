@@ -34,7 +34,7 @@ type llvmSymboArgs struct {
 	output     chan LLVMSymbolizeResult
 }
 
-const maxCacheSize = 128
+const maxCacheSize = 2048
 
 type LLVMSymbolizeResult struct {
 	Locs []SourceLocation
@@ -102,8 +102,6 @@ func (s *LLVMSymbolizer) restartIfNeeded() bool {
 
 func (s *LLVMSymbolizer) handle(ctx context.Context) {
 	for {
-		s.restartIfNeeded()
-
 		select {
 		case <-ctx.Done():
 			return
@@ -127,6 +125,7 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 				args.output <- LLVMSymbolizeResult{nil, err}
 				continue
 			}
+			s.restartIfNeeded()
 			// From //zircon/docs/symbolizer_markup.md:
 			// In frames after frame zero, this code location identifies a call site.
 			// Some emitters may subtract one byte or one instruction length from the
