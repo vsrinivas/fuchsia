@@ -87,10 +87,7 @@ class FvmContainer final : public Container {
   };
 
  public:
-  enum class ResizeImageFileToFitOption { YES, NO };
-
   enum class ExtendLengthType { EXACT, LOWER_BOUND };
-
   // Creates a new FvmContainer at the given |path|, regardless of whether one already exists.
   // Uses the provided |slice_size| to create the container starting at |offset| bytes within the
   // file with a total length of |length| bytes, and returns the result in |out|.
@@ -119,20 +116,31 @@ class FvmContainer final : public Container {
 
   uint64_t CalculateDiskSize() const final;
 
+  void SetExtendLengthType(ExtendLengthType opt) { extend_length_type_ = opt; }
+
   // Returns the actual disk size.
   uint64_t GetDiskSize() const;
-
-  void SetResizeImageFileToFit(ResizeImageFileToFitOption opt) { resize_image_file_to_fit_ = opt; }
-
-  void SetExtendLengthType(ExtendLengthType opt) { extend_length_type_ = opt; }
+  // Trim the image file to only keep essential content.
+  zx_status_t ResizeImageFileToFit();
+  // Convert the image to android sparse format.
+  zx_status_t ConvertToAndroidSparseImage();
+  // Compress the image with lz4.
+  zx_status_t CompressWithLZ4();
+  // Add non-empty segment information, currently for test purpose.
+  void AddNonEmptySegment(size_t start, size_t end);
 
  private:
   uint64_t disk_offset_;
   uint64_t disk_size_;
   fbl::Vector<FvmPartitionInfo> partitions_;
   FvmInfo info_;
-  ResizeImageFileToFitOption resize_image_file_to_fit_ = ResizeImageFileToFitOption::NO;
   ExtendLengthType extend_length_type_ = ExtendLengthType::EXACT;
+
+  struct Segment {
+    size_t start;
+    size_t end;
+  };
+  std::vector<Segment> non_empty_segments_;
 
   FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length);
 
@@ -155,8 +163,12 @@ class FvmContainer final : public Container {
   zx_status_t WriteData(uint32_t pslice, uint32_t block_offset, size_t block_size, void* data);
   // Calculate total slices in added partitions.
   size_t CountAddedSlices() const;
-  // Minimize the image file that only keep header and added partitions.
-  zx_status_t ResizeImageFileToFit();
+  // The method returns the offset in bytes of a block in a slice
+  size_t GetBlockStart(uint32_t pslice, uint32_t block_offset, size_t block_size) const;
+  // Helper function to determine the type of android sparse image block type.
+  AndroidSparseChunkType DetermineAndroidSparseChunkType(const uint32_t* buffer, size_t block_size,
+                                                         size_t block_start);
+  void FinalizeNonEmptySegmentsInfo();
 };
 
 class CompressionContext {

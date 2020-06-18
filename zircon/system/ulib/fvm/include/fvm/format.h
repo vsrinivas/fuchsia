@@ -375,6 +375,38 @@ class FormatInfo {
 
 }  // namespace fvm
 
+// Following describes the android sparse format
+
+constexpr uint32_t kAndroidSparseHeaderMagic = 0xed26ff3a;
+
+struct AndroidSparseHeader {
+  const uint32_t kMagic = kAndroidSparseHeaderMagic;
+  const uint16_t kMajorVersion = 0x1;
+  const uint16_t kMinorVersion = 0x0;
+  uint16_t file_header_size;
+  uint16_t chunk_header_size;
+  uint32_t block_size;
+  uint32_t total_blocks;
+  uint32_t total_chunks;
+  // CRC32 checksum of the original data, including dont-care chunk
+  uint32_t image_checksum;
+};
+
+enum AndroidSparseChunkType : uint16_t {
+  kChunkTypeRaw = 0xCAC1,
+  kChunkTypeFill = 0xCAC2,
+  kChunkTypeDontCare = 0xCAC3,
+};
+
+struct AndroidSparseChunkHeader {
+  AndroidSparseChunkType chunk_type;
+  uint16_t reserved1;
+  // In the unit of blocks
+  uint32_t chunk_blocks;
+  // In the unit of bytes
+  uint32_t total_size;
+};
+
 #endif  //  __cplusplus
 
 __BEGIN_CDECLS

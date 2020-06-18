@@ -372,10 +372,6 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     return ZX_ERR_IO;
   }
 
-  if (resize_image_file_to_fit_ == ResizeImageFileToFitOption::YES) {
-    return ResizeImageFileToFit();
-  }
-
   cleanup.cancel();
   return ZX_OK;
 }
@@ -424,14 +420,11 @@ zx_status_t FvmContainer::Commit() {
     return status;
   }
 
+  non_empty_segments_ = {{disk_offset_, disk_offset_ + 2 * info_.MetadataSize()}};
   for (unsigned i = 0; i < partitions_.size(); i++) {
     if ((status = WritePartition(i)) != ZX_OK) {
       return status;
     }
-  }
-
-  if (resize_image_file_to_fit_ == ResizeImageFileToFitOption::YES) {
-    return ResizeImageFileToFit();
   }
 
   xprintf("Successfully wrote FVM data to disk\n");
@@ -598,6 +591,10 @@ zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uin
     return status;
   }
 
+  auto slice_start = GetBlockStart(*pslice, 0, format->BlockSize());
+  auto slice_end = slice_start + vslice_info.slice_count * slice_size_;
+  AddNonEmptySegment(slice_start, slice_end);
+
   // Write each slice in the given extent
   uint32_t current_block = 0;
   for (unsigned i = 0; i < vslice_info.slice_count; i++) {
@@ -614,7 +611,6 @@ zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uin
           fprintf(stderr, "Failed to read block from minfs\n");
           return status;
         }
-
         current_block++;
       }
 
@@ -632,14 +628,12 @@ zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uin
 zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size_t block_size,
                                     void* data) {
   info_.CheckValid();
-  fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_);
   if (block_offset * block_size > slice_size_) {
     fprintf(stderr, "Not enough space in slice\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (lseek(fd_.get(), disk_offset_ + format_info.GetSliceStart(pslice) + block_offset * block_size,
-            SEEK_SET) < 0) {
+  if (lseek(fd_.get(), GetBlockStart(pslice, block_offset, block_size), SEEK_SET) < 0) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -650,4 +644,255 @@ zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size
   }
 
   return ZX_OK;
+}
+
+size_t FvmContainer::GetBlockStart(uint32_t pslice, uint32_t block_offset,
+                                   size_t block_size) const {
+  return disk_offset_ +
+         fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_).GetSliceStart(pslice) +
+         block_offset * block_size;
+}
+
+AndroidSparseChunkType FvmContainer::DetermineAndroidSparseChunkType(const uint32_t* buffer,
+                                                                     size_t block_size,
+                                                                     size_t block_start) {
+  // Check whether it can be dont-care block.
+  // If it intersects with any non-empty segment, it cannot be dont-care.
+  for (const auto& segment : non_empty_segments_) {
+    if (segment.start >= block_start + block_size) {
+      break;
+    }
+    if (segment.end > block_start) {
+      if (std::all_of(buffer, &buffer[block_size / sizeof(buffer[0])],
+                      [&](uint32_t val) { return val == buffer[0]; })) {
+        return kChunkTypeFill;
+      }
+      return kChunkTypeRaw;
+    }
+  }
+  return kChunkTypeDontCare;
+}
+
+namespace {
+bool CanAppendBlockToChunk(const uint32_t* buffer, uint16_t block_type,
+                           const AndroidSparseChunkHeader& chunk, uint32_t fill_val) {
+  // Check whether we can just append the block to current chunk.
+  // 1. The block has to be of the same type as the current chunk.
+  // 2. If it is kChunkTypeFill, the fill value should be the same as well.
+  if (block_type == chunk.chunk_type) {
+    return block_type == kChunkTypeFill ? buffer[0] == fill_val : true;
+  }
+  return false;
+}
+}  // namespace
+
+zx_status_t FvmContainer::ConvertToAndroidSparseImage() {
+  char path[] = "/tmp/block.XXXXXX";
+  fbl::unique_fd fd(mkstemp(path));
+  if (!fd) {
+    fprintf(stderr, "Failed to create temporary file\n");
+    return ZX_ERR_IO;
+  }
+
+  auto cleanup = fit::defer([path]() {
+    if (unlink(path) < 0) {
+      fprintf(stderr, "Failed to unlink path %s\n", path);
+    }
+  });
+
+  // The block size is recommended to be always 4096.
+  constexpr size_t block_size = 4096;
+  // Defined as uint32_t instead of uint8_t because kChunkTypeFill is based
+  // on uint32_t granularity instead of byte.
+  uint32_t buffer[block_size / sizeof(uint32_t)];
+
+  if (lseek(fd_.get(), 0, SEEK_SET) != 0) {
+    fprintf(stderr, "Failed to seek to the beginning of the file.\n");
+    return ZX_ERR_IO;
+  }
+
+  uint64_t file_size = fvm::host::FdWrapper(fd_.get()).Size();
+  FinalizeNonEmptySegmentsInfo();
+  // Scan the file to determine all chunks.
+  std::vector<AndroidSparseChunkHeader> chunks;
+  size_t total_bytes = 0, total_blocks = 0;
+  uint32_t fill_val = 0;
+  while (total_bytes < file_size) {
+    ssize_t read_bytes = read(fd_.get(), buffer, block_size);
+    if (read_bytes != block_size) {
+      fprintf(stderr, "Failed to read data @ %zu\n", total_bytes);
+      return ZX_ERR_IO;
+    }
+
+    AndroidSparseChunkType block_type =
+        DetermineAndroidSparseChunkType(buffer, block_size, total_bytes);
+    if (!chunks.empty() && CanAppendBlockToChunk(buffer, block_type, chunks.back(), fill_val)) {
+      chunks.back().chunk_blocks++;
+      chunks.back().total_size += block_type == kChunkTypeRaw ? block_size : 0;
+    } else {
+      // Start a new chunk.
+      chunks.push_back({block_type, 0, 1, sizeof(AndroidSparseChunkHeader)});
+      if (block_type == kChunkTypeFill) {
+        chunks.back().total_size += sizeof(uint32_t);
+        fill_val = buffer[0];
+      } else if (block_type == kChunkTypeRaw) {
+        chunks.back().total_size += block_size;
+      }
+    }
+    total_bytes += read_bytes;
+    total_blocks++;
+  }
+
+  // Construct android sparse image header.
+  AndroidSparseHeader sparse_header{
+      .file_header_size = sizeof(AndroidSparseHeader),
+      .chunk_header_size = sizeof(AndroidSparseChunkHeader),
+      .block_size = static_cast<uint32_t>(block_size),
+      .total_blocks = static_cast<uint32_t>(total_blocks),
+      .total_chunks = static_cast<unsigned>(chunks.size()),
+      .image_checksum = 0,
+  };
+  if (write(fd.get(), &sparse_header, sizeof(sparse_header)) != sizeof(sparse_header)) {
+    fprintf(stderr, "Failed to write sparse header\n");
+    return ZX_ERR_IO;
+  }
+
+  // Write chunks to file.
+  size_t read_offset = 0;
+  for (auto& chunk : chunks) {
+    // Write chunk header.
+    if (write(fd.get(), &chunk, sizeof(chunk)) != sizeof(chunk)) {
+      fprintf(stderr, "Failed to write chunk header\n");
+      return ZX_ERR_IO;
+    }
+
+    // Write chunk data.
+    if (chunk.chunk_type == kChunkTypeRaw) {
+      for (size_t i = 0; i < chunk.chunk_blocks; i++) {
+        ssize_t read_bytes = pread(fd_.get(), buffer, block_size, read_offset + i * block_size);
+        if (read_bytes != block_size) {
+          fprintf(stderr, "Failed to read raw block data @ %zu\n", read_offset + i * block_size);
+          return ZX_ERR_IO;
+        }
+        ssize_t write_bytes = write(fd.get(), buffer, block_size);
+        if (write_bytes != block_size) {
+          fprintf(stderr, "Failed to write raw block data\n");
+          return ZX_ERR_IO;
+        }
+      }
+    } else if (chunk.chunk_type == kChunkTypeFill) {
+      uint32_t fill_val;
+      if (pread(fd_.get(), &fill_val, sizeof(fill_val), read_offset) != sizeof(fill_val)) {
+        fprintf(stderr, "Failed to read fill value @ %zu\n", read_offset);
+        return ZX_ERR_IO;
+      }
+      if (write(fd.get(), &fill_val, sizeof(fill_val)) != sizeof(fill_val)) {
+        fprintf(stderr, "Failed to write fill value  for fill chunk\n");
+        return ZX_ERR_IO;
+      }
+    }
+    read_offset += chunk.chunk_blocks * block_size;
+  }
+
+  fd_.reset(fd.release());
+  if (rename(path, path_.c_str()) < 0) {
+    fprintf(stderr, "Failed to copy over temp file\n");
+    return ZX_ERR_IO;
+  }
+
+  cleanup.cancel();
+  return ZX_OK;
+}
+
+namespace {
+zx_status_t CreateCompressionContext(CompressionContext* out, size_t size) {
+  auto result = CompressionContext::Create();
+  if (!result.is_ok()) {
+    fprintf(stderr, "%s", result.take_error_result().error.c_str());
+    return ZX_ERR_INTERNAL;
+  }
+  *out = std::move(result.take_ok_result().value);
+  out->Setup(size);
+  return ZX_OK;
+}
+}  // namespace
+
+zx_status_t FvmContainer::CompressWithLZ4() {
+  constexpr size_t kBufferLength = 1024 * 1024;
+  std::vector<uint8_t> buffer(kBufferLength);
+
+  if (lseek(fd_.get(), 0, SEEK_SET) != 0) {
+    fprintf(stderr, "Failed to seek to beginning of the file.\n");
+    return ZX_ERR_IO;
+  }
+
+  uint64_t file_size = fvm::host::FdWrapper(fd_.get()).Size();
+  CompressionContext compression;
+  if (auto status = CreateCompressionContext(&compression, file_size); status != ZX_OK) {
+    return status;
+  }
+
+  while (true) {
+    ssize_t read_bytes = read(fd_.get(), buffer.data(), kBufferLength);
+    if (read_bytes < 0) {
+      fprintf(stderr, "Failed to read data from image file\n");
+      return ZX_ERR_IO;
+    } else if (read_bytes == 0) {
+      break;
+    }
+
+    if (auto status = compression.Compress(buffer.data(), read_bytes); status != ZX_OK) {
+      fprintf(stderr, "Failed to compress data.\n");
+      return status;
+    }
+  }
+
+  if (auto status = compression.Finish(); status != ZX_OK) {
+    return status;
+  }
+
+  if (lseek(fd_.get(), 0, SEEK_SET) != 0) {
+    fprintf(stderr, "Failed to seek to beginning of the file.\n");
+    return ZX_ERR_IO;
+  }
+
+  // Write compressed data to file;
+  const uint8_t* start = static_cast<const uint8_t*>(compression.GetData());
+  const uint8_t* end = start + compression.GetLength();
+  while (start < end) {
+    ssize_t result = write(fd_.get(), start, end - start);
+    if (result <= 0) {
+      fprintf(stderr, "Failed to write compressed data to output file.\n");
+      return ZX_ERR_IO;
+    }
+    start += result;
+  }
+
+  if (ftruncate(fd_.get(), compression.GetLength())) {
+    fprintf(stderr, "Failed to truncate file\n");
+    return ZX_ERR_IO;
+  }
+
+  return ZX_OK;
+}
+
+void FvmContainer::AddNonEmptySegment(size_t start, size_t end) {
+  non_empty_segments_.push_back({start, end});
+}
+
+void FvmContainer::FinalizeNonEmptySegmentsInfo() {
+  // 1. Sort segments
+  // 2. Make sure segments are disjoint.
+  std::sort(non_empty_segments_.begin(), non_empty_segments_.end(),
+            [](auto& l, auto& r) { return l.start < r.start; });
+
+  std::vector<Segment> disjoint;
+  for (auto& seg : non_empty_segments_) {
+    if (disjoint.empty() || disjoint.back().end < seg.start) {
+      disjoint.push_back(seg);
+    } else {
+      disjoint.back().end = seg.end;
+    }
+  }
+  non_empty_segments_ = disjoint;
 }

@@ -71,7 +71,9 @@ int usage(void) {
           "(defaults to 0)\n");
   fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
   fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
-  fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
+  fprintf(stderr,
+          " --compress - specify that file should be compressed (sparse and android sparse image "
+          "only)\n");
   fprintf(stderr, " --disk [bytes] - Size of target disk (valid for size command only)\n");
   fprintf(stderr, " --disk-type [file OR mtd] - Type of target disk (pave only)\n");
   fprintf(stderr, " --max-bad-blocks [number] - Max bad blocks for FTL (pave on mtd only)\n");
@@ -90,6 +92,9 @@ int usage(void) {
           "be resized to just fit the metadata header and added partitions. Disk size specified in "
           "the header remains the same. It's useful for reducing the size of the image file for "
           "flashing\n");
+  fprintf(stderr,
+          " --android-sparse-format - When used with create command, the image will be converted "
+          "to android sparse image.");
   fprintf(
       stderr,
       " --length-is-lowerbound - When used with extend command, if current disk size is already "
@@ -268,6 +273,7 @@ int main(int argc, char** argv) {
   bool should_unlink = true;
   bool resize_image_file_to_fit = false;
   bool length_is_lower_bound = false;
+  bool convert_to_android_sparse_format = false;
   uint32_t flags = 0;
 
   while (i < argc) {
@@ -316,6 +322,8 @@ int main(int argc, char** argv) {
       resize_image_file_to_fit = true;
     } else if (!strcmp(argv[i], "--length-is-lowerbound")) {
       length_is_lower_bound = true;
+    } else if (!strcmp(argv[i], "--android-sparse-format")) {
+      convert_to_android_sparse_format = true;
     } else {
       break;
     }
@@ -366,12 +374,26 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    if (resize_image_file_to_fit) {
-      fvmContainer->SetResizeImageFileToFit(FvmContainer::ResizeImageFileToFitOption::YES);
-    }
-
     if (fvmContainer->Commit() != ZX_OK) {
       return -1;
+    }
+
+    if (resize_image_file_to_fit) {
+      if (auto status = fvmContainer->ResizeImageFileToFit(); status != ZX_OK) {
+        return status;
+      }
+    }
+
+    if (convert_to_android_sparse_format) {
+      if (fvmContainer->ConvertToAndroidSparseImage() != ZX_OK) {
+        return -1;
+      }
+    }
+
+    if (flags & fvm::kSparseFlagLz4) {
+      if (fvmContainer->CompressWithLZ4() != ZX_OK) {
+        return -1;
+      }
     }
   } else if (!strcmp(command, "add")) {
     std::unique_ptr<FvmContainer> fvmContainer;

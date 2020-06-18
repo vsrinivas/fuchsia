@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 
+#include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fvm-host/container.h>
@@ -571,9 +572,7 @@ class FvmHostTest : public zxtest::Test {
   // Creates a fvm container and adds partitions to it. When should succeed is false,
   // the function surfaces the error in adding partition to caller without asserting.
   void CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_pass,
-                 bool enable_data = true,
-                 FvmContainer::ResizeImageFileToFitOption resize_image_file_to_fit =
-                     FvmContainer::ResizeImageFileToFitOption::NO) {
+                 bool enable_data = true, std::unique_ptr<FvmContainer>* out = nullptr) {
     off_t length = 0;
     if (create_before) {
       CreateFile(fvm_path, kContainerSize);
@@ -585,8 +584,10 @@ class FvmHostTest : public zxtest::Test {
         FvmContainer::CreateNew(fvm_path, slice_size, offset, length - offset, &fvmContainer));
     AddPartitions(fvmContainer.get(), enable_data, should_pass);
     if (should_pass) {
-      fvmContainer->SetResizeImageFileToFit(resize_image_file_to_fit);
       ASSERT_OK(fvmContainer->Commit());
+    }
+    if (out) {
+      *out = std::move(fvmContainer);
     }
   }
 
@@ -747,8 +748,9 @@ TEST_F(FvmHostTest, TestPaveZxcryptFail) {
 
 TEST_F(FvmHostTest, TestCreateWithResizeImageFileToFit) {
   size_t offset = 4096;
-  CreateFvm(true, offset, kDefaultSliceSize, true /* should_pass */, true,
-            FvmContainer::ResizeImageFileToFitOption::YES);
+  std::unique_ptr<FvmContainer> out;
+  CreateFvm(true, offset, kDefaultSliceSize, true /* should_pass */, true, &out);
+  ASSERT_OK(out->ResizeImageFileToFit());
 
   std::unique_ptr<FvmContainer> container;
   ASSERT_OK(FvmContainer::CreateExisting(fvm_path, offset, &container));
@@ -761,13 +763,13 @@ TEST_F(FvmHostTest, TestCreateWithResizeImageFileToFit) {
   DestroyFvm();
 }
 
-TEST_F(FvmHostTest, TestExtendWithResizeImageFileToFit) {
+TEST_F(FvmHostTest, TestResizeImageFileToFitAfterExtend) {
   CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true);
 
   std::unique_ptr<FvmContainer> container;
   ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &container));
-  container->SetResizeImageFileToFit(FvmContainer::ResizeImageFileToFitOption::YES);
   ASSERT_OK(container->Extend(kContainerSize * 2));
+  ASSERT_OK(container->ResizeImageFileToFit());
   auto required_data_size = ComputeRequiredDataSize(container);
   size_t expected_size =
       required_data_size + 2 * fvm::MetadataSize(2 * kContainerSize, kDefaultSliceSize);
@@ -786,6 +788,147 @@ TEST_F(FvmHostTest, ExtendToSmallerThanCurrentSizeSucceedWithLowerBoundLength) {
   container->SetExtendLengthType(FvmContainer::ExtendLengthType::LOWER_BOUND);
   ASSERT_OK(container->Extend(kContainerSize - 1));
   DestroyFvm();
+}
+
+namespace {
+constexpr size_t kAndroidSparseBlockSize = 4096;
+
+union ChunkData {
+  uint32_t fill_val;
+  const uint8_t* raw_data;
+};
+
+void ValidateAndroidSparseChunk(const fbl::unique_fd& fd, uint16_t chunk_type, uint32_t chunk_size,
+                                const ChunkData& expected) {
+  AndroidSparseChunkHeader chunk_header;
+  ASSERT_EQ(read(fd.get(), &chunk_header, sizeof(chunk_header)), sizeof(chunk_header));
+  ASSERT_EQ(chunk_header.chunk_type, chunk_type);
+  ASSERT_EQ(chunk_header.chunk_blocks, chunk_size);
+  uint32_t fill_val = 0;
+  switch (chunk_type) {
+    case kChunkTypeDontCare:
+      ASSERT_EQ(chunk_header.total_size, sizeof(chunk_header));
+      break;
+    case kChunkTypeFill:
+      ASSERT_EQ(chunk_header.total_size, sizeof(chunk_header) + sizeof(uint32_t));
+      ASSERT_EQ(read(fd.get(), &fill_val, sizeof(fill_val)), sizeof(fill_val));
+      ASSERT_EQ(fill_val, expected.fill_val);
+      break;
+    case kChunkTypeRaw:
+      size_t data_size = chunk_header.chunk_blocks * kAndroidSparseBlockSize;
+      ASSERT_EQ(chunk_header.total_size, sizeof(chunk_header) + data_size);
+      std::vector<uint8_t> validate(data_size);
+      ASSERT_EQ(read(fd.get(), validate.data(), data_size), data_size);
+      ASSERT_BYTES_EQ(validate.data(), expected.raw_data, data_size);
+      break;
+  }
+}
+}  // namespace
+
+TEST_F(FvmHostTest, ConverToAndroidSparseFormat) {
+  uint8_t block_data[kAndroidSparseBlockSize];
+
+  std::unique_ptr<FvmContainer> out;
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true, &out);
+  size_t disk_size = out->GetDiskSize();
+  size_t roundup_disk_size = fbl::round_up(disk_size, kAndroidSparseBlockSize);
+  size_t superblock_size = 2 * fvm::MetadataSize(disk_size, out->SliceSize());
+  out.reset();
+  // Modify the created fvm by writing custom data to test sparse image conversion logic.
+  fbl::unique_fd fd(open(fvm_path, O_RDWR, 0644));
+  ASSERT_TRUE(fd);
+  // Avoid modifying the superblock. Otherwise it cannot be loaded.
+  size_t roundup_super_block_size = fbl::round_up(superblock_size, kAndroidSparseBlockSize);
+  // Make sure the fvm size is block aligned.
+  ASSERT_EQ(ftruncate(fd.get(), roundup_disk_size), 0);
+  // Write some new content
+  ASSERT_EQ(lseek(fd.get(), roundup_super_block_size, SEEK_SET), roundup_super_block_size);
+  // Write two fill blocks of fill value 0xab.
+  memset(block_data, 0xab, kAndroidSparseBlockSize);
+  ASSERT_EQ(write(fd.get(), block_data, kAndroidSparseBlockSize), kAndroidSparseBlockSize);
+  ASSERT_EQ(write(fd.get(), block_data, kAndroidSparseBlockSize), kAndroidSparseBlockSize);
+  // Write a fill block of fill value 0xcd.
+  memset(block_data, 0xcd, kAndroidSparseBlockSize);
+  ASSERT_EQ(write(fd.get(), block_data, kAndroidSparseBlockSize), kAndroidSparseBlockSize);
+  // Write two raw blocks
+  for (size_t i = 0; i < kAndroidSparseBlockSize; i++) {
+    block_data[i] = i % 0xff;
+  }
+  ASSERT_EQ(write(fd.get(), block_data, kAndroidSparseBlockSize), kAndroidSparseBlockSize);
+  ASSERT_EQ(write(fd.get(), block_data, kAndroidSparseBlockSize), kAndroidSparseBlockSize);
+  fd.reset();
+  roundup_disk_size =
+      std::max(roundup_disk_size, roundup_super_block_size + 5 * kAndroidSparseBlockSize);
+  return;
+  // Create an FVM from it and covert to android sparse image.
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &container),
+            "Failed to initialize fvm container");
+  // Add non-empty segments info. Superblock is skipped to simplify the test, so that
+  // we don't have to deal with the complicated data in it.
+  container->AddNonEmptySegment(roundup_super_block_size,
+                                roundup_super_block_size + 5 * kAndroidSparseBlockSize);
+  ASSERT_OK(container->ConvertToAndroidSparseImage());
+  container.reset();
+
+  // Validate the image;
+  fd.reset(open(fvm_path, O_RDWR, 0644));
+  ASSERT_TRUE(fd);
+  // Validate the header
+  AndroidSparseHeader sparse_header;
+  ASSERT_EQ(read(fd.get(), &sparse_header, sizeof(sparse_header)), sizeof(sparse_header));
+  ASSERT_EQ(sparse_header.kMagic, kAndroidSparseHeaderMagic);
+  ASSERT_EQ(sparse_header.kMajorVersion, 1);
+  ASSERT_EQ(sparse_header.kMinorVersion, 0);
+  ASSERT_EQ(sparse_header.file_header_size, sizeof(AndroidSparseHeader));
+  ASSERT_EQ(sparse_header.chunk_header_size, sizeof(AndroidSparseChunkHeader));
+  ASSERT_EQ(sparse_header.block_size, static_cast<uint32_t>(kAndroidSparseBlockSize));
+  ASSERT_EQ(sparse_header.total_blocks, roundup_disk_size / kAndroidSparseBlockSize);
+  // dont-care chunk, fill chunk 0xab, fill chunk 0xcd, raw chunk, remaining dont-care chunk.
+  ASSERT_EQ(sparse_header.total_chunks, 5);
+  ASSERT_EQ(sparse_header.image_checksum, 0);
+
+  // Validate chunks
+  ChunkData expected;
+  // dont-care superblock chunk
+  ASSERT_NO_FAILURES(ValidateAndroidSparseChunk(
+      fd, kChunkTypeDontCare, roundup_super_block_size / kAndroidSparseBlockSize, expected));
+
+  // Fill chunk 0xab
+  expected.fill_val = 0xabababab;
+  ASSERT_NO_FAILURES(ValidateAndroidSparseChunk(fd, kChunkTypeFill, 2, expected));
+
+  // Fill chunk 0xcd
+  expected.fill_val = 0xcdcdcdcd;
+  ASSERT_NO_FAILURES(ValidateAndroidSparseChunk(fd, kChunkTypeFill, 1, expected));
+
+  // Raw chunk
+  std::vector<uint8_t> expected_raw(2 * kAndroidSparseBlockSize);
+  for (size_t i = 0; i < kAndroidSparseBlockSize; i++) {
+    expected_raw[i] = i % 0xff;
+    expected_raw[i + kAndroidSparseBlockSize] = expected_raw[i];
+  }
+  expected.raw_data = expected_raw.data();
+  ASSERT_NO_FAILURES(ValidateAndroidSparseChunk(fd, kChunkTypeRaw, 2, expected));
+
+  // The rest (if there is any) is dont-care chunk
+  size_t remaining = roundup_disk_size - roundup_super_block_size - 5 * kAndroidSparseBlockSize;
+  if (remaining) {
+    ASSERT_NO_FAILURES(ValidateAndroidSparseChunk(fd, kChunkTypeDontCare,
+                                                  remaining / kAndroidSparseBlockSize, expected));
+  }
+}
+
+TEST_F(FvmHostTest, CompressWithLZ4) {
+  std::unique_ptr<FvmContainer> out;
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true, &out);
+  ASSERT_OK(out->CompressWithLZ4());
+  // Validate magic value in the lz4 frame header.
+  fbl::unique_fd fd(open(fvm_path, O_RDONLY, 0644));
+  ASSERT_TRUE(fd);
+  uint32_t magic;
+  ASSERT_EQ(read(fd.get(), &magic, sizeof(magic)), sizeof(magic));
+  ASSERT_EQ(magic, 0x184D2204);
 }
 
 // Test extend with values that ensure the FVM metadata size will increase.
