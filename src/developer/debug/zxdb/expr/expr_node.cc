@@ -8,6 +8,7 @@
 
 #include <ostream>
 
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -153,6 +154,56 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "BINARY_OP(" + op_.value() + ")\n";
   left_->Print(out, indent + 1);
   right_->Print(out, indent + 1);
+}
+
+void BlockExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
+  EvalBlockFrom(RefPtrTo(this), 0, context, std::move(cb));
+}
+
+void BlockExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "BLOCK\n";
+  for (const auto& stmt : statements_)
+    stmt->Print(out, indent + 1);
+}
+
+// static
+void BlockExprNode::EvalBlockFrom(fxl::RefPtr<BlockExprNode> node, size_t index,
+                                  const fxl::RefPtr<EvalContext>& context, EvalCallback cb) {
+  if (index >= node->statements_.size())
+    return cb(ExprValue());
+
+  if (index + 1 == node->statements_.size()) {
+    // The last statement in a block.
+    switch (context->GetLanguage()) {
+      case ExprLanguage::kC:
+        // Discard the result since blocks in C aren't expressions.
+        node->statements_[index]->Eval(context, [cb = std::move(cb)](ErrOrValue result) mutable {
+          cb(result.value_or_empty());
+        });
+        break;
+      case ExprLanguage::kRust:
+        // The result of a block expression is the result of the last statement inside it.
+        node->statements_[index]->Eval(context, std::move(cb));
+        break;
+    }
+  } else {
+    // Need to evaluate a sequence of operations following this.
+    node->statements_[index]->Eval(context, [node = std::move(node), context, index,
+                                             cb = std::move(cb)](ErrOrValue result) mutable {
+      if (result.has_error())
+        return cb(std::move(result));
+
+      // If we called EvalBlock() directly here, block evaluation would be recursive. For blocks
+      // with several lines this will be fine, but this will fall down in the general case because
+      // there can be many statements in a block and we can overflow the stack. Instead, resume
+      // evaluation of the next statement back from the message loop. This will be slower but more
+      // predictable.
+      debug_ipc::MessageLoop::Current()->PostTask(
+          FROM_HERE, [node = std::move(node), context, index, cb = std::move(cb)]() mutable {
+            EvalBlockFrom(std::move(node), index + 1, context, std::move(cb));
+          });
+    });
+  }
 }
 
 void CastExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {

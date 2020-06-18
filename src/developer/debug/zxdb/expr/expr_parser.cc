@@ -98,52 +98,54 @@ struct ExprParser::DispatchInfo {
 // clang-format off
 ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     // Prefix handler              Infix handler                 Precedence for infix
-    {nullptr,                      nullptr,                      -1},                             // kInvalid
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kName
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kSpecialName
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kInteger
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kFloat
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kStringLiteral
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kEquals
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kEquality
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kInequality
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kLessEqual
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kGreaterEqual
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceThreeWayComparison},  // kSpaceship
-    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},          // kDot
-    {nullptr,                      nullptr,                      -1},                             // kComma
-    {nullptr,                      nullptr,                      -1},                             // kSemicolon
-    {&ExprParser::StarPrefix,      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kStar
-    {&ExprParser::AmpersandPrefix, &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseAnd},          // kAmpersand
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalAnd},          // kDoubleAnd
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseOr},           // kBitwiseOr
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalOr},           // kLogicalOr
-    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},          // kArrow
-    {nullptr,                      &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},          // kLeftSquare
-    {nullptr,                      nullptr,                      -1},                             // kRightSquare
-    {&ExprParser::LeftParenPrefix, &ExprParser::LeftParenInfix,  kPrecedenceCallAccess},          // kLeftParen
-    {nullptr,                      nullptr,                      -1},                             // kRightParen
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kLess
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kGreater
-    {&ExprParser::UnaryPrefix,     &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kMinus
-    {&ExprParser::UnaryPrefix,     nullptr,                      kPrecedenceUnary},               // kBang
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kPlus
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kSlash
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kPercent
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kColonColon
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftLeft
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftRight
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kTrue
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kFalse
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kConst
-    {nullptr,                      nullptr,                      -1},                             // kMut
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kVolatile
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kRestrict
-    {&ExprParser::CastPrefix,      nullptr,                      -1},                             // kReinterpretCast
-    {&ExprParser::CastPrefix,      nullptr,                      -1},                             // kStaticCast
-    {&ExprParser::SizeofPrefix,    nullptr,                      -1},                             // kSizeof
-    {nullptr,                      &ExprParser::RustCastInfix,   kPrecedenceRustCast},            // kAs
+    {nullptr,                        nullptr,                      -1},                             // kInvalid
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kName
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kSpecialName
+    {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kInteger
+    {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kFloat
+    {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kStringLiteral
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kEquality
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kInequality
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kLessEqual
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kGreaterEqual
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceThreeWayComparison},  // kSpaceship
+    {nullptr,                        &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},          // kDot
+    {nullptr,                        nullptr,                      -1},                             // kComma
+    {nullptr,                        nullptr,                      -1},                             // kSemicolon
+    {&ExprParser::StarPrefix,        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kStar
+    {&ExprParser::AmpersandPrefix,   &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseAnd},          // kAmpersand
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceLogicalAnd},          // kDoubleAnd
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseOr},           // kBitwiseOr
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceLogicalOr},           // kLogicalOr
+    {nullptr,                        &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},          // kArrow
+    {nullptr,                        &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},          // kLeftSquare
+    {nullptr,                        nullptr,                      -1},                             // kRightSquare
+    {&ExprParser::LeftParenPrefix,   &ExprParser::LeftParenInfix,  kPrecedenceCallAccess},          // kLeftParen
+    {nullptr,                        nullptr,                      -1},                             // kRightParen
+    {&ExprParser::LeftBracketPrefix, nullptr,                      -1},                             // kLeftBracket
+    {nullptr,                        nullptr,                      -1},                             // kRightBracket
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kLess
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kGreater
+    {&ExprParser::UnaryPrefix,       &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kMinus
+    {&ExprParser::UnaryPrefix,       nullptr,                      kPrecedenceUnary},               // kBang
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kPlus
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kSlash
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kPercent
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kColonColon
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftLeft
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftRight
+    {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kTrue
+    {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kFalse
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kConst
+    {nullptr,                        nullptr,                      -1},                             // kMut
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kVolatile
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kRestrict
+    {&ExprParser::CastPrefix,        nullptr,                      -1},                             // kReinterpretCast
+    {&ExprParser::CastPrefix,        nullptr,                      -1},                             // kStaticCast
+    {&ExprParser::SizeofPrefix,      nullptr,                      -1},                             // kSizeof
+    {nullptr,                        &ExprParser::RustCastInfix,   kPrecedenceRustCast},            // kAs
 };
 // clang-format on
 
@@ -157,8 +159,8 @@ ExprParser::ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
                 "kDispatchInfo needs updating to match ExprTokenType");
 }
 
-fxl::RefPtr<ExprNode> ExprParser::Parse() {
-  auto result = ParseExpression(0);
+fxl::RefPtr<ExprNode> ExprParser::ParseExpression() {
+  auto result = ParseExpression(0, EmptyExpression::kReject, StatementEnd::kAny);
 
   // That should have consumed everything, as we don't support multiple expressions being next to
   // each other (probably the user forgot an operator and wrote something like "foo 5"
@@ -166,12 +168,26 @@ fxl::RefPtr<ExprNode> ExprParser::Parse() {
     SetError(cur_token(), "Unexpected input, did you forget an operator?");
     return nullptr;
   }
-
-  if (!result && !has_error()) {
-    SetError(ExprToken(), "No input to parse.");
-    return nullptr;
-  }
   return result;
+}
+
+fxl::RefPtr<BlockExprNode> ExprParser::ParseBlock(BlockDelimiter delimiter) {
+  if (delimiter == BlockDelimiter::kExplicit) {
+    // Expect block to start with a {.
+    Consume(ExprTokenType::kLeftBracket, "Expected '{'.");
+    if (has_error())
+      return nullptr;
+  }
+
+  auto block = ParseBlockContents(delimiter == BlockDelimiter::kExplicit ? BlockEnd::kExplicit
+                                                                         : BlockEnd::kEndOfInput);
+  if (!has_error() && delimiter == BlockDelimiter::kExplicit) {
+    // Consume the ending }.
+    Consume(ExprTokenType::kRightBracket, "Expected '}'.");
+  }
+  if (has_error())
+    return nullptr;
+  return block;
 }
 
 // static
@@ -191,7 +207,7 @@ Err ExprParser::ParseIdentifier(const std::string& input, ParsedIdentifier* outp
     return tokenizer.err();
 
   ExprParser parser(tokenizer.TakeTokens(), tokenizer.language());
-  auto root = parser.Parse();
+  auto root = parser.ParseExpression();
   if (!root)
     return parser.err();
 
@@ -203,15 +219,29 @@ Err ExprParser::ParseIdentifier(const std::string& input, ParsedIdentifier* outp
   return Err();
 }
 
-fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
-  if (at_end())
+fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence, EmptyExpression empty_expr,
+                                                  StatementEnd statement_end,
+                                                  bool* had_statement_end) {
+  if (had_statement_end)
+    *had_statement_end = false;
+  if (at_end()) {
+    if (empty_expr == EmptyExpression::kReject)
+      SetError(ExprToken(), "Expected expression instead of end of input.");
     return nullptr;
+  }
 
   // Here we need ">>" to be treated as a shift operation. When that appears as part of a name and
   // should be separated, the identifier parser will handle it separately.
   ExprToken token = ConsumeWithShiftTokenConversion();
-  PrefixFunc prefix = DispatchForToken(token).prefix;
+  if (token.type() == ExprTokenType::kSemicolon) {
+    if (had_statement_end)
+      *had_statement_end = true;  // record that this empty expression had an explicit end.
+    if (empty_expr == EmptyExpression::kReject)
+      SetError(token, "Empty expression not permitted here.");
+    return nullptr;
+  }
 
+  PrefixFunc prefix = DispatchForToken(token).prefix;
   if (!prefix) {
     SetError(token, fxl::StringPrintf("Unexpected token '%s'.", token.value().c_str()));
     return nullptr;
@@ -219,9 +249,12 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
 
   fxl::RefPtr<ExprNode> left = (this->*prefix)(token);
   if (has_error())
-    return left;
+    return left;  // In both C++ and Rust, the end of a block is the end of a statement.
 
-  while (!at_end() && precedence < CurPrecedenceWithShiftTokenConversion()) {
+  // Checks for the next thing being a semicolon or the last thing being a {} which indicates the
+  // end of the expression.
+  while (!at_end() && !LookAhead(ExprTokenType::kSemicolon) && !left->AsBlock() &&
+         precedence < CurPrecedenceWithShiftTokenConversion()) {
     const ExprToken& next_token = ConsumeWithShiftTokenConversion();
     InfixFunc infix = DispatchForToken(next_token).infix;
     if (!infix) {
@@ -233,7 +266,86 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
       return nullptr;
   }
 
+  // Handle end-of-statement requirements.
+  switch (statement_end) {
+    case StatementEnd::kAny:
+    case StatementEnd::kExplicit:
+      if (left->AsBlock()) {
+        // Blocks are their own statements, nothing to do.
+        if (had_statement_end)
+          *had_statement_end = true;
+        break;
+      } else if (LookAhead(ExprTokenType::kSemicolon)) {
+        // Semicolon indicating end of statement, consume it.
+        Consume();
+        if (had_statement_end)
+          *had_statement_end = true;
+        break;
+      } else if (statement_end == StatementEnd::kExplicit) {
+        // Statement end was required but not present.
+        SetError(cur_token(), "Expected ';'.");
+        return nullptr;
+      }
+      break;
+    case StatementEnd::kNone:
+      // Nothing to check.
+      break;
+  }
+
   return left;
+}
+
+// We parse all blocks as expressions. In C++ this is not correct but simplifies the parsing logic.
+// During evaluation, C++ blocks will return empty which will throw errors when using blocks in
+// places where they can't be used in expressions.
+fxl::RefPtr<BlockExprNode> ExprParser::ParseBlockContents(BlockEnd block_end) {
+  // Expect a sequence of semicolon-terminated expressions. In Rust the last expression does not
+  // need a semicolon. As we start parsing each new statement, we check whether the previous
+  // statement had a separator.
+  bool previous_had_statement_end = true;
+
+  constexpr ExprTokenType kBlockEndTokenType = ExprTokenType::kRightBracket;
+
+  std::vector<fxl::RefPtr<ExprNode>> statements;
+  while (!at_end() && !LookAhead(kBlockEndTokenType)) {
+    if (!previous_had_statement_end) {
+      SetError(cur_token(), "Expected ';'.");
+      return nullptr;
+    }
+
+    // Accept any type of statement end and validate later to accommodate Rust.
+    auto stmt = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kAny,
+                                &previous_had_statement_end);
+    if (has_error())
+      return nullptr;
+    if (stmt)  // Statement could be empty.
+      statements.push_back(std::move(stmt));
+  }
+
+  // C++ requires a statement terminator for everything. In Rust we can skip this check since the
+  // last semicolon is optional.
+  if (language_ == ExprLanguage::kC) {
+    if (!previous_had_statement_end) {
+      SetErrorAtCur("Expected ';'.");
+      return nullptr;
+    }
+  }
+
+  // Validate the correct end of the block.
+  switch (block_end) {
+    case BlockEnd::kExplicit:
+      if (!LookAhead(kBlockEndTokenType))
+        SetErrorAtCur("Expected '}'.");
+      break;
+    case BlockEnd::kEndOfInput:
+      if (!at_end())
+        SetErrorAtCur("Unexpected.");
+      break;
+  }
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<BlockExprNode>(std::move(statements));
 }
 
 ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
@@ -795,8 +907,6 @@ std::vector<fxl::RefPtr<ExprNode>> ExprParser::ParseExpressionList(ExprTokenType
 
 fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
   fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
-  if (!has_error() && !right)
-    SetError(token, "Expected expression for '&'.");
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<AddressOfExprNode>(std::move(right));
@@ -805,7 +915,9 @@ fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
 fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,
                                                 const ExprToken& token) {
   const DispatchInfo& dispatch = DispatchForToken(token);
-  fxl::RefPtr<ExprNode> right = ParseExpression(dispatch.precedence);
+
+  // Allow empty expressions during parse so we can give a slightly better error message below.
+  fxl::RefPtr<ExprNode> right = ParseExpression(dispatch.precedence, EmptyExpression::kAllow);
   if (!has_error() && !right) {
     SetError(token, fxl::StringPrintf("Expected expression after '%s'.", token.value().c_str()));
   }
@@ -817,8 +929,9 @@ fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,
 
 fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                                   const ExprToken& token) {
-  // These are left-associative so use the same precedence as the token.
-  fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceCallAccess);
+  // These are left-associative so use the same precedence as the token. Allow empty expressions
+  // during parse so we can give a slightly better error message below.
+  fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceCallAccess, EmptyExpression::kAllow);
 
   auto literal = right ? right->AsLiteral() : nullptr;
 
@@ -877,6 +990,21 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   return expr;
 }
 
+fxl::RefPtr<ExprNode> ExprParser::LeftBracketPrefix(const ExprToken& token) {
+  // We could say to terminate on a bracket. But by saying "none" we have the opportunity to give a
+  // better error message below, referencing the opening bracket.
+  auto block = ParseBlockContents(BlockEnd::kExplicit);
+  if (!block)
+    return nullptr;
+
+  // Cosume the terminating bracket.
+  Consume(ExprTokenType::kRightBracket, "Expected '}' to match.", token);
+  if (has_error())
+    return nullptr;
+
+  return block;
+}
+
 fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
                                                  const ExprToken& token) {
   // "(" as an infix is a function call. In this case, the thing on the left identifies what to
@@ -900,8 +1028,6 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
 fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
                                                   const ExprToken& token) {
   auto inner = ParseExpression(0);
-  if (!has_error() && !inner)
-    SetError(token, "Expected expression inside '['.");
   if (!has_error())
     Consume(ExprTokenType::kRightSquare, "Expected ']' to match.", token);
   if (has_error())
@@ -923,7 +1049,8 @@ fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
 }
 
 fxl::RefPtr<ExprNode> ExprParser::UnaryPrefix(const ExprToken& token) {
-  auto inner = ParseExpression(kPrecedenceUnary);
+  // Allow empty expressions during parse to give a better error message below.
+  auto inner = ParseExpression(kPrecedenceUnary, EmptyExpression::kAllow);
   if (!has_error() && !inner)
     SetError(token, fxl::StringPrintf("Expected expression for '%s'.", token.value().c_str()));
   if (has_error())
@@ -961,8 +1088,6 @@ fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
   fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
-  if (!has_error() && !right)
-    SetError(token, "Expected expression for '*'.");
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<DereferenceExprNode>(std::move(right));
@@ -1109,6 +1234,13 @@ void ExprParser::SetError(const ExprToken& token, Err err) {
 void ExprParser::SetError(const ExprToken& token, std::string msg) {
   err_ = Err(std::move(msg));
   error_token_ = token;
+}
+
+void ExprParser::SetErrorAtCur(std::string msg) {
+  if (at_end())
+    SetError(ExprToken(), msg + " Hit the end of input instead.");
+  else
+    SetError(cur_token(), msg);
 }
 
 bool ExprParser::IsCurTokenShiftRight() const {

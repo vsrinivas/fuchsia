@@ -74,6 +74,8 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kRightSquare,     kLangAll,  "]"},
     {ExprTokenType::kLeftParen,       kLangAll,  "("},
     {ExprTokenType::kRightParen,      kLangAll,  ")"},
+    {ExprTokenType::kLeftBracket,     kLangAll,  "{"},
+    {ExprTokenType::kRightBracket,    kLangAll,  "}"},
     {ExprTokenType::kLess,            kLangAll,  "<"},
     {ExprTokenType::kGreater,         kLangAll,  ">"},
     {ExprTokenType::kMinus,           kLangAll,  "-"},

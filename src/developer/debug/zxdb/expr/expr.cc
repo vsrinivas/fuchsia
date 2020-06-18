@@ -56,7 +56,7 @@ void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& co
 
   ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(),
                     context->GetSymbolNameLookupCallback());
-  auto node = parser.Parse();
+  auto node = parser.ParseExpression();
   if (parser.err().has_error()) {
     // Add context information since we have the original input string (the
     // parser doesn't have this).

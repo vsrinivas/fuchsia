@@ -73,7 +73,7 @@ class ExprParserTest : public testing::Test {
 
     parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), tokenizer_->language(),
                                            std::move(name_lookup));
-    return parser_->Parse();
+    return parser_->ParseExpression();
   }
 
   // Does the parse and returns the string dump of the structure.
@@ -82,7 +82,8 @@ class ExprParserTest : public testing::Test {
     return GetParseString(input, ExprLanguage::kC, std::move(name_lookup));
   }
 
-  std::string GetParseString(const char* input, ExprLanguage lang, NameLookupCallback name_lookup) {
+  std::string GetParseString(const char* input, ExprLanguage lang,
+                             NameLookupCallback name_lookup = NameLookupCallback()) {
     auto root = Parse(input, lang, std::move(name_lookup));
     if (!root) {
       // Expect calls to this to parse successfully.
@@ -104,7 +105,87 @@ class ExprParserTest : public testing::Test {
 TEST_F(ExprParserTest, Empty) {
   auto result = Parse("");
   ASSERT_FALSE(result);
-  EXPECT_EQ("No input to parse.", parser().err().msg());
+  EXPECT_EQ("Expected expression instead of end of input.", parser().err().msg());
+
+  result = Parse(" ");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected expression instead of end of input.", parser().err().msg());
+
+  result = Parse("; ");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Empty expression not permitted here.", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, Block) {
+  EXPECT_EQ("BLOCK\n", GetParseString("{}"));
+  EXPECT_EQ(
+      "BLOCK\n"
+      " LITERAL(1)\n",
+      GetParseString("{ 1; }"));
+  EXPECT_EQ(
+      "BLOCK\n"
+      " BINARY_OP(+)\n"
+      "  LITERAL(1)\n"
+      "  IDENTIFIER(\"n\")\n"
+      " LITERAL(2)\n"
+      " LITERAL(3)\n",
+      GetParseString("{ 1+n;2;    \n3 ;}"));
+
+  // Last Rust expression doesn't require a semicolon.
+  EXPECT_EQ(
+      "BLOCK\n"
+      " LITERAL(1)\n",
+      GetParseString("{1}", ExprLanguage::kRust));
+  EXPECT_EQ(
+      "BLOCK\n"
+      " LITERAL(1)\n"
+      " LITERAL(2)\n",
+      GetParseString("{1;2}", ExprLanguage::kRust));
+
+  // Duplicate statement separators.
+  EXPECT_EQ(
+      "BLOCK\n"
+      " LITERAL(1)\n"
+      " LITERAL(2)\n",
+      GetParseString("{;1;;2;}", ExprLanguage::kRust));
+
+  // Nested blocks.
+  EXPECT_EQ(
+      "BLOCK\n"
+      " BLOCK\n"
+      "  BLOCK\n"
+      " LITERAL(1)\n"
+      " LITERAL(2)\n"
+      " BLOCK\n",
+      GetParseString("{{{}};1;;2;{;}}", ExprLanguage::kRust));
+
+  // C requires a semicolon as the last element.
+  auto result = Parse("{1}");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ';'.", parser().err().msg());
+  result = Parse("{1;2}");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ';'.", parser().err().msg());
+
+  // Rust blocks as expressions. Our parser will currenly accept this in C as well but it will get
+  // rejected during execution since blocks don't return anything.
+  EXPECT_EQ(
+      "BINARY_OP(=)\n"
+      " IDENTIFIER(\"a\")\n"
+      " BLOCK\n"
+      "  LITERAL(1)\n"
+      "  LITERAL(2)\n",
+      GetParseString("a = {1;2}", ExprLanguage::kRust));
+
+  // Missing terminating "}".
+  result = Parse("{1;");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '}'. Hit the end of input instead.", parser().err().msg());
+
+  // No separator between elements.
+  result = Parse("{1 {}}");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ';'.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, Identifier) {
@@ -283,7 +364,7 @@ TEST_F(ExprParserTest, DereferenceAndAddress) {
   // "*" by itself is an error.
   auto result = Parse("*");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected expression for '*'.", parser().err().msg());
+  EXPECT_EQ("Expected expression instead of end of input.", parser().err().msg());
   EXPECT_EQ(0u, parser().error_token().byte_offset());
 }
 
@@ -506,7 +587,7 @@ TEST_F(ExprParserTest, FunctionCall) {
   // Unmatched "(" error.
   auto result = Parse("Call(a, ");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected ')' to match. Hit the end of input instead.", parser().err().msg());
+  EXPECT_EQ("Expected expression instead of end of input.", parser().err().msg());
 
   // Arguments not separated by commas.
   result = Parse("Call(a b)");
@@ -557,7 +638,8 @@ TEST_F(ExprParserTest, Templates) {
   ASSERT_FALSE(result);
   EXPECT_EQ("Unmatched '['.", parser().err().msg());
 
-  // Duplicate template spec.
+  // Duplicate template spec. This will actually be parsed as "less than" and "greater than" and it
+  // will look like "greater than" is missing the right-hand-side.
   result = Parse("Foo<Bar><Baz>");
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected expression after '>'.", parser().err().msg());
@@ -915,7 +997,7 @@ TEST_F(ExprParserTest, ParseIdentifier) {
   ParsedIdentifier empty_ident;
   err = ExprParser::ParseIdentifier("", &empty_ident);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("No input to parse.", err.msg());
+  EXPECT_EQ("Expected expression instead of end of input.", err.msg());
   EXPECT_EQ("", empty_ident.GetDebugName());
 
   // Normal word.

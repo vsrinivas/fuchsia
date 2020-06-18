@@ -27,6 +27,7 @@ class Type;
 class AddressOfExprNode;
 class ArrayAccessExprNode;
 class BinaryOpExprNode;
+class BlockExprNode;
 class CastExprNode;
 class DereferenceExprNode;
 class FunctionCallExprNode;
@@ -43,6 +44,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const AddressOfExprNode* AsAddressOf() const { return nullptr; }
   virtual const ArrayAccessExprNode* AsArrayAccess() const { return nullptr; }
   virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
+  virtual const BlockExprNode* AsBlock() const { return nullptr; }
   virtual const CastExprNode* AsCast() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
   virtual const FunctionCallExprNode* AsFunctionCall() const { return nullptr; }
@@ -158,6 +160,31 @@ class BinaryOpExprNode : public ExprNode {
   fxl::RefPtr<ExprNode> left_;
   ExprToken op_;
   fxl::RefPtr<ExprNode> right_;
+};
+
+class BlockExprNode : public ExprNode {
+ public:
+  const BlockExprNode* AsBlock() const override { return this; }
+  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+  const std::vector<fxl::RefPtr<ExprNode>>& statements() const { return statements_; }
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(BlockExprNode);
+  FRIEND_MAKE_REF_COUNTED(BlockExprNode);
+
+  BlockExprNode();
+  BlockExprNode(std::vector<fxl::RefPtr<ExprNode>> statements)
+      : statements_(std::move(statements)) {}
+  ~BlockExprNode() override = default;
+
+  // Evaluates the given block starging from the statement at the given index. This is used to
+  // recursively evaluate the block statements.
+  static void EvalBlockFrom(fxl::RefPtr<BlockExprNode> node, size_t index,
+                            const fxl::RefPtr<EvalContext>& context, EvalCallback cb);
+
+  std::vector<fxl::RefPtr<ExprNode>> statements_;
 };
 
 // Implements all types of casts.

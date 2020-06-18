@@ -19,6 +19,20 @@ namespace zxdb {
 
 class ExprParser {
  public:
+  enum class BlockDelimiter {
+    kExplicit,  // Require the block to be surrounded with { }.
+    kImplicit,  // No {} needed. If the first thing is a { it will start a nested block.
+  };
+  enum class BlockEnd {
+    // Stops block parsing at "}", it is not consumed. If end-of-input is reached first, this will
+    // it will report an error.
+    kExplicit,
+
+    // Stops block parsing when end-of-input is reached. If an "}" is encountered, it will be an
+    // error.
+    kEndOfInput,
+  };
+
   // The name lookup callback can be empty if the caller doesn't have any symbol context. This means
   // that we can't disambiguate some cases like how to parse "Foo < 1 > bar". In this mode, we'll
   // assume that "<" after a name always mean a template rather than a comparison operation.
@@ -27,7 +41,10 @@ class ExprParser {
 
   // Returns the root expression node on successful parsing. On error, returns an empty pointer in
   // which case the error message can be read from err() ad error_token()
-  fxl::RefPtr<ExprNode> Parse();
+  fxl::RefPtr<ExprNode> ParseExpression();
+
+  // Parses a block. { and } will be consumed. The input is counted as being complete.
+  fxl::RefPtr<BlockExprNode> ParseBlock(BlockDelimiter delimiter);
 
   // Attempts to parse the given string as an identifier. The returned err indicates whether the
   // output identifier is valid.
@@ -43,10 +60,45 @@ class ExprParser {
  private:
   struct DispatchInfo;
 
+  enum StatementEnd {
+    // Requires an explicit statement end according to language rules. For C++ this requires a
+    // semicolon at the end, or that the statement be a block (blocks don't require semicolons at
+    // the end).
+    kExplicit,
+
+    // Does not consume an end-of-statement marker (";" in C) even if present.
+    kNone,
+
+    // Allow an explicit ending as above, or and end-of-input to indicate the end of the statement,
+    // as long as the result is syntactically valid. The statement end token will be consumed if
+    // present.
+    kAny,
+  };
+
+  enum class EmptyExpression {
+    kAllow,   // Allow empty expressions. ParseExpression will return null but not an error.
+    kReject,  // Reject empty expressions and report an error.
+  };
+
+  // Internal version of ParseExpression that takes the current operator precedence being parsed.
+  //
+  // THIS CAN RETURN NULL if the input is empty or starts with a semicolon.
+  //
   // When recursively calling this function, call with the same precedence as the current expression
   // for left-associativity (operators evaluated from left-to-right), and one less for
   // right-associativity.
-  fxl::RefPtr<ExprNode> ParseExpression(int precedence);
+  //
+  // The value optionally pointed to by had_statement_end will be set to true if the statement was
+  // explicitly ended as per the rules for StatementEnd::kExplicit. This allows code that passes
+  // StatementEnd::kAny to determine how the statement was ended.
+  fxl::RefPtr<ExprNode> ParseExpression(int precedence,
+                                        EmptyExpression empty_expr = EmptyExpression::kReject,
+                                        StatementEnd statement_end = StatementEnd::kNone,
+                                        bool* had_statement_end = nullptr);
+
+  // Parses the contents of a block. Stops when a "}" (it is not consumed) or end of input is hit,
+  // depending on the option parameter. Blocks accept multiple expressions.
+  fxl::RefPtr<BlockExprNode> ParseBlockContents(BlockEnd block_end);
 
   // Parses the name of a symbol or a non-type identifier (e.g. a variable name) starting at
   // cur_token().
@@ -111,6 +163,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> BinaryOpInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> DotOrArrowInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> LeftBracketPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftParenInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> RustCastInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
@@ -155,6 +208,10 @@ class ExprParser {
 
   void SetError(const ExprToken& token, Err err);
   void SetError(const ExprToken& token, std::string msg);
+
+  // Sets the error referencing the current token if there is one. If the current token is at the
+  // end, " Hit the end of input instead." will be appended to the message.
+  void SetErrorAtCur(std::string msg);
 
   // Returns true if the current token is the first of a pair of adjacent ">" tokens that might
   // compose a shift right token (">>"). Because of ambiguity, the tokenizer always tokenizes these

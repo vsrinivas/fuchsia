@@ -37,6 +37,8 @@ enum class ExprTokenType : size_t {
   kRightSquare,    // ]
   kLeftParen,      // (
   kRightParen,     // )
+  kLeftBracket,    // {
+  kRightBracket,   // }
   kLess,           // <
   kGreater,        // >
   kMinus,          // - (by itself, not part of "->")
