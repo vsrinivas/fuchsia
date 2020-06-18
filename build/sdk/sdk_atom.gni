@@ -178,13 +178,9 @@ template("sdk_atom") {
     copy(meta_copy_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      sources = [
-        meta_content.source,
-      ]
+      sources = [ meta_content.source ]
 
-      outputs = [
-        meta_file,
-      ]
+      outputs = [ meta_file ]
 
       deps = gn_deps
     }
@@ -226,14 +222,14 @@ template("sdk_atom") {
 
         inputs = []
 
-        outputs = [
-          current_api_file,
-        ]
+        outputs = [ current_api_file ]
 
         args = [
           "--output",
           rebase_path(current_api_file),
         ]
+
+        deps = gn_deps
 
         foreach(file, invoker.api_contents) {
           inputs += [ file.source ]
@@ -262,9 +258,7 @@ template("sdk_atom") {
         invoker.api,
       ]
 
-      outputs = [
-        stamp_file,
-      ]
+      outputs = [ stamp_file ]
 
       args = [
         "--reference",
@@ -280,9 +274,7 @@ template("sdk_atom") {
       }
 
       if (defined(invoker.api_contents)) {
-        deps = [
-          ":$generate_api_target_name",
-        ]
+        deps = [ ":$generate_api_target_name" ]
       }
     }
   }  # if defined(invoker.api)
@@ -310,9 +302,7 @@ template("sdk_atom") {
                "//build/sdk/sdk_common.py",
              ]
 
-    outputs = [
-      manifest,
-    ]
+    outputs = [ manifest ]
 
     args = [
              "--id",
