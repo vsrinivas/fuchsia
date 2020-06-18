@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::StreamExt,
 };
 
@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
         fasync::spawn_local(async move {
             test_manager_lib::run_test_manager(stream)
                 .await
-                .unwrap_or_else(|e| fx_log_err!("test manager failed: {:?}", e))
+                .unwrap_or_else(|e| fx_log_warn!("test manager returned error: {:?}", e))
         });
     });
     fs.take_and_serve_directory_handle()?;
