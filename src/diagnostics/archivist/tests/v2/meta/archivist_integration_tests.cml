@@ -12,17 +12,19 @@
     ],
     offer: [
         {
+            protocol: "/svc/fuchsia.boot.WriteOnlyLog",
+            from: "realm",
+            to: [ "#driver" ],
+        },
+        {
             protocol: "/svc/fuchsia.diagnostics.ArchiveAccessor",
             from: "#archivist",
             to: [ "#driver" ],
         },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
-            to: [
-                "#archivist",
-                "#driver",
-            ],
+            from: "#archivist",
+            to: [ "#driver" ],
         },
         {
             protocol: "/svc/fuchsia.sys2.EventSource",

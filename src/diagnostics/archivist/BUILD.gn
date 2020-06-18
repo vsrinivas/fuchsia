@@ -66,6 +66,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 rustc_binary("bin") {
@@ -75,6 +77,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+
     # TODO(54125): Fix the leaks and remove this.
     "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

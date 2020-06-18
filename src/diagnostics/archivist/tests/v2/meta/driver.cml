@@ -12,6 +12,7 @@
         { runner: "rust_test_runner" },
         {
             protocol: [
+                "/svc/fuchsia.boot.WriteOnlyLog",
                 "/svc/fuchsia.diagnostics.ArchiveAccessor",
                 "/svc/fuchsia.logger.LogSink",
             ],

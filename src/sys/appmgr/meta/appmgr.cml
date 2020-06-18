@@ -153,6 +153,15 @@
             as: "diagnostics_ready",
             filter: { path: "/diagnostics" },
         },
+        {
+            event: "capability_requested",
+            from: "framework",
+            filter: { path: "/svc/fuchsia.logger.LogSink" },
+        },
+        {
+            event_stream: [ "capability_requested" ],
+            as: "/svc/fuchsia.sys2.EventStream",
+        },
 
         // From v2 components
         {

@@ -24,9 +24,14 @@ rustc_test("integration_tests_bin") {
   name = "archivist_integration_tests"
   edition = "2018"
   deps = [
+    "//src/diagnostics/lib/selectors",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/lib/stdout-to-debuglog/rust:stdout-to-debuglog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
   ]
 }
 

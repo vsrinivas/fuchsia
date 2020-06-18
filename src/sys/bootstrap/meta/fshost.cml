@@ -20,6 +20,7 @@
                 "/svc/fuchsia.boot.Items",
                 "/svc/fuchsia.boot.WriteOnlyLog",
                 "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",
                 "/svc/fuchsia.tracing.provider.Registry",
             ],

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
-use fidl::endpoints::ClientEnd;
+use anyhow::{format_err, Context as _, Error};
+use fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker};
+use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogRequest, LogRequestStream, LogSinkRequest,
     LogSinkRequestStream,
 };
+use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_sys_internal::{
     LogConnection, LogConnectionListenerRequest, LogConnectorProxy, SourceIdentity,
 };
@@ -226,6 +228,86 @@ impl LogManager {
         }
     }
 
+    /// Handle the components v2 EventStream for attributed logs of v2
+    /// components.
+    pub async fn handle_event_stream(
+        self,
+        mut stream: fsys::EventStreamRequestStream,
+        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+    ) {
+        while let Ok(Some(request)) = stream.try_next().await {
+            match request {
+                fsys::EventStreamRequest::OnEvent { event, .. } => {
+                    if let Err(e) = self.handle_event(event, sender.clone()) {
+                        error!("Unable to process event: {}", e);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Handle the components v2 CapabilityRequested event for attributed logs of
+    /// v2 components.
+    fn handle_event(
+        &self,
+        event: fsys::Event,
+        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+    ) -> Result<(), Error> {
+        let identity = Self::source_identity_from_event(&event)?;
+        let stream = Self::log_sink_request_stream_from_event(event)?;
+        fasync::spawn(self.clone().handle_log_sink(stream, identity, sender));
+        Ok(())
+    }
+
+    /// Extract the SourceIdentity from a components v2 event.
+    // TODO(fxb/54330): LogManager should have its own error type.
+    fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, Error> {
+        let target_moniker = event
+            .descriptor
+            .as_ref()
+            .and_then(|descriptor| descriptor.moniker.clone())
+            .ok_or(format_err!("No moniker present"))?;
+
+        let component_url = event
+            .descriptor
+            .as_ref()
+            .and_then(|descriptor| descriptor.component_url.clone())
+            .ok_or(format_err!("No URL present"))?;
+
+        let mut source = SourceIdentity::empty();
+        source.component_url = Some(component_url.clone());
+        source.component_name = Some(target_moniker.clone());
+        Ok(Arc::new(source))
+    }
+
+    /// Extract the LogSinkRequestStream from a CapabilityRequested v2 event.
+    // TODO(fxb/54330): LogManager should have its own error type.
+    fn log_sink_request_stream_from_event(
+        event: fsys::Event,
+    ) -> Result<LogSinkRequestStream, Error> {
+        let payload =
+            event.event_result.ok_or(format_err!("Missing event result.")).and_then(|result| {
+                match result {
+                    fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
+                        payload,
+                    )) => Ok(payload),
+                    fsys::EventResult::Error(fsys::EventError {
+                        description: Some(description),
+                        ..
+                    }) => Err(format_err!("{}", description)),
+                    _ => Err(format_err!("Incorrect event type.")),
+                }
+            })?;
+
+        let capability_path = payload.path.ok_or(format_err!("Missing capability path"))?;
+        if capability_path != format!("/svc/{}", LogSinkMarker::NAME) {
+            return Err(format_err!("Incorrect LogSink capability_path {}", capability_path));
+        }
+        let capability = payload.capability.ok_or(format_err!("Missing capability"))?;
+        let server_end = ServerEnd::<LogSinkMarker>::new(capability);
+        server_end.into_stream().map_err(|_| format_err!("Unable to create LogSinkRequestStream"))
+    }
+
     /// Handle requests to `fuchsia.logger.Log`. All request types read the
     /// whole backlog from memory, `DumpLogs(Safe)` stops listening after that.
     async fn handle_log_requests(self, mut stream: LogRequestStream) -> Result<(), Error> {
@@ -309,9 +391,11 @@ mod tests {
             LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker,
             LogSinkProxy,
         },
+        fidl_fuchsia_sys2 as fsys,
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_inspect_derive::WithInspect,
         fuchsia_zircon as zx,
+        matches::assert_matches,
         std::{io::Cursor, marker::PhantomData},
         validating_log_listener::{validate_log_dump, validate_log_stream},
     };
@@ -401,8 +485,11 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn attributed_inspect_two_streams_different_identities() {
+    async fn attributed_inspect_two_streams_different_identities_by_reader(
+        harness: TestHarness,
+        log_reader1: Arc<dyn LogReader>,
+        log_reader2: Arc<dyn LogReader>,
+    ) {
         let mut packet = setup_default_packet();
         let message = LogMessage {
             pid: packet.metadata.pid,
@@ -419,24 +506,10 @@ mod tests {
         let mut message2 = message.clone();
         message2.severity = packet2.metadata.severity;
 
-        let harness = TestHarness::new();
-
-        let identity = Arc::new(SourceIdentity {
-            component_name: Some("foo".into()),
-            component_url: Some("http://foo.com".into()),
-            instance_id: None,
-            realm_path: None,
-        });
-        let mut foo_stream = harness.create_stream(identity);
+        let mut foo_stream = harness.create_stream_from_log_reader(log_reader1.clone());
         foo_stream.write_packet(&mut packet);
 
-        let identity = Arc::new(SourceIdentity {
-            component_name: Some("bar".into()),
-            component_url: Some("http://bar.com".into()),
-            instance_id: None,
-            realm_path: None,
-        });
-        let mut bar_stream = harness.create_stream(identity);
+        let mut bar_stream = harness.create_stream_from_log_reader(log_reader2.clone());
         bar_stream.write_packet(&mut packet2);
         let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
 
@@ -484,7 +557,107 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn attributed_inspect_two_streams_same_identity() {
+    async fn attributed_inspect_two_streams_different_identities() {
+        let harness = TestHarness::new();
+
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("foo".into()),
+            component_url: Some("http://foo.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let log_reader1 = DefaultLogReader::new(harness.log_manager.clone(), identity);
+
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("bar".into()),
+            component_url: Some("http://bar.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let log_reader2 = DefaultLogReader::new(harness.log_manager.clone(), identity);
+
+        attributed_inspect_two_streams_different_identities_by_reader(
+            harness,
+            log_reader1,
+            log_reader2,
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn attributed_inspect_two_v2_streams_different_identities() {
+        let harness = TestHarness::new();
+
+        let log_reader1 =
+            EventStreamLogReader::new(harness.log_manager.clone(), "foo", "http://foo.com");
+        let log_reader2 =
+            EventStreamLogReader::new(harness.log_manager.clone(), "bar", "http://bar.com");
+        attributed_inspect_two_streams_different_identities_by_reader(
+            harness,
+            log_reader1,
+            log_reader2,
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn attributed_inspect_two_mixed_streams_different_identities() {
+        let harness = TestHarness::new();
+
+        let log_reader1 =
+            EventStreamLogReader::new(harness.log_manager.clone(), "foo", "http://foo.com");
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("bar".into()),
+            component_url: Some("http://bar.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let log_reader2 = DefaultLogReader::new(harness.log_manager.clone(), identity);
+        attributed_inspect_two_streams_different_identities_by_reader(
+            harness,
+            log_reader1,
+            log_reader2,
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn source_identity_from_v2_event() {
+        let target_moniker = "foo".to_string();
+        let target_url = "http://foo.com".to_string();
+        let (_log_sink_proxy, log_sink_server_end) =
+            fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
+        let event = create_capability_requested_event(
+            target_moniker.clone(),
+            target_url.clone(),
+            log_sink_server_end.into_channel(),
+        );
+        let identity = LogManager::source_identity_from_event(&event).unwrap();
+        assert_matches!(&identity.component_name,
+                        Some(component_name) if *component_name == target_moniker);
+        assert_matches!(&identity.component_url,
+                        Some(component_url) if *component_url == target_url);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn log_sink_request_stream_from_v2_event() {
+        let target_moniker = "foo".to_string();
+        let target_url = "http://foo.com".to_string();
+        let (_log_sink_proxy, log_sink_server_end) =
+            fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
+        let event = create_capability_requested_event(
+            target_moniker.clone(),
+            target_url.clone(),
+            log_sink_server_end.into_channel(),
+        );
+        LogManager::log_sink_request_stream_from_event(event).unwrap();
+    }
+
+    async fn attributed_inspect_two_streams_same_identity_by_reader(
+        harness: TestHarness,
+        log_reader1: Arc<dyn LogReader>,
+        log_reader2: Arc<dyn LogReader>,
+    ) {
         let mut packet = setup_default_packet();
         let message = LogMessage {
             pid: packet.metadata.pid,
@@ -501,18 +674,10 @@ mod tests {
         let mut message2 = message.clone();
         message2.severity = packet2.metadata.severity;
 
-        let harness = TestHarness::new();
-
-        let identity = Arc::new(SourceIdentity {
-            component_name: Some("foo".into()),
-            component_url: Some("http://foo.com".into()),
-            instance_id: None,
-            realm_path: None,
-        });
-        let mut foo_stream = harness.create_stream(identity.clone());
+        let mut foo_stream = harness.create_stream_from_log_reader(log_reader1.clone());
         foo_stream.write_packet(&mut packet);
 
-        let mut bar_stream = harness.create_stream(identity.clone());
+        let mut bar_stream = harness.create_stream_from_log_reader(log_reader2.clone());
         bar_stream.write_packet(&mut packet2);
         let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
 
@@ -548,6 +713,54 @@ mod tests {
                 },
             }
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn attributed_inspect_two_streams_same_identity() {
+        let harness = TestHarness::new();
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("foo".into()),
+            component_url: Some("http://foo.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let log_reader = DefaultLogReader::new(harness.log_manager.clone(), identity);
+        attributed_inspect_two_streams_same_identity_by_reader(
+            harness,
+            log_reader.clone(),
+            log_reader.clone(),
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn attributed_inspect_two_v2_streams_same_identity() {
+        let harness = TestHarness::new();
+        let log_reader =
+            EventStreamLogReader::new(harness.log_manager.clone(), "foo", "http://foo.com");
+        attributed_inspect_two_streams_same_identity_by_reader(
+            harness,
+            log_reader.clone(),
+            log_reader.clone(),
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn attributed_inspect_two_mixed_streams_same_identity() {
+        let harness = TestHarness::new();
+
+        let log_reader1 =
+            EventStreamLogReader::new(harness.log_manager.clone(), "foo", "http://foo.com");
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("foo".into()),
+            component_url: Some("http://foo.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let log_reader2 = DefaultLogReader::new(harness.log_manager.clone(), identity);
+        attributed_inspect_two_streams_same_identity_by_reader(harness, log_reader1, log_reader2)
+            .await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -891,6 +1104,27 @@ mod tests {
         log_proxy: LogProxy,
     }
 
+    fn create_capability_requested_event(
+        target_moniker: String,
+        target_url: String,
+        capability: zx::Channel,
+    ) -> fsys::Event {
+        fsys::Event {
+            event_type: Some(fsys::EventType::CapabilityRequested),
+            descriptor: Some(fsys::ComponentDescriptor {
+                moniker: Some(target_moniker),
+                component_url: Some(target_url),
+            }),
+            event_result: Some(fsys::EventResult::Payload(
+                fsys::EventPayload::CapabilityRequested(fsys::CapabilityRequestedPayload {
+                    path: Some(format!("/svc/{}", LogSinkMarker::NAME)),
+                    capability: Some(capability),
+                }),
+            )),
+            ..fsys::Event::empty()
+        }
+    }
+
     impl TestHarness {
         fn new() -> Self {
             let inner = Arc::new(Mutex::new(ManagerInner {
@@ -954,14 +1188,23 @@ mod tests {
         }
 
         fn create_stream(&self, identity: Arc<SourceIdentity>) -> TestStream<LogPacketWriter> {
-            TestStream::new(self.log_manager.clone(), identity)
+            let log_reader = DefaultLogReader::new(self.log_manager.clone(), identity);
+            TestStream::new(log_reader)
+        }
+
+        fn create_stream_from_log_reader(
+            &self,
+            log_reader: Arc<dyn LogReader>,
+        ) -> TestStream<LogPacketWriter> {
+            TestStream::new(log_reader)
         }
 
         fn create_structured_stream(
             &self,
             identity: Arc<SourceIdentity>,
         ) -> TestStream<StructuredMessageWriter> {
-            TestStream::new(self.log_manager.clone(), identity)
+            let log_reader = DefaultLogReader::new(self.log_manager.clone(), identity);
+            TestStream::new(log_reader)
         }
     }
 
@@ -1009,6 +1252,87 @@ mod tests {
         }
     }
 
+    /// A `LogReader` host a LogSink connection.
+    trait LogReader {
+        fn handle_request(
+            &self,
+            sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+        ) -> LogSinkProxy;
+    }
+
+    // A LogReader that exercises the handle_log_sink code path.
+    struct DefaultLogReader {
+        log_manager: LogManager,
+        identity: Arc<SourceIdentity>,
+    }
+
+    impl DefaultLogReader {
+        fn new(log_manager: LogManager, identity: Arc<SourceIdentity>) -> Arc<dyn LogReader> {
+            Arc::new(Self { log_manager, identity })
+        }
+    }
+
+    impl LogReader for DefaultLogReader {
+        fn handle_request(
+            &self,
+            log_sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+        ) -> LogSinkProxy {
+            let (log_sink_proxy, log_sink_stream) =
+                fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
+            fasync::spawn(self.log_manager.clone().handle_log_sink(
+                log_sink_stream,
+                self.identity.clone(),
+                log_sender,
+            ));
+            log_sink_proxy
+        }
+    }
+
+    // A LogReader that exercises the components v2 EventStream and CapabilityRequested event
+    // code path for log attribution.
+    struct EventStreamLogReader {
+        log_manager: LogManager,
+        target_moniker: String,
+        target_url: String,
+    }
+
+    impl EventStreamLogReader {
+        pub fn new(
+            log_manager: LogManager,
+            target_moniker: impl Into<String>,
+            target_url: impl Into<String>,
+        ) -> Arc<dyn LogReader> {
+            Arc::new(Self {
+                log_manager,
+                target_moniker: target_moniker.into(),
+                target_url: target_url.into(),
+            })
+        }
+    }
+
+    impl LogReader for EventStreamLogReader {
+        fn handle_request(
+            &self,
+            log_sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+        ) -> LogSinkProxy {
+            let (event_stream_proxy, event_stream) =
+                fidl::endpoints::create_proxy_and_stream::<fsys::EventStreamMarker>().unwrap();
+            let (log_sink_proxy, log_sink_server_end) =
+                fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
+            event_stream_proxy
+                .on_event(create_capability_requested_event(
+                    self.target_moniker.clone(),
+                    self.target_url.clone(),
+                    log_sink_server_end.into_channel(),
+                ))
+                .unwrap();
+            let log_manager = self.log_manager.clone();
+            fasync::spawn(log_manager.handle_event_stream(event_stream, log_sender));
+
+            log_sink_proxy
+        }
+    }
+
     struct TestStream<E> {
         sin: zx::Socket,
         _log_sink_proxy: LogSinkProxy,
@@ -1019,20 +1343,17 @@ mod tests {
     where
         E: LogWriter<Packet = P>,
     {
-        fn new(log_manager: LogManager, identity: Arc<SourceIdentity>) -> Self {
+        fn new(log_reader: Arc<dyn LogReader>) -> Self {
             let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-            let (_log_sink_proxy, log_sink_stream) =
-                fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-
-            let manager = log_manager.clone();
             let (log_sender, log_receiver) = mpsc::unbounded();
-            fasync::spawn(manager.handle_log_sink(log_sink_stream, identity, log_sender));
+            let log_sink_proxy = log_reader.handle_request(log_sender);
+
             fasync::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }));
 
-            E::connect(&_log_sink_proxy, sout);
+            E::connect(&log_sink_proxy, sout);
 
-            Self { _log_sink_proxy, sin, _encoder: PhantomData }
+            Self { _log_sink_proxy: log_sink_proxy, sin, _encoder: PhantomData }
         }
 
         fn write_packets(&mut self, packets: Vec<P>) {

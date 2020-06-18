@@ -266,8 +266,6 @@
         {
             protocol: [
                 "/svc/fuchsia.exception.Handler",
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.net.NameLookup",
                 "/svc/fuchsia.net.stack.Log",
                 "/svc/fuchsia.net.stack.Stack",
@@ -284,6 +282,16 @@
             ],
             from: "realm",
             to: [ "#driver_manager" ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+            ],
+            from: "realm",
+            to: [
+                "#driver_manager",
+                "#fshost",
+            ],
         },
         {
             protocol: [

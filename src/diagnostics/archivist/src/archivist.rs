@@ -46,7 +46,6 @@ fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::
         }),
     );
 }
-
 /// The `Archivist` is responsible for publishing all the services and monitoring component's health.
 /// # All resposibilities:
 ///  * Run and process Log Sink connections on main future.
@@ -119,7 +118,9 @@ impl Archivist {
     pub fn install_logger_services(&mut self) -> &mut Self {
         let log_manager_1 = self.log_manager.clone();
         let log_manager_2 = self.log_manager.clone();
+        let log_manager_3 = self.log_manager.clone();
         let log_sender = self.log_sender.clone();
+        let log_sender2 = self.log_sender.clone();
 
         self.fs
             .dir("svc")
@@ -131,6 +132,11 @@ impl Archivist {
                     source,
                     log_sender.clone(),
                 ));
+            })
+            .add_fidl_service(move |stream| {
+                fasync::spawn(
+                    log_manager_3.clone().handle_event_stream(stream, log_sender2.clone()),
+                )
             });
         self
     }
