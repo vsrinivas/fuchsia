@@ -176,6 +176,12 @@
             as: "/svc_for_sys/fuchsia.test.manager.Harness",
         },
 
+        // From power_manager
+        {
+            protocol: "/svc/fuchsia.thermal.Controller",
+            as: "/svc_for_sys/fuchsia.thermal.Controller",
+        },
+
         // These services are used by appmgr directly
         {
             protocol: [

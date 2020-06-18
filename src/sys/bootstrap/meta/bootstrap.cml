@@ -33,6 +33,10 @@
             name: "sysinfo",
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
+        {
+            name: "power_manager",
+            url: "fuchsia-pkg://fuchsia.com/power_manager#meta/power_manager.cm",
+        },
     ],
     offer: [
         {
@@ -50,11 +54,22 @@
                 "/svc/fuchsia.boot.ReadOnlyLog",
                 "/svc/fuchsia.boot.RootJob",
                 "/svc/fuchsia.boot.RootJobForInspect",
-                "/svc/fuchsia.kernel.Stats",
-                "/svc/fuchsia.power.manager.DriverManagerRegistration",
             ],
             from: "realm",
             to: [ "#driver_manager" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.power.manager.DriverManagerRegistration" ],
+            from: "#power_manager",
+            to: [ "#driver_manager" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.kernel.Stats" ],
+            from: "realm",
+            to: [
+                "#driver_manager",
+                "#power_manager",
+            ],
         },
         {
             protocol: "/svc/fuchsia.boot.RootResource",
@@ -69,9 +84,7 @@
             protocol: [
                 "/svc/fuchsia.boot.Arguments",
                 "/svc/fuchsia.boot.Items",
-                "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.tracing.provider.Registry",
             ],
             from: "realm",
             to: [
@@ -86,10 +99,23 @@
                 "#console",
                 "#driver_manager",
                 "#fshost",
+                "#power_manager",
                 "#ptysvc",
                 "#pwrbtn-monitor",
                 "#shutdown_shim",
                 "#sysinfo",
+            ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.tracing.provider.Registry",
+            ],
+            from: "realm",
+            to: [
+                "#driver_manager",
+                "#fshost",
+                "#power_manager",
             ],
         },
         {
@@ -168,6 +194,15 @@
             dependency: "weak_for_migration",
         },
 
+        // Offer power_manager's config data to it, so it can read its config
+        {
+            directory: "/config/data",
+            from: "#fshost",
+            to: [ "#power_manager" ],
+            subdir: "power_manager",
+            dependency: "weak_for_migration",
+        },
+
         // Offer the kernel serial console to the driver_manager
         {
             protocol: "/svc/fuchsia.hardware.pty.Device",
@@ -196,16 +231,35 @@
             dependency: "weak_for_migration",
         },
 
-        // Things shutdown_shim needs to work
+        // Things shutdown_shim and power_manager need
         {
             protocol: [ "/svc/fuchsia.sys2.SystemController" ],
             from: "realm",
-            to: [ "#shutdown_shim" ],
+            to: [
+                "#power_manager",
+                "#shutdown_shim",
+            ],
         },
         {
             protocol: [ "/svc/fuchsia.device.manager.SystemStateTransition" ],
             from: "#driver_manager",
             to: [ "#shutdown_shim" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.hardware.power.statecontrol.Admin" ],
+            from: "#power_manager",
+            to: [ "#shutdown_shim" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.device.manager.Administrator" ],
+            from: "#driver_manager",
+            to: [ "#power_manager" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "/svc/fuchsia.feedback.CrashReporter" ],
+            from: "realm",
+            to: [ "#power_manager" ],
         },
 
         // Non-zircon services for svchost
@@ -316,6 +370,10 @@
         {
             protocol: "/svc/fuchsia.sysinfo.SysInfo",
             from: "#sysinfo",
+        },
+        {
+            protocol: [ "/svc/fuchsia.thermal.Controller" ],
+            from: "#power_manager",
         },
     ],
     environments: [

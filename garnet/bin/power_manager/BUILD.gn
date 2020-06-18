@@ -80,8 +80,8 @@ package("power_manager") {
   ]
   meta = [
     {
-      path = rebase_path("meta/power_manager.cmx")
-      dest = "power_manager.cmx"
+      path = rebase_path("meta/power_manager.cml")
+      dest = "power_manager.cm"
     },
   ]
 }
@@ -99,21 +99,10 @@ test_package("power_manager_tests") {
   ]
 }
 
-config_data("sysmgr_config") {
-  for_pkg = "sysmgr"
-  sources = [ rebase_path("config/power_manager.config") ]
-}
-
 group("astro_config") {
-  deps = [
-    ":sysmgr_config",
-    "node_config:astro",
-  ]
+  deps = [ "node_config:astro" ]
 }
 
 group("base_config") {
-  deps = [
-    ":sysmgr_config",
-    "node_config:base",
-  ]
+  deps = [ "node_config:base" ]
 }
