@@ -67,6 +67,7 @@ source_set("shared") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+    "//sdk/lib/syslog/cpp",
     "//src/devices/lib/dev-operation",
     "//src/lib/ddk",
     "//src/lib/ddktl",

@@ -4,11 +4,13 @@
 
 #include "server.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/fifo.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
@@ -49,9 +51,25 @@ void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_
   response.group = group;
   response.count = 1;
 
-  status = fifo.write_one(response);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Block Server I/O error: Could not write response\n");
+  for (;;) {
+    status = fifo.write_one(response);
+    switch (status) {
+      case ZX_OK:
+        return;
+      case ZX_ERR_SHOULD_WAIT: {
+        zx_signals_t signals;
+        status = zx_object_wait_one(fifo.get_handle(), ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
+                                    ZX_TIME_INFINITE, &signals);
+        if (status != ZX_OK) {
+          FX_LOGS(WARNING) << "(fifo) zx_object_wait_one failed: " << zx_status_get_string(status);
+          return;
+        }
+        break;
+      }
+      default:
+        FX_LOGS(WARNING) << "Fifo write failed: " << zx_status_get_string(status);
+        return;
+    }
   }
 }
 
@@ -425,7 +443,7 @@ void Server::ProcessRequest(block_fifo_request_t* request) {
       TxnComplete(status, request->reqid, request->group);
       break;
     default:
-      fprintf(stderr, "Unrecognized Block Server operation: %x\n", request->opcode);
+      FX_LOGS(WARNING) << "Unrecognized block server operation: " << request->opcode;
       TxnComplete(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
   }
 }

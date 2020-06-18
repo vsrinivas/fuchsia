@@ -19,6 +19,7 @@ group("tests") {
 
   deps = [
     ":vfs_tests",
+    "block_client:tests",
     "fs_management:tests",
     "ramdevice_client:tests",
     "vfs/rust/macros:tests",

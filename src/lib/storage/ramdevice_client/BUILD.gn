@@ -12,6 +12,7 @@ rustc_library("ramdevice_client") {
   deps = [
     "//src/lib/fdio/rust:fdio",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
   ]
   test_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

@@ -41,6 +41,7 @@
 mod ramdevice_sys;
 
 use {
+    anyhow::Error,
     fdio, fuchsia_zircon as zx,
     std::{
         ffi, fs,
@@ -189,6 +190,14 @@ fn open_isolated_devmgr() -> Result<fs::File, zx::Status> {
     fdio::service_connect("/svc/fuchsia.test.IsolatedDevmgr", server_chan)?;
 
     Ok(fdio::create_fd(client_chan.into())?)
+}
+
+/// Wait for no longer than |duration| for the device at |path| to appear.
+pub fn wait_for_device(path: &str, duration: std::time::Duration) -> Result<(), Error> {
+    let c_path = ffi::CString::new(path)?;
+    Ok(zx::Status::ok(unsafe {
+        ramdevice_sys::wait_for_device(c_path.as_ptr(), duration.as_nanos() as u64)
+    })?)
 }
 
 #[cfg(test)]
