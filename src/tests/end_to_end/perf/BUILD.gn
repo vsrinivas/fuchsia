@@ -17,7 +17,6 @@ import("//build/testing/host_test_data.gni")
 
 test_list = [
   "dart_inspect_benchmarks_test",
-  "fidl_microbenchmarks_test",
   "garnet_input_latency_benchmarks_test",
   "kernel_boot_timeline_test",
   "microbenchmarks_test",
@@ -42,6 +41,35 @@ foreach(target_name, test_list) {
       nuc_env,
     ]
   }
+}
+
+# Split fidl_microbenchmarks_test into shards so that each shard fits
+# within the default time limit.
+shards = [
+  "0",
+  "1",
+]
+total_shards = "2"
+foreach(shard, shards) {
+  target_name = "fidl_microbenchmarks_test_shard_" + shard
+  dart_test(target_name) {
+    sources = [ "fidl_microbenchmarks_test.dart" ]
+
+    args = [
+      "--total-shards=" + total_shards,
+      "--shard-index=" + shard,
+    ]
+
+    deps = [
+      "//sdk/testing/sl4f/client",
+      "//third_party/dart-pkg/pub/test",
+    ]
+
+    non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+
+    environments = [ nuc_env ]
+  }
+  test_list += [ target_name ]
 }
 
 if (is_host) {
