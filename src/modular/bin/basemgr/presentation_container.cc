@@ -12,8 +12,7 @@ namespace modular {
 
 PresentationContainer::PresentationContainer(
     fuchsia::ui::policy::Presenter* const presenter,
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fuchsia::modular::session::SessionShellConfig shell_config)
+    fuchsia::ui::views::ViewHolderToken view_holder_token)
     : presenter_(presenter) {
   presenter_->PresentOrReplaceView(std::move(view_holder_token),
                                    presentation_state_.presentation.NewRequest());

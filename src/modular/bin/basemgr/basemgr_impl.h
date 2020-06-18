@@ -79,10 +79,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Starts a new session.
   void StartSession(bool use_random_id);
 
-  // Returns the session shell config of the active session shell, or returns
-  // the a default config if there is no active one.
-  fuchsia::modular::session::SessionShellConfig GetActiveSessionShellConfig();
-
   // Updates the session shell app config to the active session shell. Done once
   // on initialization and every time the session shells are swapped.
   void UpdateSessionShellConfig();

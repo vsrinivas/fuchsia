@@ -22,8 +22,7 @@ class PresentationContainer {
   // Initializes the presentation with the given |view_owner| and
   // |shell_config| and connects it to the presenter service.
   explicit PresentationContainer(fuchsia::ui::policy::Presenter* const presenter,
-                                 fuchsia::ui::views::ViewHolderToken view_holder_token,
-                                 fuchsia::modular::session::SessionShellConfig shell_config);
+                                 fuchsia::ui::views::ViewHolderToken view_holder_token);
 
   ~PresentationContainer();
 

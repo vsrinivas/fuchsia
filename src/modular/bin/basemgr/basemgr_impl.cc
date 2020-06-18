@@ -73,7 +73,6 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider") {
   UpdateSessionShellConfig();
-
   Start();
 }
 
@@ -183,13 +182,11 @@ void BasemgrImpl::StartSession(bool use_random_id) {
   }
 
   // Ownership of the Presenter should be moved to the session shell.
-  presentation_container_ =
-      std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token),
-                                              /* shell_config= */ GetActiveSessionShellConfig());
-}
-
-fuchsia::modular::session::SessionShellConfig BasemgrImpl::GetActiveSessionShellConfig() {
-  return CloneStruct(config_.basemgr_config().session_shell_map().at(0).config());
+  if (presenter_) {
+    presentation_container_ =
+        std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token));
+    presenter_.set_error_handler([this] (zx_status_t) { presentation_container_.reset(); });
+  }
 }
 
 void BasemgrImpl::UpdateSessionShellConfig() {
@@ -242,6 +239,10 @@ void BasemgrImpl::StartSessionWithRandomId() { StartSession(/* use_random_id */ 
 
 void BasemgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
+  if (!presentation_container_) {
+    request.Close(ZX_ERR_NOT_FOUND);
+    return;
+  }
   presentation_container_->GetPresentation(std::move(request));
 }
 
