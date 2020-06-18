@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
+#include "utils.h"
+
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
-#include <zircon/processargs.h>
 #include <zircon/process.h>
-#include <zxtest/zxtest.h>
+#include <zircon/processargs.h>
 
-#include "utils.h"
+#include <fbl/auto_call.h>
+#include <zxtest/zxtest.h>
 
 const char* ExternalThread::program_name_ = nullptr;
 const char* ExternalThread::helper_flag_ = "futex-owner-helper";

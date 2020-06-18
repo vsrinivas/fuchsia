@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <fbl/function.h>
-#include <fbl/futex.h>
-#include <fbl/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/thread.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
+
+#include <atomic>
+
+#include <fbl/function.h>
+#include <fbl/futex.h>
+#include <fbl/macros.h>
 
 // Allow up to 4 pointers worth of storage for any lambdas we need to capture
 // into a fbl::InlineFunction object (instead of falling back on the implicit
