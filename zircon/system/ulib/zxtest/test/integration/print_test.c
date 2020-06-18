@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdint.h>
+#include <sys/types.h>
 
 #include <zxtest/zxtest.h>
 
@@ -66,4 +67,16 @@ TEST(CPrintTest, SignedChar) {
   signed char c = 'a';
 
   ASSERT_EQ(c, 'a');
+}
+
+TEST(CPrintTest, LongLong) {
+  long long a = 0;
+
+  ASSERT_EQ(a, 0);
+}
+
+TEST(CPrintTest, OffT) {
+  off_t a = 0;
+
+  ASSERT_EQ(a, 0);
 }

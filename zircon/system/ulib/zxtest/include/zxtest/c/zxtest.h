@@ -138,7 +138,12 @@ __END_CDECLS
             bool: _zxtest_print_bool,                                                              \
             const char*: _zxtest_print_str,                                                        \
             char: _zxtest_print_int32,                                                             \
-            default: _zxtest_print_ptr)(var, buffer, size)
+            default: _Generic((var),                                                               \
+                              /* On Mac, 'long long' is the same type as int64_t, so the two */    \
+                              /* have to be in different lists of _Generic matches to avoid an */  \
+                              /* error about duplicates. */                                        \
+                              long long: _zxtest_print_int64,                                      \
+                              default: _zxtest_print_ptr))(var, buffer, size)
 // clang-format on
 
 #define _ZXTEST_NULLPTR NULL
