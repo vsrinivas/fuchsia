@@ -102,6 +102,14 @@
             ],
         },
 
+        // Diagnostics/Inspect
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
+
         // TODO: this volume directory is only used by the paver lib in netsvc under
         // devcoordinator. The paver lib could create its own memfs instead, so
         // this should eventually be removed.

@@ -26,6 +26,7 @@
 #include "delayed-outdir.h"
 #include "fdio.h"
 #include "fshost-boot-args.h"
+#include "inspect-manager.h"
 #include "lifecycle.h"
 #include "metrics.h"
 #include "registry.h"
@@ -111,6 +112,9 @@ class FsManager {
 
   // Keeps a collection of metrics being track at the FsHost level.
   FsHostMetrics metrics_;
+
+  // Serves inspect data.
+  InspectManager inspect_;
 
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
   devmgr::FshostBootArgs boot_args_;

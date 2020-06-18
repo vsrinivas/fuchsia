@@ -176,6 +176,9 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   }
   outgoing_dir->AddEntry("delayed", delayed_outdir_.Initialize(std::move(filesystems_client_2)));
 
+  // Add the diagnostics directory
+  outgoing_dir->AddEntry("diagnostics", inspect_.Initialize(global_loop_->dispatcher()));
+
   // Run the outgoing directory
   outgoing_vfs_.ServeDirectory(outgoing_dir, std::move(dir_request));
   return ZX_OK;
@@ -201,8 +204,18 @@ zx_status_t FsManager::Initialize() {
     if (open_result.is_error()) {
       return open_result.error();
     }
+
     ZX_ASSERT(open_result.is_ok());
     mount_nodes[n] = std::move(open_result.ok().vnode);
+  }
+
+  auto open_result =
+      root_vfs_->Open(global_root_, std::string_view("/data"),
+                      fs::VnodeConnectionOptions::ReadOnly(), fs::Rights::ReadOnly(), S_IFDIR);
+  if (open_result.is_ok()) {
+    inspect_.ServeStats("data", open_result.ok().vnode);
+  } else {
+    fprintf(stderr, "fshost: failed to serve /data stats");
   }
 
   status = zx::event::create(0, &event_);
