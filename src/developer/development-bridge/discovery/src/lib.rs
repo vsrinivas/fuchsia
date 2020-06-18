@@ -117,9 +117,9 @@ core/test
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(RemoteControlRequest::Select { selector: _, responder }) => {
+                    RemoteControlRequest::Select { selector: _, responder } => {
                         let _ = responder
                             .send(&mut Ok(vec![ServiceMatch {
                                 moniker: vec![String::from("core"), String::from("test")],
@@ -128,7 +128,7 @@ core/test
                             }]))
                             .unwrap();
                     }
-                    _ => assert!(false),
+                    _ => assert!(false, format!("got unexpected {:?}", req)),
                 }
             }
         });

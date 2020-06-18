@@ -388,9 +388,9 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         spawn(async move {
-            while let Ok(Some(_)) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 // No requests should be made to the target RCS.
-                assert!(false);
+                assert!(false, format!("got unexpected {:?}", req))
             }
         });
 

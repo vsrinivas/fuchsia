@@ -70,24 +70,24 @@ mod test {
         state_ptr: Arc<Mutex<Option<PowerCtlSubcommand>>>,
     ) {
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(AdminRequest::Reboot { reason: RebootReason::UserRequest, responder }) => {
+                    AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } => {
                         *(state_ptr.lock().unwrap()) =
                             Some(PowerCtlSubcommand::Reboot(RebootCommand {}));
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    Some(AdminRequest::RebootToBootloader { responder }) => {
+                    AdminRequest::RebootToBootloader { responder } => {
                         *(state_ptr.lock().unwrap()) =
                             Some(PowerCtlSubcommand::Bootloader(BootloaderCommand {}));
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    Some(AdminRequest::RebootToRecovery { responder }) => {
+                    AdminRequest::RebootToRecovery { responder } => {
                         *(state_ptr.lock().unwrap()) =
                             Some(PowerCtlSubcommand::Recovery(RecoveryCommand {}));
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    Some(AdminRequest::Poweroff { responder }) => {
+                    AdminRequest::Poweroff { responder } => {
                         *(state_ptr.lock().unwrap()) =
                             Some(PowerCtlSubcommand::Poweroff(PoweroffCommand {}));
                         responder.send(&mut Ok(())).unwrap();
@@ -119,7 +119,7 @@ mod test {
                         );
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    _ => assert!(false),
+                    _ => assert!(false, format!("got unexpected {:?}", req)),
                 }
             }
         });

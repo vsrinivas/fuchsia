@@ -155,9 +155,9 @@ mod test {
 
     fn setup_fake_launcher_service(mut stream: LauncherRequestStream) {
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(LauncherRequest::CreateComponent {
+                    LauncherRequest::CreateComponent {
                         launch_info:
                             LaunchInfo {
                                 url: _,
@@ -170,13 +170,12 @@ mod test {
                             },
                         controller,
                         control_handle: _,
-                    }) => {
+                    } => {
                         let (_, handle) =
                             controller.unwrap().into_stream_and_control_handle().unwrap();
                         handle.send_on_terminated(0, Exited).unwrap();
                         // TODO: Add test coverage for FE behavior once fxbug.dev/49063 is resolved.
                     }
-                    _ => assert!(false),
                 }
                 // We should only get one request per stream. We want subsequent calls to fail if more are
                 // made.
