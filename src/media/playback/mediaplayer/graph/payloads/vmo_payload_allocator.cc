@@ -115,8 +115,7 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
     }
 
     if (payload_vmo->size() < size) {
-      FX_LOGS(ERROR) << "VMO is too small (" << payload_vmo->size() << " bytes) for allocation ("
-                     << size << " bytes).";
+      // Buffers are smaller than the requested size.
       return nullptr;
     }
 

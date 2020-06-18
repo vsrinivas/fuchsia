@@ -1641,9 +1641,7 @@ TEST_F(PayloadManagerTest, UsesVmos_UsesVmos_Allocation) {
   uint64_t max_payload_size = std::max(output_payload_size, input_payload_size);
 
   // Allocation too large.
-  FX_LOGS(INFO) << "Start of expected errors in log.";
   EXPECT_EQ(nullptr, under_test.AllocatePayloadBufferForOutput(max_payload_size * 2).get());
-  FX_LOGS(INFO) << "End of expected errors in log.";
 
   // Valid allocations.
   std::vector<fbl::RefPtr<PayloadBuffer>> buffers;

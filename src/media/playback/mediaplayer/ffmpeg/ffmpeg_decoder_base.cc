@@ -156,7 +156,7 @@ int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
   int result = avcodec_send_packet(av_codec_context_.get(), &av_packet);
 
   if (result != 0) {
-    FX_LOGS(ERROR) << "avcodec_send_packet failed " << result;
+    FX_LOGS(WARNING) << "avcodec_send_packet failed " << result;
   }
 
   return result;

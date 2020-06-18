@@ -293,14 +293,6 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/mediaplayer_tests#meta/mediaplayer_graph_tests.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/mediaplayer_tests#meta/mediaplayer_tests.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/msd-arm-mali-integration-tests#meta/msd_arm_mali_integration_tests.cmx",
          "max_severity": "ERROR"
       },
