@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/json/validate_json.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
 # A toolchain dedicated to processing FIDL libraries.
@@ -33,4 +34,30 @@ generated_file("all_fidl_json") {
 
   outputs = [ "$root_build_dir/all_fidl_json.txt" ]
   data_keys = [ "fidl_json" ]
+}
+
+# Generates a fidl_project.json file.
+# fidl_project.json is a declarative file that lists FIDL libraries and their
+# constituent files, dependencies, and build artifacts. It is used by the FIDL
+# LSP Language Server to compile FIDL libraries.
+action("gen_fidl_project") {
+  testonly = true
+  script = "//scripts/generate-fidl-project.py"
+  deps = [ "//:generated_sources" ]
+
+  inputs = [ "$root_build_dir/generated_sources.json" ]
+  outputs = [ "$root_build_dir/fidl_project.json" ]
+
+  args = [
+    rebase_path("//"),
+    rebase_path("$root_build_dir/generated_sources.json"),
+    rebase_path("$root_build_dir/fidl_project.json"),
+  ]
+}
+
+validate_json("validate_fidl_project_json") {
+  testonly = true
+  data = "$root_build_dir/fidl_project.json"
+  schema = "//scripts/fidl_project_schema.json"
+  deps = [ ":gen_fidl_project" ]
 }

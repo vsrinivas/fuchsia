@@ -1,0 +1,43 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "The schema for fidl-project.json, an input to the FIDL Language Server",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "required": [
+            "name",
+            "bindings",
+            "deps",
+            "files",
+            "json"
+        ],
+        "properties": {
+            "name": {
+                "description": "The name of this library, e.g. `fuchsia.io` or `zx`",
+                "type": "string"
+            },
+            "bindings": {
+                "description": "The locations of this library's generated bindings",
+                "type": "object"
+            },
+            "files": {
+                "description": "This library's constituent files",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "deps": {
+                "description": "This library's dependencies, by library name",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "json": {
+                "description": "The absolute filepath to this library's compiled JSON IR",
+                "type": "string"
+            }
+        }
+    }
+}
