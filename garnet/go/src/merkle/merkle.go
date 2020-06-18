@@ -72,9 +72,9 @@ func (t *Tree) finish() *Tree {
 
 // ReadFrom consumes r until EOF, computing tree digests along the way
 func (t *Tree) ReadFrom(r io.Reader) (int64, error) {
+	buf := make([]byte, blockSize)
 	var total int64
 	for {
-		buf := make([]byte, blockSize)
 		n, err := io.ReadFull(r, buf)
 		total += int64(n)
 		if n > 0 {
