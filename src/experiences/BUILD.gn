@@ -4,7 +4,8 @@
 
 group("experiences") {
   testonly = true
-  public_deps = [
+  deps = [
+    ":tests",
     "bin",
     "examples",
     "session_shells",
@@ -16,7 +17,7 @@ group("experiences") {
 group("tests") {
   testonly = true
 
-  public_deps = [
+  deps = [
     ":dart_target_tests",
     ":dart_unittests",
     ":test_config",
@@ -33,13 +34,13 @@ group("test_config") {
 # Dart tests which can run on target
 group("dart_target_tests") {
   testonly = true
-  public_deps = [ "bin:dart_target_tests" ]
+  deps = [ "bin:dart_target_tests" ]
 }
 
 # Dart unit tests which can run on the host or target
 group("dart_unittests") {
   testonly = true
-  public_deps = [
+  deps = [
     "bin:dart_unittests",
     "examples:dart_unittests",
     "session_shells:dart_unittests",
