@@ -50,9 +50,30 @@ zx_status_t Tas5720::Mute(bool mute) {
 
 zx_status_t Tas5720::SetGain(float gain) {
   gain = std::clamp(gain, kMinGain, kMaxGain);
+  float digital_gain = gain;
+  // For gains lower than 0dB we lower the analog gain first.
+  uint8_t analog_setting = 3;  // 26.3dBV.
+  if (gain >= 0.f) {
+    // Apply the gain directly as digital volume, keep analog_setting at 3.
+  } else if (gain >= -2.8f) {
+    digital_gain += 2.8f;
+    analog_setting = 2;  // 23.5dBV.
+  } else if (gain >= -5.6f) {
+    digital_gain += 5.6f;
+    analog_setting = 1;  // 20.7dBV.
+  } else {
+    digital_gain += 7.1f;
+    analog_setting = 0;  // 19.2dBV.
+  }
+  constexpr uint8_t kPwmRate = 0x05;  // 16 x lrclk.
+  constexpr uint8_t kReserved = 0x01;
+  auto status = WriteReg(kRegAnalogControl,
+                         static_cast<uint8_t>((kPwmRate << 4) | (analog_setting << 2) | kReserved));
+  if (status != ZX_OK) {
+    return status;
+  }
   // Datasheet: "DVC [Hex Value] = 0xCF + (DVC [dB] / 0.5 [dB] )".
-  uint8_t gain_reg = static_cast<uint8_t>(0xCF + gain / .5f);
-  zx_status_t status;
+  uint8_t gain_reg = static_cast<uint8_t>(0xCF + digital_gain / .5f);
   status = WriteReg(kRegVolumeControl, gain_reg);
   if (status != ZX_OK) {
     return status;
@@ -84,7 +105,11 @@ zx_status_t Tas5720::Init(std::optional<uint8_t> slot, uint32_t rate) {
   if (status != ZX_OK) {
     return status;
   }
-  status = WriteReg(kRegAnalogControl, 0x55);  // PWM rate 16 x lrclk, gain 20.7 dBV.
+  constexpr uint8_t kAnalogSetting = 3;  // 26.3dBV.
+  constexpr uint8_t kPwmRate = 0x05;     // 16 x lrclk.
+  constexpr uint8_t kReserved = 0x01;
+  status = WriteReg(kRegAnalogControl,
+                    static_cast<uint8_t>((kPwmRate << 4) | (kAnalogSetting << 2) | kReserved));
   if (status != ZX_OK) {
     return status;
   }
@@ -100,7 +125,7 @@ zx_status_t Tas5720::Init(std::optional<uint8_t> slot, uint32_t rate) {
   if (status != ZX_OK) {
     return status;
   }
-  return SetGain(0);
+  return SetGain(-7.1f);  // Conservative default gain.
 }
 
 zx_status_t Tas5720::Standby() {

@@ -236,6 +236,27 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   return InitHW();
 }
 
+zx_status_t SherlockAudioStreamOut::SetCodecsGain(float gain) {
+  ZX_DEBUG_ASSERT(codecs_.size() == 3);
+
+  // TODO(andresoportus): Get this param through product metadata.
+  // Boost the woofer above tweeters by 7.1db analog and 5.5db digital needed for this product.
+  constexpr float kDeltaGainWooferVsTweeters = 12.6f;
+  auto status = codecs_[0]->SetGain(gain - kDeltaGainWooferVsTweeters);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = codecs_[1]->SetGain(gain - kDeltaGainWooferVsTweeters);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = codecs_[2]->SetGain(gain);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t SherlockAudioStreamOut::Init() {
   zx_status_t status;
 
@@ -249,20 +270,26 @@ zx_status_t SherlockAudioStreamOut::Init() {
     return status;
   }
 
-  float gain = codecs_[0]->GetGain();
   float min_gain = codecs_[0]->GetMinGain();
+  min_gain = std::max(min_gain, codecs_[1]->GetMinGain());
+  min_gain = std::max(min_gain, codecs_[2]->GetMinGain());
+
   float max_gain = codecs_[0]->GetMaxGain();
+  max_gain = std::min(max_gain, codecs_[1]->GetMaxGain());
+  max_gain = std::min(max_gain, codecs_[2]->GetMaxGain());
+
   float gain_step = codecs_[0]->GetGainStep();
-  for (size_t i = 1; i < codecs_.size(); ++i) {
-    min_gain = std::max(min_gain, codecs_[i]->GetMinGain());
-    max_gain = std::min(max_gain, codecs_[i]->GetMaxGain());
-    gain_step = std::max(gain_step, codecs_[i]->GetGainStep());
-    status = codecs_[i]->SetGain(gain);
-    if (status != ZX_OK) {
-      return status;
-    }
+  gain_step = std::max(gain_step, codecs_[1]->GetGainStep());
+  gain_step = std::max(gain_step, codecs_[2]->GetGainStep());
+
+  // Use woofer as reference initial gain.
+  float gain = codecs_[2]->GetGain();
+  status = SetCodecsGain(gain);
+  if (status != ZX_OK) {
+    return status;
   }
   cur_gain_state_.cur_gain = gain;
+
   cur_gain_state_.cur_mute = false;
   cur_gain_state_.cur_agc = false;
 
@@ -329,12 +356,7 @@ zx_status_t SherlockAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmt
     }
 
     // Set gain after the codec is reinitialized.
-    for (size_t i = 0; i < codecs_.size(); ++i) {
-      zx_status_t status = codecs_[i]->SetGain(cur_gain_state_.cur_gain);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
+    SetCodecsGain(cur_gain_state_.cur_gain);
   }
 
   // At this time only one format is supported, and hardware is initialized
@@ -348,17 +370,12 @@ void SherlockAudioStreamOut::ShutdownHook() {
 }
 
 zx_status_t SherlockAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
-  for (size_t i = 0; i < codecs_.size(); ++i) {
-    zx_status_t status = codecs_[i]->SetGain(req.gain);
-    if (status != ZX_OK) {
-      return status;
-    }
+  auto status = SetCodecsGain(req.gain);
+  if (status != ZX_OK) {
+    return status;
   }
   cur_gain_state_.cur_gain = req.gain;
-  // TODO(andresoportus): More options on volume setting, e.g.:
-  // -Allow for ratio between tweeters and woofer gains.
-  // -Make use of analog gain options in TAS5720.
-  // -Add codecs mute and fade support.
+  // TODO(andresoportus): More options on volume setting, e.g.: Add codecs mute and fade support.
   return ZX_OK;
 }
 
