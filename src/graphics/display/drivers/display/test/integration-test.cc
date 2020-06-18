@@ -110,7 +110,7 @@ class IntegrationTest : public TestBase {
   std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_;
 };
 
-TEST_F(IntegrationTest, ClientsCanBail) {
+TEST_F(IntegrationTest, DISABLED_ClientsCanBail) {
   for (size_t i = 0; i < 100; i++) {
     RunLoopWithTimeoutOrUntil([this]() { return !primary_client_connected(); }, zx::sec(1));
     TestFidlClient client(sysmem_.get());
