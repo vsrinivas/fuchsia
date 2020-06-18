@@ -12,8 +12,6 @@
 
 namespace {
 
-const fidl::ExperimentalFlags FLAGS(fidl::ExperimentalFlags::Flag::kUniqueCanonicalNames);
-
 bool GoodTopLevel() {
   BEGIN_TEST;
 
@@ -30,8 +28,7 @@ enum FoObAr { A = 1; };
 bits FooBaR { A = 1; };
 protocol FoObaR {};
 service FOoBAR {};
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -48,8 +45,7 @@ struct Example {
   bool foo_bar;
   bool f_o_o_b_a_r;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -66,8 +62,7 @@ table Example {
   2: bool foo_bar;
   3: bool f_o_o_b_a_r;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -84,8 +79,7 @@ union Example {
   2: bool foo_bar;
   3: bool f_o_o_b_a_r;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -102,8 +96,7 @@ enum Example {
   foo_bar = 2;
   f_o_o_b_a_r = 3;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -120,8 +113,7 @@ bits Example {
   foo_bar = 2;
   f_o_o_b_a_r = 4;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -138,8 +130,7 @@ protocol Example {
   foo_bar() -> ();
   f_o_o_b_a_r() -> ();
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -158,8 +149,7 @@ protocol Example {
     bool f_o_o_b_a_r
   ) -> ();
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -178,8 +168,7 @@ protocol Example {
     bool f_o_o_b_a_r
   );
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -197,8 +186,7 @@ service Example {
   P foo_bar;
   P f_o_o_b_a_r;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -212,8 +200,7 @@ library example;
 
 struct HTTPServer {};
 struct httpserver {};
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -226,8 +213,7 @@ bool GoodCurrentLibrary() {
 library example;
 
 struct example {};
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   END_TEST;
@@ -242,7 +228,7 @@ library foobar;
 
 struct Something {};
 )FIDL",
-                         &shared, FLAGS);
+                         &shared);
   ASSERT_TRUE(dependency.Compile());
 
   TestLibrary library(R"FIDL(
@@ -260,8 +246,7 @@ enum FoObAr { A = 1; };
 bits FooBaR { A = 1; };
 protocol FoObaR {};
 service FOoBAR {};
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_TRUE(library.Compile());
 
@@ -301,7 +286,7 @@ bool BadTopLevel() {
       std::ostringstream s;
       s << "library example;\n\n" << line1 << '\n' << line2 << '\n';
       const auto fidl = s.str();
-      TestLibrary library(fidl, FLAGS);
+      TestLibrary library(fidl);
       // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
       ASSERT_FALSE(library.Compile());  // << fidl;
       const auto& errors = library.errors();
@@ -326,8 +311,7 @@ struct Example {
   bool fooBar;
   bool FooBar;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -349,8 +333,7 @@ table Example {
   1: bool fooBar;
   2: bool FooBar;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -372,8 +355,7 @@ union Example {
   1: bool fooBar;
   2: bool FooBar;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -395,8 +377,7 @@ enum Example {
   fooBar = 1;
   FooBar = 2;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -418,8 +399,7 @@ bits Example {
   fooBar = 1;
   FooBar = 2;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -441,8 +421,7 @@ protocol Example {
   fooBar() -> ();
   FooBar() -> ();
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -463,8 +442,7 @@ library example;
 protocol Example {
   example(bool fooBar, bool FooBar) -> ();
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -485,8 +463,7 @@ library example;
 protocol Example {
   example() -> (bool fooBar, bool FooBar);
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -508,8 +485,7 @@ service Example {
   P fooBar;
   P FooBar;
 };
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -529,8 +505,7 @@ library example;
 
 struct HTTPServer {};
 struct HttpServer {};
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -551,7 +526,7 @@ library foobar;
 
 struct Something {};
 )FIDL",
-                         &shared, FLAGS);
+                         &shared);
   ASSERT_TRUE(dependency.Compile());
 
   TestLibrary library(R"FIDL(
@@ -560,8 +535,7 @@ library example;
 using foobar;
 
 using FOOBAR = foobar.Something;
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
@@ -594,7 +568,7 @@ bool BadVariousCollisions() {
         const auto name2 = f2(base_name);
         s << "library example;\n\nstruct " << name1 << " {};\nstruct " << name2 << " {};\n";
         const auto fidl = s.str();
-        TestLibrary library(fidl, FLAGS);
+        TestLibrary library(fidl);
         // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
         ASSERT_FALSE(library.Compile());  // << fidl;
         const auto& errors = library.errors();
@@ -624,8 +598,7 @@ library example;
 
 struct it_is_the_same {};
 struct it__is___the____same {};
-)FIDL",
-                      FLAGS);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -664,7 +637,7 @@ bool BadInconsistentTypeSpelling() {
       std::ostringstream s;
       s << "library example;\n\n" << decl << '\n' << use << '\n';
       const auto fidl = s.str();
-      TestLibrary library(fidl, FLAGS);
+      TestLibrary library(fidl);
       // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
       ASSERT_FALSE(library.Compile());  // << fidl;
       const auto& errors = library.errors();
@@ -692,7 +665,7 @@ bool BadInconsistentConstSpelling() {
       << "const bool " << decl_name << " = false;\n"
       << "const bool EXAMPLE = " << use_name << ";\n";
     const auto fidl = s.str();
-    TestLibrary library(fidl, FLAGS);
+    TestLibrary library(fidl);
     // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
     ASSERT_FALSE(library.Compile());  // << fidl;
     const auto& errors = library.errors();
@@ -719,7 +692,7 @@ bool BadInconsistentEnumMemberSpelling() {
       << "enum Enum { " << decl_name << " = 1; };\n"
       << "const Enum EXAMPLE = Enum." << use_name << ";\n";
     const auto fidl = s.str();
-    TestLibrary library(fidl, FLAGS);
+    TestLibrary library(fidl);
     // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
     ASSERT_FALSE(library.Compile());  // << fidl;
     const auto& errors = library.errors();
@@ -747,7 +720,7 @@ bool BadInconsistentBitsMemberSpelling() {
       << "bits Bits { " << decl_name << " = 1; };\n"
       << "const Bits EXAMPLE = Bits." << use_name << ";\n";
     const auto fidl = s.str();
-    TestLibrary library(fidl, FLAGS);
+    TestLibrary library(fidl);
     // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
     ASSERT_FALSE(library.Compile());  // << fidl;
     const auto& errors = library.errors();

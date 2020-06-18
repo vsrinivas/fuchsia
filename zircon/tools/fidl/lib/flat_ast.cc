@@ -1319,7 +1319,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   }
 
   const auto canonical_decl_name = utils::canonicalize(name.decl_name());
-  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+  {
     const auto it = declarations_by_canonical_name_.emplace(canonical_decl_name, decl_ptr);
     if (!it.second) {
       const auto previous_name = it.first->second->name;
@@ -1333,8 +1333,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     if (dependencies_.Contains(name.span()->source_file().filename(), {name.span()->data()})) {
       return Fail(ErrDeclNameConflictsWithLibraryImport, name, name);
     }
-    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames) &&
-        dependencies_.Contains(name.span()->source_file().filename(), {canonical_decl_name})) {
+    if (dependencies_.Contains(name.span()->source_file().filename(), {canonical_decl_name})) {
       return Fail(ErrDeclNameConflictsWithLibraryImportCanonical, name, name, canonical_decl_name);
     }
   }
@@ -3091,11 +3090,9 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
           return Fail(ErrDuplicateMethodName, method.name, original_name,
                       name_result.previous_occurrence());
         }
-        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
-          const auto previous_span = name_result.previous_occurrence();
-          return Fail(ErrDuplicateMethodNameCanonical, method.name, original_name,
-                      previous_span.data(), previous_span, canonical_name);
-        }
+        const auto previous_span = name_result.previous_occurrence();
+        return Fail(ErrDuplicateMethodNameCanonical, method.name, original_name,
+                    previous_span.data(), previous_span, canonical_name);
       }
       auto ordinal_result =
           method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
@@ -3143,10 +3140,8 @@ bool Library::CompileService(Service* service_decl) {
       if (original_name == name_result.previous_occurrence().data()) {
         return Fail(ErrDuplicateServiceMemberName, member.name, original_name, previous_span);
       }
-      if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
-        return Fail(ErrDuplicateServiceMemberNameCanonical, member.name, original_name,
-                    previous_span.data(), previous_span, canonical_name);
-      }
+      return Fail(ErrDuplicateServiceMemberNameCanonical, member.name, original_name,
+                  previous_span.data(), previous_span, canonical_name);
     }
     if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
@@ -3174,12 +3169,10 @@ bool Library::CompileStruct(Struct* struct_declaration) {
                                                                : ErrDuplicateStructMemberName,
                     member.name, original_name, previous_span);
       }
-      if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
-        return Fail(
-            struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterNameCanonical
-                                                       : ErrDuplicateStructMemberNameCanonical,
-            member.name, original_name, previous_span.data(), previous_span, canonical_name);
-      }
+      return Fail(struct_declaration->is_request_or_response
+                      ? ErrDuplicateMethodParameterNameCanonical
+                      : ErrDuplicateStructMemberNameCanonical,
+                  member.name, original_name, previous_span.data(), previous_span, canonical_name);
     }
 
     if (!CompileTypeConstructor(member.type_ctor.get()))
@@ -3220,10 +3213,8 @@ bool Library::CompileTable(Table* table_declaration) {
           return Fail(ErrDuplicateTableFieldName, member.maybe_used->name, original_name,
                       previous_span);
         }
-        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
-          return Fail(ErrDuplicateTableFieldNameCanonical, member.maybe_used->name, original_name,
-                      previous_span.data(), previous_span, canonical_name);
-        }
+        return Fail(ErrDuplicateTableFieldNameCanonical, member.maybe_used->name, original_name,
+                    previous_span.data(), previous_span, canonical_name);
       }
       if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
         return false;
@@ -3258,10 +3249,8 @@ bool Library::CompileUnion(Union* union_declaration) {
           return Fail(ErrDuplicateUnionMemberName, member.maybe_used->name, original_name,
                       previous_span);
         }
-        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
-          return Fail(ErrDuplicateUnionMemberNameCanonical, member.maybe_used->name, original_name,
-                      previous_span.data(), previous_span, canonical_name);
-        }
+        return Fail(ErrDuplicateUnionMemberNameCanonical, member.maybe_used->name, original_name,
+                    previous_span.data(), previous_span, canonical_name);
       }
 
       if (!CompileTypeConstructor(member.maybe_used->type_ctor.get())) {
@@ -3479,8 +3468,7 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
       if (original_name == name_result.previous_occurrence().data()) {
         success = Fail(ErrDuplicateMemberName, member.name, std::string_view(decl_type),
                        original_name, previous_span);
-      } else if (experimental_flags_.IsFlagEnabled(
-                     ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+      } else {
         success = Fail(ErrDuplicateMemberNameCanonical, member.name, std::string_view(decl_type),
                        original_name, previous_span.data(), previous_span, canonical_name);
       }

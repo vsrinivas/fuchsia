@@ -17,7 +17,6 @@ class ExperimentalFlags {
     kEnableHandleRights = 0b01,
     kFlexibleBitsAndEnums = 0b10,
     kDisallowOldHandleSyntax = 0b100,
-    kUniqueCanonicalNames = 0b1000,
   };
 
   ExperimentalFlags() : flags_(0) {}

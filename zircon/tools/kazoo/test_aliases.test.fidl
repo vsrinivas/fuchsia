@@ -39,9 +39,7 @@ using vector_paddr = vector<paddr>;
 using vector_void = vector<byte>;
 using vector_void_u32size = vector<byte>;
 using voidptr = uint64;
-
-struct StringView {};
-using string_view = StringView;
+using string_view = uint64;
 
 [Transport="Syscall"]
 protocol Aliases {
