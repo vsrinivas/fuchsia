@@ -22,7 +22,7 @@ constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 
 static fidl::StringView FvmDriverLib() { return fidl::StringView("/pkg/bin/driver/fvm.so"); }
 
-zx::status<std::string> CreateFvmPartition(const std::string& device_path, int slice_size) {
+zx::status<std::string> CreateFvmInstance(const std::string& device_path, int slice_size) {
   fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     FX_LOGS(ERROR) << "Could not open test disk";
@@ -58,9 +58,18 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
     return status.take_error();
   }
 
+  return zx::ok(fvm_disk_path);
+}
+
+zx::status<std::string> CreateFvmPartition(const std::string& device_path, int slice_size) {
+  // Format the raw device to support FVM, and bind the FVM driver to it.
+  zx::status<std::string> fvm_disk_path_or = CreateFvmInstance(device_path, slice_size);
+  if (fvm_disk_path_or.is_error()) {
+    return fvm_disk_path_or.take_error();
+  }
+
   // Open "fvm" driver
-  fvm_channel.reset();
-  auto fvm_fd = fbl::unique_fd(open(fvm_disk_path.c_str(), O_RDWR));
+  auto fvm_fd = fbl::unique_fd(open(fvm_disk_path_or->c_str(), O_RDWR));
   if (!fvm_fd) {
     FX_LOGS(ERROR) << "Could not open FVM driver: errno=" << errno;
     return zx::error(ZX_ERR_BAD_STATE);
@@ -73,7 +82,7 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
   memcpy(request.type, kTestPartGUID, sizeof(request.type));
   memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
 
-  fd.reset(fvm_allocate_partition(fvm_fd.get(), &request));
+  fbl::unique_fd fd(fvm_allocate_partition(fvm_fd.get(), &request));
   if (!fd) {
     FX_LOGS(ERROR) << "Could not allocate FVM partition";
     return zx::error(ZX_ERR_BAD_STATE);
