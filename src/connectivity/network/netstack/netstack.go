@@ -120,26 +120,33 @@ func (c *cobaltClient) Collect() []cobalt.CobaltEvent {
 }
 
 func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface, stats *stats, stk *stack.Stack) error {
-	// TODO(52146): move stats to a cobaltEventProducer.
-	// Metric                         | Sampling Interval | Aggregation Strategy
-	// SocketCountMax                 | socket creation   | max
-	// SocketsCreated                 | 1 minute          | delta
-	// SocketsDestroyed               | 1 minute          | delta
-	// PacketsSent                    | 1 minute          | delta
-	// PacketsReceived                | 1 minute          | delta
-	// BytesSent                      | 1 minute          | delta
-	// BytesReceived                  | 1 minute          | delta
-	// TCPConnectionsEstablishedTotal | 1 minute          | max
-	// TCPConnectionsClosed           | 1 minute          | delta
-	// TCPConnectionsReset            | 1 minute          | delta
-	// TCPConnectionsTimedout         | 1 minute          | delta
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			cobaltLogger.LogCobaltEvents(context.Background(), c.Collect())
+		}
+	}
+}
+
+type statsObserver struct {
+	mu struct {
+		sync.Mutex
+		cobaltEvents []cobalt.CobaltEvent
+		hasEvents    func()
+	}
+}
+
+func (o *statsObserver) run(ctx context.Context, interval time.Duration, stats *stats, stk *stack.Stack) error {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	var lastCreated, lastDestroyed uint64
 	var lastTcpConnectionsClosed, lastTcpConnectionsReset, lastTcpConnectionsTimedOut uint64
 	previousTime := time.Now()
-
 	lastNICStats := make(map[tcpip.NICID]nicStats)
 	for {
 		select {
@@ -184,7 +191,6 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 					Payload:  eventCount(period, tcpConnectionsTimedOut-lastTcpConnectionsTimedOut),
 				},
 			}
-			events = append(events, c.Collect()...)
 
 			nicInfos := stk.NICInfo()
 			for nicid, info := range nicInfos {
@@ -227,7 +233,14 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 					},
 				)
 			}
-			cobaltLogger.LogCobaltEvents(context.Background(), events)
+			o.mu.Lock()
+			o.mu.cobaltEvents = append(o.mu.cobaltEvents, events...)
+			hasEvents := o.mu.hasEvents
+			o.mu.Unlock()
+			if hasEvents == nil {
+				panic("statsObserver: hasEvents callback unspecified (ensure setHasEvents has been called)")
+			}
+			hasEvents()
 			lastCreated = created
 			lastDestroyed = destroyed
 			lastTcpConnectionsClosed = tcpConnectionsClosed
@@ -235,6 +248,20 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 			lastTcpConnectionsTimedOut = tcpConnectionsTimedOut
 		}
 	}
+}
+
+func (o *statsObserver) setHasEvents(hasEvents func()) {
+	o.mu.Lock()
+	o.mu.hasEvents = hasEvents
+	o.mu.Unlock()
+}
+
+func (o *statsObserver) events() []cobalt.CobaltEvent {
+	o.mu.Lock()
+	res := o.mu.cobaltEvents
+	o.mu.cobaltEvents = nil
+	o.mu.Unlock()
+	return res
 }
 
 func eventCount(period int64, count uint64) cobalt.EventPayload {

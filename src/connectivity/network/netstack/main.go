@@ -294,7 +294,11 @@ func Main() {
 	ns.stats = stats{
 		Stats: stk.Stats(),
 	}
-
+	statsObserver := statsObserver{}
+	statsObserver.setHasEvents(func() {
+		cobaltClient.Register(&statsObserver)
+	})
+	go statsObserver.run(context.Background(), time.Minute, &ns.stats, ns.stack)
 	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
