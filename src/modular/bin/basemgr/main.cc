@@ -48,19 +48,13 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
   fit::deferred_action<fit::closure> cobalt_cleanup =
       SetupCobalt(config.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
-  fuchsia::ui::policy::PresenterPtr presenter;
-  component_context->svc()->Connect(presenter.NewRequest());
-  fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager;
-  component_context->svc()->Connect(device_settings_manager.NewRequest());
-  fuchsia::wlan::service::WlanPtr wlan;
-  component_context->svc()->Connect(wlan.NewRequest());
-  fuchsia::hardware::power::statecontrol::AdminPtr administrator;
-  component_context->svc()->Connect(administrator.NewRequest());
-
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config), component_context->svc(), component_context->outgoing(),
-      component_context->svc()->Connect<fuchsia::sys::Launcher>(), std::move(presenter),
-      std::move(device_settings_manager), std::move(wlan), std::move(administrator),
+      component_context->svc()->Connect<fuchsia::sys::Launcher>(),
+      component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
+      component_context->svc()->Connect<fuchsia::devicesettings::DeviceSettingsManager>(),
+      component_context->svc()->Connect<fuchsia::wlan::service::Wlan>(),
+      component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
       /*on_shutdown=*/
       [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {
         cobalt_cleanup.call();
