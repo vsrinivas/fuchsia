@@ -84,7 +84,7 @@ class GichState {
   // Tracks pending interrupts.
   hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker_;
 
-  // Tracks list registers.
+  // Tracks interrupts in list registers.
   bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>> lr_tracker_;
 };
 
