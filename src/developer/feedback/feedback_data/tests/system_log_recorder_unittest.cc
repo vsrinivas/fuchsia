@@ -15,10 +15,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/log_format.h"
-#include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -30,7 +30,8 @@ using stubs::BuildLogMessage;
 
 const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line XX")).size();
 const size_t kDroppedFormatStrSize = std::string("!!! DROPPED XX MESSAGES !!!\n").size();
-const size_t kRepeatedFormatStrSize = std::string("!!! MESSAGE REPEATED XX MORE TIMES !!!\n").size();
+const size_t kRepeatedFormatStrSize =
+    std::string("!!! MESSAGE REPEATED XX MORE TIMES !!!\n").size();
 
 TEST(LogMessageStoreTest, AddAndConsume) {
   // Set up the store to hold 2 log lines.
@@ -255,31 +256,31 @@ TEST_F(ListenerTest, AddsMessages) {
 )");
 }
 
-std::vector<const std::string> LogFiles(files::ScopedTempDir& temp_dir) {
-  const std::vector<const std::string> kLogFileNames = {
-      "file0.txt",
-      "file1.txt",
-      "file2.txt",
-      "file3.txt",
-  };
+// Returns auto-generated valid file paths
+std::vector<const std::string> MakeLogFilePaths(files::ScopedTempDir& temp_dir, size_t num_files) {
+  std::vector<const std::string> file_names;
 
-  std::vector<const std::string> log_files;
-
-  for (const auto& file : kLogFileNames) {
-    log_files.push_back(files::JoinPath(temp_dir.path(), file));
+  for (size_t file_idx = 0; file_idx < num_files; file_idx++) {
+    file_names.push_back("file" + std::to_string(file_idx) + ".txt");
   }
 
-  return log_files;
+  std::vector<const std::string> file_paths;
+
+  for (const auto& file : file_names) {
+    file_paths.push_back(files::JoinPath(temp_dir.path(), file));
+  }
+
+  return file_paths;
 }
 
 TEST(WriterTest, VerifyFileRotation) {
   files::ScopedTempDir temp_dir;
-  const std::vector<const std::string> log_files = LogFiles(temp_dir);
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/3);
 
-  // Set up the writer such that each file can fit 1 log message. We will then write 7 messages
-  // and only expect the last 4 to remain as there are 4 files in the rotation.
+  // Set up the writer such that each file can fit 1 log message. We will then write 5 messages
+  // and only expect the last 3 to remain as there are 3 files in the rotation.
   LogMessageStore store(kMaxLogLineSize);
-  SystemLogWriter writer(log_files, FileSize::Bytes(log_files.size() * kMaxLogLineSize), &store);
+  SystemLogWriter writer(file_paths, FileSize::Bytes(file_paths.size() * kMaxLogLineSize), &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
   writer.Write();
@@ -291,37 +292,29 @@ TEST(WriterTest, VerifyFileRotation) {
   writer.Write();
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 5")));
   writer.Write();
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 6")));
-  writer.Write();
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 7")));
-  writer.Write();
 
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
 
-  ASSERT_TRUE(Concatenate(log_files, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, output_path));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 4
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 3
+[15604.000][07559][07687][] INFO: line 4
 [15604.000][07559][07687][] INFO: line 5
-[15604.000][07559][07687][] INFO: line 6
-[15604.000][07559][07687][] INFO: line 7
 )");
 }
 
 TEST(WriterTest, WritesMessages) {
   files::ScopedTempDir temp_dir;
-  const std::vector<const std::string> log_files = LogFiles(temp_dir);
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/2);
 
   // Set up the writer such that each file can fit 2 log messages and the "!!! DROPPED..."
   // string.
   LogMessageStore store(kMaxLogLineSize * 2);
   SystemLogWriter writer(
-      log_files, FileSize::Bytes(log_files.size() * (kMaxLogLineSize * 2 + kDroppedFormatStrSize)),
-      &store);
-
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line A")));
-  writer.Write();
+      file_paths,
+      FileSize::Bytes(file_paths.size() * (kMaxLogLineSize * 2 + kDroppedFormatStrSize)), &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -332,45 +325,29 @@ TEST(WriterTest, WritesMessages) {
   EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
   writer.Write();
 
-  store.Add(BuildLogMessage(FX_LOG_INFO, "line 5"));
-  writer.Write();
-
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
 
-  ASSERT_TRUE(Concatenate(log_files, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, output_path));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line A
-[15604.000][07559][07687][] INFO: line 0
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
 [15604.000][07559][07687][] INFO: line 2
 [15604.000][07559][07687][] INFO: line 3
 !!! DROPPED 1 MESSAGES !!!
-[15604.000][07559][07687][] INFO: line 5
 )");
 
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 6")));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 7")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 5")));
   writer.Write();
 
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 8")));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 9")));
-  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 10")));
-  writer.Write();
-
-  ASSERT_TRUE(Concatenate(log_files, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, output_path));
 
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 2
 [15604.000][07559][07687][] INFO: line 3
 !!! DROPPED 1 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 5
-[15604.000][07559][07687][] INFO: line 6
-[15604.000][07559][07687][] INFO: line 7
-[15604.000][07559][07687][] INFO: line 8
-[15604.000][07559][07687][] INFO: line 9
-!!! DROPPED 1 MESSAGES !!!
 )");
 }
 
@@ -389,10 +366,6 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   //    1.50: line8
   //    2.25: line9
   //    3.00: line10
-  //    3.75: line11
-  //    4.50: line12
-  //    5.25: line13
-  //    6.00: line14
   const zx::duration kListenerPeriod = zx::msec(750);
   const zx::duration kWriterPeriod = zx::sec(1);
 
@@ -417,17 +390,13 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
       BuildLogMessage(FX_LOG_INFO, "line 8"),
       BuildLogMessage(FX_LOG_INFO, "line 9"),
       BuildLogMessage(FX_LOG_INFO, "line 10"),
-      BuildLogMessage(FX_LOG_INFO, "line 11"),
-      BuildLogMessage(FX_LOG_INFO, "line 12"),
-      BuildLogMessage(FX_LOG_INFO, "line 13"),
-      BuildLogMessage(FX_LOG_INFO, "line 14"),
   });
 
   stubs::LoggerDelayedResponses logger(dispatcher(), dumps, messages, kListenerPeriod);
   InjectServiceProvider(&logger);
 
   files::ScopedTempDir temp_dir;
-  const std::vector<const std::string> log_files = LogFiles(temp_dir);
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/2);
 
   const size_t kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
 
@@ -435,8 +404,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
                              SystemLogRecorder::WriteParameters{
                                  .period = kWriterPeriod,
                                  .max_write_size_bytes = kWriteSize,
-                                 .log_file_paths = log_files,
-                                 .total_log_size = FileSize::Bytes(log_files.size() * kWriteSize),
+                                 .log_file_paths = file_paths,
+                                 .total_log_size = FileSize::Bytes(file_paths.size() * kWriteSize),
                              });
   recorder.Start();
 
@@ -446,7 +415,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
 
-  ASSERT_TRUE(Concatenate(log_files, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -455,78 +424,32 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(log_files, output_path));
-  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
-[15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 MESSAGES !!!
-[15604.000][07559][07687][] INFO: line 8
-)");
-
-  RunLoopFor(kWriterPeriod);
-
-  ASSERT_TRUE(Concatenate(log_files, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
 !!! DROPPED 6 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 8
-[15604.000][07559][07687][] INFO: line 9
 )");
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(log_files, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
 !!! DROPPED 6 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
-[15604.000][07559][07687][] INFO: line 10
-[15604.000][07559][07687][] INFO: line 11
 )");
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(Concatenate(log_files, output_path));
-  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
-[15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 MESSAGES !!!
-[15604.000][07559][07687][] INFO: line 8
-[15604.000][07559][07687][] INFO: line 9
-[15604.000][07559][07687][] INFO: line 10
-[15604.000][07559][07687][] INFO: line 11
-[15604.000][07559][07687][] INFO: line 12
-)");
-
-  RunLoopFor(kWriterPeriod);
-
-  ASSERT_TRUE(Concatenate(log_files, output_path));
-  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
-[15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 MESSAGES !!!
-[15604.000][07559][07687][] INFO: line 8
-[15604.000][07559][07687][] INFO: line 9
-[15604.000][07559][07687][] INFO: line 10
-[15604.000][07559][07687][] INFO: line 11
-[15604.000][07559][07687][] INFO: line 12
-[15604.000][07559][07687][] INFO: line 13
-)");
-
-  RunLoopFor(kWriterPeriod);
-
-  ASSERT_TRUE(Concatenate(log_files, output_path));
+  ASSERT_TRUE(Concatenate(file_paths, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
 [15604.000][07559][07687][] INFO: line 10
-[15604.000][07559][07687][] INFO: line 11
-[15604.000][07559][07687][] INFO: line 12
-[15604.000][07559][07687][] INFO: line 13
-[15604.000][07559][07687][] INFO: line 14
 )");
 }
 
