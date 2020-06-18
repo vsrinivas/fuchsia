@@ -28,6 +28,11 @@ fn with_tcp_stream(f: impl FnOnce(TcpStream) -> ()) {
         fasync::Executor::new().expect("new executor").run_singlethreaded(
             server.into_stream().expect("endpoint into stream").for_each(move |request| {
                 future::ready(match request.expect("stream socket request stream") {
+                    StreamSocketRequest::Close { responder } => {
+                        let () = responder.control_handle().shutdown();
+                        let () =
+                            responder.send(zx::Status::OK.into_raw()).expect("send Close response");
+                    }
                     StreamSocketRequest::Describe { responder } => {
                         let (s0, _s1) =
                             zx::Socket::create(zx::SocketOpts::STREAM).expect("create zx socket");

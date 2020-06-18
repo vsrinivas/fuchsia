@@ -18,6 +18,21 @@ namespace fio = ::llcpp::fuchsia::io;
 namespace fsocket = ::llcpp::fuchsia::posix::socket;
 
 namespace {
+zx_status_t base_close(const zx::channel& channel) {
+  auto response = fsocket::BaseSocket::Call::Close(channel.borrow());
+  zx_status_t status;
+  if ((status = response.status()) != ZX_OK) {
+    return status;
+  }
+  if ((status = response->s) != ZX_OK) {
+    return status;
+  };
+  if ((status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr)) != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t base_bind(zx::unowned_channel channel, const struct sockaddr* addr, socklen_t addrlen,
                       int16_t* out_code) {
   auto response = fsocket::BaseSocket::Call::Bind(
@@ -590,15 +605,12 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   };
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
+    zx_status_t channel_status = base_close(zs->client.channel());
     // TODO(fxb/45407): When the syscall to detach a handle from its object is added,
     // we should use that to mark the handle as detached, instead of closing
     // the handle with risks of race behavior.
     zs->event.reset();
-    auto close_result = zs->client.Close();
-    if (close_result.status() != ZX_OK) {
-      return close_result.status();
-    }
-    return close_result->s;
+    return channel_status;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
     auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
@@ -775,17 +787,9 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   };
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    // N.B. we don't call zs->control.Close() because such a call would block
-    // until all bytes are drained zs->pipe.socket. Closing the channel (via the
-    // destructor) is semantically equivalent and doesn't block.
-    //
-    // These semantics are not quite in accordance with POSIX, but this is the
-    // best we can do given the double buffering inherent in the use of a zircon
-    // socket as the transport. In the case of us backing a blocking socket, we
-    // might want to block here, but the knowledge of blocking-or-not is not
-    // available in this context, and the consequence of this deviation is judged
-    // (by me - tamird@) to be minor.
-    return zxio_close(&zs->pipe.io);
+    zx_status_t channel_status = base_close(zs->client.channel());
+    zx_status_t aux_status = zxio_close(&zs->pipe.io);
+    return channel_status != ZX_OK ? channel_status : aux_status;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);

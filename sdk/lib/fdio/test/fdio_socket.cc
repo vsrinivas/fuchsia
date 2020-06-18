@@ -19,7 +19,6 @@
 #include <cstring>
 #include <future>
 #include <latch>
-#include <vector>
 
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
@@ -29,16 +28,10 @@ namespace {
 
 class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interface {
  public:
-  Server(zx::socket peer) : peer_(std::move(peer)) {
+  explicit Server(zx::socket peer) : peer_(std::move(peer)) {
     // We need the FDIO to act like it's connected.
     // ZXSIO_SIGNAL_CONNECTED is private, but we know the value.
     ASSERT_OK(peer_.signal(0, ZX_USER_SIGNAL_3));
-  }
-
-  ~Server() {
-    for (auto &completer : close_completers_) {
-      completer.Reply(ZX_OK);
-    }
   }
 
   void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync completer) override {
@@ -46,8 +39,8 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
   }
 
   void Close(CloseCompleter::Sync completer) override {
-    // Take the completer hostage until the destructor runs.
-    close_completers_.push_back(completer.ToAsync());
+    completer.Reply(ZX_OK);
+    completer.Close(ZX_OK);
   }
 
   void Describe(DescribeCompleter::Sync completer) override {
@@ -122,7 +115,6 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
 
  private:
   zx::socket peer_;
-  std::vector<CloseCompleter::Async> close_completers_;
 };
 
 template <int sock_type>
@@ -130,11 +122,10 @@ class BaseTest : public ::zxtest::Test {
   static_assert(sock_type == ZX_SOCKET_STREAM || sock_type == ZX_SOCKET_DATAGRAM);
 
  public:
-  BaseTest() : server(clientSocket()) {
+  BaseTest() : server(clientSocket()), loop(&kAsyncLoopConfigNoAttachToCurrentThread) {
     zx::channel client_channel, server_channel;
     ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
     ASSERT_OK(loop.StartThread("fake-socket-server"));
     ASSERT_OK(fdio_fd_create(client_channel.release(), client_fd.reset_and_get_address()));
@@ -144,6 +135,7 @@ class BaseTest : public ::zxtest::Test {
   zx::socket server_socket;
   fbl::unique_fd client_fd;
   Server server;
+  async::Loop loop;
 
  private:
   zx::socket clientSocket() {
