@@ -25,9 +25,9 @@ TEST(HwStress, RunCpuShort) {
 }
 
 TEST(HwStress, RunMemTestShort) {
-  // Run with default args for a short duration.
-  const char* args[] = {"hwstress", "memory", "-d", "0.1"};
-  EXPECT_EQ(0, hwstress::Run(4, args));
+  // Run with default args for a short duration and small amount of RAM.
+  const char* args[] = {"hwstress", "memory", "-d", "0.1", "-m", "1"};
+  EXPECT_EQ(0, hwstress::Run(6, args));
 }
 
 }  // namespace
