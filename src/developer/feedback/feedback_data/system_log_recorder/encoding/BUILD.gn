@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("decoder") {
+  sources = [ "decoder.h" ]
+
+  public_deps = [ "//src/lib/fsl" ]
+}
+
+source_set("encoder") {
+  sources = [ "encoder.h" ]
+}
+
+source_set("identity_decoder") {
+  sources = [
+    "identity_decoder.cc",
+    "identity_decoder.h",
+  ]
+
+  deps = [ ":decoder" ]
+}
+
+source_set("identity_encoder") {
+  sources = [ "identity_encoder.h" ]
+
+  public_deps = [ ":encoder" ]
+}
+
+source_set("production") {
+  sources = [ "production_encoding.h" ]
+
+  public_deps = [
+    ":identity_decoder",
+    ":identity_encoder",
+  ]
+}
