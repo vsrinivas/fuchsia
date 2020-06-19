@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	bootloaderVersion             = "0.7.22"
 	defaultTftpBlockSize          = 1428
 	defaultTftpWindowSize         = 256
 	defaultMicrosecBetweenPackets = 20
@@ -101,10 +102,12 @@ func init() {
 	flag.StringVar(&imageManifest, "images", "", "use an image manifest to pave")
 	flag.Var(&mode, "mode", "bootserver modes: either pave, netboot, or pave-zedboot")
 
+	flag.BoolVar(&allowZedbootVersionMismatch, "allow-zedboot-version-mismatch", false, "warn on zedboot version mismatch rather than fail")
 	flag.StringVar(&authorizedKeys, "authorized-keys", "", "use the supplied file as an authorized_keys file")
 	flag.StringVar(&boardName, "board_name", "", "name of the board files are meant for")
 	flag.BoolVar(&bootOnce, "1", true, "only boot once, then exit")
 	flag.BoolVar(&failFast, "fail-fast", false, "exit on first error")
+	flag.BoolVar(&failFastZedbootVersionMismatch, "fail-fast-if-version-mismatch", false, "error if zedboot version does not match")
 
 	//  TODO(fxbug.dev/38517): Implement the following unsupported flags.
 	flag.StringVar(&bootIpv6, "a", "", "only boot device with this IPv6 address")
@@ -115,8 +118,6 @@ func init() {
 	flag.BoolVar(&useNetboot, "netboot", false, "use the netboot protocol")
 	flag.BoolVar(&useTftp, "tftp", true, "use the tftp protocol (default)")
 	flag.BoolVar(&nocolor, "nocolor", false, "disable ANSI color (false)")
-	flag.BoolVar(&allowZedbootVersionMismatch, "allow-zedboot-version-mismatch", false, "warn on zedboot version mismatch rather than fail")
-	flag.BoolVar(&failFastZedbootVersionMismatch, "fail-fast-if-version-mismatch", false, "error if zedboot version does not match")
 }
 
 // Creates a slice of FirmwareArgs from |args|.
@@ -279,9 +280,21 @@ func populateReaders(imgs []bootserver.Image) (func() error, error) {
 }
 
 func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string, signers []ssh.Signer) error {
-	addr, err := netutil.GetNodeAddress(ctx, nodename, false)
+	addr, msg, conn, err := netutil.GetAdvertisement(ctx, nodename)
 	if err != nil {
 		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
+	}
+	defer conn.Close()
+	if msg.BootloaderVersion != bootloaderVersion {
+		mismatchErrMsg := fmt.Sprintf("WARNING: Bootserver version '%s' != remote Zedboot version '%s'", bootloaderVersion, msg.BootloaderVersion)
+		if allowZedbootVersionMismatch {
+			logger.Warningf(ctx, "%s. Paving may fail.", mismatchErrMsg)
+		} else {
+			if failFastZedbootVersionMismatch {
+				failFast = true
+			}
+			return fmt.Errorf("%w: %s. Device will not be serviced. Please upgrade Zedboot.", errIncompleteTransfer, mismatchErrMsg)
+		}
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   addr.IP,
@@ -298,6 +311,8 @@ func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Imag
 			return err
 		}
 	}
+
+	logger.Infof(ctx, "Proceeding with nodename %s", msg.Nodename)
 
 	if err := bootserver.Boot(ctx, client, imgs, cmdlineArgs, signers); err != nil {
 		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
@@ -347,6 +362,10 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 	n, err := resolveNodename()
 	if err != nil {
 		return err
+	}
+
+	if allowZedbootVersionMismatch && failFastZedbootVersionMismatch {
+		return fmt.Errorf("only one of allow-zedboot-version-mismatch and fail-fast-if-version-mismatch can be true")
 	}
 
 	var signers []ssh.Signer

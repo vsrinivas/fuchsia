@@ -84,6 +84,64 @@ func startFakeNetbootServers(t *testing.T, nodenames []string) (int, func()) {
 	}
 }
 
+func TestParseBeacon(t *testing.T) {
+	c := NewClient(time.Second)
+	tests := []struct {
+		name             string
+		data             string
+		expectedNodename string
+		expectedVersion  string
+		expectErr        bool
+	}{
+		{
+			name:             "valid beacon",
+			data:             "nodename=name;version=1.2.3",
+			expectedNodename: "name",
+			expectedVersion:  "1.2.3",
+			expectErr:        false,
+		},
+		{
+			name:             "missing version",
+			data:             "nodename=name",
+			expectedNodename: "name",
+			expectedVersion:  "",
+			expectErr:        true,
+		},
+		{
+			name:             "invalid beacon",
+			data:             "invalid message",
+			expectedNodename: "",
+			expectedVersion:  "",
+			expectErr:        true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			nbmsg := netbootMessage{}
+			copy(nbmsg.Data[:], test.data)
+			var buf bytes.Buffer
+			if err := binary.Write(&buf, binary.LittleEndian, nbmsg); err != nil {
+				t.Fatalf("binary write: %v", err)
+			}
+			msg, err := c.parseBeacon(buf.Bytes())
+			if test.expectErr != (err != nil) {
+				t.Errorf("expected err: %v, got err: %v", test.expectErr, err)
+			}
+			if msg == nil && !test.expectErr {
+				t.Errorf("got unexpected nil advertisement")
+			}
+			if msg != nil {
+				if msg.Nodename != test.expectedNodename {
+					t.Errorf("expected nodename: %v, got: %v", test.expectedNodename, msg.Nodename)
+				}
+				if msg.BootloaderVersion != test.expectedVersion {
+					t.Errorf("expected version: %v, got %v", test.expectedVersion, msg.BootloaderVersion)
+				}
+			}
+		})
+	}
+}
+
 func TestBeacon(t *testing.T) {
 	c := NewClient(time.Second)
 	conn, err := net.ListenUDP("udp6", &net.UDPAddr{

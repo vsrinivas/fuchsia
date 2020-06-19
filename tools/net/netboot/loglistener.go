@@ -10,10 +10,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"net"
-	"os"
-	"syscall"
-
-	"golang.org/x/sys/unix"
 )
 
 // Magic constants used by the netboot protocol.
@@ -37,43 +33,13 @@ type logpacket struct {
 // LogListener is Zircon's debug log listener.
 type LogListener struct {
 	seq      uint32
-	conn     net.PacketConn
+	conn     *net.UDPConn
 	nodename string
 }
 
 // NewLogListener creates and connects a new instance of debug log listener.
 func NewLogListener(nodename string) (*LogListener, error) {
-	syscall.ForkLock.RLock()
-	fd, err := syscall.Socket(syscall.AF_INET6, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
-	if err == nil {
-		unix.CloseOnExec(fd)
-	}
-	syscall.ForkLock.RUnlock()
-	if err != nil {
-		return nil, err
-	}
-
-	// SO_REUSEADDR and SO_REUSEPORT allows binding to the same port multiple
-	// times which is necessary in the case when there are multiple instances.
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, unix.SO_REUSEADDR, 1); err != nil {
-		syscall.Close(fd)
-		return nil, err
-	}
-
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
-		syscall.Close(fd)
-		return nil, err
-	}
-
-	// Bind the socket to the default debug log listener port.
-	if err := syscall.Bind(fd, &syscall.SockaddrInet6{Port: debugPort}); err != nil {
-		syscall.Close(fd)
-		return nil, err
-	}
-
-	f := os.NewFile(uintptr(fd), "")
-	conn, err := net.FilePacketConn(f)
-	f.Close()
+	conn, err := UDPConnWithReusablePort(debugPort, "", true)
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 	"time"
 
@@ -423,15 +424,28 @@ func (n *Client) StartDiscover(t chan<- *Target, nodename string, fuchsia bool) 
 	return q.close, nil
 }
 
-func (n *Client) beacon(conn *net.UDPConn) (*net.UDPAddr, error) {
+// Advertisement represents the information in an advertisement sent from a device.
+type Advertisement struct {
+	Nodename          string
+	BootloaderVersion string
+}
+
+func (n *Client) beacon(conn *net.UDPConn) (*net.UDPAddr, *Advertisement, error) {
 	conn.SetReadDeadline(time.Now().Add(n.Timeout))
 
 	b := make([]byte, 4096)
 	_, addr, err := conn.ReadFromUDP(b)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	msg, err := n.parseBeacon(b)
+	if err != nil {
+		return nil, nil, err
+	}
+	return addr, msg, err
+}
 
+func (n *Client) parseBeacon(b []byte) (*Advertisement, error) {
 	r := bytes.NewReader(b)
 	var res netbootMessage
 	if err := binary.Read(r, binary.LittleEndian, &res); err != nil {
@@ -442,44 +456,97 @@ func (n *Client) beacon(conn *net.UDPConn) (*net.UDPAddr, error) {
 	if err != nil {
 		return nil, err
 	}
+	msg := &Advertisement{}
 	// The query packet payload contains fields separated by ;.
-	for _, f := range strings.Split(string(data[:]), ";") {
-		// The field has a key=value format.
-		vars := strings.SplitN(f, "=", 2)
-		// The field with the "nodename" key contains the name of the device.
-		if vars[0] == "nodename" {
-			return addr, nil
-		}
+	// Each field has a key=value format.
+	nodenameRegex := regexp.MustCompile("nodename=([^;]+)")
+	versionRegex := regexp.MustCompile("version=([^;]+)")
+	submatches := nodenameRegex.FindStringSubmatch(data)
+	if len(submatches) == 2 {
+		msg.Nodename = submatches[1]
+	}
+	submatches = versionRegex.FindStringSubmatch(data)
+	if len(submatches) == 2 {
+		msg.BootloaderVersion = submatches[1]
+	}
+	if msg.Nodename == "" || msg.BootloaderVersion == "" {
+		return nil, errors.New("no valid beacon")
 	}
 
-	return nil, errors.New("no valid beacon")
+	return msg, nil
 }
 
 // BeaconOnInterface receives the beacon packet on a particular interface.
 func (n *Client) BeaconOnInterface(networkInterface string) (*net.UDPAddr, error) {
-	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
-		IP:   net.IPv6zero,
-		Port: n.AdvertPort,
-		Zone: networkInterface,
-	})
+	conn, err := UDPConnWithReusablePort(n.AdvertPort, networkInterface, true)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	return n.beacon(conn)
+	addr, _, err := n.beacon(conn)
+	return addr, err
+}
+
+func (n *Client) beaconForNodename(ctx context.Context, conn *net.UDPConn, nodename string) (*net.UDPAddr, *Advertisement, error) {
+	for {
+		addr, msg, err := n.beacon(conn)
+		if err != nil {
+			return nil, nil, err
+		}
+		if nodename == NodenameWildcard {
+			logger.Infof(ctx, "found nodename %s", msg.Nodename)
+			return addr, msg, err
+		}
+		if msg.Nodename != nodename {
+			logger.Infof(ctx, "ignoring nodename %s (expecting %s)", msg.Nodename, nodename)
+			continue
+		}
+		return addr, msg, err
+	}
+}
+
+// BeaconForNodename receives the beacon packet for a particular nodename.
+func (n *Client) BeaconForNodename(ctx context.Context, nodename string, reusable bool) (*net.UDPAddr, *Advertisement, *net.UDPConn, error) {
+	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
+	defer cancel()
+	conn, err := UDPConnWithReusablePort(n.AdvertPort, "", reusable)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	type response struct {
+		addr *net.UDPAddr
+		msg  *Advertisement
+		err  error
+	}
+	r := make(chan response)
+	go func() {
+		addr, msg, err := n.beaconForNodename(ctx, conn, nodename)
+		r <- response{addr, msg, err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		conn.Close()
+		return nil, nil, nil, fmt.Errorf("timed out waiting for results")
+	case resp := <-r:
+		if resp.err != nil {
+			conn.Close()
+			return nil, nil, nil, resp.err
+		}
+		return resp.addr, resp.msg, conn, nil
+	}
 }
 
 // Beacon receives the beacon packet, returning the address of the sender.
 func (n *Client) Beacon() (*net.UDPAddr, error) {
-	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
-		IP:   net.IPv6zero,
-		Port: n.AdvertPort,
-	})
+	conn, err := UDPConnWithReusablePort(n.AdvertPort, "", true)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	return n.beacon(conn)
+	addr, _, err := n.beacon(conn)
+	return addr, err
 }
 
 // Boot sends a boot packet to the address.
