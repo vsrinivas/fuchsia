@@ -50,8 +50,8 @@ def update_stem_history(env):
     Return a map of "fuchsia_rev -> integration_revs".
 
     This is a relatively expensive operation, and requires performing a git
-    fetch of the intergration repo and parsing the "fuchsia/stem" file. We cache
-    results in the locations specified by "env" to speed up future calls.
+    fetch of the integration repo and parsing the "stem" file. We cache results
+    in the locations specified by "env" to speed up future calls.
     """
     message('updating in %s' % env.integration_dir)
     git(['fetch', 'origin', '-q'], cwd=env.integration_dir)
@@ -96,9 +96,18 @@ def update_stem_history(env):
     else:
         integration_revs_to_update = data['head'] + '..' + cur_head
 
+    stem_paths = ['fuchsia/stem', 'stem']
+    for p in stem_paths:
+        if os.path.exists(os.path.join(env.integration_dir, p)):
+            stem_path = p
+            break
+    else:
+        print('Could not find stem manifest', file=sys.stderr)
+        sys.exit(1)
+
     message('getting integration commits from %s' % integration_revs_to_update)
     new_integration_commits = git(
-        ['log', '--format=%H', integration_revs_to_update, 'fuchsia/stem'],
+        ['log', '--format=%H', integration_revs_to_update, stem_path],
         cwd=env.integration_dir).split()
     data['integration_commits'] = (
         new_integration_commits + data['integration_commits'])
@@ -111,13 +120,13 @@ def update_stem_history(env):
 
     def get_fuchsia_rev_for_integration_commit(ic):
         manifest_root = ET.fromstring(
-            git(['show', ic + ':fuchsia/stem'], cwd=env.integration_dir))
+            git(['show', ic + ':' + stem_path], cwd=env.integration_dir))
         for project in manifest_root.find('projects'):
             if project.get('name') == 'fuchsia':
                 return project.get('revision')
         print(
-            'Could not find "fuchsia" project in "fuchia/stem" file at '
-            'revision %s.' % ic,
+            'Could not find "fuchsia" project in "%s" file at '
+            'revision %s.' % (stem_path, ic),
             file=sys.stderr)
         sys.exit(1)
 
@@ -179,8 +188,9 @@ def save_and_fix_fuchsia_jiri_project_config(env):
             to_return = right.strip()
             break
     else:
-        print('Could not find current "ignore" value in jiri project-config',
-              file=sys.stderr)
+        print(
+            'Could not find current "ignore" value in jiri project-config',
+            file=sys.stderr)
         sys.exit(1)
     set_jiri_ignore(env, 'true')
     return to_return
