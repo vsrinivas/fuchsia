@@ -11,7 +11,7 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
 use crate::internal::switchboard;
-use crate::message::base::{Audience, MessengerType};
+use crate::message::base::Audience;
 use crate::switchboard::base::{
     SettingRequest, SettingResponse, SettingResponseResult, SettingType, SwitchboardError,
 };
@@ -287,25 +287,4 @@ where
             }
         }
     }
-}
-
-pub fn process_stream<S, T, ST>(
-    stream: RequestStream<S>,
-    switchboard_messenger_factory: switchboard::message::Factory,
-    setting_type: SettingType,
-    callback: RequestCallback<S, T, ST>,
-) where
-    S: ServiceMarker,
-    T: From<SettingResponse> + Send + Sync + 'static,
-    ST: Sender<T> + Send + Sync + 'static,
-{
-    fasync::spawn_local(async move {
-        if let Ok((messenger, _)) =
-            switchboard_messenger_factory.create(MessengerType::Unbound).await
-        {
-            let mut processor = FidlProcessor::<S>::new(stream, messenger).await;
-            processor.register::<T, ST>(setting_type, callback).await;
-            processor.process().await;
-        }
-    });
 }

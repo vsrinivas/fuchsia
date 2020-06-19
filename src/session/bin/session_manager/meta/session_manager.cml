@@ -70,7 +70,6 @@
                 "/svc/fuchsia.settings.DoNotDisturb",
                 "/svc/fuchsia.settings.Privacy",
                 "/svc/fuchsia.settings.Setup",
-                "/svc/fuchsia.setui.SetUiService",
                 "/svc/fuchsia.stash.Store",
                 "/svc/fuchsia.sys.Environment",
                 "/svc/fuchsia.sys.Launcher", // so that the session can launch cmx components

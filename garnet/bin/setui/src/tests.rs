@@ -24,7 +24,6 @@ mod restore_agent_tests;
 mod scaffold;
 mod service_configuration_tests;
 mod setting_handler_tests;
-mod setui_tests;
 mod setup_tests;
 mod system_tests;
 mod test_failure_utils;

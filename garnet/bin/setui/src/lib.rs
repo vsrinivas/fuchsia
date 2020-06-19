@@ -42,11 +42,9 @@ use {
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,
     crate::switchboard::switchboard_impl::SwitchboardBuilder,
-    crate::system::spawn_setui_fidl_handler,
     crate::system::system_controller::SystemController,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
-    fidl_fuchsia_setui::SetUiServiceRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_inspect::component,
@@ -545,13 +543,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         setup,
         Setup
     );
-
-    if components.contains(&SettingType::System) {
-        let messenger_factory = switchboard_messenger_factory.clone();
-        service_dir.add_fidl_service(move |stream: SetUiServiceRequestStream| {
-            spawn_setui_fidl_handler(messenger_factory.clone(), stream);
-        });
-    }
 
     for blueprint in agent_blueprints {
         if agent_authority.register(blueprint).await.is_err() {

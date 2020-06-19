@@ -20,7 +20,6 @@
             "fuchsia.settings.Privacy",
             "fuchsia.settings.Setup",
             "fuchsia.settings.System",
-            "fuchsia.setui.SetUiService",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher"
         ]

@@ -61,7 +61,6 @@
             "fuchsia.settings.DoNotDisturb",
             "fuchsia.settings.Privacy",
             "fuchsia.settings.Setup",
-            "fuchsia.setui.SetUiService",
             "fuchsia.stash.Store",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

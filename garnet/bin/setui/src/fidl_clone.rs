@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_bluetooth_sys::Peer, fidl_fuchsia_settings::*, fidl_fuchsia_setui::*,
+    fidl_fuchsia_bluetooth_sys::Peer, fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
 };
 
@@ -11,37 +11,6 @@ use {
 /// TODO(QA-715): Remove
 pub trait FIDLClone {
     fn clone(&self) -> Self;
-}
-
-impl FIDLClone for SettingData {
-    fn clone(&self) -> SettingData {
-        match self {
-            SettingData::StringValue(val) => {
-                return SettingData::StringValue(val.to_string());
-            }
-            SettingData::TimeZoneValue(val) => {
-                return SettingData::TimeZoneValue(val.clone());
-            }
-            SettingData::Connectivity(val) => {
-                return SettingData::Connectivity(val.clone());
-            }
-            SettingData::Intl(val) => {
-                return SettingData::Intl(val.clone());
-            }
-            SettingData::Wireless(val) => {
-                return SettingData::Wireless(val.clone());
-            }
-            SettingData::Account(val) => {
-                return SettingData::Account(val.clone());
-            }
-        }
-    }
-}
-
-impl FIDLClone for AccountSettings {
-    fn clone(&self) -> Self {
-        return AccountSettings { mode: self.mode };
-    }
 }
 
 impl<T: FIDLClone> FIDLClone for Vec<T> {
@@ -56,16 +25,6 @@ impl<T: FIDLClone> FIDLClone for Option<Box<T>> {
             None => None,
             Some(val) => Some(Box::new(val.as_ref().clone())),
         }
-    }
-}
-
-impl FIDLClone for TimeZone {
-    fn clone(&self) -> Self {
-        return TimeZone {
-            id: self.id.clone(),
-            name: self.name.clone(),
-            region: self.region.clone(),
-        };
     }
 }
 
