@@ -17,4 +17,8 @@ zx_library("cksum") {
   ]
 
   cflags = [ "-Wno-strict-prototypes" ]
+
+  if (is_kernel) {
+    deps = [ "$zx/kernel/lib/libc" ]
+  }
 }
