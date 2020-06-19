@@ -105,7 +105,7 @@ class Pow2RangeAllocator {
   Block* GetUnusedBlock();
   static void FreeBlockList(fbl::DoublyLinkedList<Block*> block_list);
   static void FreeRangeList(fbl::DoublyLinkedList<Range*> range_list);
-  void ReturnFreeBlock(Block* block, bool merge_allowed);
+  void ReturnFreeBlock(Block* block);
 
   DECLARE_MUTEX(Pow2RangeAllocator) lock_;
   fbl::DoublyLinkedList<Range*> ranges_;

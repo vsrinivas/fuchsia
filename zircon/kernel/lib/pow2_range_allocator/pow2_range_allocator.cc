@@ -44,7 +44,7 @@ void Pow2RangeAllocator::FreeRangeList(fbl::DoublyLinkedList<Range*> range_list)
     delete range;
 }
 
-void Pow2RangeAllocator::ReturnFreeBlock(Block* block, bool merge_allowed) {
+void Pow2RangeAllocator::ReturnFreeBlock(Block* block) {
   DEBUG_ASSERT(block);
   DEBUG_ASSERT(block->bucket < bucket_count_);
   DEBUG_ASSERT(!block->InContainer());
@@ -106,10 +106,6 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block, bool merge_allowed) {
   if (first && second) {
     uint32_t first_len = 1u << first->bucket;
     if ((first->start + first_len) == second->start) {
-      // Assert that we are allowed to perform a merge.  If the caller is
-      // not expecting us to have to merge anything, then there is a fatal
-      // bookkeeping error somewhere
-      DEBUG_ASSERT(merge_allowed);
       DEBUG_ASSERT(first->bucket == second->bucket);
 
       // Remove the two blocks' bookkeeping from their bucket.
@@ -122,7 +118,7 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block, bool merge_allowed) {
       // Reuse the other half to track the newly merged block, and place
       // it in the next bucket size up.
       first->bucket++;
-      ReturnFreeBlock(first, merge_allowed);
+      ReturnFreeBlock(first);
     }
   }
 }
@@ -261,7 +257,7 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
 
   Block* block;
   while ((block = new_blocks.pop_front()) != nullptr)
-    ReturnFreeBlock(block, true);
+    ReturnFreeBlock(block);
 
   return ret;
 }
@@ -317,7 +313,7 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
       TRACEF(
           "Failed to allocated free bookkeeping block when attempting to "
           "split for allocation\n");
-      ReturnFreeBlock(block, true);
+      ReturnFreeBlock(block);
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -332,7 +328,7 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
     split_block->bucket = bucket;
 
     // Return the second half of the chunk to the free pool.
-    ReturnFreeBlock(split_block, false);
+    ReturnFreeBlock(split_block);
   }
 
   // Success! Mark the block as allocated and return the block to the user.
@@ -374,5 +370,5 @@ void Pow2RangeAllocator::FreeRange(uint32_t range_start, uint32_t size) {
 #endif
 
   // Return the block to the free buckets (merging as needed) and we are done.
-  ReturnFreeBlock(block, true);
+  ReturnFreeBlock(block);
 }
