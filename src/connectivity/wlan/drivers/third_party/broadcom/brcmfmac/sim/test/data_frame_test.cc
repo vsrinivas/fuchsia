@@ -361,6 +361,8 @@ void DataFrameTest::Tx(std::vector<uint8_t>& ethFrame) {
   // Send it
   client_ifc_.if_impl_ops_->data_queue_tx(client_ifc_.if_impl_ctx_, 0, netbuf, TxComplete,
                                           &data_context_);
+  ethFrame.clear();
+  delete netbuf;
 }
 
 void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,

@@ -22,37 +22,43 @@
 namespace wlan {
 namespace brcmfmac {
 
+constexpr zx_protocol_device_t kSimDeviceOps = {
+    .version = DEVICE_OPS_VERSION,
+    .release = [](void* ctx) { return static_cast<SimDevice*>(ctx)->DdkRelease(); },
+};
+
 // static
-zx_status_t SimDevice::Create(zx_device_t* parent_device,
-                              const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
+zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr* dev_mgr,
                               const std::shared_ptr<simulation::Environment>& env,
-                              std::unique_ptr<SimDevice>* device_out) {
+                              SimDevice** device_out) {
   zx_status_t status = ZX_OK;
-  zx_device_t* phy_device;
-  device_add_args_t add_args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "brcmfmac-wlanphy",
-      .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
-      // The tests don't access any of the other fields yet
-  };
 
-  if ((status = dev_mgr->DeviceAdd(parent_device, &add_args, &phy_device)) != ZX_OK) {
-    return status;
-  }
-
-  auto device = std::make_unique<SimDevice>(phy_device, dev_mgr, env);
+  auto device = std::make_unique<SimDevice>(parent_device, dev_mgr, env);
   if ((status = device->brcmfmac::Device::Init()) != ZX_OK) {
     return status;
   }
 
+  device_add_args_t add_args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "brcmfmac-wlanphy",
+      .ctx = device.get(),
+      .ops = &kSimDeviceOps,
+      .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
+      // The tests don't access any of the other fields yet
+  };
+
+  if ((status = dev_mgr->DeviceAdd(parent_device, &add_args, &device->phy_device_)) != ZX_OK) {
+    return status;
+  }
+
   std::unique_ptr<brcmf_bus> bus;
-  if ((status = brcmf_sim_register(device->brcmf_pub_.get(), &bus, device->fake_dev_mgr_.get(),
+  if ((status = brcmf_sim_register(device->brcmf_pub_.get(), &bus, device->fake_dev_mgr_,
                                    device->sim_environ_.get())) != ZX_OK) {
     return status;
   }
   device->brcmf_bus_ = std::move(bus);
 
-  *device_out = std::move(device);
+  *device_out = device.release();
   return ZX_OK;
 }
 
@@ -74,9 +80,6 @@ brcmf_simdev* SimDevice::GetSim() { return (brcmf_bus_.get())->bus_priv.sim; }
 
 SimDevice::~SimDevice() {
   DisableDispatcher();
-  if (fake_dev_mgr_ != nullptr && phy_device_ != nullptr) {
-    fake_dev_mgr_->DeviceAsyncRemove(phy_device_);
-  }
   if (brcmf_bus_) {
     brcmf_sim_exit(brcmf_bus_.get());
   }

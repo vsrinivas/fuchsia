@@ -170,6 +170,8 @@ static inline zx_status_t brcmf_bus_gettxq(struct brcmf_bus* bus, struct pktq** 
   }
   if (txq_out) {
     *txq_out = bus->ops->gettxq(bus);
+    if (!(*txq_out))
+      return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }

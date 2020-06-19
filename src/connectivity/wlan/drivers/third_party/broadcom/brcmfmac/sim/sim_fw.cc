@@ -76,7 +76,7 @@ zx_status_t SimFirmware::BusPreinit() {
   return ZX_OK;
 }
 
-void SimFirmware::BusStop() { ZX_PANIC("%s unimplemented", __FUNCTION__); }
+void SimFirmware::BusStop() { BRCMF_ERR("%s unimplemented", __FUNCTION__); }
 
 // Returns a bufer that can be used for BCDC-formatted communications, with the requested
 // payload size and an initialized BCDC header. "data_offset" represents any signalling offset
@@ -421,6 +421,8 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
 
   hw_.Tx(dataFrame);
 
+  free(netbuf->allocated_buffer);
+  free(netbuf);
   return ZX_OK;
 }
 
@@ -476,7 +478,7 @@ zx_status_t SimFirmware::BusRxCtl(unsigned char* msg, uint len, int* rxlen_out) 
 }
 
 struct pktq* SimFirmware::BusGetTxQueue() {
-  ZX_PANIC("%s unimplemented", __FUNCTION__);
+  BRCMF_ERR("%s unimplemented", __FUNCTION__);
   return nullptr;
 }
 

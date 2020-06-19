@@ -23,7 +23,7 @@ PcieDevice::~PcieDevice() {
 }
 
 // static
-zx_status_t PcieDevice::Create(zx_device_t* parent_device, PcieDevice** out_device) {
+zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
   const auto ddk_remover = [](PcieDevice* device) { device->DdkAsyncRemove(); };
@@ -66,7 +66,7 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device, PcieDevice** out_devi
   // TODO(sheu): make the device visible once higher-level functionality is present.
   // device->DdkMakeVisible();
 
-  *out_device = device.release();  // This now has its lifecycle managed by the devhost.
+  device.release();  // This now has its lifecycle managed by the devhost.
   return ZX_OK;
 }
 

@@ -30,7 +30,6 @@ class CreateSoftAPTest : public SimTest {
   uint32_t DeviceCount();
   void TxAssocReq();
   void TxDisassocReq();
-  void CleanupInterface();
   void VerifyAssoc();
   void VerifyDisassoc();
   void VerifyStartAPConf(uint8_t status);
@@ -102,16 +101,9 @@ void CreateSoftAPTest::CreateInterface() {
   ASSERT_EQ(status, ZX_OK);
 }
 
-void CreateSoftAPTest::DeleteInterface() {
-  uint32_t iface_id;
-  zx_status_t status;
+void CreateSoftAPTest::DeleteInterface() { SimTest::DeleteInterface(softap_ifc_.iface_id_); }
 
-  iface_id = softap_ifc_.iface_id_;
-  status = device_->WlanphyImplDestroyIface(iface_id);
-  ASSERT_EQ(status, ZX_OK);
-}
-
-uint32_t CreateSoftAPTest::DeviceCount() { return (dev_mgr_->DevicesCount()); }
+uint32_t CreateSoftAPTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
 uint16_t CreateSoftAPTest::CreateRsneIe(uint8_t* buffer) {
   // construct a fake rsne ie in the input buffer
@@ -274,8 +266,6 @@ void CreateSoftAPTest::VerifyStartAPConf(uint8_t status) {
   ASSERT_EQ(start_conf_status_, status);
 }
 
-void CreateSoftAPTest::CleanupInterface() { DeleteInterface(); }
-
 TEST_F(CreateSoftAPTest, SetDefault) {
   Init();
   CreateInterface();
@@ -295,7 +285,6 @@ TEST_F(CreateSoftAPTest, CreateSoftAP) {
   // SCHEDULE_CALL(delay, &CreateSoftAPTest::VerifyStartAPConf, this, WLAN_START_RESULT_SUCCESS);
   env_->Run();
   VerifyStartAPConf(WLAN_START_RESULT_SUCCESS);
-  CleanupInterface();
 }
 
 TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
@@ -322,7 +311,6 @@ TEST_F(CreateSoftAPTest, CreateSecureSoftAP) {
   // Restart SoftAP in open mode
   StartSoftAP();
   StopSoftAP();
-  DeleteInterface();
 }
 
 TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
@@ -333,7 +321,6 @@ TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
   SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this);
   SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
   env_->Run();
-  CleanupInterface();
 }
 
 TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
@@ -348,7 +335,6 @@ TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
   SCHEDULE_CALL(zx::msec(100), &CreateSoftAPTest::TxAssocReq, this);
   SCHEDULE_CALL(zx::msec(150), &CreateSoftAPTest::VerifyAssoc, this);
   env_->Run();
-  CleanupInterface();
 }
 
 TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
@@ -359,7 +345,6 @@ TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
   SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::TxDisassocReq, this);
   SCHEDULE_CALL(zx::msec(75), &CreateSoftAPTest::VerifyDisassoc, this);
   env_->Run();
-  CleanupInterface();
 }
 
 }  // namespace wlan::brcmfmac

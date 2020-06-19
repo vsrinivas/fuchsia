@@ -194,22 +194,28 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
   }
 }
 
-// static
-intptr_t SimTest::instance_num_ = 0;
-
 SimTest::SimTest() {
   env_ = std::make_shared<simulation::Environment>();
   env_->AddStation(this);
 
-  dev_mgr_ = std::make_shared<simulation::FakeDevMgr>();
-  parent_dev_ = reinterpret_cast<zx_device_t*>(instance_num_++);
+  dev_mgr_ = std::make_unique<simulation::FakeDevMgr>();
   // The sim test is strictly a theoretical observer in the simulation environment thus it should be
   // able to see everything
   rx_sensitivity_ = std::numeric_limits<double>::lowest();
 }
 
+SimTest::~SimTest() {
+  // Clean the ifaces created in test but not deleted.
+  for (auto id : iface_id_set_) {
+    if (device_->WlanphyImplDestroyIface(id) != ZX_OK) {
+      BRCMF_ERR("Clean iface fail.\n");
+    }
+  }
+  // Don't have to erase the iface ids here.
+}
+
 zx_status_t SimTest::Init() {
-  return brcmfmac::SimDevice::Create(parent_dev_, dev_mgr_, env_, &device_);
+  return brcmfmac::SimDevice::Create(dev_mgr_->GetRootDevice(), dev_mgr_.get(), env_, &device_);
 }
 
 zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim_ifc,
@@ -230,6 +236,11 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
 
   if ((status = device_->WlanphyImplCreateIface(&req, &sim_ifc->iface_id_)) != ZX_OK) {
     return status;
+  }
+
+  if (!iface_id_set_.insert(sim_ifc->iface_id_).second) {
+    BRCMF_ERR("Iface already exist in this test.\n");
+    return ZX_ERR_ALREADY_EXISTS;
   }
 
   // This should have created a WLANIF_IMPL device
@@ -253,6 +264,16 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
   }
 
   return ZX_OK;
+}
+
+void SimTest::DeleteInterface(uint16_t iface_id) {
+  auto iter = iface_id_set_.find(iface_id);
+  if (iter == iface_id_set_.end()) {
+    BRCMF_ERR("Iface id does not exist.\n");
+    return;
+  }
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(*iter), ZX_OK);
+  iface_id_set_.erase(iter);
 }
 
 }  // namespace wlan::brcmfmac

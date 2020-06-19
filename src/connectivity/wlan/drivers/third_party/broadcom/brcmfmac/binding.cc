@@ -41,8 +41,7 @@ static constexpr zx_driver_ops_t brcmfmac_driver_ops = {
           zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 #if CONFIG_BRCMFMAC_PCIE
           {
-            ::wlan::brcmfmac::PcieDevice* pcie_device = nullptr;
-            if ((status = ::wlan::brcmfmac::PcieDevice::Create(device, &pcie_device)) == ZX_OK) {
+            if ((status = ::wlan::brcmfmac::PcieDevice::Create(device)) == ZX_OK) {
               return ZX_OK;
             }
             if (status != ZX_ERR_NOT_SUPPORTED) {

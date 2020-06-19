@@ -99,12 +99,7 @@ void ScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid
 }
 
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
-void ScanTest::EndSimulation() {
-  ap_info_->ap_.DisableBeacon();
-  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_.iface_id_);
-  EXPECT_EQ(status, ZX_OK);
-  // TODO - check status. brcmfmac doesn't support destroying an interface yet.
-}
+void ScanTest::EndSimulation() { ap_info_->ap_.DisableBeacon(); }
 
 // Tell the DUT to run a scan
 void ScanTest::StartScan() {

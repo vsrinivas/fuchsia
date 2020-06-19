@@ -886,8 +886,8 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
     }
   }
 
-  free(params);
 exit:
+  free(params);
   return err;
 }
 
@@ -4531,6 +4531,8 @@ static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
   delete cfg->disconnect_timer;
   delete cfg->escan_timer;
   delete cfg->signal_report_timer;
+  delete cfg->ap_start_timer;
+  delete cfg->connect_timer;
 }
 
 static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
@@ -4990,4 +4992,5 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
   brcmf_btcoex_detach(cfg);
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
   wl_deinit_priv(cfg);
+  free(cfg);
 }

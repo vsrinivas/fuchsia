@@ -180,6 +180,8 @@ void brmcf_sim_rx_frame(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_
 }
 
 void brcmf_sim_exit(brcmf_bus* bus) {
+  brcmf_detach((bus->bus_priv.sim)->drvr);
+  brcmf_proto_bcdc_detach((bus->bus_priv.sim)->drvr);
   delete bus->bus_priv.sim;
   bus->bus_priv.sim = nullptr;
 }

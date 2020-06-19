@@ -45,7 +45,6 @@ class AuthTest : public SimTest {
   };
 
   void Init();
-  void Destroy();
 
   // Start the process of authentication
   void StartAuth();
@@ -136,11 +135,6 @@ void AuthTest::Init() {
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   sim_fw_ = device_->GetSim()->sim_fw.get();
   ap_.EnableBeacon(zx::msec(100));
-}
-
-void AuthTest::Destroy() {
-  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_.iface_id_);
-  EXPECT_EQ(status, ZX_OK);
 }
 
 void AuthTest::VerifyAuthFrames() {

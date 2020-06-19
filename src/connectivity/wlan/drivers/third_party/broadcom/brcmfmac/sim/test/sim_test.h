@@ -7,6 +7,8 @@
 
 #include <zircon/types.h>
 
+#include <set>
+
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
@@ -117,11 +119,10 @@ struct SimInterface {
 class SimTest : public ::testing::Test, public simulation::StationIfc {
  public:
   SimTest();
+  ~SimTest();
   zx_status_t Init();
 
   std::shared_ptr<simulation::Environment> env_;
-
-  static intptr_t instance_num_;
 
  protected:
   // Create a new interface on the simulated device, providing the specified role and function
@@ -131,19 +132,22 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
       std::optional<const wlanif_impl_ifc_protocol*> sme_protocol = std::nullopt,
       std::optional<common::MacAddr> mac_addr = std::nullopt);
 
+  // Stop and delete a SimInterface
+  void DeleteInterface(uint16_t iface_id);
+
   // Fake device manager
-  std::shared_ptr<simulation::FakeDevMgr> dev_mgr_;
+  std::unique_ptr<simulation::FakeDevMgr> dev_mgr_;
 
   // brcmfmac's concept of a device
-  std::unique_ptr<brcmfmac::SimDevice> device_;
+  brcmfmac::SimDevice* device_;
+
+  // Keep track of the ifaces we created during test by iface id.
+  std::set<uint16_t> iface_id_set_;
 
  private:
   // StationIfc methods - by default, do nothing. These can/will be overridden by superclasses.
   void Rx(std::shared_ptr<const simulation::SimFrame> frame,
           std::shared_ptr<const simulation::WlanRxInfo> info) override {}
-
-  // Contrived pointer used as a stand-in for the (opaque) parent device
-  zx_device_t* parent_dev_;
 };
 
 // Schedule a call from within a SimTest to a member function that takes no arguments

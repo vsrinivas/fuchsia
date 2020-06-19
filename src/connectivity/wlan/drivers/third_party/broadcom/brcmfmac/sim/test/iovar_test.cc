@@ -25,7 +25,6 @@ class IovarTest : public SimTest {
 
   zx_status_t CreateInterface(wlan_info_mac_role_t role,
                               std::optional<common::MacAddr> mac_addr = std::nullopt);
-  void DeleteInterface();
   uint32_t DeviceCount();
 
   zx_status_t IovarGet(char* buf, uint32_t buf_len);
@@ -43,16 +42,7 @@ zx_status_t IovarTest::CreateInterface(wlan_info_mac_role_t role,
   return SimTest::StartInterface(role, &client_ifc_, &sme_protocol_, mac_addr);
 }
 
-void IovarTest::DeleteInterface() {
-  uint32_t iface_id;
-  zx_status_t status;
-
-  iface_id = client_ifc_.iface_id_;
-  status = device_->WlanphyImplDestroyIface(iface_id);
-  ASSERT_EQ(status, ZX_OK);
-}
-
-uint32_t IovarTest::DeviceCount() { return (dev_mgr_->DevicesCount()); }
+uint32_t IovarTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
 // Create our device instance and hook up the callbacks
 void IovarTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }

@@ -185,7 +185,7 @@ void ArpTest::VerifyAssoc() {
 
 void ArpTest::CleanupApInterface() {
   StopSoftAP();
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(sim_ifc_.iface_id_), ZX_OK);
+  DeleteInterface(sim_ifc_.iface_id_);
 }
 
 void ArpTest::Tx(const std::vector<uint8_t>& ethFrame) {

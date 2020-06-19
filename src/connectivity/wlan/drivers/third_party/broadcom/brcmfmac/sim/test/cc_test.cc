@@ -40,16 +40,9 @@ void CountryCodeTest::CreateInterface() {
   ASSERT_EQ(status, ZX_OK);
 }
 
-void CountryCodeTest::DeleteInterface() {
-  uint32_t iface_id;
-  zx_status_t status;
+void CountryCodeTest::DeleteInterface() { SimTest::DeleteInterface(client_ifc_.iface_id_); }
 
-  iface_id = client_ifc_.iface_id_;
-  status = device_->WlanphyImplDestroyIface(iface_id);
-  ASSERT_EQ(status, ZX_OK);
-}
-
-uint32_t CountryCodeTest::DeviceCount() { return (dev_mgr_->DevicesCount()); }
+uint32_t CountryCodeTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
 zx_status_t CountryCodeTest::SetCountryCode(const wlanphy_country_t* country) {
   return device_->WlanphyImplSetCountry(country);
@@ -88,7 +81,6 @@ TEST_F(CountryCodeTest, SetCCode) {
   GetCountryCodeFromFirmware(&country_code);
   code = memcmp(valid_country.alpha2, country_code.ccode, WLANPHY_ALPHA2_LEN);
   ASSERT_EQ(code, 0);
-  DeleteInterface();
 }
 
 TEST_F(CountryCodeTest, GetCCode) {
@@ -113,8 +105,6 @@ TEST_F(CountryCodeTest, GetCCode) {
     EXPECT_EQ(get_country_result.alpha2[0], 'U');
     EXPECT_EQ(get_country_result.alpha2[1], 'S');
   }
-
-  DeleteInterface();
 }
 
 TEST_F(CountryCodeTest, ClearCCode) {
@@ -131,7 +121,6 @@ TEST_F(CountryCodeTest, ClearCCode) {
   GetCountryCodeFromFirmware(&country_code);
   code = memcmp(world_safe_country.alpha2, country_code.ccode, WLANPHY_ALPHA2_LEN);
   ASSERT_EQ(code, 0);
-  DeleteInterface();
 }
 
 }  // namespace wlan::brcmfmac

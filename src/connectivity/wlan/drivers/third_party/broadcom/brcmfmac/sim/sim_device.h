@@ -24,17 +24,15 @@ namespace wlan::brcmfmac {
 
 class SimDevice : public Device {
  public:
-  ~SimDevice();
+  ~SimDevice() override;
   // Static factory function for SimDevice instances.
-  static zx_status_t Create(zx_device_t* parent_device,
-                            const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
+  static zx_status_t Create(zx_device_t* parent_device, simulation::FakeDevMgr* dev_mgr,
                             const std::shared_ptr<simulation::Environment>& env,
-                            std::unique_ptr<SimDevice>* device_out);
+                            SimDevice** device_out);
 
-  explicit SimDevice(zx_device_t* phy_device,
-                     const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
+  explicit SimDevice(zx_device_t* parent_device, simulation::FakeDevMgr* dev_mgr,
                      const std::shared_ptr<simulation::Environment>& env)
-      : Device(phy_device), phy_device_(phy_device), fake_dev_mgr_(dev_mgr), sim_environ_(env) {}
+      : Device(parent_device), fake_dev_mgr_(dev_mgr), sim_environ_(env) {}
 
   SimDevice(const SimDevice& device) = delete;
   SimDevice& operator=(const SimDevice& other) = delete;
@@ -50,7 +48,7 @@ class SimDevice : public Device {
  private:
   std::unique_ptr<brcmf_bus> brcmf_bus_;
   zx_device_t* phy_device_;
-  std::shared_ptr<simulation::FakeDevMgr> fake_dev_mgr_;
+  simulation::FakeDevMgr* fake_dev_mgr_;
   std::shared_ptr<simulation::Environment> sim_environ_;
 };
 

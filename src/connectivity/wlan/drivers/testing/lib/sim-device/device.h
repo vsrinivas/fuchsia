@@ -8,6 +8,7 @@
 /* Add an abstracted device interface that can be used for wlan driver tests without involving
  * devmgr.
  */
+#include <zircon/assert.h>
 
 #include <unordered_map>
 
@@ -49,8 +50,9 @@ struct DeviceIdHasher {
 };
 
 struct wlan_sim_dev_info_t {
-  zx_device* parent;
+  zx_device_t* parent;
   device_add_args_t dev_args;
+  uint32_t ref_count;
 };
 
 // Fake DeviceManager is a drop-in replacement for Fuchsia's DeviceManager in unit tests.
@@ -60,6 +62,9 @@ struct wlan_sim_dev_info_t {
 // Note: Devices are *not* ordered in any particular way.
 class FakeDevMgr {
  public:
+  FakeDevMgr();
+  ~FakeDevMgr();
+
   using devices_t = std::unordered_map<DeviceId, wlan_sim_dev_info_t, DeviceIdHasher>;
   using iterator = devices_t::iterator;
   using const_iterator = devices_t::const_iterator;
@@ -78,10 +83,17 @@ class FakeDevMgr {
   std::optional<wlan_sim_dev_info_t> FindFirst(const Predicate& pred);
   std::optional<wlan_sim_dev_info_t> FindFirstByProtocolId(uint32_t proto_id);
   std::optional<wlan_sim_dev_info_t> GetDevice(zx_device_t* device);
-  size_t DevicesCount();
+  size_t DeviceCount();
+  zx_device_t* GetRootDevice();
+
+  // The device id of fake root device, the value is 1, initialized with constructor.
+  const DeviceId fake_root_dev_id_;
 
  private:
-  uint64_t dev_counter_ = 1;
+  bool DeviceUnreference(devices_t::iterator iter);
+
+  // The device counter starts from 2, because 0 and 1 are reserved for fake root device.
+  uint64_t dev_counter_ = 2;
   devices_t devices_;
 };
 }  // namespace wlan::simulation

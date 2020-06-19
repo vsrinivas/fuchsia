@@ -167,14 +167,12 @@ zx_status_t DynamicIfTest::CreateInterface(wlan_info_mac_role_t role,
 
 void DynamicIfTest::DeleteInterface(wlan_info_mac_role_t role) {
   uint32_t iface_id;
-  zx_status_t status;
 
   if (role == WLAN_INFO_MAC_ROLE_CLIENT)
     iface_id = client_ifc_.iface_id_;
   else
     iface_id = softap_ifc_.iface_id_;
-  status = device_->WlanphyImplDestroyIface(iface_id);
-  ASSERT_EQ(status, ZX_OK);
+  SimTest::DeleteInterface(iface_id);
 }
 
 void DynamicIfTest::Query(wlanphy_impl_info_t* out_info) {
@@ -183,7 +181,7 @@ void DynamicIfTest::Query(wlanphy_impl_info_t* out_info) {
   ASSERT_EQ(status, ZX_OK);
 }
 
-uint32_t DynamicIfTest::DeviceCount() { return (dev_mgr_->DevicesCount()); }
+uint32_t DynamicIfTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
 void DynamicIfTest::StartSoftAP() {
   wlanif_start_req_t start_req = {

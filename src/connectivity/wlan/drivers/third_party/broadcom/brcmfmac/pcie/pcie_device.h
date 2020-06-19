@@ -26,7 +26,7 @@ class PcieDevice : public Device {
   // Static factory function for PcieDevice instances. This factory does not return an owned
   // instance, as on successful invocation the instance will have its lifecycle managed by the
   // devhost.
-  static zx_status_t Create(zx_device_t* parent_device, PcieDevice** out_device);
+  static zx_status_t Create(zx_device_t* parent_device);
 
   PcieDevice(const PcieDevice& device) = delete;
   PcieDevice& operator=(const PcieDevice& other) = delete;
