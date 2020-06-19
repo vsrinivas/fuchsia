@@ -126,7 +126,7 @@ zx_status_t Client::Create(fbl::unique_fd devfs_root, const zx::channel& svc_roo
   }
 
   if (AstroClient::Create(devfs_root.duplicate(), svc_root, context, out) == ZX_OK ||
-      SherlockClient::Create(std::move(devfs_root), out) == ZX_OK) {
+      SherlockClient::Create(std::move(devfs_root), svc_root, out) == ZX_OK) {
     return ZX_OK;
   }
 
@@ -186,10 +186,11 @@ zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, const zx::channel& sv
   return AbrPartitionClient::Create(std::move(partition), out);
 }
 
-zx_status_t SherlockClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out) {
+zx_status_t SherlockClient::Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                                   std::unique_ptr<abr::Client>* out) {
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx_status_t status =
-      paver::SherlockPartitioner::Initialize(std::move(devfs_root), std::nullopt, &partitioner);
+  zx_status_t status = paver::SherlockPartitioner::Initialize(
+      std::move(devfs_root), std::move(svc_root), std::nullopt, &partitioner);
   if (status != ZX_OK) {
     return status;
   }

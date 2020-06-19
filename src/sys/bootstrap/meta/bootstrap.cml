@@ -296,6 +296,7 @@
         {
             protocol: [
                 "/svc/fuchsia.fshost.Admin",
+                "/svc/fuchsia.fshost.BlockWatcher",
                 "/svc/fuchsia.fshost.Filesystems",
                 "/svc/fuchsia.fshost.Registry",
             ],

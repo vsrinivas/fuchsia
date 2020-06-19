@@ -34,7 +34,6 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include <iterator>
 #include <string_view>
 
 #include <crashsvc/crashsvc.h>
@@ -233,7 +232,6 @@ static constexpr const char* devmgr_services[] = {
     fuchsia_device_manager_Administrator_Name,
     fuchsia_device_manager_DebugDumper_Name,
     fuchsia_hardware_power_statecontrol_Admin_Name,
-    fuchsia_hardware_power_statecontrol_RebootMethodsWatcherRegister_Name,
     llcpp::fuchsia::device::manager::BindDebugger::Name,
     nullptr,
 };
@@ -359,7 +357,7 @@ int main(int argc, char** argv) {
        .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
   };
 
-  for (size_t i = 0; i < std::size(service_providers); ++i) {
+  for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
     status = provider_load(&service_providers[i], dispatcher, outgoing.svc_dir());
     if (status != ZX_OK) {
       fprintf(stderr, "svchost: error: Failed to load service provider %zu: %d (%s).\n", i, status,
@@ -409,7 +407,7 @@ int main(int argc, char** argv) {
 
   status = loop.Run();
 
-  for (size_t i = 0; i < std::size(service_providers); ++i) {
+  for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
     provider_release(&service_providers[i]);
   }
 

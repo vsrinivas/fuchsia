@@ -6,10 +6,13 @@
 #define SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_
 
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <stdbool.h>
 #include <zircon/types.h>
 
@@ -52,6 +55,31 @@ enum class Arch {
   kArm64,
 };
 
+// This class pauses the block watcher when it is Create()d, and
+// resumes it when the destructor is called.
+class BlockWatcherPauser {
+ public:
+  BlockWatcherPauser(BlockWatcherPauser&& other)
+      : watcher_(std::move(other.watcher_)), valid_(other.valid_) {
+    other.valid_ = false;
+  }
+  // Destructor for the pauser, which automatically resumes the watcher.
+  ~BlockWatcherPauser();
+
+  // This is the function used for creating the BlockWatcherPauser.
+  static zx::status<BlockWatcherPauser> Create(const zx::channel& svc_root);
+
+ private:
+  // Create a new Pauser. This should immediately be followed by a call to Pause().
+  BlockWatcherPauser(zx::channel chan)
+      : watcher_(llcpp::fuchsia::fshost::BlockWatcher::SyncClient(std::move(chan))),
+        valid_(false) {}
+  zx_status_t Pause();
+
+  llcpp::fuchsia::fshost::BlockWatcher::SyncClient watcher_;
+  bool valid_;
+};
+
 // Operations on a specific partition take two identifiers, a partition type
 // and a content type.
 //
@@ -88,8 +116,9 @@ class DevicePartitioner {
   // implementation. Returns nullptr on failure.
   // |block_device| is root block device whichs contains the logical partitions we wish to operate
   // against. It's only meaningful for EFI and CROS devices which may have multiple storage devices.
-  static std::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, zx::channel svc_root,
-                                                   Arch arch, std::shared_ptr<Context> context,
+  static std::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root,
+                                                   const zx::channel& svc_root, Arch arch,
+                                                   std::shared_ptr<Context> context,
                                                    zx::channel block_device = zx::channel());
 
   virtual ~DevicePartitioner() = default;
@@ -149,7 +178,7 @@ class GptDevicePartitioner {
   // directly. If it is not provided, we search for a device with a valid GPT,
   // with an entry for an FVM. If multiple devices with valid GPT containing
   // FVM entries are found, an error is returned.
-  static zx_status_t InitializeGpt(fbl::unique_fd devfs_root,
+  static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, const zx::channel& svc_root,
                                    std::optional<fbl::unique_fd> block_device,
                                    std::unique_ptr<GptDevicePartitioner>* gpt_out,
                                    bool* initialize_partition_tables);
@@ -193,6 +222,8 @@ class GptDevicePartitioner {
 
   const fbl::unique_fd& devfs_root() { return devfs_root_; }
 
+  const zx::channel& svc_root() { return svc_root_; }
+
  private:
   using GptDevices = std::vector<std::pair<std::string, fbl::unique_fd>>;
 
@@ -202,12 +233,15 @@ class GptDevicePartitioner {
   // Initializes GPT for a device which was explicitly provided. If |gpt_device| doesn't have a
   // valid GPT, it will initialize it with a valid one.
   static zx_status_t InitializeProvidedGptDevice(fbl::unique_fd devfs_root,
+                                                 const zx::channel& svc_root,
                                                  fbl::unique_fd gpt_device,
                                                  std::unique_ptr<GptDevicePartitioner>* gpt_out);
 
-  GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd, std::unique_ptr<GptDevice> gpt,
+  GptDevicePartitioner(fbl::unique_fd devfs_root, const zx::channel& svc_root, fbl::unique_fd fd,
+                       std::unique_ptr<GptDevice> gpt,
                        ::llcpp::fuchsia::hardware::block::BlockInfo block_info)
       : devfs_root_(std::move(devfs_root)),
+        svc_root_(fdio_service_clone(svc_root.get())),
         caller_(std::move(fd)),
         gpt_(std::move(gpt)),
         block_info_(block_info) {}
@@ -216,6 +250,7 @@ class GptDevicePartitioner {
                                  uint64_t blocks, uint8_t* out_guid) const;
 
   fbl::unique_fd devfs_root_;
+  zx::channel svc_root_;
   fdio_cpp::FdioCaller caller_;
   mutable std::unique_ptr<GptDevice> gpt_;
   ::llcpp::fuchsia::hardware::block::BlockInfo block_info_;
@@ -224,7 +259,7 @@ class GptDevicePartitioner {
 // DevicePartitioner implementation for EFI based devices.
 class EfiDevicePartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
+  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
                                 std::optional<fbl::unique_fd> block_device,
                                 std::unique_ptr<DevicePartitioner>* partitioner);
 
@@ -262,7 +297,7 @@ class EfiDevicePartitioner : public DevicePartitioner {
 // DevicePartitioner implementation for ChromeOS devices.
 class CrosDevicePartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
+  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
                                 std::optional<fbl::unique_fd> block_device,
                                 std::unique_ptr<DevicePartitioner>* partitioner);
 
@@ -439,7 +474,7 @@ class As370Partitioner : public DevicePartitioner {
 
 class SherlockPartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root,
+  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
                                 std::optional<fbl::unique_fd> block_device,
                                 std::unique_ptr<DevicePartitioner>* partitioner);
 

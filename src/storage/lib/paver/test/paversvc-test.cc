@@ -1382,6 +1382,10 @@ class PaverServiceBlockTest : public PaverServiceTest {
     args.disable_block_watcher = false;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
+    // Forward the block watcher FIDL interface from the devmgr.
+    fake_svc_.ForwardServiceTo(llcpp::fuchsia::fshost::BlockWatcher::Name,
+                               devmgr_.fshost_outgoing_dir());
+
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());

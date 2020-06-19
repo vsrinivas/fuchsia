@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include <endian.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/cksum.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
+#include <lib/fdio/directory.h>
 
 #include <zxtest/zxtest.h>
 
@@ -43,8 +45,14 @@ TEST(SherlockAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
+  zx::channel svc_root, remote;
+  ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
+  fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release());
+
   std::unique_ptr<abr::Client> partitioner;
-  ASSERT_NE(abr::SherlockClient::Create(devmgr.devfs_root().duplicate(), &partitioner), ZX_OK);
+  ASSERT_NE(abr::SherlockClient::Create(devmgr.devfs_root().duplicate(), std::move(svc_root),
+                                        &partitioner),
+            ZX_OK);
 }
 
 }  // namespace

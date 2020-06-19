@@ -102,6 +102,7 @@
                 "/svc/fuchsia.fshost.Admin",
 
                 // These are services from fshost that show up in svchost
+                "/svc/fuchsia.fshost.BlockWatcher",
                 "/svc/fuchsia.fshost.Filesystems",
                 "/svc/fuchsia.fshost.Loader",
                 "/svc/fuchsia.fshost.Registry",

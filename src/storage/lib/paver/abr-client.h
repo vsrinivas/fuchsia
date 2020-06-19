@@ -86,7 +86,8 @@ class AstroClient {
 
 class SherlockClient {
  public:
-  static zx_status_t Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out);
+  static zx_status_t Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                            std::unique_ptr<abr::Client>* out);
 };
 
 // Implementation of abr::Client which works with a contiguous partition storing AbrData.

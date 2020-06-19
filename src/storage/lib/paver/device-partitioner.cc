@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
@@ -19,7 +20,9 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zx/status.h>
 #include <libgen.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <array>
@@ -61,6 +64,22 @@ namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
 constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
 constexpr size_t kGibibyte = kMebibyte * 1024;
+
+zx_status_t RebindGptDriver(const zx::channel& svc_root, zx::unowned_channel chan) {
+  auto pauser = BlockWatcherPauser::Create(svc_root);
+  if (pauser.is_error()) {
+    return pauser.status_value();
+  }
+  auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+      std::move(chan), fidl::StringView("/boot/driver/gpt.so"));
+  if (!result.ok()) {
+    return result.status();
+  }
+  if (result->result.is_err()) {
+    return result->result.err();
+  }
+  return ZX_OK;
+}
 
 bool FilterByType(const gpt_partition_t& part, const uint8_t type[GPT_GUID_LEN]) {
   return memcmp(part.type, type, GPT_GUID_LEN) == 0;
@@ -429,6 +448,52 @@ bool GetBool(::llcpp::fuchsia::boot::Arguments::SyncClient& client, ::fidl::Stri
 
 }  // namespace
 
+BlockWatcherPauser::~BlockWatcherPauser() {
+  if (valid_) {
+    auto result = watcher_.Resume();
+    if (result.status() != ZX_OK) {
+      ERROR("Failed to unpause the block watcher: %s\n", zx_status_get_string(result.status()));
+    } else if (result->status != ZX_OK) {
+      ERROR("Failed to unpause the block watcher: %s\n", zx_status_get_string(result->status));
+    }
+  }
+}
+
+zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(const zx::channel& svc_root) {
+  zx::channel local, remote;
+  auto status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  status = fdio_service_connect_at(svc_root.get(), llcpp::fuchsia::fshost::BlockWatcher::Name,
+                                   remote.release());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  BlockWatcherPauser pauser(std::move(local));
+  status = pauser.Pause();
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  return zx::ok(std::move(pauser));
+}
+
+zx_status_t BlockWatcherPauser::Pause() {
+  auto result = watcher_.Pause();
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  if (result->status != ZX_OK) {
+    return result->status;
+  }
+
+  valid_ = true;
+  return ZX_OK;
+}
+
 const char* PartitionName(Partition type) {
   switch (type) {
     case Partition::kBootloader:
@@ -463,7 +528,7 @@ fbl::String PartitionSpec::ToString() const {
 }
 
 std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
-                                                             zx::channel svc_root, Arch arch,
+                                                             const zx::channel& svc_root, Arch arch,
                                                              std::shared_ptr<Context> context,
                                                              zx::channel block_device) {
   std::optional<fbl::unique_fd> block_dev;
@@ -482,16 +547,17 @@ std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
     block_dev_dup = block_dev->duplicate();
     block_dev_dup2 = block_dev->duplicate();
   }
+
   std::unique_ptr<DevicePartitioner> device_partitioner;
   if ((AstroPartitioner::Initialize(devfs_root.duplicate(), svc_root, context,
                                     &device_partitioner) == ZX_OK) ||
       (As370Partitioner::Initialize(devfs_root.duplicate(), &device_partitioner) == ZX_OK) ||
-      (SherlockPartitioner::Initialize(devfs_root.duplicate(), std::move(block_dev_dup2),
+      (SherlockPartitioner::Initialize(devfs_root.duplicate(), svc_root, std::move(block_dev_dup2),
                                        &device_partitioner) == ZX_OK) ||
-      (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev_dup),
-                                         &device_partitioner) == ZX_OK) ||
-      (EfiDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev),
-                                        &device_partitioner) == ZX_OK) ||
+      (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), svc_root, arch,
+                                         std::move(block_dev_dup), &device_partitioner) == ZX_OK) ||
+      (EfiDevicePartitioner::Initialize(devfs_root.duplicate(), svc_root, arch,
+                                        std::move(block_dev), &device_partitioner) == ZX_OK) ||
       (FixedDevicePartitioner::Initialize(std::move(devfs_root), &device_partitioner) == ZX_OK)) {
     return device_partitioner;
   }
@@ -563,8 +629,13 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
 }
 
 zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
-    fbl::unique_fd devfs_root, fbl::unique_fd gpt_device,
+    fbl::unique_fd devfs_root, const zx::channel& svc_root, fbl::unique_fd gpt_device,
     std::unique_ptr<GptDevicePartitioner>* gpt_out) {
+  auto pauser = BlockWatcherPauser::Create(svc_root);
+  if (pauser.is_error()) {
+    ERROR("Failed to pause the block watcher\n");
+    return pauser.status_value();
+  }
   fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
   auto result = block::Block::Call::GetInfo(caller.channel());
   if (!result.ok()) {
@@ -594,27 +665,28 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
       ERROR("Failed to sync empty GPT\n");
       return ZX_ERR_BAD_STATE;
     }
-    auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
-        caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
-    if (!result.ok() || result->result.is_err()) {
+    zx_status_t status = RebindGptDriver(svc_root, caller.channel());
+    if (status != ZX_OK) {
       ERROR("Failed to re-read GPT\n");
-      return ZX_ERR_BAD_STATE;
+      return status;
     }
     printf("Rebound GPT driver succesfully\n");
   }
 
-  *gpt_out = WrapUnique(new GptDevicePartitioner(devfs_root.duplicate(), std::move(gpt_device),
-                                                 std::move(gpt), *(response.info)));
+  *gpt_out = WrapUnique(new GptDevicePartitioner(
+      devfs_root.duplicate(), svc_root, std::move(gpt_device), std::move(gpt), *(response.info)));
   return ZX_OK;
 }
 
 zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
+                                                const zx::channel& svc_root,
                                                 std::optional<fbl::unique_fd> block_device,
                                                 std::unique_ptr<GptDevicePartitioner>* gpt_out,
                                                 bool* initialize_partition_tables) {
   *initialize_partition_tables = false;
   if (block_device) {
-    return InitializeProvidedGptDevice(std::move(devfs_root), *std::move(block_device), gpt_out);
+    return InitializeProvidedGptDevice(std::move(devfs_root), svc_root, *std::move(block_device),
+                                       gpt_out);
   }
 
   GptDevices gpt_devices;
@@ -659,7 +731,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
     non_removable_gpt_devices.emplace_back(gpt_device.duplicate());
 
     auto partitioner = WrapUnique(new GptDevicePartitioner(
-        devfs_root.duplicate(), std::move(gpt_device), std::move(gpt), *(response.info)));
+        devfs_root.duplicate(), svc_root, std::move(gpt_device), std::move(gpt), *(response.info)));
 
     if (partitioner->FindPartition(IsFvmPartition, nullptr, nullptr) != ZX_OK) {
       continue;
@@ -680,7 +752,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
   if (non_removable_gpt_devices.size() == 1) {
     *initialize_partition_tables = true;
     // If we only find a single non-removable gpt device, we initialize it's partition table.
-    return InitializeProvidedGptDevice(std::move(devfs_root),
+    return InitializeProvidedGptDevice(std::move(devfs_root), svc_root,
                                        std::move(non_removable_gpt_devices[0]), gpt_out);
   }
 
@@ -777,15 +849,10 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, const uin
     ERROR("Failed to clear first block of new partition\n");
     return status;
   }
-  auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
-      Channel(), fidl::StringView("/boot/driver/gpt.so"));
-  if (!result.ok()) {
+  status = RebindGptDriver(svc_root_, Channel());
+  if (status != ZX_OK) {
     ERROR("Failed to rebind GPT\n");
-    return result.status();
-  }
-  if (result->result.is_err()) {
-    ERROR("Failed to rebind GPT\n");
-    return result->result.err();
+    return status;
   }
 
   return ZX_OK;
@@ -898,8 +965,7 @@ zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
     gpt_->Sync();
     LOG("Immediate reboot strongly recommended\n");
   }
-  ::llcpp::fuchsia::device::Controller::Call::Rebind(Channel(),
-                                                     fidl::StringView("/boot/driver/gpt.so"));
+  RebindGptDriver(svc_root_, Channel());
   return ZX_OK;
 }
 
@@ -913,8 +979,8 @@ zx_status_t GptDevicePartitioner::WipePartitionTables() const {
  *                 EFI SPECIFIC                       *
  *====================================================*/
 
-zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
-                                             std::optional<fbl::unique_fd> block_device,
+zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                                             Arch arch, std::optional<fbl::unique_fd> block_device,
                                              std::unique_ptr<DevicePartitioner>* out_partitioner) {
   if (arch != Arch::kX64) {
     return ZX_ERR_NOT_FOUND;
@@ -923,7 +989,7 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arc
   std::unique_ptr<GptDevicePartitioner> gpt;
   bool initialize_partition_tables = false;
   zx_status_t status = GptDevicePartitioner::InitializeGpt(
-      std::move(devfs_root), std::move(block_device), &gpt, &initialize_partition_tables);
+      std::move(devfs_root), svc_root, std::move(block_device), &gpt, &initialize_partition_tables);
   if (status != ZX_OK) {
     return status;
   }
@@ -1135,7 +1201,8 @@ zx_status_t EfiDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
  *                CROS SPECIFIC                       *
  *====================================================*/
 
-zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
+zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
+                                              const zx::channel& svc_root, Arch arch,
                                               std::optional<fbl::unique_fd> block_device,
                                               std::unique_ptr<DevicePartitioner>* out_partitioner) {
   if (arch != Arch::kX64) {
@@ -1149,8 +1216,9 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
 
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   bool initialize_partition_tables = false;
-  status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device),
-                                               &gpt_partitioner, &initialize_partition_tables);
+  status =
+      GptDevicePartitioner::InitializeGpt(std::move(devfs_root), svc_root, std::move(block_device),
+                                          &gpt_partitioner, &initialize_partition_tables);
   if (status != ZX_OK) {
     return status;
   }
@@ -1161,6 +1229,12 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
 
   if (!is_ready_to_pave(gpt, reinterpret_cast<fuchsia_hardware_block_BlockInfo*>(&info),
                         SZ_ZX_PART)) {
+    auto pauser = BlockWatcherPauser::Create(gpt_partitioner->svc_root());
+    if (pauser.is_error()) {
+      ERROR("Failed to pause the block watcher");
+      return pauser.status_value();
+    }
+
     status = config_cros_for_fuchsia(
         gpt, reinterpret_cast<fuchsia_hardware_block_BlockInfo*>(&info), SZ_ZX_PART);
     if (status != ZX_OK) {
@@ -1171,8 +1245,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
       ERROR("Failed to sync CrOS for Fuchsia.\n");
       return status;
     }
-    llcpp::fuchsia::device::Controller::Call::Rebind(gpt_partitioner->Channel(),
-                                                     fidl::StringView("/boot/driver/gpt.so"));
+    RebindGptDriver(gpt_partitioner->svc_root(), gpt_partitioner->Channel());
   }
 
   auto partitioner = WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner)));
@@ -1555,7 +1628,7 @@ zx_status_t FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
  *                    SHERLOCK                        *
  *====================================================*/
 
-zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root,
+zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
                                             std::optional<fbl::unique_fd> block_device,
                                             std::unique_ptr<DevicePartitioner>* partitioner) {
   zx_status_t status = IsBoard(devfs_root, "sherlock");
@@ -1565,8 +1638,8 @@ zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root,
 
   bool initialize_partition_tables;
   std::unique_ptr<GptDevicePartitioner> gpt;
-  status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device), &gpt,
-                                               &initialize_partition_tables);
+  status = GptDevicePartitioner::InitializeGpt(
+      std::move(devfs_root), svc_root, std::move(block_device), &gpt, &initialize_partition_tables);
   if (status != ZX_OK) {
     return status;
   }
