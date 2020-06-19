@@ -127,7 +127,7 @@ mod tests {
         async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
             let shared_data = EventMetadata {
                 component_id: MONIKER_ID.clone(),
-                component_url: Some(LEGACY_URL.clone()),
+                component_url: LEGACY_URL.clone(),
                 timestamp: zx::Time::get(zx::ClockId::Monotonic),
             };
 
@@ -155,7 +155,7 @@ mod tests {
         async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
             let shared_data = EventMetadata {
                 component_id: LEGACY_ID.clone(),
-                component_url: Some(LEGACY_URL.clone()),
+                component_url: LEGACY_URL.clone(),
                 timestamp: zx::Time::get(zx::ClockId::Monotonic),
             };
 

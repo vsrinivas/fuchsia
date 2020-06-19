@@ -142,7 +142,7 @@ impl TryFrom<SourceIdentity> for EventMetadata {
         });
         Ok(EventMetadata {
             component_id,
-            component_url: Some(component.component_url),
+            component_url: component.component_url,
             timestamp: zx::Time::get(zx::ClockId::Monotonic),
         })
     }
@@ -214,7 +214,7 @@ pub struct LegacyIdentifier {
 pub struct EventMetadata {
     pub component_id: ComponentIdentifier,
 
-    pub component_url: Option<String>,
+    pub component_url: String,
 
     pub timestamp: zx::Time,
 }
@@ -308,7 +308,7 @@ impl TryFrom<Event> for ComponentEvent {
 
         let shared_data = EventMetadata {
             component_id: ComponentIdentifier::Moniker(event.descriptor.moniker.clone()),
-            component_url: Some(event.descriptor.component_url.clone()),
+            component_url: event.descriptor.component_url.clone(),
             timestamp: zx::Time::from_nanos(event.timestamp),
         };
 

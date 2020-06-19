@@ -43,6 +43,8 @@ pub struct DiagnosticsArtifactsContainer {
     /// Relative moniker of the component that this artifacts container
     /// is representing.
     pub relative_moniker: Vec<String>,
+    /// The url with which the component associated with this container was launched.
+    pub component_url: String,
     /// Container holding the artifacts needed to serve inspect data.
     /// If absent, this is interpereted as a component existing, but not
     /// hosting diagnostics data.
@@ -282,14 +284,14 @@ impl DataCollector for InspectDataCollector {
 /// Packet containing a snapshot and all the metadata needed to
 /// populate a diagnostics schema for that snapshot.
 pub struct SnapshotData {
-    // Name of the file that created this snapshot.
+    /// Name of the file that created this snapshot.
     pub filename: String,
-    // Timestamp at which this snapshot resolved or failed.
+    /// Timestamp at which this snapshot resolved or failed.
     pub timestamp: zx::Time,
-    // Errors encountered when processing this snapshot.
+    /// Errors encountered when processing this snapshot.
     pub errors: Vec<formatter::Error>,
-    // Optional snapshot of the inspect hierarchy, in case reading fails
-    // and we have errors to share with client.
+    /// Optional snapshot of the inspect hierarchy, in case reading fails
+    /// and we have errors to share with client.
     pub snapshot: Option<ReadSnapshot>,
 }
 
@@ -323,6 +325,8 @@ pub struct PopulatedInspectDataContainer {
     /// Relative moniker of the component that this populated
     /// data packet has gathered data for.
     pub relative_moniker: Vec<String>,
+    /// The url with which the associated component was launched.
+    pub component_url: String,
     /// Vector of all the snapshots of inspect hierarchies under
     /// the diagnostics directory of the component identified by
     /// relative_moniker, along with the metadata needed to populate
@@ -406,6 +410,7 @@ impl PopulatedInspectDataContainer {
                 match snapshots_data_opt {
                     Some(snapshots) => PopulatedInspectDataContainer {
                         relative_moniker: unpopulated.relative_moniker,
+                        component_url: unpopulated.component_url,
                         snapshots: snapshots,
                         inspect_matcher: unpopulated.inspect_matcher,
                     },
@@ -421,6 +426,7 @@ impl PopulatedInspectDataContainer {
                         )];
                         PopulatedInspectDataContainer {
                             relative_moniker: unpopulated.relative_moniker,
+                            component_url: unpopulated.component_url,
                             snapshots: no_success_snapshot_data,
                             inspect_matcher: unpopulated.inspect_matcher,
                         }
@@ -439,6 +445,7 @@ impl PopulatedInspectDataContainer {
                 )];
                 PopulatedInspectDataContainer {
                     relative_moniker: unpopulated.relative_moniker,
+                    component_url: unpopulated.component_url,
                     snapshots: no_success_snapshot_data,
                     inspect_matcher: unpopulated.inspect_matcher,
                 }
@@ -454,6 +461,8 @@ pub struct UnpopulatedInspectDataContainer {
     /// Relative moniker of the component that this data container
     /// is representing.
     pub relative_moniker: Vec<String>,
+    /// The url with which the associated component was launched.
+    pub component_url: String,
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
     pub component_diagnostics_proxy: DirectoryProxy,
@@ -487,6 +496,7 @@ impl DiagnosticsDataRepository {
     pub fn add_new_component(
         &mut self,
         identifier: ComponentIdentifier,
+        component_url: impl Into<String>,
         event_creation_time: zx::Time,
         component_start_time: Option<zx::Time>,
     ) -> Result<(), Error> {
@@ -515,6 +525,7 @@ impl DiagnosticsDataRepository {
                             key,
                             DiagnosticsArtifactsContainer {
                                 relative_moniker: relative_moniker,
+                                component_url: component_url.into(),
                                 lifecycle_artifacts_container: Some(lifecycle_artifact_container),
                                 inspect_artifacts_container: None,
                             },
@@ -549,6 +560,7 @@ impl DiagnosticsDataRepository {
                 key,
                 DiagnosticsArtifactsContainer {
                     relative_moniker: relative_moniker,
+                    component_url: component_url.into(),
                     lifecycle_artifacts_container: Some(lifecycle_artifact_container),
                     inspect_artifacts_container: None,
                 },
@@ -560,6 +572,7 @@ impl DiagnosticsDataRepository {
     pub fn add_inspect_artifacts(
         &mut self,
         identifier: ComponentIdentifier,
+        component_url: impl Into<String>,
         directory_proxy: DirectoryProxy,
     ) -> Result<(), Error> {
         let relative_moniker = identifier.relative_moniker_for_selectors();
@@ -590,9 +603,12 @@ impl DiagnosticsDataRepository {
         };
 
         match inspect_artifact_container {
-            Some(inspect_container) => {
-                self.insert_inspect_artifact_container(inspect_container, key, relative_moniker)
-            }
+            Some(inspect_container) => self.insert_inspect_artifact_container(
+                inspect_container,
+                key,
+                relative_moniker,
+                component_url.into(),
+            ),
             // The Inspect artifact container being None here implies that
             // there were valid static selectors and none of them applied to
             // the component currently being processed.
@@ -608,6 +624,7 @@ impl DiagnosticsDataRepository {
         inspect_container: InspectArtifactsContainer,
         key: Vec<String>,
         relative_moniker: Vec<String>,
+        component_url: String,
     ) -> Result<(), Error> {
         let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
         match diag_repo_entry_opt {
@@ -625,6 +642,7 @@ impl DiagnosticsDataRepository {
                             key,
                             DiagnosticsArtifactsContainer {
                                 relative_moniker: relative_moniker,
+                                component_url,
                                 lifecycle_artifacts_container: None,
                                 inspect_artifacts_container: Some(inspect_container),
                             },
@@ -664,6 +682,7 @@ impl DiagnosticsDataRepository {
                 key,
                 DiagnosticsArtifactsContainer {
                     relative_moniker: relative_moniker,
+                    component_url,
                     lifecycle_artifacts_container: None,
                     inspect_artifacts_container: Some(inspect_container),
                 },
@@ -680,23 +699,24 @@ impl DiagnosticsDataRepository {
             .iter()
             .filter_map(|(_, diagnostics_artifacts_container_opt)| {
                 match diagnostics_artifacts_container_opt {
-                    Some(diagnostics_artifacts_container) => {
-                        match &diagnostics_artifacts_container.inspect_artifacts_container {
-                            Some(inspect_artifacts) => io_util::clone_directory(
-                                &inspect_artifacts.component_diagnostics_proxy,
-                                CLONE_FLAG_SAME_RIGHTS,
-                            )
-                            .ok()
-                            .map(|directory| UnpopulatedInspectDataContainer {
-                                relative_moniker: diagnostics_artifacts_container
-                                    .relative_moniker
-                                    .clone(),
-                                component_diagnostics_proxy: directory,
-                                inspect_matcher: inspect_artifacts.inspect_matcher.clone(),
-                            }),
-                            None => None,
-                        }
-                    }
+                    Some(diagnostics_artifacts_container) => match &diagnostics_artifacts_container
+                        .inspect_artifacts_container
+                    {
+                        Some(inspect_artifacts) => io_util::clone_directory(
+                            &inspect_artifacts.component_diagnostics_proxy,
+                            CLONE_FLAG_SAME_RIGHTS,
+                        )
+                        .ok()
+                        .map(|directory| UnpopulatedInspectDataContainer {
+                            relative_moniker: diagnostics_artifacts_container
+                                .relative_moniker
+                                .clone(),
+                            component_url: diagnostics_artifacts_container.component_url.clone(),
+                            component_diagnostics_proxy: directory,
+                            inspect_matcher: inspect_artifacts.inspect_matcher.clone(),
+                        }),
+                        None => None,
+                    },
                     None => None,
                 }
             })
@@ -726,6 +746,8 @@ mod tests {
         futures::{FutureExt, StreamExt},
         std::path::PathBuf,
     };
+
+    const TEST_URL: &'static str = "fuchsia-pkg://test";
 
     fn get_vmo(text: &[u8]) -> zx::Vmo {
         let vmo = zx::Vmo::create(4096).unwrap();
@@ -904,11 +926,15 @@ mod tests {
         });
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .expect("add to repo");
 
         let key = component_id.unique_key();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
@@ -927,17 +953,20 @@ mod tests {
         });
 
         data_repo
-            .add_new_component(component_id.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
             .expect("instantiated new component.");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        data_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+        data_repo
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .expect("add to repo");
 
         let key = component_id.unique_key();
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
         assert!(entry.inspect_artifacts_container.is_some());
+        assert_eq!(entry.component_url, TEST_URL);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -953,11 +982,12 @@ mod tests {
         });
 
         data_repo
-            .add_new_component(component_id.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
             .expect("instantiated new component.");
 
         let duplicate_new_component_insertion = data_repo.add_new_component(
             component_id.clone(),
+            TEST_URL,
             zx::Time::from_nanos(1),
             Some(zx::Time::from_nanos(0)),
         );
@@ -972,6 +1002,7 @@ mod tests {
         let lifecycle_container = entry.lifecycle_artifacts_container.as_ref().unwrap();
         assert!(lifecycle_container.component_start_time.is_none());
         assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
+        assert_eq!(entry.component_url, TEST_URL);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -988,6 +1019,7 @@ mod tests {
 
         let component_insertion = data_repo.add_new_component(
             component_id.clone(),
+            TEST_URL,
             zx::Time::from_nanos(1),
             Some(zx::Time::from_nanos(0)),
         );
@@ -1003,6 +1035,7 @@ mod tests {
         assert!(lifecycle_container.component_start_time.is_some());
         assert_eq!(lifecycle_container.component_start_time.unwrap().into_nanos(), 0);
         assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
+        assert_eq!(entry.component_url, TEST_URL);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1019,10 +1052,16 @@ mod tests {
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        data_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+        data_repo
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .expect("add to repo");
 
-        let false_new_component_result =
-            data_repo.add_new_component(component_id.clone(), zx::Time::from_nanos(0), None);
+        let false_new_component_result = data_repo.add_new_component(
+            component_id.clone(),
+            TEST_URL,
+            zx::Time::from_nanos(0),
+            None,
+        );
         assert!(false_new_component_result.is_ok());
 
         // We shouldn't have overwritten the entry. There should still be an inspect
@@ -1030,6 +1069,7 @@ mod tests {
         let key = component_id.unique_key();
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
+        assert_eq!(entry.component_url, TEST_URL);
         assert!(entry.inspect_artifacts_container.is_some());
         assert!(entry.lifecycle_artifacts_container.is_some());
     }
@@ -1047,7 +1087,7 @@ mod tests {
         });
 
         data_repo
-            .add_new_component(component_id.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
         let key = component_id.unique_key();
@@ -1057,12 +1097,13 @@ mod tests {
             data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
         mutable_values.push(DiagnosticsArtifactsContainer {
             relative_moniker: component_id.relative_moniker_for_selectors(),
+            component_url: TEST_URL.to_string(),
             inspect_artifacts_container: None,
             lifecycle_artifacts_container: None,
         });
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        assert!(data_repo.add_inspect_artifacts(component_id.clone(), proxy).is_err());
+        assert!(data_repo.add_inspect_artifacts(component_id.clone(), TEST_URL, proxy).is_err());
     }
 }

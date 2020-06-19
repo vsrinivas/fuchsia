@@ -157,7 +157,7 @@ pub mod tests {
 
         let shared_data = EventMetadata {
             component_id: expected_component_id.clone(),
-            component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+            component_url: "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string(),
             timestamp: zx::Time::get(zx::ClockId::Monotonic),
         };
         // Assert the first received event was a Start event.

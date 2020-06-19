@@ -159,7 +159,7 @@ mod tests {
                     instance_id: self.instance_id,
                     realm_path: RealmPath(self.realm_path),
                 }),
-                component_url: Some(MOCK_URL.clone()),
+                component_url: MOCK_URL.clone(),
                 timestamp: zx::Time::from_nanos(0),
             }
         }

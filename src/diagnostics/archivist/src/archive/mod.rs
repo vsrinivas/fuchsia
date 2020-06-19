@@ -609,6 +609,7 @@ fn populate_inspect_repo(
 
     state.lock().inspect_repository.write().add_inspect_artifacts(
         diagnostics_ready_data.metadata.component_id,
+        diagnostics_ready_data.metadata.component_url,
         diagnostics_directory_proxy,
     )
 }
@@ -629,6 +630,7 @@ async fn process_event(
             archive_event(&state, "START", start.metadata.clone()).await?;
             state.lock().inspect_repository.write().add_new_component(
                 start.metadata.component_id,
+                start.metadata.component_url,
                 start.metadata.timestamp,
                 None,
             )
@@ -637,6 +639,7 @@ async fn process_event(
             archive_event(&state, "RUNNING", running.metadata.clone()).await?;
             state.lock().inspect_repository.write().add_new_component(
                 running.metadata.component_id,
+                running.metadata.component_url,
                 running.metadata.timestamp,
                 Some(running.component_start_time),
             )

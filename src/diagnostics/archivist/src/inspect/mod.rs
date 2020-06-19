@@ -112,6 +112,15 @@ impl Drop for ReaderServer {
     }
 }
 
+pub struct BatchResultItem {
+    /// Relative moniker of the component associated with this result.
+    pub moniker: Moniker,
+    /// The url with which the component associated with this result was launched.
+    pub component_url: String,
+    /// The resulting Node hierarchy plus some metadata.
+    pub hierarchy_data: NodeHierarchyData,
+}
+
 impl ReaderServer {
     pub fn new(
         inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
@@ -248,6 +257,7 @@ impl ReaderServer {
         join_all(inspect_batch.into_iter().map(move |inspect_data_packet| {
             let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
             let attempted_inspect_matcher = inspect_data_packet.inspect_matcher.clone();
+            let component_url = inspect_data_packet.component_url.clone();
             let global_stats = self.inspect_reader_server_stats.global_stats.clone();
             PopulatedInspectDataContainer::from(inspect_data_packet).on_timeout(
                 PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
@@ -264,6 +274,7 @@ impl ReaderServer {
                     )];
                     PopulatedInspectDataContainer {
                         relative_moniker: attempted_relative_moniker,
+                        component_url,
                         snapshots: no_success_snapshot_data,
                         inspect_matcher: attempted_inspect_matcher,
                     }
@@ -284,7 +295,7 @@ impl ReaderServer {
     pub fn filter_snapshots(
         &self,
         pumped_inspect_data: Vec<PopulatedInspectDataContainer>,
-    ) -> Vec<(Moniker, NodeHierarchyData)> {
+    ) -> Vec<BatchResultItem> {
         // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
         // want to do the component selector filtering again, so store the results in a map.
         let mut client_selector_matches: HashMap<String, Option<InspectHierarchyMatcher>> =
@@ -339,18 +350,22 @@ impl ReaderServer {
                 }
             }
 
-            let mut filtered_hierarchy_data_with_moniker: Vec<(String, NodeHierarchyData)> =
-                ReaderServer::filter_single_components_snapshots(
-                    sanitized_moniker.clone(),
-                    pumped_data.snapshots,
-                    pumped_data.inspect_matcher,
-                    &client_selector_matches,
-                )
-                .into_iter()
-                .map(|filtered_hierarchy_data| (sanitized_moniker.clone(), filtered_hierarchy_data))
-                .collect();
+            let component_url = pumped_data.component_url;
+            let mut result = ReaderServer::filter_single_components_snapshots(
+                sanitized_moniker.clone(),
+                pumped_data.snapshots,
+                pumped_data.inspect_matcher,
+                &client_selector_matches,
+            )
+            .into_iter()
+            .map(|hierarchy_data| BatchResultItem {
+                moniker: sanitized_moniker.clone(),
+                component_url: component_url.clone(),
+                hierarchy_data,
+            })
+            .collect();
 
-            acc.append(&mut filtered_hierarchy_data_with_moniker);
+            acc.append(&mut result);
             acc
         })
     }
@@ -365,19 +380,20 @@ impl ReaderServer {
     /// a node hierarchy fails to format, its vmo is an empty string.
     fn format_hierarchies(
         format: &fidl_fuchsia_diagnostics::Format,
-        hierarchies_with_monikers: Vec<(Moniker, NodeHierarchyData)>,
+        batch_results: Vec<BatchResultItem>,
     ) -> Vec<Result<fidl_fuchsia_diagnostics::FormattedContent, Error>> {
-        hierarchies_with_monikers
+        batch_results
             .into_iter()
-            .map(|(moniker, hierarchy_data)| {
+            .map(|batch_item| {
                 let formatted_string_result = match format {
                     fidl_fuchsia_diagnostics::Format::Json => {
                         let inspect_schema = Schema::for_inspect(
-                            moniker,
-                            hierarchy_data.hierarchy,
-                            hierarchy_data.timestamp,
-                            hierarchy_data.filename,
-                            hierarchy_data.errors,
+                            batch_item.moniker,
+                            batch_item.hierarchy_data.hierarchy,
+                            batch_item.hierarchy_data.timestamp,
+                            batch_item.component_url,
+                            batch_item.hierarchy_data.filename,
+                            batch_item.hierarchy_data.errors,
                         );
 
                         Ok(serde_json::to_string_pretty(&inspect_schema)?)
@@ -484,6 +500,7 @@ impl ReaderServer {
             )];
             PopulatedInspectDataContainer {
                 relative_moniker: container.relative_moniker,
+                component_url: container.component_url,
                 snapshots: no_success_snapshot_data,
                 inspect_matcher: container.inspect_matcher,
             }
@@ -580,8 +597,8 @@ impl ReaderServer {
                         // the batch
                         let batch_hierarchy_data = self.filter_snapshots(current_batch);
 
-                        batch_hierarchy_data.iter().for_each(|(_, value)| {
-                            if !value.errors.is_empty() {
+                        batch_hierarchy_data.iter().for_each(|batch_item| {
+                            if !batch_item.hierarchy_data.errors.is_empty() {
                                 self.inspect_reader_server_stats
                                     .global_stats
                                     .batch_iterator_get_next_result_errors
@@ -709,6 +726,8 @@ mod tests {
         serde_json::json,
         std::path::PathBuf,
     };
+
+    const TEST_URL: &'static str = "fuchsia-pkg://test";
 
     fn get_vmo(text: &[u8]) -> zx::Vmo {
         let vmo = zx::Vmo::create(4096).unwrap();
@@ -1000,11 +1019,15 @@ mod tests {
         });
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .expect("add to repo");
 
         let key = component_id.unique_key();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
@@ -1110,7 +1133,10 @@ mod tests {
                 let inspect_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
 
                 for (cid, proxy) in id_and_directory_proxy {
-                    inspect_repo.write().add_inspect_artifacts(cid.clone(), proxy).unwrap();
+                    inspect_repo
+                        .write()
+                        .add_inspect_artifacts(cid.clone(), TEST_URL, proxy)
+                        .unwrap();
                 }
 
                 let inspector = Inspector::new();
@@ -1219,7 +1245,10 @@ mod tests {
         }}});
 
         let inspector_arc = Arc::new(inspector);
-        inspect_repo.write().add_inspect_artifacts(component_id.clone(), out_dir_proxy).unwrap();
+        inspect_repo
+            .write()
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, out_dir_proxy)
+            .unwrap();
 
         let expected_get_next_result_errors = match mode {
             VerifyMode::ExpectComponentFailure => 1u64,

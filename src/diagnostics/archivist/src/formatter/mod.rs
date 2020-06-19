@@ -68,6 +68,8 @@ pub struct LifecycleEventMetadata {
     pub errors: Option<Vec<Error>>,
     /// Type of lifecycle event being encoded in the schema.
     pub lifecycle_event_type: LifecycleEventType,
+    /// The url with which the component was launched.
+    pub component_url: String,
     /// Monotonic time in nanos.
     #[serde(serialize_with = "serialize_time")]
     pub timestamp: Time,
@@ -80,6 +82,8 @@ pub struct InspectMetadata {
     pub errors: Option<Vec<Error>>,
     /// Name of diagnostics file producing data.
     pub filename: String,
+    /// The url with which the component was launched.
+    pub component_url: String,
     /// Monotonic time in nanos.
     #[serde(serialize_with = "serialize_time")]
     pub timestamp: Time,
@@ -107,18 +111,23 @@ type InspectSchema = Schema<String>;
 
 impl Schema<String> {
     pub fn for_lifecycle_event(
-        moniker: String,
+        moniker: impl Into<String>,
         lifecycle_event_type: LifecycleEventType,
         timestamp: Time,
+        component_url: impl Into<String>,
         errors: Vec<Error>,
     ) -> Schema<String> {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
-        let lifecycle_event_metadata =
-            LifecycleEventMetadata { timestamp, lifecycle_event_type, errors: errors_opt };
+        let lifecycle_event_metadata = LifecycleEventMetadata {
+            timestamp,
+            component_url: component_url.into(),
+            lifecycle_event_type,
+            errors: errors_opt,
+        };
 
         Schema {
-            moniker,
+            moniker: moniker.into(),
             version: *SCHEMA_VERSION,
             data_source: DataSource::LifecycleEvent,
             payload: None,
@@ -127,18 +136,24 @@ impl Schema<String> {
     }
 
     pub fn for_inspect(
-        moniker: String,
+        moniker: impl Into<String>,
         inspect_hierarchy: Option<NodeHierarchy>,
         timestamp: Time,
-        filename: String,
+        component_url: impl Into<String>,
+        filename: impl Into<String>,
         errors: Vec<Error>,
     ) -> InspectSchema {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
-        let inspect_metadata = InspectMetadata { timestamp, filename, errors: errors_opt };
+        let inspect_metadata = InspectMetadata {
+            timestamp,
+            component_url: component_url.into(),
+            filename: filename.into(),
+            errors: errors_opt,
+        };
 
         Schema {
-            moniker,
+            moniker: moniker.into(),
             version: *SCHEMA_VERSION,
             data_source: DataSource::Inspect,
             payload: inspect_hierarchy,
@@ -154,8 +169,10 @@ mod tests {
     use pretty_assertions;
     use serde_json::json;
 
+    const TEST_URL: &'static str = "fuchsia-pkg://test";
+
     #[test]
-    fn test_canonicol_json_inspect_formatting() {
+    fn test_canonical_json_inspect_formatting() {
         let mut hierarchy = NodeHierarchy::new(
             "root",
             vec![Property::String("x".to_string(), "foo".to_string())],
@@ -164,15 +181,16 @@ mod tests {
 
         hierarchy.sort();
         let json_schema = Schema::for_inspect(
-            "a/b/c/d".to_string(),
+            "a/b/c/d",
             Some(hierarchy),
             Time::from_nanos(123456),
-            "test_file_plz_ignore.inspect".to_string(),
+            TEST_URL,
+            "test_file_plz_ignore.inspect",
             Vec::new(),
         );
 
-        let pretty_json_string =
-            serde_json::to_string_pretty(&json_schema).expect("serialization should succeed.");
+        let result_json =
+            serde_json::to_value(&json_schema).expect("serialization should succeed.");
 
         let expected_json = json!({
           "moniker": "a/b/c/d",
@@ -184,34 +202,29 @@ mod tests {
             }
           },
           "metadata": {
-            "timestamp": 123456,
+            "component_url": TEST_URL,
             "errors": null,
-            "filename": "test_file_plz_ignore.inspect"
+            "filename": "test_file_plz_ignore.inspect",
+            "timestamp": 123456,
           }
         });
 
-        let expect_json_pretty_string = serde_json::to_string_pretty(&expected_json)
-            .expect("serialization should be successful.");
-
-        pretty_assertions::assert_eq!(
-            pretty_json_string,
-            expect_json_pretty_string,
-            "golden diff failed."
-        );
+        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
     #[test]
     fn test_errorful_json_inspect_formatting() {
         let json_schema = Schema::for_inspect(
-            "a/b/c/d".to_string(),
+            "a/b/c/d",
             None,
             Time::from_nanos(123456),
-            "test_file_plz_ignore.inspect".to_string(),
+            TEST_URL,
+            "test_file_plz_ignore.inspect",
             vec![Error { message: "too much fun being had.".to_string() }],
         );
 
-        let pretty_json_string =
-            serde_json::to_string_pretty(&json_schema).expect("serialization should succeed.");
+        let result_json =
+            serde_json::to_value(&json_schema).expect("serialization should succeed.");
 
         let expected_json = json!({
           "moniker": "a/b/c/d",
@@ -219,33 +232,28 @@ mod tests {
           "data_source": "Inspect",
           "payload": null,
           "metadata": {
-            "timestamp": 123456,
+            "component_url": TEST_URL,
             "errors": ["too much fun being had."],
-            "filename": "test_file_plz_ignore.inspect"
+            "filename": "test_file_plz_ignore.inspect",
+            "timestamp": 123456,
           }
         });
 
-        let expect_json_pretty_string = serde_json::to_string_pretty(&expected_json)
-            .expect("serialization should be successful.");
-
-        pretty_assertions::assert_eq!(
-            pretty_json_string,
-            expect_json_pretty_string,
-            "golden diff failed."
-        );
+        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
     #[test]
-    fn test_canonicol_json_lifecycle_event_formatting() {
+    fn test_canonical_json_lifecycle_event_formatting() {
         let json_schema = Schema::for_lifecycle_event(
-            "a/b/c/d".to_string(),
+            "a/b/c/d",
             LifecycleEventType::DiagnosticsReady,
             Time::from_nanos(123456),
+            TEST_URL,
             Vec::new(),
         );
 
-        let pretty_json_string =
-            serde_json::to_string_pretty(&json_schema).expect("serialization should succeed.");
+        let result_json =
+            serde_json::to_value(&json_schema).expect("serialization should succeed.");
 
         let expected_json = json!({
           "moniker": "a/b/c/d",
@@ -253,33 +261,28 @@ mod tests {
           "data_source": "LifecycleEvent",
           "payload": null,
           "metadata": {
-            "timestamp": 123456,
+            "component_url": TEST_URL,
             "errors": null,
-            "lifecycle_event_type": "DiagnosticsReady"
+            "lifecycle_event_type": "DiagnosticsReady",
+            "timestamp": 123456,
           }
         });
 
-        let expect_json_pretty_string = serde_json::to_string_pretty(&expected_json)
-            .expect("serialization should be successful.");
-
-        pretty_assertions::assert_eq!(
-            pretty_json_string,
-            expect_json_pretty_string,
-            "golden diff failed."
-        );
+        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
     #[test]
     fn test_errorful_json_lifecycle_event_formatting() {
         let json_schema = Schema::for_lifecycle_event(
-            "a/b/c/d".to_string(),
+            "a/b/c/d",
             LifecycleEventType::DiagnosticsReady,
             Time::from_nanos(123456),
+            TEST_URL,
             vec![Error { message: "too much fun being had.".to_string() }],
         );
 
-        let pretty_json_string =
-            serde_json::to_string_pretty(&json_schema).expect("serialization should succeed.");
+        let result_json =
+            serde_json::to_value(&json_schema).expect("serialization should succeed.");
 
         let expected_json = json!({
           "moniker": "a/b/c/d",
@@ -287,19 +290,13 @@ mod tests {
           "data_source": "LifecycleEvent",
           "payload": null,
           "metadata": {
-            "timestamp": 123456,
             "errors": ["too much fun being had."],
-            "lifecycle_event_type": "DiagnosticsReady"
+            "lifecycle_event_type": "DiagnosticsReady",
+            "component_url": TEST_URL,
+            "timestamp": 123456,
           }
         });
 
-        let expect_json_pretty_string = serde_json::to_string_pretty(&expected_json)
-            .expect("serialization should be successful.");
-
-        pretty_assertions::assert_eq!(
-            pretty_json_string,
-            expect_json_pretty_string,
-            "golden diff failed."
-        );
+        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 }
