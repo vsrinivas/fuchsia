@@ -10,9 +10,9 @@
 
 #include <err.h>
 #include <sys/types.h>
-#include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include <fbl/intrusive_double_list.h>
 #include <kernel/mutex.h>
 
 // Pow2RangeAllocator is a small utility class which partitions a set of
@@ -92,28 +92,26 @@ class Pow2RangeAllocator {
   void FreeRange(uint32_t range_start, uint32_t size);
 
  private:
-  struct Block {
-    struct list_node node;
+  struct Block : fbl::DoublyLinkedListable<Block*> {
     uint32_t bucket = 0u;
     uint32_t start = 0u;
   };
 
-  struct Range {
-    struct list_node node;
+  struct Range : fbl::DoublyLinkedListable<Range*> {
     uint32_t start = 0u;
     uint32_t len = 0u;
   };
 
   Block* GetUnusedBlock();
-  static void FreeBlockList(struct list_node* block_list);
-  static void FreeRangeList(struct list_node* range_list);
+  static void FreeBlockList(fbl::DoublyLinkedList<Block*> block_list);
+  static void FreeRangeList(fbl::DoublyLinkedList<Range*> range_list);
   void ReturnFreeBlock(Block* block, bool merge_allowed);
 
   DECLARE_MUTEX(Pow2RangeAllocator) lock_;
-  struct list_node ranges_ = LIST_INITIAL_VALUE(ranges_);
-  struct list_node unused_blocks_ = LIST_INITIAL_VALUE(unused_blocks_);
-  struct list_node allocated_blocks_ = LIST_INITIAL_VALUE(allocated_blocks_);
-  struct list_node* free_block_buckets_ = nullptr;
+  fbl::DoublyLinkedList<Range*> ranges_;
+  fbl::DoublyLinkedList<Block*> unused_blocks_;
+  fbl::DoublyLinkedList<Block*> allocated_blocks_;
+  fbl::DoublyLinkedList<Block*>* free_block_buckets_ = nullptr;
   uint32_t bucket_count_ = 0;
 };
 

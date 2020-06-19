@@ -15,12 +15,13 @@
 
 #include <fbl/auto_call.h>
 #include <kernel/lockdep.h>
+#include <ktl/move.h>
 
 #define LOCAL_TRACE 0
 
 Pow2RangeAllocator::Block* Pow2RangeAllocator::GetUnusedBlock() {
-  if (!list_is_empty(&unused_blocks_))
-    return list_remove_head_type(&unused_blocks_, Block, node);
+  if (!unused_blocks_.is_empty())
+    return unused_blocks_.pop_front();
 
   fbl::AllocChecker ac;
   Block* block = new (&ac) Block{};
@@ -31,48 +32,46 @@ Pow2RangeAllocator::Block* Pow2RangeAllocator::GetUnusedBlock() {
   }
 }
 
-void Pow2RangeAllocator::FreeBlockList(struct list_node* block_list) {
+void Pow2RangeAllocator::FreeBlockList(fbl::DoublyLinkedList<Block*> block_list) {
   Block* block;
-  while ((block = list_remove_head_type(block_list, Block, node)) != nullptr)
+  while ((block = block_list.pop_front()) != nullptr)
     delete block;
 }
 
-void Pow2RangeAllocator::FreeRangeList(struct list_node* range_list) {
+void Pow2RangeAllocator::FreeRangeList(fbl::DoublyLinkedList<Range*> range_list) {
   Range* range;
-  while ((range = list_remove_head_type(range_list, Range, node)) != nullptr)
+  while ((range = range_list.pop_front()) != nullptr)
     delete range;
 }
 
 void Pow2RangeAllocator::ReturnFreeBlock(Block* block, bool merge_allowed) {
   DEBUG_ASSERT(block);
   DEBUG_ASSERT(block->bucket < bucket_count_);
-  DEBUG_ASSERT(!list_in_list(&block->node));
+  DEBUG_ASSERT(!block->InContainer());
   DEBUG_ASSERT(!(block->start & ((1u << block->bucket) - 1)));
 
   // Return the block to its proper free bucket, sorted by base ID.  Start by
   // finding the block which should come after this block in the list.
-  struct list_node* l = &free_block_buckets_[block->bucket];
-  Block* after = list_peek_head_type(l, Block, node);
+  fbl::DoublyLinkedList<Block*>& list = free_block_buckets_[block->bucket];
   uint32_t block_len = 1u << block->bucket;
 
-  while (after) {
+  bool inserted = false;
+  for (Block& after : list) {
     // We do not allow ranges to overlap.
-    __UNUSED uint32_t after_len = 1u << after->bucket;
-    DEBUG_ASSERT((block->start >= (after->start + after_len)) ||
-                 (after->start >= (block->start + block_len)));
+    __UNUSED uint32_t after_len = 1u << after.bucket;
+    DEBUG_ASSERT((block->start >= (after.start + after_len)) ||
+                 (after.start >= (block->start + block_len)));
 
-    if (after->start > block->start) {
-      list_add_before(&after->node, &block->node);
+    if (after.start > block->start) {
+      list.insert(after, block);
+      inserted = true;
       break;
     }
-
-    // Advance the iterator.
-    after = list_next_type(l, &after->node, Block, node);
   }
 
   // If no block comes after this one, it goes on the end of the list.
-  if (!after)
-    list_add_tail(l, &block->node);
+  if (!inserted)
+    list.push_back(block);
 
   // Don't merge blocks in the largest bucket.
   if (block->bucket + 1 == bucket_count_)
@@ -84,11 +83,23 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block, bool merge_allowed) {
   if (block->start & ((block_len << 1) - 1)) {
     // Odd alignment.  This might be the second block of a merge pair.
     second = block;
-    first = list_prev_type(l, &block->node, Block, node);
+    auto iter = list.make_iterator(*block);
+    if (iter == list.begin()) {
+      first = nullptr;
+    } else {
+      --iter;
+      first = &*iter;
+    }
   } else {
     // Even alignment.  This might be the first block of a merge pair.
     first = block;
-    second = list_next_type(l, &block->node, Block, node);
+    auto iter = list.make_iterator(*block);
+    ++iter;
+    if (iter == list.end()) {
+      second = nullptr;
+    } else {
+      second = &*iter;
+    }
   }
 
   // Do these chunks fit together?
@@ -102,11 +113,11 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block, bool merge_allowed) {
       DEBUG_ASSERT(first->bucket == second->bucket);
 
       // Remove the two blocks' bookkeeping from their bucket.
-      list_delete(&first->node);
-      list_delete(&second->node);
+      list.erase(*first);
+      list.erase(*second);
 
       // Place one half of the bookkeeping back on the unused list.
-      list_add_tail(&unused_blocks_, &second->node);
+      unused_blocks_.push_back(second);
 
       // Reuse the other half to track the newly merged block, and place
       // it in the next bucket size up.
@@ -125,18 +136,11 @@ zx_status_t Pow2RangeAllocator::Init(uint32_t max_alloc_size) {
   // Allocate the storage for our free buckets.
   bucket_count_ = log2_uint_floor(max_alloc_size) + 1;
   fbl::AllocChecker ac;
-  free_block_buckets_ = new (&ac) list_node[bucket_count_];
+  free_block_buckets_ = new (&ac) fbl::DoublyLinkedList<Block*>[bucket_count_];
   if (!ac.check()) {
     TRACEF("Failed to allocate storage for %u free bucket lists!\n", bucket_count_);
     return ZX_ERR_NO_MEMORY;
   }
-
-  // Initialize the rest of our bookeeping.
-  list_initialize(&ranges_);
-  list_initialize(&unused_blocks_);
-  list_initialize(&allocated_blocks_);
-  for (uint32_t i = 0; i < bucket_count_; ++i)
-    list_initialize(&free_block_buckets_[i]);
 
   return ZX_OK;
 }
@@ -144,13 +148,13 @@ zx_status_t Pow2RangeAllocator::Init(uint32_t max_alloc_size) {
 void Pow2RangeAllocator::Free() {
   DEBUG_ASSERT(bucket_count_);
   DEBUG_ASSERT(free_block_buckets_);
-  DEBUG_ASSERT(list_is_empty(&allocated_blocks_));
+  DEBUG_ASSERT(allocated_blocks_.is_empty());
 
-  FreeRangeList(&ranges_);
-  FreeBlockList(&unused_blocks_);
-  FreeBlockList(&allocated_blocks_);
+  FreeRangeList(ktl::move(ranges_));
+  FreeBlockList(ktl::move(unused_blocks_));
+  FreeBlockList(ktl::move(allocated_blocks_));
   for (uint32_t i = 0; i < bucket_count_; ++i)
-    FreeBlockList(&free_block_buckets_[i]);
+    FreeBlockList(ktl::move(free_block_buckets_[i]));
 }
 
 zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_len) {
@@ -161,30 +165,28 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
 
   zx_status_t ret = ZX_OK;
   Range* new_range = nullptr;
-  struct list_node new_blocks;
-  list_initialize(&new_blocks);
+  fbl::DoublyLinkedList<Block*> new_blocks;
 
   // If we're exiting with a failure, clean up anything we've allocated.
   auto auto_call = fbl::MakeAutoCall([&]() {
     if (ret != ZX_OK) {
       if (new_range) {
-        DEBUG_ASSERT(!list_in_list(&new_range->node));
+        DEBUG_ASSERT(!new_range->InContainer());
         delete new_range;
       }
 
-      FreeBlockList(&new_blocks);
+      FreeBlockList(ktl::move(new_blocks));
     }
   });
 
   // Enter the lock and check for overlap with pre-existing ranges.
   Guard<Mutex> guard{&lock_};
 
-  Range* range;
-  list_for_every_entry (&ranges_, range, Range, node) {
-    if (((range->start >= range_start) && (range->start < (range_start + range_len))) ||
-        ((range_start >= range->start) && (range_start < (range->start + range->len)))) {
+  for (Range& range : ranges_) {
+    if (((range.start >= range_start) && (range.start < (range_start + range_len))) ||
+        ((range_start >= range.start) && (range_start < (range.start + range.len)))) {
       TRACEF("Range [%u, %u] overlaps with existing range [%u, %u].\n", range_start,
-             range_start + range_len - 1, range->start, range->start + range->len - 1);
+             range_start + range_len - 1, range.start, range.start + range.len - 1);
       ret = ZX_ERR_ALREADY_EXISTS;
       return ret;
     }
@@ -247,7 +249,7 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
 
     block->bucket = bucket;
     block->start = range_start;
-    list_add_tail(&new_blocks, &block->node);
+    new_blocks.push_back(block);
 
     range_start += csize;
     range_len -= csize;
@@ -255,10 +257,10 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
 
   // Looks like we managed to allocate everything we needed to.  Go ahead and
   // add all of our newly allocated bookkeeping to the state.
-  list_add_tail(&ranges_, &new_range->node);
+  ranges_.push_back(new_range);
 
   Block* block;
-  while ((block = list_remove_head_type(&new_blocks, Block, node)) != nullptr)
+  while ((block = new_blocks.pop_front()) != nullptr)
     ReturnFreeBlock(block, true);
 
   return ret;
@@ -289,7 +291,7 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
   // Find the smallest sized chunk which can hold the allocation and is
   // compatible with the requested addressing capabilities.
   while (bucket < bucket_count_) {
-    block = list_remove_head_type(&free_block_buckets_[bucket], Block, node);
+    block = free_block_buckets_[bucket].pop_front();
     if (block)
       break;
     bucket++;
@@ -334,7 +336,7 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
   }
 
   // Success! Mark the block as allocated and return the block to the user.
-  list_add_head(&allocated_blocks_, &block->node);
+  allocated_blocks_.push_front(block);
   *out_range_start = block->start;
 
   return ZX_OK;
@@ -355,17 +357,17 @@ void Pow2RangeAllocator::FreeRange(uint32_t range_start, uint32_t size) {
   // that instead.
   Block* block;
 #if DEBUG_ASSERT_IMPLEMENTED
-  block = list_peek_head_type(&allocated_blocks_, Block, node);
-  while (block) {
-    if ((block->start == range_start) && (block->bucket == bucket)) {
-      list_delete(&block->node);
+  block = nullptr;
+  for (Block& candidate : allocated_blocks_) {
+    if ((candidate.start == range_start) && (candidate.bucket == bucket)) {
+      block = &candidate;
+      allocated_blocks_.erase(candidate);
       break;
     }
-    block = list_next_type(&allocated_blocks_, &block->node, Block, node);
   }
   ASSERT(block);
 #else
-  block = list_remove_head_type(&allocated_blocks_, Block, node);
+  block = allocated_blocks_.pop_front();
   ASSERT(block);
   block->start = range_start;
   block->bucket = bucket;
