@@ -2200,8 +2200,7 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
 
   LOG_TRACE("bind done\n");
 
-  thrd_t init_thread;
-  status = thrd_create_with_name(&init_thread, finish_init, this, "i915-init-thread");
+  status = thrd_create_with_name(&init_thread_, finish_init, this, "i915-init-thread");
   if (status != ZX_OK) {
     LOG_ERROR("Failed to create init thread\n");
     device_remove_deprecated(zxdev());
@@ -2232,16 +2231,24 @@ Controller::~Controller() {
       pipes_[i].Reset();
     }
   }
-  // Drop our own reference to bar 0. No-op if we failed before we mapped it.
-  mmio_space_->reset();
-  UnmapPciMmio(0u);
   // Release anything leaked by the gpu-core client.
   fbl::AutoLock lock(&bar_lock_);
-  for (unsigned i = 0; i < PCI_MAX_BAR_COUNT; i++) {
+  // Start at 1, because we treat bar 0 specially.
+  for (unsigned i = 1; i < PCI_MAX_BAR_COUNT; i++) {
     if (mapped_bars_[i].count) {
-      LOG_INFO("Leaked bar %d\n", i);
+      LOG_WARN("Leaked bar %d\n", i);
       mapped_bars_[i].count = 1;
       UnmapPciMmio(i);
+    }
+  }
+
+  // bar 0 should have at most one ref left, otherwise log a leak like above and correct it.
+  // We will leave it with one ref, because mmio_space_ will unmap it on destruction, and
+  // we may need to access mmio_space_ while destroying member variables.
+  if (mapped_bars_[0].count != mmio_space_.has_value()) {
+    LOG_WARN("Leaked bar 0\n");
+    if (mapped_bars_[0].count > 0) {
+      mapped_bars_[0].count = 1;
     }
   }
 }
