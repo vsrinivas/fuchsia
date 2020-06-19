@@ -14,4 +14,6 @@ fidl("fuchsia.diagnostics") {
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+
+  should_normalize = true  # TODO(adamperry) remove this when its the default
 }

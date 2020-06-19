@@ -6,7 +6,9 @@ group("tests") {
   testonly = true
   deps = [
     ":tools",
+    "//build/fidl:tests",
     "//examples/fidl/echo_test/cpp",
+
     # TODO(49942): temporarily disable while flake is investigated.
     # "//garnet/bin/fidl_compatibility_test",
     # "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_cpp",
@@ -41,7 +43,7 @@ group("tests") {
 }
 
 group("tools") {
-  deps = [ 
+  deps = [
     "//src/tests/benchmarks/fidl/benchmark_suite/gen:host",
     "//tools/fidl/fidldoc",
   ]

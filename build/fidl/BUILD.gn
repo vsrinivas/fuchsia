@@ -61,3 +61,20 @@ validate_json("validate_fidl_project_json") {
   schema = "//scripts/fidl_project_schema.json"
   deps = [ ":gen_fidl_project" ]
 }
+
+normalize_test_stamp = "$target_gen_dir/normalize_unittest.stamp"
+action("normalize_unittest") {
+  testonly = true
+  script = "normalize_unittest.py"
+  inputs = [ "normalize.py" ]
+  outputs = [ normalize_test_stamp ]
+  args = [
+    "--stamp",
+    rebase_path(normalize_test_stamp),
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":normalize_unittest" ]
+}

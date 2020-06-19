@@ -80,6 +80,9 @@ template("fidl") {
   if (defined(invoker.experimental_flags)) {
     not_needed(invoker, [ "experimental_flags" ])
   }
+  if (defined(invoker.should_normalize)) {
+    not_needed(invoker, [ "should_normalize" ])
+  }
 
   # Allow generated targets visibility to their dependant generated targets
   if (defined(invoker.visibility)) {
