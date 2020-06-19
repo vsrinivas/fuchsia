@@ -23,7 +23,7 @@ struct MsiControlReg {
 class MsiCapability : public Capability {
  public:
   MsiCapability(const Config& cfg, uint8_t base)
-      : Capability(static_cast<uint8_t>(Capability::Id::kMsi), base),
+      : Capability(static_cast<uint8_t>(Capability::Id::kMsi), base, cfg.addr()),
         ctrl_(PciReg16(static_cast<uint16_t>(base + 0x2))),
         tgt_addr_(PciReg32(static_cast<uint16_t>(base + 0x4))),
         // In all 64 bit layouts the upper address bits are at base + 0x8

@@ -47,13 +47,16 @@ class Capability : public fbl::DoublyLinkedListable<std::unique_ptr<Capability>>
     /* 0x15 */ kFlatteningPortalBridge,
   };
 
-  Capability(uint8_t id, uint8_t base) : id_(id), base_(base) {}
+  Capability(uint8_t id, uint8_t base, const char* addr = nullptr)
+      : id_(id), base_(base), addr_(addr) {}
   [[nodiscard]] uint8_t id() const { return id_; }
   [[nodiscard]] uint8_t base() const { return base_; }
+  const char* addr() { return addr_; }
 
  private:
   uint8_t id_;
   uint8_t base_;
+  const char* addr_;
 };
 using CapabilityList = fbl::DoublyLinkedList<std::unique_ptr<Capability>>;
 static_assert(static_cast<uint8_t>(Capability::Id::kFlatteningPortalBridge) == 0x15);
