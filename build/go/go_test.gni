@@ -70,12 +70,11 @@ template("go_test") {
           timeout = invoker.timeout
         }
         command += [
-          "--test.timeout",
+          "-test.timeout",
           timeout,
+          "-test.v",  # Emit detailed test case information.
         ]
 
-        # Emit detailed test case information.
-        command += [ "-test.v" ]
         if (defined(invoker.args)) {
           command += invoker.args
         }
