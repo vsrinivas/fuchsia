@@ -72,6 +72,6 @@ executable("vdso-variant-helper") {
   sources = [ "helper/vdso-variant-helper.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
 }

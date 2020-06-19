@@ -9,19 +9,17 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define GOOD_SYMBOL "zx_syscall_test_0"
 #define BAD_SYMBOL "zx_syscall_test_1"
 
-bool vdso_open_test(void) {
-  BEGIN_TEST;
-
+TEST(VdsoVariantTests, vdso_open_test) {
   int vdso_dir_fd = open("/boot/kernel/vdso", O_RDONLY | O_DIRECTORY);
   ASSERT_GE(vdso_dir_fd, 0, "open of vdso directory failed");
 
   DIR* dir = fdopendir(dup(vdso_dir_fd));
-  ASSERT_NONNULL(dir, "fdopendir failed");
+  ASSERT_NOT_NULL(dir, "fdopendir failed");
 
   const struct dirent* d;
   int vdso_files_found = 0;
@@ -32,7 +30,7 @@ bool vdso_open_test(void) {
     ++vdso_files_found;
     // Test that we can open for read.
     int fd = openat(vdso_dir_fd, d->d_name, O_RDONLY);
-    EXPECT_GE(fd, 0, d->d_name);
+    EXPECT_GE(fd, 0, "%s", d->d_name);
     EXPECT_EQ(close(fd), 0, "");
 
     // Test that we cannot open for write.
@@ -44,26 +42,15 @@ bool vdso_open_test(void) {
 
   EXPECT_EQ(closedir(dir), 0, "");
   EXPECT_EQ(close(vdso_dir_fd), 0, "");
-
-  END_TEST;
 }
 
-bool vdso_missing_test_syscall1_test(void) {
-  BEGIN_TEST;
-
+TEST(VdsoVariantTests, vdso_missing_test_syscall1_test) {
   void* dso = dlopen("libzircon.so", RTLD_LOCAL | RTLD_NOLOAD);
-  ASSERT_NONNULL(dso, dlerror());
+  ASSERT_NOT_NULL(dso, "%s", dlerror());
 
-  EXPECT_NONNULL(dlsym(dso, GOOD_SYMBOL), dlerror());
+  EXPECT_NOT_NULL(dlsym(dso, GOOD_SYMBOL), "%s", dlerror());
 
   EXPECT_NULL(dlsym(dso, BAD_SYMBOL), BAD_SYMBOL " symbol found in vDSO");
 
   EXPECT_EQ(dlclose(dso), 0, "");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(vdso_variant_tests)
-RUN_TEST(vdso_open_test)
-RUN_TEST(vdso_missing_test_syscall1_test)
-END_TEST_CASE(vdso_variant_tests)
