@@ -6,15 +6,6 @@
 
 library benchmarkfidl;
 
-struct BoolArray16 {
-    array<bool>:16 values;
-};
-
 struct BoolArray256 {
     array<bool>:256 values;
-};
-
-[BindingsDenylist = "rust, cpp, llcpp, walker"]
-struct BoolArray4096 {
-    array<bool>:4096 values;
 };

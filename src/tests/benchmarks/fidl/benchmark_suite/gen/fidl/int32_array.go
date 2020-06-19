@@ -12,8 +12,8 @@ import (
 
 func init() {
 	util.Register(config.FidlFile{
-		Filename: "float_array.gen.test.fidl",
-		Gen:      fidlGenFloatArray,
+		Filename: "int32_array.gen.test.fidl",
+		Gen:      fidlGenInt32Array,
 		Definitions: []config.Definition{
 			{
 				Config: config.Config{
@@ -24,10 +24,10 @@ func init() {
 	})
 }
 
-func fidlGenFloatArray(config config.Config) (string, error) {
+func fidlGenInt32Array(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct FloatArray%[1]d {
-	array<float32>:%[1]d values;
+struct Int32Array%[1]d {
+	array<int32>:%[1]d bytes;
 };`, size), nil
 }

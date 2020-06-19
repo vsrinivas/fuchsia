@@ -8,9 +8,9 @@ library benchmarkfidl;
 
 struct StructTree1 {
     uint8 a;
-    // 8 byte padding
     uint8 b;
 };
+
 struct StructTree2 {
     StructTree1 left;
     StructTree1 right;

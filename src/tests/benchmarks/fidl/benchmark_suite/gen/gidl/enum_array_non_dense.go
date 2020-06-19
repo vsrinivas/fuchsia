@@ -17,15 +17,6 @@ func init() {
 		Gen:      gidlGenEnumArrayNonDense,
 		Benchmarks: []config.Benchmark{
 			{
-				Name: "EnumArray/NonDense/16",
-				Comment: `array of 16 enums that cannot be validated with a range
-				Disabled on LLCPP / Walker because of enum bug in GIDL`,
-				Config: config.Config{
-					"size": 16,
-				},
-				Denylist: []config.Binding{config.LLCPP, config.Walker},
-			},
-			{
 				Name: "EnumArray/NonDense/256",
 				Comment: `array of 256 enums that cannot be validated with a range
 				Disabled on LLCPP / Walker because of enum bug in GIDL`,
@@ -33,16 +24,6 @@ func init() {
 					"size": 256,
 				},
 				Denylist: []config.Binding{config.LLCPP, config.Walker},
-			},
-			{
-				Name: "EnumArray/NonDense/4096",
-				Comment: `
-				array of 4096 enums that cannot be validated with a range
-				Disabled on HLCPP / LLCPP due to clang performance issues`,
-				Config: config.Config{
-					"size": 4096,
-				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
 			},
 		},
 	})

@@ -17,28 +17,11 @@ func init() {
 		Gen:      gidlGenBoolArray,
 		Benchmarks: []config.Benchmark{
 			{
-				Name:    "BoolArray/16",
-				Comment: `16 bool array in a struct`,
-				Config: config.Config{
-					"size": 16,
-				},
-			},
-			{
 				Name:    "BoolArray/256",
 				Comment: `256 bool array in a struct`,
 				Config: config.Config{
 					"size": 256,
 				},
-			},
-			{
-				Name: "BoolArray/4096",
-				Comment: `
-			4096 bool array in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
-				Config: config.Config{
-					"size": 4096,
-				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
 			},
 		},
 	})

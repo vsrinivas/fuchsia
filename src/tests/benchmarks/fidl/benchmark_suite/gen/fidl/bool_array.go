@@ -17,21 +17,8 @@ func init() {
 		Definitions: []config.Definition{
 			{
 				Config: config.Config{
-					"size": 16,
-				},
-			},
-			{
-				Config: config.Config{
 					"size": 256,
 				},
-			},
-			{
-				Config: config.Config{
-					"size": 4096,
-				},
-				// The Rust bindings only supports arrays of size 0-32, 64, and 256.
-				// CPP generated code is slow to compile in clang.
-				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker},
 			},
 		},
 	})

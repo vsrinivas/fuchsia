@@ -17,15 +17,6 @@ func init() {
 		Gen:      gidlGenEnumArray,
 		Benchmarks: []config.Benchmark{
 			{
-				Name: "EnumArray/16",
-				Comment: `16 enum array in a struct
-				Disabled on LLCPP / Walker because of enum bug in GIDL`,
-				Config: config.Config{
-					"size": 16,
-				},
-				Denylist: []config.Binding{config.LLCPP, config.Walker},
-			},
-			{
 				Name: "EnumArray/256",
 				Comment: `256 enum array in a struct
 				Disabled on LLCPP / Walker because of enum bug in GIDL`,
@@ -33,16 +24,6 @@ func init() {
 					"size": 256,
 				},
 				Denylist: []config.Binding{config.LLCPP, config.Walker},
-			},
-			{
-				Name: "EnumArray/4096",
-				Comment: `
-			4096 enum array in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
-				Config: config.Config{
-					"size": 4096,
-				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
 			},
 		},
 	})

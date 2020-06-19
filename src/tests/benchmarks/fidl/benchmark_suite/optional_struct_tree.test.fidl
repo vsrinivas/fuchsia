@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
-
 library benchmarkfidl;
 
-struct FloatArray256 {
-    array<float32>:256 values;
+struct OptionalStructTree {
+    OptionalStructTree? left;
+    OptionalStructTree? right;
 };

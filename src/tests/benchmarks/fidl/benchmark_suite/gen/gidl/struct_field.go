@@ -30,14 +30,6 @@ func init() {
 					"size": 256,
 				},
 			},
-			{
-				Name:    "StructField/4096",
-				Comment: `Struct with 4096 uint8 fields`,
-				Config: config.Config{
-					"size": 4096,
-				},
-				Denylist: []config.Binding{config.Rust, config.LLCPP, config.HLCPP, config.Walker},
-			},
 		},
 	})
 }

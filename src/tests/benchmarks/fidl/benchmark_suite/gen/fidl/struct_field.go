@@ -26,13 +26,6 @@ func init() {
 					"size": 256,
 				},
 			},
-			{
-				Config: config.Config{
-					"size": 4096,
-				},
-				// CPP bindings are slow to compile with Clang.
-				Denylist: []config.Binding{config.Rust, config.LLCPP, config.HLCPP, config.Walker},
-			},
 		},
 	})
 }

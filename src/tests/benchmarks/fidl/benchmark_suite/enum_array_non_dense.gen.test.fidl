@@ -6,19 +6,11 @@
 
 library benchmarkfidl;
 
-enum EnumArrayNonDenseElement{
+enum EnumArrayNonDenseElement {
     A = 1;
     C = 3;
-};
-struct EnumArrayNonDense16 {
-    array<EnumArrayNonDenseElement>:16 values;
 };
 
 struct EnumArrayNonDense256 {
     array<EnumArrayNonDenseElement>:256 values;
-};
-
-[BindingsDenylist = "rust, cpp, llcpp, walker"]
-struct EnumArrayNonDense4096 {
-    array<EnumArrayNonDenseElement>:4096 values;
 };

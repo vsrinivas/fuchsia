@@ -12,12 +12,13 @@ import (
 
 func init() {
 	util.Register(config.FidlFile{
-		Filename: "struct_tree.gen.test.fidl",
-		Gen:      fidlGenStructTree,
+		Filename: "padded_struct_tree.gen.test.fidl",
+		Gen:      fidlGenPaddedStructTree,
 		ExtraDefinition: `
-struct StructTree1 {
+struct PaddedStructTree1 {
 	uint8 a;
-	uint8 b;
+	// 3 byte padding
+	uint32 b;
 };`,
 		Definitions: []config.Definition{
 			{
@@ -59,11 +60,11 @@ struct StructTree1 {
 	})
 }
 
-func fidlGenStructTree(config config.Config) (string, error) {
+func fidlGenPaddedStructTree(config config.Config) (string, error) {
 	depth := config.GetInt("depth")
 	return fmt.Sprintf(`
-struct StructTree%[1]d {
-	StructTree%[2]d left;
-	StructTree%[2]d right;
+struct PaddedStructTree%[1]d {
+	PaddedStructTree%[2]d left;
+	PaddedStructTree%[2]d right;
 };`, depth, depth-1), nil
 }
