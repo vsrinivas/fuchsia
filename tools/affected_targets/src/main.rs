@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use affected_builders_lib::{
+use affected_targets_lib::{
     analysis::is_build_required, argument_parsing::ProgramArguments, gn::DefaultGn,
 };
 

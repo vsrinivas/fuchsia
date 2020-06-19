@@ -48,7 +48,7 @@ where
         .any(|parsed_file_type| parsed_file_type != file_type)
 }
 
-/// Returns true if all `files` are of a type supported by `affected_builders`.
+/// Returns true if all `files` are of a type supported by `affected_targets`.
 ///
 /// If this returns true, it is safe to continue analyzing the build, and potentially
 /// short-circuit the builder. If it's false, the tool does not support the analysis

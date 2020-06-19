@@ -5,7 +5,7 @@
 use argh::FromArgs;
 
 #[derive(FromArgs)]
-/// affected_builders uses build configuration and a list of files to
+/// affected_targets uses build configuration and a list of files to
 /// determine whether or not the builder is affected by the changed files.
 pub struct ProgramArguments {
     /// the path to the build directory
