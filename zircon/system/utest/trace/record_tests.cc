@@ -19,7 +19,7 @@
 
 namespace {
 
-bool blob_test() {
+TEST(Records, blob_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -43,7 +43,7 @@ bool blob_test() {
   END_TRACE_TEST;
 }
 
-bool blob_macro_test() {
+TEST(Records, blob_macro_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -66,7 +66,7 @@ bool blob_macro_test() {
   END_TRACE_TEST;
 }
 
-bool large_blob_attachment_test() {
+TEST(Records, large_blob_attachment_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -99,7 +99,7 @@ bool large_blob_attachment_test() {
   END_TRACE_TEST;
 }
 
-bool large_blob_attachment_macro_test() {
+TEST(Records, large_blob_attachment_macro_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -125,7 +125,7 @@ bool large_blob_attachment_macro_test() {
   END_TRACE_TEST;
 }
 
-bool large_blob_event_macro_args_test() {
+TEST(Records, large_blob_event_macro_args_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -156,7 +156,7 @@ bool large_blob_event_macro_args_test() {
   END_TRACE_TEST;
 }
 
-bool large_blob_event_macro_small_test() {
+TEST(Records, large_blob_event_macro_small_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -185,7 +185,7 @@ bool large_blob_event_macro_small_test() {
   END_TRACE_TEST;
 }
 
-bool large_blob_event_macro_medium_test() {
+TEST(Records, large_blob_event_macro_medium_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -214,7 +214,7 @@ bool large_blob_event_macro_medium_test() {
   END_TRACE_TEST;
 }
 
-bool large_blob_event_macro_big_test() {
+TEST(Records, large_blob_event_macro_big_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -243,7 +243,7 @@ bool large_blob_event_macro_big_test() {
   END_TRACE_TEST;
 }
 
-bool large_blob_event_macro_rejected_test() {
+TEST(Records, large_blob_event_macro_rejected_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -270,7 +270,7 @@ bool large_blob_event_macro_rejected_test() {
   END_TRACE_TEST;
 }
 
-bool arg_value_null_ending_test() {
+TEST(Records, arg_value_null_ending_test) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -314,16 +314,3 @@ bool arg_value_null_ending_test() {
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(records)
-RUN_TEST(blob_test)
-RUN_TEST(blob_macro_test)
-RUN_TEST(large_blob_attachment_test)
-RUN_TEST(large_blob_attachment_macro_test)
-RUN_TEST(large_blob_event_macro_args_test)
-RUN_TEST(large_blob_event_macro_small_test)
-RUN_TEST(large_blob_event_macro_medium_test)
-RUN_TEST(large_blob_event_macro_big_test)
-RUN_TEST(large_blob_event_macro_rejected_test)
-RUN_TEST(arg_value_null_ending_test)
-END_TEST_CASE(records)

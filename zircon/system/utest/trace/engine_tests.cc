@@ -51,7 +51,7 @@ void RunThread(fbl::Closure closure) {
   ZX_ASSERT(result == thrd_success);
 }
 
-bool TestNormalShutdown() {
+TEST(EngineTests, TestNormalShutdown) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -61,7 +61,7 @@ bool TestNormalShutdown() {
   END_TRACE_TEST;
 }
 
-bool TestHardShutdown() {
+TEST(EngineTests, TestHardShutdown) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -71,7 +71,7 @@ bool TestHardShutdown() {
   END_TRACE_TEST;
 }
 
-bool TestIsEnabled() {
+TEST(EngineTests, TestIsEnabled) {
   BEGIN_TRACE_TEST;
 
   EXPECT_FALSE(trace_is_enabled());
@@ -85,7 +85,7 @@ bool TestIsEnabled() {
   END_TRACE_TEST;
 }
 
-bool TestIsCategoryEnabled() {
+TEST(EngineTests, TestIsCategoryEnabled) {
   BEGIN_TRACE_TEST;
 
   EXPECT_FALSE(trace_is_category_enabled("+enabled"));
@@ -105,7 +105,7 @@ bool TestIsCategoryEnabled() {
   END_TRACE_TEST;
 }
 
-bool TestAcquireContextForCategory() {
+TEST(EngineTests, TestAcquireContextForCategory) {
   BEGIN_TRACE_TEST;
 
   trace_string_ref_t category_ref;
@@ -118,7 +118,7 @@ bool TestAcquireContextForCategory() {
 
   fixture_initialize_and_start_tracing();
   context = trace_acquire_context_for_category("+enabled", &category_ref);
-  EXPECT_NONNULL(context);
+  EXPECT_NOT_NULL(context);
   EXPECT_TRUE(trace_is_inline_string_ref(&category_ref) ||
               trace_is_indexed_string_ref(&category_ref));
   trace_release_context(context);
@@ -134,8 +134,10 @@ bool TestAcquireContextForCategory() {
   END_TRACE_TEST;
 }
 
+// TODO(FLK-389): deflake and reenable this test.
 /* Commented out because the test is currently disabled due to a flake.
-bool TestAcquireContextForCategoryCached() {
+
+TEST(EngineTests, TestAcquireContextForCategoryCached) {
   BEGIN_TRACE_TEST;
 
   // Note that this test is also testing internal cache state management.
@@ -161,7 +163,7 @@ bool TestAcquireContextForCategoryCached() {
 
   context =
       trace_acquire_context_for_category_cached("+enabled", &enabled_category_state, &category_ref);
-  EXPECT_NONNULL(context);
+  EXPECT_NOT_NULL(context);
   EXPECT_TRUE(trace_is_inline_string_ref(&category_ref) ||
               trace_is_indexed_string_ref(&category_ref));
   EXPECT_EQ(get_site_state(enabled_category_state) & kSiteStateFlagsMask, kSiteStateEnabled);
@@ -205,7 +207,7 @@ bool TestAcquireContextForCategoryCached() {
 }
 */
 
-bool TestFlushCategoryCache() {
+TEST(EngineTests, TestFlushCategoryCache) {
   BEGIN_TRACE_TEST;
 
   trace_string_ref_t category_ref;
@@ -230,7 +232,7 @@ bool TestFlushCategoryCache() {
   END_TRACE_TEST;
 }
 
-bool TestGenerateNonce() {
+TEST(EngineTests, TestGenerateNonce) {
   BEGIN_TRACE_TEST;
 
   uint64_t nonce1 = trace_generate_nonce();
@@ -244,7 +246,7 @@ bool TestGenerateNonce() {
   END_TRACE_TEST;
 }
 
-bool TestObserver() {
+TEST(EngineTests, TestObserver) {
   const size_t kBufferSize = 4096u;
 
   // This test needs the trace engine to run in the same thread as the test:
@@ -286,7 +288,7 @@ bool TestObserver() {
   END_TRACE_TEST;
 }
 
-bool TestObserverErrors() {
+TEST(EngineTests, TestObserverErrors) {
   BEGIN_TRACE_TEST;
 
   zx::event event;
@@ -301,7 +303,7 @@ bool TestObserverErrors() {
   END_TRACE_TEST;
 }
 
-bool TestRegisterCurrentThread() {
+TEST(EngineTests, TestRegisterCurrentThread) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -327,7 +329,7 @@ Thread(index: 1, <>)
   END_TRACE_TEST;
 }
 
-bool TestRegisterCurrentThreadMultipleThreads() {
+TEST(EngineTests, TestRegisterCurrentThreadMultipleThreads) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -362,7 +364,7 @@ Thread(index: 2, <>)
   END_TRACE_TEST;
 }
 
-bool TestRegisterStringLiteral() {
+TEST(EngineTests, TestRegisterStringLiteral) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -415,7 +417,7 @@ String(index: 3, "string3")
   END_TRACE_TEST;
 }
 
-bool TestRegisterStringLiteralMultipleThreads() {
+TEST(EngineTests, TestRegisterStringLiteralMultipleThreads) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -461,7 +463,7 @@ String(index: 4, "string2")
   END_TRACE_TEST;
 }
 
-bool TestRegisterStringLiteralTableOverflow() {
+TEST(EngineTests, TestRegisterStringLiteralTableOverflow) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -486,7 +488,7 @@ bool TestRegisterStringLiteralTableOverflow() {
   END_TRACE_TEST;
 }
 
-bool TestMaximumRecordLength() {
+TEST(EngineTests, TestMaximumRecordLength) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -494,10 +496,10 @@ bool TestMaximumRecordLength() {
   {
     auto context = trace::TraceContext::Acquire();
 
-    EXPECT_NONNULL(trace_context_alloc_record(context.get(), 0));
-    EXPECT_NONNULL(trace_context_alloc_record(context.get(), 8));
-    EXPECT_NONNULL(trace_context_alloc_record(context.get(), 16));
-    EXPECT_NONNULL(
+    EXPECT_NOT_NULL(trace_context_alloc_record(context.get(), 0));
+    EXPECT_NOT_NULL(trace_context_alloc_record(context.get(), 8));
+    EXPECT_NOT_NULL(trace_context_alloc_record(context.get(), 16));
+    EXPECT_NOT_NULL(
         trace_context_alloc_record(context.get(), TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE));
 
     EXPECT_NULL(
@@ -509,7 +511,7 @@ bool TestMaximumRecordLength() {
   END_TRACE_TEST;
 }
 
-bool TestEventWithInlineEverything() {
+TEST(EngineTests, TestEventWithInlineEverything) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -536,7 +538,7 @@ bool TestEventWithInlineEverything() {
   END_TRACE_TEST;
 }
 
-bool TestCircularMode() {
+TEST(EngineTests, TestCircularMode) {
   const size_t kBufferSize = 4096u;
   BEGIN_TRACE_TEST_ETC(kNoAttachToThread, TRACE_BUFFERING_MODE_CIRCULAR, kBufferSize);
 
@@ -602,7 +604,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
   END_TRACE_TEST;
 }
 
-bool TestStreamingMode() {
+TEST(EngineTests, TestStreamingMode) {
   const size_t kBufferSize = 4096u;
   BEGIN_TRACE_TEST_ETC(kNoAttachToThread, TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
 
@@ -765,7 +767,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
 // This test exercises DX-441 where a buffer becomes full and immediately
 // thereafter tracing is stopped. This causes the "please save buffer"
 // processing to run when tracing is not active.
-bool TestShutdownWhenFull() {
+TEST(EngineTests, TestShutdownWhenFull) {
   const size_t kBufferSize = 4096u;
 
   // This test needs the trace engine to run in the same thread as the test:
@@ -802,27 +804,3 @@ bool TestShutdownWhenFull() {
 // NOTE: The functions for writing trace records are exercised by other trace tests.
 
 }  // namespace
-
-BEGIN_TEST_CASE(engine_tests)
-RUN_TEST(TestNormalShutdown)
-RUN_TEST(TestHardShutdown)
-RUN_TEST(TestIsEnabled)
-RUN_TEST(TestIsCategoryEnabled)
-RUN_TEST(TestAcquireContextForCategory)
-// TODO(FLK-389): deflake and reenable this test.
-// RUN_TEST(TestAcquireContextForCategoryCached)
-RUN_TEST(TestFlushCategoryCache)
-RUN_TEST(TestGenerateNonce)
-RUN_TEST(TestObserver)
-RUN_TEST(TestObserverErrors)
-RUN_TEST(TestRegisterCurrentThread)
-RUN_TEST(TestRegisterCurrentThreadMultipleThreads)
-RUN_TEST(TestRegisterStringLiteral)
-RUN_TEST(TestRegisterStringLiteralMultipleThreads)
-RUN_TEST(TestRegisterStringLiteralTableOverflow)
-RUN_TEST(TestMaximumRecordLength)
-RUN_TEST(TestEventWithInlineEverything)
-RUN_TEST(TestCircularMode)
-RUN_TEST(TestStreamingMode)
-RUN_TEST(TestShutdownWhenFull)
-END_TEST_CASE(engine_tests)

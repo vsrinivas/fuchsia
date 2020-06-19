@@ -5,13 +5,12 @@
 #pragma once
 
 #include <trace-test-utils/fixture.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define DEFAULT_BUFFER_SIZE_BYTES (1024u * 1024u)
 
 // This isn't a do-while because of the cleanup.
 #define BEGIN_TRACE_TEST_ETC(attach_to_thread, mode, buffer_size) \
-  BEGIN_TEST;                                                     \
   __attribute__((cleanup(fixture_scope_cleanup))) bool __scope;   \
   (void)__scope;                                                  \
   fixture_set_up((attach_to_thread), (mode), (buffer_size))
@@ -19,7 +18,7 @@
 #define BEGIN_TRACE_TEST \
   BEGIN_TRACE_TEST_ETC(kNoAttachToThread, TRACE_BUFFERING_MODE_ONESHOT, DEFAULT_BUFFER_SIZE_BYTES)
 
-#define END_TRACE_TEST END_TEST;
+#define END_TRACE_TEST
 
 #ifndef NTRACE
 

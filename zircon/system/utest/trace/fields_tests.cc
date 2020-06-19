@@ -4,13 +4,11 @@
 
 #include <lib/trace-engine/fields.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-static bool field_get_set_test(void) {
-  BEGIN_TEST;
-
+TEST(Types, field_get_set_test) {
   uint64_t value(0);
 
   trace::Field<0, 0>::Set(value, uint8_t(1));
@@ -28,12 +26,6 @@ static bool field_get_set_test(void) {
   EXPECT_EQ(uint8_t(7), value);
   trace::Field<0, 2>::Set(value, uint8_t(0));
   EXPECT_EQ(uint8_t(0), value);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(types)
-RUN_TEST(field_get_set_test)
-END_TEST_CASE(types)
