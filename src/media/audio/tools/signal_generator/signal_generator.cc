@@ -36,32 +36,28 @@ const char* SampleFormatToString(const fuchsia::media::AudioSampleFormat& format
 }
 
 std::string RefTimeStrFromZxTime(zx::time zx_time) {
+  char time_chars[20];
   auto time = zx_time.get();
 
   if (time == fuchsia::media::NO_TIMESTAMP) {
-    return "  [NO_TIMESTAMP]   ";
+    snprintf(time_chars, 20, "  [NO_TIMESTAMP]   ");
+  } else {
+    snprintf(time_chars, 20, "%07lu'%03lu'%03lu'%03lu", time / ZX_SEC(1),
+             (time % ZX_SEC(1)) / ZX_MSEC(1), (time % ZX_MSEC(1)) / ZX_USEC(1), time % ZX_USEC(1));
   }
-
-  char time_chars[20];
-  sprintf(time_chars, "%07lu'%03lu'%03lu'%03lu", time / ZX_SEC(1), (time % ZX_SEC(1)) / ZX_MSEC(1),
-          (time % ZX_MSEC(1)) / ZX_USEC(1), time % ZX_USEC(1));
-  time_chars[19] = 0;
-
   return std::string(time_chars);
 }
 
 std::string RefTimeMsStrFromZxTime(zx::time zx_time) {
+  char time_chars[18];
   auto time = zx_time.get();
 
   if (time == fuchsia::media::NO_TIMESTAMP) {
-    return "  [NO_TIMESTAMP]       ";
+    snprintf(time_chars, 18, "[NO_TIMESTAMP]   ");
+  } else {
+    snprintf(time_chars, 18, "%07lu'%03lu.%02lu ms", time / ZX_SEC(1),
+             (time % ZX_SEC(1)) / ZX_MSEC(1), (time % ZX_MSEC(1)) / ZX_USEC(10));
   }
-
-  char time_chars[24];
-  sprintf(time_chars, "%07lu'%03lu.%02lu millisec", time / ZX_SEC(1),
-          (time % ZX_SEC(1)) / ZX_MSEC(1), (time % ZX_MSEC(1)) / ZX_USEC(10));
-  time_chars[23] = 0;
-
   return std::string(time_chars);
 }
 
@@ -146,30 +142,37 @@ void MediaApp::ParameterRangeChecks() {
     success = false;
   }
 
-  if (adjusting_clock_rate_) {
+  if (clock_rate_adjustment_) {
     if (clock_type_ != ClockType::Monotonic) {
       clock_type_ = ClockType::Custom;
     }
 
-    if (clock_rate_adjustment_ > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST) {
+    if (clock_rate_adjustment_.value() > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST) {
       std::cerr << "Clock adjustment must be " << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST
                 << " parts-per-million or less" << std::endl;
       success = false;
     }
-    if (clock_rate_adjustment_ < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST) {
+    if (clock_rate_adjustment_.value() < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST) {
       std::cerr << "Clock rate adjustment must be " << ZX_CLOCK_UPDATE_MIN_RATE_ADJUST
                 << " parts-per-million or more" << std::endl;
       success = false;
     }
   }
 
-  stream_gain_db_ = std::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
-                                      fuchsia::media::audio::MAX_GAIN_DB);
+  if (stream_gain_db_) {
+    stream_gain_db_ =
+        std::clamp<float>(stream_gain_db_.value(), fuchsia::media::audio::MUTED_GAIN_DB,
+                          fuchsia::media::audio::MAX_GAIN_DB);
+  }
 
-  usage_gain_db_ =
-      std::clamp<float>(usage_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, kUnityGainDb);
-  usage_volume_ = std::clamp<float>(usage_volume_, fuchsia::media::audio::MIN_VOLUME,
-                                    fuchsia::media::audio::MAX_VOLUME);
+  if (usage_gain_db_) {
+    usage_gain_db_ = std::clamp<float>(usage_gain_db_.value(), fuchsia::media::audio::MUTED_GAIN_DB,
+                                       kUnityGainDb);
+  }
+  if (usage_volume_) {
+    usage_volume_ = std::clamp<float>(usage_volume_.value(), fuchsia::media::audio::MIN_VOLUME,
+                                      fuchsia::media::audio::MAX_VOLUME);
+  }
 
   CLI_CHECK(success, "Exiting.");
 }
@@ -249,30 +252,31 @@ void MediaApp::DisplayConfigurationSettings() {
       printf("sine wave");
     } else if (output_signal_type_ == kOutputTypeSawtooth) {
       printf("rising sawtooth wave");
-    } else if (output_signal_type_ == kOutputTypeRamp) {
-      printf("isosceles ramp");
+    } else if (output_signal_type_ == kOutputTypeTriangle) {
+      printf("isosceles triangle wave");
     }
   }
   printf(" with amplitude %.4f", amplitude_);
 
-  if (ramp_stream_gain_) {
+  if (ramp_target_gain_db_) {
     printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
-           stream_gain_db_, ramp_target_gain_db_,
+           stream_gain_db_.value(), ramp_target_gain_db_.value(),
            static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
-  } else if (set_stream_gain_) {
-    printf(",\nsetting stream gain to %.3f dB", stream_gain_db_);
+  } else if (stream_gain_db_) {
+    printf(",\nsetting stream gain to %.3f dB", stream_gain_db_.value());
   }
-  if (set_stream_mute_) {
-    printf(",\n after explicitly %s this stream", stream_mute_ ? "muting" : "unmuting");
+  if (stream_mute_) {
+    printf(",\n after explicitly %s this stream", stream_mute_.value() ? "muting" : "unmuting");
   }
 
-  if (set_usage_gain_ || set_usage_volume_) {
+  if (usage_gain_db_ || usage_volume_) {
     printf(",\nafter setting ");
-    if (set_usage_gain_) {
-      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_, (set_usage_volume_ ? " and " : ""));
+    if (usage_gain_db_) {
+      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_.value(),
+             (usage_volume_ ? " and " : ""));
     }
-    if (set_usage_volume_) {
-      printf("%s volume to %.1f", usage_str, usage_volume_);
+    if (usage_volume_) {
+      printf("%s volume to %.1f", usage_str, usage_volume_.value());
     }
   }
 
@@ -292,14 +296,14 @@ void MediaApp::DisplayConfigurationSettings() {
       break;
     case ClockType::Monotonic:
       printf("a clone of the MONOTONIC clock");
-      if (adjusting_clock_rate_) {
-        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_);
+      if (clock_rate_adjustment_) {
+        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_.value());
       }
       break;
     case ClockType::Custom:
       printf("a custom clock");
-      if (adjusting_clock_rate_) {
-        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_);
+      if (clock_rate_adjustment_) {
+        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_.value());
       }
       break;
   }
@@ -307,9 +311,9 @@ void MediaApp::DisplayConfigurationSettings() {
   printf(".\nThe renderer will transport data using %u %stimestamped buffers of %u frames",
          total_num_mapped_payloads_, (!use_pts_ ? "non-" : ""), frames_per_payload_);
 
-  if (set_continuity_threshold_) {
+  if (pts_continuity_threshold_secs_) {
     printf(",\nhaving set the PTS continuity threshold to %f seconds",
-           pts_continuity_threshold_secs_);
+           pts_continuity_threshold_secs_.value());
   }
 
   printf(".\n\n");
@@ -317,15 +321,15 @@ void MediaApp::DisplayConfigurationSettings() {
 
 // AudioCore interface is used to change the gain/volume of usages.
 void MediaApp::SetAudioCoreSettings(sys::ComponentContext* app_context) {
-  if (set_usage_gain_ || set_usage_volume_) {
+  if (usage_gain_db_ || usage_volume_) {
     fuchsia::media::AudioCorePtr audio_core;
     app_context->svc()->Connect(audio_core.NewRequest());
 
-    if (set_usage_gain_) {
-      audio_core->SetRenderUsageGain(usage_, usage_gain_db_);
+    if (usage_gain_db_) {
+      audio_core->SetRenderUsageGain(usage_, usage_gain_db_.value());
     }
 
-    if (set_usage_volume_) {
+    if (usage_volume_) {
       fuchsia::media::Usage usage;
       usage.set_render_usage(usage_);
       audio_core->BindUsageVolumeControl(std::move(usage), usage_volume_control_.NewRequest());
@@ -361,7 +365,7 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
     audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
-    if (set_stream_mute_ || set_stream_gain_ || ramp_stream_gain_) {
+    if (stream_mute_ || stream_gain_db_ || ramp_target_gain_db_) {
       audio_renderer_->BindGainControl(gain_control_.NewRequest());
       gain_control_.set_error_handler([this](zx_status_t status) {
         CLI_CHECK(Shutdown(),
@@ -388,8 +392,8 @@ void MediaApp::ConfigureAudioRendererPts() {
   if (use_pts_) {
     audio_renderer_->SetPtsUnits(frame_rate_, 1);
   }
-  if (set_continuity_threshold_) {
-    audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_);
+  if (pts_continuity_threshold_secs_) {
+    audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_.value());
   }
 }
 
@@ -414,8 +418,8 @@ void MediaApp::InitializeAudibleRenderer() {
       zx_status_t status;
       zx::clock::update_args args;
       args.reset();
-      if (adjusting_clock_rate_) {
-        args.set_rate_adjust(clock_rate_adjustment_);
+      if (clock_rate_adjustment_) {
+        args.set_rate_adjust(clock_rate_adjustment_.value());
       }
 
       if (clock_type_ == ClockType::Monotonic) {
@@ -431,7 +435,7 @@ void MediaApp::InitializeAudibleRenderer() {
 
         args.set_value(zx::time(0));
       }
-      if (adjusting_clock_rate_ || clock_type_ == ClockType::Custom) {
+      if (clock_rate_adjustment_ || clock_type_ == ClockType::Custom) {
         // update starts our clock
         status = reference_clock_to_set.update(args);
         CLI_CHECK_OK(status, "zx::clock::update failed");
@@ -455,19 +459,19 @@ void MediaApp::InitializeAudibleRenderer() {
   audio_renderer_->SetPcmStreamType(format);
 
   // Set usage volume, if specified.
-  if (set_usage_volume_) {
-    usage_volume_control_->SetVolume(usage_volume_);
+  if (usage_volume_) {
+    usage_volume_control_->SetVolume(usage_volume_.value());
   }
 
   // Set stream gain and mute, if specified.
-  if (set_stream_mute_) {
-    gain_control_->SetMute(stream_mute_);
+  if (stream_mute_) {
+    gain_control_->SetMute(stream_mute_.value());
   }
-  if (set_stream_gain_) {
-    gain_control_->SetGain(stream_gain_db_);
+  if (stream_gain_db_) {
+    gain_control_->SetGain(stream_gain_db_.value());
   }
-  if (ramp_stream_gain_) {
-    gain_control_->SetGainWithRamp(ramp_target_gain_db_, ramp_duration_nsec_,
+  if (ramp_target_gain_db_) {
+    gain_control_->SetGainWithRamp(ramp_target_gain_db_.value(), ramp_duration_nsec_,
                                    fuchsia::media::audio::RampType::SCALE_LINEAR);
   }
 }
@@ -519,67 +523,66 @@ void MediaApp::GetClockAndStart() {
 // Prime (pre-submit) an initial set of packets, then start playback.
 // Called from the GetReferenceClock callback
 void MediaApp::Play() {
-  if (num_packets_to_send_ > 0) {
-    zx::time ref_now;
-    auto status = reference_clock_.read(ref_now.get_address());
-    CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during init: " << status);
-
-    // read current time and use it as our rand48 seed ...
-    srand48(ref_now.get());
-    // ... before generating random data to prime our pink noise generator
-    if (output_signal_type_ == kOutputTypePinkNoise) {
-      PrimePinkNoiseFilter();
-    }
-
-    // We can only send down as many packets as will concurrently fit into our payload buffer.
-    // The rest will be sent, one at a time, from a previous packet's completion callback.
-    uint32_t num_packets_to_prime =
-        std::min<uint64_t>(total_num_mapped_payloads_, num_packets_to_send_);
-    for (uint32_t packet_num = 0; packet_num < num_packets_to_prime; ++packet_num) {
-      SendPacket();
-    }
-
-    status = reference_clock_.read(ref_now.get_address());
-    CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during Play(): " << status);
-
-    reference_start_time_ = use_pts_ ? ref_now + kPlayStartupDelay + min_lead_time_ : kNoTimeStamp;
-    media_start_time_ = use_pts_ ? zx::time(0) : kNoTimeStamp;
-
-    if (verbose_) {
-      auto requested_ref_str = RefTimeStrFromZxTime(reference_start_time_);
-      auto requested_media_str = RefTimeStrFromZxTime(media_start_time_);
-      auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
-      auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
-
-      printf("\nCalling Play (ref %s, media %s) at ref_now %s : mono_now %s\n",
-             requested_ref_str.c_str(), requested_media_str.c_str(), ref_now_str.c_str(),
-             mono_now_str.c_str());
-    }
-
-    auto play_completion_func = [this](int64_t actual_ref_start, int64_t actual_media_start) {
-      if (verbose_) {
-        zx::time ref_now;
-        auto status = reference_clock_.read(ref_now.get_address());
-        CLI_CHECK(status == ZX_OK || Shutdown(),
-                  "zx::clock::read failed during Play callback: " << status);
-
-        auto actual_ref_str = RefTimeStrFromZxTime(zx::time{actual_ref_start});
-        auto actual_media_str = RefTimeStrFromZxTime(zx::time{actual_media_start});
-        auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
-        auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
-
-        printf("Play callback(ref %s, media %s) at ref_now %s : mono_now %s\n\n",
-               actual_ref_str.c_str(), actual_media_str.c_str(), ref_now_str.c_str(),
-               mono_now_str.c_str());
-      }
-    };
-
-    audio_renderer_->Play(reference_start_time_.get(), media_start_time_.get(),
-                          play_completion_func);
-  } else {
+  if (num_packets_to_send_ == 0) {
     // No packets to send, so we're done! Shutdown will unwind everything and exit our loop.
     Shutdown();
   }
+
+  zx::time ref_now;
+  auto status = reference_clock_.read(ref_now.get_address());
+  CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during init: " << status);
+
+  // read current time and use it as our rand48 seed ...
+  srand48(ref_now.get());
+  // ... before generating random data to prime our pink noise generator
+  if (output_signal_type_ == kOutputTypePinkNoise) {
+    PrimePinkNoiseFilter();
+  }
+
+  // We can only send down as many packets as will concurrently fit into our payload buffer.
+  // The rest will be sent, one at a time, from a previous packet's completion callback.
+  uint32_t num_packets_to_prime =
+      std::min<uint64_t>(total_num_mapped_payloads_, num_packets_to_send_);
+  for (uint32_t packet_num = 0; packet_num < num_packets_to_prime; ++packet_num) {
+    SendPacket();
+  }
+
+  status = reference_clock_.read(ref_now.get_address());
+  CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during Play(): " << status);
+
+  reference_start_time_ = use_pts_ ? ref_now + kPlayStartupDelay + min_lead_time_ : kNoTimeStamp;
+  media_start_time_ = use_pts_ ? zx::time(0) : kNoTimeStamp;
+
+  if (verbose_) {
+    auto requested_ref_str = RefTimeStrFromZxTime(reference_start_time_);
+    auto requested_media_str = RefTimeStrFromZxTime(media_start_time_);
+    auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
+    auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
+
+    printf("\nCalling Play (ref %s, media %s) at ref_now %s : mono_now %s\n",
+           requested_ref_str.c_str(), requested_media_str.c_str(), ref_now_str.c_str(),
+           mono_now_str.c_str());
+  }
+
+  auto play_completion_func = [this](int64_t actual_ref_start, int64_t actual_media_start) {
+    if (verbose_) {
+      zx::time ref_now;
+      auto status = reference_clock_.read(ref_now.get_address());
+      CLI_CHECK(status == ZX_OK || Shutdown(),
+                "zx::clock::read failed during Play callback: " << status);
+
+      auto actual_ref_str = RefTimeStrFromZxTime(zx::time{actual_ref_start});
+      auto actual_media_str = RefTimeStrFromZxTime(zx::time{actual_media_start});
+      auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
+      auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
+
+      printf("Play callback(ref %s, media %s) at ref_now %s : mono_now %s\n\n",
+             actual_ref_str.c_str(), actual_media_str.c_str(), ref_now_str.c_str(),
+             mono_now_str.c_str());
+    }
+  };
+
+  audio_renderer_->Play(reference_start_time_.get(), media_start_time_.get(), play_completion_func);
 }
 
 // We have a set of buffers each backed by its own VMO, with each buffer sub-divided into
@@ -721,7 +724,7 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
         case kOutputTypeSawtooth:
           raw_val = (fmod(frames_since_start / frames_per_period_, 1.0) * 2.0) - 1.0;
           break;
-        case kOutputTypeRamp:
+        case kOutputTypeTriangle:
           raw_val = (abs(fmod(frames_since_start / frames_per_period_, 1.0) - 0.5) * 4.0) - 1.0;
           break;
         case kOutputTypeNoise:
@@ -775,8 +778,8 @@ void MediaApp::SendPacket() {
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
     auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
 
-    printf("Sending packet %4lu (media pts %s) at ref_now %s : mono_now %s\n", num_packets_sent_,
-           pts_str.c_str(), ref_now_str.c_str(), mono_now_str.c_str());
+    printf("  Sending: packet %4lu (media pts %s) :  ref_now %s :  mono_now %s\n",
+           num_packets_sent_, pts_str.c_str(), ref_now_str.c_str(), mono_now_str.c_str());
   }
 
   ++num_packets_sent_;
@@ -798,7 +801,7 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
     auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
 
-    printf("Packet %4lu complete (%5lu, %8lu frames total) at ref_now %s : mono_now %s\n",
+    printf("Completed: packet %4lu (%5lu frames, up to %8lu ) :  ref_now %s :  mono_now %s\n",
            num_packets_completed_, frames_completed, num_frames_completed_, ref_now_str.c_str(),
            mono_now_str.c_str());
   }

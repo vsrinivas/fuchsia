@@ -21,7 +21,7 @@ typedef enum {
   kOutputTypeSine,
   kOutputTypeSquare,
   kOutputTypeSawtooth,
-  kOutputTypeRamp,
+  kOutputTypeTriangle,
 } OutputSignalType;
 // TODO(49220): refactor signal-generation to make it easier for new generators to be added.
 
@@ -68,41 +68,24 @@ class MediaApp {
   }
 
   void set_clock_type(ClockType type) { clock_type_ = type; }
-  void adjust_clock_rate(int32_t rate_adjustment) {
-    adjusting_clock_rate_ = true;
-    clock_rate_adjustment_ = rate_adjustment;
-  }
+  void adjust_clock_rate(int32_t rate_adjustment) { clock_rate_adjustment_ = rate_adjustment; }
 
   void set_use_pts(bool use_pts) { use_pts_ = use_pts; }
   void set_pts_continuity_threshold(float pts_continuity_threshold) {
-    set_continuity_threshold_ = true;
     pts_continuity_threshold_secs_ = pts_continuity_threshold;
   }
 
   void set_save_to_file(bool save_to_file) { save_to_file_ = save_to_file; }
   void set_save_file_name(std::string file_name) { file_name_ = file_name; }
 
-  void set_stream_gain(float gain_db) {
-    set_stream_gain_ = true;
-    stream_gain_db_ = gain_db;
-  }
-  void set_stream_mute(bool mute) {
-    set_stream_mute_ = true;
-    stream_mute_ = mute;
-  }
+  void set_stream_gain(float gain_db) { stream_gain_db_ = gain_db; }
+  void set_stream_mute(bool mute) { stream_mute_ = mute; }
 
-  void set_will_ramp_stream_gain() { ramp_stream_gain_ = true; }
   void set_ramp_duration_nsec(zx_duration_t duration_nsec) { ramp_duration_nsec_ = duration_nsec; }
   void set_ramp_target_gain_db(float gain_db) { ramp_target_gain_db_ = gain_db; }
 
-  void set_usage_gain(float gain_db) {
-    set_usage_gain_ = true;
-    usage_gain_db_ = gain_db;
-  }
-  void set_usage_volume(float volume) {
-    set_usage_volume_ = true;
-    usage_volume_ = volume;
-  }
+  void set_usage_gain(float gain_db) { usage_gain_db_ = gain_db; }
+  void set_usage_volume(float volume) { usage_volume_ = volume; }
 
   void set_verbose(bool verbose) { verbose_ = verbose; }
   void set_ultrasound(bool ultrasound) { ultrasound_ = ultrasound; }
@@ -176,14 +159,12 @@ class MediaApp {
 
   zx::clock reference_clock_;
   ClockType clock_type_ = ClockType::Default;
-  bool adjusting_clock_rate_ = false;
-  int32_t clock_rate_adjustment_ = 0;
+  std::optional<int32_t> clock_rate_adjustment_ = std::nullopt;
 
   zx::time reference_start_time_;
   zx::time media_start_time_;
   bool use_pts_ = false;
-  bool set_continuity_threshold_ = false;
-  float pts_continuity_threshold_secs_;
+  std::optional<float> pts_continuity_threshold_secs_ = std::nullopt;
 
   uint32_t payload_mapping_size_;
   uint32_t payload_size_;
@@ -202,19 +183,14 @@ class MediaApp {
   media::audio::WavWriter<> wav_writer_;
   bool wav_writer_initialized_ = false;
 
-  bool set_stream_gain_ = false;
-  float stream_gain_db_ = kUnityGainDb;
-  bool set_stream_mute_ = false;
-  bool stream_mute_ = false;
+  std::optional<float> stream_gain_db_ = std::nullopt;
+  std::optional<bool> stream_mute_ = std::nullopt;
 
-  bool ramp_stream_gain_ = false;
-  float ramp_target_gain_db_ = kUnityGainDb;
+  std::optional<float> ramp_target_gain_db_ = std::nullopt;
   zx_duration_t ramp_duration_nsec_;
 
-  bool set_usage_gain_ = false;
-  float usage_gain_db_ = kUnityGainDb;
-  bool set_usage_volume_ = false;
-  float usage_volume_;
+  std::optional<float> usage_gain_db_ = std::nullopt;
+  std::optional<float> usage_volume_ = std::nullopt;
 
   bool verbose_ = false;
 

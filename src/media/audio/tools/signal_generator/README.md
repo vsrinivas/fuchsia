@@ -9,7 +9,7 @@ AudioCore, AudioRenderer, VolumeControl and GainControl FIDL protocols.
       [--chans=<NUM_CHANS>]
       [--int16 | --int24]
       [--rate=<FRAME_RATE>]
-      [--sine[=<FREQ>] | --square[=<FREQ>] | --saw[=<FREQ>] | --ramp[=<FREQ>] | --noise | --pink]
+      [--sine[=<FREQ>] | --square[=<FREQ>] | --saw[=<FREQ>] | --tri[=<FREQ>] | --noise | --pink]
       [--dur=<DURATION_SEC>]
       [--amp=<AMPL>]
       [--wav[=<FILEPATH>]]
@@ -41,7 +41,7 @@ These optional parameters are interpreted as follows:
     --sine[=<FREQ>]          Play sine wave at given frequency (Hz)
     --square[=<FREQ>]        Play square wave at given frequency
     --saw[=<FREQ>]           Play rising sawtooth wave at given frequency
-    --ramp[=<FREQ>]          Play rising-then-falling ramp at given frequency
+    --tri[=<FREQ>]           Play rising-then-falling triangle wave at given frequency
     --noise                  Play pseudo-random 'white' noise
     --pink                   Play pseudo-random 'pink' (1/f) noise
 
@@ -56,7 +56,7 @@ These optional parameters are interpreted as follows:
       By default, use a MEDIA stream and do not change the volume or gain for this RENDER_USAGE
     --usage=<RENDER_USAGE>   Set stream render usage. RENDER_USAGE must be one of:
                              BACKGROUND, MEDIA, INTERRUPTION, SYSTEM_AGENT, COMMUNICATION
-    --usage-vol[=<VOLUME>]   Set render usage volume (min 0.0, max 1.0, default 0.50)
+    --usage-vol[=<VOLUME>]   Set render usage volume (min 0.0, max 1.0, 1.0 if flag with no value)
     --usage-gain[=<DB>]      Set render usage gain, in dB (min -160.0, max 0.0, default 0.0)
       Changes to these system-wide volume/gain settings persist after the utility runs
 

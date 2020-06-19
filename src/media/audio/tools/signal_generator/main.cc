@@ -20,7 +20,7 @@ constexpr char kFrameRateDefaultHz[] = "48000";
 constexpr char kSineWaveSwitch[] = "sine";
 constexpr char kSquareWaveSwitch[] = "square";
 constexpr char kSawtoothWaveSwitch[] = "saw";
-constexpr char kRampWaveSwitch[] = "ramp";
+constexpr char kTriangleWaveSwitch[] = "tri";
 constexpr char kFrequencyDefaultHz[] = "440.0";
 constexpr char kWhiteNoiseSwitch[] = "noise";
 constexpr char kPinkNoiseSwitch[] = "pink";
@@ -65,7 +65,7 @@ constexpr char kRenderUsageDefault[] = "MEDIA";
 constexpr char kRenderUsageGainSwitch[] = "usage-gain";
 constexpr char kRenderUsageGainDefaultDb[] = "0.0";
 constexpr char kRenderUsageVolumeSwitch[] = "usage-vol";
-constexpr char kRenderUsageVolumeDefault[] = "0.50";
+constexpr char kRenderUsageVolumeDefault[] = "1.0";
 
 constexpr char kUltrasoundSwitch[] = "ultrasound";
 
@@ -105,7 +105,8 @@ void usage(const char* prog_name) {
   printf("  --%s[=<FREQ>]  \t Play sine wave at given frequency (Hz)\n", kSineWaveSwitch);
   printf("  --%s[=<FREQ>]  \t Play square wave at given frequency\n", kSquareWaveSwitch);
   printf("  --%s[=<FREQ>]  \t Play rising sawtooth wave at given frequency\n", kSawtoothWaveSwitch);
-  printf("  --%s[=<FREQ>]  \t Play rising-then-falling ramp at given frequency\n", kRampWaveSwitch);
+  printf("  --%s[=<FREQ>]  \t Play rising-then-falling triangle wave at given frequency\n",
+         kTriangleWaveSwitch);
   printf("  --%s  \t\t Play pseudo-random 'white' noise\n", kWhiteNoiseSwitch);
   printf("  --%s  \t\t Play pseudo-random 'pink' (1/f) noise\n", kPinkNoiseSwitch);
 
@@ -131,9 +132,10 @@ void usage(const char* prog_name) {
       printf("\n");
     }
   }
-  printf("  --%s[=<VOLUME>] Set render usage volume (min %.1f, max %.1f, default %s)\n",
-         kRenderUsageVolumeSwitch, fuchsia::media::audio::MIN_VOLUME,
-         fuchsia::media::audio::MAX_VOLUME, kRenderUsageVolumeDefault);
+  printf(
+      "  --%s[=<VOLUME>] Set render usage volume (min %.1f, max %.1f, %s if flag with no value)\n",
+      kRenderUsageVolumeSwitch, fuchsia::media::audio::MIN_VOLUME,
+      fuchsia::media::audio::MAX_VOLUME, kRenderUsageVolumeDefault);
   printf("  --%s[=<DB>]\t Set render usage gain, in dB (min %.1f, max %.1f, default %s)\n",
          kRenderUsageGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB, kUnityGainDb,
          kRenderUsageGainDefaultDb);
@@ -265,9 +267,9 @@ int main(int argc, const char** argv) {
   } else if (command_line.HasOption(kSawtoothWaveSwitch)) {
     media_app.set_output_type(kOutputTypeSawtooth);
     command_line.GetOptionValue(kSawtoothWaveSwitch, &frequency_str);
-  } else if (command_line.HasOption(kRampWaveSwitch)) {
-    media_app.set_output_type(kOutputTypeRamp);
-    command_line.GetOptionValue(kRampWaveSwitch, &frequency_str);
+  } else if (command_line.HasOption(kTriangleWaveSwitch)) {
+    media_app.set_output_type(kOutputTypeTriangle);
+    command_line.GetOptionValue(kTriangleWaveSwitch, &frequency_str);
   } else if (command_line.HasOption(kWhiteNoiseSwitch)) {
     media_app.set_output_type(kOutputTypeNoise);
   } else if (command_line.HasOption(kPinkNoiseSwitch)) {
@@ -361,8 +363,6 @@ int main(int argc, const char** argv) {
   if (command_line.HasOption(kStreamRampSwitch) ||
       command_line.HasOption(kStreamRampTargetGainSwitch) ||
       command_line.HasOption(kStreamRampDurationSwitch)) {
-    media_app.set_will_ramp_stream_gain();
-
     std::string target_gain_db_str = command_line.GetOptionValueWithDefault(
         kStreamRampTargetGainSwitch, kStreamRampTargetGainDefaultDb);
     if (target_gain_db_str == "") {
