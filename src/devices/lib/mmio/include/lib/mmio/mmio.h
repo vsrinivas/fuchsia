@@ -114,14 +114,17 @@ class MmioPinnedBuffer {
     return *this;
   }
 
-  void reset() { memset(&pinned_, 0, sizeof(pinned_)); }
+  void reset() {
+    mmio_buffer_unpin(&pinned_);
+    memset(&pinned_, 0, sizeof(pinned_));
+  }
 
   zx_paddr_t get_paddr() const { return pinned_.paddr; }
 
  private:
   void transfer(MmioPinnedBuffer&& other) {
     pinned_ = other.pinned_;
-    other.reset();
+    memset(&other.pinned_, 0, sizeof(other.pinned_));
   }
   mmio_pinned_buffer_t pinned_;
 };
@@ -180,7 +183,10 @@ class MmioBuffer {
     return status;
   }
 
-  void reset() { memset(&mmio_, 0, sizeof(mmio_)); }
+  void reset() {
+    mmio_buffer_release(&mmio_); 
+    memset(&mmio_, 0, sizeof(mmio_));
+  }
 
   void Info() const {
     zxlogf(INFO, "vaddr = %p", mmio_.vaddr);
@@ -406,7 +412,7 @@ class MmioBuffer {
     mmio_ = other.mmio_;
     ops_ = other.ops_;
     ctx_ = other.ctx_;
-    other.reset();
+    memset(&other.mmio_, 0, sizeof(other.mmio_));
   }
 };
 
