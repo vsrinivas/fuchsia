@@ -198,6 +198,15 @@ pub fn parse_wpa_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<wpa::WpaIe> {
         .map_err(|_| FrameParseError::new("Failed to parse WPA IE"))
 }
 
+pub fn parse_wmm_info<B: ByteSlice>(raw_body: B) -> FrameParseResult<LayoutVerified<B, WmmInfo>> {
+    LayoutVerified::new(raw_body).ok_or(FrameParseError::new("Invalid length for WMM Info element"))
+}
+
+pub fn parse_wmm_param<B: ByteSlice>(raw_body: B) -> FrameParseResult<LayoutVerified<B, WmmParam>> {
+    LayoutVerified::new(raw_body)
+        .ok_or(FrameParseError::new("Invalid length for WMM Param element"))
+}
+
 pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B>> {
     let mut reader = BufferReader::new(raw_body);
     let oui = *reader.read::<Oui>().ok_or(FrameParseError::new("Failed to read vendor OUI"))?;
@@ -214,6 +223,17 @@ pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B
                 Some(wsc::VENDOR_SPECIFIC_TYPE) => {
                     let (_type, body) = reader.into_remaining().split_at(1);
                     VendorIe::Wsc(body)
+                }
+                // The first three bytes after OUI are OUI type, OUI subtype, and version.
+                Some(WMM_OUI_TYPE) if reader.bytes_remaining() >= 3 => {
+                    let body = reader.into_remaining();
+                    match body[1] {
+                        // Safe to split because we already checked that there are at least 3
+                        // bytes remaining.
+                        WMM_INFO_OUI_SUBTYPE => VendorIe::WmmInfo(body.split_at(3).1),
+                        WMM_PARAM_OUI_SUBTYPE => VendorIe::WmmParam(body.split_at(3).1),
+                        _ => VendorIe::Unknown { oui, body },
+                    }
                 }
                 _ => VendorIe::Unknown { oui, body: reader.into_remaining() },
             }
@@ -953,6 +973,100 @@ mod tests {
         let wpa_ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
         assert_variant!(wpa_ie, VendorIe::MsftLegacyWpa(wpa_body) => {
             parse_wpa_ie(&wpa_body[..]).expect_err("parsed truncated wpa ie")
+        });
+    }
+
+    #[test]
+    fn parse_wmm_info_ie_ok() {
+        let raw_body = [
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x02, 0x00, 0x01, // WMM Info IE header
+            0x80, // QoS Info: U-APSD enabled
+        ];
+        let wmm_info_ie = parse_vendor_ie(&raw_body[..]).expect("expected Ok");
+        assert_variant!(wmm_info_ie, VendorIe::WmmInfo(body) => {
+            assert_variant!(parse_wmm_info(&body[..]), Ok(wmm_info) => {
+                assert_eq!(wmm_info.0, 0x80);
+            })
+        });
+    }
+
+    #[test]
+    fn parse_wmm_info_ie_too_short() {
+        let raw_body = [
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x02, 0x00, 0x01, // WMM Info IE header
+                  // truncated
+        ];
+        let wmm_info_ie = parse_vendor_ie(&raw_body[..]).expect("expected Ok");
+        assert_variant!(wmm_info_ie, VendorIe::WmmInfo(body) => {
+            parse_wmm_info(&body[..]).expect_err("parsed truncated WMM info ie")
+        });
+    }
+
+    #[test]
+    fn parse_wmm_param_ie_ok() {
+        let raw_body = [
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x02, 0x01, 0x01, // WMM Param IE header
+            0x80, // QoS Info: U-APSD enabled
+            0x00, // reserved
+            0x03, 0xa4, 0x00, 0x00, // AC_BE Params - ACM no, AIFSN 3, ECWmin/max 4/10, TXOP 0
+            0x27, 0xa4, 0x00, 0x00, // AC_BK Params - ACM no, AIFSN 7, ECWmin/max 4/10, TXOP 0
+            0x42, 0x43, 0x5e, 0x00, // AC_VI Params - ACM no, AIFSN 2, ECWmin/max 3/4, TXOP 94
+            0x62, 0x32, 0x2f, 0x00, // AC_VO Params - ACM no, AIFSN 2, ECWmin/max 2/3, TXOP 47
+        ];
+        let wmm_param_ie = parse_vendor_ie(&raw_body[..]).expect("expected Ok");
+        assert_variant!(wmm_param_ie, VendorIe::WmmParam(body) => {
+            assert_variant!(parse_wmm_param(&body[..]), Ok(wmm_param) => {
+                assert_eq!(wmm_param.wmm_info.0, 0x80);
+                let ac_be = wmm_param.ac_be_params;
+                assert_eq!(ac_be.aci_aifsn.aifsn(), 3);
+                assert_eq!(ac_be.aci_aifsn.acm(), false);
+                assert_eq!(ac_be.aci_aifsn.aci(), 0);
+                assert_eq!(ac_be.ecw_min_max.ecw_min(), 4);
+                assert_eq!(ac_be.ecw_min_max.ecw_max(), 10);
+                assert_eq!({ ac_be.txop_limit }, 0);
+
+                let ac_bk = wmm_param.ac_bk_params;
+                assert_eq!(ac_bk.aci_aifsn.aifsn(), 7);
+                assert_eq!(ac_bk.aci_aifsn.acm(), false);
+                assert_eq!(ac_bk.aci_aifsn.aci(), 1);
+                assert_eq!(ac_bk.ecw_min_max.ecw_min(), 4);
+                assert_eq!(ac_bk.ecw_min_max.ecw_max(), 10);
+                assert_eq!({ ac_bk.txop_limit }, 0);
+
+                let ac_vi = wmm_param.ac_vi_params;
+                assert_eq!(ac_vi.aci_aifsn.aifsn(), 2);
+                assert_eq!(ac_vi.aci_aifsn.acm(), false);
+                assert_eq!(ac_vi.aci_aifsn.aci(), 2);
+                assert_eq!(ac_vi.ecw_min_max.ecw_min(), 3);
+                assert_eq!(ac_vi.ecw_min_max.ecw_max(), 4);
+                assert_eq!({ ac_vi.txop_limit }, 94);
+
+                let ac_vo = wmm_param.ac_vo_params;
+                assert_eq!(ac_vo.aci_aifsn.aifsn(), 2);
+                assert_eq!(ac_vo.aci_aifsn.acm(), false);
+                assert_eq!(ac_vo.aci_aifsn.aci(), 3);
+                assert_eq!(ac_vo.ecw_min_max.ecw_min(), 2);
+                assert_eq!(ac_vo.ecw_min_max.ecw_max(), 3);
+                assert_eq!({ ac_vo.txop_limit }, 47);
+            });
+        });
+    }
+
+    #[test]
+    fn parse_wmm_param_ie_too_short() {
+        let raw_body = [
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x02, 0x01, 0x01, // WMM Param IE header
+            0x80, // QoS Info: U-APSD enabled
+            0x00, // reserved
+                  // truncated
+        ];
+        let wmm_param_ie = parse_vendor_ie(&raw_body[..]).expect("expected Ok");
+        assert_variant!(wmm_param_ie, VendorIe::WmmParam(body) => {
+            parse_wmm_param(&body[..]).expect_err("parsed truncated WMM param ie")
         });
     }
 

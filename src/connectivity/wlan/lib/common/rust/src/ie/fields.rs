@@ -58,6 +58,83 @@ pub struct TimView<B> {
     pub bitmap: B,
 }
 
+// WFA WMM v1.2, 2.2.1
+#[bitfield(
+    0..=7   union {
+                client_wmm_info as ClientWmmInfo(u8),
+                ap_wmm_info as ApWmmInfo(u8),
+            }
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct WmmInfo(pub u8);
+
+// WFA WMM v1.2, 2.2.1 Figure 6
+#[bitfield(
+    0..=3   parameter_set_count,
+    4..=6   _, // reserved
+    7       uapsd
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct ApWmmInfo(pub u8);
+
+// WFA WMM v1.2, 2.2.1 Figure 7
+#[bitfield(
+    0       ac_vo_uapsd,
+    1       ac_vi_uapsd,
+    2       ac_bk_uapsd,
+    3       ac_be_uapsd,
+    4       _, // reserved
+    5..=6   max_sp_length,
+    7       _  // reserved
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct ClientWmmInfo(pub u8);
+
+// WFA WMM v1.2, 2.2.2 Table 5
+#[repr(C, packed)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct WmmParam {
+    pub wmm_info: WmmInfo,
+    pub _reserved: u8,
+    pub ac_be_params: WmmAcParams,
+    pub ac_bk_params: WmmAcParams,
+    pub ac_vi_params: WmmAcParams,
+    pub ac_vo_params: WmmAcParams,
+}
+
+// WFA WMM v1.2, 2.2.2 Figure 9
+#[repr(C, packed)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct WmmAcParams {
+    pub aci_aifsn: WmmAciAifsn,
+    pub ecw_min_max: EcwMinMax,
+    /// unit of 32 microseconds
+    pub txop_limit: u16,
+}
+
+// WFA WMM v1.2, 2.2.2 Figure 10
+#[bitfield(
+    0..=3   aifsn,
+    4       acm,
+    5..=6   aci,
+    7       _  // reserved
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct WmmAciAifsn(pub u8);
+
+// WFA WMM v1.2, 2.2.2 Figure 11
+#[bitfield(
+    0..=3   ecw_min,
+    4..=7   ecw_max,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct EcwMinMax(pub u8);
+
 // IEEE Std 802.11-2016, 9.4.2.56
 #[repr(C, packed)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
@@ -762,6 +839,12 @@ pub enum VendorIe<B: ByteSlice> {
     // WiFi Simple Configuration element.
     // Like WPA, this does not contain the bytes identifying the IE as WSC.
     Wsc(B),
+    // WMM Info is a single byte. The IE header and the IE body's first six bytes
+    // (OUI, OUI type, OUI subtype, and version) are stripped.
+    WmmInfo(B),
+    // This does not contain the IE body's first six bytes
+    // (OUI, OUI type, OUI subtype, and version) that identify IE as WMM Parameter
+    WmmParam(B),
     // IEEE Std 802.11-2016, 9.4.2.26
     Unknown { oui: Oui, body: B },
 }
