@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::{channel::mpsc, future::BoxFuture, prelude::*, select, stream::FuturesUnordered};
+use {
+    crate::util::future_with_metadata::FutureWithMetadata,
+    futures::{channel::mpsc, future::BoxFuture, prelude::*, select, stream::FuturesUnordered},
+};
 
 pub trait Listener<F> {
     /// Sends an update to the listener.  Returns itself boxed if the update was sent successfully.
@@ -23,6 +26,11 @@ pub enum Message<P, U> {
     NotifyListeners(U),
 }
 
+#[derive(Debug, Clone)]
+struct PendingAckMetadata {
+    missed_a_message: bool,
+}
+
 /// Serves and manages a list of Listeners.
 /// Use `Message` to interact with registered listeners.
 pub async fn serve<P, F, U>(mut messages: mpsc::UnboundedReceiver<Message<P, U>>)
@@ -33,31 +41,55 @@ where
     // A list of listeners which are ready to receive updates.
     let mut acked_listeners = Vec::new();
     // A list of pending listeners which have not acknowledged their last update yet.
-    let mut unacked_listeners = FuturesUnordered::new();
+    // Rust is failing to infer the return value for pending_acks() in the select! statement
+    // below, so this ugly and verbose type annotation is required.
+    let mut pending_acks: FuturesUnordered<FutureWithMetadata<Option<Box<P>>, PendingAckMetadata>> =
+        FuturesUnordered::new();
     // Last reported state update.
     let mut current_state = U::default();
 
+    // A helper function to dedupe logic of notifying listener and build a FutureWithMetadata
+    let send_current_state = |listener: Box<P>, current_state: &U| {
+        let pending_ack_fut = listener.notify_listener(current_state.clone().into());
+        FutureWithMetadata::new(PendingAckMetadata { missed_a_message: false }, pending_ack_fut)
+    };
+
     loop {
         select! {
-            // Enqueue every listener back into the listener pool once they ack'ed the reception
-            // of a previously sent update.
-            // Listeners which already closed their channel will be dropped.
-            listener = unacked_listeners.select_next_some() => if let Some(listener) = listener {
-                acked_listeners.push(listener);
+            // Process listener acks
+            (listener, metadata) = pending_acks.select_next_some() => {
+                // Listeners which closed their channel will be None. Drop them silently.
+                if let Some(listener) = listener {
+                    // Check if the listener missed any messages while we were waiting for its ack
+                    if metadata.missed_a_message {
+                        // If yes, send the listener a snapshot of the current state
+                        pending_acks.push(send_current_state(listener, &current_state));
+                    } else {
+                        // Enqueue the listener back into the listener pool
+                        acked_listeners.push(listener);
+                    };
+                };
             },
             // Process internal messages
             msg = messages.select_next_some() => match msg {
                 // Register new listener
                 Message::NewListener(listener) => {
-                    unacked_listeners.push(listener.notify_listener(current_state.clone().into()));
+                    // Send the new listener a copy of the current state
+                    pending_acks.push(send_current_state(Box::new(listener), &current_state));
                 },
                 // Notify all listeners
                 Message::NotifyListeners(update) => {
+                    // Update our current state
                     current_state.merge_in_update(update);
-                    // Listeners are dequeued and their pending acknowledgement is enqueued.
+                    // Mark all listeners that are pending an ack as having missed an update
+                    for pending_ack_fut in pending_acks.iter_mut() {
+                        pending_ack_fut.metadata.missed_a_message = true;
+                    };
+                    // Send an update to all listeners who are ready
                     while !acked_listeners.is_empty() {
+                        // Listeners are dequeued and their pending acknowledgement is enqueued.
                         let listener = acked_listeners.remove(0);
-                        unacked_listeners.push(listener.notify_listener(current_state.clone().into()));
+                        pending_acks.push(send_current_state(listener, &current_state));
                     }
                 },
             },
@@ -304,6 +336,15 @@ mod tests {
         // #2 listener will send ack for previous update.
         test_utils::ack_update(&mut exec, l2_responder, &mut serve_listeners);
 
+        // #2 listener should have been sent a current state summary, since they missed an update.
+        let summary =
+            test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
+        let expected_summary = fidl_policy::ClientStateSummary {
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            networks: Some(vec![]),
+        };
+        assert_eq!(summary, expected_summary);
+
         // Send another update.
         let update = ClientStateUpdate {
             state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
@@ -327,5 +368,9 @@ mod tests {
         let summary =
             test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
         assert_eq!(summary, expected_summary);
+
+        // No further updates
+        assert_variant!(exec.run_until_stalled(&mut l1_stream.next()), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut l2_stream.next()), Poll::Pending);
     }
 }
