@@ -17,6 +17,7 @@
 
 // clang-format off
 #include "fbl/alloc_checker.h"
+#include "lib/fidl/llcpp/array.h"
 #include "lib/zx/clock.h"
 #include "lib/zx/time.h"
 #include "test/base.h"
@@ -58,6 +59,12 @@ class IntegrationTest : public TestBase {
     fbl::AutoLock l(controller()->mtx());
     fbl::AutoLock cl(&controller()->primary_client_->mtx_);
     return controller()->primary_client_->handler_.LatestAckedCookie() == cookie;
+  }
+
+  size_t get_gamma_table_size() {
+    fbl::AutoLock l(controller()->mtx());
+    fbl::AutoLock cl(&controller()->primary_client_->mtx_);
+    return controller()->primary_client_->handler_.GetGammaTableSize();
   }
 
   void SendVsyncAfterUnbind(std::unique_ptr<TestFidlClient> client, uint64_t display_id) {
@@ -564,6 +571,89 @@ TEST_F(IntegrationTest, InvalidImageHandleAfterSave) {
       },
       zx::sec(3)));
   EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync_count());
+}
+
+TEST_F(IntegrationTest, ImportGammaTable) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  uint64_t gamma_table_id = 3;
+  ::fidl::Array<float, 256> gamma_red = {{0.1f}};
+  ::fidl::Array<float, 256> gamma_green = {{0.2f}};
+  ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
+  }
+}
+
+TEST_F(IntegrationTest, ReleaseGammaTable) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  uint64_t gamma_table_id = 3;
+  ::fidl::Array<float, 256> gamma_red = {{0.1f}};
+  ::fidl::Array<float, 256> gamma_green = {{0.2f}};
+  ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
+    primary_client->dc_->ReleaseGammaTable(gamma_table_id);
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 0; }, zx::sec(1)));
+  }
+}
+
+TEST_F(IntegrationTest, ReleaseInvalidGammaTable) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  uint64_t gamma_table_id = 3;
+  ::fidl::Array<float, 256> gamma_red = {{0.1f}};
+  ::fidl::Array<float, 256> gamma_green = {{0.2f}};
+  ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
+    primary_client->dc_->ReleaseGammaTable(gamma_table_id + 5);
+    EXPECT_FALSE(
+        RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 0; }, zx::sec(1)));
+  }
+}
+
+TEST_F(IntegrationTest, SetGammaTable) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  uint64_t gamma_table_id = 3;
+  ::fidl::Array<float, 256> gamma_red = {{0.1f}};
+  ::fidl::Array<float, 256> gamma_green = {{0.2f}};
+  ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
+    primary_client->dc_->SetDisplayGammaTable(primary_client->display_id(), gamma_table_id);
+  }
 }
 
 }  // namespace display

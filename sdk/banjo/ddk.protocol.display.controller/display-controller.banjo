@@ -294,6 +294,16 @@ struct DisplayConfig {
     array<float32>:3 cc_postoffsets;
 
     vector<Layer?>? layer;
+
+    /// Flag to indicate valid gamma table
+    bool gamma_table_present;
+    /// Flag to indicate whether display driver should re-apply gamma correction table to hardware
+    bool apply_gamma_table;
+    /// Gamma Table (Red, Green and Blue)
+    vector<float32>? gamma_red;
+    vector<float32>? gamma_green;
+    vector<float32>? gamma_blue;
+
 };
 
 enum ConfigDisplay : uint32 {

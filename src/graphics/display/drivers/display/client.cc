@@ -11,6 +11,7 @@
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 #include <math.h>
+#include <string.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -342,10 +343,20 @@ void Client::DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _comple
 
 void Client::ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
                               ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
-                              ImportGammaTableCompleter::Sync _completer) {}
+                              ImportGammaTableCompleter::Sync _completer) {
+  fbl::AllocChecker ac;
+  auto gt = fbl::AdoptRef(new (&ac) GammaTables(r, g, b));
+  if (!ac.check()) {
+    zxlogf(ERROR, "%s failed!\n", __func__);
+    return;
+  }
+  gamma_table_map_[gamma_table_id] = std::move(gt);
+}
 
 void Client::ReleaseGammaTable(uint64_t gamma_table_id,
-                               ReleaseGammaTableCompleter::Sync _completer) {}
+                               ReleaseGammaTableCompleter::Sync _completer) {
+  gamma_table_map_.erase(gamma_table_id);
+}
 
 void Client::SetDisplayMode(uint64_t display_id, fhd::Mode mode,
                             SetDisplayModeCompleter::Sync _completer) {
@@ -437,7 +448,32 @@ void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> 
 }
 
 void Client::SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
-                                  SetDisplayGammaTableCompleter::Sync _completer) {}
+                                  SetDisplayGammaTableCompleter::Sync _completer) {
+  auto config = configs_.find(display_id);
+  if (!config.IsValid()) {
+    return;
+  }
+
+  auto gamma_table = gamma_table_map_.find(gamma_table_id);
+  if (gamma_table == gamma_table_map_.end()) {
+    zxlogf(ERROR, "Invalid Gamma Table\n");
+    TearDown();
+    return;
+  }
+
+  config->pending_.gamma_table_present = true;
+  config->pending_.gamma_red_list = gamma_table->second->Red();
+  config->pending_.gamma_red_count = GammaTables::kTableSize;
+  config->pending_.gamma_green_list = gamma_table->second->Green();
+  config->pending_.gamma_green_count = GammaTables::kTableSize;
+  config->pending_.gamma_blue_list = gamma_table->second->Blue();
+  config->pending_.gamma_blue_count = GammaTables::kTableSize;
+
+  // keep a reference of the table
+  config->pending_gamma_table_ = gamma_table->second;
+  config->display_config_change_ = true;
+  pending_config_valid_ = false;
+}
 
 void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_config,
                                    SetLayerPrimaryConfigCompleter::Sync /*_completer*/) {
@@ -600,6 +636,8 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) {
 
       config.pending_ = config.current_;
       config.display_config_change_ = false;
+
+      config.pending_gamma_table_ = config.current_gamma_table_;
     }
     pending_config_valid_ = true;
   }
@@ -677,6 +715,17 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
     // Apply any pending configuration changes to active layers.
     for (auto& layer_node : display_config.current_layers_) {
       layer_node.layer->ApplyChanges(display_config.current_.mode);
+    }
+
+    // TODO(54374): Controller needs to keep track of client switching and their applied
+    // gamma table
+    if (display_config.pending_gamma_table_ != nullptr &&
+        (display_config.pending_gamma_table_ == display_config.current_gamma_table_)) {
+      // no need to make client re-apply gamma table if it has already been aplied
+      display_config.current_.apply_gamma_table = false;
+    } else {
+      display_config.current_gamma_table_ = display_config.pending_gamma_table_;
+      display_config.current_.apply_gamma_table = true;
     }
   }
   // Overflow doesn't matter, since stamps only need to be unique until

@@ -24,6 +24,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <vector>
@@ -35,6 +36,7 @@
 #include <fbl/vector.h>
 
 #include "controller.h"
+#include "fbl/ref_ptr.h"
 #include "fbl/ring_buffer.h"
 #include "fence.h"
 #include "id-map.h"
@@ -45,6 +47,29 @@
 #include "lib/fidl/llcpp/server.h"
 
 namespace display {
+
+class GammaTables : public fbl::RefCounted<GammaTables> {
+ public:
+  static constexpr uint32_t kTableSize = 256;
+  explicit GammaTables(::fidl::Array<float, kTableSize> r, ::fidl::Array<float, kTableSize> g,
+                       ::fidl::Array<float, kTableSize> b) {
+    std::memcpy(&red, &r, sizeof(r.data_));
+    std::memcpy(&green, &g, sizeof(g.data_));
+    std::memcpy(&blue, &b, sizeof(b.data_));
+  }
+
+  // We are returning raw pointers here for display driver consumption. However,
+  // a ref-counted pointer is held by core display to guarantee validity of the
+  // pointers.
+  float* Red() { return red.data(); }
+  float* Green() { return green.data(); }
+  float* Blue() { return blue.data(); }
+
+ private:
+  ::fidl::Array<float, kTableSize> red;
+  ::fidl::Array<float, kTableSize> green;
+  ::fidl::Array<float, kTableSize> blue;
+};
 
 // Almost-POD used by Client to manage display configuration. Public state is used by Controller.
 class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
@@ -62,6 +87,9 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
  private:
   display_config_t current_;
   display_config_t pending_;
+
+  fbl::RefPtr<GammaTables> pending_gamma_table_;
+  fbl::RefPtr<GammaTables> current_gamma_table_;
 
   bool pending_layer_change_;
   bool pending_apply_layer_change_;
@@ -121,6 +149,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   // Used for testing
   sync_completion_t* fidl_unbound() { return &fidl_unbound_; }
   uint64_t LatestAckedCookie() const { return acked_cookie_; }
+  size_t GetGammaTableSize() const { return gamma_table_map_.size(); }
 
  private:
   void ImportVmoImage(llcpp::fuchsia::hardware::display::ImageConfig image_config, zx::vmo vmo,
@@ -253,6 +282,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   uint64_t pending_capture_release_image_ = INVALID_ID;
 
   uint64_t acked_cookie_ = 0;
+
+  std::map<uint64_t, fbl::RefPtr<GammaTables>> gamma_table_map_;
 };
 
 // ClientProxy manages interactions between its Client instance and the ddk and the
