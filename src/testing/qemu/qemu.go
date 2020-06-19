@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -87,6 +88,7 @@ type Params struct {
 	ZBI           string
 	AppendCmdline string
 	Networking    bool
+	DisableKVM    bool
 }
 
 type Instance struct {
@@ -144,6 +146,22 @@ func (d *Distribution) kernelPath(arch Arch) string {
 	return ""
 }
 
+// Check to see whether the current host supports KVM.
+// Currently only suports X64 Linux.
+func hostSupportsKVM(arch Arch) bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	if arch != X64 || runtime.GOARCH != "amd64" {
+		return false
+	}
+	_, err := os.OpenFile("/dev/kvm", os.O_RDONLY, 0)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 // TargetCPU returs the target CPU used by the build that produced this library.
 func (d *Distribution) TargetCPU() (Arch, error) {
 	path := filepath.Join(d.exPath, "test_data/qemu/target_cpu.txt")
@@ -177,6 +195,9 @@ func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []stri
 	} else if params.Arch == X64 {
 		args = append(args, "-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
 			"-cpu", "Haswell,+smap,-check,-fsgsbase")
+		if !params.DisableKVM && hostSupportsKVM(params.Arch) {
+			args = append(args, "-enable-kvm")
+		}
 	} else {
 		panic("unsupported architecture")
 	}
