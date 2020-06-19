@@ -16,7 +16,6 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.sys2.BlockingEventSource",
             ],
