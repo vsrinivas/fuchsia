@@ -70,10 +70,10 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   if ((status == ZX_ERR_NOT_FOUND) && (flags & VMM_PF_FLAG_USER)) {
     printf("PageFault: %zu free pages\n", pmm_count_free_pages());
     DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8 * 256);
-  } else if (status == ZX_ERR_INTERNAL_INTR_RETRY) {
-    // If we get this, then all checks passed but we were suspended while waiting
-    // for the request to be fulfilled. Pretend the fault was successful and let
-    // the thread re-fault after it is resumed.
+  } else if (status == ZX_ERR_INTERNAL_INTR_RETRY || status == ZX_ERR_INTERNAL_INTR_KILLED) {
+    // If we get this, then all checks passed but we were interrupted or killed while waiting
+    // for the request to be fulfilled. Pretend the fault was successful and let the thread re-fault
+    // after it is resumed (in case of suspension), or proceed with termination.
     status = ZX_OK;
   }
 

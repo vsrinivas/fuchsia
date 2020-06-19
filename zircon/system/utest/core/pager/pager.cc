@@ -2114,4 +2114,42 @@ TEST(Pager, WritingZeroFork) {
   vmo.write(&data, 0, sizeof(data));
 }
 
+// Test that a thread blocked on a page fault can be killed cleanly.
+TEST(Pager, CleanThreadKill) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 1;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // Faulting thread that remains blocked on a page fault until killed.
+  TestThread t([vmo]() -> bool { return check_buffer(vmo, 0, 1, true); });
+
+  // Thread that kills the faulting thread.
+  TestThread k([&t]() -> bool {
+    // Wait for the faulting thread to block on a page fault first.
+    if (!t.WaitForBlocked()) {
+      return false;
+    }
+    // Kill the thread.
+    if (!t.Kill()) {
+      return false;
+    }
+    return true;
+  });
+
+  ASSERT_TRUE(t.Start());
+  ASSERT_TRUE(k.Start());
+
+  // Make sure we saw the page fault request. Don't service it.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Make sure the faulting thread does not take a fatal exception when killed.
+  // The thread does fail since its page fault never completes, but it does not crash.
+  ASSERT_TRUE(t.WaitForFailure());
+
+  ASSERT_TRUE(k.Wait());
+}
+
 }  // namespace pager_tests
