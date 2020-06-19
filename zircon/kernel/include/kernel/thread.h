@@ -232,6 +232,23 @@ class WaitQueue {
   // This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
   static bool PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
 
+  // Used by WaitQueue and OwnedWaitQueue to manage changes to the maximum
+  // priority of a wait queue due to external effects (thread priority change,
+  // thread timeout, thread killed).
+  bool UpdatePriority(int old_prio) TA_REQ(thread_lock);
+
+  static void TimeoutHandler(Timer* timer, zx_time_t now, void* arg);
+
+  // Inline helpers (defined in wait_queue_internal.h) for
+  // WaitQueue::BlockEtc and OwnedWaitQueue::BlockAndAssignOwner to
+  // share.
+  inline zx_status_t BlockEtcPreamble(const Deadline& deadline, uint signal_mask,
+                                      ResourceOwnership reason) TA_REQ(thread_lock);
+  inline zx_status_t BlockEtcPostamble(const Deadline& deadline) TA_REQ(thread_lock);
+
+  // Internal helper for dequeueing a single Thread.
+  void Dequeue(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
+
   // Validate that the queue of a given WaitQueue is valid.
   void ValidateQueue() TA_REQ(thread_lock);
 
@@ -883,9 +900,93 @@ class ScopedThreadExceptionContext {
 };
 
 // These come last, after the definitions of both Thread and WaitQueue.
+template <typename Callable>
+void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thread_lock) {
+  auto consider_queue = [&visit_thread](Thread* queue_head) TA_REQ(thread_lock) -> bool {
+    // So, this is a bit tricky.  We need to visit each node in a
+    // wait_queue priority level in a way which permits our visit_thread
+    // function to remove the thread that we are visiting.
+    //
+    // Each priority level starts with a queue head which has a list of
+    // more threads which exist at that priority level, but the queue
+    // head itself is not a member of this list, so some special care
+    // must be taken.
+    //
+    // Start with the queue_head and look up the next thread (if any) at
+    // the priority level.  Visit the thread, and if (after visiting the
+    // thread), the next thread has become the new queue_head, update
+    // queue_head and keep going.
+    //
+    // If we advance past the queue head, but still have threads to
+    // consider, switch to a more standard enumeration of the queue
+    // attached to the queue_head.  We know at this point in time that
+    // the queue_head can no longer change out from under us.
+    //
+    DEBUG_ASSERT(queue_head != nullptr);
+    Thread* next;
+
+    while (true) {
+      next = nullptr;
+      if (!queue_head->wait_queue_state_.sublist_.is_empty()) {
+        next = &queue_head->wait_queue_state_.sublist_.front();
+      }
+
+      if (!visit_thread(queue_head)) {
+        return false;
+      }
+
+      // Have we run out of things to visit?
+      if (!next) {
+        return true;
+      }
+
+      // If next is not the new queue head, stop.
+      if (!next->wait_queue_state_.IsHead()) {
+        break;
+      }
+
+      // Next is the new queue head.  Update and keep going.
+      queue_head = next;
+    }
+
+    // If we made it this far, then we must still have a valid next.
+    DEBUG_ASSERT(next);
+    do {
+      Thread* t = next;
+      auto iter = queue_head->wait_queue_state_.sublist_.make_iterator(*t);
+      ++iter;
+      if (iter == queue_head->wait_queue_state_.sublist_.end()) {
+        next = nullptr;
+      } else {
+        next = &*iter;
+      }
+
+      if (!visit_thread(t)) {
+        return false;
+      }
+    } while (next != nullptr);
+
+    return true;
+  };
+
+  Thread* last_queue_head = nullptr;
+
+  for (Thread& queue_head : heads_) {
+    if ((last_queue_head != nullptr) && !consider_queue(last_queue_head)) {
+      return;
+    }
+    last_queue_head = &queue_head;
+  }
+
+  if (last_queue_head != nullptr) {
+    consider_queue(last_queue_head);
+  }
+}
+
 inline WaitQueueHeadsTrait::NodeState& WaitQueueHeadsTrait::node_state(Thread& thread) {
   return thread.wait_queue_state_.heads_node_;
 }
+
 inline WaitQueueSublistTrait::NodeState& WaitQueueSublistTrait::node_state(Thread& thread) {
   return thread.wait_queue_state_.sublist_node_;
 }

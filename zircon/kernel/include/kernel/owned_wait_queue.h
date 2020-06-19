@@ -14,16 +14,6 @@
 #include <kernel/thread_lock.h>
 #include <kernel/wait.h>
 
-namespace internal {
-
-// fwd decl
-// we don't want to drag all of wait_queue_internal.h into this header file, but
-// we need to be friends with this internal function, so we just fwd decl it
-// here instead..
-bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thread_lock);
-
-}  // namespace internal
-
 // Owned wait queues are an extension of wait queues which adds the concept of
 // ownership for use when priority inheritance semantics are needed.
 //
@@ -175,9 +165,9 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
                       Hook on_thread_requeue_hook = {}) TA_REQ(thread_lock) __WARN_UNUSED_RESULT;
 
  private:
-  // Give permission to the wait_queue_t thunk to call the
+  // Give permission to the WaitQueue thunk to call the
   // WaitersPriorityChanged method (below).
-  friend bool internal::wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio);
+  friend bool WaitQueue::UpdatePriority(int old_prio);
 
   // Called whenever the pressure of a wait queue currently owned by |t| has
   // just changed.  Propagates priority inheritance side effects, but do not

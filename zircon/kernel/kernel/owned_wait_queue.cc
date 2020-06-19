@@ -529,10 +529,10 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
   // we add current_thread to it.
   int old_queue_prio = BlockedPriority();
 
-  // Perform the first half of the block_etc operation.  If this fails, then
+  // Perform the first half of the BlockEtc operation.  If this fails, then
   // the state of the actual wait queue is unchanged and we can just get out
   // now.
-  zx_status_t res = internal::wait_queue_block_etc_pre(this, deadline, 0u, resource_ownership);
+  zx_status_t res = BlockEtcPreamble(deadline, 0u, resource_ownership);
   if (res != ZX_OK) {
     // There are only three reasons why the pre-wait operation should ever fail.
     //
@@ -565,10 +565,10 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
   __UNUSED bool local_resched;
   local_resched = UpdateBookkeeping(new_owner, old_queue_prio);
 
-  // Finally, go ahead and run the second half of the block_etc operation.
+  // Finally, go ahead and run the second half of the BlockEtc operation.
   // This will actually block our thread and handle setting any timeout timers
   // in the process.
-  return internal::wait_queue_block_etc_post(this, deadline);
+  return BlockEtcPostamble(deadline);
 }
 
 bool OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) {

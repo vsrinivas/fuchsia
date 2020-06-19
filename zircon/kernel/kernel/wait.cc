@@ -69,18 +69,7 @@
 //   +-------------+
 //
 
-// Utility functions meant to be used *only* by wait queue internal code.
-// Normally, these would be static and restricted to this translation unit, but
-// there are reasons that some of this code needs to be accessible outside of
-// this TU (see wait_queue_interal.h and wait_queue_block_etc_(pre|post).)
-//
-// Instead of having two styles, one where some of these functions are static
-// and others are members of internal::, all of the previously static functions
-// have been moved into the internal:: namespace instead (just for consistency's
-// sake).
-namespace internal {
-
-void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg) {
+void WaitQueue::TimeoutHandler(Timer* timer, zx_time_t now, void* arg) {
   Thread* thread = (Thread*)arg;
 
   DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
@@ -92,38 +81,35 @@ void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg) {
     return;
   }
 
-  WaitQueue::UnblockThread(thread, ZX_ERR_TIMED_OUT);
+  UnblockThread(thread, ZX_ERR_TIMED_OUT);
 
   thread_lock.Release();
 }
 
 // Deal with the consequences of a change of maximum priority across the set of
 // waiters in a wait queue.
-bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thread_lock) {
+bool WaitQueue::UpdatePriority(int old_prio) TA_REQ(thread_lock) {
   // If this is an owned wait queue, and the maximum priority of its set of
   // waiters has changed, make sure to apply any needed priority inheritance.
-  if ((wq->magic_ == OwnedWaitQueue::kOwnedMagic) && (old_prio != wq->BlockedPriority())) {
-    return static_cast<OwnedWaitQueue*>(wq)->WaitersPriorityChanged(old_prio);
+  if ((magic_ == OwnedWaitQueue::kOwnedMagic) && (old_prio != BlockedPriority())) {
+    return static_cast<OwnedWaitQueue*>(this)->WaitersPriorityChanged(old_prio);
   }
 
   return false;
 }
 
 // Remove a thread from a wait queue, maintain the wait queue's internal count,
-// and update the wait_queue specific bookkeeping in the thread in the process.
-void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t, zx_status_t wait_queue_error)
-    TA_REQ(thread_lock) {
+// and update the WaitQueue specific bookkeeping in the thread in the process.
+void WaitQueue::Dequeue(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
   DEBUG_ASSERT(t != nullptr);
   DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
-  DEBUG_ASSERT(t->blocking_wait_queue_ == wait);
+  DEBUG_ASSERT(t->blocking_wait_queue_ == this);
 
-  wait->collection_.Remove(t);
+  collection_.Remove(t);
   t->blocked_status_ = wait_queue_error;
-  t->blocking_wait_queue_ = NULL;
+  t->blocking_wait_queue_ = nullptr;
 }
-
-}  // namespace internal
 
 Thread* WaitQueueCollection::Peek() {
   if (heads_.is_empty()) {
@@ -223,13 +209,6 @@ void WaitQueueCollection::Validate() const {
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// End internal::
-// Begin user facing API
-//
-////////////////////////////////////////////////////////////////////////////////
-
 void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
   DEBUG_ASSERT_MAGIC_CHECK(this);
   DEBUG_ASSERT(arch_ints_disabled());
@@ -237,6 +216,12 @@ void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
 
   collection_.Validate();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Begin user facing API
+//
+////////////////////////////////////////////////////////////////////////////////
 
 // return the numeric priority of the highest priority thread queued
 int WaitQueue::BlockedPriority() const {
@@ -292,12 +277,12 @@ zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
     ValidateQueue();
   }
 
-  zx_status_t res = internal::wait_queue_block_etc_pre(this, deadline, signal_mask, reason);
+  zx_status_t res = BlockEtcPreamble(deadline, signal_mask, reason);
   if (res != ZX_OK) {
     return res;
   }
 
-  return internal::wait_queue_block_etc_post(this, deadline);
+  return BlockEtcPostamble(deadline);
 }
 
 /**
@@ -330,7 +315,7 @@ int WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
 
   t = Peek();
   if (t) {
-    internal::wait_queue_dequeue_thread_internal(this, t, wait_queue_error);
+    Dequeue(t, wait_queue_error);
 
     ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
@@ -358,7 +343,7 @@ Thread* WaitQueue::DequeueOne(zx_status_t wait_queue_error) {
 
   Thread* t = Peek();
   if (t) {
-    internal::wait_queue_dequeue_thread_internal(this, t, wait_queue_error);
+    Dequeue(t, wait_queue_error);
   }
 
   return t;
@@ -373,7 +358,7 @@ void WaitQueue::DequeueThread(Thread* t, zx_status_t wait_queue_error) {
     ValidateQueue();
   }
 
-  internal::wait_queue_dequeue_thread_internal(this, t, wait_queue_error);
+  Dequeue(t, wait_queue_error);
 }
 
 void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
@@ -434,7 +419,7 @@ int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
   // pop all the threads off the wait queue into the run queue
   // TODO: optimize with custom pop all routine
   while ((t = Peek())) {
-    internal::wait_queue_dequeue_thread_internal(this, t, wait_queue_error);
+    Dequeue(t, wait_queue_error);
     list.push_back(t);
     ret++;
   }
@@ -513,8 +498,8 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
   }
 
   int old_wq_prio = wq->BlockedPriority();
-  internal::wait_queue_dequeue_thread_internal(wq, t, wait_queue_error);
-  internal::wait_queue_waiters_priority_changed(wq, old_wq_prio);
+  wq->Dequeue(t, wait_queue_error);
+  wq->UpdatePriority(old_wq_prio);
 
   if (Scheduler::Unblock(t)) {
     Scheduler::Reschedule();
@@ -548,9 +533,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   wq->collection_.Remove(t);
   wq->collection_.Insert(t);
 
-  bool ret = (propagate == PropagatePI::Yes)
-                 ? internal::wait_queue_waiters_priority_changed(wq, old_wq_prio)
-                 : false;
+  bool ret = (propagate == PropagatePI::Yes) ? wq->UpdatePriority(old_wq_prio) : false;
 
   if (WAIT_QUEUE_VALIDATION) {
     t->blocking_wait_queue_->ValidateQueue();
