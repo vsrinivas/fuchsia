@@ -15,11 +15,9 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-static bool GoldfishPipeTest() {
-  BEGIN_TEST;
-
+TEST(GoldfishPipeTests, GoldfishPipeTest) {
   int fd = open("/dev/class/goldfish-pipe/000", O_RDWR);
   EXPECT_GE(fd, 0);
 
@@ -102,22 +100,14 @@ static bool GoldfishPipeTest() {
 
   // pingpong service should have returned the data received.
   EXPECT_EQ(memcmp(send_buffer, recv_buffer, kSmallSize), 0);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(GoldfishPipeTests)
-RUN_TEST(GoldfishPipeTest)
-END_TEST_CASE(GoldfishPipeTests)
 
 using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
                                                llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
 using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
                                         llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
-static bool GoldfishControlTest() {
-  BEGIN_TEST;
-
+TEST(GoldfishControlTests, GoldfishControlTest) {
   int fd = open("/dev/class/goldfish-control/000", O_RDWR);
   EXPECT_GE(fd, 0);
 
@@ -207,8 +197,6 @@ static bool GoldfishControlTest() {
                 fuchsia_hardware_goldfish_ColorBufferFormatType_BGRA, &status2),
             ZX_OK);
   EXPECT_EQ(status2, ZX_ERR_ALREADY_EXISTS);
-
-  END_TEST;
 }
 
 // In this test case we call CreateColorBuffer() and GetColorBuffer()
@@ -216,9 +204,7 @@ static bool GoldfishControlTest() {
 //
 // The IPC transmission should succeed but FIDL interface should
 // return ZX_ERR_INVALID_ARGS.
-static bool GoldfishControlTest_InvalidVmo() {
-  BEGIN_TEST;
-
+TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
   int fd = open("/dev/class/goldfish-control/000", O_RDWR);
   EXPECT_GE(fd, 0);
 
@@ -249,8 +235,6 @@ static bool GoldfishControlTest_InvalidVmo() {
                 channel.get(), vmo_copy2.release(), &status2, &id),
             ZX_OK);
   EXPECT_EQ(status2, ZX_ERR_INVALID_ARGS);
-
-  END_TEST;
 }
 
 // In this test case we call GetColorBuffer() on a vmo
@@ -258,9 +242,7 @@ static bool GoldfishControlTest_InvalidVmo() {
 // the color buffer yet.
 //
 // The FIDL interface should return ZX_ERR_NOT_FOUND.
-static bool GoldfishControlTest_GetNotCreatedColorBuffer() {
-  BEGIN_TEST;
-
+TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
   int fd = open("/dev/class/goldfish-control/000", O_RDWR);
   EXPECT_GE(fd, 0);
 
@@ -329,19 +311,9 @@ static bool GoldfishControlTest_GetNotCreatedColorBuffer() {
                                                                   &status2, &id),
             ZX_OK);
   EXPECT_EQ(status2, ZX_ERR_NOT_FOUND);
-
-  END_TEST;
 }
 
-BEGIN_TEST_CASE(GoldfishControlTests)
-RUN_TEST(GoldfishControlTest)
-RUN_TEST(GoldfishControlTest_InvalidVmo)
-RUN_TEST(GoldfishControlTest_GetNotCreatedColorBuffer)
-END_TEST_CASE(GoldfishControlTests)
-
-static bool GoldfishAddressSpaceTest() {
-  BEGIN_TEST;
-
+TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
   int fd = open("/dev/class/goldfish-address-space/000", O_RDWR);
   EXPECT_GE(fd, 0);
 
@@ -450,17 +422,11 @@ static bool GoldfishAddressSpaceTest() {
                 child_channel2.get(), 0, &res),
             ZX_OK);
   EXPECT_EQ(res, ZX_ERR_INVALID_ARGS);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(GoldfishAddressSpaceTests)
-RUN_TEST(GoldfishAddressSpaceTest)
-END_TEST_CASE(GoldfishAddressSpaceTests)
 
 int main(int argc, char** argv) {
   if (access("/dev/sys/platform/acpi/goldfish", F_OK) != -1) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    return zxtest::RunAllTests(argc, argv);
   }
   return 0;
 }
