@@ -79,6 +79,34 @@ TEST(Memory, GenerateMemoryWorkloads) {
   }
 }
 
+TEST(Memory, WorkloadGenerator) {
+  // Create a generator with 3 workloads and 3 CPUs.
+  MemoryWorkloadGenerator generator(
+      std::vector<MemoryWorkload>{
+          MemoryWorkload{.name = "A"},
+          MemoryWorkload{.name = "B"},
+          MemoryWorkload{.name = "C"},
+      },
+      3);
+
+  // Ensure we get coverage across all workloads and CPUs.
+  for (const std::pair<std::string, uint32_t>& expected :
+       std::initializer_list<std::pair<std::string, uint32_t>>{
+           {"A", 0},
+           {"B", 1},
+           {"C", 2},
+           {"A", 1},
+           {"B", 2},
+           {"C", 0},
+           {"A", 2},
+           {"B", 0},
+           {"C", 1},
+       }) {
+    MemoryWorkloadGenerator::Workload w = generator.Next();
+    EXPECT_EQ(expected, std::make_pair(w.workload.name, w.cpu));
+  }
+}
+
 TEST(Memory, CatchBitFlip) {
   // Ensure that at least one workload can catch a bitflip triggered by another thread.
   std::unique_ptr<MemoryRange> memory =

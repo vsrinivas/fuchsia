@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <numeric>
 #include <random>
 #include <string>
 #include <thread>
@@ -22,6 +23,7 @@
 #include "compiler.h"
 #include "memory_range.h"
 #include "memory_stats.h"
+#include "profile_manager.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "status.h"
 #include "temperature_sensor.h"
@@ -318,6 +320,53 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
   return zx::ok(RoundUp(free_bytes - slack, ZX_PAGE_SIZE));
 }
 
+MemoryWorkloadGenerator ::MemoryWorkloadGenerator(const std::vector<MemoryWorkload>& workloads,
+                                                  uint32_t num_cpus)
+    : num_cpus_(num_cpus) {
+  ZX_ASSERT(!workloads.empty());
+
+  // Copy workloads into workloads_, converting into
+  // a std::optional<MemoryWorkload> in the process.
+  workloads_.reserve(workloads.size());
+  for (const MemoryWorkload& workload : workloads) {
+    workloads_.emplace_back(workload);
+  }
+
+  // We want to iterate through different workloads and different CPUs. One
+  // method would be to test 1 CPU through all workloads, or 1 workload
+  // through all CPUs. Neither is great: ideally, we would like to get
+  // good coverage of both CPUs and workloads relatively quickly.
+  //
+  // To try and quickly maximise coverage, we instead iterate through both
+  // simultaneously. If we have:
+  //
+  //   gcd(num_cpus, num_workloads) == 1
+  //
+  // then the Chinese Remainder Theorem [1] ensures that after num_cpus
+  // * num_workloads iterations, we will have covered every combination of
+  // num_cpus * num_workloads.
+  //
+  // To ensure that gcd(num_cpus, num_workloads) == 1, we keep adding a number
+  // of dummy "null" workloads until this criteria is met.
+  //
+  // [1] https://en.wikipedia.org/wiki/Chinese_remainder_theorem
+  while (std::gcd(num_cpus_, workloads_.size()) != 1) {
+    workloads_.push_back(std::nullopt);
+  }
+}
+
+MemoryWorkloadGenerator::Workload MemoryWorkloadGenerator::Next() {
+  // Increment |n|, skipping over null workloads.
+  do {
+    n_++;
+  } while (!workloads_[n_ % workloads_.size()].has_value());
+
+  return Workload{
+      .cpu = static_cast<uint32_t>(n_ % num_cpus_),
+      .workload = workloads_[n_ % workloads_.size()].value(),
+  };
+}
+
 bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration duration,
                   TemperatureSensor* /*temperature_sensor*/) {
   // Parse the amount of memory to test.
@@ -328,42 +377,53 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
   }
   status->Log("Testing %0.2fMiB of memory.", bytes_to_test.value() / static_cast<double>(MiB(1)));
 
+  // Create a profile manager.
+  std::unique_ptr<ProfileManager> profile_manager = ProfileManager::CreateFromEnvironment();
+  if (profile_manager == nullptr) {
+    status->Log("Error: could not create profile manager.");
+    return false;
+  }
+
   // Get workloads.
-  size_t workload_index = 0;
   std::vector<MemoryWorkload> workloads = GenerateMemoryWorkloads();
+  MemoryWorkloadGenerator workload_generator{workloads, zx_system_get_num_cpus()};
 
   // Keep looping over the memory tests until we run out of time.
   std::unique_ptr<MemoryRange> memory;
   uint64_t num_tests = 1;
   zx::time end_time = zx::deadline_after(duration);
   while (zx::clock::get_monotonic() < end_time) {
-    const MemoryWorkload& workload = workloads[workload_index];
+    MemoryWorkloadGenerator::Workload next = workload_generator.Next();
 
     // Allocate memory for tests.
     zx::status<> result =
-        ReallocateMemoryAsRequired(workload.memory_type, bytes_to_test.value(), &memory);
+        ReallocateMemoryAsRequired(next.workload.memory_type, bytes_to_test.value(), &memory);
     if (result.is_error()) {
-      status->Log("Failed to allocate memory: %s", result.status_string());
+      status->Log("Failed to reallocate memory: %s", result.status_string());
       return false;
     }
 
-    status->Set("Test %4ld: %s", num_tests, workloads[workload_index].name.c_str());
+    // Log start of test.
+    status->Set("Test %4ld: CPU %2d : %s", num_tests, next.cpu, next.workload.name.c_str());
 
+    // Switch execution to the correct CPU.
+    profile_manager->SetThreadAffinity(*zx::thread::self(), 1u << next.cpu);
+
+    // Execute the workload.
     zx::time test_start = zx::clock::get_monotonic();
-    workload.exec(status, memory.get());
+    next.workload.exec(status, memory.get());
     zx::duration test_duration = zx::clock::get_monotonic() - test_start;
 
     // Calculate test time and throughput.
     std::string throughput;
-    if (workload.report_throughput) {
+    if (next.workload.report_throughput) {
       throughput =
           fxl::StringPrintf(", throughput: %0.2f MiB/s",
                             memory->size_bytes() / DurationToSecs(test_duration) / 1024. / 1024.);
     }
-    status->Log("Test %4ld: %s: %0.3fs%s", num_tests, workloads[workload_index].name.c_str(),
-                DurationToSecs(test_duration), throughput.c_str());
+    status->Log("Test %4ld: CPU %2d : %s: %0.3fs%s", num_tests, next.cpu,
+                next.workload.name.c_str(), DurationToSecs(test_duration), throughput.c_str());
 
-    workload_index = (workload_index + 1) % workloads.size();
     num_tests++;
   }
 

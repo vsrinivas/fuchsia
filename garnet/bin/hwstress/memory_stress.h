@@ -48,6 +48,33 @@ struct MemoryWorkload {
 // Get all memory stress workloads.
 std::vector<MemoryWorkload> GenerateMemoryWorkloads();
 
+// Generates combinations of (workloads, cpu_number) to ensure an even coverage
+// of both.
+//
+// For example, given the workloads [A, B] and 2 cpus, subsequent calls to |Next| will
+// return the values:
+//
+//   [{A, 0}, {B, 1}, {A, 1}, {B, 0}]
+//
+// and then repeat the sequence.
+class MemoryWorkloadGenerator {
+ public:
+  // Generate combinations from the given list of workloads / number of CPUs.
+  explicit MemoryWorkloadGenerator(const std::vector<MemoryWorkload>& workloads, uint32_t num_cpus);
+
+  // Generate the next combination.
+  struct Workload {
+    uint32_t cpu;
+    MemoryWorkload& workload;
+  };
+  Workload Next();
+
+ private:
+  std::vector<std::optional<MemoryWorkload>> workloads_;
+  uint32_t num_cpus_;
+  uint64_t n_ = -1;  // start at -1 so first increment puts us at 0.
+};
+
 // Write the given pattern out to memory.
 //
 // Pattern is always written in memory as a big-endian word. That is, the
