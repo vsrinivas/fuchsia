@@ -388,19 +388,33 @@ class TestPlatformBuffer {
   // }
 
   static void CommitPages(uint32_t num_pages) {
-    std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(num_pages * magma::page_size(), "test");
+    {
+      std::unique_ptr<magma::PlatformBuffer> buffer =
+          magma::PlatformBuffer::Create(num_pages * magma::page_size(), "test");
 
-    // start of range invalid
-    EXPECT_FALSE(buffer->CommitPages(num_pages, 1));
-    // end of range invalid
-    EXPECT_FALSE(buffer->CommitPages(0, num_pages + 1));
-    // one page in the middle
-    EXPECT_TRUE(buffer->CommitPages(num_pages / 2, 1));
-    // entire buffer
-    EXPECT_TRUE(buffer->CommitPages(0, num_pages));
-    // entire buffer again
-    EXPECT_TRUE(buffer->CommitPages(0, num_pages));
+      // start of range invalid
+      EXPECT_FALSE(buffer->CommitPages(num_pages, 1));
+      // end of range invalid
+      EXPECT_FALSE(buffer->CommitPages(0, num_pages + 1));
+      // one page in the middle
+      EXPECT_TRUE(buffer->CommitPages(num_pages / 2, 1));
+      // entire buffer
+      EXPECT_TRUE(buffer->CommitPages(0, num_pages));
+      // entire buffer again
+      EXPECT_TRUE(buffer->CommitPages(0, num_pages));
+    }
+
+    {
+      const uint64_t kLength = num_pages * magma::page_size();
+      void* address;
+
+      std::unique_ptr<magma::PlatformBuffer> buffer =
+          magma::PlatformBuffer::Create(kLength, "test");
+
+      // Exercise commit pages on mapped buffer.
+      EXPECT_TRUE(buffer->MapCpu(&address, kLength));
+      EXPECT_TRUE(buffer->CommitPages(0, num_pages));
+    }
   }
 
   static void MapAligned(uint32_t num_pages) {

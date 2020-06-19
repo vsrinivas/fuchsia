@@ -439,7 +439,7 @@
         "ordinal": 25,
         "name": "magma_commit_buffer",
         "type": "magma_status_t",
-        "description": "Ensures that the given page range of a buffer is backed by physical memory.",
+        "description": "Ensures that the given page range of a buffer is backed by physical memory. If the buffer is mapped, also ensures that the CPU page tables are populated to avoid unnecessary page faults when supported by the platform.",
         "arguments": [
           {
             "name": "connection",

@@ -276,6 +276,16 @@ bool ZirconPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_
   else if (status != ZX_OK)
     return DRETF(false, "failed to commit vmo pages: %d", status);
 
+  if (vmar_) {
+    TRACE_DURATION("magma", "MapRange", "op_start", TA_UINT64(op_start), "op_size",
+                   TA_UINT64(op_size));
+    const auto op_base = reinterpret_cast<uint64_t>(virt_addr_);
+    status = vmar_.op_range(ZX_VMAR_OP_MAP_RANGE, op_base + op_start, op_size, nullptr, 0);
+    if (status != ZX_OK) {
+      DLOG("Kernel failed to map the range of pages just committed! status=%d", status);
+    }
+  }
+
   return true;
 }
 

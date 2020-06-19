@@ -239,7 +239,9 @@ void magma_unmap_buffer_gpu(
     uint64_t gpu_va);
 
 ///
-/// \brief Ensures that the given page range of a buffer is backed by physical memory.
+/// \brief Ensures that the given page range of a buffer is backed by physical memory. If the buffer
+///        is mapped, also ensures that the CPU page tables are populated to avoid unnecessary page
+///        faults when supported by the platform.
 /// \param connection An open connection.
 /// \param buffer A valid buffer.
 /// \param page_offset Page offset into the buffer.
