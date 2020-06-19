@@ -4,29 +4,36 @@
 
 #include "driver.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <zircon/status.h>
+
+#include <mutex>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/driver.h>
 
 #include "device.h"
 
 // Not guarded by a mutex, because it will be valid between .init and .release and nothing else will
 // exist outside those two calls.
 static async::Loop* loop = nullptr;
+static std::once_flag flag;
 
 zx_status_t wlanphy_init(void** out_ctx) {
-  loop = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx_status_t status = loop->StartThread("wlanphy-loop");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "wlanphy: could not create event loop: %s", zx_status_get_string(status));
-    delete loop;
-    loop = nullptr;
-  } else {
-    zxlogf(INFO, "wlanphy: event loop started");
-  }
+  static zx_status_t status = ZX_ERR_BAD_STATE;
+  std::call_once(flag, []() {
+    loop = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    status = loop->StartThread("wlanphy-loop");
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "wlanphy: could not create event loop: %s", zx_status_get_string(status));
+      delete loop;
+      loop = nullptr;
+    } else {
+      zxlogf(INFO, "wlanphy: event loop started");
+    }
+  });
   return status;
 }
 
