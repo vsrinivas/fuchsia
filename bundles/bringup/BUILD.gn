@@ -120,6 +120,7 @@ group("tests") {
     "//zircon/system/utest/blobfs-bench:blobfs-bench-package",
     "//zircon/system/utest/channel-fatal:channel-fatal-package",
     "//zircon/system/utest/cleanup:cleanup-package",
+    "//zircon/system/utest/cmdline:cmdline-package",
     "//zircon/system/utest/compiler:compiler-package",
     "//zircon/system/utest/core-display:core-display-package",
     "//zircon/system/utest/cprng:cprng-package",
