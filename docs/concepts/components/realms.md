@@ -1,8 +1,9 @@
 # Realms
 
-A *realm* is a subtree of the [component instance tree][topology-instance-tree]. Every component instance
-is the root instance of a realm, known as the "component instance's realm",
-which is closely associated with the component instance.
+A *realm* is a subtree of the [component instance tree][topology-instance-tree].
+Every component instance is the root instance of a realm, known as the
+"component instance's realm", which is closely associated with the component
+instance.
 
 Component instances may contain [children](#child-component-instances). Each
 child component instance in turn defines its own sub-realm. The union of these
@@ -96,8 +97,8 @@ statically routed from it.
 A static child is defined, foremost, by two pieces of information:
 
 -   The child instance's *name*. The name is local to the parent component
-    instance, and is used to form [monikers][monikers]. It is valid to
-    declare multiple children with the same URL and different names.
+    instance, and is used to form [monikers][monikers]. It is valid to declare
+    multiple children with the same URL and different names.
 -   The child instance's [component URL][component-urls].
 
 For information on providing additional configuration information to child
@@ -156,19 +157,27 @@ The following diagram illustrates a realm with a collection:
 <br>![Collection example](collection_example.png)<br>
 
 In this example, the `shell` component declares a static child `console` and a
-collection `(tools)`, highlighted by the grey background (the `()`
-notation denotes a collection). `(tools)` contains two dynamic instances, `ls`
-and `grep`. These instances are dynamic children of `shell`, scoped to
-`(tools)`. The use of a collection implies that the existence of `ls` and `grep`
-is not known in advance. This is plausible if you imagine that `ls` and `grep`
-are command-line tools that are instantiated on demand as the user requests
-them.
+collection `(tools)`, highlighted by the grey background (the `()` notation
+denotes a collection). `(tools)` contains two dynamic instances, `ls` and
+`grep`. These instances are dynamic children of `shell`, scoped to `(tools)`.
+The use of a collection implies that the existence of `ls` and `grep` is not
+known in advance. This is plausible if you imagine that `ls` and `grep` are
+command-line tools that are instantiated on demand as the user requests them.
 
 The example also illustrates a capability routing path with the red arrows.
 First, `console` [exposes][expose] `/svc/console` to its containing realm
 `shell`, which [offers][offer] it to `(tools)`. `/svc/console` then becomes
 available for any component instance in the collection to [use][use] -- it does
 not need to be routed to the dynamic instances independently.
+
+## Environments {#environments}
+
+Every realm is assigned an [environment][environments], which configures certain
+choices the framework makes for components in a realm. For example,
+[runner capabilities][runners] are registered to an environment, which makes
+them available to any component instance in the realm. Read
+[Environments][environments] for information on what properties are configurable
+through the environment.
 
 ## The Realm framework service {#realm-framework-service}
 
@@ -183,11 +192,13 @@ documentation.
 [component-manifest-examples]: ./component_manifests.md#examples
 [component-manifests]: ./component_manifests.md
 [component-urls]: ./component_urls.md
+[environments]: ./environments.md
 [expose]: ./component_manifests.md#expose
 [framework-services]: ./component_manifests.md#framework-services
 [glossary-storage]: /docs/glossary.md#storage-capability
 [monikers]: ./monikers.md
 [offer]: ./component_manifests.md#offer
 [realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl
+[runners]: ./runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree
 [use]: ./component_manifests.md#use

@@ -59,7 +59,8 @@ represent components and may be provided to components at runtime.
 The component framework doesn't dictate a particular format for programs, but
 instead requires components to specify which runtime they need by specifying a
 [runner](runners.md). The component framework provides a built-in ELF runner,
-while other runtimes are implemented as components within the framework.
+while other runtimes are implemented as components within the framework. A
+component can use any runner available in its [environment][doc-environments].
 
 The [`program`](#program) section of a component manifest declares to the runner
 how the component is run, such as the program location and any arguments.
@@ -90,6 +91,10 @@ The following capabilities can be routed:
     it.
 -   `runner`: A capability that allows a component to use a particular
     [runner](runners.md).
+
+`protocol`, `directory` and `storage` capabilities are routed to components that
+`use` them. `runner` capabilities` are routed to [environments](#environments)
+that include them.
 
 #### Routing terminology {#routing-terminology}
 
@@ -336,6 +341,10 @@ component instances][children]
     -   `lazy` _(default)_: Start the component instance only if another
         component instance binds to it.
     -   `eager`: Start the component instance as soon as its parent starts.
+-   `environment` _(optional)_: If present, the name of the environment to be
+    assigned to the child component instance, one of
+    [`environments`](#environment). If omitted, the child will inherit the same
+    environment assigned to this component.
 
 Example:
 
@@ -367,6 +376,10 @@ The `collections` section declares collections as described in
         or it is explicitly destroyed.
     -   `persistent`: The instance exists until it is explicitly destroyed. This
         mode is not yet supported.
+-   `environment` _(optional)_: If present, the environment that will be
+    assigned to instances in this collection, one of
+    [`environments`](#environment). If omitted, instances in this collection
+    will inherit the same environment assigned to this component.
 
 Example:
 
@@ -375,6 +388,47 @@ Example:
     {
         "name": "tests",
         "durability": "transient",
+    },
+],
+```
+
+### environments {#environments}
+
+The `environments` section declares environments as describe in
+[Environments][doc-environments].
+
+`environments` is an array of objects with the following properties:
+
+-   `name`: The name of the environment, which is a string of one or more of the
+    following characters: `a-z`, `0-9`, `_`, `.`, `-`.
+-   `extend`: How the environment should extend its parent environment.
+    -   `realm`: Inherit all properties from the parent environment.
+    -   `none`: Start with an empty environment, do not inherit anything.
+    -   `runners`: The runners registered in the environment. An array of
+        objects with the following properties:
+        -   `runner`: The [name](#capability-names) of a runner capability,
+            whose source is specified in `from`.
+        -   `from`: The source of the runner capability, one of:
+            -   `realm`: The component's containing realm (parent).
+            -   `self`: This component.
+            -   `#<child-name>`: A [reference](#references) to a child component
+                instance.
+        -   `as` _(option)_: An explicit name for the runner as it will be known
+            in this environment. If omitted, defaults to `runner`.
+
+Example:
+
+```
+"environments": [
+    {
+        "name": "test-env",
+        "extend": "realm",
+        "runners": [
+            {
+                "runner": "gtest-runner",
+                "from": "#gtest",
+            },
+        ],
     },
 ],
 ```
@@ -394,7 +448,7 @@ runtime, as explained in [Routing terminology](#routing-terminology).
     -   `storage`: The [type](#storage-types) of a storage capability. A
         manifest can only declare one `use` for each storage type.
     -   `runner`: The [name](#capability-names) of a runner capability. A
-        manifest can declare at most one `runner`.
+        component can use at most one `runner`.
 -   `as` _(optional)_: The explicit [target path](#capability-paths) for the
     capability. If omitted, defaults to the source path for protocol and
     directory capabilities, and one of `/data` or `/cache` for storage
@@ -581,6 +635,7 @@ This section may be omitted.
 
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#component-collections
+[doc-environments]: environments.md
 [doc-glossary-appmgr]: /docs/glossary.md#appmgr
 [doc-glossary-hub]: /docs/glossary.md#hub
 [doc-legacy-manifest]: /docs/concepts/storage/component_manifest.md

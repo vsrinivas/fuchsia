@@ -24,6 +24,8 @@ toc:
     path: /docs/concepts/components/monikers.md
   - title: "Realms"
     path: /docs/concepts/components/realms.md
+  - title: "Environments"
+    path: /docs/concepts/components/environments.md
   - title: "Resolvers"
     path: /docs/concepts/components/resolvers.md
   - title: "Runners"

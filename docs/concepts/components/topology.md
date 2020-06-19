@@ -93,6 +93,8 @@ influence the behavior of components, such as:
 - Binding to child components to access their services.
 - Creating and destroying child components.
 
+Certain behavior of a realm can be configured through its [environment][doc-environments].
+
 See the [realms documentation][doc-realms] for more information.
 
 <br>![Diagram of component instance realms](images/topology_realms.png)<br>
@@ -108,6 +110,7 @@ for more information.
 <br>![Diagram of component instance realms](images/topology_capability_routing.png)<br>
 
 [doc-collections]: /docs/concepts/components/realms.md#collections
+[doc-environments]: /docs/concepts/components/environments.md
 [doc-manifests]: /docs/concepts/components/component_manifests.md
 [doc-realms]: /docs/concepts/components/realms.md
 [doc-monikers]: /docs/concepts/components/monikers.md
