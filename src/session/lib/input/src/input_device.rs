@@ -6,10 +6,11 @@ use {
     crate::{keyboard, mouse, touch},
     anyhow::{format_err, Error},
     async_trait::async_trait,
+    async_utils::hanging_get::client::HangingGetStream,
     fdio,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::channel::mpsc::Sender,
+    futures::{channel::mpsc::Sender, stream::StreamExt},
     std::path::PathBuf,
 };
 
@@ -119,21 +120,30 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
 {
     fasync::spawn(async move {
         let mut previous_report: Option<InputReport> = None;
-        if let Ok((_status, event)) = device_proxy.get_reports_event().await {
-            while let Ok(_) = fasync::OnSignals::new(&event, zx::Signals::USER_0).await {
-                match device_proxy.get_reports().await {
-                    Ok(input_reports) => {
-                        for report in input_reports {
-                            previous_report = process_reports(
-                                report,
-                                previous_report,
-                                &device_descriptor,
-                                &mut event_sender,
-                            );
-                        }
+        let (report_reader, server_end) = match fidl::endpoints::create_proxy() {
+            Ok(res) => res,
+            Err(_) => return, // TODO(quiche): signal error
+        };
+        if device_proxy.get_input_reports_reader(server_end).is_err() {
+            return; // TODO(quiche): signal error
+        }
+        let mut report_stream =
+            HangingGetStream::new(Box::new(move || Some(report_reader.read_input_reports())));
+        loop {
+            match report_stream.next().await {
+                Some(Ok(Ok(input_reports))) => {
+                    for report in input_reports {
+                        previous_report = process_reports(
+                            report,
+                            previous_report,
+                            &device_descriptor,
+                            &mut event_sender,
+                        );
                     }
-                    Err(_) => break,
                 }
+                Some(Ok(Err(_service_error))) => break,
+                Some(Err(_fidl_error)) => break,
+                None => break,
             }
         }
         // TODO(lindkvist): Add signaling for when this loop exits, since it means the device
