@@ -34,6 +34,11 @@
 #include <lockdep/thread_lock_state.h>
 #include <vm/kstack.h>
 
+struct Thread;
+class OwnedWaitQueue;
+class ThreadDispatcher;
+struct vmm_aspace;
+
 // When blocking this enum indicates the kind of resource ownership that is being waited for
 // that is causing the block.
 enum class ResourceOwnership {
@@ -262,12 +267,6 @@ class WaitQueue {
   WaitQueueCollection collection_;
 };
 
-struct Thread;
-
-// fwd decls
-class OwnedWaitQueue;
-class ThreadDispatcher;
-
 enum thread_state {
   THREAD_INITIAL = 0,
   THREAD_READY,
@@ -303,8 +302,6 @@ typedef void (*thread_trampoline_routine)() __NO_RETURN;
 #define THREAD_NAME_LENGTH 32
 
 #define THREAD_LINEBUFFER_LENGTH 128
-
-struct vmm_aspace;
 
 // thread priority
 #define NUM_PRIORITIES (32)
