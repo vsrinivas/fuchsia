@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -117,6 +118,41 @@ class TestPlatformBuffer {
     }
 
     EXPECT_LT(i, 100u);
+  }
+
+  static void MapConstrained() {
+    const uint64_t kPageSize = magma::page_size();
+    const uint64_t kLength = kPageSize * 2;
+    const uint64_t kDefaultAlignment = 0;
+    const uint64_t kNoLimit = std::numeric_limits<uint64_t>::max();
+    const uint64_t k4GLimit = uint64_t{1} << 32;
+    void* va_out;
+
+    std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(kLength, "test");
+
+    // Test argument validation.
+    EXPECT_FALSE(buffer->MapCpuConstrained(nullptr, kPageSize, kNoLimit, kDefaultAlignment));
+    EXPECT_FALSE(
+        buffer->MapCpuConstrained(&va_out, kLength + kPageSize, kNoLimit, kDefaultAlignment));
+    EXPECT_FALSE(buffer->MapCpuConstrained(&va_out, kPageSize + 1, kNoLimit, kDefaultAlignment));
+    EXPECT_FALSE(buffer->MapCpuConstrained(&va_out, kPageSize, k4GLimit + 1, kDefaultAlignment));
+    EXPECT_FALSE(buffer->MapCpuConstrained(&va_out, kPageSize, k4GLimit, kDefaultAlignment + 1));
+    EXPECT_FALSE(buffer->MapCpuConstrained(&va_out, kPageSize, k4GLimit, kPageSize + 1));
+    EXPECT_FALSE(buffer->MapCpuConstrained(&va_out, kPageSize, k4GLimit, kPageSize * 2 + 1));
+
+    // Test basic mapping.
+    EXPECT_TRUE(buffer->MapCpuConstrained(&va_out, kLength, k4GLimit, kDefaultAlignment));
+    EXPECT_NE(nullptr, va_out);
+    EXPECT_TRUE(reinterpret_cast<uint64_t>(va_out) < k4GLimit);
+
+    // Test map counting.
+    void* const original_va = va_out;
+    uint32_t i;
+    for (i = 0; i < 100; i++) {
+      ASSERT_TRUE(buffer->MapCpuConstrained(&va_out, kLength, k4GLimit, kDefaultAlignment));
+      EXPECT_EQ(original_va, va_out);
+    }
+    EXPECT_EQ(100u, i);
   }
 
   enum class CreateConfig { kCreate, kImport };
@@ -564,6 +600,8 @@ TEST(PlatformBuffer_ParentVmar, ImportAndMapWithFlags) {
 }
 
 TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
+
+TEST(PlatformBuffer, MapConstrained) { TestPlatformBuffer::MapConstrained(); }
 
 TEST(PlatformBuffer, NotMappable) { TestPlatformBuffer::NotMappable(); }
 

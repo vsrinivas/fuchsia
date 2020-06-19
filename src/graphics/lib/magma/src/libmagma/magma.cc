@@ -243,6 +243,16 @@ magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t 
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_map_constrained(magma_connection_t connection, magma_buffer_t buffer,
+                                     uint64_t length, uint64_t upper_limit, uint64_t alignment,
+                                     void** addr_out) {
+  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+  if (!platform_buffer->MapCpuConstrained(addr_out, length, upper_limit, alignment)) {
+    return DRET(MAGMA_STATUS_MEMORY_ERROR);
+  }
+  return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_unmap(magma_connection_t connection, magma_buffer_t buffer) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 

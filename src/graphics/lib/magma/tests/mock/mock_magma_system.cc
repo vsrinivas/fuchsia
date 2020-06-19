@@ -358,6 +358,12 @@ magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t 
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
+magma_status_t magma_map_constrained(magma_connection_t connection, magma_buffer_t buffer,
+                                     uint64_t length, uint64_t upper_limit, uint64_t alignment,
+                                     void** addr_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t magma_initialize_tracing(magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }

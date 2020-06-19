@@ -7,10 +7,15 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>  // PAGE_SIZE
+#include <zircon/types.h>
 
+#include <limits>
 #include <map>
 #include <vector>
 
+#include "lib/trace/event_args.h"
+#include "platform_buffer.h"
+#include "platform_handle.h"
 #include "platform_trace.h"
 
 namespace magma {
@@ -54,6 +59,8 @@ class ZirconPlatformBufferMapping : public PlatformBuffer::Mapping {
 
 bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
                                            std::unique_ptr<Mapping>* mapping_out) {
+  TRACE_DURATION("magma", "MapCpuWithFlags", "offset", TA_UINT64(offset), "length",
+                 TA_UINT64(length), "flags", TA_UINT64(flags));
   if (!magma::is_page_aligned(offset))
     return DRETF(false, "offset %lx isn't page aligned", offset);
   if (!magma::is_page_aligned(length))
@@ -76,6 +83,8 @@ bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uin
 }
 
 bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) {
+  TRACE_DURATION("magma", "MapAtCpuAddr", "addr", TA_UINT64(addr), "offset", TA_UINT64(offset),
+                 "length", TA_UINT64(length));
   if (!magma::is_page_aligned(addr))
     return DRETF(false, "addr %lx isn't page aligned", addr);
   if (!magma::is_page_aligned(offset))
@@ -119,6 +128,7 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t
 }
 
 bool ZirconPlatformBuffer::MapCpu(void** addr_out, uint64_t alignment) {
+  TRACE_DURATION("magma", "MapCpu", "alignment", TA_UINT64(alignment));
   if (!magma::is_page_aligned(alignment))
     return DRETF(false, "alignment 0x%lx isn't page aligned", alignment);
   if (alignment && !magma::is_pow2(alignment))
@@ -157,7 +167,78 @@ bool ZirconPlatformBuffer::MapCpu(void** addr_out, uint64_t alignment) {
   return true;
 }
 
+bool ZirconPlatformBuffer::MapCpuConstrained(void** va_out, uint64_t length, uint64_t upper_limit,
+                                             uint64_t alignment) {
+  TRACE_DURATION("magma", "MapCpuConstrained", "size", TA_UINT64(size()), "length",
+                 TA_UINT64(length), "upper_limit", TA_UINT64(upper_limit), "alignment",
+                 TA_UINT64(alignment));
+
+  if (!va_out) {
+    return DRETF(false, "va_out is nullptr");
+  }
+  if (!magma::is_page_aligned(length)) {
+    return DRETF(false, "length %lx isn't page aligned", length);
+  }
+  if (length > size()) {
+    return DRETF(false, "length %lx > size %lx", length, size());
+  }
+  if (!magma::is_page_aligned(alignment)) {
+    return DRETF(false, "alignment 0x%lx isn't page aligned", alignment);
+  }
+  // The combination of this test and the previous alignment test ensures that
+  // alignment is power of 2 of at least PAGE_SIZE or zero.
+  uint64_t alignment_log2 = 0;
+  if (alignment && !magma::get_pow2(alignment, &alignment_log2)) {
+    return DRETF(false, "alignment 0x%lx isn't power of 2", alignment);
+  }
+  if ((alignment_log2 << ZX_VM_ALIGN_BASE) > ZX_VM_ALIGN_4GB) {
+    return DRETF(false, "alignment 0x%lx is too large", alignment);
+  }
+  if (upper_limit < length) {
+    return DRETF(false, "upper_limit 0x%lx is too small for the length 0x%lx", upper_limit, length);
+  }
+
+  if (map_count_ == 0) {
+    DASSERT(!virt_addr_);
+    DASSERT(!vmar_);
+    uintptr_t child_addr;
+    zx::vmar child_vmar;
+
+    const zx_vm_option_t alignment_flag = alignment_log2 << ZX_VM_ALIGN_BASE;
+    const zx_vm_option_t flags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC |
+                                 ZX_VM_OFFSET_IS_UPPER_LIMIT | alignment_flag;
+    zx_status_t status =
+        parent_vmar_->get()->allocate(upper_limit, length, flags, &child_vmar, &child_addr);
+    if (status != ZX_OK) {
+      return DRETF(false,
+                   "failed to make vmar: upper_limit=0x%zx size=0x%zx alignment=%zx status=%d",
+                   upper_limit, length, alignment, status);
+    }
+
+    DLOG("allocated vmar: child_addr=0x%zx length=0x%zx alignment=0x%zx upper_limit=0x%zx",
+         child_addr, length, alignment, upper_limit);
+
+    uintptr_t ptr;
+    status = child_vmar.map(0, vmo_, 0, length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr);
+    if (status != ZX_OK)
+      return DRETF(false, "failed to map vmo");
+
+    virt_addr_ = reinterpret_cast<void*>(ptr);
+    vmar_ = std::move(child_vmar);
+  }
+
+  DASSERT(!alignment || (reinterpret_cast<uintptr_t>(virt_addr_) & (alignment - 1)) == 0);
+
+  *va_out = virt_addr_;
+  map_count_++;
+
+  DLOG("mapped vmo %p got %p, map_count_ = %u", this, virt_addr_, map_count_);
+
+  return true;
+}
+
 bool ZirconPlatformBuffer::UnmapCpu() {
+  TRACE_DURATION("magma", "UnmapCpu");
   DLOG("UnmapCpu vmo %p, map_count_ %u", this, map_count_);
   if (map_count_) {
     map_count_--;
@@ -173,15 +254,17 @@ bool ZirconPlatformBuffer::UnmapCpu() {
 }
 
 bool ZirconPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_count) const {
-  TRACE_DURATION("magma", "CommitPages");
+  TRACE_DURATION("magma", "CommitPages", "start_page_index", TA_UINT32(start_page_index),
+                 "page_count", TA_UINT32(page_count));
   if (!page_count)
     return true;
 
   if ((start_page_index + page_count) * PAGE_SIZE > size())
     return DRETF(false, "offset + length greater than buffer size");
 
-  zx_status_t status = vmo_.op_range(ZX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
-                                     page_count * PAGE_SIZE, nullptr, 0);
+  const uint64_t op_start = start_page_index * PAGE_SIZE;
+  const uint64_t op_size = page_count * PAGE_SIZE;
+  zx_status_t status = vmo_.op_range(ZX_VMO_OP_COMMIT, op_start, op_size, nullptr, 0);
 
   if (status == ZX_ERR_NO_MEMORY)
     return DRETF(false,

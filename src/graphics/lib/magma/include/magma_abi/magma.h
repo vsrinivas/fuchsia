@@ -504,6 +504,25 @@ magma_status_t magma_connection_access_performance_counters(
     magma_connection_t connection,
     magma_handle_t channel);
 
+///
+/// \brief Maps the given buffer's memory below the given CPU virtual address. Fails if the buffer
+///        was previously mapped, or if a suitable address range is unavailable.
+/// \param connection An open connection.
+/// \param buffer A valid buffer.
+/// \param length The length of the region to map.
+/// \param upper_limit The upper limit of the virtual address space to map the buffer.
+/// \param alignment The requested alignment. Must either be 0 (default page alignment) or a power
+///        of 2 >= PAGE_SIZE.
+/// \param addr_out The returned CPU virtual address for the start of the buffer.
+///
+magma_status_t magma_map_constrained(
+    magma_connection_t connection,
+    magma_buffer_t buffer,
+    uint64_t length,
+    uint64_t upper_limit,
+    uint64_t alignment,
+    void** addr_out);
+
 #if defined(__cplusplus)
 }
 #endif

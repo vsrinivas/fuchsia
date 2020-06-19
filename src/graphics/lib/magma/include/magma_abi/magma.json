@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 54,
+    "next-free-ordinal": 55,
     "exports": [
       {
         "ordinal": 4,
@@ -937,6 +937,44 @@
             "name": "channel",
             "type": "magma_handle_t",
             "description": "A handle to a channel to a gpu-performance-counter device."
+          }
+        ]
+      },
+      {
+        "ordinal": 54,
+        "name": "magma_map_constrained",
+        "type": "magma_status_t",
+        "description": "Maps the given buffer's memory below the given CPU virtual address. Fails if the buffer was previously mapped, or if a suitable address range is unavailable.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "length",
+            "type": "uint64_t",
+            "description": "The length of the region to map."
+          },
+          {
+            "name": "upper_limit",
+            "type": "uint64_t",
+            "description": "The upper limit of the virtual address space to map the buffer."
+          },
+          {
+            "name": "alignment",
+            "type": "uint64_t",
+            "description": "The requested alignment. Must either be 0 (default page alignment) or a power of 2 >= PAGE_SIZE."
+          },
+          {
+            "name": "addr_out",
+            "type": "void**",
+            "description": "The returned CPU virtual address for the start of the buffer."
           }
         ]
       }

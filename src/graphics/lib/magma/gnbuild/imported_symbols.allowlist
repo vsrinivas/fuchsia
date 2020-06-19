@@ -480,6 +480,7 @@ zx_vcpu_create
 zx_vmar_allocate
 zx_vmar_destroy
 zx_vmar_map
+zx_vmar_op_range
 zx_vmar_root_self
 zx_vmar_unmap
 zx_vmo_create

@@ -68,6 +68,8 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   // PlatformBuffer implementation
   bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
   bool MapCpu(void** addr_out, uintptr_t alignment) override;
+  bool MapCpuConstrained(void** va_out, uint64_t length, uint64_t upper_limit,
+                         uint64_t alignment) override;
   bool UnmapCpu() override;
   bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) override;
   bool MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
