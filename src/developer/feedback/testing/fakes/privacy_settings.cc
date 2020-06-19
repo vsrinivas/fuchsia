@@ -18,9 +18,9 @@ void PrivacySettings::CloseConnection() {
   }
 }
 
-void PrivacySettings::Watch(WatchCallback callback) {
+void PrivacySettings::Watch2(Watch2Callback callback) {
   FX_CHECK(!watcher_);
-  watcher_ = std::make_unique<WatchCallback>(std::move(callback));
+  watcher_ = std::make_unique<Watch2Callback>(std::move(callback));
   if (dirty_bit_) {
     NotifyWatcher();
   }
@@ -39,12 +39,12 @@ void PrivacySettings::Set(fuchsia::settings::PrivacySettings settings, SetCallba
 void PrivacySettings::NotifyWatcher() {
   fuchsia::settings::PrivacySettings settings;
   settings_.Clone(&settings);
-  (*watcher_)(::fit::ok(std::move(settings)));
+  (*watcher_)(std::move(settings));
   watcher_.reset();
   dirty_bit_ = false;
 }
 
-void PrivacySettingsClosesConnectionOnFirstWatch::Watch(WatchCallback callback) {
+void PrivacySettingsClosesConnectionOnFirstWatch::Watch2(Watch2Callback callback) {
   if (first_watch_) {
     CloseConnection();
     first_watch_ = false;
@@ -52,7 +52,7 @@ void PrivacySettingsClosesConnectionOnFirstWatch::Watch(WatchCallback callback) 
   }
 
   FX_CHECK(!watcher_);
-  watcher_ = std::make_unique<WatchCallback>(std::move(callback));
+  watcher_ = std::make_unique<Watch2Callback>(std::move(callback));
   if (dirty_bit_) {
     NotifyWatcher();
   }

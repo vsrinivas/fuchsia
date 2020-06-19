@@ -45,21 +45,14 @@ void PrivacySettingsWatcher::Connect() {
 }
 
 void PrivacySettingsWatcher::Watch() {
-  privacy_settings_ptr_->Watch(
-      [this](::fit::result<fuchsia::settings::PrivacySettings, fuchsia::settings::Error> result) {
-        retry_backoff_.Reset();
+  privacy_settings_ptr_->Watch2([this](fuchsia::settings::PrivacySettings settings) {
+    retry_backoff_.Reset();
+    privacy_settings_ = std::move(settings);
+    Update();
 
-        if (result.is_error()) {
-          FX_LOGS(ERROR) << "Failed to obtain privacy settings: " << result.error();
-          Reset();
-        } else {
-          privacy_settings_ = result.take_value();
-          Update();
-        }
-
-        // We watch for the next update, following the hanging get pattern.
-        Watch();
-      });
+    // We watch for the next update, following the hanging get pattern.
+    Watch();
+  });
 }
 
 void PrivacySettingsWatcher::Reset() {

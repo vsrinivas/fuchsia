@@ -260,19 +260,13 @@ void IntlPropertyProviderImpl::GetProfile(
 }
 
 void IntlPropertyProviderImpl::StartSettingsWatcher() {
-  settings_client_->Watch(
-      [this](fit::result<fuchsia::settings::IntlSettings, fuchsia::settings::Error> result) {
-        if (result.is_error()) {
-          FX_LOGS(ERROR) << "watch failed: " << result.error();
-        } else {
-          const fuchsia::settings::IntlSettings& response = result.value();
-          FX_VLOGS(2) << "New settings value: " << response;
-          fuchsia::intl::merge::Data new_profile_data = GetDefaultRawData(raw_profile_data_);
-          Merge(response, &new_profile_data);
-          UpdateRawData(std::move(new_profile_data));
-        }
-        StartSettingsWatcher();
-      });
+  settings_client_->Watch2([this](fuchsia::settings::IntlSettings settings) {
+    FX_VLOGS(2) << "New settings value: " << settings;
+    fuchsia::intl::merge::Data new_profile_data = GetDefaultRawData(raw_profile_data_);
+    Merge(settings, &new_profile_data);
+    UpdateRawData(std::move(new_profile_data));
+    StartSettingsWatcher();
+  });
 }
 
 fit::result<Profile, zx_status_t> IntlPropertyProviderImpl::GetProfileInternal() {

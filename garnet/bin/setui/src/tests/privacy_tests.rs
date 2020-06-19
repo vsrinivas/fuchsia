@@ -58,11 +58,8 @@ async fn test_privacy() {
     let (privacy_service, store) = create_test_privacy_env(factory).await;
 
     // Ensure retrieved value matches set value
-    let settings = privacy_service.watch().await.expect("watch completed");
-    assert_eq!(
-        settings.unwrap().user_data_sharing_consent,
-        initial_value.user_data_sharing_consent
-    );
+    let settings = privacy_service.watch2().await.expect("watch completed");
+    assert_eq!(settings.user_data_sharing_consent, initial_value.user_data_sharing_consent);
 
     // Ensure setting interface propagates correctly
     let mut privacy_settings = fidl_fuchsia_settings::PrivacySettings::empty();
@@ -75,11 +72,8 @@ async fn test_privacy() {
     assert_eq!(changed_value, retrieved_struct);
 
     // Ensure retrieved value matches set value
-    let settings = privacy_service.watch().await.expect("watch completed");
-    assert_eq!(
-        settings.unwrap().user_data_sharing_consent,
-        changed_value.user_data_sharing_consent
-    );
+    let settings = privacy_service.watch2().await.expect("watch completed");
+    assert_eq!(settings.user_data_sharing_consent, changed_value.user_data_sharing_consent);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

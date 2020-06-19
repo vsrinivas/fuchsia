@@ -8,7 +8,7 @@
 mod tests {
 
     use {
-        anyhow::{anyhow, Context as _, Error},
+        anyhow::{Context as _, Error},
         crossbeam::channel,
         fidl_fidl_examples_echo as fecho, fidl_fuchsia_intl as fintl,
         fidl_fuchsia_settings as fsettings, fuchsia_async as fasync,
@@ -35,17 +35,12 @@ mod tests {
         /// Tries to create a new timezone setter.
         pub async fn try_new(timezone: &str) -> Result<ScopedTimezone, Error> {
             let client = intl_client()?;
-            let result = client.watch().await?;
-            match result {
-                Err(error) => Err(anyhow!("{:?}", error)),
-                Ok(response) => {
-                    fx_log_info!("setting timezone for test: {}", timezone);
-                    let old_timezone = response.time_zone_id.unwrap().id;
-                    let setter = ScopedTimezone { timezone: old_timezone, client: client };
-                    setter.set_timezone(timezone).await?;
-                    Ok(setter)
-                }
-            }
+            let response = client.watch2().await?;
+            fx_log_info!("setting timezone for test: {}", timezone);
+            let old_timezone = response.time_zone_id.unwrap().id;
+            let setter = ScopedTimezone { timezone: old_timezone, client: client };
+            setter.set_timezone(timezone).await?;
+            Ok(setter)
         }
 
         /// Asynchronously set the timezone based to the supplied value.
