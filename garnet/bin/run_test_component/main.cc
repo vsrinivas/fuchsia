@@ -187,14 +187,14 @@ void print_log_message(const std::shared_ptr<fuchsia::logger::LogMessage>& log) 
 
 int main(int argc, const char** argv) {
   auto max_severity_config = run::MaxSeverityConfig::ParseFromDirectory(max_severity_config_path);
-  // fxb/49735: we have not turned on this feature yet, but this change was breaking people who did
-  // not update thier device because of missing configuration. Commenting this out for now. Will
-  // comment this out in next CL.
-  /* if (max_severity_config.HasError()) {
-     fprintf(stderr, "max_severity config file(s) are broken: %s",
+
+  if (max_severity_config.HasError()) {
+    fprintf(stderr,
+            "WARN: max_severity config file(s) are broken: %s. Updatiing your device might fix "
+            "the issue.",
             max_severity_config.Error().c_str());
     return 1;
-   }*/
+  }
 
   // Services which we get from /svc. They might be different depending on in which shell this
   // binary is launched from, so can't use it to create underlying environment.
@@ -272,9 +272,8 @@ int main(int argc, const char** argv) {
 
   std::vector<std::shared_ptr<fuchsia::logger::LogMessage>> restricted_logs;
   auto max_severity_allowed = FX_LOG_FATAL;
-  bool restrict_logs = false;
-  // flip switch in next CL to make this change easily revertible.
-  // bool restrict_logs = parse_result.restrict_logs;
+
+  bool restrict_logs = parse_result.restrict_logs;
   if (restrict_logs) {
     max_severity_allowed = FX_LOG_WARNING;
     auto it = max_severity_config.config().find(program_name);
