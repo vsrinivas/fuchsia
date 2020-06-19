@@ -14,6 +14,7 @@
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+import("brcmfmac_config.gni")
 
 # By default, targets are only visible here and to subdirectories.
 visibility = [ "./*" ]
@@ -261,7 +262,26 @@ driver_module("test_driver_module") {
 driver_library_files = []
 if (internal_access) {
   # Firmware files from git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-  if (board_name == "astro") {
+  if (brcmfmac_firmware_variant != "") {
+    copy("brcmfmac-firmware-copy") {
+      sources = [ "firmware/brcmfmac43455-sdio-$board_name-$brcmfmac_firmware_variant.bin" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
+    }
+    copy("brcmfmac-nvram-copy") {
+      sources = [ "firmware/brcmfmac43455-sdio-$board_name-$brcmfmac_firmware_variant.txt" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
+    }
+    copy("brcmfmac-clm-copy") {
+      sources = [ "firmware/brcmfmac43455-sdio-$board_name-$brcmfmac_firmware_variant.clm_blob" ]
+      outputs =
+          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
+    }
+    driver_library_files += [
+      "brcmfmac43455-sdio.bin",
+      "brcmfmac43455-sdio.txt",
+      "brcmfmac43455-sdio.clm_blob",
+    ]
+  } else if (board_name == "astro") {
     copy("brcmfmac-firmware-copy") {
       sources = [ "firmware/brcmfmac43455-sdio-astro.bin" ]
       outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
