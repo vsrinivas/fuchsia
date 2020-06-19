@@ -3934,9 +3934,7 @@ static bool brcmf_is_link_going_down(net_device* ndev, const brcmf_event_msg* e)
   uint16_t flags = e->flags;
   brcmf_if* ifp = ndev_to_if(ndev);
 
-  if ((event == BRCMF_E_DEAUTH) || (event == BRCMF_E_DEAUTH_IND) ||
-      (event == BRCMF_E_DISASSOC_IND) ||
-      ((event == BRCMF_E_LINK) && (!(flags & BRCMF_EVENT_MSG_LINK)))) {
+  if (event == BRCMF_E_DISASSOC_IND) {
     BRCMF_DBG(CONN, "Processing link down\n");
     // Adding this log for debugging disconnect issues.
     // TODO(karthikrish) : Move this to CONN level for production code
@@ -4213,22 +4211,6 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
               MAC_FMT_ARGS(disassoc_ind_params.peer_sta_address), disassoc_ind_params.reason_code);
 
     wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
-
-    // Client has deauthenticated
-  } else if ((event == BRCMF_E_DEAUTH_IND) || (event == BRCMF_E_DEAUTH)) {
-    wlanif_deauth_indication_t deauth_ind_params;
-    memset(&deauth_ind_params, 0, sizeof(deauth_ind_params));
-    memcpy(deauth_ind_params.peer_sta_address, e->addr, ETH_ALEN);
-    deauth_ind_params.reason_code = e->reason;
-
-    BRCMF_DBG(WLANIF,
-              "Sending deauth indication to SME. address: " MAC_FMT_STR
-              ", type: %s reason: %" PRIu16 "\n",
-              MAC_FMT_ARGS(deauth_ind_params.peer_sta_address),
-              (event == BRCMF_E_DEAUTH_IND) ? "DEAUTH_IND" : "DEAUTH",
-              deauth_ind_params.reason_code);
-
-    wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
   }
   return ZX_OK;
 }
@@ -4304,13 +4286,17 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
                                                     const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = ifp->ndev;
-  zx_status_t err = ZX_OK;
+  zx_status_t status = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
   // TODO(karthikrish) : Move this to CONN level for production code
   BRCMF_INFO("Link Down Event: State: %s evt: %d flg: 0x%x rsn: %d sts: %d rssi: %d snr: %d\n",
              brcmf_get_client_connect_state_string(ifp), e->event_code, e->flags, e->reason,
              e->status, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
+  if (!brcmf_is_client_connected(ifp)) {
+    // Client is already disconnected.
+    return status;
+  }
   brcmf_bss_connect_done(cfg, ndev, false);
   brcmf_disconnect_done(cfg);
   brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason);
@@ -4320,7 +4306,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
   }
   brcmf_net_setcarrier(ifp, false);
   BRCMF_DBG(TRACE, "Exit\n");
-  return err;
+  return status;
 }
 
 static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
@@ -4365,6 +4351,30 @@ static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct b
   return ZX_OK;
 }
 
+static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                              void* data) {
+  brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
+  if (brcmf_is_apmode(ifp->vif)) {
+    struct net_device* ndev = ifp->ndev;
+    wlanif_deauth_indication_t deauth_ind_params;
+
+    memset(&deauth_ind_params, 0, sizeof(deauth_ind_params));
+    memcpy(deauth_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+    deauth_ind_params.reason_code = e->reason;
+
+    BRCMF_DBG(WLANIF,
+              "Sending deauth indication to SME. address: " MAC_FMT_STR
+              ", type: %s reason: %" PRIu16 "\n",
+              MAC_FMT_ARGS(deauth_ind_params.peer_sta_address),
+              (e->event_code == BRCMF_E_DEAUTH_IND) ? "DEAUTH_IND" : "DEAUTH",
+              deauth_ind_params.reason_code);
+
+    wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
+    return ZX_OK;
+  } else
+    return brcmf_indicate_client_disconnect(ifp, e, data);
+}
+
 static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
@@ -4374,8 +4384,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
   BRCMF_DBG(TRACE, "Enter\n");
   BRCMF_DBG(CONN, "IF: %d Event code %d, status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
             e->event_code, e->status, e->reason, e->auth_type, e->flags);
-  if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
-      (e->event_code == BRCMF_E_DISASSOC_IND)) {
+  if (e->event_code == BRCMF_E_DISASSOC_IND) {
     brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   }
 
@@ -4504,8 +4513,8 @@ static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
 static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_LINK, brcmf_process_link_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH_IND, brcmf_process_auth_ind_event);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_notify_connect_status);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_notify_connect_status);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_process_deauth_event);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_process_deauth_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC_IND, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_ASSOC_IND, brcmf_handle_assoc_ind);
   brcmf_fweh_register(cfg->pub, BRCMF_E_REASSOC_IND, brcmf_handle_assoc_ind);
