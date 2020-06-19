@@ -1909,8 +1909,8 @@ generate_package_metadata("all_package_manifests.list") {
 component_id_index_config_data("component_id_index_config_data") {
   testonly = true
 
-  # crawl for component_id_index()s in the universe of packages.
-  deps = [ ":universe_packages" ]
+  # crawl for component_id_index()s in the base set.
+  deps = [ ":base_packages" ]
 }
 
 component_index_metadata = "$target_out_dir/component_index_metadata"
