@@ -1280,8 +1280,15 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
   status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  EXPECT_EQ(ZX_OK, allocation_status);
   EXPECT_EQ(status, ZX_OK);
+  // TODO(54153): This test is skipped on FEMU until we support external
+  // host-visible image allocation on FEMU.
+  if (allocation_status == ZX_ERR_NOT_SUPPORTED) {
+    FX_LOGS(WARNING) << "Buffer constraints not supported. Test skipped.";
+    GTEST_SKIP();
+  } else {
+    ASSERT_EQ(ZX_OK, allocation_status);
+  }
   EXPECT_FALSE(buffer_collection_info.settings.buffer_settings.is_secure);
   status = buffer_collection->Close();
   EXPECT_EQ(status, ZX_OK);
