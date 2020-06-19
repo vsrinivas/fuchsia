@@ -21,8 +21,8 @@ use {
     fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Process, Task},
-    futures::future::{AbortHandle, Abortable, BoxFuture, FutureExt},
+    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
+    futures::future::{BoxFuture, FutureExt},
     log::{error, warn},
     std::convert::TryFrom,
     std::{path::Path, sync::Arc},
@@ -288,7 +288,7 @@ impl ElfRunner {
         &self,
         start_info: fcrunner::ComponentStartInfo,
         checker: &ScopedPolicyChecker,
-    ) -> Result<Option<(ElfComponent, Process)>, ElfRunnerError> {
+    ) -> Result<Option<ElfComponent>, ElfRunnerError> {
         let resolved_url =
             runner::get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
@@ -402,11 +402,9 @@ impl ElfRunner {
             .get_koid()
             .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
             .raw_koid();
+
         self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-        Ok(Some((
-            ElfComponent::new(runtime_dir, Job::from(component_job), lifecycle_client),
-            process,
-        )))
+        Ok(Some(ElfComponent::new(runtime_dir, Job::from(component_job), lifecycle_client)))
     }
 }
 
@@ -573,48 +571,21 @@ impl Runner for ScopedElfRunner {
         start_info: fcrunner::ComponentStartInfo,
         server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
     ) {
-        // Start the component and move the Controller into a new async
+        // start the component and move the Controller into a new async
         // execution context.
         let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
         match self.runner.start_component(start_info, &self.checker).await {
-            Ok(Some((elf_component, process))) => {
-                let (handle, registration) = AbortHandle::new_pair();
-
-                // Spawn a future that watches for the process to exit
+            Ok(Some(elf_component)) => {
+                // This future completes when the
+                // Controller is told to stop/kill the component.
                 fasync::spawn(async move {
-                    let _ = fasync::OnSignals::new(
-                        &process.as_handle_ref(),
-                        zx::Signals::PROCESS_TERMINATED,
-                    )
-                    .await;
-                    handle.abort();
-                });
-
-                // Create a future which owns and serves the controller channel
-                // and can be aborted if the process exits. Aborting the
-                // future causes the channel to be dropped and closed.
-                let abortable_future = Abortable::new(
-                    // This future completes when the
-                    // Controller is told to stop/kill the component.
-                    async move {
-                        let server_stream = server_end.into_stream().expect("failed to convert");
-                        runner::component::Controller::new(elf_component, server_stream)
-                            .serve()
-                            .await
-                            .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
-                    },
-                    registration,
-                );
-
-                fasync::spawn(async {
-                    // TODO(fxb/53413) Currently we don't care whether this was
-                    // aborted or completed on its own. In the future we should
-                    // set an epitaph on the controller channel if the process
-                    // exited.
-                    let _ = abortable_future.await;
+                    let server_stream = server_end.into_stream().expect("failed to convert");
+                    runner::component::Controller::new(elf_component, server_stream)
+                        .serve()
+                        .await
+                        .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
                 });
             }
-
             Ok(None) => {
                 // TODO(fxb/): Should this signal an error?
             }
@@ -790,8 +761,9 @@ mod tests {
         assert!(job_id > 0);
         assert_ne!(process_id, job_id);
 
-        // Wait for the process to exit so the test doesn't pagefault due to an invalid stdout
-        // handle.
+        // Kill the process before finishing the test so that it doesn't pagefault due to an
+        // invalid stdout handle.
+        controller.kill().expect("kill failed");
         fasync::OnSignals::new(&controller.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
             .await
             .expect("failed waiting for channel to close");

@@ -45,10 +45,7 @@ impl Event {
         trace::duration!("component_manager", "events:resume");
         trace::flow_step!("component_manager", "event", self.event.id);
         if let Some(responder) = self.responder {
-            // If this returns an error, there isn't much we can do, presumably
-            // the caller hoping to resume the component manager has other
-            // means to understand component manager didn't resume.
-            let _ = responder.send(());
+            responder.send(()).unwrap()
         }
     }
 }
