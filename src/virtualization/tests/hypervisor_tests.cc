@@ -1136,6 +1136,8 @@ static bool vcpu_use_after_thread_exits() {
   t.join();
 
   ASSERT_EQ(status, ZX_OK);
+  // Send an interrupt to the VCPU after the thread has been shutdown.
+  test.vcpu.interrupt(kInterruptVector);
   // Shutdown the VCPU after the thread has been shutdown.
   test.vcpu.reset();
 

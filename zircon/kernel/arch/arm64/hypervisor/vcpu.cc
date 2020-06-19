@@ -219,23 +219,55 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 }
 
 Vcpu::Vcpu(Guest* guest, uint8_t vpid, Thread* thread)
-    : guest_(guest), vpid_(vpid), thread_(thread) {
+    : guest_(guest), vpid_(vpid), thread_(thread), last_cpu_(thread->LastCpu()) {
   thread->flags_ |= THREAD_FLAG_VCPU;
+  // We have to disable thread safety analysis because it's not smart enough to
+  // realize that SetMigrateFn will always be called with the ThreadLock.
+  thread->SetMigrateFn([this](Thread* thread, auto stage)
+                           TA_NO_THREAD_SAFETY_ANALYSIS { MigrateCpu(thread, stage); });
 }
 
 Vcpu::~Vcpu() {
   {
+    // Taking the ThreadLock guarantees that thread_ isn't going to be freed
+    // while we access it.
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-    thread_->flags_ &= ~THREAD_FLAG_VCPU;
+    Thread* thread = thread_.load();
+    if (thread != nullptr) {
+      thread->flags_ &= ~THREAD_FLAG_VCPU;
+      // Clear the migration function, so that |thread_| does not reference
+      // |this| after destruction of the VCPU.
+      thread->SetMigrateFnLocked(nullptr);
+    }
   }
+
   __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
   DEBUG_ASSERT(status == ZX_OK);
 }
 
+void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
+  switch (stage) {
+    case Thread::MigrateStage::Before:
+      break;
+    case Thread::MigrateStage::After:
+      // After thread migration, update the |last_cpu_| for Vcpu::Interrupt().
+      last_cpu_.store(thread->LastCpuLocked());
+      break;
+    case Thread::MigrateStage::Exiting:
+      // When the thread is exiting, set |last_cpu_| to INVALID_CPU and
+      // |thread_| to nullptr.
+      last_cpu_.store(INVALID_CPU);
+      thread_.store(nullptr);
+      break;
+  }
+}
+
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-  if (Thread::Current::Get() != thread_) {
+  Thread* current_thread = Thread::Current::Get();
+  if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
   }
+
   const ArchVmAspace& aspace = *guest_->AddressSpace()->arch_aspace();
   zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
   GuestState* guest_state = &el2_state_->guest_state;
@@ -261,7 +293,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       // to the guest.
       ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(ich_state->misr),
                        guest_state->system_state.elr_el2);
-      status = thread_->signals_ & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
+      status = current_thread->signals_ & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
       GUEST_STATS_INC(interrupts);
     } else if (status == ZX_OK) {
       status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
@@ -277,7 +309,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
   gich_state_.Interrupt(vector, type);
   if (running_.load()) {
-    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(thread_->LastCpu()));
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_.load()));
   }
 }
 
@@ -285,6 +317,7 @@ zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
   if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
+
   ASSERT(sizeof(state->x) >= sizeof(el2_state_->guest_state.x));
   memcpy(state->x, el2_state_->guest_state.x, sizeof(el2_state_->guest_state.x));
   state->sp = el2_state_->guest_state.system_state.sp_el1;
@@ -296,6 +329,7 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& state) {
   if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
+
   ASSERT(sizeof(el2_state_->guest_state.x) >= sizeof(state.x));
   memcpy(el2_state_->guest_state.x, state.x, sizeof(state.x));
   el2_state_->guest_state.system_state.sp_el1 = state.sp;

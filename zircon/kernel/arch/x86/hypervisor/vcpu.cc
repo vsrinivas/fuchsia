@@ -750,8 +750,8 @@ Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
       last_cpu_(thread->LastCpu()),
       vmx_state_(/* zero-init */) {
   thread->flags_ |= THREAD_FLAG_VCPU;
-  // We have to disable thread safety analysis because it's not smart enough to realize
-  // that SetMigrateFn will always be called with the ThreadLock.
+  // We have to disable thread safety analysis because it's not smart enough to
+  // realize that SetMigrateFn will always be called with the ThreadLock.
   thread->SetMigrateFn([this](Thread* thread, auto stage)
                            TA_NO_THREAD_SAFETY_ANALYSIS { MigrateCpu(thread, stage); });
 }
@@ -760,13 +760,14 @@ Vcpu::~Vcpu() {
   local_apic_state_.timer.Cancel();
 
   {
-    // Taking the ThreadLock guarantees that thread_ isn't going to be freed while we access it.
+    // Taking the ThreadLock guarantees that thread_ isn't going to be freed
+    // while we access it.
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     Thread* thread = thread_.load();
     if (thread != nullptr) {
       thread->flags_ &= ~THREAD_FLAG_VCPU;
-      // Clear the migration function, so that |thread_| does not reference |this|
-      // after destruction of the VCPU.
+      // Clear the migration function, so that |thread_| does not reference
+      // |this| after destruction of the VCPU.
       thread->SetMigrateFnLocked(nullptr);
     }
   }
@@ -837,11 +838,14 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       zx_paddr_t pml4_address = guest_->AddressSpace()->arch_aspace()->arch_table_phys();
       invept(InvEpt::SINGLE_CONTEXT, ept_pointer(pml4_address));
 
-      last_cpu_ = thread->LastCpuLocked();
+      // After thread migration, update the |last_cpu_| for Vcpu::Interrupt().
+      last_cpu_.store(thread->LastCpuLocked());
       break;
     }
     case Thread::MigrateStage::Exiting: {
-      // The thread this VCPU is bound to is exiting, so erase our local pointer to the thread.
+      // When the thread is exiting, set |last_cpu_| to INVALID_CPU and
+      // |thread_| to nullptr.
+      last_cpu_.store(INVALID_CPU);
       thread_.store(nullptr);
       break;
     }
@@ -1050,8 +1054,7 @@ static void register_copy(Out* out, const In& in) {
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) {
-  Thread* current_thread = Thread::Current::Get();
-  if (current_thread != thread_) {
+  if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
   register_copy(vcpu_state, vmx_state_.guest_state);
@@ -1062,8 +1065,7 @@ zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
-  Thread* current_thread = Thread::Current::Get();
-  if (current_thread != thread_) {
+  if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
   register_copy(&vmx_state_.guest_state, vcpu_state);
@@ -1078,8 +1080,7 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
-  Thread* current_thread = Thread::Current::Get();
-  if (current_thread != thread_) {
+  if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
   if ((io_state.access_size != 1) && (io_state.access_size != 2) && (io_state.access_size != 4)) {
