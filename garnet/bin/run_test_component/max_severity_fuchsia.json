@@ -77,6 +77,14 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/cobalt_tests#meta/cobalt_testapp.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/cobalt_tests#meta/cobalt_testapp_for_prober_do_not_run_manually.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/cobalt_tests#meta/cobalt_testapp_no_network.cmx",
          "max_severity": "ERROR"
       },
