@@ -427,7 +427,9 @@ impl AacCodecInfo {
         }
         // Note: the "capabilities" bitrate field is unclear in the A2DP spec: 4.5.2.4.
         // Interpreting this as the max bitrate for either constant or vbr.
-        if self.bitrate() < other.bitrate() {
+        // Zero is "not known", which we interpret to be "any bitrate is okay", but only
+        // if we are interpreting our bitrate support
+        if self.bitrate() != 0 && (self.bitrate() < other.bitrate()) {
             return false;
         }
         return true;
@@ -917,6 +919,7 @@ mod tests {
             8388607, // Largest 23-bit bit rate.
         )
         .expect("Error creating aac media codec info.");
+
         let aac_codec_mpeg4 = AacCodecInfo::new(
             AacObjectType::MPEG4_AAC_LC,
             AacSamplingFrequency::all(),
@@ -941,5 +944,16 @@ mod tests {
         .expect("Error creating aac media codec info.");
 
         assert!(!aac_codec_not_vbr.supports(&aac_codec_mpeg4));
+
+        let aac_codec_bitrate_not_known = AacCodecInfo::new(
+            AacObjectType::MPEG4_AAC_LC,
+            AacSamplingFrequency::all(),
+            AacChannels::ONE,
+            true,
+            0, // Bitrate "Not known"
+        )
+        .expect("Error creating aac media codec info.");
+
+        assert!(aac_codec_bitrate_not_known.supports(&aac_codec_not_vbr));
     }
 }
