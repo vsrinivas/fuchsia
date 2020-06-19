@@ -141,21 +141,6 @@ struct WaitQueueCollection {
   WaitQueueCollection& operator=(const WaitQueueCollection&) = delete;
 
  private:
-  // Insert |new_head| by making inserting it in |private_heads_|,
-  // before the iterator at |before| (which may correspond to and
-  // element or to the end of the heads list).
-  inline void InsertQueueHead(Thread* new_head, WaitQueueHeads::iterator before);
-
-  // Insert |thread| by appending it to |sublist|.
-  inline void InsertIntoSublist(Thread* thread, WaitQueueSublist* sublist);
-
-  // Remove |thread| from this collection, which must be a queue head.
-  inline void RemoveQueueHead(Thread* thread);
-
-  // Remove |thread| from this collection, which must be on a sublist
-  // and not a queue head.
-  inline void RemoveFromSublist(Thread* thread);
-
   int count_ = 0;
   WaitQueueHeads heads_;
 };

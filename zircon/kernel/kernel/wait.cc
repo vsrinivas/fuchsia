@@ -139,40 +139,6 @@ const Thread* WaitQueueCollection::Peek() const {
   return &heads_.front();
 }
 
-void WaitQueueCollection::InsertQueueHead(Thread* new_head, WaitQueueHeads::iterator before) {
-  heads_.insert(before, new_head);
-}
-
-void WaitQueueCollection::InsertIntoSublist(Thread* thread, WaitQueueSublist* sublist) {
-  sublist->push_back(thread);
-}
-
-void WaitQueueCollection::RemoveQueueHead(Thread* thread) {
-  if (thread->wait_queue_state_.sublist_.is_empty()) {
-    // If there's no new queue head, the only work we have to do is
-    // removing |thread| from the heads list.
-    heads_.erase(*thread);
-  } else {
-    // To migrate to the new queue head, we need to:
-    // - update the sublist for this priority, by removing |newhead|.
-    // - move the sublist from |thread| to |newhead|.
-    // - replace |thread| with |newhead| in the heads list.
-
-    // Remove the newhead from its position in the sublist.
-    Thread* newhead = thread->wait_queue_state_.sublist_.pop_front();
-
-    // Move the sublist from |thread| to |newhead|.
-    newhead->wait_queue_state_.sublist_ = ktl::move(thread->wait_queue_state_.sublist_);
-
-    // Patch in the new head into the queue head list.
-    heads_.replace(*thread, newhead);
-  }
-}
-
-void WaitQueueCollection::RemoveFromSublist(Thread* thread) {
-  thread->wait_queue_state_.sublist_node_.RemoveFromContainer<WaitQueueSublistTrait>();
-}
-
 void WaitQueueCollection::Insert(Thread* thread) {
   // Regardless of the state of the collection, the count goes up one.
   ++count_;
@@ -184,11 +150,11 @@ void WaitQueueCollection::Insert(Thread* thread) {
     for (Thread& head : heads_) {
       if (pri > head.scheduler_state_.effective_priority()) {
         // Insert ourself here as a new queue head, before |head|.
-        InsertQueueHead(thread, heads_.make_iterator(head));
+        heads_.insert(head, thread);
         return;
       } else if (head.scheduler_state_.effective_priority() == pri) {
         // Same priority, add ourself to the tail of this queue.
-        InsertIntoSublist(thread, &head.wait_queue_state_.sublist_);
+        head.wait_queue_state_.sublist_.push_back(thread);
         return;
       }
     }
@@ -196,7 +162,7 @@ void WaitQueueCollection::Insert(Thread* thread) {
 
   // We're the first thread, or we walked off the end, so add ourself
   // as a new queue head at the end.
-  InsertQueueHead(thread, heads_.end());
+  heads_.push_back(thread);
 }
 
 void WaitQueueCollection::Remove(Thread* thread) {
@@ -205,10 +171,28 @@ void WaitQueueCollection::Remove(Thread* thread) {
 
   if (!thread->wait_queue_state_.IsHead()) {
     // We're just in a queue, not a head.
-    RemoveFromSublist(thread);
+    thread->wait_queue_state_.sublist_node_.RemoveFromContainer<WaitQueueSublistTrait>();
   } else {
     // We're the head of a queue.
-    RemoveQueueHead(thread);
+    if (thread->wait_queue_state_.sublist_.is_empty()) {
+      // If there's no new queue head, the only work we have to do is
+      // removing |thread| from the heads list.
+      heads_.erase(*thread);
+    } else {
+      // To migrate to the new queue head, we need to:
+      // - update the sublist for this priority, by removing |newhead|.
+      // - move the sublist from |thread| to |newhead|.
+      // - replace |thread| with |newhead| in the heads list.
+
+      // Remove the newhead from its position in the sublist.
+      Thread* newhead = thread->wait_queue_state_.sublist_.pop_front();
+
+      // Move the sublist from |thread| to |newhead|.
+      newhead->wait_queue_state_.sublist_ = ktl::move(thread->wait_queue_state_.sublist_);
+
+      // Patch in the new head into the queue head list.
+      heads_.replace(*thread, newhead);
+    }
   }
 }
 
