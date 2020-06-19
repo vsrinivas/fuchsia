@@ -15,100 +15,105 @@
 
 #include <kernel/mutex.h>
 
-__BEGIN_CDECLS
+// Pow2RangeAllocator is a small utility class which partitions a set of
+// ranges of integers into sub-ranges which are power of 2 in length and power
+// of 2 aligned and then manages allocating and freeing the subranges for
+// clients.  It is responsible for breaking larger sub-regions into smaller ones
+// as needed for allocation, and for merging sub-regions into larger sub-regions
+// as needed during free operations.
+//
+// Its primary use is as a utility library for plaforms who need to manage
+// allocating blocks MSI IRQ IDs on behalf of the PCI bus driver, but could (in
+// theory) be used for other things).
 
-/**
- * The pow2_range_allocator is a small utility library which partitions a set of
- * ranges of integers into sub-ranges which are power of 2 in length and power
- * of 2 aligned and then manages allocating and freeing the subranges for
- * clients.  It is responsible for breaking larger sub-regions into smaller ones
- * as needed for allocation, and for merging sub-regions into larger sub-regions
- * as needed during free operations.
- *
- * Its primary use is as a utility library for plaforms who need to manage
- * allocating blocks MSI IRQ IDs on behalf of the PCI bus driver, but could (in
- * theory) be used for other things).
- */
+class Pow2RangeAllocator {
+ public:
+  constexpr Pow2RangeAllocator() = default;
 
-typedef struct p2ra_state {
-  DECLARE_MUTEX(p2ra_state) lock;
-  struct list_node ranges;
-  struct list_node unused_blocks;
-  struct list_node allocated_blocks;
-  struct list_node* free_block_buckets;
-  uint bucket_count;
-} p2ra_state_t;
+  // Pow2RangeAllocators cannot be copied or moved.
+  Pow2RangeAllocator(const Pow2RangeAllocator&) = delete;
+  Pow2RangeAllocator(Pow2RangeAllocator&&) = delete;
+  Pow2RangeAllocator& operator=(const Pow2RangeAllocator&) = delete;
+  Pow2RangeAllocator& operator=(Pow2RangeAllocator&&) = delete;
 
-/**
- * Initialize the state of a pow2 range allocator.
- *
- * @param state A pointer to the state structure to be initialized.
- * @param max_alloc_size The maximum size of a single contiguous allocation.
- * Must be a power of 2.
- *
- * @return A status code indicating the success or failure of the operation.
- */
-zx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size);
+  // Initialize the state of a pow2 range allocator.
+  //
+  // @param max_alloc_size The maximum size of a single contiguous allocation.
+  // Must be a power of 2.
+  //
+  // @return A status code indicating the success or failure of the operation.
+  zx_status_t Init(uint32_t max_alloc_size);
 
-/**
- * Free all of the state associated with a previously initialized pow2 range
- * allocator.
- *
- * @param state A pointer to the state structure to be cleaned up.
- */
-void p2ra_free(p2ra_state_t* state);
+  // Free all of the state associated with a previously initialized pow2 range
+  // allocator.
+  void Free();
 
-/**
- * Add a range of uints to the pool of ranges to be allocated.
- *
- * @param state A pointer to the state structure to add the range to.
- * @param range_start The start of the uint range.
- * @param range_len The length of the uint range.
- *
- * @return A status code incidcating the success or failure of the operation.
- * Possible return values include
- * ++ ZX_ERR_INVALID_ARGS range_len is zero, or would cause the range to wrap the
- *    maximum range of a uint.
- * ++ ZX_ERR_ALREADY_EXISTS the specified range overlaps with a range already added
- *    to the allocator.
- * ++ ZX_ERR_NO_MEMORY Not enough memory to allocate the bookkeeping required for
- *    managing the range.
- */
-zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len);
+  // Add a range of uint32_ts to the pool of ranges to be allocated.
+  //
+  // @param state A pointer to the state structure to add the range to.
+  // @param range_start The start of the uint32_t range.
+  // @param range_len The length of the uint32_t range.
+  //
+  // @return A status code incidcating the success or failure of the operation.
+  // Possible return values include
+  // ++ ZX_ERR_INVALID_ARGS range_len is zero, or would cause the range to wrap the
+  //    maximum range of a uint32_t.
+  // ++ ZX_ERR_ALREADY_EXISTS the specified range overlaps with a range already added
+  //    to the allocator.
+  // ++ ZX_ERR_NO_MEMORY Not enough memory to allocate the bookkeeping required for
+  //    managing the range.
+  zx_status_t AddRange(uint32_t range_start, uint32_t range_len);
 
-/**
- * Attempt to allocate a range of uints from the available sub-ranges.  The
- * sizeo the allocated range must be a power of 2, and if the allocation
- * succeeds, it is guaranteed to be aligned on a power of 2 boundary matching it
- * size.
- *
- * @param state A pointer to the state structure to allocate from.
- * @param size The requested size of the region.
- * @param out_range_start An out parameter which will hold the start of the
- * allocated range upon success.
- *
- * @return A status code indicating the success or failure of the operation.
- * Possible return values include
- * ++ ZX_ERR_INVALID_ARGS Multiple reasons, including...
- *    ++ size is zero.
- *    ++ size is not a power of two.
- *    ++ out_range_start is NULL.
- * ++ ZX_ERR_NO_RESOURCES No contiguous, aligned region could be found to satisfy
- *    the allocation request.
- * ++ ZX_ERR_NO_MEMORY A region could be found, but memory required for bookkeeping
- *    could not be allocated.
- */
-zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_start);
+  // Attempt to allocate a range of uint32_ts from the available sub-ranges.  The
+  // sizeo the allocated range must be a power of 2, and if the allocation
+  // succeeds, it is guaranteed to be aligned on a power of 2 boundary matching it
+  // size.
+  //
+  // @param size The requested size of the region.
+  // @param out_range_start An out parameter which will hold the start of the
+  // allocated range upon success.
+  //
+  // @return A status code indicating the success or failure of the operation.
+  // Possible return values include
+  // ++ ZX_ERR_INVALID_ARGS Multiple reasons, including...
+  //    ++ size is zero.
+  //    ++ size is not a power of two.
+  //    ++ out_range_start is NULL.
+  // ++ ZX_ERR_NO_RESOURCES No contiguous, aligned region could be found to satisfy
+  //    the allocation request.
+  // ++ ZX_ERR_NO_MEMORY A region could be found, but memory required for bookkeeping
+  //    could not be allocated.
+  zx_status_t AllocateRange(uint32_t size, uint32_t* out_range_start);
 
-/**
- * Free a range previously allocated using p2ra_allocate_range.
- *
- * @param state A pointer to the state structure to return the range to.
- * @param range_start The start of the previously allocated range.
- * @param size The size of the previously allocated range.
- */
-void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size);
+  // Free a range previously allocated using AllocateRange.
+  //
+  // @param range_start The start of the previously allocated range.
+  // @param size The size of the previously allocated range.
+  void FreeRange(uint32_t range_start, uint32_t size);
 
-__END_CDECLS
+ private:
+  struct Block {
+    struct list_node node;
+    uint32_t bucket;
+    uint32_t start;
+  };
+
+  struct Range {
+    struct list_node node;
+    uint32_t start, len;
+  };
+
+  Block* GetUnusedBlock();
+  static void FreeBlockList(struct list_node* block_list);
+  static void FreeRangeList(struct list_node* range_list);
+  void ReturnFreeBlock(Block* block, bool merge_allowed);
+
+  DECLARE_MUTEX(Pow2RangeAllocator) lock_;
+  struct list_node ranges_ = LIST_INITIAL_VALUE(ranges_);
+  struct list_node unused_blocks_ = LIST_INITIAL_VALUE(unused_blocks_);
+  struct list_node allocated_blocks_ = LIST_INITIAL_VALUE(allocated_blocks_);
+  struct list_node* free_block_buckets_ = nullptr;
+  uint32_t bucket_count_ = 0;
+};
 
 #endif  // ZIRCON_KERNEL_LIB_POW2_RANGE_ALLOCATOR_INCLUDE_LIB_POW2_RANGE_ALLOCATOR_H_

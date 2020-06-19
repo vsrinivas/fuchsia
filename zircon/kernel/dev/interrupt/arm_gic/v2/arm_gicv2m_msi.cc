@@ -17,23 +17,23 @@
 
 #define LOCAL_TRACE 0
 
-p2ra_state_t g_32bit_targets;
-p2ra_state_t g_64bit_targets;
+Pow2RangeAllocator g_32bit_targets;
+Pow2RangeAllocator g_64bit_targets;
 
 static bool g_msi_initialized = false;
 zx_status_t arm_gicv2m_msi_init() {
   zx_status_t ret;
 
-  ret = p2ra_init(&g_32bit_targets, MAX_MSI_IRQS);
+  ret = g_32bit_targets.Init(MAX_MSI_IRQS);
   if (ret != ZX_OK) {
     TRACEF("Failed to initialize 32 bit allocation pool!\n");
     return ret;
   }
 
-  ret = p2ra_init(&g_64bit_targets, MAX_MSI_IRQS);
+  ret = g_64bit_targets.Init(MAX_MSI_IRQS);
   if (ret != ZX_OK) {
     TRACEF("Failed to initialize 64 bit allocation pool!\n");
-    p2ra_free(&g_32bit_targets);
+    g_32bit_targets.Free();
     return ret;
   }
 
@@ -48,11 +48,11 @@ zx_status_t arm_gicv2m_msi_init() {
    */
   arm_gicv2m_frame_info_t info;
   for (uint i = 0; arm_gicv2m_get_frame_info(i, &info) == ZX_OK; ++i) {
-    p2ra_state_t* pool =
+    Pow2RangeAllocator* pool =
         ((uint64_t)info.doorbell & 0xFFFFFFFF00000000) ? &g_64bit_targets : &g_32bit_targets;
 
     uint len = info.end_spi_id - info.start_spi_id + 1;
-    ret = p2ra_add_range(pool, info.start_spi_id, len);
+    ret = pool->AddRange(info.start_spi_id, len);
     if (ret != ZX_OK) {
       TRACEF("Failed to add MSI IRQ range [%u, %u] to allocator (ret %d).\n", info.start_spi_id,
              len, ret);
@@ -62,8 +62,8 @@ zx_status_t arm_gicv2m_msi_init() {
 
 finished:
   if (ret != ZX_OK) {
-    p2ra_free(&g_32bit_targets);
-    p2ra_free(&g_64bit_targets);
+    g_32bit_targets.Free();
+    g_64bit_targets.Free();
   }
 
   g_msi_initialized = true;
@@ -89,11 +89,11 @@ zx_status_t arm_gicv2m_msi_alloc_block(uint requested_irqs, bool can_target_64bi
   /* If this MSI request can tolerate a 64 bit target address, start by
    * attempting to allocate from the 64 bit pool */
   if (can_target_64bit)
-    ret = p2ra_allocate_range(&g_64bit_targets, alloc_size, &alloc_start);
+    ret = g_64bit_targets.AllocateRange(alloc_size, &alloc_start);
 
   /* No allocation yet?  Fall back on the 32 bit pool */
   if (ret != ZX_OK) {
-    ret = p2ra_allocate_range(&g_32bit_targets, alloc_size, &alloc_start);
+    ret = g_32bit_targets.AllocateRange(alloc_size, &alloc_start);
     is_32bit = true;
   }
 
@@ -120,7 +120,8 @@ zx_status_t arm_gicv2m_msi_alloc_block(uint requested_irqs, bool can_target_64bi
   /* This should never ever fail */
   DEBUG_ASSERT(ret == ZX_OK);
   if (ret != ZX_OK) {
-    p2ra_free_range(is_32bit ? &g_32bit_targets : &g_64bit_targets, alloc_start, alloc_size);
+    Pow2RangeAllocator* pool = is_32bit ? &g_32bit_targets : &g_64bit_targets;
+    pool->FreeRange(alloc_start, alloc_size);
     return ret;
   }
 
@@ -145,8 +146,8 @@ void arm_gicv2m_msi_free_block(msi_block_t* block) {
   DEBUG_ASSERT(block->allocated);
 
   /* We stashed whether or not this came from the 32 bit pool in the platform context pointer */
-  p2ra_state_t* pool = block->platform_ctx ? &g_32bit_targets : &g_64bit_targets;
-  p2ra_free_range(pool, block->base_irq_id, block->num_irq);
+  Pow2RangeAllocator* pool = block->platform_ctx ? &g_32bit_targets : &g_64bit_targets;
+  pool->FreeRange(block->base_irq_id, block->num_irq);
   memset(block, 0, sizeof(*block));
 }
 
