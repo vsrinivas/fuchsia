@@ -720,14 +720,12 @@ void DebuggedProcess::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTable
   }
 }
 
-void DebuggedProcess::SuspendAll(bool synchronous, std::vector<uint64_t>* suspended_koids) {
-  // We issue the suspension order for all the threads.
+void DebuggedProcess::SuspendAll(bool synchronous, std::vector<zx_koid_t>* suspended_koids) {
+  // Issue the suspension order for all the threads.
   for (auto& [thread_koid, thread] : threads_) {
     bool was_suspended = thread->Suspend(synchronous);
-    if (was_suspended) {
-      if (suspended_koids)
-        suspended_koids->push_back(thread_koid);
-    }
+    if (was_suspended && suspended_koids)
+      suspended_koids->push_back(thread_koid);
   }
 
   if (!synchronous)

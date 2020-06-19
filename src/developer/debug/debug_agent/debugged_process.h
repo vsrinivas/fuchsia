@@ -102,12 +102,12 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
                              debug_ipc::LoadInfoHandleTableReply* reply);
 
-  // Pauses all threads in the process. If non-null, the paused_koids vector
-  // will be populated with the koids of all threads paused by this operation.
+  // Pauses all threads in the process. If non-null, the paused_koids vector will be populated with
+  // the koids of all threads paused by this operation. It will not include threads that were
+  // already paused.
   //
-  // If |synchronous| is false, this call will send the suspend commands to the
-  // kernel and return immediately. It will block on all the suspend signals
-  // otherwise.
+  // If |synchronous| is false, this call will send the suspend commands to the kernel and return
+  // immediately. It will block on all the suspend signals otherwise.
   void SuspendAll(bool synchronous = false, std::vector<zx_koid_t>* suspended_koids = nullptr);
 
   // Returns the thread or null if there is no known thread for this koid.

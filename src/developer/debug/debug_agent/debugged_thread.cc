@@ -374,8 +374,14 @@ void DebuggedThread::ResumeSuspension() {
 }
 
 bool DebuggedThread::Suspend(bool synchronous) {
-  if (local_suspend_token_)
+  if (local_suspend_token_) {
+    // The thread could have an asynchronous suspend pending from before, but it might not actually
+    // be suspended yet. If somebody requests a synchronous suspend, make sure we honor that the
+    // thread is suspended before returning.
+    if (synchronous)
+      WaitForSuspension(DefaultSuspendDeadline());
     return false;
+  }
   local_suspend_token_ = RefCountedSuspend(synchronous);
 
   // If there is only one count, we know that this was the token that did the suspension.
@@ -391,37 +397,39 @@ std::unique_ptr<DebuggedThread::SuspendToken> DebuggedThread::RefCountedSuspend(
 }
 
 zx::time DebuggedThread::DefaultSuspendDeadline() {
-  // Various events and environments can cause suspensions to take a long time,
-  // so this needs to be a relatively long time. We don't generally expect
-  // error cases that take infinitely long so there isn't much downside of a
-  // long timeout.
+  // Various events and environments can cause suspensions to take a long time, so this needs to be
+  // a relatively long time. We don't generally expect error cases that take infinitely long so
+  // there isn't much downside of a long timeout.
   return zx::deadline_after(zx::msec(100));
 }
 
 bool DebuggedThread::WaitForSuspension(zx::time deadline) {
-  // This function is complex because a thread in an exception state can't be
-  // suspended (ZX-3772). Delivery of exceptions are queued on the
-  // exception port so our cached state may be stale, and exceptions can also
-  // race with our suspend call.
+  // The thread could already be suspended. This bypasses a wait cycle in that case.
+  zx_info_thread info;
+  if (arch_provider_->GetInfo(handle_, ZX_INFO_THREAD, &info, sizeof(info)) != ZX_OK)
+    return false;  // Error getting thread info, probably thread is dead.
+  if (info.state == ZX_THREAD_STATE_SUSPENDED)
+    return true;  // Already suspended, success.
+
+  // This function is complex because a thread in an exception state can't be suspended (ZX-3772).
+  // Delivery of exceptions are queued on the exception port so our cached state may be stale, and
+  // exceptions can also race with our suspend call.
   //
   // To manually stress-test this code, write a one-line infinite loop:
   //   volatile bool done = false;
   //   while (!done) {}
-  // and step over it with "next". This will cause an infinite flood of
-  // single-step exceptions as fast as the debugger can process them. Pausing
-  // after doing the "next" will trigger a suspension and is more likely to
-  // race with an exception.
+  // and step over it with "next". This will cause an infinite flood of single-step exceptions as
+  // fast as the debugger can process them. Pausing after doing the "next" will trigger a suspension
+  // and is more likely to race with an exception.
 
-  // If an exception happens before the suspend does, we'll never get the
-  // suspend signal and will end up waiting for the entire timeout just to be
-  // able to tell the difference between suspended and exception. To avoid
-  // waiting for a long timeout to tell the difference, wait for short timeouts
-  // multiple times.
+  // If an exception happens before the suspend does, we'll never get the suspend signal and will
+  // end up waiting for the entire timeout just to be able to tell the difference between suspended
+  // and exception. To avoid waiting for a long timeout to tell the difference, wait for short
+  // timeouts multiple times.
   auto poll_time = zx::msec(10);
   zx_status_t status = ZX_OK;
   do {
-    // Always check the thread state from the kernel because of queue described
-    // above.
+    // Before waiting, check the thread state from the kernel because of queue described above.
     if (IsBlockedOnException(handle_))
       return true;
 
