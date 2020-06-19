@@ -94,13 +94,14 @@ class Pow2RangeAllocator {
  private:
   struct Block {
     struct list_node node;
-    uint32_t bucket;
-    uint32_t start;
+    uint32_t bucket = 0u;
+    uint32_t start = 0u;
   };
 
   struct Range {
     struct list_node node;
-    uint32_t start, len;
+    uint32_t start = 0u;
+    uint32_t len = 0u;
   };
 
   Block* GetUnusedBlock();

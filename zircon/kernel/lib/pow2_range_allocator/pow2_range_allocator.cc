@@ -22,19 +22,25 @@ Pow2RangeAllocator::Block* Pow2RangeAllocator::GetUnusedBlock() {
   if (!list_is_empty(&unused_blocks_))
     return list_remove_head_type(&unused_blocks_, Block, node);
 
-  return (Block*)calloc(1, sizeof(Block));
+  fbl::AllocChecker ac;
+  Block* block = new (&ac) Block{};
+  if (!ac.check()) {
+    return nullptr;
+  } else {
+    return block;
+  }
 }
 
 void Pow2RangeAllocator::FreeBlockList(struct list_node* block_list) {
   Block* block;
   while ((block = list_remove_head_type(block_list, Block, node)) != nullptr)
-    free(block);
+    delete block;
 }
 
 void Pow2RangeAllocator::FreeRangeList(struct list_node* range_list) {
   Range* range;
   while ((range = list_remove_head_type(range_list, Range, node)) != nullptr)
-    free(range);
+    delete range;
 }
 
 void Pow2RangeAllocator::ReturnFreeBlock(Block* block, bool merge_allowed) {
@@ -118,9 +124,9 @@ zx_status_t Pow2RangeAllocator::Init(uint32_t max_alloc_size) {
 
   // Allocate the storage for our free buckets.
   bucket_count_ = log2_uint_floor(max_alloc_size) + 1;
-  const size_t size = bucket_count_ * sizeof(free_block_buckets_[0]);
-  free_block_buckets_ = static_cast<list_node*>(malloc(size));
-  if (!free_block_buckets_) {
+  fbl::AllocChecker ac;
+  free_block_buckets_ = new (&ac) list_node[bucket_count_];
+  if (!ac.check()) {
     TRACEF("Failed to allocate storage for %u free bucket lists!\n", bucket_count_);
     return ZX_ERR_NO_MEMORY;
   }
@@ -159,11 +165,11 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
   list_initialize(&new_blocks);
 
   // If we're exiting with a failure, clean up anything we've allocated.
-  auto ac = fbl::MakeAutoCall([&]() {
+  auto auto_call = fbl::MakeAutoCall([&]() {
     if (ret != ZX_OK) {
       if (new_range) {
         DEBUG_ASSERT(!list_in_list(&new_range->node));
-        free(new_range);
+        delete new_range;
       }
 
       FreeBlockList(&new_blocks);
@@ -185,8 +191,9 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
   }
 
   // Allocate our range state.
-  new_range = static_cast<Range*>(calloc(1, sizeof(*new_range)));
-  if (!new_range) {
+  fbl::AllocChecker ac;
+  new_range = new (&ac) Range{};
+  if (!ac.check()) {
     ret = ZX_ERR_NO_MEMORY;
     return ret;
   }
