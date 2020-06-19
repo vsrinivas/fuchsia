@@ -68,6 +68,9 @@ class VmoBackedBuffer {
     return out;
   }
 
+  // Returns the offset (in frames) that will be written to by the next call to Append.
+  size_t GetCurrentOffset() const { return append_offset_frames_; }
+
   // Append a slice to the buffer, advancing the current seek position.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   void Append(AudioBufferSlice<SampleFormat> slice) {
@@ -80,6 +83,9 @@ class VmoBackedBuffer {
     memset(BufferStart(), 0, SizeBytes());
     append_offset_frames_ = 0;
   }
+
+  // Seek to the given offset of the buffer, relative to the start of the buffer.
+  void Seek(size_t offset) { append_offset_frames_ = offset; }
 
   // Write a slice to the given absolute offset.
   template <fuchsia::media::AudioSampleFormat SampleFormat>

@@ -87,8 +87,8 @@ void CompareAudioBuffersExact(AudioBufferSlice<SampleFormat> got_slice,
         ADD_FAILURE() << options.test_label << ": unexpected value at frame " << raw_frame
                       << ", channel " << chan << ":\n   got[" << raw_frame
                       << "] = " << SampleFormatTraits<SampleFormat>::ToString(got) << "\n  want["
-                      << raw_frame << "] = " << SampleFormatTraits<SampleFormat>::ToString(want);
-        CompareAudioBuffersShowContext(got_slice, want_slice, options, frame);
+                      << raw_frame << "] = " << SampleFormatTraits<SampleFormat>::ToString(want)
+                      << CompareAudioBuffersShowContext(got_slice, want_slice, options, frame);
         return;
       }
     }
@@ -154,8 +154,9 @@ void CompareAudioBuffersApprox(AudioBufferSlice<SampleFormat> got_slice,
                 << ":\n   got[" << raw_frame
                 << "] = " << SampleFormatTraits<SampleFormat>::ToString(first_difference->got)
                 << "\n  want[" << raw_frame
-                << "] = " << SampleFormatTraits<SampleFormat>::ToString(first_difference->want);
-  CompareAudioBuffersShowContext(got_slice, want_slice, options, first_difference->frame);
+                << "] = " << SampleFormatTraits<SampleFormat>::ToString(first_difference->want)
+                << CompareAudioBuffersShowContext(got_slice, want_slice, options,
+                                                  first_difference->frame);
 }
 
 }  // namespace

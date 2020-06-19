@@ -51,16 +51,15 @@ TEST_F(AudioPipelineTest, RenderWithPts) {
   auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
   auto num_frames = num_packets * kPacketFrames;
 
+  // TODO(49981): Don't send an extra silent packet, once 49980 is fixed
   auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
-  renderer_->AppendPayload(&input_buffer);
-  // TODO(49981): Don't send an extra packet, once 49980 is fixed
-  auto silent_packet = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  renderer_->AppendPayload(&silent_packet);
-  renderer_->SendPackets(num_packets + 1);
-  renderer_->Play(this, output_->NextSynchronizedTimestamp(this), 0);
+  auto silent_buffer = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
+  auto packets = renderer_->AppendPackets({&input_buffer, &silent_buffer});
+  auto start_time = output_->NextSynchronizedTimestamp(this);
+  renderer_->Play(this, start_time, 0);
 
-  // Let all packets play through the system (including an extra silent packet).
-  renderer_->WaitForPacket(this, num_packets);
+  // Let all packets play through the system (including the extra silent packet).
+  renderer_->WaitForPackets(this, start_time, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // The ring buffer should match the input buffer for the first num_packets.
@@ -79,22 +78,51 @@ TEST_F(AudioPipelineTest, RenderWithPts) {
 TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   auto min_lead_time = renderer_->GetMinLeadTime();
   ASSERT_GT(min_lead_time, 0);
-  // Add 2 extra packets to allow for scheduling delay to reduce flakes. See fxb/52410.
-  constexpr auto kSchedulingDelayInPackets = 2;
-  const auto packet_offset_delay =
+  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxb/52410.
+  constexpr auto kSchedulingDelayInPackets = 10;
+  const auto min_lead_time_in_packets =
       (min_lead_time / ZX_MSEC(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
-  const auto pts_offset_delay = packet_offset_delay * kPacketFrames;
 
-  auto num_packets = kNumPacketsInPayload - 1;
-  auto num_frames = num_packets * kPacketFrames;
-
-  auto first_input = GenerateSequentialAudio<kSampleFormat>(format_, num_packets);
-  renderer_->AppendPayload(&first_input);
-  renderer_->SendPackets(num_packets);
-  renderer_->Play(this, output_->NextSynchronizedTimestamp(this), 0);
+  // This test writes to the ring buffer as follows:
+  //
+  // 1. The first step starts writing num_packets to the front of the ring buffer, but
+  //    interrupts and discards after two packets have been written. Because of races,
+  //    it's possible that more than two packets will have been written at the moment
+  //    the remaining packets are discarded.
+  //
+  //     +---+---+ ...           +
+  //     | P | P | maybe empty   |
+  //     +---+---+ ...           +
+  //
+  //     ^..... num_packets .....^
+  //
+  // 2. The second step writes another num_packets, starting at least min_lead_time after
+  //    the second packet:
+  //
+  //     +---+---+ ...           +---+ ...               +
+  //     | P | P | maybe empty   | P | ...               |
+  //     +---+---+ ...           +---+ ...               +
+  //
+  //             ^ min_lead_time ^
+  //             +kSchedulingDelay
+  //
+  //     ^..... num_packets .....^..... num_packets .....^
+  //
+  // Note that 1 PTS == 1 frame.
+  // To further simplify, all of the above sizes are integer numbers of packets.
+  const int64_t first_packet = 0;
+  const int64_t restart_packet = 2 + min_lead_time_in_packets;
+  const int64_t first_pts = first_packet * kPacketFrames;
+  const int64_t restart_pts = restart_packet * kPacketFrames;
+  const size_t num_packets = 5;
+  const size_t num_frames = num_packets * kPacketFrames;
 
   // Load the renderer with lots of packets, but interrupt after two of them.
-  renderer_->WaitForPacket(this, 1);
+  auto first_input = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
+  auto first_packets = renderer_->AppendPackets({&first_input}, first_pts);
+  auto first_time = output_->NextSynchronizedTimestamp(this);
+  renderer_->Play(this, first_time, 0);
+  renderer_->WaitForPackets(this, first_time, {first_packets[0], first_packets[1]});
 
   auto received_discard_all_callback = false;
   renderer_->renderer()->DiscardAllPackets(CompletionCallback([&received_discard_all_callback]() {
@@ -121,22 +149,20 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
                       opts);
 
   opts.partial = false;
+  renderer_->ClearPayload();
 
   // After interrupting the stream without stopping, now play another sequence of packets starting
   // at least "min_lead_time" after the last audio frame previously written to the ring buffer.
   // Between Left|Right, initial data values were odd|even; these are even|odd, for quick contrast
   // when visually inspecting the buffer.
-  int16_t restart_data_value = 0x4000;
-  int64_t restart_pts = 2 * kPacketFrames + pts_offset_delay;
+  const int16_t restart_data_value = 0x4000;
   auto second_input =
       GenerateSequentialAudio<kSampleFormat>(format_, num_frames, restart_data_value);
-  auto silent_packet = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  renderer_->ClearPayload();
-  renderer_->AppendPayload(&second_input);
+  auto silent_data = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
   // TODO(49981): Don't send an extra packet, once 49980 is fixed
-  renderer_->AppendPayload(&silent_packet);
-  renderer_->SendPackets(num_packets + 1, restart_pts);
-  renderer_->WaitForPacket(this, num_packets);  // wait for the extra silent packet as well
+  auto second_packets = renderer_->AppendPackets({&second_input, &silent_data}, restart_pts);
+  auto second_time = first_time + ZX_MSEC(restart_packet * RendererShimImpl::kPacketMs);
+  renderer_->WaitForPackets(this, second_time, second_packets);
 
   // The ring buffer should contain first_input for 10ms (one packet), then partially-written data
   // followed by zeros until restart_pts, then second_input (num_packets), then the remaining bytes
@@ -198,15 +224,14 @@ TEST_F(AudioPipelineEffectsTest, RenderWithEffects) {
   auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
-  renderer_->AppendPayload(&input_buffer);
   // TODO(49981): Don't send an extra packet, once 49980 is fixed
-  auto silent_packet = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  renderer_->AppendPayload(&silent_packet);
-  renderer_->SendPackets(num_packets + 1);
-  renderer_->Play(this, output_->NextSynchronizedTimestamp(this), 0);
+  auto silent_buffer = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
+  auto packets = renderer_->AppendPackets({&input_buffer, &silent_buffer});
+  auto start_time = output_->NextSynchronizedTimestamp(this);
+  renderer_->Play(this, start_time, 0);
 
-  // Let all packets play through the system (including an extra silent packet).
-  renderer_->WaitForPacket(this, num_packets);
+  // Let all packets play through the system (including the extra silent packet).
+  renderer_->WaitForPackets(this, start_time, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // Simulate running the effect on the input buffer.
@@ -256,15 +281,14 @@ TEST_F(AudioPipelineEffectsTest, EffectsControllerUpdateEffect) {
   auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
-  renderer_->AppendPayload(&input_buffer);
   // TODO(49981): Don't send an extra packet, once 49980 is fixed
-  auto silent_packet = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  renderer_->AppendPayload(&silent_packet);
-  renderer_->SendPackets(num_packets + 1);
-  renderer_->Play(this, output_->NextSynchronizedTimestamp(this), 0);
+  auto silent_buffer = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
+  auto packets = renderer_->AppendPackets({&input_buffer, &silent_buffer});
+  auto start_time = output_->NextSynchronizedTimestamp(this);
+  renderer_->Play(this, start_time, 0);
 
   // Let all packets play through the system (including an extra silent packet).
-  renderer_->WaitForPacket(this, num_packets);
+  renderer_->WaitForPackets(this, start_time, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // The ring buffer should match the input buffer for the first num_packets. The remaining bytes

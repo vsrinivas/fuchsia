@@ -114,7 +114,7 @@ AudioRendererShim<kSampleFormat>* AudioAdminTest::SetUpRenderer(
   for (size_t k = 0; k < buf.samples().size(); k++) {
     buf.samples()[k] = data;
   }
-  r->AppendPayload(&buf);
+  r->payload().Append(AudioBufferSlice(&buf));
   return r;
 }
 

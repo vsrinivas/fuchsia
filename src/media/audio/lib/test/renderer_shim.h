@@ -9,6 +9,7 @@
 #include <fuchsia/ultrasound/cpp/fidl.h>
 
 #include <memory>
+#include <vector>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
@@ -46,15 +47,38 @@ class RendererShimImpl {
   // Minimum lead time for the AudioRenderer.
   int64_t GetMinLeadTime() const { return min_lead_time_; }
 
+  // Sets the units used by the presentation (media) timeline.
+  // By default, we use format.frames_per_second / 1, which means 1 PTS tick = 1 frame.
+  void SetPtsUnits(uint32_t ticks_per_second_numerator, uint32_t ticks_per_second_denominator);
+
   // Send a Play command to the renderer and wait until it is processed.
   void Play(TestFixture* fixture, int64_t reference_time, int64_t media_time);
 
-  // Submit timestamped packets. Caller must have written audio data to the payload buffer before
-  // calling this method. We guarantee that PTS has units frames, meaning that frame X has PTS = X.
-  void SendPackets(size_t num_packets, int64_t initial_pts = 0);
+  struct Packet {
+    int64_t start_pts;      // starting frame of the packet (PTS has units frames)
+    int64_t end_pts;        // one past the last frame of the packet
+    bool returned = false;  // set after the packet was returned from AudioCore
+  };
 
-  // Wait for packet with the given ID to complete.
-  void WaitForPacket(TestFixture* fixture, size_t packet_num);
+  using PacketVector = std::vector<std::shared_ptr<Packet>>;
+
+  // Submit the given slices as a sequence of timestamped packets of length at most kPacketMs.
+  // The packets are appended to the payload buffer after the last call to ClearPayload().
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  PacketVector AppendPackets(const std::vector<AudioBufferSlice<SampleFormat>>& slices,
+                             int64_t initial_pts = 0);
+
+  // Wait until the given packets are rendered. |packets| must be non-empty and must be ordered by
+  // start_pts. The reference_time refers to the time at which the first frame of packets[0] should
+  // be rendered, using the same clock as the reference_time passed to Play().
+  //
+  // If |ring_out_frames| > 0, we wait for all |packets| to be rendered, plus an additional
+  // |ring_out_frames|.
+  void WaitForPackets(TestFixture* fixture, int64_t reference_time, const PacketVector& packets,
+                      size_t ring_out_frames = 0);
+
+  // Reset the payload buffer to all zeros and seek back to the start.
+  void ClearPayload() { payload_buffer_.Clear(); }
 
   // For validating properties exported by inspect.
   // By default, there are no expectations.
@@ -79,7 +103,8 @@ class RendererShimImpl {
   fuchsia::media::AudioRendererPtr renderer_;
   bool received_min_lead_time_ = false;
   int64_t min_lead_time_ = -1;
-  ssize_t received_packet_num_ = -1;
+  TimelineRate pts_ticks_per_second_;
+  TimelineRate pts_ticks_per_frame_;
 
   ExpectedInspectProperties expected_inspect_properties_;
 };
@@ -89,13 +114,10 @@ class AudioRendererShim : public RendererShimImpl {
  public:
   using SampleT = typename AudioBuffer<SampleFormat>::SampleT;
 
-  // Append a slice to the payload buffer.
-  void AppendPayload(AudioBufferSlice<SampleFormat> slice) {
-    payload_buffer_.Append<SampleFormat>(slice);
+  PacketVector AppendPackets(const std::vector<AudioBufferSlice<SampleFormat>>& slices,
+                             int64_t initial_pts = 0) {
+    return RendererShimImpl::AppendPackets<SampleFormat>(slices, initial_pts);
   }
-
-  // Reset the payload buffer to all zeros and seek back to the start.
-  void ClearPayload() { payload_buffer_.Clear(); }
 
   // Don't call this directly. Use HermeticAudioTest::CreateAudioRenderer so the object is
   // appropriately bound into the test environment.
@@ -111,7 +133,7 @@ class AudioRendererShim : public RendererShimImpl {
                                  .channels = format_.channels(),
                                  .frames_per_second = format_.frames_per_second()});
 
-    renderer_->SetPtsUnits(format_.frames_per_second(), 1);
+    SetPtsUnits(format_.frames_per_second(), 1);
     renderer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
   }
 };
@@ -123,13 +145,10 @@ class UltrasoundRendererShim : public RendererShimImpl {
 
   const zx::clock& reference_clock() const { return reference_clock_; }
 
-  // Append a slice to the payload buffer.
-  void AppendPayload(AudioBufferSlice<SampleFormat> slice) {
-    payload_buffer_.Append<SampleFormat>(slice);
+  PacketVector AppendPackets(const std::vector<AudioBufferSlice<SampleFormat>>& slices,
+                             int64_t initial_pts = 0) {
+    return RendererShimImpl::AppendPackets<SampleFormat>(slices, initial_pts);
   }
-
-  // Reset the payload buffer to all zeros and seek back to the start.
-  void ClearPayload() { payload_buffer_.Clear(); }
 
   // Don't call this directly. Use HermeticAudioTest::CreateUltrasoundRenderer so the object is
   // appropriately bound into the test environment.
@@ -149,7 +168,7 @@ class UltrasoundRendererShim : public RendererShimImpl {
     fixture->RunLoopUntil([&created] { return created; });
 
     WatchEvents();
-    renderer_->SetPtsUnits(format_.frames_per_second(), 1);
+    SetPtsUnits(format_.frames_per_second(), 1);
     renderer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
   }
 
