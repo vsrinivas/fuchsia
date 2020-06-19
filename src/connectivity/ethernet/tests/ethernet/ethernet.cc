@@ -868,93 +868,93 @@ static bool EthernetSetMulticastPromiscClearOnCloseTest() {
 
 #if 0
 static bool EthernetDataTest_Send() {
-    BEGIN_TEST;
-    EthertapClient tap;
-    EthernetClient client;
-    EthernetOpenInfo info(__func__);
-    ASSERT_TRUE(OpenFirstClientHelper(&tap, &client, info));
+  BEGIN_TEST;
+  EthertapClient tap;
+  EthernetClient client;
+  EthernetOpenInfo info(__func__);
+  ASSERT_TRUE(OpenFirstClientHelper(&tap, &client, info));
 
-    // Ensure that the fifo is writable
-    zx_signals_t obs;
-    EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
-    ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
+  // Ensure that the fifo is writable
+  zx_signals_t obs;
+  EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
+  ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
-    // Grab an available TX fifo entry
-    auto entry = client.GetTxBuffer();
-    ASSERT_TRUE(entry != nullptr);
+  // Grab an available TX fifo entry
+  auto entry = client.GetTxBuffer();
+  ASSERT_TRUE(entry != nullptr);
 
-    // Populate some data
-    uint8_t* buf = reinterpret_cast<uint8_t*>(entry->cookie);
-    for (int i = 0; i < 32; i++) {
-        buf[i] = static_cast<uint8_t>(i & 0xff);
-    }
-    entry->length = 32;
+  // Populate some data
+  uint8_t* buf = reinterpret_cast<uint8_t*>(entry->cookie);
+  for (int i = 0; i < 32; i++) {
+    buf[i] = static_cast<uint8_t>(i & 0xff);
+  }
+  entry->length = 32;
 
-    // Write to the TX fifo
-    ASSERT_EQ(ZX_OK, client.tx_fifo()->write_one(*entry));
+  // Write to the TX fifo
+  ASSERT_EQ(ZX_OK, client.tx_fifo()->write_one(*entry));
 
-    EXPECT_TRUE(tap.ExpectDataRead(buf, 32, ""));
+  EXPECT_TRUE(tap.ExpectDataRead(buf, 32, ""));
 
-    // Now the TX completion entry should be available to read from the TX fifo
-    EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
-    ASSERT_TRUE(obs & ZX_FIFO_READABLE);
+  // Now the TX completion entry should be available to read from the TX fifo
+  EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
+  ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
-    eth_fifo_entry_t return_entry;
-    ASSERT_EQ(ZX_OK, client.tx_fifo()->read_one(&return_entry));
+  eth_fifo_entry_t return_entry;
+  ASSERT_EQ(ZX_OK, client.tx_fifo()->read_one(&return_entry));
 
-    // Check the flags on the returned entry
-    EXPECT_TRUE(return_entry.flags & ETH_FIFO_TX_OK);
-    return_entry.flags = 0;
+  // Check the flags on the returned entry
+  EXPECT_TRUE(return_entry.flags & ETH_FIFO_TX_OK);
+  return_entry.flags = 0;
 
-    // Verify the bytes from the rest of the entry match what we wrote
-    auto expected_entry = reinterpret_cast<uint8_t*>(entry);
-    auto actual_entry = reinterpret_cast<uint8_t*>(&return_entry);
-    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(eth_fifo_entry_t), "");
+  // Verify the bytes from the rest of the entry match what we wrote
+  auto expected_entry = reinterpret_cast<uint8_t*>(entry);
+  auto actual_entry = reinterpret_cast<uint8_t*>(&return_entry);
+  EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(eth_fifo_entry_t), "");
 
-    // Return the buffer to our client; the client destructor will make sure no TXs are still
-    // pending at the end of te test.
-    client.ReturnTxBuffer(&return_entry);
+  // Return the buffer to our client; the client destructor will make sure no TXs are still
+  // pending at the end of te test.
+  client.ReturnTxBuffer(&return_entry);
 
-    ASSERT_TRUE(EthernetCleanupHelper(&tap, &client));
-    END_TEST;
+  ASSERT_TRUE(EthernetCleanupHelper(&tap, &client));
+  END_TEST;
 }
 
 static bool EthernetDataTest_Recv() {
-    BEGIN_TEST;
-    EthertapClient tap;
-    EthernetClient client;
-    EthernetOpenInfo info(__func__);
-    ASSERT_TRUE(OpenFirstClientHelper(&tap, &client, info));
+  BEGIN_TEST;
+  EthertapClient tap;
+  EthernetClient client;
+  EthernetOpenInfo info(__func__);
+  ASSERT_TRUE(OpenFirstClientHelper(&tap, &client, info));
 
-    // Send a buffer through the tap channel
-    uint8_t buf[32];
-    for (int i = 0; i < 32; i++) {
-        buf[i] = static_cast<uint8_t>(i & 0xff);
-    }
-    EXPECT_EQ(ZX_OK, tap.Write(static_cast<void*>(buf), 32));
+  // Send a buffer through the tap channel
+  uint8_t buf[32];
+  for (int i = 0; i < 32; i++) {
+    buf[i] = static_cast<uint8_t>(i & 0xff);
+  }
+  EXPECT_EQ(ZX_OK, tap.Write(static_cast<void*>(buf), 32));
 
-    zx_signals_t obs;
-    // The fifo should be readable
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
-    ASSERT_TRUE(obs & ZX_FIFO_READABLE);
+  zx_signals_t obs;
+  // The fifo should be readable
+  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
+  ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
-    // Read the RX fifo
-    eth_fifo_entry_t entry;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->read_one(&entry));
+  // Read the RX fifo
+  eth_fifo_entry_t entry;
+  EXPECT_EQ(ZX_OK, client.rx_fifo()->read_one(&entry));
 
-    // Check the bytes in the VMO compared to what we sent through the tap channel
-    auto return_buf = client.GetRxBuffer(entry.offset);
-    EXPECT_BYTES_EQ(buf, return_buf, entry.length, "");
+  // Check the bytes in the VMO compared to what we sent through the tap channel
+  auto return_buf = client.GetRxBuffer(entry.offset);
+  EXPECT_BYTES_EQ(buf, return_buf, entry.length, "");
 
-    // RX fifo should be readable, and we can return the buffer to the driver
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
-    ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
+  // RX fifo should be readable, and we can return the buffer to the driver
+  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
+  ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
-    entry.length = 2048;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->write_one(entry));
+  entry.length = 2048;
+  EXPECT_EQ(ZX_OK, client.rx_fifo()->write_one(entry));
 
-    ASSERT_TRUE(EthernetCleanupHelper(&tap, &client));
-    END_TEST;
+  ASSERT_TRUE(EthernetCleanupHelper(&tap, &client));
+  END_TEST;
 }
 #endif
 
