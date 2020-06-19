@@ -54,7 +54,8 @@ EXTRA_COPY = [
         dest='bin'),
     # {fuchsia}/tools/devshell/lib/emu-ifup-macos.sh -> {out}/bin/devshell/lib/emu-ifup-macos.sh
     CopyArgs(
-        src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'emu-ifup-macos.sh'),
+        src=os.path.join(
+            FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'emu-ifup-macos.sh'),
         base=os.path.join(FUCHSIA_ROOT, 'tools'),
         dest='bin')
 ]
@@ -151,7 +152,8 @@ class GNBuilder(Frontend):
         copy_tree(self.local('base'), self.output, allow_overwrite=False)
         # Copy any additional files that would normally not be included
         for each in EXTRA_COPY:
-            self.copy_file(each.src, each.base, each.dest, allow_overwrite=False)
+            self.copy_file(
+                each.src, each.base, each.dest, allow_overwrite=False)
 
         self.write_additional_files()
 
@@ -406,6 +408,11 @@ class GNBuilder(Frontend):
         self.build_files.append(
             os.path.relpath(os.path.join(base, 'BUILD.gn'), self.output))
         self.write_atom_metadata(os.path.join(base, 'meta.json'), atom)
+
+    def install_data_atom(self, atom):
+        self.write_atom_metadata(
+            self.dest('data', 'config', atom['name'], 'meta.json'), atom)
+        self.copy_files(atom['data'])
 
     def install_sysroot_atom(self, atom):
         for arch in self.target_arches:

@@ -51,6 +51,10 @@
     {
       "meta": "pkg/sysroot/meta.json",
       "type": "sysroot"
+    },
+    {
+      "meta": "data/config/modular_config/meta.json",
+      "type": "data"
     }
   ],
   "schema_version": "1"

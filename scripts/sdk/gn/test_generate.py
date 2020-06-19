@@ -51,7 +51,9 @@ class GNGenerateTest(unittest.TestCase):
                 "--directory",
                 os.path.join(SCRIPT_DIR, 'testdata'),
                 "--jiri-manifest",
-                os.path.join(SCRIPT_DIR, 'testdata', '.jiri_root', 'update_history', 'latest'),
+                os.path.join(
+                    SCRIPT_DIR, 'testdata', '.jiri_root', 'update_history',
+                    'latest'),
             ])
         self.verify_contents(TMP_DIR_NAME)
         # verify tarball
@@ -65,7 +67,9 @@ class GNGenerateTest(unittest.TestCase):
         INPUT_PREBUILTS = generate.EXTRA_PREBUILTS
         prebuilt_results = generate.get_prebuilts(
             INPUT_PREBUILTS,
-            os.path.join(SCRIPT_DIR, 'testdata', '.jiri_root', 'update_history', 'latest'))
+            os.path.join(
+                SCRIPT_DIR, 'testdata', '.jiri_root', 'update_history',
+                'latest'))
         if cmp(prebuilt_results, EXPECTED_PREBUILTS) != 0:
             self.fail(
                 "Expected output %s but returned %s instead" %
@@ -88,7 +92,7 @@ class GNGenerateTest(unittest.TestCase):
                 (generated_file, golden_file))
 
         # Special case: Check the prebuilts *.version files generated from the jiri manifest
-        for prebuilt,version in EXPECTED_PREBUILTS.items():
+        for prebuilt, version in EXPECTED_PREBUILTS.items():
             in_path = os.path.join(outdir, 'bin', prebuilt + '.version')
             with open(in_path, 'r') as in_file:
                 in_version = in_file.read().strip()
@@ -154,7 +158,8 @@ class GNGenerateTest(unittest.TestCase):
                 found_file = os.path.relpath(os.path.join(dir_name, f), sdk_dir)
                 self.assertIn(found_file, fileset)
                 fileset.remove(found_file)
-        self.assertTrue(len(fileset) == 0, "Files missing from manifest: %s" % str(fileset))
+        self.assertTrue(
+            len(fileset) == 0, "Files missing from manifest: %s" % str(fileset))
 
     def get_atom_files(self, atom):
         files = set()
@@ -162,6 +167,8 @@ class GNGenerateTest(unittest.TestCase):
             files.update(atom['headers'])
         if 'sources' in atom:
             files.update(atom['sources'])
+        if 'data' in atom:
+            files.update(atom['data'])
         if 'docs' in atom:
             files.update(atom['docs'])
         if 'files' in atom:

@@ -53,6 +53,10 @@
       "type": "documentation"
     },
     {
+      "meta": "data/config/modular_config/meta.json",
+      "type": "data"
+    },
+    {
       "meta": "docs/test_docs.json",
       "type": "documentation"
     },
