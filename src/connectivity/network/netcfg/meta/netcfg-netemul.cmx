@@ -9,7 +9,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/ethernet"
+            "class/ethernet",
+            "class/network"
         ],
         "features": [
             "config-data",

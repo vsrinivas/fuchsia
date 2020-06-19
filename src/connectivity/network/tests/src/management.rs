@@ -9,13 +9,13 @@ use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netstack as netstack;
-use fuchsia_async as fasync;
 
 use anyhow::Context as _;
 use futures::future::{self, FutureExt as _};
 use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
+use netstack_testing_macros::variants_test;
 
 use crate::environments::*;
 use crate::*;
@@ -23,9 +23,8 @@ use crate::*;
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
 // TODO(54025): Enable this test for NetworkManager.
-#[fasync::run_singlethreaded(test)]
-async fn test_oir() -> Result {
-    let name = "test_oir";
+#[variants_test]
+async fn test_oir<E: Endpoint>(name: &str) -> Result {
     let sandbox = TestSandbox::new().context("create sandbox")?;
     // Create an environment with the LookupAdmin service as NetCfg tries to configure
     // it. NetCfg will fail if it can't send the LookupAdmin a request.
@@ -43,9 +42,12 @@ async fn test_oir() -> Result {
     .context("launch the network manager")?;
 
     // Add a device to the environment.
-    let endpoint = sandbox.create_endpoint::<Ethernet, _>(name).await.context("create endpoint")?;
-    let endpoint_mount_path = "class/ethernet/ep";
-    let () = environment.add_virtual_device(&endpoint, endpoint_mount_path.to_string())?;
+    let endpoint = sandbox.create_endpoint::<E, _>(name).await.context("create endpoint")?;
+    let endpoint_mount_path = E::dev_path("ep");
+    let endpoint_mount_path = endpoint_mount_path.as_path();
+    let () = environment
+        .add_virtual_device(&endpoint, endpoint_mount_path)
+        .with_context(|| format!("add virtual device {}", endpoint_mount_path.display()))?;
 
     // Make sure the Netstack got the new device added.
     let netstack = environment
@@ -84,7 +86,9 @@ async fn test_oir() -> Result {
         }
     }?;
 
-    environment.remove_virtual_device(endpoint_mount_path)
+    environment
+        .remove_virtual_device(endpoint_mount_path)
+        .with_context(|| format!("remove virtual device {}", endpoint_mount_path.display()))
 }
 
 /// Make sure the DHCP server is configured to start serving requests when NetCfg discovers
@@ -92,8 +96,8 @@ async fn test_oir() -> Result {
 ///
 /// Also make sure that a new WLAN AP interface may be added after a previous interface has been
 /// removed from the netstack.
-#[fasync::run_singlethreaded(test)]
-async fn test_wlan_ap_dhcp_server() -> Result {
+#[variants_test]
+async fn test_wlan_ap_dhcp_server<E: Endpoint>(name: &str) -> Result {
     // Use a large timeout to check for resolution.
     //
     // These values effectively result in a large timeout of 60s which should avoid
@@ -121,7 +125,7 @@ async fn test_wlan_ap_dhcp_server() -> Result {
     ///
     /// When `wlan_ap_dhcp_server_inner` returns successfully, the interface that it creates will
     /// have been removed.
-    async fn wlan_ap_dhcp_server_inner<'a>(
+    async fn wlan_ap_dhcp_server_inner<'a, E: Endpoint>(
         sandbox: &'a TestSandbox,
         environment: &TestEnvironment<'a>,
         offset: u8,
@@ -151,11 +155,13 @@ async fn test_wlan_ap_dhcp_server() -> Result {
             .await
             .context("create network")?;
         let wlan_ap = network
-            .create_endpoint::<Ethernet, _>(format!("wlanif-ap-dhcp-server-{}", offset))
+            .create_endpoint::<E, _>(format!("wlanif-ap-dhcp-server-{}", offset))
             .await
             .context("create wlan ap")?;
+        let path = E::dev_path(&format!("dhcp-server-ep-{}", offset));
         let () = environment
-            .add_virtual_device(&wlan_ap, format!("class/ethernet/dhcp-server-ep-{}", offset))?;
+            .add_virtual_device(&wlan_ap, path.as_path())
+            .with_context(|| format!("add WLAN AP virtual device {}", path.display()))?;
         let () = wlan_ap.set_link_up(true).await.context("set wlan ap link up")?;
 
         // Make sure the WLAN AP interface is added to the Netstack and is brought up with
@@ -247,11 +253,13 @@ async fn test_wlan_ap_dhcp_server() -> Result {
 
         // Add a host endpoint to the network. It should be configured by the DHCP server.
         let host = network
-            .create_endpoint::<Ethernet, _>(format!("host-dhcp-client-{}", offset))
+            .create_endpoint::<E, _>(format!("host-dhcp-client-{}", offset))
             .await
             .context("create host")?;
+        let path = E::dev_path(&format!("dhcp-client-ep-{}", offset));
         let () = environment
-            .add_virtual_device(&host, format!("class/ethernet/dhcp-client-ep-{}", offset))?;
+            .add_virtual_device(&host, path.as_path())
+            .with_context(|| format!("add host virtual device {}", path.display()))?;
         let () = host.set_link_up(true).await.context("set host link up")?;
         let () = netstack
             .take_event_stream()
@@ -316,7 +324,6 @@ async fn test_wlan_ap_dhcp_server() -> Result {
         Ok(())
     }
 
-    let name = "wlan_ap_dhcp_server";
     let sandbox = TestSandbox::new().context("create sandbox")?;
     let environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(
@@ -345,7 +352,7 @@ async fn test_wlan_ap_dhcp_server() -> Result {
     // Add a WLAN AP, make sure the DHCP server gets configurd and starts or stops when the
     // interface is added and brought up or brought down/removed.
     for i in 0..=1 {
-        let test_fut = wlan_ap_dhcp_server_inner(&sandbox, &environment, i).fuse();
+        let test_fut = wlan_ap_dhcp_server_inner::<E>(&sandbox, &environment, i).fuse();
         futures::pin_mut!(test_fut);
         let () = futures::select! {
             test_res = test_fut => test_res,

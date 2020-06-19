@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use std::convert::TryInto as _;
+use std::path::{Path, PathBuf};
 
 use fidl_fuchsia_net_filter;
 use fidl_fuchsia_net_stack as net_stack;
@@ -210,6 +211,16 @@ pub struct TestSandbox {
 /// Abstraction for different endpoint backing types.
 pub trait Endpoint: Copy + Clone {
     const NETEMUL_BACKING: netemul_network::EndpointBacking;
+
+    /// The relative path from the root device directory where devices of this `Endpoint`
+    /// can be discovered.
+    const DEV_PATH: &'static str;
+
+    /// Returns the path to an endpoint with the given name in this `Endpoint`'s
+    /// device directory.
+    fn dev_path(name: &str) -> PathBuf {
+        Path::new(Self::DEV_PATH).join(name)
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -218,6 +229,7 @@ pub enum Ethernet {}
 impl Endpoint for Ethernet {
     const NETEMUL_BACKING: netemul_network::EndpointBacking =
         netemul_network::EndpointBacking::Ethertap;
+    const DEV_PATH: &'static str = "class/ethernet";
 }
 
 #[derive(Copy, Clone)]
@@ -226,6 +238,7 @@ pub enum NetworkDevice {}
 impl Endpoint for NetworkDevice {
     const NETEMUL_BACKING: netemul_network::EndpointBacking =
         netemul_network::EndpointBacking::NetworkDevice;
+    const DEV_PATH: &'static str = "class/network";
 }
 
 impl TestSandbox {
@@ -509,7 +522,11 @@ impl<'a> TestEnvironment<'a> {
     }
 
     /// Adds a device to the environment's virtual device filesystem.
-    pub fn add_virtual_device(&self, e: &TestEndpoint<'_>, path: String) -> Result {
+    pub fn add_virtual_device(&self, e: &TestEndpoint<'_>, path: &Path) -> Result {
+        let path = path
+            .to_str()
+            .with_context(|| format!("convert {} to str", path.display()))?
+            .to_string();
         let (device, device_server_end) =
             fidl::endpoints::create_endpoints::<netemul_network::DeviceProxy_Marker>()
                 .context("create endpoints")?;
@@ -521,7 +538,8 @@ impl<'a> TestEnvironment<'a> {
     }
 
     /// Removes a device from the environment's virtual device filesystem.
-    pub fn remove_virtual_device(&self, path: &str) -> Result {
+    pub fn remove_virtual_device(&self, path: &Path) -> Result {
+        let path = path.to_str().with_context(|| format!("convert {} to str", path.display()))?;
         self.environment.remove_device(path).context("remove device")
     }
 

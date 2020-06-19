@@ -91,6 +91,10 @@ impl EthernetFeatures {
     pub fn is_physical(&self) -> bool {
         !self.intersects(Self::SYNTHETIC | Self::LOOPBACK)
     }
+
+    pub fn is_wlan(&self) -> bool {
+        self.intersects(Self::WLAN)
+    }
 }
 
 impl std::str::FromStr for EthernetFeatures {

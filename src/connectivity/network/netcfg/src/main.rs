@@ -11,14 +11,17 @@
 
 extern crate network_manager_core_interface as interface;
 
+mod devices;
+mod matchers;
+
 use std::collections::HashSet;
+use std::convert::TryInto as _;
 use std::fs;
 use std::io;
-use std::os::unix::io::IntoRawFd as _;
 use std::path;
 use std::str::FromStr;
 
-use fidl_fuchsia_hardware_ethernet as feth;
+use fidl_fuchsia_device as fdev;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
@@ -45,7 +48,7 @@ use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
 use serde::Deserialize;
 
-mod matchers;
+use self::devices::{Device as _, DeviceInfo as _};
 
 /// Interface metrics.
 ///
@@ -55,12 +58,11 @@ mod matchers;
 const INTF_METRIC_WLAN: u32 = 90;
 const INTF_METRIC_ETH: u32 = 100;
 
-/// Path to the directory where ethernet devices are found.
-const ETH_DEV_PATH: &str = "/dev/class/ethernet";
+/// Path to devfs.
+const DEV_PATH: &str = "/dev";
 
-/// Path to the directory where ethernet devices are found when running in a
-/// Netemul environment.
-const NETEMUL_ETH_DEV_PATH: &str = "/vdev/class/ethernet";
+/// Path to devfs in netemul environments.
+const NETEMUL_DEV_PATH: &str = "/vdev";
 
 /// File that stores persistant interface configurations.
 const PERSISTED_INTERFACE_CONFIG_FILEPATH: &str = "/data/net_interfaces.cfg.json";
@@ -462,12 +464,24 @@ impl<'a> NetCfg<'a> {
     /// The device directory will be monitored for device events and the netstack will be
     /// configured with a new interface on new device discovery.
     async fn run(mut self) -> Result<(), anyhow::Error> {
-        let mut device_dir_watcher_stream = fvfs_watcher::Watcher::new(
-            open_directory_in_namespace(&self.device_dir_path, OPEN_RIGHT_READABLE)
-                .context("opening device directory")?,
+        let ethdev_dir_path = format!("{}/{}", self.device_dir_path, devices::EthernetDevice::PATH);
+        let ethdev_dir_path = &ethdev_dir_path;
+        let mut ethdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
+            open_directory_in_namespace(ethdev_dir_path, OPEN_RIGHT_READABLE)
+                .context("opening ethdev directory")?,
         )
         .await
-        .with_context(|| format!("creating watcher for {}", self.device_dir_path))?
+        .with_context(|| format!("creating watcher for ethdevs {}", ethdev_dir_path))?
+        .fuse();
+
+        let netdev_dir_path = format!("{}/{}", self.device_dir_path, devices::NetworkDevice::PATH);
+        let netdev_dir_path = &netdev_dir_path;
+        let mut netdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
+            open_directory_in_namespace(netdev_dir_path, OPEN_RIGHT_READABLE)
+                .context("opening netdev directory")?,
+        )
+        .await
+        .with_context(|| format!("creating watcher for netdevs {}", netdev_dir_path))?
         .fuse();
 
         let mut netstack_stream = self.netstack.take_event_stream().fuse();
@@ -489,14 +503,23 @@ impl<'a> NetCfg<'a> {
 
         loop {
             let () = futures::select! {
-                device_dir_watcher_res = device_dir_watcher_stream.try_next() => {
-                    let event = device_dir_watcher_res
-                        .with_context(|| format!("watching {}", self.device_dir_path))?
-                        .ok_or(anyhow::anyhow!(
-                            "device directory {} watcher stream ended unexpectedly",
-                            self.device_dir_path
+                ethdev_dir_watcher_res = ethdev_dir_watcher_stream.try_next() => {
+                    let event = ethdev_dir_watcher_res
+                        .with_context(|| format!("watching ethdevs at {}", ethdev_dir_path))?
+                        .ok_or_else(|| anyhow::anyhow!(
+                            "ethdev directory {} watcher stream ended unexpectedly",
+                            ethdev_dir_path
                         ))?;
-                    self.handle_device_event(event).await?
+                    self.handle_dev_event::<devices::EthernetDevice>(ethdev_dir_path, event).await.context("handle ethdev event")?
+                }
+                netdev_dir_watcher_res = netdev_dir_watcher_stream.try_next() => {
+                    let event = netdev_dir_watcher_res
+                        .with_context(|| format!("watching netdevs at {}", netdev_dir_path))?
+                        .ok_or_else(|| anyhow::anyhow!(
+                            "netdev directory {} watcher stream ended unexpectedly",
+                            netdev_dir_path
+                        ))?;
+                    self.handle_dev_event::<devices::NetworkDevice>(netdev_dir_path, event).await.context("handle netdev event")?
                 }
                 netstack_res = netstack_stream.try_next() => {
                     let event = netstack_res
@@ -512,7 +535,7 @@ impl<'a> NetCfg<'a> {
                         .ok_or(anyhow::anyhow!(
                             "Netstack DNS Server watcher stream ended unexpectedly",
                         ))?;
-                    self.update_dns_servers(source, servers).await?
+                    self.update_dns_servers(source, servers).await.context("handle netstack DNS servers update")?
                 }
                 complete => break,
             };
@@ -588,132 +611,100 @@ impl<'a> NetCfg<'a> {
         Ok(())
     }
 
-    /// Handles an event on the device directory.
-    async fn handle_device_event(
+    /// Handle an event from `D`'s device directory.
+    async fn handle_dev_event<D: devices::Device>(
         &mut self,
+        dev_dir_path: &str,
         event: fvfs_watcher::WatchMessage,
     ) -> Result<(), anyhow::Error> {
         let fvfs_watcher::WatchMessage { event, filename } = event;
-        trace!("got {:?} event for {}", event, filename.display());
+        trace!("got {:?} {} event for {}", event, D::NAME, filename.display());
 
         if filename == path::PathBuf::from(THIS_DIRECTORY) {
-            debug!("skipping filename = {}", filename.display());
+            debug!("skipping {} w/ filename = {}", D::NAME, filename.display());
             return Ok(());
         }
 
         match event {
             fvfs_watcher::WatchEvent::ADD_FILE | fvfs_watcher::WatchEvent::EXISTING => {
-                let filepath = path::Path::new(&self.device_dir_path).join(filename);
-                let device = fs::File::open(&filepath)
-                    .with_context(|| format!("could not open {}", filepath.display()))?;
-                let topological_path = fdio::device_get_topo_path(&device).with_context(|| {
-                    format!("fdio::device_get_topo_path({})", filepath.display())
-                })?;
+                let filepath = path::Path::new(dev_dir_path).join(filename);
+                let (topological_path, device_instance) =
+                    get_topo_path_and_device::<D::ServiceMarker>(&filepath).await.with_context(
+                        || format!("get_topo_path_and_device({})", filepath.display()),
+                    )?;
 
-                debug!(
-                    "topological path for device at {} is {}",
+                info!(
+                    "found new {} {} with topological path {}",
+                    D::NAME,
                     filepath.display(),
                     topological_path
                 );
 
-                let device = device.into_raw_fd();
-                let mut client = 0;
-                // Safe because we're passing a valid fd.
-                let () = zx::Status::ok(unsafe {
-                    fdio::fdio_sys::fdio_get_service_handle(device, &mut client)
-                })
-                .with_context(|| {
-                    format!("zx::sys::fdio_get_service_handle({})", filepath.display())
-                })?;
-                // Safe because we checked the return status above.
-                let client = zx::Channel::from(unsafe { zx::Handle::from_raw(client) });
-
-                let device = fidl::endpoints::ClientEnd::<feth::DeviceMarker>::new(client)
-                    .into_proxy()
-                    .context("client end proxy")?;
-
-                let device_info: feth_ext::EthernetInfo = match device.get_info().await {
-                    Ok(d) => d.into(),
-                    Err(e) => {
-                        error!("error getting device info for {}: {}", filepath.display(), e);
-                        return Ok(());
-                    }
-                };
-
-                if !self.allow_virtual_devices && !device_info.features.is_physical() {
-                    warn!("device at {} is not a physical device, skipping", filepath.display());
+                let (info, mac) = D::device_info_and_mac(&device_instance)
+                    .await
+                    .context("get device info and MAC")?;
+                if !self.allow_virtual_devices && !info.is_physical() {
+                    warn!(
+                        "{} at {} is not a physical device, skipping",
+                        D::NAME,
+                        filepath.display()
+                    );
                     return Ok(());
                 }
 
-                let client = device
-                    .into_channel()
-                    .map_err(|feth::DeviceProxy { .. }| {
-                        anyhow::anyhow!("failed to convert device proxy into channel")
-                    })?
-                    .into_zx_channel();
+                let wlan = info.is_wlan();
+                let (metric, features) = crate::get_metric_and_features(wlan);
+                let name = self
+                    .persisted_interface_config
+                    .get_stable_name(
+                        &topological_path, /* TODO(tamird): we can probably do
+                                            * better with std::borrow::Cow. */
+                        mac,
+                        wlan,
+                    )
+                    .context("get stable name")?;
 
-                let name = self.persisted_interface_config.get_stable_name(
-                    &topological_path, /* TODO(tamird): we can probably do
-                                        * better with std::borrow::Cow. */
-                    device_info.mac,
-                    device_info.features.contains(feth_ext::EthernetFeatures::WLAN),
-                )?;
-
-                // Hardcode the interface metric. Eventually this should
-                // be part of the config file.
-                let metric: u32 =
-                    match device_info.features.contains(feth_ext::EthernetFeatures::WLAN) {
-                        true => INTF_METRIC_WLAN,
-                        false => INTF_METRIC_ETH,
-                    };
-                let mut derived_interface_config = matchers::config_for_device(
-                    &device_info,
+                let eth_info = D::eth_device_info(info, mac, features);
+                let mut config = matchers::config_for_device(
+                    &eth_info,
                     name.to_string(),
                     &topological_path,
                     metric,
                     &self.default_config_rules,
                     &filepath,
                 );
-                let nic_id = self
-                    .netstack
-                    .add_ethernet_device(
+
+                let nic_id =
+                    D::add_to_stack(self, topological_path.clone(), &mut config, device_instance)
+                        .await
+                        .with_context(|| {
+                            format!("add {} {} to stack", D::NAME, filepath.display())
+                        })?;
+
+                let () = self
+                    .configure_eth_interface(
+                        nic_id.try_into().expect("NIC ID should fit in a u32"),
                         &topological_path,
-                        &mut derived_interface_config,
-                        fidl::endpoints::ClientEnd::<feth::DeviceMarker>::new(client),
+                        &eth_info,
+                        &config,
                     )
                     .await
                     .with_context(|| {
                         format!(
-                            "fidl_netstack::Netstack::add_ethernet_device({})",
+                            "configure ethernet interface for {} {}",
+                            D::NAME,
                             filepath.display()
                         )
                     })?;
-
-                if topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS) {
-                    if let Some(s) = &self.wlan_ap_interface_state {
-                        return Err(anyhow::anyhow!("multiple WLAN AP interfaces are not supported, have WLAN AP interface with id = {}", s.id));
-                    }
-                    self.wlan_ap_interface_state = Some(WlanApInterfaceState::new(nic_id));
-
-                    info!(
-                        "discovered WLAN AP interface with id={}, configuring interface and DHCP server",
-                        nic_id
-                    );
-
-                    let () = self
-                        .configure_wlan_ap_and_dhcp_server(nic_id, derived_interface_config.name)
-                        .await?;
-                } else {
-                    let () = self
-                        .configure_host(nic_id, &device_info, &derived_interface_config)
-                        .await?;
-                }
-
-                let () = self.netstack.set_interface_status(nic_id, true)?;
             }
             fvfs_watcher::WatchEvent::IDLE | fvfs_watcher::WatchEvent::REMOVE_FILE => {}
             event => {
-                debug!("unrecognized event {:?} for filename {}", event, filename.display());
+                debug!(
+                    "unrecognized event {:?} for {} filename {}",
+                    event,
+                    D::NAME,
+                    filename.display()
+                );
             }
         }
 
@@ -733,6 +724,38 @@ impl<'a> NetCfg<'a> {
     /// Stop the DHCP server.
     async fn stop_dhcp_server(&mut self) -> Result<(), anyhow::Error> {
         self.dhcp_server.stop_serving().await.context("stop DHCP server request")
+    }
+
+    /// Configure an ethernet interface.
+    ///
+    /// If the device has `WLAN_AP_TOPO_PATH_CONTAINS` in its topological path, it will
+    /// be configured as a WLAN AP (see `configure_wlan_ap_and_dhcp_server` for more details).
+    /// Otherwise, it will be configured as a host (see `configure_host` for more details).
+    async fn configure_eth_interface(
+        &mut self,
+        nic_id: u32,
+        topological_path: &str,
+        info: &feth_ext::EthernetInfo,
+        config: &fnetstack::InterfaceConfig,
+    ) -> Result<(), anyhow::Error> {
+        if topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS) {
+            if let Some(s) = &self.wlan_ap_interface_state {
+                return Err(anyhow::anyhow!("multiple WLAN AP interfaces are not supported, have WLAN AP interface with id = {}", s.id));
+            }
+
+            self.wlan_ap_interface_state = Some(WlanApInterfaceState::new(nic_id));
+
+            info!(
+                "discovered WLAN AP interface with id={}, configuring interface and DHCP server",
+                nic_id
+            );
+
+            let () = self.configure_wlan_ap_and_dhcp_server(nic_id, config.name.clone()).await?;
+        } else {
+            let () = self.configure_host(nic_id, info, config).await?;
+        }
+
+        Ok(self.netstack.set_interface_status(nic_id, true)?)
     }
 
     /// Configure host interface.
@@ -908,6 +931,51 @@ impl<'a> NetCfg<'a> {
     }
 }
 
+/// Return the metric and ethernet features.
+fn get_metric_and_features(wlan: bool) -> (u32, feth_ext::EthernetFeatures) {
+    // Hardcode the interface metric. Eventually this should
+    // be part of the config file.
+    if wlan {
+        (INTF_METRIC_WLAN, feth_ext::EthernetFeatures::WLAN)
+    } else {
+        (INTF_METRIC_ETH, feth_ext::EthernetFeatures::empty())
+    }
+}
+
+/// Returns the topological path for a device located at `filepath` and a proxy to `S`.
+///
+/// It is expected that the node at `filepath` implements `fuchsia.device/Controller`
+/// and `S`.
+async fn get_topo_path_and_device<S: fidl::endpoints::ServiceMarker>(
+    filepath: &std::path::PathBuf,
+) -> Result<(String, S::Proxy), anyhow::Error> {
+    let filepath = filepath
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("failed to convert {} to str", filepath.display()))?;
+
+    // Get the topological path using `fuchsia.device/Controller`.
+    let (controller, req) = fidl::endpoints::create_proxy::<fdev::ControllerMarker>()
+        .context("creating fuchsia.device.Controller proxy")?;
+    fdio::service_connect(filepath, req.into_channel().into())
+        .with_context(|| format!("fdio::service_connect({})", filepath))?;
+    let path = controller
+        .get_topological_path()
+        .await
+        .context("get topological path request")?
+        .map_err(zx::Status::from_raw)
+        .context("get topological path")?;
+
+    // The same channel is expeceted to implement `S`.
+    let ch = controller
+        .into_channel()
+        .map_err(|_: fdev::ControllerProxy| anyhow::anyhow!("failed to get controller's channel"))?
+        .into_zx_channel();
+    let device =
+        fidl::endpoints::ClientEnd::<S>::new(ch).into_proxy().context("client end proxy")?;
+
+    Ok((path, device))
+}
+
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
     let opt: Opt = argh::from_env();
@@ -938,7 +1006,7 @@ async fn main() -> Result<(), anyhow::Error> {
     };
 
     let (path, allow_virtual) =
-        if opt.netemul { (NETEMUL_ETH_DEV_PATH, true) } else { (ETH_DEV_PATH, false) };
+        if opt.netemul { (NETEMUL_DEV_PATH, true) } else { (DEV_PATH, false) };
 
     let mut netcfg =
         NetCfg::new(path, allow_virtual, default_config_rules, filter_enabled_interface_types)
