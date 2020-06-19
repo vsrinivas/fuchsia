@@ -14,13 +14,6 @@ package("root_presenter") {
     },
   ]
 
-  resources = [
-    {
-      path = rebase_path("resources/cursor32.png")
-      dest = "cursor32.png"
-    },
-  ]
-
   meta = [
     {
       path = rebase_path("meta/root_presenter.cmx")
@@ -88,7 +81,6 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/input",
-    "//src/ui/lib/glm_workaround",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
@@ -103,16 +95,12 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/input",
+    "//src/ui/lib/glm_workaround",
     "//src/ui/lib/input_report_reader",
-    "//src/ui/lib/key_util",
-    "//src/ui/scenic/lib/scenic/util:rk4_spring_simulation",
-    "//zircon/public/lib/fit",
-    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/trace",
   ]
 }

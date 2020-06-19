@@ -5,29 +5,18 @@
 #ifndef SRC_UI_BIN_ROOT_PRESENTER_PRESENTATION_H_
 #define SRC_UI_BIN_ROOT_PRESENTER_PRESENTATION_H_
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-#include <glm/ext.hpp>
-
 #include <fuchsia/accessibility/cpp/fidl.h>
-#include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/input2/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_ptr_set.h>
-#include <lib/fit/function.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <map>
-#include <memory>
 
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/ui/input/device_state.h"
 #include "src/lib/ui/input/input_device_impl.h"
 #include "src/ui/bin/root_presenter/activity_notifier.h"
@@ -39,7 +28,7 @@ namespace root_presenter {
 
 // This class creates a root ViewHolder and sets up rendering of a new scene to
 // display the graphical content of the view passed to |PresentScene()|.  It
-// also wires up input dispatch and manages the mouse cursor.
+// also wires up input dispatch.
 //
 // The root ViewHolder has the presented (content) view as its child.
 //
@@ -48,8 +37,6 @@ namespace root_presenter {
 //   + RootNode
 //     + ViewHolder
 //       + link: Content view's actual content
-//   + child: cursor 1
-//   + child: cursor N
 //
 class Presentation : fuchsia::ui::policy::Presentation,
                      fuchsia::accessibility::MagnificationHandler {
@@ -72,7 +59,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
  private:
   enum SessionPresentState { kNoPresentPending, kPresentPending, kPresentPendingAndSceneDirty };
-  friend class PerspectiveDemoMode;
 
   // |fuchsia::ui::policy::Presentation|
   void CapturePointerEventsHACK(
@@ -88,18 +74,10 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // Nulls out the clip-space transform.
   void ResetClipSpaceTransform();
 
-  // Transforms a device coordinate to a post-magnification coordinate by applying the inverse
-  // clip-space transform. This is used to render cursors at the correct location.
-  glm::vec2 ApplyInverseClipSpaceTransform(const glm::vec2& coordinate);
-
   // Sets |display_metrics_| and updates Scenic.  Returns false if the updates
   // were skipped (if display initialization hasn't happened yet).
   bool ApplyDisplayModelChanges(bool print_log, bool present_changes);
   bool ApplyDisplayModelChangesHelper(bool print_log);
-
-  // Returns the raw pointer coordinates transformed by the current display
-  // rotation.
-  glm::vec2 RotatePointerCoordinates(float x, float y);
 
   void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
 
@@ -126,9 +104,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   scenic::EntityNode root_node_;
   scenic::ViewHolder view_holder_;
 
-  scenic::RoundedRectangle cursor_shape_;
-  scenic::Material cursor_material_;
-
   SessionPresentState session_present_state_ = kNoPresentPending;
 
   bool display_model_initialized_ = false;
@@ -150,24 +125,9 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // TODO(SCN-857) - Make this less of a hack.
   int32_t display_startup_rotation_adjustment_;
 
-  struct {
-    glm::vec2 translation;
-    float scale = 1;
-  } clip_space_transform_;
-
-  fuchsia::math::PointF mouse_coordinates_;
-
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;
 
-  struct CursorState {
-    bool created;
-    bool visible;
-    fuchsia::math::PointF position;
-    std::unique_ptr<scenic::ShapeNode> node;
-  };
-
-  std::map<uint32_t, CursorState> cursors_;
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;
 

@@ -8,24 +8,19 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+// clang-format off
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
+// clang-format on
+#include <glm/ext.hpp>
+
 #include <cmath>
-#include <utility>
 
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
-#include "src/ui/lib/key_util/key_util.h"
-
-using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
 namespace root_presenter {
 namespace {
 
-// The shape and elevation of the cursor.
-constexpr float kCursorWidth = 20;
-constexpr float kCursorHeight = 20;
-constexpr float kCursorRadius = 10;
 // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
-// Derive cursor elevation from non-hardcoded Z bounds.
-constexpr float kCursorElevation = 800;
 constexpr float kDefaultRootViewDepth = 1000;
 
 // TODO(SCN-1278): Remove this.
@@ -35,14 +30,6 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   memcpy(&ia, &fa, sizeof(uint32_t));
   memcpy(&ib, &fb, sizeof(uint32_t));
   return (((uint64_t)ia) << 32) | ib;
-}
-
-// Applies the inverse of the given translation in a dimension of Vulkan NDC and scale (about the
-// center of the range) to the given coordinate, for inverting the clip-space transform for pointer
-// input.
-float InverseLinearTransform(float x, uint32_t range, float ndc_translation, float scale) {
-  const float half_range = range / 2.f;
-  return (x - half_range * (1 + ndc_translation)) / scale + half_range;
 }
 
 }  // namespace
@@ -63,9 +50,6 @@ Presentation::Presentation(
       view_holder_node_(session),
       root_node_(session_),
       view_holder_(session, std::move(view_holder_token), "root_presenter"),
-      cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius, kCursorRadius,
-                    kCursorRadius),
-      cursor_material_(session_),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       a11y_binding_(this),
@@ -107,8 +91,6 @@ Presentation::Presentation(
     param.set_shadow_technique(fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED);
     renderer_.SetParam(std::move(param));
   }
-
-  cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
   SetScenicDisplayRotation();
 
@@ -251,37 +233,6 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
   return true;
 }
 
-glm::vec2 Presentation::RotatePointerCoordinates(float x, float y) {
-  // TODO(SCN-911): This math is messy and hard to understand. Instead, we
-  // should just walk down the layer and scene graph and apply transformations.
-  // On the other hand, this method is only used when capturing touch events,
-  // which is something we intend to deprecate anyway.
-
-  const float anchor_w = display_model_.display_info().width_in_px / 2;
-  const float anchor_h = display_model_.display_info().height_in_px / 2;
-  const int32_t startup_rotation = display_startup_rotation_adjustment_;
-
-  glm::vec4 pointer_coords(x, y, 0.f, 1.f);
-  glm::vec4 rotated_coords =
-      glm::translate(glm::vec3(anchor_w, anchor_h, 0)) *
-      glm::rotate(glm::radians<float>(-startup_rotation), glm::vec3(0, 0, 1)) *
-      glm::translate(glm::vec3(-anchor_w, -anchor_h, 0)) * pointer_coords;
-
-  if (abs(startup_rotation) % 180 == 90) {
-    // If the aspect ratio is flipped, the origin needs to be adjusted too.
-    int32_t sim_w = static_cast<int32_t>(display_metrics_.width_in_px());
-    int32_t sim_h = static_cast<int32_t>(display_metrics_.height_in_px());
-    float adjust_origin = (sim_w - sim_h) / 2.f;
-    rotated_coords = glm::translate(glm::vec3(-adjust_origin, adjust_origin, 0)) * rotated_coords;
-  }
-
-  FX_VLOGS(2) << "Pointer coordinates rotated [" << startup_rotation << "]: (" << pointer_coords.x
-              << ", " << pointer_coords.y << ")->(" << rotated_coords.x << ", " << rotated_coords.y
-              << ").";
-
-  return glm::vec2(rotated_coords.x, rotated_coords.y);
-}
-
 void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
   FX_VLOGS(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
@@ -315,12 +266,6 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
-    auto it = cursors_.find(device_id);
-    if (it != cursors_.end()) {
-      it->second.node->Detach();
-      cursors_.erase(it);
-      PresentScene();
-    }
     device_states_by_id_.erase(device_id);
   }
 }
@@ -354,7 +299,6 @@ void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport 
 void Presentation::SetClipSpaceTransform(float x, float y, float scale,
                                          SetClipSpaceTransformCallback callback) {
   camera_.SetClipSpaceTransform(x, y, scale);
-  clip_space_transform_ = {{x, y}, scale};
   // The callback is used to throttle magnification transition animations and is expected to
   // approximate the framerate.
   // TODO(35521): In the future, this may need to be downsampled as |Present| calls must be
@@ -366,90 +310,32 @@ void Presentation::ResetClipSpaceTransform() {
   SetClipSpaceTransform(0, 0, 1, [] {});
 }
 
-glm::vec2 Presentation::ApplyInverseClipSpaceTransform(const glm::vec2& coordinate) {
-  return {
-      InverseLinearTransform(coordinate.x, display_model_.display_info().width_in_px,
-                             clip_space_transform_.translation.x, clip_space_transform_.scale),
-      InverseLinearTransform(coordinate.y, display_model_.display_info().height_in_px,
-                             clip_space_transform_.translation.y, clip_space_transform_.scale),
-  };
-}
-
 void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
-  trace_flow_id_t trace_id = 0;
-
   FX_VLOGS(1) << "OnEvent " << event;
 
   activity_notifier_->ReceiveInputEvent(event);
 
+  if (!event.is_pointer()) {
+    FX_LOGS(ERROR) << "Only pointer input events are handled.";
+    return;
+  }
+
+  // TODO(SCN-1278): Use proper trace_id for tracing flow.
+  const trace_flow_id_t trace_id =
+      PointerTraceHACK(event.pointer().radius_major, event.pointer().radius_minor);
+  TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);
+
   fuchsia::ui::input::Command input_cmd;
-
-  bool invalidate = false;
-  bool dispatch_event = true;
-
-  // Process the event.
-  if (dispatch_event) {
-    if (event.is_pointer()) {
-      const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
-
-      // TODO(SCN-1278): Use proper trace_id for tracing flow.
-      trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
-      TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);
-
-      // Ensure the cursor appears at the correct position after magnification position and scaling.
-      // It should appear at the same physical location on the screen as it would without
-      // magnification. (However, the cursor itself will scale.)
-      const glm::vec2 transformed_point = ApplyInverseClipSpaceTransform({pointer.x, pointer.y});
-
-      if (pointer.type == fuchsia::ui::input::PointerEventType::MOUSE) {
-        if (cursors_.count(pointer.device_id) == 0) {
-          cursors_.emplace(pointer.device_id, CursorState{});
-        }
-
-        cursors_[pointer.device_id].position.x = transformed_point.x;
-        cursors_[pointer.device_id].position.y = transformed_point.y;
-
-        // TODO(SCN-823) for now don't show cursor when mouse is added until
-        // we have a timer to hide it. Acer12 sleeve reports 2 mice but only
-        // one will generate events for now.
-        if (pointer.phase != fuchsia::ui::input::PointerEventPhase::ADD &&
-            pointer.phase != fuchsia::ui::input::PointerEventPhase::REMOVE) {
-          cursors_[pointer.device_id].visible = true;
-        }
-        invalidate = true;
-      } else {
-        for (auto it = cursors_.begin(); it != cursors_.end(); ++it) {
-          if (it->second.visible) {
-            it->second.visible = false;
-            invalidate = true;
-          }
-        }
-      }
-
-      fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
-      pointer_cmd.pointer_event = std::move(pointer);
-      pointer_cmd.compositor_id = compositor_id_;
-      input_cmd.set_send_pointer_input(std::move(pointer_cmd));
-
-    } else if (event.is_keyboard()) {
-      // Keyboard dispatch disabled.
-      dispatch_event = false;
-
-      return;
-    }
+  {
+    fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
+    pointer_cmd.pointer_event = std::move(event.pointer());
+    pointer_cmd.compositor_id = compositor_id_;
+    input_cmd.set_send_pointer_input(std::move(pointer_cmd));
   }
 
-  if (invalidate) {
-    PresentScene();
-  }
-
-  if (dispatch_event) {
-    if (trace_id) {
-      TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", trace_id);
-    }
-    session_->Enqueue(std::move(input_cmd));
-  }
+  TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", trace_id);
+  session_->Enqueue(std::move(input_cmd));
 }
 
 void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {
@@ -473,29 +359,6 @@ void Presentation::PresentScene() {
 
   // There is no present pending, so we will kick one off.
   session_present_state_ = kPresentPending;
-
-  // TODO(SCN-631): Individual Presentations shouldn't directly manage cursor
-  // state.
-  for (auto it = cursors_.begin(); it != cursors_.end(); ++it) {
-    CursorState& state = it->second;
-    if (state.visible) {
-      if (!state.created) {
-        state.node = std::make_unique<scenic::ShapeNode>(session_);
-        state.node->SetLabel("mouse cursor");
-        state.node->SetShape(cursor_shape_);
-        state.node->SetMaterial(cursor_material_);
-        scene_.AddChild(*state.node);
-        state.created = true;
-      }
-      state.node->SetTranslation(
-          state.position.x * display_metrics_.x_scale_in_pp_per_px() + kCursorWidth * .5f,
-          state.position.y * display_metrics_.y_scale_in_pp_per_px() + kCursorHeight * .5f,
-          -kCursorElevation);
-    } else if (state.created) {
-      state.node->Detach();
-      state.created = false;
-    }
-  }
 
   session_->Present(0, [weak = weak_factory_.GetWeakPtr()](fuchsia::images::PresentationInfo info) {
     if (auto self = weak.get()) {
