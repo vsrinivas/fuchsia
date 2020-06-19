@@ -29,6 +29,28 @@ struct ReadWriteOperation {
     uint32 block_count;
 };
 
+enum WriteBytesMode {
+    /// In this mode, WriteBytes() performs the following steps:
+    /// 1. Reads data from the minimum block range that covers the specified write range into a
+    /// buffer. (i.e. if 1 block contains 4 pages, then the minimum block range that covers page
+    /// range [3, 6] is block range [0, 1])
+    /// 2. Updates the buffer with input write data,
+    /// 3. Erase the storage in the minimum block range.
+    /// 4. Write the updated buffer into the minimum block range.
+    ///
+    /// This mode only changes data in the specified write range on the storage, data out of the
+    // range remains unchanged.
+    READ_MODIFY_ERASE_WRITE = 1;
+    /// In this mode, WriteBytes() performs the following steps:
+    /// 1. Erase the minimum block range that covers the specified write range.
+    /// 2. Write new input data on the specified write range.
+    ///
+    /// This mode changes data in the minmum block range w.r.t the specified write range on the
+    /// storage. Storage out of the specified write range will be in an erased state and available
+    /// for write in the future.
+    ERASE_WRITE = 2;
+};
+
 struct WriteBytesOperation {
     /// Memory object describing buffer to write from.
     zx.handle:VMO vmo;
@@ -40,6 +62,8 @@ struct WriteBytesOperation {
     /// Number of bytes to write.
     /// Must be flash page aligned.
     uint64 size;
+    /// The write mode. This option does not affect WriteBytesWithoutErase().
+    WriteBytesMode mode;
 };
 
 /// SkipBlock is a layer on top of a raw NAND device that skips bad blocks, but provides no

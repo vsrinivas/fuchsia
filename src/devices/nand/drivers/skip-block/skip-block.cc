@@ -30,7 +30,6 @@
 namespace nand {
 
 namespace {
-
 struct BlockOperationContext {
   ReadWriteOperation op;
   fuchsia_hardware_nand_Info* nand_info;
@@ -42,12 +41,7 @@ struct BlockOperationContext {
   sync_completion_t* completion_event;
   zx_status_t status;
   bool mark_bad;
-};
-
-struct WriteBytesWithoutEraseOperationContext {
-  size_t page_offset;
-  size_t page_count;
-  BlockOperationContext block_op_ctx;
+  std::optional<PageRange> write_page_range;
 };
 
 // Called when all page reads in a block finish. If another block still needs
@@ -105,25 +99,56 @@ void WriteCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
   return;
 }
 
+// Given a block specified in |ctx| and the target page range to write to specified by |page_range|,
+// compute the write range within this block and the offset into input vmo.
+void ComputeInBlockWriteRangeFromPageRange(const BlockOperationContext* ctx,
+                                           const PageRange& page_range, size_t* in_block_offset,
+                                           size_t* write_size, size_t* vmo_offset) {
+  // All following quantities are logical page indices relative to logical page 0 of the storage.
+  // Page index of the current block
+  const size_t block_start_page = ctx->current_block * ctx->nand_info->pages_per_block;
+  // Page index of the end of current block
+  const size_t block_end_page = block_start_page + ctx->nand_info->pages_per_block;
+  // Page index where the write within the current block should start.
+  const size_t write_start_page = std::max(block_start_page, page_range.page_offset);
+  // Page index where the write within the current block should end.
+  const size_t write_end_page =
+      std::min(block_end_page, page_range.page_offset + page_range.page_count);
+  // |write_start_page - page_range.page_offset| is essentially the number of pages we have
+  // written so far.
+  *vmo_offset = ctx->op.vmo_offset + write_start_page - page_range.page_offset;
+  *in_block_offset = write_start_page - block_start_page;
+  *write_size = write_end_page - write_start_page;
+}
+
 // Called when a block erase operation finishes. Subsequently queues up writes
 // to the block.
 void EraseCompletionCallback(void* cookie, zx_status_t status, nand_operation_t* op) {
   auto* ctx = static_cast<BlockOperationContext*>(cookie);
-
   if (status != ZX_OK) {
     ctx->status = status;
     ctx->mark_bad = (status == ZX_ERR_IO);
     sync_completion_signal(ctx->completion_event);
     return;
   }
-  const size_t vmo_offset =
+
+  size_t in_block_offset = 0;
+  size_t write_size = ctx->nand_info->pages_per_block;
+  size_t vmo_offset =
       ctx->op.vmo_offset + ((ctx->current_block - ctx->op.block) * ctx->nand_info->pages_per_block);
+
+  if (ctx->write_page_range) {
+    ComputeInBlockWriteRangeFromPageRange(ctx, *(ctx->write_page_range), &in_block_offset,
+                                          &write_size, &vmo_offset);
+  }
+
   op->rw.command = NAND_OP_WRITE;
   op->rw.data_vmo = ctx->op.vmo.get();
   op->rw.oob_vmo = ZX_HANDLE_INVALID;
-  op->rw.length = ctx->nand_info->pages_per_block;
-  op->rw.offset_nand = ctx->physical_block * ctx->nand_info->pages_per_block;
+  op->rw.length = write_size;
+  op->rw.offset_nand = ctx->physical_block * ctx->nand_info->pages_per_block + in_block_offset;
   op->rw.offset_data_vmo = vmo_offset;
+
   ctx->nand->Queue(op, WriteCompletionCallback, cookie);
   return;
 }
@@ -347,7 +372,8 @@ void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer)
   completer.Reply(ReadLocked(std::move(op)));
 }
 
-zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_grown) {
+zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_grown,
+                                         std::optional<PageRange> write_page_range) {
   *bad_block_grown = false;
 
   bool one_copy_succeeded = false;
@@ -374,6 +400,7 @@ zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_
           .completion_event = &completion,
           .status = ZX_OK,
           .mark_bad = false,
+          .write_page_range = write_page_range,
       };
 
       nand_operation_t* nand_op = nand_op_->operation();
@@ -427,7 +454,7 @@ void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync complete
     return;
   }
 
-  status = WriteLocked(std::move(op), &bad_block_grown);
+  status = WriteLocked(std::move(op), &bad_block_grown, std::nullopt);
   completer.Reply(status, bad_block_grown);
 }
 
@@ -511,27 +538,41 @@ void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sy
   const uint64_t last_block = fbl::round_up(op.offset + op.size, block_size) / block_size - 1;
   const uint64_t op_size = (last_block - first_block + 1) * block_size;
 
-  zx::vmo vmo;
-  if (op_size == op.size) {
-    // No copies are necessary as offset and size are block aligned.
-    vmo = std::move(op.vmo);
-  } else {
-    status =
-        ReadPartialBlocksLocked(std::move(op), block_size, first_block, last_block, op_size, &vmo);
-    if (status != ZX_OK) {
-      completer.Reply(status, bad_block_grown);
-      return;
+  if (op.mode == WriteBytesMode::READ_MODIFY_ERASE_WRITE) {
+    zx::vmo vmo;
+    if (op_size == op.size) {
+      // No copies are necessary as offset and size are block aligned.
+      vmo = std::move(op.vmo);
+    } else {
+      status = ReadPartialBlocksLocked(std::move(op), block_size, first_block, last_block, op_size,
+                                       &vmo);
+      if (status != ZX_OK) {
+        completer.Reply(status, bad_block_grown);
+        return;
+      }
     }
+
+    // Now issue normal write.
+    ReadWriteOperation rw_op = {
+        .vmo = std::move(vmo),
+        .vmo_offset = 0,
+        .block = static_cast<uint32_t>(first_block),
+        .block_count = static_cast<uint32_t>(last_block - first_block + 1),
+    };
+    status = WriteLocked(std::move(rw_op), &bad_block_grown, {});
+  } else if (op.mode == WriteBytesMode::ERASE_WRITE) {
+    // No partial read is necessary
+    ReadWriteOperation rw_op = {
+        .vmo = std::move(op.vmo),
+        .vmo_offset = 0,
+        .block = static_cast<uint32_t>(first_block),
+        .block_count = static_cast<uint32_t>(last_block - first_block + 1),
+    };
+    auto page_size = nand_info_.page_size;
+    PageRange page_range{op.offset / page_size, op.size / page_size};
+    status = WriteLocked(std::move(rw_op), &bad_block_grown, page_range);
   }
 
-  // Now issue normal write.
-  ReadWriteOperation rw_op = {
-      .vmo = std::move(vmo),
-      .vmo_offset = 0,
-      .block = static_cast<uint32_t>(first_block),
-      .block_count = static_cast<uint32_t>(last_block - first_block + 1),
-  };
-  status = WriteLocked(std::move(rw_op), &bad_block_grown);
   completer.Reply(status, bad_block_grown);
 }
 
@@ -575,8 +616,7 @@ void SkipBlockDevice::WriteBytesWithoutErase(WriteBytesOperation op,
 // write-without-erase to the block.
 void WriteBytesWithoutEraseCompletionCallback(void* cookie, zx_status_t status,
                                               nand_operation_t* op) {
-  auto* write_wo_erase_ctx = static_cast<WriteBytesWithoutEraseOperationContext*>(cookie);
-  auto* ctx = &write_wo_erase_ctx->block_op_ctx;
+  auto* ctx = static_cast<BlockOperationContext*>(cookie);
 
   if (status != ZX_OK || ctx->current_block == ctx->op.block + ctx->op.block_count ||
       (status = ctx->block_map->GetPhysical(ctx->copy, ctx->current_block, &ctx->physical_block)) !=
@@ -586,26 +626,15 @@ void WriteBytesWithoutEraseCompletionCallback(void* cookie, zx_status_t status,
     return;
   }
 
-  // All following quantities are logical page indices relative to logical page 0 of the storage.
-  // Page index of the current block
-  const size_t block_start_page = ctx->current_block * ctx->nand_info->pages_per_block;
-  // Page index of the end of current block
-  const size_t block_end_page = block_start_page + ctx->nand_info->pages_per_block;
-  // Page index where the write within the current block should start.
-  const size_t write_start_page = std::max(block_start_page, write_wo_erase_ctx->page_offset);
-  // Page index where the write within the current block should end.
-  const size_t write_end_page =
-      std::min(block_end_page, write_wo_erase_ctx->page_offset + write_wo_erase_ctx->page_count);
-  // |write_start_page - write_wo_erase_ctx->page_offset| is essentially the number of pages we have
-  // written so far.
-  const size_t vmo_offset = ctx->op.vmo_offset + write_start_page - write_wo_erase_ctx->page_offset;
+  size_t in_block_offset, write_size, vmo_offset;
+  ComputeInBlockWriteRangeFromPageRange(ctx, *(ctx->write_page_range), &in_block_offset,
+                                        &write_size, &vmo_offset);
 
   op->rw.command = NAND_OP_WRITE;
   op->rw.data_vmo = ctx->op.vmo.get();
   op->rw.oob_vmo = ZX_HANDLE_INVALID;
-  op->rw.length = write_end_page - write_start_page,
-  op->rw.offset_nand =
-      ctx->physical_block * ctx->nand_info->pages_per_block + write_start_page - block_start_page;
+  op->rw.length = write_size,
+  op->rw.offset_nand = ctx->physical_block * ctx->nand_info->pages_per_block + in_block_offset;
   op->rw.offset_data_vmo = vmo_offset;
   ctx->current_block += 1;
   ctx->nand->Queue(op, WriteBytesWithoutEraseCompletionCallback, cookie);
@@ -621,10 +650,7 @@ zx_status_t SkipBlockDevice::WriteBytesWithoutEraseLocked(size_t page_offset, si
     }
 
     sync_completion_t completion;
-    WriteBytesWithoutEraseOperationContext op_context;
-    op_context.page_count = page_count;
-    op_context.page_offset = page_offset;
-    op_context.block_op_ctx = {
+    BlockOperationContext op_context{
         .op = std::move(op),
         .nand_info = &nand_info_,
         .block_map = &block_map_,
@@ -635,17 +661,17 @@ zx_status_t SkipBlockDevice::WriteBytesWithoutEraseLocked(size_t page_offset, si
         .completion_event = &completion,
         .status = ZX_OK,
         .mark_bad = false,
+        .write_page_range = {{page_offset, page_count}},
     };
     WriteBytesWithoutEraseCompletionCallback(&op_context, ZX_OK, nand_op_->operation());
 
     // Wait on completion.
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
-    op = std::move(op_context.block_op_ctx.op);
-    if (op_context.block_op_ctx.status != ZX_OK) {
+    op = std::move(op_context.op);
+    if (op_context.status != ZX_OK) {
       zxlogf(ERROR, "Failed to write-without-erase block %d, copy %d with status %s\n",
-             op_context.block_op_ctx.current_block, copy,
-             zx_status_get_string(op_context.block_op_ctx.status));
-      return op_context.block_op_ctx.status;
+             op_context.current_block, copy, zx_status_get_string(op_context.status));
+      return op_context.status;
     }
   }
 

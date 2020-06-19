@@ -16,4 +16,7 @@
 # 2. Implement the fidl interface in fuchsia directory. Define the
 # required flag in feature.gni file.
 
-skip_block_features = [ "skip_block_write_without_erase" ]
+skip_block_features = [
+  "skip_block_write_without_erase",
+  "skip_block_writebytes_mode",
+]

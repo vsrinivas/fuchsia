@@ -28,7 +28,13 @@ using NandOperation = nand::Operation<>;
 
 using ::llcpp::fuchsia::hardware::skipblock::PartitionInfo;
 using ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation;
+using ::llcpp::fuchsia::hardware::skipblock::WriteBytesMode;
 using ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation;
+
+struct PageRange {
+  size_t page_offset;
+  size_t page_count;
+};
 
 class SkipBlockDevice;
 using DeviceType =
@@ -76,7 +82,8 @@ class SkipBlockDevice : public DeviceType,
   zx_status_t ValidateOperationLocked(const WriteBytesOperation& op) const TA_REQ(lock_);
 
   zx_status_t ReadLocked(ReadWriteOperation op) TA_REQ(lock_);
-  zx_status_t WriteLocked(ReadWriteOperation op, bool* bad_block_grown) TA_REQ(lock_);
+  zx_status_t WriteLocked(ReadWriteOperation op, bool* bad_block_grown,
+                          std::optional<PageRange> write_page_range) TA_REQ(lock_);
   zx_status_t WriteBytesWithoutEraseLocked(size_t page_offset, size_t page_count,
                                            ReadWriteOperation op) TA_REQ(lock_);
 

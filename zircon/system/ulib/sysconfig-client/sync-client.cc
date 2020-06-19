@@ -25,8 +25,6 @@
 
 namespace sysconfig {
 
-namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
-
 namespace {
 
 constexpr size_t kKilobyte = 1 << 10;
@@ -379,7 +377,8 @@ zx_status_t SyncClient::WritePartition(PartitionType partition, const zx::vmo& v
   return Write(partition_info.offset, partition_info.size, vmo, vmo_offset);
 }
 
-zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset) {
+zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset,
+                              skipblock::WriteBytesMode mode) {
   zx::vmo dup;
   if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
     return status;
@@ -389,6 +388,7 @@ zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_
       .vmo_offset = vmo_offset,
       .offset = offset,
       .size = len,
+      .mode = mode,
   };
   printf("sysconfig: ADDING ERASE CYCLE TO SYSCONFIG\n");
   auto result = skip_block_.WriteBytes(std::move(operation));
@@ -406,6 +406,9 @@ zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const 
       .vmo_offset = vmo_offset,
       .offset = offset,
       .size = len,
+      // The option doesn't have effect, but not setting it to a valid enum value will result
+      // in fidl errors.
+      .mode = skipblock::WriteBytesMode::READ_MODIFY_ERASE_WRITE,
   };
   auto result = skip_block_.WriteBytesWithoutErase(std::move(operation));
   return result.ok() ? result.value().status : result.status();
@@ -869,11 +872,11 @@ zx_status_t SyncClientAbrWearLeveling::FlushReset(const sysconfig_header* header
   set_abr_metadata_ext_magic(&abr_data);
   // Put the latest abr data to the first page.
   memcpy(abr_start, &abr_data, sizeof(abr_metadata_ext));
-  // Reset the rest of the pages in abr partition to be empty for future use
-  memset(&abr_start[kAstroPageSize], 0xff, header->abr_metadata.size - kAstroPageSize);
 
   // Write data to persistent storage.
-  if (auto status = client_.Write(0, kAstroSysconfigPartitionSize, cache_.vmo(), 0);
+  size_t write_size = kAstroSysconfigPartitionSize - (header->abr_metadata.size - kAstroPageSize);
+  if (auto status =
+          client_.Write(0, write_size, cache_.vmo(), 0, skipblock::WriteBytesMode::ERASE_WRITE);
       status != ZX_OK) {
     fprintf(stderr, "Failed to flush write. %s\n", zx_status_get_string(status));
     return status;

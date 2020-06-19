@@ -270,7 +270,7 @@ class SkipBlockTest : public zxtest::Test {
     }
     auto result = client_->WriteBytes(std::move(op));
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_EQ(result.value().status, expected);
     *bad_block_grown = result.value().bad_block_grown;
   }
 
@@ -400,6 +400,42 @@ TEST_F(SkipBlockTest, MappingFailure) {
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
 }
 
+TEST_F(SkipBlockTest, WriteBytesEraseWriteMode) {
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+  // 20 pages in 1 block.
+  // Write page range [110, 130], the corresponding block range is [5, 6]
+  // Erase Block 5
+  nand().set_result(ZX_OK);
+  // Write Block 5
+  nand().set_result(ZX_OK);
+  // Erase Block 6
+  nand().set_result(ZX_OK);
+  // Write Block 6
+  nand().set_result(ZX_OK);
+
+  zx::vmo vmo;
+  ASSERT_NO_FATAL_FAILURES(CreatePayload(20 * kPageSize, &vmo));
+  fzl::VmoMapper mapper;
+  ASSERT_OK(mapper.Map(vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
+  auto start = static_cast<uint8_t*>(nand().mapper().start()) + 5 * kBlockSize;
+  memset(start, 0xab, 2 * kBlockSize);
+
+  nand::WriteBytesOperation op = {};
+  op.vmo = std::move(vmo);
+  op.offset = 110 * kPageSize;
+  op.size = 20 * kPageSize;
+  op.mode = nand::WriteBytesMode::ERASE_WRITE;
+
+  bool bad_block_grown;
+  ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+  ASSERT_FALSE(bad_block_grown);
+  ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+  ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+  ASSERT_NO_FATAL_FAILURES(ValidateWritten(110 * kPageSize, 20 * kPageSize));
+  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(100 * kPageSize, 10 * kPageSize));
+  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(130 * kPageSize, 10 * kPageSize));
+}
+
 TEST_F(SkipBlockTest, ReadSuccess) {
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
@@ -509,6 +545,7 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockNoOffset) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
   op.size = kSize;
+  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -539,6 +576,7 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockWithOffset) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset + kOffset;
   op.size = kSize;
+  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -576,6 +614,7 @@ TEST_F(SkipBlockTest, WriteBytesMultipleBlocks) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset + kOffset;
   op.size = kSize;
+  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -608,6 +647,7 @@ TEST_F(SkipBlockTest, WriteBytesAligned) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
   op.size = kSize;
+  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -633,6 +673,8 @@ TEST_F(SkipBlockTest, WriteBytesWithoutErase) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
   op.size = kSize;
+  // The option doesn't have effect, but we still need to give a valid value.
+  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
 
   ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op)));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
@@ -694,6 +736,8 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
     op.vmo = std::move(data);
     op.offset = kNandOffset;
     op.size = kSize;
+    // The option doesn't have effect, but we still need to give a valid value.
+    op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
     ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op), ZX_ERR_IO));
   }
 
@@ -703,6 +747,8 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
     op.vmo = std::move(vmo_backed_up);
     op.offset = kBlockOffset * kBlockSize;
     op.size = kBlockSize;
+    // The option doesn't have effect, but we still need to give a valid value.
+    op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
     bool bad_block_grown;
     ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
     ASSERT_TRUE(bad_block_grown);

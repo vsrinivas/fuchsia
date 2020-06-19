@@ -19,6 +19,8 @@
 
 namespace sysconfig {
 
+namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
+
 // This class provides a synchronous read and write interface into sub-partitions of the sysconfig
 // skip-block partition.
 //
@@ -87,7 +89,9 @@ class __EXPORT SyncClient {
 
   zx_status_t InitializeReadMapper();
 
-  zx_status_t Write(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset);
+  zx_status_t Write(
+      size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset,
+      skipblock::WriteBytesMode mode = skipblock::WriteBytesMode::READ_MODIFY_ERASE_WRITE);
 
   zx_status_t Read(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset);
 
