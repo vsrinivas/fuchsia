@@ -158,7 +158,7 @@ func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 		opts:    opts,
 		c:       make(chan error),
 		serial:  serial,
-		ptm:    ptm,
+		ptm:     ptm,
 	}, nil
 }
 
@@ -297,6 +297,8 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	}
 	qemuCmd.AddNetwork(netdev)
 
+	// Disable the virtcon.
+	qemuCmd.AddKernelArg("virtcon.disable=true")
 	// The system will halt on a kernel panic instead of rebooting.
 	qemuCmd.AddKernelArg("kernel.halt-on-panic=true")
 	// Print a message if `dm poweroff` times out.
