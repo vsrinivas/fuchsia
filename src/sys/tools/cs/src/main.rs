@@ -462,7 +462,7 @@ async fn print_log_stats(opt: Opt) -> Result<(), Error> {
             Some(s) => *s as i64,
             None => 0,
         };
-        let uptime_in_hours = (now - start_time) as f64 / 60.0;
+        let uptime_in_hours = (now - start_time) as f64 / 3600.0;
         let error_rate = stats.get_count(LogSeverity::ERROR) as f64 / uptime_in_hours;
         table_str.push_str(&format!("{:<10.4}", error_rate));
         table_str.push_str(&format!("{}\n", short_name));
