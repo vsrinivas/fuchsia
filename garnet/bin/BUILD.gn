@@ -10,7 +10,8 @@ group("bin") {
     "cpuperf",
     "cpuperf_provider",
     "cs",
-    "fidl_compatibility_test",
+    # TODO(49942): temporarily disable while flake is investigated.
+    # "fidl_compatibility_test",
     "glob",
     "http",
     "hwstress",
