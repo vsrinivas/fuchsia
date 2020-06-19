@@ -25,10 +25,19 @@ struct StructWithPadding {
     int64 c;
 };
 
+struct PaddingAtEndStruct {
+    uint16 a;
+    uint8 b;
+};
+
 // Some fields in this struct should be removed from coding tables because
 // they have no action and the walker can skip over them.
 struct StructWithSomeFieldsRemovedFromCodingTables {
     StructWithPadding padding_struct; // not removed
+    // PaddingAtEndStruct contains 3 bytes with 1 final byte of padding
+    // When the struct is flattened, this becomes 5 bytes of padding.
+    PaddingAtEndStruct padding_at_end_struct;
+    uint64 reset_alignment;
     int8 foo; // removed
     // 3 bytes padding.
     array<StructWithAllFieldsRemovedFromCodingTables>:1 arr; // removed

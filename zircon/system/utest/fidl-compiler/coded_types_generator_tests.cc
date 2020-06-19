@@ -463,8 +463,246 @@ struct Complex {
   EXPECT_EQ(type_complex_struct->fields[0].offset, 4);
   EXPECT_EQ(type_complex_struct->fields[0].padding, 3);
   EXPECT_EQ(type_complex_struct->fields[1].type, nullptr);
-  EXPECT_EQ(type_complex_struct->fields[1].offset, 16);
+  EXPECT_EQ(type_complex_struct->fields[1].offset, 18);
   EXPECT_EQ(type_complex_struct->fields[1].padding, 6);
+  END_TEST;
+}
+
+bool CodedTypesOfMultilevelNestedStructs() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+// alignment 4
+struct Level0 {
+  int8 a;
+  //padding 3
+  int32 b;
+  int8 c;
+  // padding 3;
+};
+
+// alignment 8
+struct Level1 {
+  Level0 l0;
+  // 4 bytes padding + 3 inside of Level0.
+  uint64 d;
+};
+
+// alignment 8
+struct Level2 {
+  Level1 l1;
+  uint8 e;
+  // 7 bytes of padding.
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  auto name_level0 = fidl::flat::Name::Key(library.library(), "Level0");
+  auto type_level0 = gen.CodedTypeFor(name_level0);
+  ASSERT_NONNULL(type_level0);
+  auto struct_level0 = static_cast<const fidl::coded::StructType*>(type_level0);
+  ASSERT_EQ(struct_level0->fields.size(), 2);
+  EXPECT_NULL(struct_level0->fields[0].type);
+  EXPECT_EQ(struct_level0->fields[0].offset, 1);
+  EXPECT_EQ(struct_level0->fields[0].padding, 3);
+  EXPECT_NULL(struct_level0->fields[1].type);
+  EXPECT_EQ(struct_level0->fields[1].offset, 9);
+  EXPECT_EQ(struct_level0->fields[1].padding, 3);
+
+  auto name_level1 = fidl::flat::Name::Key(library.library(), "Level1");
+  auto type_level1 = gen.CodedTypeFor(name_level1);
+  ASSERT_NONNULL(type_level1);
+  auto struct_level1 = static_cast<const fidl::coded::StructType*>(type_level1);
+  ASSERT_EQ(struct_level1->fields.size(), 2);
+  EXPECT_NULL(struct_level1->fields[0].type);
+  EXPECT_EQ(struct_level1->fields[0].offset, 1);
+  EXPECT_EQ(struct_level1->fields[0].padding, 3);
+  EXPECT_NULL(struct_level1->fields[1].type);
+  EXPECT_EQ(struct_level1->fields[1].offset, 9);
+  EXPECT_EQ(struct_level1->fields[1].padding, 7);
+
+  auto name_level2 = fidl::flat::Name::Key(library.library(), "Level2");
+  auto type_level2 = gen.CodedTypeFor(name_level2);
+  ASSERT_NONNULL(type_level2);
+  auto struct_level2 = static_cast<const fidl::coded::StructType*>(type_level2);
+  ASSERT_EQ(struct_level2->fields.size(), 3);
+  EXPECT_NULL(struct_level2->fields[0].type);
+  EXPECT_EQ(struct_level2->fields[0].offset, 1);
+  EXPECT_EQ(struct_level2->fields[0].padding, 3);
+  EXPECT_NULL(struct_level2->fields[1].type);
+  EXPECT_EQ(struct_level2->fields[1].offset, 9);
+  EXPECT_EQ(struct_level2->fields[1].padding, 7);
+  EXPECT_NULL(struct_level2->fields[2].type);
+  EXPECT_EQ(struct_level2->fields[2].offset, 25);
+  EXPECT_EQ(struct_level2->fields[2].padding, 7);
+
+  END_TEST;
+}
+
+bool CodedTypesOfRecursiveOptionalStructs() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct OneLevelRecursiveOptionalStruct {
+  OneLevelRecursiveOptionalStruct? val;
+};
+
+struct TwoLevelRecursiveOptionalStructA {
+  TwoLevelRecursiveOptionalStructB b;
+};
+
+struct TwoLevelRecursiveOptionalStructB {
+  TwoLevelRecursiveOptionalStructA? a;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  auto name_one_level = fidl::flat::Name::Key(library.library(), "OneLevelRecursiveOptionalStruct");
+  auto type_one_level = gen.CodedTypeFor(name_one_level);
+  ASSERT_NONNULL(type_one_level);
+  auto struct_one_level = static_cast<const fidl::coded::StructType*>(type_one_level);
+  ASSERT_EQ(struct_one_level->fields.size(), 1);
+  EXPECT_EQ(struct_one_level->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
+  ASSERT_STR_STR(struct_one_level->fields[0].type->coded_name.c_str(),
+                 "OneLevelRecursiveOptionalStruct");
+  EXPECT_EQ(struct_one_level->fields[0].offset, 0);
+  EXPECT_EQ(struct_one_level->fields[0].padding, 0);
+
+  auto name_two_level_b =
+      fidl::flat::Name::Key(library.library(), "TwoLevelRecursiveOptionalStructB");
+  auto type_two_level_b = gen.CodedTypeFor(name_two_level_b);
+  ASSERT_NONNULL(type_two_level_b);
+  auto struct_two_level_b = static_cast<const fidl::coded::StructType*>(type_two_level_b);
+  ASSERT_EQ(struct_two_level_b->fields.size(), 1);
+  EXPECT_EQ(struct_two_level_b->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
+  ASSERT_STR_STR(struct_two_level_b->fields[0].type->coded_name.c_str(),
+                 "TwoLevelRecursiveOptionalStructA");
+  EXPECT_EQ(struct_two_level_b->fields[0].offset, 0);
+  EXPECT_EQ(struct_two_level_b->fields[0].padding, 0);
+
+  // TwoLevelRecursiveOptionalStructA will be equivalent to TwoLevelRecursiveOptionalStructB
+  // because of flattening.
+  auto name_two_level_a =
+      fidl::flat::Name::Key(library.library(), "TwoLevelRecursiveOptionalStructA");
+  auto type_two_level_a = gen.CodedTypeFor(name_two_level_a);
+  ASSERT_NONNULL(type_two_level_a);
+  auto struct_two_level_a = static_cast<const fidl::coded::StructType*>(type_two_level_a);
+  ASSERT_EQ(struct_two_level_a->fields.size(), 1);
+  EXPECT_EQ(struct_two_level_a->fields[0].type->kind, fidl::coded::Type::Kind::kStructPointer);
+  ASSERT_STR_STR(struct_two_level_a->fields[0].type->coded_name.c_str(),
+                 "TwoLevelRecursiveOptionalStructA");
+  EXPECT_EQ(struct_two_level_a->fields[0].offset, 0);
+  EXPECT_EQ(struct_two_level_a->fields[0].padding, 0);
+
+  END_TEST;
+}
+
+bool CodedTypesOfReusedStructs() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+// InnerStruct is reused and appears twice.
+struct InnerStruct{
+  int8 a;
+  // 1 byte padding
+  int16 b;
+};
+
+struct OuterStruct {
+  InnerStruct a;
+  InnerStruct b;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  auto name_inner_struct = fidl::flat::Name::Key(library.library(), "InnerStruct");
+  auto type_inner_struct = gen.CodedTypeFor(name_inner_struct);
+  ASSERT_NONNULL(type_inner_struct);
+  auto struct_inner_struct = static_cast<const fidl::coded::StructType*>(type_inner_struct);
+  ASSERT_EQ(struct_inner_struct->fields.size(), 1);
+  EXPECT_NULL(struct_inner_struct->fields[0].type);
+  EXPECT_EQ(struct_inner_struct->fields[0].offset, 1);
+  EXPECT_EQ(struct_inner_struct->fields[0].padding, 1);
+
+  auto name_outer_struct = fidl::flat::Name::Key(library.library(), "OuterStruct");
+  auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
+  ASSERT_NONNULL(type_outer_struct);
+  auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
+  ASSERT_EQ(struct_outer_struct->fields.size(), 2);
+  EXPECT_NULL(struct_outer_struct->fields[0].type);
+  EXPECT_EQ(struct_outer_struct->fields[0].offset, 1);
+  EXPECT_EQ(struct_outer_struct->fields[0].padding, 1);
+  EXPECT_NULL(struct_outer_struct->fields[1].type);
+  EXPECT_EQ(struct_outer_struct->fields[1].offset, 5);
+  EXPECT_EQ(struct_outer_struct->fields[1].padding, 1);
+
+  END_TEST;
+}
+
+bool CodedTypesOfOptionals() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct InnerStruct{
+  int8 a;
+  // 1 byte padding
+  int16 b;
+};
+
+union SimpleUnion {
+    1: int64 a;
+};
+
+struct OuterStruct {
+  InnerStruct a;
+  handle? opt_handle;
+  SimpleUnion? opt_union;
+  InnerStruct b;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  auto name_outer_struct = fidl::flat::Name::Key(library.library(), "OuterStruct");
+  auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
+  ASSERT_NONNULL(type_outer_struct);
+  auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
+  ASSERT_EQ(struct_outer_struct->fields.size(), 5);
+  EXPECT_NULL(struct_outer_struct->fields[0].type);
+  EXPECT_EQ(struct_outer_struct->fields[0].offset, 1);
+  EXPECT_EQ(struct_outer_struct->fields[0].padding, 1);
+  EXPECT_EQ(struct_outer_struct->fields[1].type->kind, fidl::coded::Type::Kind::kHandle);
+  EXPECT_EQ(struct_outer_struct->fields[1].offset, 4);
+  EXPECT_EQ(struct_outer_struct->fields[1].padding, 0);
+  EXPECT_EQ(struct_outer_struct->fields[2].type->kind, fidl::coded::Type::Kind::kXUnion);
+  EXPECT_EQ(struct_outer_struct->fields[2].offset, 8);
+  EXPECT_EQ(struct_outer_struct->fields[2].padding, 0);
+  EXPECT_NULL(struct_outer_struct->fields[3].type);
+  EXPECT_EQ(struct_outer_struct->fields[3].offset, 33);
+  EXPECT_EQ(struct_outer_struct->fields[3].padding, 1);
+  EXPECT_NULL(struct_outer_struct->fields[4].type);
+  EXPECT_EQ(struct_outer_struct->fields[4].offset, 36);
+  EXPECT_EQ(struct_outer_struct->fields[4].padding, 4);
+
   END_TEST;
 }
 
@@ -643,132 +881,6 @@ union MyUnion {
   END_TEST;
 }
 
-bool field_num_in_struct() {
-  BEGIN_TEST;
-
-  auto wire_formats = std::vector<fidl::WireFormat>{
-      fidl::WireFormat::kV1NoEe,
-  };
-  for (auto wire_format : wire_formats) {
-    TestLibrary library(R"FIDL(
-library example;
-
-struct MyStruct {
-    uint64        f0;
-    vector<uint8> f1; // coded field 0
-    uint64        f2;
-    vector<uint8> f3; // coded field 1
-    vector<uint8> f4; // coded field 2
-    uint64        f5;
-    vector<uint8> f6; // coded field 3
-    vector<uint8> f7; // coded field 4
-    vector<uint8> f8; // coded field 5
-    uint64        f9;
-};
-
-  )FIDL");
-    ASSERT_TRUE(library.Compile());
-    fidl::CodedTypesGenerator gen(library.library());
-    gen.CompileCodedTypes(wire_format);
-
-    ASSERT_NE(0, gen.coded_types().size());
-
-    auto name_struct = fidl::flat::Name::Key(library.library(), "MyStruct");
-    auto coded_type = gen.CodedTypeFor(name_struct);
-    ASSERT_NONNULL(coded_type);
-    ASSERT_EQ(fidl::coded::Type::Kind::kStruct, coded_type->kind);
-    auto coded_struct_type = static_cast<const fidl::coded::StructType*>(coded_type);
-
-    ASSERT_EQ(6, coded_struct_type->fields.size());
-
-    EXPECT_EQ(1, coded_struct_type->fields[0].field_num);
-    EXPECT_EQ(3, coded_struct_type->fields[1].field_num);
-    EXPECT_EQ(4, coded_struct_type->fields[2].field_num);
-    EXPECT_EQ(6, coded_struct_type->fields[3].field_num);
-    EXPECT_EQ(7, coded_struct_type->fields[4].field_num);
-    EXPECT_EQ(8, coded_struct_type->fields[5].field_num);
-  }
-
-  END_TEST;
-}
-
-bool field_num_in_message() {
-  BEGIN_TEST;
-
-  auto wire_formats = std::vector<fidl::WireFormat>{
-      fidl::WireFormat::kV1NoEe,
-  };
-  for (auto wire_format : wire_formats) {
-    TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-    MyMethod(
-      uint64        f0,
-      vector<uint8> f1, // coded field 0
-      uint64        f2,
-      vector<uint8> f3, // coded field 1
-      vector<uint8> f4, // coded field 2
-      uint64        f5,
-      vector<uint8> f6, // coded field 3
-      vector<uint8> f7, // coded field 4
-      vector<uint8> f8, // coded field 5
-      uint64        f9
-    ) -> (
-      uint64        f0,
-      vector<uint8> f1, // coded field 0
-      vector<uint8> f2, // coded field 1
-      vector<uint8> f3, // coded field 2
-      uint64        f4,
-      vector<uint8> f5, // coded field 3
-      vector<uint8> f6, // coded field 4
-      uint64        f7,
-      vector<uint8> f8, // coded field 5
-      uint64        f9
-    );
-};
-
-  )FIDL");
-    ASSERT_TRUE(library.Compile());
-    fidl::CodedTypesGenerator gen(library.library());
-    gen.CompileCodedTypes(wire_format);
-
-    ASSERT_NE(0, gen.coded_types().size());
-
-    auto name_protocol = fidl::flat::Name::Key(library.library(), "MyProtocol");
-    auto coded_type = gen.CodedTypeFor(name_protocol);
-    ASSERT_NONNULL(coded_type);
-    ASSERT_EQ(fidl::coded::Type::Kind::kProtocol, coded_type->kind);
-    auto coded_protocol_type = static_cast<const fidl::coded::ProtocolType*>(coded_type);
-
-    ASSERT_EQ(2, coded_protocol_type->messages_after_compile.size());
-
-    const auto& request_message_type = coded_protocol_type->messages_after_compile[0];
-    ASSERT_NONNULL(request_message_type);
-    ASSERT_EQ(6, request_message_type->fields.size());
-
-    EXPECT_EQ(1, request_message_type->fields[0].field_num);
-    EXPECT_EQ(3, request_message_type->fields[1].field_num);
-    EXPECT_EQ(4, request_message_type->fields[2].field_num);
-    EXPECT_EQ(6, request_message_type->fields[3].field_num);
-    EXPECT_EQ(7, request_message_type->fields[4].field_num);
-    EXPECT_EQ(8, request_message_type->fields[5].field_num);
-
-    const auto& response_message_type = coded_protocol_type->messages_after_compile[1];
-    ASSERT_NONNULL(response_message_type);
-    ASSERT_EQ(6, response_message_type->fields.size());
-
-    EXPECT_EQ(1, response_message_type->fields[0].field_num);
-    EXPECT_EQ(2, response_message_type->fields[1].field_num);
-    EXPECT_EQ(3, response_message_type->fields[2].field_num);
-    EXPECT_EQ(5, response_message_type->fields[3].field_num);
-    EXPECT_EQ(6, response_message_type->fields[4].field_num);
-    EXPECT_EQ(8, response_message_type->fields[5].field_num);
-  }
-
-  END_TEST;
-}
-
 bool check_duplicate_coded_type_names(const fidl::CodedTypesGenerator& gen) {
   BEGIN_HELPER;
   const auto types = gen.AllCodedTypes();
@@ -864,12 +976,14 @@ RUN_TEST(CodedTypesOfUnions);
 RUN_TEST(CodedTypesOfNullableUnions);
 RUN_TEST(CodedTypesOfNullablePointers);
 RUN_TEST(CodedTypesOfStructsWithPaddings);
+RUN_TEST(CodedTypesOfMultilevelNestedStructs);
+RUN_TEST(CodedTypesOfRecursiveOptionalStructs);
+RUN_TEST(CodedTypesOfReusedStructs);
+RUN_TEST(CodedTypesOfOptionals);
 RUN_TEST(CodedTypesOfTables);
 RUN_TEST(CodedTypesOfBits);
 RUN_TEST(CodedTypesOfEnum);
 RUN_TEST(CodedTypesOfUnionsWithReverseOrdinals);
-RUN_TEST(field_num_in_struct);
-RUN_TEST(field_num_in_message);
 RUN_TEST(CodedHandle);
 RUN_TEST(duplicate_coded_types_two_unions);
 RUN_TEST(duplicate_coded_types_union_array_array);

@@ -387,7 +387,7 @@ void TablesGenerator::Generate(const coded::StructField& field) {
     Emit(&tables_file_, field.offset);
   } else {
     Emit(&tables_file_, ".padding_offset=");
-    Emit(&tables_file_, field.offset + field.size);
+    Emit(&tables_file_, field.padding_offset);
   }
   Emit(&tables_file_, ", .padding=");
   Emit(&tables_file_, field.padding);

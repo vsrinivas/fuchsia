@@ -44,27 +44,24 @@ struct Type;
 struct StructType;
 
 struct StructField {
-  StructField(const Type* type, uint32_t size, uint32_t offset, uint32_t padding,
-              const Type* struct_type, uint32_t field_num)
-      : type(type),
-        size(size),
-        offset(offset),
-        padding(padding),
-        struct_type(struct_type),
-        field_num(field_num) {}
+  static StructField Field(const Type* type, uint32_t offset, uint32_t padding) {
+    return StructField(type, offset, padding);
+  }
+
+  static StructField Padding(uint32_t padding_offset, uint32_t padding) {
+    return StructField(nullptr, padding_offset, padding);
+  }
 
   const Type* type;
-  const uint32_t size;
-  const uint32_t offset;
+  union {
+    const uint32_t offset;
+    const uint32_t padding_offset;
+  };
   const uint32_t padding;
-  // TODO(fxb/7704): When we remove special handling of requests/responses, this
-  // needs to be a StructType (we'll remove MessageType).
-  const Type* struct_type;
-  // The field number in the FIDL struct, first field is numbered 0. Since we
-  // omit generation for certain types of fields (e.g. primitives), this number
-  // does not correspond to the field index in the coded struct table, and these
-  // must be manually mapped.
-  const uint32_t field_num;
+
+ private:
+  StructField(const Type* type, uint32_t offset, uint32_t padding)
+      : type(type), offset(offset), padding(padding) {}
 };
 
 struct TableField {

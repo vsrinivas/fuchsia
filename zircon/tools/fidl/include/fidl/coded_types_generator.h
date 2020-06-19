@@ -38,6 +38,25 @@ class CodedTypesGenerator {
   void CompileDecl(const flat::Decl* decl, const WireFormat wire_format);
   void CompileXRef(const coded::Type* type, const WireFormat wire_format);
 
+  // Representation of the fields of a struct member after it has been flattened.
+  struct FlattenedStructMember {
+    FlattenedStructMember(const flat::StructMember& member, const WireFormat wire_format);
+    const flat::Type* type;
+    const SourceSpan name;
+    const uint32_t inline_size;
+    uint32_t offset;
+    uint32_t padding;
+  };
+
+  // Flatten a list of flat-AST struct members by recursively descending and expanding.
+  // e.g.:
+  // struct A { int8 x; };
+  // struct B { A y; int8 z; };
+  // becomes the equivalent of
+  // struct B { int8 x; int8 z; };
+  std::vector<FlattenedStructMember> FlattenedStructMembers(const flat::Struct& input,
+                                                            const WireFormat wire_format);
+
   const flat::Library* library_;
 
   template <typename FlatType, typename CodedType>

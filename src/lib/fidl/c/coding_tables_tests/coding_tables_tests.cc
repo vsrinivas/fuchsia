@@ -10,52 +10,45 @@
 TEST(SomeStruct, CodingTable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingSomeStructRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
-  const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingSomeStructRequest", request_struct.name);
-  const FidlStructField& some_struct_field = request_struct.fields[0];
-  // Transaction message header is 16 bytes.
-  ASSERT_EQ(16, some_struct_field.offset);
-
-  const fidl_type& some_struct_type = *some_struct_field.type;
-  ASSERT_EQ(kFidlTypeStruct, some_struct_type.type_tag());
-  const FidlCodedStruct& some_struct_table = some_struct_type.coded_struct();
-  ASSERT_STR_EQ("fidl.test.example.codingtables/SomeStruct", some_struct_table.name);
+  const FidlCodedStruct& some_struct_table = type.coded_struct();
+  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingSomeStructRequest", some_struct_table.name);
   // Every field (including primitives without padding) has a coding table generated for it.
   ASSERT_EQ(1, some_struct_table.field_count);
-  ASSERT_EQ(&fidl_internal_kBoolTable, some_struct_table.fields[0].type);
-  ASSERT_EQ(0, some_struct_table.fields[0].offset);
-  ASSERT_EQ(3, some_struct_table.fields[0].padding);
+  EXPECT_EQ(&fidl_internal_kBoolTable, some_struct_table.fields[0].type);
+  EXPECT_EQ(16, some_struct_table.fields[0].offset);
+  EXPECT_EQ(3, some_struct_table.fields[0].padding);
 }
 
 TEST(StructWithSomeFieldsRemoved, CodingTable) {
-  const fidl_type& request_type =
+  const fidl_type& type =
       fidl_test_example_codingtables_CodingStructWithSomeFieldsRemovedFromCodingTablesRequestTable;
-  ASSERT_EQ(kFidlTypeStruct, request_type.type_tag());
-
-  const fidl_type& type = *request_type.coded_struct().fields[0].type;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& coded_struct = type.coded_struct();
-  ASSERT_STR_EQ("fidl.test.example.codingtables/StructWithSomeFieldsRemovedFromCodingTables",
-                coded_struct.name);
+  ASSERT_STR_EQ(
+      "fidl.test.example.codingtables/CodingStructWithSomeFieldsRemovedFromCodingTablesRequest",
+      coded_struct.name);
 
-  ASSERT_EQ(4, coded_struct.field_count);
+  ASSERT_EQ(5, coded_struct.field_count);
 
-  ASSERT_NOT_NULL(coded_struct.fields[0].type);
-  ASSERT_EQ(0, coded_struct.fields[0].padding_offset);
-  ASSERT_EQ(0, coded_struct.fields[0].padding);
+  EXPECT_NULL(coded_struct.fields[0].type);
+  EXPECT_EQ(17, coded_struct.fields[0].padding_offset);
+  EXPECT_EQ(7, coded_struct.fields[0].padding);
 
-  ASSERT_NULL(coded_struct.fields[1].type);
-  ASSERT_EQ(17, coded_struct.fields[1].padding_offset);
-  ASSERT_EQ(1, coded_struct.fields[1].padding);
+  EXPECT_NULL(coded_struct.fields[1].type);
+  EXPECT_EQ(35, coded_struct.fields[1].padding_offset);
+  EXPECT_EQ(5, coded_struct.fields[1].padding);
 
-  ASSERT_EQ(&fidl_internal_kBoolTable, coded_struct.fields[2].type->coded_array().element);
-  ASSERT_EQ(22, coded_struct.fields[2].offset);
-  ASSERT_EQ(1, coded_struct.fields[2].padding);
+  EXPECT_NULL(coded_struct.fields[2].type);
+  EXPECT_EQ(49, coded_struct.fields[2].offset);
+  EXPECT_EQ(1, coded_struct.fields[2].padding);
 
-  ASSERT_NULL(coded_struct.fields[3].type);
-  ASSERT_EQ(26, coded_struct.fields[3].padding_offset);
-  ASSERT_EQ(6, coded_struct.fields[3].padding);
+  EXPECT_EQ(&fidl_internal_kBoolTable, coded_struct.fields[3].type->coded_array().element);
+  EXPECT_EQ(54, coded_struct.fields[3].padding_offset);
+  EXPECT_EQ(1, coded_struct.fields[3].padding);
+
+  EXPECT_NULL(coded_struct.fields[4].type);
+  EXPECT_EQ(58, coded_struct.fields[4].padding_offset);
+  EXPECT_EQ(6, coded_struct.fields[4].padding);
 }
 
 TEST(MyXUnion, CodingTableWhenNullable) {
@@ -229,17 +222,9 @@ TEST(MyEnum, CodingTable) {
 TEST(NumberCollision, CodingTable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingNumberCollisionRequestTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
-  const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingNumberCollisionRequest", request_struct.name);
-  const FidlStructField& number_collision_field = request_struct.fields[0];
-  // Transaction message header is 16 bytes.
-  ASSERT_EQ(16, number_collision_field.offset);
-
-  const fidl_type& number_collision_type = *number_collision_field.type;
-  ASSERT_EQ(kFidlTypeStruct, number_collision_type.type_tag());
-  const FidlCodedStruct& number_collision_table = number_collision_type.coded_struct();
-  ASSERT_STR_EQ("fidl.test.example.codingtables/NumberCollision", number_collision_table.name);
+  const FidlCodedStruct& number_collision_table = type.coded_struct();
+  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingNumberCollisionRequest",
+                number_collision_table.name);
   ASSERT_EQ(5, number_collision_table.field_count);
 }
 

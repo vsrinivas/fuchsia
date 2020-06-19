@@ -11,7 +11,7 @@ const struct FidlCodedStruct top_TopGetFooRequestTable = {.tag=kFidlTypeStruct, 
 
 extern const struct FidlCodedStruct top_TopGetFooResponseTable;
 static const struct FidlStructField Fields21top_TopGetFooResponse[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&bottom_FooTable), .offset=16u, .padding=4u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
 };
 const struct FidlCodedStruct top_TopGetFooResponseTable = {.tag=kFidlTypeStruct, .fields=Fields21top_TopGetFooResponse, .field_count=1u, .size=24u, .name="top/TopGetFooResponse"};
 

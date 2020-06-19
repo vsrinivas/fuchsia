@@ -10,6 +10,52 @@
 
 namespace fidl {
 
+CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::StructMember& member,
+                                                                  const WireFormat wire_format)
+    : type(member.type_ctor->type),
+      name(member.name),
+      inline_size(member.typeshape(wire_format).InlineSize()),
+      offset(member.fieldshape(wire_format).Offset()),
+      padding(member.fieldshape(wire_format).Padding()) {}
+
+std::vector<CodedTypesGenerator::FlattenedStructMember> CodedTypesGenerator::FlattenedStructMembers(
+    const flat::Struct& input, const WireFormat wire_format) {
+  auto get_struct_decl = [this](const flat::StructMember& member) -> flat::Struct* {
+    if (member.type_ctor->nullability == types::Nullability::kNullable) {
+      return nullptr;
+    }
+    flat::Decl* decl = library_->LookupDeclByName(member.type_ctor->name);
+    if (decl == nullptr || decl->kind != flat::Decl::Kind::kStruct) {
+      return nullptr;
+    }
+    return static_cast<flat::Struct*>(decl);
+  };
+
+  std::vector<FlattenedStructMember> result;
+  for (const auto& member : input.members) {
+    auto flattened_member = FlattenedStructMember(member, wire_format);
+    flat::Struct* struct_decl = get_struct_decl(member);
+    if (!struct_decl) {
+      result.push_back(flattened_member);
+      continue;
+    }
+    if (struct_decl->members.size() == 0) {
+      result.push_back(flattened_member);
+      continue;
+    }
+    auto flattened_members = FlattenedStructMembers(*struct_decl, wire_format);
+    for (size_t i = 0; i < flattened_members.size(); i++) {
+      auto inner_member = flattened_members[i];
+      if (i == flattened_members.size() - 1) {
+        inner_member.padding += flattened_member.padding;
+      }
+      inner_member.offset += flattened_member.offset;
+      result.push_back(inner_member);
+    }
+  }
+  return result;
+}
+
 std::vector<const coded::Type*> CodedTypesGenerator::AllCodedTypes() const {
   std::vector<const coded::Type*> coded_types;
   coded_types.reserve(coded_types_.size() + named_coded_types_.size());
@@ -215,22 +261,16 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           std::vector<coded::StructField>& request_fields = coded_message->fields;
           uint32_t field_num = 0;
           bool is_noop = true;
-          for (const auto& parameter : message.members) {
-            std::string parameter_name =
-                coded_message->coded_name + "_" + std::string(parameter.name.data());
-            auto coded_parameter_type = CompileType(
-                parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope, wire_format);
+          for (const auto parameter : FlattenedStructMembers(message, wire_format)) {
+            auto coded_parameter_type =
+                CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope, wire_format);
             if (!coded_parameter_type->is_noop) {
-              request_fields.emplace_back(
-                  coded_parameter_type, parameter.typeshape(wire_format).InlineSize(),
-                  parameter.fieldshape(wire_format).Offset(),
-                  parameter.fieldshape(wire_format).Padding(), coded_message.get(), field_num);
+              request_fields.push_back(coded::StructField::Field(
+                  coded_parameter_type, parameter.offset, parameter.padding));
               is_noop = false;
-            } else if (parameter.fieldshape(wire_format).Padding() != 0) {
-              request_fields.emplace_back(nullptr, parameter.typeshape(wire_format).InlineSize(),
-                                          parameter.fieldshape(wire_format).Offset(),
-                                          parameter.fieldshape(wire_format).Padding(),
-                                          coded_message.get(), field_num);
+            } else if (parameter.padding != 0) {
+              request_fields.push_back(coded::StructField::Padding(
+                  parameter.inline_size + parameter.offset, parameter.padding));
               is_noop = false;
             }
             field_num++;
@@ -262,21 +302,17 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
       std::vector<coded::StructField>& struct_fields = coded_struct->fields;
       uint32_t field_num = 0;
       bool is_noop = true;
-      for (const auto& member : struct_decl->members) {
+      for (const auto member : FlattenedStructMembers(*struct_decl, wire_format)) {
         std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
-        auto coded_member_type = CompileType(member.type_ctor->type,
-                                             coded::CodingContext::kOutsideEnvelope, wire_format);
+        auto coded_member_type =
+            CompileType(member.type, coded::CodingContext::kOutsideEnvelope, wire_format);
         if (!coded_member_type->is_noop) {
-          struct_fields.emplace_back(coded_member_type, member.typeshape(wire_format).InlineSize(),
-                                     member.fieldshape(wire_format).Offset(),
-                                     member.fieldshape(wire_format).Padding(), coded_struct,
-                                     field_num);
+          struct_fields.push_back(
+              coded::StructField::Field(coded_member_type, member.offset, member.padding));
           is_noop = false;
-        } else if (member.fieldshape(wire_format).Padding() != 0) {
-          struct_fields.emplace_back(nullptr, member.typeshape(wire_format).InlineSize(),
-                                     member.fieldshape(wire_format).Offset(),
-                                     member.fieldshape(wire_format).Padding(), coded_struct,
-                                     field_num);
+        } else if (member.padding != 0) {
+          struct_fields.push_back(
+              coded::StructField::Padding(member.inline_size + member.offset, member.padding));
           is_noop = false;
         }
         field_num++;
