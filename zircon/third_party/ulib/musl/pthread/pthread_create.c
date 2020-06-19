@@ -41,6 +41,16 @@ __NO_SAFESTACK static void deallocate_region(const struct iovec* region) {
   _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)region->iov_base, region->iov_len);
 }
 
+__NO_SAFESTACK static void deallocate_stack(struct iovec* stack, const struct iovec* region) {
+  // Clear the pointers in the TCB before actually unmapping.  In case we get
+  // suspended by __sanitizer_memory_snapshot, the TCB is always expected to
+  // contain valid pointers.
+  stack->iov_base = NULL;
+  stack->iov_len = 0;
+  atomic_signal_fence(memory_order_seq_cst);
+  deallocate_region(region);
+}
+
 int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp,
                      void* (*entry)(void*), void* restrict arg) {
   pthread_attr_t attr = attrp == NULL ? DEFAULT_PTHREAD_ATTR : *attrp;
@@ -98,26 +108,29 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
 
 fail_after_alloc:
   __thread_list_erase(new);
-  deallocate_region(&new->safe_stack_region);
-  deallocate_region(&new->unsafe_stack_region);
-  deallocate_region(&new->tcb_region);
+  deallocate_stack(&new->safe_stack, &new->safe_stack_region);
+  deallocate_stack(&new->unsafe_stack, &new->unsafe_stack_region);
 #if HAVE_SHADOW_CALL_STACK
-  deallocate_region(&new->shadow_call_stack_region);
+  deallocate_stack(&new->shadow_call_stack, &new->shadow_call_stack_region);
 #endif
+  deallocate_region(&new->tcb_region);
   return status == ZX_ERR_ACCESS_DENIED ? EPERM : EAGAIN;
 }
 
 static _Noreturn void final_exit(pthread_t self) __asm__("final_exit") __attribute__((used));
 
 static __NO_SAFESTACK NO_ASAN void final_exit(pthread_t self) {
-  deallocate_region(&self->safe_stack_region);
-  deallocate_region(&self->unsafe_stack_region);
+  deallocate_stack(&self->safe_stack, &self->safe_stack_region);
+  deallocate_stack(&self->unsafe_stack, &self->unsafe_stack_region);
 #if HAVE_SHADOW_CALL_STACK
-  deallocate_region(&self->shadow_call_stack_region);
+  deallocate_stack(&self->shadow_call_stack, &self->shadow_call_stack_region);
 #endif
 
-  // This deallocates the TCB region too for the detached case.
-  // If not detached, pthread_join will deallocate it.
+  // This deallocates the TCB region too for the detached case.  If not
+  // detached, pthread_join will deallocate it.  This always makes the
+  // __thread_list_erase callback before deallocating the TCB, so
+  // __sanitizer_memory_snapshot should not consider the thread to be "alive"
+  // any more safely before the memory might be unmapped.
   zxr_thread_exit_unmap_if_detached(&self->zxr_thread, __thread_list_erase, self,
                                     _zx_vmar_root_self(), (uintptr_t)self->tcb_region.iov_base,
                                     self->tcb_region.iov_len);
@@ -151,7 +164,7 @@ static NO_ASAN _Noreturn void finish_exit(pthread_t self) {
       "call final_exit\n"
       "# Target receives %[self]"
       :
-      : [ self ] "D"(self));
+      : [self] "D"(self));
 #elif defined(__aarch64__)
   // The thread descriptor is at the start of the region, so the rest of
   // the space up to the guard page is available as the temporary stack.
@@ -160,8 +173,8 @@ static NO_ASAN _Noreturn void finish_exit(pthread_t self) {
       "mov x0, %[self]\n"
       "bl final_exit"
       :
-      : [ base ] "r"(self->tcb_region.iov_base), [ len ] "r"(self->tcb_region.iov_len - PAGE_SIZE),
-        [ self ] "r"(self));
+      : [base] "r"(self->tcb_region.iov_base), [len] "r"(self->tcb_region.iov_len - PAGE_SIZE),
+        [self] "r"(self));
 #else
 #error what architecture?
 #endif

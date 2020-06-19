@@ -402,6 +402,9 @@ class MemorySnapshot {
 
   void ReportStack(const iovec& stack, uintptr_t sp,
                    sanitizer_memory_snapshot_callback_t* callback) {
+    if (!stack.iov_base || stack.iov_len == 0) {
+      return;
+    }
     uintptr_t base = reinterpret_cast<uintptr_t>(stack.iov_base);
     uintptr_t limit = base + stack.iov_len;
     // If the current SP is not woefully misaligned and falls within the
