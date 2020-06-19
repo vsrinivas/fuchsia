@@ -11,44 +11,65 @@ import (
 )
 
 var (
-	goTestPreamblePattern = regexp.MustCompile(`^==================== Test output for (.*?):$`)
-	goTestCasePattern     = regexp.MustCompile(`^--- (\w*?): (.*?) \((.*?)\)$`)
+	goTestPreamblePattern = regexp.MustCompile(`^=== RUN\s+(.[^/]*)(?:/?)(.*?)$`)
+	goTestCasePattern     = regexp.MustCompile(`^\s*--- (\w*?): (.[^/]*)(?:/?)(.*?) \((.*?)\)$`)
+	goTestPanicPattern    = regexp.MustCompile(`^panic: test timed out after (\S+)$`)
 )
 
 func parseGoTest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
 	var suiteName string
 	for _, line := range lines {
+		var matched bool
 		line := string(line)
 		m := goTestPreamblePattern.FindStringSubmatch(line)
 		if m != nil {
+			// Will be overridden below by the panic matcher
+			// or the test case matcher if present.
 			suiteName = m[1]
 			continue
 		}
-		m = goTestCasePattern.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
 		var status TestCaseStatus
-		switch m[1] {
-		case "PASS":
-			status = Pass
-		case "FAIL":
+		var displayName string
+		var caseName string
+		var duration time.Duration
+		m = goTestPanicPattern.FindStringSubmatch(line)
+		if m != nil {
 			status = Fail
-		case "SKIP":
-			status = Skip
+			displayName = suiteName
+			duration, _ = time.ParseDuration(m[1])
+			matched = true
 		}
-		caseName := m[2]
-		displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
-		duration, _ := time.ParseDuration(m[3])
-		res = append(res, TestCaseResult{
-			DisplayName: displayName,
-			SuiteName:   suiteName,
-			CaseName:    caseName,
-			Status:      status,
-			Duration:    duration,
-			Format:      "Go",
-		})
+		m = goTestCasePattern.FindStringSubmatch(line)
+		if m != nil {
+			switch m[1] {
+			case "PASS":
+				status = Pass
+			case "FAIL":
+				status = Fail
+			case "SKIP":
+				status = Skip
+			}
+			suiteName = m[2]
+			caseName = m[3]
+			if caseName == "" {
+				displayName = suiteName
+			} else {
+				displayName = fmt.Sprintf("%s/%s", suiteName, caseName)
+			}
+			duration, _ = time.ParseDuration(m[4])
+			matched = true
+		}
+		if matched {
+			res = append(res, TestCaseResult{
+				DisplayName: displayName,
+				SuiteName:   suiteName,
+				CaseName:    caseName,
+				Status:      status,
+				Duration:    duration,
+				Format:      "Go",
+			})
+		}
 	}
 	return res
 }
