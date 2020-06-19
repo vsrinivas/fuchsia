@@ -8,6 +8,7 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/test_spec.gni")
 
 declare_args() {
   # Enables the tracing feature of mdns, which can be turned on using
@@ -172,7 +173,10 @@ group("tests") {
   deps = [
     ":mdns-netemul-multi-network-tests",
     ":mdns_fuzzers",
+    ":mdns_netemul_multi_network_test_spec",
+    ":mdns_netemul_test_spec",
     ":mdns_netemul_tests",
+    ":mdns_netemul_v6_test_spec",
     ":mdns_netemul_v6_tests",
     ":mdns_tests",
   ]
@@ -227,10 +231,18 @@ executable("mdns_netemul_test_agent") {
   ]
 }
 
-test_package("mdns_netemul_tests") {
+test_spec("mdns_netemul_test_spec") {
+  target = ":mdns_netemul_tests"
+  package_url =
+      "fuchsia-pkg://fuchsia.com/mdns_netemul_tests#meta/mdns_netemul_test.cmx"
+}
+
+# NOTE(brunodalbo) we use package instead of test_package here because of an issue with the
+# test_package rule when no test binaries are provided. See fxbug.dev/54284.
+package("mdns_netemul_tests") {
+  testonly = true
   deps = [
     ":mdns_netemul_test_agent",
-    ":netemul_empty_binaries",
     "//src/connectivity/network/tests:device_name_provider",
   ]
 
@@ -239,6 +251,10 @@ test_package("mdns_netemul_tests") {
       path = rebase_path("meta/mdns_netemul_test_agent.cmx")
       dest = "mdns_netemul_test_agent.cmx"
     },
+    {
+      path = rebase_path("meta/mdns_netemul_test.cmx")
+      dest = "mdns_netemul_test.cmx"
+    },
   ]
 
   binaries = [
@@ -246,22 +262,19 @@ test_package("mdns_netemul_tests") {
       name = "mdns_netemul_test_agent"
     },
   ]
-
-  tests = [
-    {
-      name = "mdns_netemul_test"
-    },
-  ]
 }
 
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/mdns_netemul_test", "")
+test_spec("mdns_netemul_v6_test_spec") {
+  target = ":mdns_netemul_v6_tests"
+  package_url = "fuchsia-pkg://fuchsia.com/mdns_netemul_v6_tests#meta/mdns_netemul_v6_test.cmx"
 }
 
-test_package("mdns_netemul_v6_tests") {
+# NOTE(brunodalbo) we use package instead of test_package here because of an issue with the
+# test_package rule when no test binaries are provided. See fxbug.dev/54284.
+package("mdns_netemul_v6_tests") {
+  testonly = true
   deps = [
     ":mdns_netemul_test_agent",
-    ":netemul_empty_v6_binaries",
     "//src/connectivity/network/tests:device_name_provider",
   ]
 
@@ -270,6 +283,10 @@ test_package("mdns_netemul_v6_tests") {
       path = rebase_path("meta/mdns_netemul_test_agent.cmx")
       dest = "mdns_netemul_test_agent.cmx"
     },
+    {
+      path = rebase_path("meta/mdns_netemul_v6_test.cmx")
+      dest = "mdns_netemul_v6_test.cmx"
+    },
   ]
 
   binaries = [
@@ -277,16 +294,6 @@ test_package("mdns_netemul_v6_tests") {
       name = "mdns_netemul_test_agent"
     },
   ]
-
-  tests = [
-    {
-      name = "mdns_netemul_v6_test"
-    },
-  ]
-}
-
-group("netemul_empty_v6_binaries") {
-  write_file("$root_out_dir/mdns_netemul_v6_test", "")
 }
 
 executable("mdns_netemul_multi_network_test_agent") {
@@ -305,10 +312,18 @@ executable("mdns_netemul_multi_network_test_agent") {
   ]
 }
 
-test_package("mdns-netemul-multi-network-tests") {
+test_spec("mdns_netemul_multi_network_test_spec") {
+  target = ":mdns-netemul-multi-network-tests"
+  package_url = "fuchsia-pkg://fuchsia.com/mdns-netemul-multi-network-tests#meta/mdns_netemul_multi_network_test.cmx"
+  environments = [ emu_env ]
+}
+
+# NOTE(brunodalbo) we use package instead of test_package here because of an issue with the
+# test_package rule when no test binaries are provided. See fxbug.dev/54284.
+package("mdns-netemul-multi-network-tests") {
+  testonly = true
   deps = [
     ":mdns_netemul_multi_network_test_agent",
-    ":netemul_empty_multi_network_binaries",
     "//src/connectivity/network/tests:device_name_provider",
   ]
 
@@ -317,6 +332,10 @@ test_package("mdns-netemul-multi-network-tests") {
       path = rebase_path("meta/mdns_netemul_multi_network_test_agent.cmx")
       dest = "mdns_netemul_multi_network_test_agent.cmx"
     },
+    {
+      path = rebase_path("meta/mdns_netemul_multi_network_test.cmx")
+      dest = "mdns_netemul_multi_network_test.cmx"
+    },
   ]
 
   binaries = [
@@ -324,15 +343,4 @@ test_package("mdns-netemul-multi-network-tests") {
       name = "mdns_netemul_multi_network_test_agent"
     },
   ]
-
-  tests = [
-    {
-      name = "mdns_netemul_multi_network_test"
-      environments = [ emu_env ]
-    },
-  ]
-}
-
-group("netemul_empty_multi_network_binaries") {
-  write_file("$root_out_dir/mdns_netemul_multi_network_test", "")
 }
