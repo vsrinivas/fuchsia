@@ -257,7 +257,7 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(Thre
   // set the tss SP0 value to point at the top of our stack
   x86_set_tss_sp(newthread->stack_.top());
 
-  if (likely(!oldthread->user_state_saved_)) {
+  if (likely(!oldthread->IsUserStateSavedLocked())) {
     x86_extended_register_context_switch(oldthread, newthread);
     x86_debug_context_switch(oldthread, newthread);
     x86_segment_selector_context_switch(oldthread, newthread);

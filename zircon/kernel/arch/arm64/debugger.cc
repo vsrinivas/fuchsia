@@ -29,7 +29,7 @@ static constexpr uint64_t kSSMaskSPSR = (1 << 21);
 zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t* out) {
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
@@ -54,7 +54,7 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
 zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_regs_t* in) {
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
@@ -79,7 +79,7 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
 zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out) {
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
@@ -102,7 +102,7 @@ zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_st
 
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
@@ -133,7 +133,7 @@ zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) 
 zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* out) {
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   const fpstate* in = &thread->arch_.fpstate;
   out->fpcr = in->fpcr;
@@ -149,7 +149,7 @@ zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* ou
 zx_status_t arch_set_vector_regs(Thread* thread, const zx_thread_state_vector_regs* in) {
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   fpstate* out = &thread->arch_.fpstate;
   out->fpcr = in->fpcr;
@@ -169,7 +169,7 @@ zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out)
 
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // The kernel ensures that this state is being kept up to date, so we can safely copy the
   // information over.
@@ -216,7 +216,7 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
 
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // If the suspended registers are not there, we cannot save the MDSCR values for this thread,
   // meaning that the debug HW state will be cleared almost immediatelly.

@@ -12,17 +12,18 @@
 #include <zircon/compiler.h>
 
 #include <arch/arch_thread.h>
+#include <kernel/thread_lock.h>
 
 __BEGIN_CDECLS
 
 struct Thread;
 
 void arch_thread_initialize(Thread*, vaddr_t entry_point);
-void arch_context_switch(Thread* oldthread, Thread* newthread);
+void arch_context_switch(Thread* oldthread, Thread* newthread) TA_REQ(thread_lock);
 void arch_save_user_state(Thread* thread);
 void arch_restore_user_state(Thread* thread);
 void arch_thread_construct_first(Thread*);
-void *arch_thread_get_blocked_fp(Thread*);
+void* arch_thread_get_blocked_fp(Thread*);
 
 __END_CDECLS
 

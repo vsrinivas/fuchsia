@@ -123,7 +123,7 @@ constexpr zx_time_t& operator+=(zx_time_t& value, SchedDuration delta) {
 // after arch_set_current_thread (we'd now see newthread's unsafe-sp instead!).
 // Hence this function and everything it calls between this point and the
 // the low-level context switch must be marked with __NO_SAFESTACK.
-__NO_SAFESTACK void FinalContextSwitch(Thread* oldthread, Thread* newthread) {
+__NO_SAFESTACK void FinalContextSwitch(Thread* oldthread, Thread* newthread) TA_REQ(thread_lock) {
   arch_set_current_thread(newthread);
   arch_context_switch(oldthread, newthread);
 }

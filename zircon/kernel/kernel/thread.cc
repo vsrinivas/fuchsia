@@ -754,32 +754,32 @@ static void thread_do_suspend() {
   }
 }
 
-bool thread_is_user_state_saved_locked(Thread* thread) {
+bool Thread::IsUserStateSavedLocked() const {
   DEBUG_ASSERT(thread_lock.IsHeld());
-  return thread->user_state_saved_;
+  return user_state_saved_;
 }
 
-[[nodiscard]] static bool thread_save_user_state_locked(Thread* thread) {
+bool Thread::SaveUserStateLocked() {
   DEBUG_ASSERT(thread_lock.IsHeld());
-  DEBUG_ASSERT(thread == Thread::Current::Get());
-  DEBUG_ASSERT(thread->user_thread_ != nullptr);
+  DEBUG_ASSERT(this == Thread::Current::Get());
+  DEBUG_ASSERT(user_thread_ != nullptr);
 
-  if (thread->user_state_saved_) {
+  if (user_state_saved_) {
     return false;
   }
-  thread->user_state_saved_ = true;
-  arch_save_user_state(thread);
+  user_state_saved_ = true;
+  arch_save_user_state(this);
   return true;
 }
 
-static void thread_restore_user_state_locked(Thread* thread) {
+void Thread::RestoreUserStateLocked() {
   DEBUG_ASSERT(thread_lock.IsHeld());
-  DEBUG_ASSERT(thread == Thread::Current::Get());
-  DEBUG_ASSERT(thread->user_thread_ != nullptr);
+  DEBUG_ASSERT(this == Thread::Current::Get());
+  DEBUG_ASSERT(user_thread_ != nullptr);
 
-  DEBUG_ASSERT(thread->user_state_saved_);
-  thread->user_state_saved_ = false;
-  arch_restore_user_state(thread);
+  DEBUG_ASSERT(user_state_saved_);
+  user_state_saved_ = false;
+  arch_restore_user_state(this);
 }
 
 ScopedThreadExceptionContext::ScopedThreadExceptionContext(const arch_exception_context_t* context)
@@ -788,14 +788,14 @@ ScopedThreadExceptionContext::ScopedThreadExceptionContext(const arch_exception_
   // It's possible that the context and state have been installed/saved earlier in the call chain.
   // If so, then it's some other object's responsibilty to remove/restore.
   need_to_remove_ = arch_install_exception_context(thread_, context_);
-  need_to_restore_ = thread_save_user_state_locked(thread_);
+  need_to_restore_ = thread_->SaveUserStateLocked();
 }
 
 ScopedThreadExceptionContext::~ScopedThreadExceptionContext() {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   // Did we save the state?  If so, then it's our job to restore it.
   if (need_to_restore_) {
-    thread_restore_user_state_locked(thread_);
+    thread_->RestoreUserStateLocked();
   }
   // Did we install the exception context? If so, then it's out job to remove it.
   if (need_to_remove_) {
@@ -854,11 +854,11 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
       // kernel and user mode (e.g. just before returning from a syscall, timer interrupt, or
       // architectural exception/fault).  We're about the perform a save.  If the save fails
       // (returns false), then we likely have a mismatched save/restore pair, which is a bug.
-      const bool saved = thread_save_user_state_locked(current_thread);
+      const bool saved = current_thread->SaveUserStateLocked();
       DEBUG_ASSERT(saved);
       guard.CallUnlocked([]() { thread_do_suspend(); });
       if (saved) {
-        thread_restore_user_state_locked(current_thread);
+        current_thread->RestoreUserStateLocked();
       }
     } else {
       // No user mode component so nothing to save.

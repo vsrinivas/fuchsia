@@ -442,6 +442,11 @@ struct Thread {
   bool IsSignaled() { return signals_ != 0; }
   bool IsIdle() const { return !!(flags_ & THREAD_FLAG_IDLE); }
 
+  // Returns true if this Thread's user state has been saved.
+  //
+  // Caller must hold the thread lock.
+  bool IsUserStateSavedLocked() const TA_REQ(thread_lock);
+
   // All of these operations implicitly operate on the current thread.
   struct Current {
     // This is defined below, just after the Thread declaration.
@@ -659,12 +664,27 @@ struct Thread {
   // Thread API.
   bool has_migrate_fn() const { return migrate_fn_ != nullptr; }
 
+ private:
+  // OwnedWaitQueues manipulate wait queue state.
+  friend class OwnedWaitQueue;
+
+  // ScopedThreadExceptionContext is the only public way to call
+  // SaveUserStateLocked and RestoreUserStateLocked.
+  friend class ScopedThreadExceptionContext;
+
+  // Save the arch-specific user state.
+  //
+  // Returns true when the user state will later need to be restored.
+  [[nodiscard]] bool SaveUserStateLocked() TA_REQ(thread_lock);
+
+  // Restore the arch-specific user state.
+  void RestoreUserStateLocked() TA_REQ(thread_lock);
+
   // TODO(54383) This should all be private. Until migrated away from
   // list_node, we need Thread to be standard layout. For now,
   // OwnedWaitQueue needs to be able to manipulate list_nodes in
   // Thread.
-  friend class OwnedWaitQueue;
-
+ public:
   int magic_;
 
   struct ThreadListTrait {
@@ -766,6 +786,8 @@ struct Thread {
   char linebuffer_[THREAD_LINEBUFFER_LENGTH];
 #endif
 
+  // TODO(54383) More of Thread should be private than this.
+ private:
   // Indicates whether user register state (debug, vector, fp regs, etc.) has been saved to the
   // arch_thread_t as part of thread suspension / exception handling.
   //
@@ -774,11 +796,9 @@ struct Thread {
   // so that it may be accessed by a debugger.  Upon leaving a suspended or exception state, we
   // restore user register state.
   //
-  // See also |thread_is_user_state_saved_locked()| and |ScopedThreadExceptionContext|.
+  // See also |IsUserStateSavedLocked()| and |ScopedThreadExceptionContext|.
   bool user_state_saved_;
 
-  // TODO(54383) More of Thread should be private than this.
- private:
   // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
   MigrateFn migrate_fn_;
 };
@@ -860,11 +880,6 @@ class AutoReschedDisable {
  private:
   bool started_ = false;
 };
-
-// Returns true if |thread|'s user state has been saved.
-//
-// Caller must hold the thread lock.
-bool thread_is_user_state_saved_locked(Thread* thread);
 
 // RAII helper that installs/removes an exception context and saves/restores user register state.
 // The class operates on the current thread.

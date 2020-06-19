@@ -121,7 +121,7 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // to avoid an extra function call to a non SAFESTACK accessor function
   newthread->arch_.current_percpu_ptr = __arm64_percpu;
 
-  if (likely(!oldthread->user_state_saved_)) {
+  if (likely(!oldthread->IsUserStateSavedLocked())) {
     arm64_fpu_context_switch(oldthread, newthread);
     arm64_tpidr_save_state(oldthread);
     arm64_tpidr_restore_state(newthread);
