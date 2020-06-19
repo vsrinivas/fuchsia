@@ -813,8 +813,13 @@ class SlabAllocated<
   //
   // Hide the delete operator, and halt-and-catch-fire if some Bad Person ever
   // manages to generate a call to this operator without passing the option.
-  void operator delete(void*) {
-    ZX_DEBUG_ASSERT(SATraits::Options & SlabAllocatorOptions::AllowManualDeleteOperator);
+  // Otherwise, make sure that we passthru to the global delete operator.
+  void operator delete(void* obj) {
+    if constexpr (SATraits::Options & SlabAllocatorOptions::AllowManualDeleteOperator) {
+      ::operator delete(obj);
+    } else {
+      ZX_DEBUG_ASSERT(false);
+    }
   }
 };
 

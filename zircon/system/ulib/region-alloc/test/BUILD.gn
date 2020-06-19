@@ -33,9 +33,6 @@ test("region-alloc") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(54182): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("region-alloc-package") {
