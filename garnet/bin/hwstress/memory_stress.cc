@@ -21,6 +21,7 @@
 #include <fbl/span.h>
 
 #include "compiler.h"
+#include "memory_patterns.h"
 #include "memory_range.h"
 #include "memory_stats.h"
 #include "profile_manager.h"
@@ -41,9 +42,9 @@ std::default_random_engine CreateRandomEngine() {
 
 // Writes a pattern to memory; verifies it is still the same, and writes out the
 // complement; and finally verify the complement has been correctly written out.
-void TestPatternAndComplement(MemoryRange* memory, uint64_t pattern) {
-  // Convert pattern to big-endian.
-  uint64_t be_pattern = htobe64(pattern);
+template <typename PatternGenerator>
+void TestPatternAndComplement(MemoryRange* memory, PatternGenerator pattern) {
+  PatternGenerator original_pattern = pattern;
 
   // Write out the pattern.
   WritePattern(memory->span(), pattern);
@@ -54,24 +55,28 @@ void TestPatternAndComplement(MemoryRange* memory, uint64_t pattern) {
   // We perform a read/verify/write on each word at a time (instead of
   // a VerifyPattern/WritePattern pair) to minimise the time between
   // verifying the old value and writing the next test pattern.
-  uint64_t* start = memory->words();
-  size_t words = memory->size_words();
-  for (size_t i = 0; i < words; i++) {
-    if (unlikely(start[i] != be_pattern)) {
-      ZX_PANIC("Found memory error: expected 0x%16lx, got 0x%16lx at offset %ld.\n", pattern,
-               start[i], i);
+  {
+    uint64_t* start = memory->words();
+    size_t words = memory->size_words();
+    for (size_t i = 0; i < words; i++) {
+      uint64_t p = pattern();
+      if (unlikely(start[i] != p)) {
+        ZX_PANIC("Found memory error: expected 0x%16lx, got 0x%16lx at offset %ld.\n", p, start[i],
+                 i);
+      }
+      start[i] = ~p;
     }
-    start[i] = ~be_pattern;
+    memory->CleanInvalidateCache();
   }
-  memory->CleanInvalidateCache();
 
   // Verify the pattern again.
-  VerifyPattern(memory->span(), ~pattern);
+  VerifyPattern(memory->span(), InvertPattern(original_pattern));
 }
 
-// Make a |MemoryWorkload| consisting of writing a simple pattern out to RAM
+// Make a |MemoryWorkload| consisting of writing a pattern to RAM
 // and reading it again.
-MemoryWorkload MakeSimplePatternWorkload(std::string_view name, uint64_t pattern) {
+template <typename PatternGenerator>
+MemoryWorkload MakePatternWorkload(std::string_view name, PatternGenerator pattern) {
   MemoryWorkload result;
   result.name = std::string(name);
   result.exec = [pattern](StatusLine* /*unused*/, MemoryRange* memory) {
@@ -90,7 +95,7 @@ void RowHammer(StatusLine* status, MemoryRange* memory, uint32_t iterations, uin
   constexpr int kReadsPerIteration = 1'000'000;
 
   // Set all memory to the desired pattern.
-  WritePattern(memory->span(), pattern);
+  WritePattern(memory->span(), SimplePattern(pattern));
 
   // Get random numbers returning a random page.
   uint32_t num_pages = memory->size_bytes() / ZX_PAGE_SIZE;
@@ -134,7 +139,7 @@ void RowHammer(StatusLine* status, MemoryRange* memory, uint32_t iterations, uin
                   (kReadsPerIteration / seconds_per_iteration) * (64. / 1000.));
 
   // Ensure memory is still as expected.
-  VerifyPattern(memory->span(), pattern);
+  VerifyPattern(memory->span(), SimplePattern(pattern));
 }
 
 MemoryWorkload MakeRowHammerWorkload(std::string_view name, uint64_t pattern) {
@@ -157,58 +162,8 @@ MemoryWorkload MakeRowHammerWorkload(std::string_view name, uint64_t pattern) {
 
 }  // namespace
 
-void WritePattern(fbl::Span<uint8_t> range, uint64_t pattern) {
-  // Hide the pattern from the compiler.
-  //
-  // This prevents the compiler from optimising this into a |memset|. When
-  // the pattern is |0|, |memset| will try and optimise itself by zero'ing
-  // cache lines instead of writing memory. This fails when we attempt to
-  // write to uncached memory.
-  pattern = HideFromCompiler(pattern);
-
-  // Convert pattern to big-endian.
-  pattern = htobe64(pattern);
-
-  // Write out the pattern.
-  auto* start = reinterpret_cast<uint64_t*>(range.begin());
-  size_t words = range.size_bytes() / sizeof(uint64_t);
-  for (size_t i = 0; i < words; i++) {
-    start[i] = pattern;
-  }
-}
-
-std::optional<std::string> VerifyPattern(fbl::Span<uint8_t> range, uint64_t pattern) {
-  auto* start = reinterpret_cast<uint64_t*>(range.begin());
-  size_t words = range.size_bytes() / sizeof(uint64_t);
-
-  // Convert pattern to big-endian.
-  pattern = htobe64(pattern);
-
-  // We use a branchless fast path, which is optimised to assume that everything matches.
-  //
-  // If we actually find a mismatch, we scan again with a slow path to find the
-  // actual error.
-  uint64_t mismatches = 0;
-  for (size_t i = 0; i < words; i++) {
-    mismatches += (start[i] != pattern);
-  }
-
-  // If we found a mismatch, search again to find it.
-  if (unlikely(mismatches != 0)) {
-    for (size_t i = 0; i < words; i++) {
-      if (start[i] != pattern) {
-        return fxl::StringPrintf("Expected 0x%016lx, got 0x%16lx at offset %ld.", pattern, start[i],
-                                 i * sizeof(uint64_t));
-      }
-    }
-    return fxl::StringPrintf("Detected %ld transient bitflip(s) at unknown location(s).",
-                             mismatches);
-  }
-
-  return std::nullopt;
-}
-
-void VerifyPatternOrDie(fbl::Span<uint8_t> range, uint64_t pattern) {
+template <typename PatternGenerator>
+void VerifyPatternOrDie(fbl::Span<uint8_t> range, PatternGenerator pattern) {
   std::optional<std::string> result = VerifyPattern(range, pattern);
   if (unlikely(result.has_value())) {
     ZX_PANIC("Detected memory error: %s\n", result->c_str());
@@ -218,7 +173,7 @@ void VerifyPatternOrDie(fbl::Span<uint8_t> range, uint64_t pattern) {
 std::vector<MemoryWorkload> GenerateMemoryWorkloads() {
   std::vector<MemoryWorkload> result;
 
-  // Generate some simple patterns.
+  // Simple patterns.
   struct BitPattern {
     std::string_view name;
     uint64_t pattern;
@@ -233,17 +188,34 @@ std::vector<MemoryWorkload> GenerateMemoryWorkloads() {
            {"4 bits on / 4 bits off (1/2)", 0xf0f0'f0f0'f0f0'f0f0ul},
            {"4 bits on / 4 bits off (2/2)", 0x0f0f'0f0f'0f0f'0f0ful},
        }) {
-    result.push_back(MakeSimplePatternWorkload(pattern.name, pattern.pattern));
+    result.push_back(MakePatternWorkload(pattern.name, SimplePattern(pattern.pattern)));
   }
 
-  // Single bits set/clear.
-  for (uint64_t i = 0; i < 8; i++) {
-    result.push_back(MakeSimplePatternWorkload(
-        fxl::StringPrintf("Single bit set 8-bit (%ld/8)", i + 1), RepeatByte(1ul << i)));
+  // 1 in 6 bits set.
+  //
+  // Having every 6'th bit set results in rows of RAM not having bits to
+  // the north/south/east/west set, assuming that the rows are
+  // a power-of-two size.
+  auto every_sixth_bit = std::initializer_list<uint64_t>{
+      0b1000001000001000001000001000001000001000001000001000001000001000,
+      0b0010000010000010000010000010000010000010000010000010000010000010,
+      0b0000100000100000100000100000100000100000100000100000100000100000,
+  };
+  for (int i = 0; i < 6; i++) {
+    result.push_back(MakePatternWorkload(fxl::StringPrintf("Single bit set 6-bit (%d/6)", i + 1),
+                                         MultiWordPattern(RotatePattern(every_sixth_bit, i))));
   }
-  for (uint64_t i = 0; i < 8; i++) {
-    result.push_back(MakeSimplePatternWorkload(
-        fxl::StringPrintf("Single bit set 8-bit (%ld/8)", i + 1), RepeatByte(1ul << i)));
+  for (int i = 0; i < 6; i++) {
+    result.push_back(
+        MakePatternWorkload(fxl::StringPrintf("Single bit clear 6-bit (%d/6)", i + 1),
+                            MultiWordPattern(NegateWords((RotatePattern(every_sixth_bit, i))))));
+  }
+
+  // Random bits.
+  constexpr int kRandomBitIterations = 10;
+  for (int i = 0; i < kRandomBitIterations; i++) {
+    result.push_back(MakePatternWorkload(
+        fxl::StringPrintf("Random bits (%d/%d)", i + 1, kRandomBitIterations), RandomPattern()));
   }
 
   // Row hammer workloads.

@@ -7,7 +7,9 @@
 
 #include <lib/zx/time.h>
 
+#include <random>
 #include <string>
+#include <vector>
 
 namespace hwstress {
 
@@ -30,6 +32,19 @@ inline uint64_t RoundUp(uint64_t n, uint64_t k) { return ((n + (k - 1)) / k) * k
 inline constexpr uint64_t kiB(uint64_t n) { return n * 1024ul; }
 inline constexpr uint64_t MiB(uint64_t n) { return n * 1024ul * 1024ul; }
 inline constexpr uint64_t GiB(uint64_t n) { return n * 1024ul * 1024ul * 1024ul; }
+
+// Knuth's MMIX LCE parameters. [1]
+//
+// This random number engine produces 64-bit output, and is roughly
+// 4 times faster than std::mt19937_64 (or any other 64-bit generator
+// in the C++ standard library), while still maintaining reasonable
+// quality output.
+//
+// [1] D. E. Knuth, The Art of Computer Programming – Seminumerical
+//     Algorithms, 3rd Edition, Vol. 2, Pearson Education, 2000.
+using knuth_mmix_rng =
+    std::linear_congruential_engine<uint64_t, 6364136223846793005, 1442695040888963407, 0>;
+using fast_64bit_rng = knuth_mmix_rng;
 
 }  // namespace hwstress
 
