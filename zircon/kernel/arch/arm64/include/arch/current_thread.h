@@ -21,7 +21,14 @@ static inline Thread* arch_get_current_thread(void) {
 #else
   char* tp = (char*)__arm_rsr64("tpidr_el1");
 #endif
+
+  // The Thread structure isn't standard layout, but it's "POD enough"
+  // for us to rely on computing this member offset via offsetof.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
   tp -= offsetof(Thread, arch_.thread_pointer_location);
+#pragma GCC diagnostic pop
+
   return (Thread*)tp;
 }
 

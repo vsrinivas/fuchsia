@@ -12,8 +12,8 @@
 
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
-#include <kernel/thread_lock.h>
 #include <kernel/scheduler.h>
+#include <kernel/thread_lock.h>
 #include <ktl/array.h>
 
 // TODO(edcoyne): delete this override and default these on.
@@ -23,8 +23,7 @@
 
 namespace load_balancer {
 
-constexpr zx_duration_t kAllowedRuntimeDeviation =
-    Scheduler::kDefaultTargetLatency.raw_value() / 4;
+constexpr zx_duration_t kAllowedRuntimeDeviation = Scheduler::kDefaultTargetLatency.raw_value() / 4;
 
 // State stored on a per-cpu basis for the load balancer system.
 class CpuState {
@@ -160,7 +159,7 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
     return initial_cpu;
   }
 
-  if (unlikely(thread->migrate_fn_ && initial_cpu_available)) {
+  if (unlikely(thread->has_migrate_fn() && initial_cpu_available)) {
     // Stay where we are, the migrate_fn_ will migrate us later.
     thread->scheduler_state_.set_next_cpu(lowest_cpu);
     return initial_cpu;

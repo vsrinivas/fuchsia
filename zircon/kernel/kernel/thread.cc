@@ -484,9 +484,7 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
   current_thread->state_ = THREAD_DEATH;
   current_thread->retcode_ = retcode;
 
-  if (unlikely(current_thread->migrate_fn_)) {
-    current_thread->migrate_fn_(current_thread, Thread::MigrateStage::Exiting);
-  }
+  current_thread->CallMigrateFnLocked(Thread::MigrateStage::Exiting);
 
   // Make sure that we have released any wait queues we may have owned when we
   // exited.  TODO(johngro):  Should we log a warning or take any other

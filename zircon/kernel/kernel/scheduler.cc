@@ -647,8 +647,8 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name_, target_cpu);
   trace.End(target_cpu, remaining_mask);
 
-  bool delay_migration = last_cpu != target_cpu && last_cpu != INVALID_CPU && thread->migrate_fn_ &&
-                         (active_mask & last_cpu_mask) != 0;
+  bool delay_migration = last_cpu != target_cpu && last_cpu != INVALID_CPU &&
+                         thread->has_migrate_fn() && (active_mask & last_cpu_mask) != 0;
   if (unlikely(delay_migration)) {
     thread->scheduler_state_.next_cpu_ = target_cpu;
     return last_cpu;

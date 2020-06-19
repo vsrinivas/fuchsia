@@ -657,8 +657,15 @@ struct Thread {
     dump_thread_during_panic(this, full);
   }
 
-  // TODO: This should all be private. Until migrated away from list_node, we need Thread to be
-  // standard layout. For now, OwnedWaitQueue needs to be able to manipulate list_nodes in Thread.
+  // Accessors into Thread state. When the conversion to all-private
+  // members is complete (bug 54383), we can revisit the overall
+  // Thread API.
+  bool has_migrate_fn() const { return migrate_fn_ != nullptr; }
+
+  // TODO(54383) This should all be private. Until migrated away from
+  // list_node, we need Thread to be standard layout. For now,
+  // OwnedWaitQueue needs to be able to manipulate list_nodes in
+  // Thread.
   friend class OwnedWaitQueue;
 
   int magic_;
@@ -773,6 +780,8 @@ struct Thread {
   // See also |thread_is_user_state_saved_locked()| and |ScopedThreadExceptionContext|.
   bool user_state_saved_;
 
+  // TODO(54383) More of Thread should be private than this.
+ private:
   // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
   MigrateFn migrate_fn_;
 };
