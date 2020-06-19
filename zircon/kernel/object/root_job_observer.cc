@@ -14,11 +14,6 @@
 
 namespace {
 
-bool HasChild(zx_signals_t state) {
-  bool no_child = (state & ZX_JOB_NO_JOBS) && (state & ZX_JOB_NO_PROCESSES);
-  return !no_child;
-}
-
 __NO_RETURN void Halt() {
   const char* notice = gCmdline.GetString("kernel.root-job.notice");
   if (notice != nullptr) {
@@ -72,8 +67,8 @@ StateObserver::Flags RootJobObserver::OnStateChange(zx_signals_t new_state) {
   // If we don't have any children, trigger the callback.
   //
   // If the root job is itself killed, all children processes and jobs will
-  // first be removed, also causing the "HasChild" check to fail.
-  if (!HasChild(new_state)) {
+  // first be removed, also causing the "ZX_JOB_NO_CHILDREN" signal to activate.
+  if ((new_state & ZX_JOB_NO_CHILDREN) != 0) {
     callback_();
     return kNeedRemoval;
   }
