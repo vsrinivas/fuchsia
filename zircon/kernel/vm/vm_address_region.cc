@@ -13,10 +13,12 @@
 #include <lib/userabi/vdso.h>
 #include <pow2.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
+#include <ktl/limits.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
@@ -90,9 +92,16 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  bool is_specific_overwrite = static_cast<bool>(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
-  bool is_specific = static_cast<bool>(vmar_flags & VMAR_FLAG_SPECIFIC) || is_specific_overwrite;
-  if (!is_specific && offset != 0) {
+  const bool is_specific_overwrite = vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE;
+  const bool is_specific = (vmar_flags & VMAR_FLAG_SPECIFIC) || is_specific_overwrite;
+  const bool is_upper_bound = vmar_flags & VMAR_FLAG_OFFSET_IS_UPPER_LIMIT;
+  if (is_specific && is_upper_bound) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (!is_specific && !is_upper_bound && offset != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (!IS_PAGE_ALIGNED(offset)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -114,8 +123,9 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     arch_mmu_flags |= cache_policy;
   }
 
-  // Check that we have the required privileges if we want a SPECIFIC mapping
-  if (is_specific && !(flags_ & VMAR_FLAG_CAN_MAP_SPECIFIC)) {
+  // Check that we have the required privileges if we want a SPECIFIC or
+  // UPPER_LIMIT mapping.
+  if ((is_specific || is_upper_bound) && !(flags_ & VMAR_FLAG_CAN_MAP_SPECIFIC)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
@@ -123,13 +133,10 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     return ZX_ERR_INVALID_ARGS;
   }
 
-  vaddr_t new_base = -1;
+  vaddr_t new_base = ktl::numeric_limits<vaddr_t>::max();
   if (is_specific) {
     // This would not overflow because offset <= size_ - 1, base_ + offset <= base_ + size_ - 1.
     new_base = base_ + offset;
-    if (!IS_PAGE_ALIGNED(new_base)) {
-      return ZX_ERR_INVALID_ARGS;
-    }
     if (align_pow2 > 0 && (new_base & ((1ULL << align_pow2) - 1))) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -141,7 +148,9 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     }
   } else {
     // If we're not mapping to a specific place, search for an opening.
-    zx_status_t status = AllocSpotLocked(size, align_pow2, arch_mmu_flags, &new_base);
+    const vaddr_t upper_bound =
+        is_upper_bound ? base_ + offset : ktl::numeric_limits<vaddr_t>::max();
+    zx_status_t status = AllocSpotLocked(size, align_pow2, arch_mmu_flags, &new_base, upper_bound);
     if (status != ZX_OK) {
       return status;
     }
@@ -156,7 +165,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
   fbl::RefPtr<VmAddressRegionOrMapping> vmar;
   if (vmo) {
     vmar = fbl::AdoptRef(new (&ac) VmMapping(*this, new_base, size, vmar_flags, ktl::move(vmo),
-                                             vmo_offset, arch_mmu_flags));
+                                             is_upper_bound ? 0 : vmo_offset, arch_mmu_flags));
   } else {
     vmar = fbl::AdoptRef(new (&ac) VmAddressRegion(*this, new_base, size, vmar_flags, name));
   }
@@ -190,8 +199,8 @@ zx_status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t a
   }
 
   // Check that only allowed flags have been set
-  if (vmar_flags &
-      ~(VMAR_FLAG_SPECIFIC | VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_COMPACT | VMAR_CAN_RWX_FLAGS)) {
+  if (vmar_flags & ~(VMAR_FLAG_SPECIFIC | VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_COMPACT |
+                     VMAR_CAN_RWX_FLAGS | VMAR_FLAG_OFFSET_IS_UPPER_LIMIT)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -214,7 +223,8 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
   LTRACEF("%p %#zx %#zx %x\n", this, mapping_offset, size, vmar_flags);
 
   // Check that only allowed flags have been set
-  if (vmar_flags & ~(VMAR_FLAG_SPECIFIC | VMAR_FLAG_SPECIFIC_OVERWRITE | VMAR_CAN_RWX_FLAGS)) {
+  if (vmar_flags & ~(VMAR_FLAG_SPECIFIC | VMAR_FLAG_SPECIFIC_OVERWRITE | VMAR_CAN_RWX_FLAGS |
+                     VMAR_FLAG_OFFSET_IS_UPPER_LIMIT)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -596,7 +606,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     ASSERT(!overflowed);
 
     switch (op) {
-      case ZX_VMO_OP_DECOMMIT: {
+      case ZX_VMAR_OP_DECOMMIT: {
         // Decommit zeroes pages of the VMO, equivalent to writing to it.
         // the mapping is currently writable, or could be made writable.
         if (!mapping->is_valid_mapping_flags(ARCH_MMU_FLAG_PERM_WRITE)) {
@@ -605,6 +615,16 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
         zx_status_t result = vmo->DecommitRange(op_offset, op_size);
         if (result != ZX_OK) {
           return result;
+        }
+        break;
+      }
+      case ZX_VMAR_OP_MAP_RANGE: {
+        LTRACEF_LEVEL(2, "MapRange: op_offset=0x%zx op_size=0x%zx\n", op_offset, op_size);
+        const auto result = mapping->MapRangeLocked(op_offset, op_size, false);
+        if (result != ZX_OK) {
+          // TODO(46881): ZX_ERR_INTERNAL is not meaningful to userspace.
+          // For now, translate to ZX_ERR_NOT_FOUND.
+          return result == ZX_ERR_INTERNAL ? ZX_ERR_NOT_FOUND : result;
         }
         break;
       }
@@ -900,6 +920,14 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
   return ((range_size - alloc_size) >> align_pow2) + 1;
 }
 
+// Returns the size of the given range clamped to the given upper limit. The base
+// of the range must be within the upper limit.
+constexpr size_t ClampRange(vaddr_t range_base, size_t range_size, vaddr_t upper_limit) {
+  DEBUG_ASSERT(range_base <= upper_limit);
+  const size_t range_limit = range_base + range_size;
+  return range_limit <= upper_limit ? range_size : range_size - (range_limit - upper_limit);
+}
+
 }  // namespace
 
 // Perform allocations for VMARs. This allocator works by choosing uniformly at random from a set of
@@ -908,13 +936,14 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
 // from the address space, and can vary based on whether the user has requested compact allocations
 // or not.
 zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                                             vaddr_t* spot) {
+                                             vaddr_t* spot, vaddr_t upper_limit) {
   canary_.Assert();
   DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
   DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
   DEBUG_ASSERT(spot);
 
-  LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size, align_pow2);
+  LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu upper_limit 0x%lx\n", this, size, align_pow2,
+                upper_limit);
 
   align_pow2 = ktl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
   const vaddr_t align = 1UL << align_pow2;
@@ -926,8 +955,8 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
     prng = &aspace_->AslrPrng();
   }
 
-  zx_status_t status =
-      subregions_.GetAllocSpot(&alloc_spot, align_pow2, entropy, size, base_, size_, prng);
+  zx_status_t status = subregions_.GetAllocSpot(&alloc_spot, align_pow2, entropy, size, base_,
+                                                size_, prng, upper_limit);
   if (status != ZX_OK) {
     return status;
   }
@@ -1072,7 +1101,8 @@ bool RegionList::IsRangeAvailable(vaddr_t base, size_t size) const {
 
 void RegionList::FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t selected_index,
                                      vaddr_t parent_base, vaddr_t parent_size,
-                                     RegionList::AllocSpotInfo* alloc_spot_info) const {
+                                     RegionList::AllocSpotInfo* alloc_spot_info,
+                                     vaddr_t upper_limit) const {
   const vaddr_t align = 1UL << align_pow2;
   // candidate_spot_count is the number of available slot that we could allocate if we have not
   // found the spot with index |selected_index| to allocate.
@@ -1082,14 +1112,15 @@ void RegionList::FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t se
   // alloc_spot is the virtual start address of the spot to allocate if we find one.
   vaddr_t alloc_spot = 0;
   ForEachGap(
-      [align, align_pow2, size, &candidate_spot_count, &selected_index, &alloc_spot, &found](
-          vaddr_t gap_base, size_t gap_len) -> bool {
+      [align, align_pow2, size, upper_limit, &candidate_spot_count, &selected_index, &alloc_spot,
+       &found](vaddr_t gap_base, size_t gap_len) -> bool {
         DEBUG_ASSERT(IS_ALIGNED(gap_base, align));
-        if (gap_len < size) {
-          // Ignore gap that is too small.
+        if (gap_len < size || gap_base + size > upper_limit) {
+          // Ignore gap that is too small or out of range.
           return true;
         }
-        const size_t spots = AllocationSpotsInRange(gap_len, size, align_pow2);
+        const size_t clamped_len = ClampRange(gap_base, gap_len, upper_limit);
+        const size_t spots = AllocationSpotsInRange(clamped_len, size, align_pow2);
         candidate_spot_count += spots;
 
         if (selected_index < spots) {
@@ -1111,7 +1142,7 @@ void RegionList::FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t se
 
 zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy,
                                      size_t size, vaddr_t parent_base, size_t parent_size,
-                                     crypto::PRNG* prng) const {
+                                     crypto::PRNG* prng, vaddr_t upper_limit) const {
   DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
   const vaddr_t align = 1UL << align_pow2;
   // This is the maximum number of spaces we need to consider based on our desired entropy.
@@ -1142,7 +1173,8 @@ zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, ui
   }
 
   AllocSpotInfo alloc_spot_info;
-  FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size, &alloc_spot_info);
+  FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size, &alloc_spot_info,
+                      upper_limit);
   size_t candidate_spot_count = alloc_spot_info.candidate_spot_count;
   if (candidate_spot_count == 0) {
     DEBUG_ASSERT(!alloc_spot_info.found);
@@ -1157,7 +1189,7 @@ zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, ui
     DEBUG_ASSERT(prng);
     selected_index = prng->RandInt(candidate_spot_count);
     FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
-                        &alloc_spot_info);
+                        &alloc_spot_info, upper_limit);
   }
   DEBUG_ASSERT(alloc_spot_info.found);
   *alloc_spot = alloc_spot_info.alloc_spot;

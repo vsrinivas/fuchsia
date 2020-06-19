@@ -18,6 +18,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/limits.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
@@ -32,7 +33,8 @@
 // Like VMAR_FLAG_SPECIFIC, but permits overwriting existing mappings.  This
 // flag will not overwrite through a subregion.
 #define VMAR_FLAG_SPECIFIC_OVERWRITE (1 << 2)
-// Allow VmMappings to be created inside the new region with the SPECIFIC flag.
+// Allow VmMappings to be created inside the new region with the SPECIFIC or
+// OFFSET_IS_UPPER_LIMIT flag.
 #define VMAR_FLAG_CAN_MAP_SPECIFIC (1 << 3)
 // When on a VmAddressRegion, allow VmMappings to be created inside the region
 // with read permissions.  When on a VmMapping, controls whether or not the
@@ -50,6 +52,8 @@
 #define VMAR_FLAG_REQUIRE_NON_RESIZABLE (1 << 7)
 // Allow VMO backings that could result in faults.
 #define VMAR_FLAG_ALLOW_FAULTS (1 << 8)
+// Treat the offset as an upper limit when allocating a VMO or child VMAR.
+#define VMAR_FLAG_OFFSET_IS_UPPER_LIMIT (1 << 9)
 
 #define VMAR_CAN_RWX_FLAGS \
   (VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE | VMAR_FLAG_CAN_MAP_EXECUTE)
@@ -226,7 +230,8 @@ class RegionList final {
 
   // Get the allocation spot that is free and large enough for the aligned size.
   zx_status_t GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy, size_t size,
-                           vaddr_t parent_base, size_t parent_size, crypto::PRNG* prng) const;
+                           vaddr_t parent_base, size_t parent_size, crypto::PRNG* prng,
+                           vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max()) const;
 
   // Utility for allocators for iterating over gaps between allocations.
   // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
@@ -272,8 +277,8 @@ class RegionList final {
   // candidate spots if |selected_index| is larger than candidate_spaces. In this case, we need to
   // pick a smaller index and try again.
   void FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t selected_index,
-                           vaddr_t parent_base, vaddr_t parent_size,
-                           AllocSpotInfo* alloc_spot_info) const;
+                           vaddr_t parent_base, vaddr_t parent_size, AllocSpotInfo* alloc_spot_info,
+                           vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max()) const;
 };
 
 // A representation of a contiguous range of virtual address space
@@ -388,7 +393,8 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
                       uint arch_mmu_flags);
 
   // search for a spot to allocate for a region of a given size
-  zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot);
+  zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot,
+                              vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max());
 
   RegionList subregions_;
 
@@ -466,6 +472,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // Map in pages from the underlying vm object, optionally committing pages as it goes
   zx_status_t MapRange(size_t offset, size_t len, bool commit);
+  zx_status_t MapRangeLocked(size_t offset, size_t len, bool commit);
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to the parent region to allocate.  If all of the memory is unmapped,

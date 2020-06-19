@@ -179,6 +179,7 @@ typedef struct zx_wait_item {
 
 // VM Object opcodes
 #define ZX_VMO_OP_COMMIT                 ((uint32_t)1u)
+// Keep value in sync with ZX_VMAR_OP_DECOMMIT.
 #define ZX_VMO_OP_DECOMMIT               ((uint32_t)2u)
 #define ZX_VMO_OP_LOCK                   ((uint32_t)3u)
 #define ZX_VMO_OP_UNLOCK                 ((uint32_t)4u)
@@ -188,6 +189,11 @@ typedef struct zx_wait_item {
 #define ZX_VMO_OP_CACHE_CLEAN            ((uint32_t)8u)
 #define ZX_VMO_OP_CACHE_CLEAN_INVALIDATE ((uint32_t)9u)
 #define ZX_VMO_OP_ZERO                   ((uint32_t)10u)
+
+// VMAR opcodes
+// Keep value in sync with ZX_VMO_OP_DECOMMIT.
+#define ZX_VMAR_OP_DECOMMIT              ((uint32_t)2u)
+#define ZX_VMAR_OP_MAP_RANGE             ((uint32_t)3u)
 
 // Pager opcodes
 #define ZX_PAGER_OP_FAIL                 ((uint32_t)1u)
@@ -218,6 +224,7 @@ typedef uint32_t zx_vm_option_t;
 #define ZX_VM_MAP_RANGE             ((zx_vm_option_t)(1u << 10))
 #define ZX_VM_REQUIRE_NON_RESIZABLE ((zx_vm_option_t)(1u << 11))
 #define ZX_VM_ALLOW_FAULTS          ((zx_vm_option_t)(1u << 12))
+#define ZX_VM_OFFSET_IS_UPPER_LIMIT ((zx_vm_option_t)(1u << 13))
 
 #define ZX_VM_ALIGN_BASE            24
 #define ZX_VM_ALIGN_1KB             ((zx_vm_option_t)(10u << ZX_VM_ALIGN_BASE))

@@ -503,6 +503,11 @@ zx_status_t VmMappingCoalescer::Flush() {
 }  // namespace
 
 zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
+  Guard<Mutex> aspace_guard{aspace_->lock()};
+  return MapRangeLocked(offset, len, commit);
+}
+
+zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   canary_.Assert();
 
   len = ROUNDUP(len, PAGE_SIZE);
@@ -510,7 +515,6 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<Mutex> aspace_guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }

@@ -13,10 +13,12 @@
 #include <stdalign.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <atomic>
 #include <climits>
@@ -29,6 +31,9 @@
 
 // These tests focus on the semantics of the VMARs themselves.  For heavier
 // testing of the mapping permissions, see the VMO tests.
+
+// Check that these values are consistent.
+static_assert(ZX_VMO_OP_DECOMMIT == ZX_VMAR_OP_DECOMMIT);
 
 namespace {
 
@@ -143,6 +148,63 @@ TEST(Vmar, MapInCompactTest) {
 
   EXPECT_EQ(zx_handle_close(region), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
+  EXPECT_EQ(zx_handle_close(process), ZX_OK);
+}
+
+TEST(Vmar, MapInUppderLimitTest) {
+  const size_t kRegionPages = 100;
+  const size_t kSubRegions = kRegionPages / 2;
+
+  zx_handle_t process;
+  zx_handle_t process_vmar;
+  zx_handle_t vmo;
+  zx_handle_t parent_region;
+  uintptr_t parent_region_addr;
+  uintptr_t map_addr;
+
+  ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
+                              &process_vmar),
+            ZX_OK);
+
+  const size_t region_size = PAGE_SIZE * kRegionPages;
+  const size_t map_size = PAGE_SIZE;
+
+  ASSERT_EQ(zx_vmo_create(region_size, 0, &vmo), ZX_OK);
+
+  // Allocate a region and allow mapping to a specific location to enable specifying an upper limit.
+  ASSERT_EQ(zx_vmar_allocate(process_vmar,
+                             ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
+                             region_size, &parent_region, &parent_region_addr),
+            ZX_OK);
+
+  // Set the upper limit for all maps to the midpoint of the parent region.
+  const uintptr_t upper_limit = region_size / 2;
+
+  // Every map should conform to the upper limit.
+  for (size_t i = 0; i < kSubRegions; i++) {
+    ASSERT_EQ(
+        zx_vmar_map(parent_region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_OFFSET_IS_UPPER_LIMIT,
+                    upper_limit, vmo, 0, map_size, &map_addr),
+        ZX_OK);
+    EXPECT_GE(map_addr, parent_region_addr);
+    EXPECT_LE(map_addr + map_size, parent_region_addr + upper_limit);
+  }
+
+  // Mapping one more time should fail now that all of the VMAR below the upper limit is consumed.
+  ASSERT_EQ(
+      zx_vmar_map(parent_region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_OFFSET_IS_UPPER_LIMIT,
+                  upper_limit, vmo, 0, map_size, &map_addr),
+      ZX_ERR_NO_MEMORY);
+
+  // Mapping one more time without the upper limit should succeed.
+  ASSERT_EQ(zx_vmar_map(parent_region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, map_size,
+                        &map_addr),
+            ZX_OK);
+  EXPECT_GE(map_addr, parent_region_addr);
+  EXPECT_LE(map_addr + map_size, parent_region_addr + region_size);
+
+  EXPECT_EQ(zx_handle_close(parent_region), ZX_OK);
+  EXPECT_EQ(zx_handle_close(process_vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
 }
 
@@ -656,12 +718,34 @@ TEST(Vmar, InvalidArgsTest) {
   EXPECT_EQ(zx_vmar_unmap(vmo, 0, 0), ZX_ERR_WRONG_TYPE);
   EXPECT_EQ(zx_vmar_protect(vmo, ZX_VM_PERM_READ, 0, 0), ZX_ERR_WRONG_TYPE);
 
-  // Allocating with non-zero offset and without FLAG_SPECIFIC
+  // Allocating with non-zero offset and without FLAG_SPECIFIC or FLAG_OFFSET_IS_UPPER_LIMIT.
   EXPECT_EQ(zx_vmar_allocate(vmar, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, PAGE_SIZE,
                              10 * PAGE_SIZE, &region, &region_addr),
             ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE,
                         &map_addr),
+            ZX_ERR_INVALID_ARGS);
+
+  // Allocating with non-zero offset with both SPECIFIC* and OFFSET_IS_UPPER_LIMIT.
+  EXPECT_EQ(zx_vmar_allocate(vmar,
+                             ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC |
+                                 ZX_VM_OFFSET_IS_UPPER_LIMIT,
+                             PAGE_SIZE, 10 * PAGE_SIZE, &region, &region_addr),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(
+      zx_vmar_map(vmar,
+                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_OFFSET_IS_UPPER_LIMIT,
+                  PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE, &map_addr),
+      ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(zx_vmar_allocate(vmar,
+                             ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC_OVERWRITE |
+                                 ZX_VM_OFFSET_IS_UPPER_LIMIT,
+                             PAGE_SIZE, 10 * PAGE_SIZE, &region, &region_addr),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(zx_vmar_map(vmar,
+                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC_OVERWRITE |
+                            ZX_VM_OFFSET_IS_UPPER_LIMIT,
+                        PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE, &map_addr),
             ZX_ERR_INVALID_ARGS);
 
   // Allocate with ZX_VM_PERM_READ.
@@ -1709,6 +1793,58 @@ TEST(Vmar, RangeOpCommitVmoPages) {
 
   // Clean up the test VMAR and VMO.
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), vmar_base, kVmoSize), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+}
+
+// Verify vmar_range_op map range of committed mapped VMO pages.
+TEST(Vmar, RangeOpMapRange) {
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+  const size_t vmo_size = PAGE_SIZE * 4;
+
+  ASSERT_EQ(zx_vmo_create(vmo_size, 0, &vmo), ZX_OK);
+
+  zx_handle_t vmar = ZX_HANDLE_INVALID;
+  zx_vaddr_t vmar_base = 0;
+
+  ASSERT_EQ(zx_vmar_allocate(zx_vmar_root_self(), ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                             vmo_size, &vmar, &vmar_base),
+            ZX_OK);
+
+  zx_vaddr_t map_base = 0;
+
+  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, vmo_size, &map_base),
+            ZX_OK);
+
+  // Verify the ZX_VMAR_OP_MAP_RANGE op with zx_vmar_op_range.
+
+  // Attempting to map range uncommitted pages should succeed.
+  ASSERT_EQ(zx_vmar_op_range(vmar, ZX_VMAR_OP_MAP_RANGE, map_base, vmo_size, nullptr, 0), ZX_OK);
+
+  // Commit the first page in the VMO.
+  ASSERT_EQ(zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, nullptr, 0), ZX_OK);
+
+  // Attempting to map range partially committed contiguous pages should succeed.
+  ASSERT_EQ(zx_vmar_op_range(vmar, ZX_VMAR_OP_MAP_RANGE, map_base, vmo_size, nullptr, 0), ZX_OK);
+
+  // Commit the second and last page in the VMO, leaving a discontiguous hole.
+  ASSERT_EQ(zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, PAGE_SIZE, PAGE_SIZE, nullptr, 0), ZX_OK);
+  ASSERT_EQ(zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, PAGE_SIZE * 3, PAGE_SIZE, nullptr, 0), ZX_OK);
+
+  // Attempting to map range partially committed dicontiguous pages should succeed.
+  ASSERT_EQ(zx_vmar_op_range(vmar, ZX_VMAR_OP_MAP_RANGE, map_base + PAGE_SIZE, vmo_size - PAGE_SIZE,
+                             nullptr, 0),
+            ZX_OK);
+
+  // Commit all of the pages in the VMO.
+  ASSERT_EQ(zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, vmo_size, nullptr, 0), ZX_OK);
+
+  // Attempting to map range the hole should succeed.
+  ASSERT_EQ(zx_vmar_op_range(vmar, ZX_VMAR_OP_MAP_RANGE, vmar_base + PAGE_SIZE * 2, PAGE_SIZE,
+                             nullptr, 0),
+            ZX_OK);
+
+  EXPECT_EQ(zx_vmar_unmap(vmar, map_base, vmo_size), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 }
 
