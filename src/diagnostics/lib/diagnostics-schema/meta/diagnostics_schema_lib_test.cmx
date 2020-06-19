@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/diagnostics_schema_lib_test"
+    }
+}

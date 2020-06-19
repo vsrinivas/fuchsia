@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "diagnostics-schema:tests",
     "inspect-fidl-load:tests",
     "selectors:tests",
     "streams/cpp:tests",

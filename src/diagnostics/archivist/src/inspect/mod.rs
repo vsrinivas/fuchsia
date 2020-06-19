@@ -9,9 +9,9 @@ use {
             SnapshotData, UnpopulatedInspectDataContainer,
         },
         diagnostics,
-        formatter::{self, Schema},
     },
     anyhow::{format_err, Error},
+    diagnostics_schema::{self as schema, Schema},
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_diagnostics::{self, BatchIteratorMarker, BatchIteratorRequestStream},
     fidl_fuchsia_mem, fuchsia_async as fasync,
@@ -49,7 +49,7 @@ pub struct NodeHierarchyData {
     // Timestamp at which this snapshot resolved or failed.
     timestamp: zx::Time,
     // Errors encountered when processing this snapshot.
-    errors: Vec<formatter::Error>,
+    errors: Vec<schema::Error>,
     // Optional NodeHierarchy of the inspect hierarchy, in case reading fails
     // and we have errors to share with client.
     hierarchy: Option<NodeHierarchy>,
@@ -68,7 +68,7 @@ impl Into<NodeHierarchyData> for SnapshotData {
                 Err(e) => NodeHierarchyData {
                     filename: self.filename,
                     timestamp: self.timestamp,
-                    errors: vec![formatter::Error { message: format!("{:?}", e) }],
+                    errors: vec![schema::Error { message: format!("{:?}", e) }],
                     hierarchy: None,
                 },
             },
@@ -166,9 +166,7 @@ impl ReaderServer {
                                     NodeHierarchyData {
                                         filename: node_hierarchy_data.filename,
                                         timestamp: node_hierarchy_data.timestamp,
-                                        errors: vec![formatter::Error {
-                                            message: format!("{:?}", e),
-                                        }],
+                                        errors: vec![schema::Error { message: format!("{:?}", e) }],
                                         hierarchy: None,
                                     }
                                 }
@@ -214,7 +212,7 @@ impl ReaderServer {
                             Err(e) => NodeHierarchyData {
                                 filename: node_hierarchy_data.filename,
                                 timestamp: node_hierarchy_data.timestamp,
-                                errors: vec![formatter::Error { message: format!("{:?}", e) }],
+                                errors: vec![schema::Error { message: format!("{:?}", e) }],
                                 hierarchy: None,
                             },
                         }
@@ -269,7 +267,7 @@ impl ReaderServer {
                     );
                     error!("{}", error_string);
                     let no_success_snapshot_data = vec![SnapshotData::failed(
-                        formatter::Error { message: error_string },
+                        schema::Error { message: error_string },
                         "NO_FILE_SUCCEEDED".to_string(),
                     )];
                     PopulatedInspectDataContainer {
@@ -487,7 +485,7 @@ impl ReaderServer {
         // an error schema explaining what wat went wrong.
         if container.snapshots.len() > IN_MEMORY_SNAPSHOT_LIMIT {
             let no_success_snapshot_data = vec![SnapshotData::failed(
-                formatter::Error {
+                schema::Error {
                     message: format!(
                         concat!(
                             "Platform cannot exfiltrate >64 diagnostics",

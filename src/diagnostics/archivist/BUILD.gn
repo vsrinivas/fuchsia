@@ -28,6 +28,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/diagnostics/lib/diagnostics-schema",
     "//src/diagnostics/lib/inspect-fidl-load",
     "//src/diagnostics/lib/selectors",
     "//src/diagnostics/lib/validating-log-listener",

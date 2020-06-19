@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{
-        events::types::{ComponentIdentifier, InspectData},
-        formatter,
-    },
+    crate::events::types::{ComponentIdentifier, InspectData},
     anyhow::{format_err, Error},
+    diagnostics_schema as schema,
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_diagnostics::{self, Selector},
     fidl_fuchsia_inspect::TreeMarker,
@@ -289,7 +287,7 @@ pub struct SnapshotData {
     /// Timestamp at which this snapshot resolved or failed.
     pub timestamp: zx::Time,
     /// Errors encountered when processing this snapshot.
-    pub errors: Vec<formatter::Error>,
+    pub errors: Vec<schema::Error>,
     /// Optional snapshot of the inspect hierarchy, in case reading fails
     /// and we have errors to share with client.
     pub snapshot: Option<ReadSnapshot>,
@@ -307,7 +305,7 @@ impl SnapshotData {
     }
 
     // Constructs packet that timestamps and packages inspect snapshot failure for exfiltration.
-    pub fn failed(error: formatter::Error, filename: String) -> SnapshotData {
+    pub fn failed(error: schema::Error, filename: String) -> SnapshotData {
         SnapshotData {
             filename,
             timestamp: fasync::Time::now().into_zx(),
@@ -357,7 +355,7 @@ impl PopulatedInspectDataContainer {
                                 }
                                 Err(e) => {
                                     acc.push(SnapshotData::failed(
-                                        formatter::Error{message: format!("{:?}", e)}, filename));
+                                        schema::Error{message: format!("{:?}", e)}, filename));
                                 }
                             },
                             InspectData::DeprecatedFidl(inspect_proxy) => {
@@ -378,7 +376,7 @@ impl PopulatedInspectDataContainer {
                                     }
                                     Err(e) => {
                                         acc.push(SnapshotData::failed(
-                                            formatter::Error{message: format!("{:?}", e)}, filename));
+                                            schema::Error{message: format!("{:?}", e)}, filename));
                                    }
                                 }
                             }
@@ -389,7 +387,7 @@ impl PopulatedInspectDataContainer {
                                 }
                                 Err(e) => {
                                     acc.push(SnapshotData::failed(
-                                        formatter::Error{message: format!("{:?}", e)}, filename));
+                                        schema::Error{message: format!("{:?}", e)}, filename));
                                 }
                             },
                             InspectData::File(contents) => match Snapshot::try_from(contents) {
@@ -399,7 +397,7 @@ impl PopulatedInspectDataContainer {
                                 }
                                 Err(e) => {
                                     acc.push(SnapshotData::failed(
-                                        formatter::Error{message: format!("{:?}", e)}, filename));
+                                        schema::Error{message: format!("{:?}", e)}, filename));
                                 }
                             },
                             InspectData::Empty => {}
@@ -416,7 +414,7 @@ impl PopulatedInspectDataContainer {
                     },
                     None => {
                         let no_success_snapshot_data = vec![SnapshotData::failed(
-                            formatter::Error {
+                            schema::Error {
                                 message: format!(
                                     "Failed to extract any inspect data for {:?}",
                                     unpopulated.relative_moniker
@@ -435,7 +433,7 @@ impl PopulatedInspectDataContainer {
             }
             Err(e) => {
                 let no_success_snapshot_data = vec![SnapshotData::failed(
-                    formatter::Error {
+                    schema::Error {
                         message: format!(
                             "Encountered error traversing diagnostics dir for {:?}: {:?}",
                             unpopulated.relative_moniker, e

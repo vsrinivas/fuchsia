@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("diagnostics-schema") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+}
+
+test_package("diagnostics-schema-tests") {
+  deps = [ ":diagnostics-schema_test" ]
+  tests = [
+    {
+      name = "diagnostics_schema_lib_test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":diagnostics-schema-tests" ]
+}
