@@ -78,6 +78,7 @@ mod tests {
         anyhow::Result,
         serde_json::{json, value::Value},
         std::sync::Arc,
+        tempfile::tempdir,
     };
 
     #[derive(Default)]
@@ -107,6 +108,12 @@ mod tests {
         vec![PluginDescriptor::new("FooPlugin"), PluginDescriptor::new("BarPlugin")]
     );
 
+    fn test_model() -> Arc<DataModel> {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        Arc::new(DataModel::connect(uri).unwrap())
+    }
+
     #[test]
     fn test_plugin_macro() {
         let mut plugin = TestPlugin::new();
@@ -118,7 +125,7 @@ mod tests {
         let hooks = plugin.hooks();
         assert_eq!(hooks.collectors.len(), 1);
         assert_eq!(hooks.controllers.len(), 1);
-        let model = Arc::new(DataModel::connect().unwrap());
+        let model = test_model();
         assert_eq!(hooks.controllers.contains_key("/foo/bar"), true);
         assert_eq!(
             hooks.controllers.get("/foo/bar").unwrap().query(model, json!("")).unwrap(),

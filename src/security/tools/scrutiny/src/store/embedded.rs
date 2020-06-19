@@ -8,6 +8,7 @@ use {
         store::{Collection, Element, Store},
     },
     anyhow::{Error, Result},
+    log::{info, trace},
     serde::{Deserialize, Serialize},
     serde_json::value::Value,
     std::collections::HashMap,
@@ -21,7 +22,7 @@ use {
 /// flushes out to disk through JSON serialization. This is a very simple
 /// storage model that is portable and doesn't require importing a fully
 /// featured third party database.
-struct EmbeddedStore {
+pub struct EmbeddedStore {
     uri: String,
     collections: HashMap<String, Arc<RwLock<EmbeddedCollection>>>,
 }
@@ -39,7 +40,13 @@ impl Store for EmbeddedStore {
         let mut collections: HashMap<String, Arc<RwLock<EmbeddedCollection>>> = HashMap::new();
         // A EmbeddedStore is just a directory with a set of json files in it.
         // Each json file is a serialized EmbeddedCollection.
-        for entry in fs::read_dir(&uri)? {
+        let path = Path::new(&uri);
+        if !path.exists() {
+            info!("Creating data model at: {}", uri);
+            fs::create_dir(&path)?;
+        }
+        info!("Data Model: connecting {}", uri);
+        for entry in fs::read_dir(&path)? {
             let entry = entry?;
             let path = entry.path();
             if let Some(ext) = path.extension() {
@@ -67,6 +74,7 @@ impl Store for EmbeddedStore {
     /// Create a new table, initializing it and adding it to the database.
     fn create(&mut self, name: &str) -> Result<Arc<RwLock<dyn Collection>>> {
         if self.collections.contains_key(name) {
+            trace!("Failed to create collection it already exists: {}", name);
             Err(Error::new(StoreError::collection_already_exists(name.to_string())))
         } else {
             let collection_path = self.collection_path(name);
@@ -82,6 +90,7 @@ impl Store for EmbeddedStore {
         if let Some(collection) = self.collections.get(name) {
             Ok(collection.clone())
         } else {
+            trace!("Failed to get collection it does not exist: {}", name);
             Err(Error::new(StoreError::collection_does_not_exist(name)))
         }
     }
@@ -92,6 +101,7 @@ impl Store for EmbeddedStore {
             fs::remove_file(self.collection_path(name.to_string()))?;
             Ok(result)
         } else {
+            trace!("Failed to drop collection it does not exist: {}", name);
             Err(Error::new(StoreError::collection_does_not_exist(name)))
         }
     }

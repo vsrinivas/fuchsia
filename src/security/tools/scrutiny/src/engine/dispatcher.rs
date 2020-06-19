@@ -76,7 +76,7 @@ impl ControllerDispatcher {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::controller::DataController, serde_json::json};
+    use {super::*, crate::model::controller::DataController, serde_json::json, tempfile::tempdir};
 
     struct FakeController {
         pub result: String,
@@ -94,9 +94,15 @@ mod tests {
         }
     }
 
+    fn test_model() -> Arc<DataModel> {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        Arc::new(DataModel::connect(uri).unwrap())
+    }
+
     #[test]
     fn test_query() {
-        let data_model = Arc::new(DataModel::connect().unwrap());
+        let data_model = test_model();
         let mut dispatcher = ControllerDispatcher::new(data_model);
         let fake = Arc::new(FakeController::new("fake_result"));
         let namespace = "/foo/bar".to_string();
@@ -106,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_query_removed() {
-        let data_model = Arc::new(DataModel::connect().unwrap());
+        let data_model = test_model();
         let mut dispatcher = ControllerDispatcher::new(data_model);
         let fake = Arc::new(FakeController::new("fake_result"));
         let namespace = "/foo/bar".to_string();
@@ -119,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_query_multiple() {
-        let data_model = Arc::new(DataModel::connect().unwrap());
+        let data_model = test_model();
         let mut dispatcher = ControllerDispatcher::new(data_model);
         let fake = Arc::new(FakeController::new("fake_result"));
         let fake_two = Arc::new(FakeController::new("fake_result_two"));

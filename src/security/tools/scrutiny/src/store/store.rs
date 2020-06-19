@@ -12,7 +12,7 @@ use {
 pub type Element = Value;
 
 /// Represents a simple high level abstracted data store.
-pub trait Store {
+pub trait Store: Send + Sync {
     /// Connect to the database and return a handle to that database.
     fn connect(uri: String) -> Result<Self>
     where

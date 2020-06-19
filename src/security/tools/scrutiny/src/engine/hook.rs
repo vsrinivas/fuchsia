@@ -9,7 +9,7 @@ use {
 
 /// `PluginHooks` holds all the collectors and controllers that a plugin needs
 /// to operate correctly. These are hooked into the `ControllerDispatcher` and
-/// `CollectorWorkerPool` when `load` is called and removed when `unload` is
+/// `CollectorScheduler` when `load` is called and removed when `unload` is
 /// called.
 #[derive(Clone)]
 pub struct PluginHooks {

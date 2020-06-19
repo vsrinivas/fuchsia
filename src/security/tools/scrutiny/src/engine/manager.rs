@@ -6,7 +6,7 @@ use {
     super::{
         dispatcher::ControllerDispatcher,
         plugin::{Plugin, PluginDescriptor},
-        pool::CollectorPool,
+        scheduler::CollectorScheduler,
     },
     anyhow::Result,
     log::{error, info},
@@ -77,19 +77,19 @@ impl PluginInstance {
 /// The `PluginManager` is responsible for registering and loading plugins
 /// along with their declared dependencies. It is responsible for assigning the
 /// plugins a `PluginInstance` and delegating collection to the
-/// `CollectorWorkerPool` and controlling to the `ControllerDispatcher`.
+/// `CollectorWorkerScheduler` and controlling to the `ControllerDispatcher`.
 pub struct PluginManager {
     plugins: HashMap<PluginDescriptor, PluginInstance>,
-    pool: Arc<Mutex<CollectorPool>>,
+    scheduler: Arc<Mutex<CollectorScheduler>>,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
 }
 
 impl PluginManager {
     pub fn new(
-        pool: Arc<Mutex<CollectorPool>>,
+        scheduler: Arc<Mutex<CollectorScheduler>>,
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
     ) -> Self {
-        Self { plugins: HashMap::new(), pool: pool, dispatcher: dispatcher }
+        Self { plugins: HashMap::new(), scheduler: scheduler, dispatcher: dispatcher }
     }
 
     /// Utility to register and load a plugin in one line.
@@ -159,10 +159,10 @@ impl PluginManager {
 
         let plugin_instance = self.plugins.get_mut(desc).unwrap();
         let hooks = plugin_instance.plugin.hooks();
-        // Hook all the collectors into the worker pool.
-        let mut pool = self.pool.lock().unwrap();
+        // Hook all the collectors into the worker scheduler.
+        let mut scheduler = self.scheduler.lock().unwrap();
         for collector in hooks.collectors.iter() {
-            pool.add(plugin_instance.instance_id, Arc::clone(&collector));
+            scheduler.add(plugin_instance.instance_id, Arc::clone(&collector));
         }
         // Hook all the controllers into the dispatcher.
         let mut dispatcher = self.dispatcher.write().unwrap();
@@ -196,8 +196,8 @@ impl PluginManager {
             }
 
             let mut dispatcher = self.dispatcher.write().unwrap();
-            let mut pool = self.pool.lock().unwrap();
-            pool.remove(plugin_instance.instance_id);
+            let mut scheduler = self.scheduler.lock().unwrap();
+            scheduler.remove_all(plugin_instance.instance_id);
             dispatcher.remove(plugin_instance.instance_id);
             plugin_instance.state = PluginState::Unloaded;
             deps.append(&mut plugin_instance.plugin.dependencies().clone());
@@ -236,6 +236,7 @@ mod tests {
             model::{collector::DataCollector, controller::DataController, model::DataModel},
         },
         serde_json::{json, value::Value},
+        tempfile::tempdir,
     };
 
     #[derive(Default)]
@@ -289,9 +290,11 @@ mod tests {
     );
 
     fn create_manager() -> PluginManager {
-        let model = Arc::new(DataModel::connect().unwrap());
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        let model = Arc::new(DataModel::connect(uri).unwrap());
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
-        let collector = Arc::new(Mutex::new(CollectorPool::new(Arc::clone(&model))));
+        let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         PluginManager::new(collector, dispatcher)
     }
 
@@ -392,9 +395,11 @@ mod tests {
 
     #[test]
     fn test_dispatcher_hook() {
-        let model = Arc::new(DataModel::connect().unwrap());
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        let model = Arc::new(DataModel::connect(uri).unwrap());
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
-        let collector = Arc::new(Mutex::new(CollectorPool::new(Arc::clone(&model))));
+        let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         let mut manager = PluginManager::new(collector, Arc::clone(&dispatcher));
 
         let plugin_one = Box::new(TestPluginOne::new());
