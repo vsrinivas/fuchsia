@@ -39,6 +39,23 @@ group("core") {
   ]
 }
 
+# Targets to include in the base package set for the core recovery image.
+group("recovery-core") {
+  public_deps = [
+    "bin/pkg-cache",
+    "bin/pkg-resolver",
+  ]
+}
+
+# Targets to include in the base package set for the recovery image.
+group("recovery") {
+  public_deps = [
+    ":recovery-core",
+    "bin/amber",
+    "bin/omaha-client",
+  ]
+}
+
 # Shell control commands
 group("tools") {
   public_deps = [
@@ -54,7 +71,6 @@ group("system-update-checker") {
     "bin/system-update-checker",
     "bin/system-update-checker:config",
   ]
-
   # TODO(fxb/51214): Remove the comment after we update to omaha-client
   # for migration build.
   # deps = [ "//build/validate:non_production_tag" ]
