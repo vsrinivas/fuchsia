@@ -25,6 +25,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <iterator>
 
 #include <soc/aml-common/aml-ram.h>
 #include <trace-vthread/event_vthread.h>
@@ -321,7 +322,7 @@ void Monitor::MeasureBandwidthAndPost() {
     }
     fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig config = {};
     config.cycles_to_measure = cycles_to_measure;
-    for (size_t i = 0; i < countof(kRamDefaultChannels); i++) {
+    for (size_t i = 0; i < std::size(kRamDefaultChannels); i++) {
       config.channels[i] = kRamDefaultChannels[i].mask;
     }
     ++pending_bandwidth_measurements_;

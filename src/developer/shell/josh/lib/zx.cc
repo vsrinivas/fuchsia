@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <string>
 
@@ -138,8 +139,8 @@ JSValue ChannelRead(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
   uint32_t num_handles;
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
-  zx_status_t status = zx_channel_read_etc(h->handle, 0, bytes, handles, countof(bytes),
-                                           countof(handles), &num_bytes, &num_handles);
+  zx_status_t status = zx_channel_read_etc(h->handle, 0, bytes, handles, std::size(bytes),
+                                           std::size(handles), &num_bytes, &num_handles);
   if (status != ZX_OK) {
     return ZxStatusToError(ctx, status);
   }
@@ -520,7 +521,7 @@ namespace {
 int ZxRunOnInit(JSContext *ctx, JSModuleDef *m) {
   JS_NewClassID(&handle_class_id_);
   JS_NewClass(JS_GetRuntime(ctx), handle_class_id_, &handle_class_);
-  return JS_SetModuleExportList(ctx, m, funcs_, countof(funcs_));
+  return JS_SetModuleExportList(ctx, m, funcs_, std::size(funcs_));
 }
 
 }  // namespace
@@ -530,7 +531,7 @@ JSModuleDef *ZxModuleInit(JSContext *ctx, const char *module_name) {
   if (!m) {
     return nullptr;
   }
-  JS_AddModuleExportList(ctx, m, funcs_, countof(funcs_));
+  JS_AddModuleExportList(ctx, m, funcs_, std::size(funcs_));
   return m;
 }
 

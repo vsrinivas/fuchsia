@@ -7,6 +7,7 @@
 #include <array>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <set>
 #include <vector>
@@ -274,9 +275,9 @@ int FidlRunOnInit(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&fidl_class_id_);
   JS_NewClass(JS_GetRuntime(ctx), fidl_class_id_, &fidl_class_);
   JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, fidl_proto_funcs_, countof(fidl_proto_funcs_));
+  JS_SetPropertyFunctionList(ctx, proto, fidl_proto_funcs_, std::size(fidl_proto_funcs_));
   JS_SetClassProto(ctx, fidl_class_id_, proto);
-  JS_SetModuleExportList(ctx, m, module_funcs_, countof(module_funcs_));
+  JS_SetModuleExportList(ctx, m, module_funcs_, std::size(module_funcs_));
   return 0;
 };
 
@@ -288,7 +289,7 @@ JSModuleDef* FidlModuleInit(JSContext* ctx, const char* module_name, const std::
     return nullptr;
   }
   module_funcs_[1].u.str = fidl_path.c_str();
-  JS_AddModuleExportList(ctx, m, module_funcs_, countof(module_funcs_));
+  JS_AddModuleExportList(ctx, m, module_funcs_, std::size(module_funcs_));
   return m;
 }
 

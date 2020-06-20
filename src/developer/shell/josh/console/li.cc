@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 
+#include <iterator>
+
 #include "src/lib/line_input/line_input.h"
 #include "third_party/quickjs/list.h"
 
@@ -125,7 +127,7 @@ int LiRunOnInit(JSContext *ctx, JSModuleDef *m) {
   /* Repl Input class */
   JS_NewClassID(&js_repl_class_id);
   JS_NewClass(JS_GetRuntime(ctx), js_repl_class_id, &js_repl_class);
-  return JS_SetModuleExportList(ctx, m, js_li_funcs, countof(js_li_funcs));
+  return JS_SetModuleExportList(ctx, m, js_li_funcs, std::size(js_li_funcs));
 };
 
 }  // namespace
@@ -136,7 +138,7 @@ JSModuleDef *LiModuleInit(JSContext *ctx, const char *module_name) {
   if (!m) {
     return nullptr;
   }
-  JS_AddModuleExportList(ctx, m, js_li_funcs, countof(js_li_funcs));
+  JS_AddModuleExportList(ctx, m, js_li_funcs, std::size(js_li_funcs));
   return m;
 }
 

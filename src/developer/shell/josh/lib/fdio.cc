@@ -9,6 +9,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <iterator>
+
 #include "src/developer/shell/josh/lib/qjs_util.h"
 #include "src/developer/shell/josh/lib/zx.h"
 #include "third_party/quickjs/quickjs.h"
@@ -137,10 +139,10 @@ int FdioRunOnInit(JSContext *ctx, JSModuleDef *m) {
   JS_NewClassID(&flat_ns_class_id_);
   JS_NewClass(JS_GetRuntime(ctx), flat_ns_class_id_, &flat_ns_class_);
   JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, flat_ns_proto_funcs_, countof(flat_ns_proto_funcs_));
+  JS_SetPropertyFunctionList(ctx, proto, flat_ns_proto_funcs_, std::size(flat_ns_proto_funcs_));
   JS_SetClassProto(ctx, flat_ns_class_id_, proto);
 
-  return JS_SetModuleExportList(ctx, m, funcs_, countof(funcs_));
+  return JS_SetModuleExportList(ctx, m, funcs_, std::size(funcs_));
 }
 
 }  // namespace
@@ -151,7 +153,7 @@ JSModuleDef *FdioModuleInit(JSContext *ctx, const char *module_name) {
   if (!m) {
     return nullptr;
   }
-  JS_AddModuleExportList(ctx, m, funcs_, countof(funcs_));
+  JS_AddModuleExportList(ctx, m, funcs_, std::size(funcs_));
   return m;
 }
 }  // namespace shell::fdio

@@ -4,6 +4,8 @@
 
 #include <zircon/compiler.h>
 
+#include <iterator>
+
 #include "src/developer/shell/josh/lib/qjs_util.h"
 #include "src/developer/shell/mirror/client.h"
 #include "third_party/quickjs/quickjs.h"
@@ -41,7 +43,7 @@ const JSCFunctionListEntry funcs_[] = {JS_CFUNC_DEF("reload", 0, Reload)};
 namespace {
 
 int SysRunOnInit(JSContext *ctx, JSModuleDef *m) {
-  return JS_SetModuleExportList(ctx, m, funcs_, countof(funcs_));
+  return JS_SetModuleExportList(ctx, m, funcs_, std::size(funcs_));
 }
 
 }  // namespace
@@ -51,7 +53,7 @@ JSModuleDef *SysModuleInit(JSContext *ctx, const char *module_name) {
   if (!m) {
     return nullptr;
   }
-  JS_AddModuleExportList(ctx, m, funcs_, countof(funcs_));
+  JS_AddModuleExportList(ctx, m, funcs_, std::size(funcs_));
   return m;
 }
 
