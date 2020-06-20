@@ -411,6 +411,8 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect_err("ramdisk should be destroyed");
     }
 
+    // TODO(fxb/54467) Flaking test
+    #[ignore]
     #[fasync::run_singlethreaded(test)]
     async fn test_cancelled_reads() {
         let (_ramdisk, remote_block_device) = make_ramdisk();
