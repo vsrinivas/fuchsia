@@ -341,12 +341,12 @@ func (mf *metaFarFile) getBackingBlobVMO() (*zx.VMO, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	fdioFile := syscall.FDIOForFD(int(f.Fd())).(*fdio.File)
 	flags := zxio.VmoFlagRead
 	_, buffer, err := fdioFile.GetBuffer(flags)
 	if err != nil {
-		f.Close()
 		return nil, err
 	}
 	mf.backingBlobVMO = &buffer.Vmo
