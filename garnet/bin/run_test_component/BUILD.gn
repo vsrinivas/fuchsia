@@ -45,6 +45,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.time",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -55,7 +56,6 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
-    "//src/sys/timekeeper:fuchsia.time",
     "//third_party/rapidjson",
   ]
 }

@@ -59,6 +59,7 @@
                 "/svc/fuchsia.sys2.EventSource",
                 "/svc/fuchsia.sysinfo.SysInfo",
                 "/svc/fuchsia.thermal.Controller",
+                "/svc/fuchsia.time.Maintenance",
                 "/svc/fuchsia.virtualconsole.SessionManager",
             ],
             from: "realm",

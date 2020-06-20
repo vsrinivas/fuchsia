@@ -162,6 +162,10 @@
             event_stream: [ "capability_requested" ],
             as: "/svc/fuchsia.sys2.EventStream",
         },
+        {
+            protocol: "/svc/fuchsia.time.Maintenance",
+            as: "/svc_for_sys/fuchsia.time.Maintenance",
+        },
 
         // From v2 components
         {

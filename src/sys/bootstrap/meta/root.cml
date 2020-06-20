@@ -46,6 +46,7 @@
             protocol: [
                 "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.EventSource",
+                "/svc/fuchsia.time.Maintenance",
             ],
             from: "realm",
             to: [ "#core" ],

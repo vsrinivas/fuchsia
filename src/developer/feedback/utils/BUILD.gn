@@ -103,9 +103,9 @@ source_set("utc_time_provider") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//src/lib/timekeeper:system",
-    "//src/sys/timekeeper:fuchsia.time",
   ]
 
   deps = [

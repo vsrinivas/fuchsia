@@ -1,9 +1,9 @@
 use {
-    anyhow::Context as _,
     fuchsia_inspect::{Inspector, IntProperty, Property},
     fuchsia_zircon as zx,
     futures::FutureExt,
     lazy_static::lazy_static,
+    std::sync::Arc,
 };
 
 lazy_static! {
@@ -20,15 +20,69 @@ fn utc_time() -> i64 {
     zx::Time::get(zx::ClockId::UTC).into_nanos()
 }
 
-pub fn init() {
-    fuchsia_syslog::init().context("initializing logging").unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
+pub fn init(utc_clock: Arc<zx::Clock>) {
     START_TIME_MONO.set(monotonic_time());
-    INSPECTOR.root().record_lazy_child("current", || {
+    INSPECTOR.root().record_lazy_child("current", move || {
+        let utc_clock_clone = Arc::clone(&utc_clock);
         async move {
             let inspector = Inspector::new();
-            inspector.root().record_int("system_uptime_monotonic_nanos", monotonic_time());
-            inspector.root().record_int("utc_nanos", utc_time());
+            let root = inspector.root();
+            root.record_int("system_uptime_monotonic_nanos", monotonic_time());
+            root.record_int("utc_nanos", utc_time());
+            root.record_int(
+                "utc_kernel_clock_value_nanos",
+                utc_clock_clone.read().map(zx::Time::into_nanos).unwrap_or(0),
+            );
+
+            if let Ok(details) = utc_clock_clone.get_details() {
+                let child = root.create_child("utc_kernel_clock");
+                child.record_int("backstop_nanos", details.backstop.into_nanos());
+                child.record_int(
+                    "ticks_to_synthetic.reference_offset",
+                    details.ticks_to_synthetic.reference_offset,
+                );
+                child.record_int(
+                    "ticks_to_synthetic.synthetic_offset",
+                    details.ticks_to_synthetic.synthetic_offset,
+                );
+                child.record_int(
+                    "ticks_to_synthetic.rate.synthetic_ticks",
+                    details.ticks_to_synthetic.rate.synthetic_ticks as i64,
+                );
+                child.record_int(
+                    "ticks_to_synthetic.rate.reference_ticks",
+                    details.ticks_to_synthetic.rate.reference_ticks as i64,
+                );
+                child.record_int(
+                    "mono_to_synthetic.reference_offset",
+                    details.mono_to_synthetic.reference_offset,
+                );
+                child.record_int(
+                    "mono_to_synthetic.synthetic_offset",
+                    details.mono_to_synthetic.synthetic_offset,
+                );
+                child.record_int(
+                    "mono_to_synthetic.rate.synthetic_ticks",
+                    details.mono_to_synthetic.rate.synthetic_ticks as i64,
+                );
+                child.record_int(
+                    "mono_to_synthetic.rate.reference_ticks",
+                    details.mono_to_synthetic.rate.reference_ticks as i64,
+                );
+                child.record_uint("error_bounds", details.error_bounds);
+                child.record_int("query_ticks", details.query_ticks);
+                child.record_int("last_value_update_ticks", details.last_value_update_ticks);
+                child.record_int(
+                    "last_rate_adjust_update_ticks",
+                    details.last_rate_adjust_update_ticks,
+                );
+                child.record_int(
+                    "last_error_bounds_update_ticks",
+                    details.last_error_bounds_update_ticks,
+                );
+                child.record_int("generation_counter", details.generation_counter as i64);
+                root.record(child);
+            }
             Ok(inspector)
         }
         .boxed()

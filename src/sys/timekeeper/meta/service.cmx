@@ -12,6 +12,7 @@
             "fuchsia.net.Connectivity",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.time.Maintenance",
             "fuchsia.timezone.TimeService"
         ]
     }
