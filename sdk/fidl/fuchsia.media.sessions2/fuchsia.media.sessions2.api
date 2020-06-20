@@ -1,6 +1,3 @@
 {
-  "fidl/fuchsia.media.sessions2/discovery.fidl": "fdf57f5d07bbe080730bb6407becb961",
-  "fidl/fuchsia.media.sessions2/images.fidl": "f281837894724ffccb0e1c5efe897f97",
-  "fidl/fuchsia.media.sessions2/player.fidl": "cb7e6ece59e30388504a1d33f7d22480",
-  "fidl/fuchsia.media.sessions2/publisher.fidl": "73634f1c2546ce3eae151f6962dcd509"
+  "fidl/fuchsia.media.sessions2": "22cb65f4aa5f1443116a965ed35faf5b"
 }

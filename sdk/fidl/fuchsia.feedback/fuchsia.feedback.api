@@ -1,10 +1,3 @@
 {
-  "fidl/fuchsia.feedback/annotation.fidl": "4806f048170d7d6f772054840e7b676a",
-  "fidl/fuchsia.feedback/attachment.fidl": "027cee5e6d6ae90532e8bdc76268e1bf",
-  "fidl/fuchsia.feedback/crash_register.fidl": "d1eb35fdc8772c2cf82d1523a603ecd7",
-  "fidl/fuchsia.feedback/crash_reporter.fidl": "7903fbe2689d22d03d9412816d731a3e",
-  "fidl/fuchsia.feedback/data_provider.fidl": "6f72e03999726f629a4687d04823b434",
-  "fidl/fuchsia.feedback/data_register.fidl": "2584d63f1f850abbab201cc674db905d",
-  "fidl/fuchsia.feedback/device_id_provider.fidl": "c81fab3df1b512f0fee6d0f49a80679e",
-  "fidl/fuchsia.feedback/last_reboot_info.fidl": "6c8feb8d5e151affbd397524593bb566"
+  "fidl/fuchsia.feedback": "6cd703e1ff4b1916025e46027716e4e3"
 }

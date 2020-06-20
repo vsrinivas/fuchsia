@@ -1,3 +1,3 @@
 {
-  "fidl/fuchsia.update.channelcontrol/channelcontrol.fidl": "d36bca997c7520742a112748a3cbca03"
+  "fidl/fuchsia.update.channelcontrol": "139bdb44b805ead3364a3d05113534c8"
 }

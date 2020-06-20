@@ -1,5 +1,3 @@
 {
-  "fidl/fuchsia.wlan.policy/access_point_provider.fidl": "9d4410639f0312c403f7fb2f99ea6ed8",
-  "fidl/fuchsia.wlan.policy/client_provider.fidl": "a701fb48fa36ad61c38c594da291de12",
-  "fidl/fuchsia.wlan.policy/types.fidl": "d92e5894aee62494299ed4e118decfa8"
+  "fidl/fuchsia.wlan.policy": "409de669d4a77c97417d150a4f500fb5"
 }

@@ -1,4 +1,3 @@
 {
-  "fidl/fuchsia.castsetup/cast_setup.fidl": "64a277e79668500a71d1072be4eb8d4a",
-  "fidl/fuchsia.castsetup/server.fidl": "649322428fa57983359618fa006f66d5"
+  "fidl/fuchsia.castsetup": "3a93c5b003537a258225c61d99a6e310"
 }

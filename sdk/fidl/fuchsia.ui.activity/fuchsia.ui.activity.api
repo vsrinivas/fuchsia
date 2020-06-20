@@ -1,6 +1,3 @@
 {
-  "fidl/fuchsia.ui.activity/activity.fidl": "30749a5604f09fc74a193c372bfd7441",
-  "fidl/fuchsia.ui.activity/provider.fidl": "2d181d445cde2b35c6dc175197eb61c0",
-  "fidl/fuchsia.ui.activity/state.fidl": "e318cd0472a470b3d8c1ec1ba1cf60e4",
-  "fidl/fuchsia.ui.activity/tracker.fidl": "2436d15889d3d12c5358447efeb274a1"
+  "fidl/fuchsia.ui.activity": "f2c592857994d6287e6801e43812e29a"
 }

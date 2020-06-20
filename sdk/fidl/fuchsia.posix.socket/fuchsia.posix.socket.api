@@ -1,3 +1,3 @@
 {
-  "fidl/fuchsia.posix.socket/socket.fidl": "3bb73baddd3b337c4e37387ae74bdc95"
+  "fidl/fuchsia.posix.socket": "43a271948d74960c04d7ff1aeadd087f"
 }

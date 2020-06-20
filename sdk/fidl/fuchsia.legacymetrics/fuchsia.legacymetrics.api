@@ -1,4 +1,3 @@
 {
-  "fidl/fuchsia.legacymetrics/event.fidl": "8aa082fc6fe4615293e6ccd6ad8e4e36",
-  "fidl/fuchsia.legacymetrics/metrics_recorder.fidl": "875f49e7f8ad3744c0a291de686385f2"
+  "fidl/fuchsia.legacymetrics": "cf96b29c58b45b3edef9e5c75580a7b8"
 }

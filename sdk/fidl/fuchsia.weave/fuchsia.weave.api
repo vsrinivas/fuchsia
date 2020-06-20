@@ -1,5 +1,3 @@
 {
-  "fidl/fuchsia.weave/auth.fidl": "6421c4809628ae11f2636a46f63cccf2",
-  "fidl/fuchsia.weave/common.fidl": "acd4c952493b1be7d4d04838fbb21490",
-  "fidl/fuchsia.weave/weavestack.fidl": "69fcf3c1e614dc64a3f1f7b829bc231d"
+  "fidl/fuchsia.weave": "9be091be9f7bc81f0cafd1a73c449aa1"
 }

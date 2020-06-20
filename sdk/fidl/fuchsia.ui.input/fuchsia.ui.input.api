@@ -1,12 +1,3 @@
 {
-  "fidl/fuchsia.ui.input/commands.fidl": "fa4d721fe1aef4ed4e4fbcbad784df23",
-  "fidl/fuchsia.ui.input/ime_service.fidl": "63c1514e333e1157c7d6df0eb79c4903",
-  "fidl/fuchsia.ui.input/input_device_registry.fidl": "d996d45e0dc18291a728bb72fb2f4c09",
-  "fidl/fuchsia.ui.input/input_event_constants.fidl": "7bc0a1944f0968243e9bb7cf9ba87ab3",
-  "fidl/fuchsia.ui.input/input_events.fidl": "33f71d102ac6461b947d034a8336a1a1",
-  "fidl/fuchsia.ui.input/input_reports.fidl": "a0f96c30abf05f2a732f7fadbfadbf8f",
-  "fidl/fuchsia.ui.input/pointer_capture.fidl": "c2ace3f7c653d88f44ad8cbde7277edb",
-  "fidl/fuchsia.ui.input/text_editing.fidl": "420562e8e8859d59c8dbd84719c013bf",
-  "fidl/fuchsia.ui.input/text_input.fidl": "7a330e651015bbfc6edd5b287f74c2ee",
-  "fidl/fuchsia.ui.input/usages.fidl": "ae67cc0a3c0bb40d9803bcdfa68908be"
+  "fidl/fuchsia.ui.input": "f9a9d62a3d8ac31acba9691dd1eb0fb0"
 }

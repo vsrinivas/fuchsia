@@ -355,10 +355,8 @@ template("fidl_library") {
       deps = sdk_deps
     }
 
-    should_normalize = false
-    if (defined(invoker.should_normalize)) {
-      should_normalize = invoker.should_normalize
-    }
+    should_normalize =
+        !defined(invoker.should_normalize) || invoker.should_normalize
 
     api_normalize_target_name = "${target_name}_normalize"
     normalized_file = "$target_gen_dir/${target_name}.normalized"

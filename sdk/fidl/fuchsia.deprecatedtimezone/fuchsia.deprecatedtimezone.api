@@ -1,4 +1,3 @@
 {
-  "fidl/fuchsia.deprecatedtimezone/deprecated_time_service.fidl": "4d77ffd1317d524296bdc928df6654dc",
-  "fidl/fuchsia.deprecatedtimezone/deprecated_time_zone.fidl": "ebc619c18733fec5771eae4647a61d65"
+  "fidl/fuchsia.deprecatedtimezone": "09c62c39da50ed1a70664e75b02f5aff"
 }

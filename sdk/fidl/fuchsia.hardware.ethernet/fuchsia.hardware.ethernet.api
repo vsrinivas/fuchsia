@@ -1,3 +1,3 @@
 {
-  "fidl/fuchsia.hardware.ethernet/ethernet.fidl": "bd1cfc708eb82aad1c7134c89e20789f"
+  "fidl/fuchsia.hardware.ethernet": "b52e7df600542c9c266cc41cd1670c8a"
 }

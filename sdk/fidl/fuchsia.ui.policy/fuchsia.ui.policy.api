@@ -1,6 +1,3 @@
 {
-  "fidl/fuchsia.ui.policy/device_listener.fidl": "eec2c13d4c5ba8e82d2be07f79964909",
-  "fidl/fuchsia.ui.policy/display_usage.fidl": "96178dd59f83426f578f65af5ea57e76",
-  "fidl/fuchsia.ui.policy/presentation.fidl": "b10e88654eba924892991d6ec285494d",
-  "fidl/fuchsia.ui.policy/presenter.fidl": "d1ec2d3e0a1e1e8a803a79b3a2324d4d"
+  "fidl/fuchsia.ui.policy": "9f02827fd2d23a7b98e6ed1ffc023ca3"
 }
