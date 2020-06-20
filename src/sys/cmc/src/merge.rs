@@ -23,8 +23,14 @@ pub fn merge(files: Vec<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> 
         let mut buffer = String::new();
         fs::File::open(&filename)?.read_to_string(&mut buffer)?;
 
-        let v: Value = cm_json::from_json5_str(&buffer)
-            .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
+        let v: Value = match serde_json::from_str(&buffer) {
+            Ok(value) => value,
+            Err(_) => {
+                // If JSON parsing fails, try JSON5 parsing (which is slower)
+                cm_json::from_json5_str(&buffer)
+                    .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?
+            }
+        };
 
         merge_json(&mut res, &v)
             .map_err(|e| Error::parse(format!("Multiple manifests set the same key: {}", e)))?;
