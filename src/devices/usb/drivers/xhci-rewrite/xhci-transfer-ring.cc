@@ -272,6 +272,7 @@ zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* 
   isochronous_ = false;
   token_++;
   hci_ = &hci;
+  stalled_ = false;
   return AllocBuffer(&container);
 }
 
@@ -304,6 +305,20 @@ CRCR TransferRing::TransferRing::phys(uint8_t cap_length) {
   cr.set_RCS(pcs_);
   return cr;
 }
+
+zx::status<CRCR> TransferRing::TransferRing::PeekCommandRingControlRegister(uint8_t cap_length) {
+  fbl::AutoLock l(&mutex_);
+  Control control = Control::FromTRB(trbs_);
+  zx_status_t status = AllocInternal(control);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  CRCR cr = CRCR::Get(cap_length).FromValue(VirtToPhysLocked(trbs_));
+  ZX_ASSERT(trb_start_phys_);
+  cr.set_RCS(pcs_);
+  return zx::ok(cr);
+}
+
 zx_paddr_t TransferRing::VirtToPhys(TRB* trb) {
   fbl::AutoLock l(&mutex_);
   return VirtToPhysLocked(trb);
@@ -372,8 +387,79 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
   trbs_->ptr = 0;
   trbs_->status = pcs_;
   *trb = trbs_;
+  {
+    TRB empty;
+    empty.control = 0;
+    bool pcs = Control::FromTRB(*trb).Cycle();
+    Control::FromTRB(&empty).set_Cycle(pcs).ToTrb(*trb);
+  }
   AdvancePointer();
   return ZX_OK;
+}
+
+zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
+  if (count == 0) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  size_t orig_count = count;
+  TRB* contig;
+  TRB* nop;
+  size_t nop_count = 1;
+  zx_status_t status = AllocateTRB(&nop, nullptr);
+  Control::FromTRB(nop).set_Type(Control::Nop).ToTrb(nop);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  TRB* prev = nop;
+  count--;
+  bool discontiguous = false;
+  while (count) {
+    TRB* current;
+    status = AllocateTRB(&current, nullptr);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    nop_count++;
+    Control::FromTRB(current).set_Type(Control::Nop).ToTrb(current);
+    if (current != prev + 1) {
+      discontiguous = true;
+      contig = current;
+      prev = nullptr;
+      break;
+    }
+    prev = current;
+    count--;
+  }
+  if (discontiguous) {
+    // Discontiguous -- start another run
+    count = orig_count - 1;
+    prev = contig;
+    while (count) {
+      TRB* current;
+      status = AllocateTRB(&current, nullptr);
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      // Still discontiguous (couldn't get enough contiguous physical memory)
+      if (current != prev + 1) {
+        // NOTE: Today we can't guarantee the availability of contiguous physical memory,
+        // so we'll bail out if we can't satisfy the request.
+        zxlogf(ERROR,
+               "No physically contiguous memory available to satisfy TRB allocation request.\n");
+        return zx::error(ZX_ERR_NO_MEMORY);
+      }
+      prev = current;
+      count--;
+    }
+    ContiguousTRBInfo info;
+    info.nop = fbl::Span<TRB>(nop, nop_count);
+    info.trbs = fbl::Span<TRB>(contig, orig_count);
+    return zx::ok(info);
+  }
+  // Already contiguous
+  ContiguousTRBInfo info;
+  info.trbs = fbl::Span<TRB>(nop, orig_count);
+  return zx::ok(info);
 }
 
 zx_status_t TransferRing::AllocBuffer(dma_buffer::ContiguousBuffer** out) {

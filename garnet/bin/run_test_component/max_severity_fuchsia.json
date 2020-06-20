@@ -523,6 +523,10 @@
       {
          "url": "fuchsia-pkg://fuchsia.com/web_runner_tests#meta/web_runner_pixel_tests.cmx",
          "max_severity": "ERROR"
+      },
+      {
+         "url":"fuchsia-pkg://fuchsia.com/xhci-transfer-ring-unittest#meta/xhci-transfer-ring-unittest.cmx",
+         "max_severity":"ERROR"
       }
    ]
 }

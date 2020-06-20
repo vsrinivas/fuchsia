@@ -47,6 +47,7 @@ driver_module("xhci") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/xdc-server-utils",
   ]
@@ -79,6 +80,7 @@ source_set("test-libs") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
   ]
 }

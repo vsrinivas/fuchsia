@@ -224,4 +224,53 @@ TEST_F(TransferRingHarness, MultiPageShortTransferTest) {
   ring->TakePendingTRBs();
 }
 
+TEST_F(TransferRingHarness, SetStall) {
+  auto ring = this->ring();
+  ASSERT_FALSE(ring->stalled());
+  ring->set_stall(true);
+  ASSERT_TRUE(ring->stalled());
+  ring->set_stall(false);
+  ASSERT_FALSE(ring->stalled());
+}
+
+TEST_F(TransferRingHarness, AllocateContiguousFailsIfNotEnoughContiguousPhysicalMemoryExists) {
+  constexpr auto kOverAllocateAmount = 9001;
+  auto ring = this->ring();
+  ASSERT_EQ(ring->AllocateContiguous(kOverAllocateAmount).error_value(), ZX_ERR_NO_MEMORY);
+}
+
+TEST_F(TransferRingHarness, AllocateContiguousAllocatesContiguousBlocks) {
+  auto ring = this->ring();
+  constexpr auto kContiguousCount = 42;
+  constexpr auto kIterationCount = 512;
+  for (size_t i = 0; i < kIterationCount; i++) {
+    auto result = ring->AllocateContiguous(kContiguousCount);
+    ASSERT_TRUE(result.is_ok());
+    ASSERT_EQ(result->trbs.size(), kContiguousCount);
+    auto trb_start = result->trbs.data();
+    for (size_t c = 0; c < kContiguousCount; c++) {
+      ASSERT_NE(Control::FromTRB(trb_start + c).Type(), Control::Link);
+    }
+  }
+}
+
+TEST_F(TransferRingHarness, Peek) {
+  auto ring = this->ring();
+  TRB* trb;
+  ring->AllocateTRB(&trb, nullptr);
+  auto result = ring->PeekCommandRingControlRegister(0);
+  ASSERT_EQ(trb + 1, ring->PhysToVirt(result->PTR()));
+  ASSERT_TRUE(result->RCS());
+}
+
+TEST_F(TransferRingHarness, First) {
+  ContiguousTRBInfo info;
+  TRB a;
+  TRB b;
+  info.trbs = fbl::Span(&a, 1);
+  ASSERT_EQ(info.first().data(), &a);
+  info.nop = fbl::Span(&b, 1);
+  ASSERT_EQ(info.first().data(), &b);
+}
+
 }  // namespace usb_xhci

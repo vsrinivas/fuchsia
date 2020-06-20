@@ -4,9 +4,12 @@
 
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
+#include <lib/zx/status.h>
+
 #include <map>
 
 #include <ddk/protocol/usb/request.h>
+#include <fbl/span.h>
 
 #include "registers.h"
 #include "xhci-context.h"
@@ -15,6 +18,17 @@
 namespace usb_xhci {
 
 class UsbXhci;
+
+struct ContiguousTRBInfo {
+  fbl::Span<TRB> nop;   // Optional page of NOPs
+  fbl::Span<TRB> trbs;  // Contiguous TRBs
+  fbl::Span<TRB> first() {
+    if (nop.size()) {
+      return nop;
+    }
+    return trbs;
+  }
+};
 
 // Used for queueing transfers to the XHCI controller
 class TransferRing {
@@ -44,7 +58,26 @@ class TransferRing {
   // The caller should store the Cycle bit locally and zero the status field
   // prior to doing anything else with the TRB.
   zx_status_t AllocateTRB(TRB** trb, State* state);
+
+  // Allocates physically contiguous TRBs.
+  // count is the number of TRBs to allocate (not the number of bytes)
+  // NOP TRBs will be allocated with interrupt on complete set to 0 in order to pad the allocation
+  // if not enough contiguous TRBs are available on the current page. If a contiguous allocation is
+  // possible without the Transfer Ring spanning a page boundary, nullptr will be returned in the
+  // nop field of the returned ContiguousTRBInfo. The pointer to the NOP TRBs will be returned in
+  // the nop field of the returned ContiguousTRBInfo. The caller is responsible for setting the
+  // Cycle bit to the correct value during the transaction commit stage. The pointer to the
+  // contiguous TRB range will be returned in the trb field of the returned ContiguousTRBInfo.
+  zx::status<ContiguousTRBInfo> AllocateContiguous(size_t count);
   State SaveState();
+  void set_stall(bool stalled) {
+    fbl::AutoLock l(&mutex_);
+    stalled_ = stalled;
+  }
+  bool stalled() {
+    fbl::AutoLock l(&mutex_);
+    return stalled_;
+  }
   State SaveStateLocked() __TA_REQUIRES(mutex_);
   void CommitLocked() __TA_REQUIRES(mutex_);
   // Commits the current page.
@@ -66,6 +99,9 @@ class TransferRing {
   // Only called during initialization when no other threads are running.
   // Would be pointless to hold the mutex here.
   CRCR phys(uint8_t cap_length);
+  // Retrieves command ring control register value of the next TRB that would be returned
+  // by AllocateTRB.
+  zx::status<CRCR> PeekCommandRingControlRegister(uint8_t cap_length);
   zx_paddr_t VirtToPhys(TRB* trb);
   zx_paddr_t VirtToPhysLocked(TRB* trb) __TA_REQUIRES(mutex_);
   TRB* PhysToVirt(zx_paddr_t paddr);
@@ -126,6 +162,11 @@ class TransferRing {
   EventRing* ring_ __TA_GUARDED(mutex_);
   bool is_32_bit_ __TA_GUARDED(mutex_);
   ddk::MmioBuffer* mmio_ __TA_GUARDED(mutex_);
+  // Whether or not this transfer ring is stalled.
+  // When a transfer ring is stalled, TRBs added to it
+  // will not be processed by the controller until a ResetEndpoint
+  // command TRB is placed on the command ring and the command ring doorbell is rang.
+  bool stalled_ __TA_GUARDED(mutex_);
   // Not guarded by a mutex since this is synchronized by the event ring.
   size_t short_count_ = 0;
   bool isochronous_ = false;
