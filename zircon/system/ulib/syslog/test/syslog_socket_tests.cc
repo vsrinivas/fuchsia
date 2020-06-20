@@ -15,7 +15,7 @@
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 __BEGIN_CDECLS
 
@@ -55,7 +55,7 @@ bool ends_with(const char* str, const char* suffix) {
   return strcmp(str, suffix) == 0;
 }
 
-bool output_compare_helper(zx::socket local, fx_log_severity_t severity, const char* msg,
+void output_compare_helper(zx::socket local, fx_log_severity_t severity, const char* msg,
                            const char** tags, int num_tags) {
   fx_log_packet_t packet;
   ASSERT_EQ(ZX_OK, local.read(0, &packet, sizeof(packet), nullptr));
@@ -72,11 +72,9 @@ bool output_compare_helper(zx::socket local, fx_log_severity_t severity, const c
   ASSERT_EQ(0, packet.data[pos]);
   pos++;
   EXPECT_STR_EQ(msg, packet.data + pos, "");
-  return true;
 }
 
-bool TestLogSimpleWrite(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogSimpleWrite) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -84,29 +82,24 @@ bool TestLogSimpleWrite(void) {
   const char* msg = "test message";
   FX_LOG(INFO, nullptr, msg);
   output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
-  END_TEST;
 }
 
-bool TestLogWrite(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogWrite) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
   FX_LOGF(INFO, nullptr, "%d, %s", 10, "just some number");
   output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some number", nullptr, 0);
-  END_TEST;
 }
 
-bool TestLogPreprocessedMessage(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogPreprocessedMessage) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
   FX_LOG(INFO, nullptr, "%d, %s");
   output_compare_helper(std::move(local), FX_LOG_INFO, "%d, %s", nullptr, 0);
-  END_TEST;
 }
 
 static zx_status_t GetAvailableBytes(const zx::socket& socket, size_t* out_available) {
@@ -119,8 +112,7 @@ static zx_status_t GetAvailableBytes(const zx::socket& socket, size_t* out_avail
   return ZX_OK;
 }
 
-bool TestLogSeverity(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogSeverity) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -134,11 +126,9 @@ bool TestLogSeverity(void) {
 
   FX_LOGF(WARNING, nullptr, "%d, %s", 10, "just some number");
   output_compare_helper(std::move(local), FX_LOG_WARNING, "10, just some number", nullptr, 0);
-  END_TEST;
 }
 
-bool TestLogWriteWithTag(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogWriteWithTag) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -146,11 +136,9 @@ bool TestLogWriteWithTag(void) {
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"tag"};
   output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some string", tags, 1);
-  END_TEST;
 }
 
-bool TestLogWriteWithGlobalTag(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogWriteWithGlobalTag) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -159,11 +147,9 @@ bool TestLogWriteWithGlobalTag(void) {
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"gtag", "tag"};
   output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some string", tags, 2);
-  END_TEST;
 }
 
-bool TestLogWriteWithMultiGlobalTag(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogWriteWithMultiGlobalTag) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -172,11 +158,9 @@ bool TestLogWriteWithMultiGlobalTag(void) {
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"gtag", "gtag2", "tag"};
   output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some string", tags, 3);
-  END_TEST;
 }
 
-bool TestLogFallback(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogFallback) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -195,12 +179,10 @@ bool TestLogFallback(void) {
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u);
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"), buf);
-  END_TEST;
+  EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"), "%s", buf);
 }
 
-bool TestMsgLengthLimit(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimit) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -217,11 +199,9 @@ bool TestMsgLengthLimit(void) {
   expected[msg_size - 1] = 0;
   const char* tags[] = {"gtag", "gtag2", "tag"};
   output_compare_helper(std::move(local), FX_LOG_INFO, expected, tags, 3);
-  END_TEST;
 }
 
-bool TestMsgLengthLimitForPreprocessedMsg(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimitForPreprocessedMsg) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -242,11 +222,9 @@ bool TestMsgLengthLimitForPreprocessedMsg(void) {
   expected[msg_size - 1] = 0;
   const char* tags[] = {"gtag", "gtag2", "tag"};
   output_compare_helper(std::move(local), FX_LOG_INFO, expected, tags, 3);
-  END_TEST;
 }
 
-bool TestTagLengthLimit(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTestsEdgeCases, TestTagLengthLimit) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -273,11 +251,9 @@ bool TestTagLengthLimit(void) {
   tag[FX_LOG_MAX_TAG_LEN - 1] = 0;
   tags[FX_LOG_MAX_TAGS] = tag;
   output_compare_helper(std::move(local), FX_LOG_INFO, msg, tags, FX_LOG_MAX_TAGS + 1);
-  END_TEST;
 }
 
-bool TestVlogSimpleWrite(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestVlogSimpleWrite) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -286,11 +262,9 @@ bool TestVlogSimpleWrite(void) {
   FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   FX_VLOG(1, nullptr, msg);
   output_compare_helper(std::move(local), (FX_LOG_INFO - 1), msg, nullptr, 0);
-  END_TEST;
 }
 
-bool TestVlogWrite(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestVlogWrite) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -298,11 +272,9 @@ bool TestVlogWrite(void) {
   FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
   output_compare_helper(std::move(local), (FX_LOG_INFO - 1), "10, just some number", nullptr, 0);
-  END_TEST;
 }
 
-bool TestVlogWriteWithTag(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestVlogWriteWithTag) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -311,11 +283,9 @@ bool TestVlogWriteWithTag(void) {
   FX_VLOGF(5, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"tag"};
   output_compare_helper(std::move(local), (FX_LOG_INFO - 5), "10, just some string", tags, 1);
-  END_TEST;
 }
 
-bool TestLogVerbosity(void) {
-  BEGIN_TEST;
+TEST(SyslogSocketTests, TestLogVerbosity) {
   Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -334,26 +304,4 @@ bool TestLogVerbosity(void) {
   FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
   output_compare_helper(std::move(local), (FX_LOG_INFO - 1), "10, just some number", nullptr, 0);
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(syslog_socket_tests)
-RUN_TEST(TestLogSimpleWrite)
-RUN_TEST(TestLogWrite)
-RUN_TEST(TestLogPreprocessedMessage)
-RUN_TEST(TestLogSeverity)
-RUN_TEST(TestLogWriteWithTag)
-RUN_TEST(TestLogWriteWithGlobalTag)
-RUN_TEST(TestLogWriteWithMultiGlobalTag)
-RUN_TEST(TestLogFallback)
-RUN_TEST(TestVlogSimpleWrite)
-RUN_TEST(TestVlogWrite)
-RUN_TEST(TestVlogWriteWithTag)
-RUN_TEST(TestLogVerbosity)
-END_TEST_CASE(syslog_socket_tests)
-
-BEGIN_TEST_CASE(syslog_socket_tests_edge_cases)
-RUN_TEST(TestMsgLengthLimit)
-RUN_TEST(TestTagLengthLimit)
-RUN_TEST(TestMsgLengthLimitForPreprocessedMsg)
-END_TEST_CASE(syslog_socket_tests_edge_cases)

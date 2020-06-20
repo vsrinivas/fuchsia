@@ -34,8 +34,8 @@ test("syslog") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/syslog",
-    "//zircon/system/ulib/unittest",
   ]
 }
 
@@ -50,8 +50,8 @@ test("syslog-static") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/syslog:syslog-static",
-    "//zircon/system/ulib/unittest",
   ]
   defines = [ "SYSLOG_STATIC" ]
 }
