@@ -78,23 +78,70 @@ class Location {
 
 class Event {
  public:
-  Event(int64_t timestamp, Thread* thread) : timestamp_(timestamp), thread_(thread) {}
+  explicit Event(int64_t timestamp) : timestamp_(timestamp) {}
 
   // Timestamp in nanoseconds.
   int64_t timestamp() const { return timestamp_; }
 
+ private:
+  const int64_t timestamp_;
+};
+
+// Event which gives the result of a process launching.
+class ProcessLaunchedEvent : public Event {
+ public:
+  ProcessLaunchedEvent(int64_t timestamp, std::string_view command, std::string_view error_message)
+      : Event(timestamp), command_(command), error_message_(error_message) {}
+
+  const std::string& command() const { return command_; }
+  const std::string& error_message() const { return error_message_; }
+
+ private:
+  const std::string command_;
+  const std::string error_message_;
+};
+
+// Event which tells that we started monitoring a process.
+class ProcessMonitoredEvent : public Event {
+ public:
+  ProcessMonitoredEvent(int64_t timestamp, Process* process, std::string_view error_message)
+      : Event(timestamp), process_(process), error_message_(error_message) {}
+
+  Process* process() const { return process_; }
+  const std::string& error_message() const { return error_message_; }
+
+ private:
+  Process* const process_;
+  const std::string error_message_;
+};
+
+// Event which tells that we stop monitoring a process.
+class StopMonitoringEvent : public Event {
+ public:
+  StopMonitoringEvent(int64_t timestamp, Process* process) : Event(timestamp), process_(process) {}
+
+  Process* process() const { return process_; }
+
+ private:
+  Process* const process_;
+};
+
+// Base classe for all events related to a thread.
+class ThreadEvent : public Event {
+ public:
+  ThreadEvent(int64_t timestamp, Thread* thread) : Event(timestamp), thread_(thread) {}
+
   Thread* thread() const { return thread_; }
 
  private:
-  const int64_t timestamp_;
   Thread* const thread_;
 };
 
 // Base class for events related to a syscall.
-class SyscallEvent : public Event {
+class SyscallEvent : public ThreadEvent {
  public:
   SyscallEvent(int64_t timestamp, Thread* thread, const Syscall* syscall)
-      : Event(timestamp, thread), syscall_(syscall) {}
+      : ThreadEvent(timestamp, thread), syscall_(syscall) {}
 
   const Syscall* syscall() const { return syscall_; }
 
@@ -169,9 +216,9 @@ class OutputEvent : public SyscallEvent {
 };
 
 // Event that represents an exception.
-class ExceptionEvent : public Event {
+class ExceptionEvent : public ThreadEvent {
  public:
-  ExceptionEvent(int64_t timestamp, Thread* thread) : Event(timestamp, thread) {}
+  ExceptionEvent(int64_t timestamp, Thread* thread) : ThreadEvent(timestamp, thread) {}
 
   const std::vector<Location>& stack_frame() const { return stack_frame_; }
   std::vector<Location>& stack_frame() { return stack_frame_; }

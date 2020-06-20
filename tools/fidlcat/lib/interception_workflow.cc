@@ -286,7 +286,13 @@ void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
     target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target> /*target*/,
                                                               const zxdb::Err& err) {
       if (!err.ok()) {
-        syscall_decoder_dispatcher()->ProcessMonitored("", process_koid, nullptr, err.msg());
+        int64_t timestamp = time(nullptr);
+        Process* process = syscall_decoder_dispatcher()->SearchProcess(process_koid);
+        if (process == nullptr) {
+          process = syscall_decoder_dispatcher()->CreateProcess("", process_koid, nullptr);
+        }
+        syscall_decoder_dispatcher()->AddProcessMonitoredEvent(
+            std::make_shared<ProcessMonitoredEvent>(timestamp, process, err.msg()));
         return;
       }
 
@@ -300,7 +306,14 @@ void InterceptionWorkflow::ProcessDetached(zx_koid_t koid) {
     return;
   }
   configured_processes_.erase(koid);
-  syscall_decoder_dispatcher()->StopMonitoring(koid);
+  int64_t timestamp = time(nullptr);
+  Process* process = syscall_decoder_dispatcher()->SearchProcess(koid);
+  if (process == nullptr) {
+    FX_LOGS(ERROR) << "Can't find process with koid=" << koid;
+  } else {
+    syscall_decoder_dispatcher()->AddStopMonitoringEvent(
+        std::make_shared<StopMonitoringEvent>(timestamp, process));
+  }
   Detach();
 }
 
@@ -354,7 +367,9 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
       cmd.append(param);
       cmd.append(" ");
     }
-    syscall_decoder_dispatcher()->ProcessLaunched(cmd, err.ok() ? "" : err.msg());
+    int64_t timestamp = time(nullptr);
+    syscall_decoder_dispatcher()->AddProcessLaunchedEvent(
+        std::make_shared<ProcessLaunchedEvent>(timestamp, cmd, err.ok() ? "" : err.msg()));
   };
 
   if (command[0] == "run") {
@@ -425,9 +440,15 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
   }
 }
 
-void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
-  syscall_decoder_dispatcher()->ProcessMonitored(process->GetName(), process->GetKoid(),
-                                                 process->GetWeakPtr(), "");
+void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process) {
+  int64_t timestamp = time(nullptr);
+  Process* process = syscall_decoder_dispatcher()->SearchProcess(zxdb_process->GetKoid());
+  if (process == nullptr) {
+    process = syscall_decoder_dispatcher()->CreateProcess(
+        zxdb_process->GetName(), zxdb_process->GetKoid(), zxdb_process->GetWeakPtr());
+  }
+  syscall_decoder_dispatcher()->AddProcessMonitoredEvent(
+      std::make_shared<ProcessMonitoredEvent>(timestamp, process, ""));
 
   for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {
     bool put_breakpoint = true;
@@ -460,7 +481,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
       settings.name = syscall.second->name();
       settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
       settings.type = debug_ipc::BreakpointType::kSoftware;
-      settings.scope = zxdb::ExecutionScope(process->GetTarget());
+      settings.scope = zxdb::ExecutionScope(zxdb_process->GetTarget());
 
       zxdb::Identifier identifier;
       zxdb::Err err =

@@ -1620,18 +1620,16 @@ class SyscallDecoderDispatcher {
   // displayed or the exception had an error.
   virtual void DeleteDecoder(ExceptionDecoder* decoder);
 
-  // Called when a process is launched (by using the run option). If |error_message| is not
-  // empty, the the process didn't launch and |error_message| explains why.
-  virtual void ProcessLaunched(const std::string& command, std::string_view error_message) {}
+  // Called when a process is launched (by using the run option). If |event->error_message()| is not
+  // empty, the the process didn't launch and |event->error_message()| explains why.
+  virtual void AddProcessLaunchedEvent(std::shared_ptr<ProcessLaunchedEvent> event) {}
 
-  // Called when a process is monitored. If |error_message| is not empty, we haven't been able
-  // to monitor the process.
-  virtual void ProcessMonitored(std::string_view name, zx_koid_t koid,
-                                fxl::WeakPtr<zxdb::Process> zxdb_process,
-                                std::string_view error_message);
+  // Called when a process is monitored. If |event->error_message()| is not empty, we haven't been
+  // able to monitor the process.
+  virtual void AddProcessMonitoredEvent(std::shared_ptr<ProcessMonitoredEvent> event) {}
 
   // Called when a process is no longer monitored.
-  virtual void StopMonitoring(zx_koid_t koid);
+  virtual void AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event);
 
   // Adds an invoked event.
   virtual void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {}
@@ -1779,13 +1777,11 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
                                                   zxdb::Thread* thread) override;
 
-  void ProcessLaunched(const std::string& command, std::string_view error_message) override;
+  void AddProcessLaunchedEvent(std::shared_ptr<ProcessLaunchedEvent> event) override;
 
-  void ProcessMonitored(std::string_view name, zx_koid_t koid,
-                        fxl::WeakPtr<zxdb::Process> zxdb_process,
-                        std::string_view error_message) override;
+  void AddProcessMonitoredEvent(std::shared_ptr<ProcessMonitoredEvent> event) override;
 
-  void StopMonitoring(zx_koid_t koid) override;
+  void AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) override;
 
   void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) override;
 

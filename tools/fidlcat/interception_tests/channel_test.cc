@@ -247,7 +247,7 @@ LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
   TEST_F(InterceptionWorkflowTestArmAborted, name) { WRITE_ABORTED_TEST_CONTENT(errno, expected); }
 
 WRITE_ABORTED_TEST(ZxChannelWriteAborted, ZX_OK,
-                   "\x1B[32m\nStop monitoring process with koid \x1B[31m3141\x1B[0m\n");
+                   "\x1B[32m\nStop monitoring \x1B[34mtest_3141\x1B[0m koid=\x1B[31m3141\x1B[0m\n");
 
 // zx_channel_read tests.
 

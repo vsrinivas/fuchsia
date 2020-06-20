@@ -309,21 +309,9 @@ void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
   exception_decoders_.erase(decoder->thread_id());
 }
 
-void SyscallDecoderDispatcher::ProcessMonitored(std::string_view name, zx_koid_t koid,
-                                                fxl::WeakPtr<zxdb::Process> zxdb_process,
-                                                std::string_view error_message) {
-  if (!error_message.empty()) {
-    return;
-  }
-  auto process = processes_.find(koid);
-  if (process == processes_.end()) {
-    processes_.emplace(std::make_pair(koid, std::make_unique<Process>(name, koid, zxdb_process)));
-  }
-}
-
-void SyscallDecoderDispatcher::StopMonitoring(zx_koid_t koid) {
+void SyscallDecoderDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) {
   for (const auto& decoder : syscall_decoders_) {
-    if (decoder.second->fidlcat_thread()->process()->koid() == koid) {
+    if (decoder.second->fidlcat_thread()->process() == event->process()) {
       decoder.second->set_aborted();
     }
   }
@@ -347,51 +335,51 @@ std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
                                             std::make_unique<ExceptionDisplay>(this, os_));
 }
 
-void SyscallDisplayDispatcher::ProcessLaunched(const std::string& command,
-                                               std::string_view error_message) {
+void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
+    std::shared_ptr<ProcessLaunchedEvent> event) {
   last_displayed_syscall_ = nullptr;
-  if (error_message.empty()) {
-    os_ << colors().green << "\nLaunched " << colors().blue << command << colors().reset << '\n';
+  if (event->error_message().empty()) {
+    os_ << colors().green << "\nLaunched " << colors().blue << event->command() << colors().reset
+        << '\n';
   } else {
-    os_ << colors().red << "\nCan't launch " << colors().blue << command << colors().reset << " : "
-        << colors().red << error_message << colors().reset << '\n';
+    os_ << colors().red << "\nCan't launch " << colors().blue << event->command() << colors().reset
+        << " : " << colors().red << event->error_message() << colors().reset << '\n';
   }
 }
 
-void SyscallDisplayDispatcher::ProcessMonitored(std::string_view name, zx_koid_t koid,
-                                                fxl::WeakPtr<zxdb::Process> zxdb_process,
-                                                std::string_view error_message) {
+void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
+    std::shared_ptr<ProcessMonitoredEvent> event) {
   last_displayed_syscall_ = nullptr;
-  if (error_message.empty()) {
-    auto process = processes().find(koid);
-    if (process == processes().end()) {
-      os_ << colors().green << "\nMonitoring ";
-    } else {
-      os_ << colors().red << "\nAlready monitoring ";
-    }
+  if (event->error_message().empty()) {
+    os_ << colors().green << "\nMonitoring ";
   } else {
     os_ << colors().red << "\nCan't monitor ";
   }
 
-  if (name.empty()) {
+  if (event->process()->name().empty()) {
     os_ << colors().reset << "process with koid ";
   } else {
-    os_ << colors().blue << name << colors().reset << " koid=";
+    os_ << colors().blue << event->process()->name() << colors().reset << " koid=";
   }
 
-  os_ << colors().red << koid << colors().reset;
-  if (!error_message.empty()) {
-    os_ << " : " << colors().red << error_message << colors().reset;
+  os_ << colors().red << event->process()->koid() << colors().reset;
+  if (!event->error_message().empty()) {
+    os_ << " : " << colors().red << event->error_message() << colors().reset;
   }
   os_ << '\n';
-  SyscallDecoderDispatcher::ProcessMonitored(name, koid, zxdb_process, error_message);
 }
 
-void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {
+void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) {
   last_displayed_syscall_ = nullptr;
-  os_ << colors().green << "\nStop monitoring process with koid ";
-  os_ << colors().red << koid << colors().reset << '\n';
-  SyscallDecoderDispatcher::StopMonitoring(koid);
+  os_ << colors().green;
+  if (event->process()->name().empty()) {
+    os_ << "\nStop monitoring process with koid ";
+  } else {
+    os_ << "\nStop monitoring " << colors().blue << event->process()->name() << colors().reset
+        << " koid=";
+  }
+  os_ << colors().red << event->process()->koid() << colors().reset << '\n';
+  SyscallDecoderDispatcher::AddStopMonitoringEvent(std::move(event));
 }
 
 void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {

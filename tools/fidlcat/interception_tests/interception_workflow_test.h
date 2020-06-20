@@ -270,7 +270,11 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
                   fit::callback<void(const zxdb::Err&, debug_ipc::ReadMemoryReply)> cb) override {
     if (aborted_) {
       aborted_ = false;
-      global_dispatcher->StopMonitoring(kFirstPid);
+      Process* process = global_dispatcher->SearchProcess(kFirstPid);
+      FX_DCHECK(process != nullptr);
+      int64_t timestamp = time(nullptr);
+      global_dispatcher->AddStopMonitoringEvent(
+          std::make_shared<StopMonitoringEvent>(timestamp, process));
     }
     debug_ipc::ReadMemoryReply reply;
     data_.PopulateMemoryBlockForAddress(request.address, request.size, reply.blocks.emplace_back());
@@ -634,15 +638,13 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
     AlwaysQuit aq(controller_);
   }
 
-  void ProcessLaunched(const std::string& command, std::string_view error_message) override {}
+  void AddProcessLaunchedEvent(std::shared_ptr<ProcessLaunchedEvent> event) override {}
 
-  void ProcessMonitored(std::string_view name, zx_koid_t koid,
-                        fxl::WeakPtr<zxdb::Process> zxdb_process,
-                        std::string_view error_message) override {}
+  void AddProcessMonitoredEvent(std::shared_ptr<ProcessMonitoredEvent> event) override {}
 
-  void StopMonitoring(zx_koid_t koid) override {
+  void AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) override {
     if (aborted_) {
-      SyscallDisplayDispatcher::StopMonitoring(koid);
+      SyscallDisplayDispatcher::AddStopMonitoringEvent(std::move(event));
     }
   }
 
