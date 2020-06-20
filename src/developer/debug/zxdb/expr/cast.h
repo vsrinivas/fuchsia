@@ -72,6 +72,11 @@ ErrOrValue CastNumericExprValue(const fxl::RefPtr<EvalContext>& eval_context,
                                 const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                                 const ExprValueSource& dest_source = ExprValueSource());
 
+// Convience function around CastNumericExprValue() to do an implicit cast to a boolean value. Like
+// CastNumericExprValue(), this does not follow references.
+ErrOr<bool> CastNumericExprValueToBool(const fxl::RefPtr<EvalContext>& eval_context,
+                                       const ExprValue& source);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_CAST_H_

@@ -1046,4 +1046,126 @@ TEST_F(ExprParserTest, FromStringError) {
   EXPECT_EQ("", bad_ident.GetDebugName());
 }
 
+TEST_F(ExprParserTest, If) {
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  BINARY_OP(==)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   LITERAL(1)\n"
+      " THEN\n"
+      "  BINARY_OP(=)\n"
+      "   IDENTIFIER(\"b\")\n"
+      "   LITERAL(1)\n",
+      GetParseString("if (i == 1) b = 1;"));
+
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  IDENTIFIER(\"i\")\n",
+      GetParseString("if (i) ;"));
+
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  IDENTIFIER(\"i\")\n"
+      " THEN\n"
+      "  BLOCK\n",
+      GetParseString("if (i) {} else ;"));
+
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  LITERAL(1)\n"
+      " THEN\n"
+      "  IDENTIFIER(\"foo\")\n"
+      " ELSEIF\n"
+      "  LITERAL(0)\n"
+      " THEN\n"
+      "  IDENTIFIER(\"bar\")\n",
+      GetParseString("if (1) foo; else if (0) bar;"));
+
+  // Rust with no parens is OK.
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  LITERAL(1)\n"
+      " THEN\n"
+      "  BLOCK\n"
+      "   IDENTIFIER(\"foo\")\n"
+      " ELSEIF\n"
+      "  LITERAL(0)\n"
+      " THEN\n"
+      "  BLOCK\n"
+      "   IDENTIFIER(\"bar\")\n",
+      GetParseString("if 1 {foo} else if 0 {bar}", ExprLanguage::kRust));
+
+  // C with no parens is a failure.
+  auto result = Parse("if 1 foo; else if 0 bar;", ExprLanguage::kC);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '(' for if.", parser().err().msg());
+
+  // Rust requires {} for the blocks.
+  result = Parse("if 1 foo;", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '{'.", parser().err().msg());
+
+  // Missing semicolons.
+  result = Parse("if (1) foo else bar;", ExprLanguage::kC);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected token 'else'.", parser().err().msg());
+  result = Parse("if (1) foo; else bar", ExprLanguage::kC);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ';'. Hit the end of input instead.", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, CTernaryIf) {
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  LITERAL(1)\n"
+      " THEN\n"
+      "  LITERAL(2)\n"
+      " ELSE\n"
+      "  LITERAL(3)\n",
+      GetParseString("1 ? 2 : 3"));
+
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  BINARY_OP(==)\n"
+      "   LITERAL(2)\n"
+      "   BINARY_OP(-)\n"
+      "    LITERAL(3)\n"
+      "    LITERAL(1)\n"
+      " THEN\n"
+      "  CONDITION\n"
+      "   IF\n"
+      "    LITERAL(2)\n"
+      "   THEN\n"
+      "    LITERAL(1)\n"
+      "   ELSE\n"
+      "    IDENTIFIER(\"a\")\n"
+      " ELSE\n"
+      "  BINARY_OP(+)\n"
+      "   LITERAL(3)\n"
+      "   LITERAL(9)\n",
+      GetParseString("2==3-1 ? 2?1:a : 3+9"));
+
+  // Missing colon.
+  auto result = Parse(" 3 ? 1");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ':' for previous '?'. Hit the end of input instead.", parser().err().msg());
+
+  // Missing condition
+  result = Parse("? a : b");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected token '?'.", parser().err().msg());
+
+  // Not supported in Rust.
+  result = Parse("a ? b : c", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Rust '?' operators are not supported.", parser().err().msg());
+}
+
 }  // namespace zxdb

@@ -625,4 +625,17 @@ ErrOrValue CastNumericExprValue(const fxl::RefPtr<EvalContext>& eval_context,
                              dest_source);
 }
 
+ErrOr<bool> CastNumericExprValueToBool(const fxl::RefPtr<EvalContext>& eval_context,
+                                       const ExprValue& source) {
+  fxl::RefPtr<Type> bool_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool");
+  auto concrete_from = eval_context->GetConcreteType(source.type());
+
+  ErrOrValue result = CastNumberToBool(source, concrete_from.get(), bool_type, ExprValueSource());
+  if (result.has_error())
+    return result.err();
+
+  return !!result.value().GetAs<uint8_t>();
+}
+
 }  // namespace zxdb

@@ -222,6 +222,67 @@ void CastExprNode::Print(std::ostream& out, int indent) const {
   from_->Print(out, indent + 1);
 }
 
+void ConditionExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
+  EvalFromCond(RefPtrTo(this), 0, context, std::move(cb));
+}
+
+void ConditionExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "CONDITION\n";
+  for (size_t i = 0; i < conds_.size(); i++) {
+    if (i == 0)
+      out << IndentFor(indent + 1) << "IF\n";
+    else
+      out << IndentFor(indent + 1) << "ELSEIF\n";
+    conds_[i].cond->Print(out, indent + 2);
+
+    if (conds_[i].then) {
+      out << IndentFor(indent + 1) << "THEN\n";
+      conds_[i].then->Print(out, indent + 2);
+    }
+  }
+  if (else_) {
+    out << IndentFor(indent + 1) << "ELSE\n";
+    else_->Print(out, indent + 2);
+  }
+}
+
+void ConditionExprNode::EvalFromCond(fxl::RefPtr<ConditionExprNode> node, size_t index,
+                                     const fxl::RefPtr<EvalContext>& context, EvalCallback cb) {
+  if (index >= node->conds_.size()) {
+    // Evaluate "else" block.
+    if (node->else_) {
+      node->else_->Eval(std::move(context), std::move(cb));
+    } else {
+      // No "else" block given, the result is empty.
+      cb(ExprValue());
+    }
+    return;
+  }
+
+  node->conds_[index].cond->EvalFollowReferences(
+      context,
+      [node = std::move(node), index, context, cb = std::move(cb)](ErrOrValue cond_result) mutable {
+        if (cond_result.has_error()) {
+          cb(cond_result);
+          return;
+        }
+
+        ErrOr<bool> bool_result = CastNumericExprValueToBool(context, cond_result.value());
+        if (bool_result.has_error()) {
+          cb(bool_result.err());
+          return;
+        }
+
+        if (bool_result.value()) {
+          // Condition succeeded, evaluate the current block.
+          node->conds_[index].then->Eval(context, std::move(cb));
+        } else {
+          // Condition failed, go to next one or else block.
+          EvalFromCond(node, index + 1, context, std::move(cb));
+        }
+      });
+}
+
 void DereferenceExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
   expr_->EvalFollowReferences(context, [context, cb = std::move(cb)](ErrOrValue value) mutable {
     if (value.has_error())

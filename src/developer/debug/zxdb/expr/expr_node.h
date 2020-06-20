@@ -29,6 +29,7 @@ class ArrayAccessExprNode;
 class BinaryOpExprNode;
 class BlockExprNode;
 class CastExprNode;
+class ConditionExprNode;
 class DereferenceExprNode;
 class FunctionCallExprNode;
 class IdentifierExprNode;
@@ -46,6 +47,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
   virtual const BlockExprNode* AsBlock() const { return nullptr; }
   virtual const CastExprNode* AsCast() const { return nullptr; }
+  virtual const ConditionExprNode* AsCondition() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
   virtual const FunctionCallExprNode* AsFunctionCall() const { return nullptr; }
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
@@ -206,6 +208,39 @@ class CastExprNode : public ExprNode {
   CastType cast_type_;
   fxl::RefPtr<TypeExprNode> to_type_;
   fxl::RefPtr<ExprNode> from_;
+};
+
+// Implements all types of if and if/else
+class ConditionExprNode : public ExprNode {
+ public:
+  struct Pair {
+    Pair(fxl::RefPtr<ExprNode> c, fxl::RefPtr<ExprNode> t)
+        : cond(std::move(c)), then(std::move(t)) {}
+
+    fxl::RefPtr<ExprNode> cond;  // Conditional expression to evaluate.
+    fxl::RefPtr<ExprNode> then;  // Code to execute when condition is satisfied. Possibly null.
+  };
+
+  const ConditionExprNode* AsCondition() const override { return this; }
+  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(ConditionExprNode);
+  FRIEND_MAKE_REF_COUNTED(ConditionExprNode);
+
+  ConditionExprNode();
+  // The conditions are evaluated in-order until one is true. The "else" can be null in which case
+  // it will be ignored.
+  ConditionExprNode(std::vector<Pair> conds, fxl::RefPtr<ExprNode> else_case)
+      : conds_(std::move(conds)), else_(std::move(else_case)) {}
+  ~ConditionExprNode() override = default;
+
+  static void EvalFromCond(fxl::RefPtr<ConditionExprNode> node, size_t index,
+                           const fxl::RefPtr<EvalContext>& context, EvalCallback cb);
+
+  std::vector<Pair> conds_;
+  fxl::RefPtr<ExprNode> else_;  // Possibly null.
 };
 
 // Implements dereferencing a pointer ("*" in C).

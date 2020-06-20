@@ -84,6 +84,8 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kSlash,           kLangAll,  "/"},
     {ExprTokenType::kCaret,           kLangAll,  "^"},
     {ExprTokenType::kPercent,         kLangAll,  "%"},
+    {ExprTokenType::kQuestion,        kLangAll,  "?"},
+    {ExprTokenType::kColon,           kLangAll,  ":"},
     {ExprTokenType::kColonColon,      kLangAll,  "::"},
     {ExprTokenType::kShiftLeft,       kLangAll,  "<<"},
     {ExprTokenType::kShiftRight,      0},  // See header.
@@ -97,6 +99,8 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kStaticCast,      kLangC,    "static_cast"},
     {ExprTokenType::kSizeof,          kLangAll,  "sizeof"},
     {ExprTokenType::kAs,              kLangRust, "as"},
+    {ExprTokenType::kIf,              kLangAll,  "if"},
+    {ExprTokenType::kElse,            kLangAll,  "else"},
     // clang-format on
 };
 

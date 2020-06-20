@@ -153,6 +153,16 @@ TEST_F(Cast, Implicit) {
   // Integer to pointer with expansion.
   out = SyncCastNumericExprValue(eval_context, int32_minus_one, ptr_to_double_type);
   EXPECT_EQ(-1, out.GetAs<int64_t>());
+
+  // Test explicit boolean casts for the above values.
+  EXPECT_TRUE(CastNumericExprValueToBool(eval_context, int32_one).value());
+  EXPECT_TRUE(CastNumericExprValueToBool(eval_context, int32_minus_one).value());
+  EXPECT_FALSE(CastNumericExprValueToBool(eval_context, int32_zero).value());
+  EXPECT_FALSE(CastNumericExprValueToBool(eval_context, float_minus_zero).value());
+  EXPECT_TRUE(CastNumericExprValueToBool(eval_context, float_one_third).value());
+  EXPECT_TRUE(CastNumericExprValueToBool(eval_context, float_minus_two).value());
+  EXPECT_TRUE(CastNumericExprValueToBool(eval_context, double_minus_two).value());
+  EXPECT_TRUE(CastNumericExprValueToBool(eval_context, ptr_value).value());
 }
 
 // Enums can be casted to and fro.

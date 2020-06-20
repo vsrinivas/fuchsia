@@ -133,6 +133,8 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kSlash
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kPercent
+    {nullptr,                        &ExprParser::QuestionInfix,   kPrecedenceAssignment},          // kQuestion
+    {nullptr,                        nullptr,                      -1},                             // kColon
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kColonColon
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftLeft
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftRight
@@ -146,6 +148,8 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::CastPrefix,        nullptr,                      -1},                             // kStaticCast
     {&ExprParser::SizeofPrefix,      nullptr,                      -1},                             // kSizeof
     {nullptr,                        &ExprParser::RustCastInfix,   kPrecedenceRustCast},            // kAs
+    {&ExprParser::IfPrefix,          nullptr,                      kPrecedenceAssignment},          // kIf
+    {nullptr,                        nullptr,                      kPrecedenceAssignment},          // kElse
 };
 // clang-format on
 
@@ -283,7 +287,7 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence, EmptyExpressio
         break;
       } else if (statement_end == StatementEnd::kExplicit) {
         // Statement end was required but not present.
-        SetError(cur_token(), "Expected ';'.");
+        SetErrorAtCur("Expected ';'.");
         return nullptr;
       }
       break;
@@ -1044,6 +1048,34 @@ fxl::RefPtr<ExprNode> ExprParser::RustCastInfix(fxl::RefPtr<ExprNode> left,
       CastType::kRust, fxl::MakeRefCounted<TypeExprNode>(std::move(type)), std::move(left));
 }
 
+fxl::RefPtr<ExprNode> ExprParser::QuestionInfix(fxl::RefPtr<ExprNode> left,
+                                                const ExprToken& token) {
+  if (language_ == ExprLanguage::kRust) {
+    // Rust uses '?' for error handling.
+    SetError(token, "Rust '?' operators are not supported.");
+    return nullptr;
+  }
+
+  // "If true" block.
+  auto then = ParseExpression(0);
+  if (has_error())
+    return nullptr;
+
+  // Colon.
+  Consume(ExprTokenType::kColon, "Expected ':' for previous '?'.");
+  if (has_error())
+    return nullptr;
+
+  // Else block.
+  auto else_then = ParseExpression(0);
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<ConditionExprNode>(
+      std::vector<ConditionExprNode::Pair>{{std::move(left), std::move(then)}},
+      std::move(else_then));
+}
+
 fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
   return fxl::MakeRefCounted<LiteralExprNode>(token);
 }
@@ -1148,6 +1180,75 @@ fxl::RefPtr<ExprNode> ExprParser::SizeofPrefix(const ExprToken& token) {
     return nullptr;
 
   return fxl::MakeRefCounted<SizeofExprNode>(std::move(expr));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::IfPrefix(const ExprToken& token) {
+  bool require_parens = language_ == ExprLanguage::kC;  // Rust doesn't need parens.
+
+  std::vector<ConditionExprNode::Pair> conditions;
+  fxl::RefPtr<ExprNode> else_then;
+
+  // This is the language-specific way to parse a conditional block.
+  std::function<fxl::RefPtr<ExprNode>()> parse_block;
+  switch (language_) {
+    case ExprLanguage::kRust:
+      // Rust requires {}.
+      parse_block = [this]() { return ParseBlock(BlockDelimiter::kExplicit); };
+      break;
+    case ExprLanguage::kC:
+      // C allows a standalone statement or a block.
+      parse_block = [this]() {
+        return ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+      };
+      break;
+  }
+
+  while (true) {
+    // "(" at beginning of condition.
+    ExprToken left_paren;
+    if (require_parens) {
+      left_paren = Consume(ExprTokenType::kLeftParen, "Expected '(' for if.");
+      if (has_error())
+        return nullptr;
+    }
+
+    // Conditional expression.
+    auto condition = ParseExpression(0);
+    if (has_error())
+      return nullptr;
+
+    // ")" at end of condition.
+    if (require_parens) {
+      Consume(ExprTokenType::kRightParen, "Expected ')' to match.", left_paren);
+      if (has_error())
+        return nullptr;
+    }
+
+    // Block to execute on match.
+    conditions.emplace_back(std::move(condition), parse_block());
+    if (has_error())
+      return nullptr;
+
+    // Can be optionally followed by an "else".
+    if (!LookAhead(ExprTokenType::kElse))
+      break;  // No "else", done with condition.
+
+    // Handle "else".
+    Consume();  // Consume the "else" we already identified.
+    if (LookAhead(ExprTokenType::kIf)) {
+      // "else if", wrap around to doing a new condition for this arm.
+      Consume();  // Consume the "if" we already identified.
+      continue;
+    } else {
+      // Standalone "else", get the expression for it.
+      else_then = parse_block();
+      if (has_error())
+        return nullptr;
+      break;
+    }
+  }
+
+  return fxl::MakeRefCounted<ConditionExprNode>(std::move(conditions), std::move(else_then));
 }
 
 bool ExprParser::LookAhead(ExprTokenType type) const {

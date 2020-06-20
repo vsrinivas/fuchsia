@@ -47,6 +47,8 @@ enum class ExprTokenType : size_t {
   kSlash,          // /
   kCaret,          // ^
   kPercent,        // %
+  kQuestion,       // ?
+  kColon,          // :
   kColonColon,     // ::
   kShiftLeft,      // <<
 
@@ -66,6 +68,8 @@ enum class ExprTokenType : size_t {
   kStaticCast,       // static_cast
   kSizeof,           // sizeof
   kAs,               // as
+  kIf,               // if
+  kElse,             // else
 
   // Keep last. Not a token, but the count of tokens.
   kNumTypes

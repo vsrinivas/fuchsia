@@ -167,12 +167,14 @@ class ExprParser {
   fxl::RefPtr<ExprNode> LeftParenInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> RustCastInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
+  fxl::RefPtr<ExprNode> QuestionInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LiteralPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> UnaryPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> CastPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> SizeofPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> IfPrefix(const ExprToken& token);
 
   // Returns true if the next token is the given type.
   bool LookAhead(ExprTokenType type) const;
