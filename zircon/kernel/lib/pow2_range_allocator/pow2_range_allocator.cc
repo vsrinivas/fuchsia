@@ -19,12 +19,12 @@
 
 #define LOCAL_TRACE 0
 
-Pow2RangeAllocator::Block* Pow2RangeAllocator::GetUnusedBlock() {
+ktl::unique_ptr<Pow2RangeAllocator::Block> Pow2RangeAllocator::GetUnusedBlock() {
   if (!unused_blocks_.is_empty())
     return unused_blocks_.pop_front();
 
   fbl::AllocChecker ac;
-  Block* block = new (&ac) Block{};
+  auto block = ktl::make_unique<Block>(&ac);
   if (!ac.check()) {
     return nullptr;
   } else {
@@ -32,19 +32,7 @@ Pow2RangeAllocator::Block* Pow2RangeAllocator::GetUnusedBlock() {
   }
 }
 
-void Pow2RangeAllocator::FreeBlockList(fbl::DoublyLinkedList<Block*> block_list) {
-  Block* block;
-  while ((block = block_list.pop_front()) != nullptr)
-    delete block;
-}
-
-void Pow2RangeAllocator::FreeRangeList(fbl::DoublyLinkedList<Range*> range_list) {
-  Range* range;
-  while ((range = range_list.pop_front()) != nullptr)
-    delete range;
-}
-
-void Pow2RangeAllocator::ReturnFreeBlock(Block* block) {
+void Pow2RangeAllocator::ReturnFreeBlock(ktl::unique_ptr<Block> block) {
   DEBUG_ASSERT(block);
   DEBUG_ASSERT(block->bucket < bucket_count_);
   DEBUG_ASSERT(!block->InContainer());
@@ -52,8 +40,11 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block) {
 
   // Return the block to its proper free bucket, sorted by base ID.  Start by
   // finding the block which should come after this block in the list.
-  fbl::DoublyLinkedList<Block*>& list = free_block_buckets_[block->bucket];
+  BlockList& list = free_block_buckets_[block->bucket];
   uint32_t block_len = 1u << block->bucket;
+
+  // We'll need this to make an iterator in the list, after we insert |block|.
+  Block& raw_block = *block;
 
   bool inserted = false;
   for (Block& after : list) {
@@ -63,7 +54,7 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block) {
                  (after.start >= (block->start + block_len)));
 
     if (after.start > block->start) {
-      list.insert(after, block);
+      list.insert(after, ktl::move(block));
       inserted = true;
       break;
     }
@@ -71,19 +62,23 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block) {
 
   // If no block comes after this one, it goes on the end of the list.
   if (!inserted)
-    list.push_back(block);
+    list.push_back(ktl::move(block));
+
+  // After this point, we can no longer access |block|.
+
+  // Get an iterator to the block we just pushed.
+  auto iter = list.make_iterator(raw_block);
 
   // Don't merge blocks in the largest bucket.
-  if (block->bucket + 1 == bucket_count_)
+  if (raw_block.bucket + 1 == bucket_count_)
     return;
 
   // Check to see if we should be merging this block into a larger aligned block.
   Block* first;
   Block* second;
-  if (block->start & ((block_len << 1) - 1)) {
+  if (raw_block.start & ((block_len << 1) - 1)) {
     // Odd alignment.  This might be the second block of a merge pair.
-    second = block;
-    auto iter = list.make_iterator(*block);
+    second = &raw_block;
     if (iter == list.begin()) {
       first = nullptr;
     } else {
@@ -92,8 +87,7 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block) {
     }
   } else {
     // Even alignment.  This might be the first block of a merge pair.
-    first = block;
-    auto iter = list.make_iterator(*block);
+    first = &raw_block;
     ++iter;
     if (iter == list.end()) {
       second = nullptr;
@@ -109,16 +103,16 @@ void Pow2RangeAllocator::ReturnFreeBlock(Block* block) {
       DEBUG_ASSERT(first->bucket == second->bucket);
 
       // Remove the two blocks' bookkeeping from their bucket.
-      list.erase(*first);
-      list.erase(*second);
+      auto owned_first = list.erase(*first);
+      auto owned_second = list.erase(*second);
 
       // Place one half of the bookkeeping back on the unused list.
-      unused_blocks_.push_back(second);
+      unused_blocks_.push_back(ktl::move(owned_second));
 
       // Reuse the other half to track the newly merged block, and place
       // it in the next bucket size up.
-      first->bucket++;
-      ReturnFreeBlock(first);
+      owned_first->bucket++;
+      ReturnFreeBlock(ktl::move(owned_first));
     }
   }
 }
@@ -132,7 +126,7 @@ zx_status_t Pow2RangeAllocator::Init(uint32_t max_alloc_size) {
   // Allocate the storage for our free buckets.
   bucket_count_ = log2_uint_floor(max_alloc_size) + 1;
   fbl::AllocChecker ac;
-  free_block_buckets_ = new (&ac) fbl::DoublyLinkedList<Block*>[bucket_count_];
+  free_block_buckets_ = ktl::make_unique<BlockList[]>(&ac, bucket_count_);
   if (!ac.check()) {
     TRACEF("Failed to allocate storage for %u free bucket lists!\n", bucket_count_);
     return ZX_ERR_NO_MEMORY;
@@ -146,11 +140,11 @@ void Pow2RangeAllocator::Free() {
   DEBUG_ASSERT(free_block_buckets_);
   DEBUG_ASSERT(allocated_blocks_.is_empty());
 
-  FreeRangeList(ktl::move(ranges_));
-  FreeBlockList(ktl::move(unused_blocks_));
-  FreeBlockList(ktl::move(allocated_blocks_));
+  ranges_.clear();
+  unused_blocks_.clear();
+  allocated_blocks_.clear();
   for (uint32_t i = 0; i < bucket_count_; ++i)
-    FreeBlockList(ktl::move(free_block_buckets_[i]));
+    free_block_buckets_[i].clear();
 }
 
 zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_len) {
@@ -159,21 +153,8 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
   if (!range_len || ((range_start + range_len) < range_start))
     return ZX_ERR_INVALID_ARGS;
 
-  zx_status_t ret = ZX_OK;
-  Range* new_range = nullptr;
-  fbl::DoublyLinkedList<Block*> new_blocks;
-
-  // If we're exiting with a failure, clean up anything we've allocated.
-  auto auto_call = fbl::MakeAutoCall([&]() {
-    if (ret != ZX_OK) {
-      if (new_range) {
-        DEBUG_ASSERT(!new_range->InContainer());
-        delete new_range;
-      }
-
-      FreeBlockList(ktl::move(new_blocks));
-    }
-  });
+  ktl::unique_ptr<Range> new_range;
+  fbl::DoublyLinkedList<ktl::unique_ptr<Block>> new_blocks;
 
   // Enter the lock and check for overlap with pre-existing ranges.
   Guard<Mutex> guard{&lock_};
@@ -183,17 +164,15 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
         ((range_start >= range.start) && (range_start < (range.start + range.len)))) {
       TRACEF("Range [%u, %u] overlaps with existing range [%u, %u].\n", range_start,
              range_start + range_len - 1, range.start, range.start + range.len - 1);
-      ret = ZX_ERR_ALREADY_EXISTS;
-      return ret;
+      return ZX_ERR_ALREADY_EXISTS;
     }
   }
 
   // Allocate our range state.
   fbl::AllocChecker ac;
-  new_range = new (&ac) Range{};
+  new_range = ktl::make_unique<Range>(&ac);
   if (!ac.check()) {
-    ret = ZX_ERR_NO_MEMORY;
-    return ret;
+    return ZX_ERR_NO_MEMORY;
   }
   new_range->start = range_start;
   new_range->len = range_len;
@@ -233,19 +212,18 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
     DEBUG_ASSERT(csize <= range_len);
     DEBUG_ASSERT(csize);
 
-    Block* block = GetUnusedBlock();
+    ktl::unique_ptr<Block> block = GetUnusedBlock();
     if (!block) {
       TRACEF(
           "WARNING! Failed to allocate block bookkeeping with sub-range "
           "[%u, %u] still left to track.\n",
           range_start, range_start + range_len - 1);
-      ret = ZX_ERR_NO_MEMORY;
-      return ret;
+      return ZX_ERR_NO_MEMORY;
     }
 
     block->bucket = bucket;
     block->start = range_start;
-    new_blocks.push_back(block);
+    new_blocks.push_back(ktl::move(block));
 
     range_start += csize;
     range_len -= csize;
@@ -253,13 +231,13 @@ zx_status_t Pow2RangeAllocator::AddRange(uint32_t range_start, uint32_t range_le
 
   // Looks like we managed to allocate everything we needed to.  Go ahead and
   // add all of our newly allocated bookkeeping to the state.
-  ranges_.push_back(new_range);
+  ranges_.push_back(ktl::move(new_range));
 
-  Block* block;
+  ktl::unique_ptr<Block> block;
   while ((block = new_blocks.pop_front()) != nullptr)
-    ReturnFreeBlock(block);
+    ReturnFreeBlock(ktl::move(block));
 
-  return ret;
+  return ZX_OK;
 }
 
 zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_start) {
@@ -280,7 +258,7 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
   }
 
   // Lock state during allocation.
-  Block* block = nullptr;
+  ktl::unique_ptr<Block> block;
 
   Guard<Mutex> guard{&lock_};
 
@@ -304,7 +282,7 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
   DEBUG_ASSERT(bucket >= orig_bucket);
 
   while (bucket > orig_bucket) {
-    Block* split_block = GetUnusedBlock();
+    ktl::unique_ptr<Block> split_block = GetUnusedBlock();
 
     // If we failed to allocate bookkeeping for the split block, put the block
     // we failed to split back into the free list (merging if required),
@@ -313,7 +291,7 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
       TRACEF(
           "Failed to allocated free bookkeeping block when attempting to "
           "split for allocation\n");
-      ReturnFreeBlock(block);
+      ReturnFreeBlock(ktl::move(block));
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -328,12 +306,12 @@ zx_status_t Pow2RangeAllocator::AllocateRange(uint32_t size, uint* out_range_sta
     split_block->bucket = bucket;
 
     // Return the second half of the chunk to the free pool.
-    ReturnFreeBlock(split_block);
+    ReturnFreeBlock(ktl::move(split_block));
   }
 
   // Success! Mark the block as allocated and return the block to the user.
-  allocated_blocks_.push_front(block);
   *out_range_start = block->start;
+  allocated_blocks_.push_front(ktl::move(block));
 
   return ZX_OK;
 }
@@ -351,13 +329,11 @@ void Pow2RangeAllocator::FreeRange(uint32_t range_start, uint32_t size) {
   // check, we only do this in debug builds.  In release builds, we just grab
   // any piece of bookkeeping memory off the allocated_blocks list and use
   // that instead.
-  Block* block;
+  ktl::unique_ptr<Block> block;
 #if DEBUG_ASSERT_IMPLEMENTED
-  block = nullptr;
   for (Block& candidate : allocated_blocks_) {
     if ((candidate.start == range_start) && (candidate.bucket == bucket)) {
-      block = &candidate;
-      allocated_blocks_.erase(candidate);
+      block = allocated_blocks_.erase(candidate);
       break;
     }
   }
@@ -370,5 +346,5 @@ void Pow2RangeAllocator::FreeRange(uint32_t range_start, uint32_t size) {
 #endif
 
   // Return the block to the free buckets (merging as needed) and we are done.
-  ReturnFreeBlock(block);
+  ReturnFreeBlock(ktl::move(block));
 }

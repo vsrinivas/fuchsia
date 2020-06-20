@@ -14,6 +14,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <kernel/mutex.h>
+#include <ktl/unique_ptr.h>
 
 // Pow2RangeAllocator is a small utility class which partitions a set of
 // ranges of integers into sub-ranges which are power of 2 in length and power
@@ -92,26 +93,26 @@ class Pow2RangeAllocator {
   void FreeRange(uint32_t range_start, uint32_t size);
 
  private:
-  struct Block : fbl::DoublyLinkedListable<Block*> {
+  struct Block : fbl::DoublyLinkedListable<ktl::unique_ptr<Block>> {
     uint32_t bucket = 0u;
     uint32_t start = 0u;
   };
+  using BlockList = fbl::DoublyLinkedList<ktl::unique_ptr<Block>>;
 
-  struct Range : fbl::DoublyLinkedListable<Range*> {
+  struct Range : fbl::DoublyLinkedListable<ktl::unique_ptr<Range>> {
     uint32_t start = 0u;
     uint32_t len = 0u;
   };
+  using RangeList = fbl::DoublyLinkedList<ktl::unique_ptr<Range>>;
 
-  Block* GetUnusedBlock();
-  static void FreeBlockList(fbl::DoublyLinkedList<Block*> block_list);
-  static void FreeRangeList(fbl::DoublyLinkedList<Range*> range_list);
-  void ReturnFreeBlock(Block* block);
+  ktl::unique_ptr<Block> GetUnusedBlock();
+  void ReturnFreeBlock(ktl::unique_ptr<Block> block);
 
   DECLARE_MUTEX(Pow2RangeAllocator) lock_;
-  fbl::DoublyLinkedList<Range*> ranges_;
-  fbl::DoublyLinkedList<Block*> unused_blocks_;
-  fbl::DoublyLinkedList<Block*> allocated_blocks_;
-  fbl::DoublyLinkedList<Block*>* free_block_buckets_ = nullptr;
+  RangeList ranges_;
+  BlockList unused_blocks_;
+  BlockList allocated_blocks_;
+  ktl::unique_ptr<BlockList[]> free_block_buckets_;
   uint32_t bucket_count_ = 0;
 };
 
