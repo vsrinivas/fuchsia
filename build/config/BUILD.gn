@@ -372,7 +372,7 @@ config("linker_gc_speed") {
 }
 
 config("linker_gc_sanitizer") {
-  # TODO(51487): Enable when known rust/asan interaction bug is fixed.
+  configs = [ ":linker_gc" ]
 }
 
 config("linker_gc_profile") {
