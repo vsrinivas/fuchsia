@@ -28,7 +28,7 @@ class {{ .Name }}::EventSender {
 {{ "" }}
   {{- end }}
  private:
-  friend class ::fidl::ServerBinding<{{ .Name }}>;
+  friend class ::fidl::ServerBindingRef<{{ .Name }}>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}

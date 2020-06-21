@@ -59,7 +59,7 @@ class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWat
   fit::optional<status_t> last_observed_ __TA_GUARDED(lock_);
   std::queue<status_t> queue_ __TA_GUARDED(lock_);
   fit::optional<WatchStatusCompleter::Async> pending_txn_ __TA_GUARDED(lock_);
-  fit::optional<fidl::ServerBinding<netdev::StatusWatcher>> binding_ __TA_GUARDED(lock_);
+  fit::optional<fidl::ServerBindingRef<netdev::StatusWatcher>> binding_ __TA_GUARDED(lock_);
   fit::callback<void(StatusWatcher*)> closed_cb_;
 };
 

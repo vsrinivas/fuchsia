@@ -91,7 +91,7 @@ zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op) {
     return res.error();
   }
 
-  binding_ = std::make_unique<fidl::ServerBinding<FidlMessenger>>(std::move(res.value()));
+  binding_ = std::make_unique<fidl::ServerBindingRef<FidlMessenger>>(std::move(res.value()));
   return ZX_OK;
 }
 

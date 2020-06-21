@@ -58,7 +58,7 @@ class SerialDevice : public DeviceType,
   std::optional<async::Loop> loop_;
   std::optional<ReadCompleter::Async> read_completer_;
   std::optional<WriteCompleter::Async> write_completer_;
-  std::optional<fidl::ServerBinding<llcpp::fuchsia::hardware::serial::NewDevice>> binding_;
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::hardware::serial::NewDevice>> binding_;
   sync_completion_t on_unbind_;  // Signaled on Unbind() to allow DdkRelease() to proceed.
 };
 

@@ -125,7 +125,7 @@ class File : public zxtest::Test {
     if (bind_result.is_error()) {
       return bind_result.take_error_result();
     }
-    binding_ = std::make_unique<fidl::ServerBinding<fio::File>>(std::move(bind_result.value()));
+    binding_ = std::make_unique<fidl::ServerBindingRef<fio::File>>(std::move(bind_result.value()));
     return fit::ok(std::move(client_end));
   }
 
@@ -156,7 +156,7 @@ class File : public zxtest::Test {
  protected:
   zxio_storage_t file_;
   std::unique_ptr<TestServerBase> server_;
-  std::unique_ptr<fidl::ServerBinding<fio::File>> binding_;
+  std::unique_ptr<fidl::ServerBindingRef<fio::File>> binding_;
   std::unique_ptr<async::Loop> loop_;
 };
 

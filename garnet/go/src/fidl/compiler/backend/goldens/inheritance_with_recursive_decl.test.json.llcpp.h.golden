@@ -601,7 +601,7 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 class Parent::EventSender {
  public:
  private:
-  friend class ::fidl::ServerBinding<Parent>;
+  friend class ::fidl::ServerBindingRef<Parent>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}
@@ -650,7 +650,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
 class Child::EventSender {
  public:
  private:
-  friend class ::fidl::ServerBinding<Child>;
+  friend class ::fidl::ServerBindingRef<Child>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}

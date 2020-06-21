@@ -134,7 +134,7 @@ class MacClientInstance : public netdev::MacAddressing::Interface,
   // Pointer to parent MacInterface, not owned.
   MacInterface* const parent_;
   ClientState state_ __TA_GUARDED(parent_->lock_);
-  fit::optional<fidl::ServerBinding<netdev::MacAddressing>> binding_;
+  fit::optional<fidl::ServerBindingRef<netdev::MacAddressing>> binding_;
 };
 
 }  // namespace internal

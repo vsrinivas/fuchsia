@@ -3139,7 +3139,7 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 class TestProtocol::EventSender {
  public:
  private:
-  friend class ::fidl::ServerBinding<TestProtocol>;
+  friend class ::fidl::ServerBindingRef<TestProtocol>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}

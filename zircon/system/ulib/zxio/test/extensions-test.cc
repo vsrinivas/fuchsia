@@ -74,8 +74,8 @@ class ExtensionNode : public zxtest::Test {
     if (result.is_error()) {
       return nullptr;
     }
-    binding_ =
-        std::make_unique<fidl::ServerBinding<llcpp::fuchsia::io::Node>>(std::move(result.value()));
+    binding_ = std::make_unique<fidl::ServerBindingRef<llcpp::fuchsia::io::Node>>(
+        std::move(result.value()));
     return static_cast<ServerImpl*>(server_.get());
   }
 
@@ -83,9 +83,8 @@ class ExtensionNode : public zxtest::Test {
   zx::channel control_client_end_;
   zx::channel control_server_end_;
   std::unique_ptr<TestServerBase> server_;
-  std::unique_ptr<fidl::ServerBinding<llcpp::fuchsia::io::Node>> binding_;
+  std::unique_ptr<fidl::ServerBindingRef<llcpp::fuchsia::io::Node>> binding_;
   std::unique_ptr<async::Loop> loop_;
-
 };
 
 TEST_F(ExtensionNode, DefaultBehaviors) {

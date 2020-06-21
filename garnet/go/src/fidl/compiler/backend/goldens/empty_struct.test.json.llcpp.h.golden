@@ -628,7 +628,7 @@ class EmptyProtocol::EventSender {
   }
 
  private:
-  friend class ::fidl::ServerBinding<EmptyProtocol>;
+  friend class ::fidl::ServerBindingRef<EmptyProtocol>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}

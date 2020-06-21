@@ -11,20 +11,20 @@ namespace fidl {
 
 // Forward declarations.
 template <typename Protocol>
-class ServerBinding;
+class ServerBindingRef;
 
 template <typename Interface>
-fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl);
 template <typename Interface>
-fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
     OnUnboundFn<Interface> on_unbound);
 
 namespace internal {
 
 template <typename Protocol>
-fit::result<ServerBinding<Protocol>, zx_status_t> TypeErasedBindServer(
+fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
 
@@ -34,15 +34,15 @@ fit::result<ServerBinding<Protocol>, zx_status_t> TypeErasedBindServer(
 // async_dispatcher_t* (which may be multi-threaded). See the detailed documentation on the
 // |BindServer()| APIs below.
 template <typename Protocol>
-class ServerBinding {
+class ServerBindingRef {
  public:
-  ~ServerBinding() = default;
+  ~ServerBindingRef() = default;
 
   // Move only.
-  ServerBinding(ServerBinding&&) = default;
-  ServerBinding& operator=(ServerBinding&&) = default;
-  ServerBinding(const ServerBinding&) = delete;
-  ServerBinding& operator=(const ServerBinding&) = delete;
+  ServerBindingRef(ServerBindingRef&&) = default;
+  ServerBindingRef& operator=(ServerBindingRef&&) = default;
+  ServerBindingRef(const ServerBindingRef&) = delete;
+  ServerBindingRef& operator=(const ServerBindingRef&) = delete;
 
   // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
   // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher
@@ -75,11 +75,13 @@ class ServerBinding {
   typename Protocol::EventSender& operator*() { return event_sender_; }
 
  private:
-  friend fit::result<ServerBinding<Protocol>, zx_status_t> internal::TypeErasedBindServer<Protocol>(
-      async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound);
+  friend fit::result<ServerBindingRef<Protocol>, zx_status_t>
+  internal::TypeErasedBindServer<Protocol>(async_dispatcher_t* dispatcher, zx::channel channel,
+                                           void* impl,
+                                           internal::TypeErasedServerDispatchFn dispatch_fn,
+                                           internal::TypeErasedOnUnboundFn on_unbound);
 
-  explicit ServerBinding(std::weak_ptr<internal::AsyncBinding> internal_binding)
+  explicit ServerBindingRef(std::weak_ptr<internal::AsyncBinding> internal_binding)
       : event_sender_(std::move(internal_binding)) {}
 
   typename Protocol::EventSender event_sender_;
@@ -99,14 +101,16 @@ class ServerBinding {
 //
 // Creation:
 // - Upon success |BindServer| creates a binding that owns |channel|. In this case, the binding is
-//   initially kept alive even if the returned fit::result with a |ServerBinding| is ignored.
+//   initially kept alive even if the returned fit::result with a |ServerBindingRef| is ignored.
+// - |ServerBindingRef| is a reference to the binding, it does not hold the binding. To unbind the
+//   binding, see Unbind below.
 // - Upon any error creating the binding, |BindServer| returns a fit::error and |channel| is closed.
 //
 // Destruction:
-// - If the returned |ServerBinding| is ignored or dropped some time during the server operation,
+// - If the returned |ServerBindingRef| is ignored or dropped some time during the server operation,
 //   then if some error occurs (see below) the binding will be automatically destroyed.
-// - If the returned |ServerBinding| is kept but an error occurs (see below), the binding will be
-//   destroyed, though calls may still be made on the |ServerBinding|.
+// - If the returned |ServerBindingRef| is kept but an error occurs (see below), the binding will be
+//   destroyed, though calls may still be made on the |ServerBindingRef|.
 // - On an error, |channel| is unbound from the dispatcher, i.e. no dispatcher threads will interact
 //   with it. Calls on inflight |Transaction|s will have no effect. If |on_unbound| is not
 //   specified, the |channel| is closed. If specified, |on_unbound| is then executed on a
@@ -115,8 +119,8 @@ class ServerBinding {
 //   |on_unbound|'s scope.
 //
 // Unbind:
-// - The |ServerBinding| can be used to explicitly |Unbind| the binding and retrieve the |channel|
-//   endpoint.
+// - The |ServerBindingRef| can be used to explicitly |Unbind| the binding and retrieve the
+//   |channel| endpoint.
 // - |Unbind| is non-blocking with respect to user code paths, i.e. if it blocks, it does so on
 //   deterministic internal code paths. As such, the user may safely synchronize around an |Unbind|
 //   call.
@@ -153,10 +157,10 @@ class ServerBinding {
 // The following |BindServer()| APIs infer the protocol type based on the server implementation
 // which must publicly inherit from the appropriate |<Protocol_Name>::Interface| class.
 template <typename Interface>
-fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl) {
   return internal::TypeErasedBindServer<typename Interface::_Outer>(
-    dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch, nullptr);
+      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch, nullptr);
 }
 
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
@@ -165,30 +169,28 @@ fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
 // NOTE: It is only safe to invoke |on_unbound| from a |dispatcher| thread. As such, if the user
 // shuts down the |dispatcher| prior to it being invoked, it will be discarded.
 template <typename Interface>
-fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+fit::result<ServerBindingRef<typename Interface::_Outer>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
     OnUnboundFn<Interface> on_unbound) {
   return internal::TypeErasedBindServer<typename Interface::_Outer>(
-    dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
-    [fn = std::move(on_unbound)](void* impl, UnboundReason reason,
-                                 zx_status_t status,
-                                 zx::channel channel) mutable {
-      fn(static_cast<Interface*>(impl), reason, status, std::move(channel));
-    });
+      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
+      [fn = std::move(on_unbound)](void* impl, UnboundReason reason, zx_status_t status,
+                                   zx::channel channel) mutable {
+        fn(static_cast<Interface*>(impl), reason, status, std::move(channel));
+      });
 }
 
 namespace internal {
 
 template <typename Protocol>
-fit::result<ServerBinding<Protocol>, zx_status_t> TypeErasedBindServer(
+fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    internal::TypeErasedServerDispatchFn dispatch_fn,
-    internal::TypeErasedOnUnboundFn on_unbound) {
+    internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound) {
   auto internal_binding = internal::AsyncBinding::CreateServerBinding(
       dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {
-    return fit::ok(fidl::ServerBinding<Protocol>(std::move(internal_binding)));
+    return fit::ok(fidl::ServerBindingRef<Protocol>(std::move(internal_binding)));
   } else {
     return fit::error(status);
   }

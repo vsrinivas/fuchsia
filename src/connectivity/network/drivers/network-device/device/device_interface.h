@@ -126,7 +126,7 @@ class DeviceInterface : public netdev::Device::Interface,
 
    private:
     Binding() = default;
-    fit::optional<fidl::ServerBinding<netdev::Device>> binding_;
+    fit::optional<fidl::ServerBindingRef<netdev::Device>> binding_;
   };
   using BindingList = fbl::DoublyLinkedList<std::unique_ptr<Binding>>;
 

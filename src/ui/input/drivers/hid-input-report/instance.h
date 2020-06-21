@@ -108,7 +108,7 @@ class InputReportInstance : public InstanceDeviceType,
   std::optional<InputReportsReader::ReadInputReportsCompleter::Async> input_reports_waiting_read_
       __TA_GUARDED(report_lock_);
   std::optional<InputReportsReader> input_reports_reader_ __TA_GUARDED(report_lock_);
-  std::optional<fidl::ServerBinding<llcpp::fuchsia::input::report::InputReportsReader>>
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::input::report::InputReportsReader>>
       input_reports_reader_binding_ __TA_GUARDED(report_lock_);
   std::optional<async::Loop> loop_ __TA_GUARDED(report_lock_);
 };

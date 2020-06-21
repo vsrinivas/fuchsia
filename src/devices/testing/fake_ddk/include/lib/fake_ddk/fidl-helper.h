@@ -84,7 +84,7 @@ class FidlMessenger {
   // Channel to mimic RPC
   zx::channel local_;
   // Server binding
-  std::unique_ptr<fidl::ServerBinding<FidlMessenger>> binding_;
+  std::unique_ptr<fidl::ServerBindingRef<FidlMessenger>> binding_;
   // Dispatcher for fidl messages
   async::Loop loop_;
 };

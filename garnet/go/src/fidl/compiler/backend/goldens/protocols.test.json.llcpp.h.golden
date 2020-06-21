@@ -3286,7 +3286,7 @@ class Transitional::EventSender {
   }
 
  private:
-  friend class ::fidl::ServerBinding<Transitional>;
+  friend class ::fidl::ServerBindingRef<Transitional>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}
@@ -3409,7 +3409,7 @@ class ChannelProtocol::EventSender {
   }
 
  private:
-  friend class ::fidl::ServerBinding<ChannelProtocol>;
+  friend class ::fidl::ServerBindingRef<ChannelProtocol>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}
@@ -3620,7 +3620,7 @@ class WithAndWithoutRequestResponse::EventSender {
   }
 
  private:
-  friend class ::fidl::ServerBinding<WithAndWithoutRequestResponse>;
+  friend class ::fidl::ServerBindingRef<WithAndWithoutRequestResponse>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}
@@ -3750,7 +3750,7 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
 class WithErrorSyntax::EventSender {
  public:
  private:
-  friend class ::fidl::ServerBinding<WithErrorSyntax>;
+  friend class ::fidl::ServerBindingRef<WithErrorSyntax>;
 
   explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
       : binding_(std::move(binding)) {}

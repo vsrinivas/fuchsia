@@ -145,7 +145,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Set by Session::Create.
   DataVmoStore::StoredVmo* data_vmo_ = nullptr;
   zx::port tx_port_;
-  fit::optional<fidl::ServerBinding<netdev::Session>> binding_;
+  fit::optional<fidl::ServerBindingRef<netdev::Session>> binding_;
   // The control channel is only set by the session teardown process if an epitaph must be sent when
   // all the buffers are properly reclaimed. It is set to the channel that was previously bound in
   // the `binding_` Server.

@@ -654,7 +654,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
   // Bind the server.
   auto res = fidl::BindServer(server_loop.dispatcher(), std::move(remote), server.get());
   ASSERT_TRUE(res.is_ok());
-  fidl::ServerBinding<Simple> binding(std::move(res.value()));
+  fidl::ServerBindingRef<Simple> binding(std::move(res.value()));
 
   // Launch 10 client threads to make two-way Echo() calls.
   std::vector<std::thread> threads;
