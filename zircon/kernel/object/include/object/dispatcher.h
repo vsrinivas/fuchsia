@@ -83,7 +83,7 @@ DECLARE_DISPTAG(MsiDispatcher, ZX_OBJ_TYPE_MSI_INTERRUPT, "MSII")
 // the syscall API and referenced by handles.
 //
 // It implements RefCounted because handles are abstractions to a multiple
-// references from user mode or kernel mode that control the lifetime o
+// references from user mode or kernel mode that control the lifetime of
 // the object.
 //
 // It implements Recyclable because upon final Release() on the RefPtr
