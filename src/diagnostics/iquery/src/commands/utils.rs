@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{constants, types::Error},
+    crate::{
+        commands::{Command, ListCommand},
+        constants,
+        types::Error,
+    },
     fuchsia_inspect::testing::InspectDataFetcher,
     fuchsia_inspect_node_hierarchy::{
         serialization::{HierarchyDeserializer, RawJsonNodeHierarchySerializer},
@@ -20,6 +24,43 @@ pub fn get_moniker_from_result(result: &serde_json::Value) -> Result<String, Err
         .as_str()
         .ok_or(Error::ArchiveInvalidJson)?
         .to_string())
+}
+
+/// Returns the moniker in a json response or an error if one is not found
+pub fn get_url_from_result(result: &serde_json::Value) -> Result<String, Error> {
+    Ok(result
+        .get("metadata")
+        .ok_or(Error::archive_missing_property("metadata"))?
+        .get("component_url")
+        .ok_or(Error::archive_missing_property("component_url"))?
+        .as_str()
+        .ok_or(Error::ArchiveInvalidJson)?
+        .to_string())
+}
+
+/// Returns the selectors for a component whose url contains the `manifest` string.
+pub async fn get_selectors_for_manifest(
+    manifest: &Option<String>,
+    tree_selectors: &Vec<String>,
+) -> Result<Vec<String>, Error> {
+    match &manifest {
+        None => Ok(tree_selectors.clone()),
+        Some(manifest) => {
+            let list_command = ListCommand { manifest: Some(manifest.clone()), with_url: false };
+            let result = list_command
+                .execute()
+                .await?
+                .into_iter()
+                .map(|item| item.into_moniker())
+                .flat_map(|moniker| {
+                    tree_selectors
+                        .iter()
+                        .map(move |tree_selector| format!("{}:{}", moniker, tree_selector))
+                })
+                .collect();
+            Ok(result)
+        }
+    }
 }
 
 /// Returns the component "moniker" and the hierarchy data for results of

@@ -37,6 +37,32 @@ async fn test_list_no_duplicates() {
     );
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn test_list_filter_manifest() {
+    let (_env, _app) =
+        utils::start_basic_component("list-filter-test").await.expect("create comp 1");
+    let (_env, _app) =
+        utils::start_test_component("list-filter-test2").await.expect("create comp 2");
+    assert_command!(
+        command: "list",
+        golden_basename: list_filter_manifest,
+        args: [ "--manifest", "basic_component.cmx" ],
+        test_opts: [ "with_retries" ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_list_with_urls() {
+    let (_env, _app) = utils::start_basic_component("list-url-test").await.expect("create comp 1");
+    let (_env, _app) = utils::start_test_component("list-url-test2").await.expect("create comp 2");
+    assert_command!(
+        command: "list",
+        golden_basename: list_with_url,
+        args: [ "--with-url" ],
+        test_opts: [ "with_retries" ]
+    );
+}
+
 // List files command
 
 #[fasync::run_singlethreaded(test)]
@@ -89,6 +115,24 @@ async fn test_selectors() {
             "selectors-test/basic_component.cmx:root/fuchsia.inspect.Health",
             "selectors-test2/basic_component.cmx:root",
             "selectors-test3/test_component.cmx"
+        ],
+        test_opts: [ "with_retries" ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_selectors_filter() {
+    let (_env, _app) =
+        utils::start_basic_component("selectors-filter").await.expect("create comp 1");
+    let (_env, _app) =
+        utils::start_test_component("selectors-filter2").await.expect("create comp 2");
+    assert_command!(
+        command: "selectors",
+        golden_basename: selectors_filter_test,
+        args: [
+            "--manifest",
+            "basic_component.cmx",
+            "root/fuchsia.inspect.Health"
         ],
         test_opts: [ "with_retries" ]
     );
@@ -185,4 +229,20 @@ async fn empty_result_on_null_payload() {
         utils::execute_command(&["show", "show-test-empty/basic_component.cmx:root/nothing:here"])
             .await;
     assert_matches!(result, Ok(res) if res == "");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn show_filter_manifest() {
+    let (_env, _app) = utils::start_basic_component("show-filter").await.expect("create comp 1");
+    let (_env, _app) = utils::start_test_component("show-filter2").await.expect("create comp 2");
+    assert_command!(
+        command: "show",
+        golden_basename: show_filter_test,
+        args: [
+            "--manifest",
+            "basic_component.cmx",
+            "root/fuchsia.inspect.Health"
+        ],
+        test_opts: [ "with_retries" ]
+    );
 }

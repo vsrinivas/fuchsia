@@ -1,0 +1,13 @@
+[
+  {
+    "moniker": "show-filter/basic_component.cmx",
+    "payload": {
+      "root": {
+        "fuchsia.inspect.Health": {
+          "start_timestamp_nanos": "TIMESTAMP",
+          "status": "OK"
+        }
+      }
+    }
+  }
+]

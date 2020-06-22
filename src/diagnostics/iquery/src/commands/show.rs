@@ -23,11 +23,12 @@ pub struct ShowCommand {
     #[argh(option)]
     /// the name of the manifest file that we are interested in. If this is provided, the output
     /// will only contain monikers for components whose url contains the provided name.
-    pub manifest_name: Option<String>,
+    pub manifest: Option<String>,
 
     #[argh(positional)]
-    /// component or tree selectors for which the selectors should be queried. If no selectors are
-    /// provided, inspect data for the whole system will be returned.
+    /// selectors for which the selectors should be queried. If no selectors are provided, inspect
+    /// data for the whole system will be returned. If `--manifest` is provided then the selectors
+    /// should be tree selectors, otherwise component selectors or full selectors.
     pub selectors: Vec<String>,
 }
 
@@ -59,8 +60,8 @@ impl Command for ShowCommand {
     type Result = Vec<ShowCommandResultItem>;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        // TODO(fxbug.dev/45458): support filtering per manifest name.
-        let mut results = utils::fetch_data(&self.selectors)
+        let selectors = utils::get_selectors_for_manifest(&self.manifest, &self.selectors).await?;
+        let mut results = utils::fetch_data(&selectors)
             .await?
             .into_iter()
             .map(|(moniker, payload)| ShowCommandResultItem { moniker, payload })

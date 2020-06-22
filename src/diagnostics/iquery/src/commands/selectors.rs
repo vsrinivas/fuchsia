@@ -22,10 +22,12 @@ pub struct SelectorsCommand {
     #[argh(option)]
     /// the name of the manifest file that we are interested in. If this is provided, the output
     /// will only contain monikers for components whose url contains the provided name.
-    pub manifest_name: Option<String>,
+    pub manifest: Option<String>,
 
     #[argh(positional)]
-    /// component or tree selectors for which the selectors should be queried. Minimum: 1.
+    /// selectors for which the selectors should be queried. Minimum: 1 unless `--manifest` is set.
+    /// When `--manifest` is provided then the selectors should be tree selectors, otherwise
+    /// they can be component selectors or full selectors.
     pub selectors: Vec<String>,
 }
 
@@ -34,13 +36,11 @@ impl Command for SelectorsCommand {
     type Result = Vec<String>;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        if self.selectors.is_empty() {
+        if self.selectors.is_empty() && self.manifest.is_none() {
             return Err(Error::invalid_arguments("Expected 1 or more selectors. Got zero."));
         }
-
-        // TODO(fxbug.dev/45458): support filtering per manifest name.
-
-        let mut result = utils::fetch_data(&self.selectors)
+        let selectors = utils::get_selectors_for_manifest(&self.manifest, &self.selectors).await?;
+        let mut result = utils::fetch_data(&selectors)
             .await?
             .into_iter()
             .flat_map(|(component_selector, hierarchy)| {
@@ -55,18 +55,15 @@ impl Command for SelectorsCommand {
 fn get_selectors(component_selector: String, hierarchy: NodeHierarchy) -> Vec<String> {
     hierarchy
         .property_iter()
-        .map(|(node_path, maybe_property)| {
+        .flat_map(|(node_path, maybe_property)| maybe_property.map(|prop| (node_path, prop)))
+        .map(|(node_path, property)| {
             let node_selector = node_path
                 .iter()
                 .map(|s| selectors::sanitize_string_for_selectors(s))
                 .collect::<Vec<String>>()
                 .join("/");
-            let mut result = format!("{}:{}", component_selector, node_selector);
-            if let Some(property) = maybe_property {
-                let property_selector = selectors::sanitize_string_for_selectors(property.name());
-                result = format!("{}:{}", result, property_selector)
-            }
-            result
+            let property_selector = selectors::sanitize_string_for_selectors(property.name());
+            format!("{}:{}:{}", component_selector, node_selector, property_selector)
         })
         .collect()
 }
