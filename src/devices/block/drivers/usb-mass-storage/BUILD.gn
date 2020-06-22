@@ -67,6 +67,9 @@ test("ums") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(54514): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("ums-block-package") {
