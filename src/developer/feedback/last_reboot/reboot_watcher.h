@@ -6,6 +6,8 @@
 #define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_WATCHER_H_
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include <string>
 
@@ -18,15 +20,20 @@ namespace feedback {
 class ImminentGracefulRebootWatcher
     : public fuchsia::hardware::power::statecontrol::RebootMethodsWatcher {
  public:
-  ImminentGracefulRebootWatcher(const std::string& path, cobalt::Logger* cobalt)
-      : path_(path), cobalt_(cobalt) {}
+  ImminentGracefulRebootWatcher(std::shared_ptr<sys::ServiceDirectory> services,
+                                const std::string& path, cobalt::Logger* cobalt);
+
+  void Connect();
 
   void OnReboot(fuchsia::hardware::power::statecontrol::RebootReason reason,
                 OnRebootCallback callback) override;
 
  private:
+  std::shared_ptr<sys::ServiceDirectory> services_;
   std::string path_;
   cobalt::Logger* cobalt_;
+
+  ::fidl::Binding<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> connection_;
 };
 
 }  // namespace feedback

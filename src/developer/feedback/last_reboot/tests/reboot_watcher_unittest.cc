@@ -88,7 +88,7 @@ TEST_P(ImminentGracefulRebootWatcherTest, Succeed) {
 
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  ImminentGracefulRebootWatcher watcher(Path(), &cobalt_);
+  ImminentGracefulRebootWatcher watcher(services(), Path(), &cobalt_);
 
   bool callback_executed = false;
   watcher.OnReboot(param.input_reboot_reason, [&] { callback_executed = true; });

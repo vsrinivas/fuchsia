@@ -60,7 +60,7 @@ class RebootLogTest : public UnitTestFixture, public testing::WithParamInterface
 
     cobalt::Logger cobalt(dispatcher(), services());
 
-    ImminentGracefulRebootWatcher watcher(graceful_reboot_log_path_, &cobalt);
+    ImminentGracefulRebootWatcher watcher(services(), graceful_reboot_log_path_, &cobalt);
     watcher.OnReboot(reason, [] {});
   }
 

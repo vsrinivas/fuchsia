@@ -119,6 +119,7 @@ source_set("reboot_watcher") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/lib/fidl/cpp",
     "//src/developer/feedback/utils/cobalt",
   ]
 

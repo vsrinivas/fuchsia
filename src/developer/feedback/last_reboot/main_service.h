@@ -6,8 +6,6 @@
 #define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_MAIN_SERVICE_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
-#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -53,8 +51,6 @@ class MainService {
       last_reboot_info_provider_connections_;
 
   ImminentGracefulRebootWatcher reboot_watcher_;
-  ::fidl::Binding<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher>
-      reboot_watcher_connection_;
 
   InspectNodeManager node_manager_;
   InspectProtocolStats last_reboot_info_provider_stats_;
