@@ -22,6 +22,7 @@ func init() {
 				Config: config.Config{
 					"num_images": 32,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

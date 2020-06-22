@@ -4,6 +4,7 @@
 // found in the LICENSE file.
 
 benchmark("Media/StreamPacket") {
+    bindings_denylist = [dart],
     value = StreamPacket{
         pts: 0x7fffffffffffffff,
         payload_buffer_id: 1,

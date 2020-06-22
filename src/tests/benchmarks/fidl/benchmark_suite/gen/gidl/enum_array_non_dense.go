@@ -23,7 +23,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.LLCPP, config.Walker},
+				Denylist: []config.Binding{config.LLCPP, config.Walker, config.Dart},
 			},
 		},
 	})

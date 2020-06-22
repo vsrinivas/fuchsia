@@ -4,6 +4,8 @@
 
 library benchmarkfidl;
 
+// Dart doesn't support recursive type generation.
+[BindingsDenylist = "dart"]
 struct OptionalStructTree {
     OptionalStructTree? left;
     OptionalStructTree? right;

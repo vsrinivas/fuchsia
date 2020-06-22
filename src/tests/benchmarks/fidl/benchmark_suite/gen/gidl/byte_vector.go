@@ -22,6 +22,7 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "ByteVector/256",
@@ -29,6 +30,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
+				Denylist:                 []config.Binding{config.Dart},
 				EnableSendEventBenchmark: true,
 			},
 			{
@@ -37,6 +39,7 @@ func init() {
 				Config: config.Config{
 					"size": 4096,
 				},
+				Denylist:                 []config.Binding{config.Dart},
 				EnableSendEventBenchmark: true,
 			},
 			{
@@ -46,7 +49,7 @@ func init() {
 				Config: config.Config{
 					"size": 65536,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker, config.Dart},
 			},
 		},
 	})

@@ -6,6 +6,7 @@
 
 // Table with 15 reserved fields and one non-reserved set field
 benchmark("Table/LastSetOthersReserved/16") {
+    bindings_denylist = [dart],
     value = TableReserved16Struct{
         value: TableReserved16{
             field16: 1,
@@ -15,6 +16,7 @@ benchmark("Table/LastSetOthersReserved/16") {
 
 // Table with 255 reserved fields and one non-reserved set field
 benchmark("Table/LastSetOthersReserved/256") {
+    bindings_denylist = [dart],
     value = TableReserved256Struct{
         value: TableReserved256{
             field256: 1,

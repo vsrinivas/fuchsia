@@ -22,7 +22,7 @@ func init() {
 					"depth": 8,
 				},
 				// Go runs into a stack overflow.
-				Denylist: []config.Binding{config.Go},
+				Denylist: []config.Binding{config.Go, config.Dart},
 			},
 		},
 	})

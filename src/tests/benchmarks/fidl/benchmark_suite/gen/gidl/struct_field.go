@@ -22,6 +22,7 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "StructField/256",
@@ -29,6 +30,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

@@ -22,6 +22,7 @@ func init() {
 					"size":         1,
 					"field_to_set": 1,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/1_of_16",
@@ -30,6 +31,7 @@ func init() {
 					"size":         16,
 					"field_to_set": 1,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/1_of_256",
@@ -38,6 +40,7 @@ func init() {
 					"size":         256,
 					"field_to_set": 1,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/16_of_16",
@@ -46,6 +49,7 @@ func init() {
 					"size":         16,
 					"field_to_set": 16,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/16_of_256",
@@ -54,6 +58,7 @@ func init() {
 					"size":         256,
 					"field_to_set": 16,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/256_of_256",
@@ -62,6 +67,7 @@ func init() {
 					"size":         256,
 					"field_to_set": 256,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

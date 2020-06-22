@@ -21,6 +21,7 @@ func init() {
 				Config: config.Config{
 					"size": 1,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Union/LastSet/16",
@@ -28,6 +29,7 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Union/LastSet/256",
@@ -35,6 +37,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})
