@@ -168,7 +168,7 @@ class FuchsiaTestCommand {
       emitEvent(TestInfo(testsConfig.wrapWith(
           '> fx build ${buildTargets?.join(' ') ?? ''}', [green, styleBold])));
       try {
-        await fxCommandRun(fuchsiaLocator.fx, 'build', buildTargets.toList());
+        await fxCommandRun(fuchsiaLocator.fx, 'build', buildTargets?.toList());
       } on FxRunException {
         emitEvent(FatalError(
             '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
