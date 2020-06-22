@@ -37,11 +37,48 @@ impl From<BoxFuture<'static, GetEntryResult>> for AsyncGetEntry {
     }
 }
 
-/// All directories that contain other entries implement this trait.  Directories may implement
-/// other traits such as [`DirectlyMutable`] and/or [`Observable`] as well.
-pub trait EntryContainer: Send + Sync {
+pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
+
+pub enum AsyncReadDirents {
+    Immediate(ReadDirentsResult),
+    Future(BoxFuture<'static, ReadDirentsResult>),
+}
+
+impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
+    fn from(done: Box<dyn dirents_sink::Sealed>) -> AsyncReadDirents {
+        AsyncReadDirents::Immediate(Ok(done))
+    }
+}
+
+/// All directories implement this trait.  If a directory can be modified it should
+/// also implement the `MutableDirectory` trait.
+pub trait Directory<TraversalPosition>: Send + Sync
+where
+    TraversalPosition: Default + Send + Sync + 'static,
+{
     /// Returns a reference to a contained directory entry.  Used when linking entries.
     fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry;
+
+    /// Reads directory entries starting from `pos` by adding them to `sink`.
+    /// Once finished, should return a sealed sink.
+    fn read_dirents(
+        self: Arc<Self>,
+        pos: TraversalPosition,
+        sink: Box<dyn dirents_sink::Sink<TraversalPosition>>,
+    ) -> AsyncReadDirents;
+
+    /// Register a watcher for this directory.
+    /// Implementations will probably want to use a `Watcher` to manage watchers.
+    fn register_watcher(
+        self: Arc<Self>,
+        scope: ExecutionScope,
+        mask: u32,
+        channel: Channel,
+    ) -> Status;
+
+    /// Unregister a watcher from this directory. The watcher should no longer
+    /// receive events.
+    fn unregister_watcher(self: Arc<Self>, key: usize);
 }
 
 /// This trait indicates that a directory allows it's entries to be added and removed.  Server side
@@ -187,38 +224,4 @@ pub fn rename_helper(
             )
         }
     }
-}
-
-pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
-
-pub enum AsyncReadDirents {
-    Immediate(ReadDirentsResult),
-    Future(BoxFuture<'static, ReadDirentsResult>),
-}
-
-impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
-    fn from(done: Box<dyn dirents_sink::Sealed>) -> AsyncReadDirents {
-        AsyncReadDirents::Immediate(Ok(done))
-    }
-}
-
-/// All directories that allow inspection of their entries implement this trait.
-pub trait Observable<TraversalPosition>: Send + Sync
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    fn read_dirents(
-        self: Arc<Self>,
-        pos: TraversalPosition,
-        sink: Box<dyn dirents_sink::Sink<TraversalPosition>>,
-    ) -> AsyncReadDirents;
-
-    fn register_watcher(
-        self: Arc<Self>,
-        scope: ExecutionScope,
-        mask: u32,
-        channel: Channel,
-    ) -> Status;
-
-    fn unregister_watcher(self: Arc<Self>, key: usize);
 }

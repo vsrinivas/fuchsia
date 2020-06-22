@@ -15,7 +15,7 @@ use crate::{
         connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{self, AsyncReadDirents, EntryContainer},
+        entry_container::{self, AsyncReadDirents, Directory},
         immutable::connection::io1::ImmutableConnection,
     },
     execution_scope::ExecutionScope,
@@ -310,7 +310,8 @@ where
     }
 }
 
-impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry> EntryContainer
+impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
+    Directory<TraversalPosition>
     for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
     TraversalPosition: Default + Send + Sync + 'static,
@@ -328,21 +329,7 @@ where
         let task = (self.get_entry)(name);
         entry_container::AsyncGetEntry::Future(Box::pin(task))
     }
-}
 
-impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-    entry_container::Observable<TraversalPosition>
-    for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
-        + Send
-        + Sync
-        + 'static,
-    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
-    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
-    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
-{
     fn read_dirents(
         self: Arc<Self>,
         pos: TraversalPosition,

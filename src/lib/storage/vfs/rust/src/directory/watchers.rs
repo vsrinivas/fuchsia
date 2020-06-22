@@ -11,7 +11,7 @@ mod watcher;
 pub use watcher::Controller;
 
 use crate::{
-    directory::{entry_container, watchers::event_producers::EventProducer},
+    directory::{entry_container::Directory, watchers::event_producers::EventProducer},
     execution_scope::ExecutionScope,
 };
 
@@ -47,7 +47,7 @@ impl Watchers {
     pub fn add<TraversalPosition>(
         &mut self,
         scope: ExecutionScope,
-        directory: Arc<dyn entry_container::Observable<TraversalPosition>>,
+        directory: Arc<dyn Directory<TraversalPosition>>,
         mask: u32,
         channel: Channel,
     ) -> Option<&mut Controller>

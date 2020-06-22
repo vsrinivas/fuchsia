@@ -11,7 +11,7 @@ use crate::{
         connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{self, AsyncGetEntry, AsyncReadDirents, EntryContainer},
+        entry_container::{self, AsyncGetEntry, AsyncReadDirents, Directory},
         immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
         mutable::connection::io1::{MutableConnection, MutableConnectionClient},
         traversal_position::AlphabeticalTraversal,
@@ -190,7 +190,7 @@ where
     }
 }
 
-impl<Connection> EntryContainer for Simple<Connection>
+impl<Connection> Directory<AlphabeticalTraversal> for Simple<Connection>
 where
     Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
 {
@@ -205,6 +205,89 @@ where
             Some(entry) => entry.clone().into(),
             None => Status::NOT_FOUND.into(),
         }
+    }
+
+    fn read_dirents(
+        self: Arc<Self>,
+        pos: AlphabeticalTraversal,
+        sink: Box<dyn dirents_sink::Sink<AlphabeticalTraversal>>,
+    ) -> AsyncReadDirents {
+        use dirents_sink::AppendResult;
+
+        let this = self.inner.lock();
+
+        let (mut sink, entries_iter) = match pos {
+            AlphabeticalTraversal::Dot => {
+                // Lazy position retrieval.
+                let pos = &|| match this.entries.keys().next() {
+                    None => AlphabeticalTraversal::End,
+                    Some(first_name) => AlphabeticalTraversal::Name(first_name.clone()),
+                };
+                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".", pos) {
+                    AppendResult::Ok(sink) => {
+                        // I wonder why, but rustc can not infer T in
+                        //
+                        //   pub fn range<T, R>(&self, range: R) -> Range<K, V>
+                        //   where
+                        //     K: Borrow<T>,
+                        //     R: RangeBounds<T>,
+                        //     T: Ord + ?Sized,
+                        //
+                        // for some reason here.  It says:
+                        //
+                        //   error[E0283]: type annotations required: cannot resolve `_: std::cmp::Ord`
+                        //
+                        // pointing to "range".  Same for two the other "range()" invocations
+                        // below.
+                        (sink, this.entries.range::<String, _>(..))
+                    }
+                    AppendResult::Sealed(sealed) => return sealed.into(),
+                }
+            }
+
+            AlphabeticalTraversal::Name(next_name) => {
+                (sink, this.entries.range::<String, _>(next_name..))
+            }
+
+            AlphabeticalTraversal::End => return sink.seal(AlphabeticalTraversal::End).into(),
+        };
+
+        for (name, entry) in entries_iter {
+            match sink
+                .append(&entry.entry_info(), &name, &|| AlphabeticalTraversal::Name(name.clone()))
+            {
+                AppendResult::Ok(new_sink) => sink = new_sink,
+                AppendResult::Sealed(sealed) => return sealed.into(),
+            }
+        }
+
+        sink.seal(AlphabeticalTraversal::End).into()
+    }
+
+    fn register_watcher(
+        self: Arc<Self>,
+        scope: ExecutionScope,
+        mask: u32,
+        channel: Channel,
+    ) -> Status {
+        let mut this = self.inner.lock();
+
+        let mut names = StaticVecEventProducer::existing({
+            let entry_names = this.entries.keys();
+            iter::once(&".".to_string()).chain(entry_names).cloned().collect()
+        });
+
+        if let Some(controller) = this.watchers.add(scope, self.clone(), mask, channel) {
+            controller.send_event(&mut names);
+            controller.send_event(&mut SingleNameEventProducer::idle());
+        }
+
+        Status::OK
+    }
+
+    fn unregister_watcher(self: Arc<Self>, key: usize) {
+        let mut this = self.inner.lock();
+        this.watchers.remove(key);
     }
 }
 
@@ -344,93 +427,5 @@ where
 
         let _ = this.entries.insert(dst, entry);
         Ok(())
-    }
-}
-
-impl<Connection> entry_container::Observable<AlphabeticalTraversal> for Simple<Connection>
-where
-    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
-{
-    fn read_dirents(
-        self: Arc<Self>,
-        pos: AlphabeticalTraversal,
-        sink: Box<dyn dirents_sink::Sink<AlphabeticalTraversal>>,
-    ) -> AsyncReadDirents {
-        use dirents_sink::AppendResult;
-
-        let this = self.inner.lock();
-
-        let (mut sink, entries_iter) = match pos {
-            AlphabeticalTraversal::Dot => {
-                // Lazy position retrieval.
-                let pos = &|| match this.entries.keys().next() {
-                    None => AlphabeticalTraversal::End,
-                    Some(first_name) => AlphabeticalTraversal::Name(first_name.clone()),
-                };
-                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".", pos) {
-                    AppendResult::Ok(sink) => {
-                        // I wonder why, but rustc can not infer T in
-                        //
-                        //   pub fn range<T, R>(&self, range: R) -> Range<K, V>
-                        //   where
-                        //     K: Borrow<T>,
-                        //     R: RangeBounds<T>,
-                        //     T: Ord + ?Sized,
-                        //
-                        // for some reason here.  It says:
-                        //
-                        //   error[E0283]: type annotations required: cannot resolve `_: std::cmp::Ord`
-                        //
-                        // pointing to "range".  Same for two the other "range()" invocations
-                        // below.
-                        (sink, this.entries.range::<String, _>(..))
-                    }
-                    AppendResult::Sealed(sealed) => return sealed.into(),
-                }
-            }
-
-            AlphabeticalTraversal::Name(next_name) => {
-                (sink, this.entries.range::<String, _>(next_name..))
-            }
-
-            AlphabeticalTraversal::End => return sink.seal(AlphabeticalTraversal::End).into(),
-        };
-
-        for (name, entry) in entries_iter {
-            match sink
-                .append(&entry.entry_info(), &name, &|| AlphabeticalTraversal::Name(name.clone()))
-            {
-                AppendResult::Ok(new_sink) => sink = new_sink,
-                AppendResult::Sealed(sealed) => return sealed.into(),
-            }
-        }
-
-        sink.seal(AlphabeticalTraversal::End).into()
-    }
-
-    fn register_watcher(
-        self: Arc<Self>,
-        scope: ExecutionScope,
-        mask: u32,
-        channel: Channel,
-    ) -> Status {
-        let mut this = self.inner.lock();
-
-        let mut names = StaticVecEventProducer::existing({
-            let entry_names = this.entries.keys();
-            iter::once(&".".to_string()).chain(entry_names).cloned().collect()
-        });
-
-        if let Some(controller) = this.watchers.add(scope, self.clone(), mask, channel) {
-            controller.send_event(&mut names);
-            controller.send_event(&mut SingleNameEventProducer::idle());
-        }
-
-        Status::OK
-    }
-
-    fn unregister_watcher(self: Arc<Self>, key: usize) {
-        let mut this = self.inner.lock();
-        this.watchers.remove(key);
     }
 }
