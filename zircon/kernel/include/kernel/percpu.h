@@ -27,10 +27,13 @@
 #include <vm/page_state.h>
 
 struct percpu {
-  percpu(cpu_num_t cpu_num);
+  explicit percpu(cpu_num_t cpu_num);
 
+  // percpus cannot be moved or copied.
   percpu(const percpu&) = delete;
-  percpu operator=(const percpu&) = delete;
+  percpu(percpu&&) = delete;
+  percpu& operator=(const percpu&) = delete;
+  percpu& operator=(percpu&&) = delete;
 
   // Each CPU maintains a per-cpu queue of timers.
   TimerQueue timer_queue;
