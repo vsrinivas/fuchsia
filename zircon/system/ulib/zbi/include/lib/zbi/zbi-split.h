@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include "zbi.h"
+#ifndef LIB_ZBI_ZBI_SPLIT_H_
+#define LIB_ZBI_ZBI_SPLIT_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include "zbi.h"
 
 __BEGIN_CDECLS
 
@@ -17,3 +18,5 @@ zbi_result_t zbi_split_complete(zx_handle_t zbi_vmo, zx_handle_t* kernel_vmo,
                                 zx_handle_t* data_vmo);
 
 __END_CDECLS
+
+#endif  // LIB_ZBI_ZBI_SPLIT_H_

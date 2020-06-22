@@ -30,45 +30,47 @@ foreach(entry, zircon_test_specs) {
 # This ensures the GN build fails when a test gets removed from ZN, which is
 # critical when migrating tests from ZN to GN.
 listed_tests = [
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
   "hwreg-asm-header",
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
+
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
   "kazoo-unittests",
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
+
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
+  #------------------
 ]
 if (current_os == "linux") {
   listed_tests += [
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
-#------------------
+    #------------------
+    #------------------
+    #------------------
+    #------------------
+    #------------------
+    #------------------
   ]
 }
 
@@ -102,63 +104,78 @@ group("migrated-tests") {
   testonly = true
 
   deps = [
-    "//zircon/system/ulib/uart/test",
+    #------------------
+    "//sdk/lib/fdio/test/host",
+
+    #------------------
+    "//zircon/system/ulib/blobfs/test:blobfs-host",
     "//zircon/system/ulib/fbl/test:fbl",
     "//zircon/system/ulib/ffl/test:ffl",
     "//zircon/system/ulib/fit/test",
     "//zircon/system/ulib/fs/transaction/test",
-    "//zircon/system/ulib/libzbi/test:zbi",
-    "//zircon/system/utest/cmdline",
-  #------------------
-    "//zircon/system/ulib/blobfs/test:blobfs-host",
-  #------------------
-  #------------------
-    "//zircon/system/utest/fidl",
-  #------------------
-  #------------------
-    "//zircon/system/utest/fs-host",
-  #------------------
-  #------------------
+
+    #------------------
+    #------------------
     "//zircon/system/ulib/fvm-host:fvm-host-test",
-  #------------------
-    "//sdk/lib/fdio/test/host",
-  #------------------
+
+    #------------------
     "//zircon/system/ulib/fvm/test:fvm-unit",
-  #------------------
-  #------------------
+
+    #------------------
+    #------------------
     "//zircon/system/ulib/minfs/test:minfs-host",
-  #------------------
-  #------------------
+
+    #------------------
+    #------------------
     #"tests",
-  #------------------
-  #------------------
+    #------------------
+    #------------------
     "//zircon/system/ulib/trace-reader/test:trace-reader-test",
-  #------------------
-  #------------------
-    "//zircon/system/utest/util",
-  #------------------
-  #------------------
+    "//zircon/system/ulib/uart/test",
+    "//zircon/system/ulib/zbi/test:zbi",
+
+    #------------------
+    #------------------
     "//zircon/system/ulib/zxtest/test:zxtest",
-  #------------------
-  #------------------
+
+    #------------------
+    #------------------
     "//zircon/system/ulib/zxtest/test/integration:zxtest-integration",
-  #------------------
+    "//zircon/system/utest/cmdline",
+
+    #------------------
+    #------------------
+    "//zircon/system/utest/fidl",
+
+    #------------------
+    #------------------
+    "//zircon/system/utest/fs-host",
+
+    #------------------
+    #------------------
+    "//zircon/system/utest/util",
+
+    #------------------
   ]
 
   if (current_os == "linux") {
     deps += [
       "//src/devices/usb/drivers/usb-peripheral-test",
-      "//zircon/system/utest/mtd",
-      "//zircon/system/ulib/nand-redundant-storage/test:nand-redundant-storage",
-  #------------------
+
+      #------------------
       "//zircon/system/ulib/ftl-mtd/test:ftl-volume-wrapper",
-  #------------------
-  #------------------
-      "//zircon/system/utest/ftl-mtd:ftl-volume-wrapper-integration",
-  #------------------
-  #------------------
+
+      #------------------
+      #------------------
       "//zircon/system/ulib/ftl-mtd/test:nand-volume-driver",
-  #------------------
+      "//zircon/system/ulib/nand-redundant-storage/test:nand-redundant-storage",
+
+      #------------------
+      #------------------
+      "//zircon/system/utest/ftl-mtd:ftl-volume-wrapper-integration",
+      "//zircon/system/utest/mtd",
+
+      #------------------
     ]
   }
 }

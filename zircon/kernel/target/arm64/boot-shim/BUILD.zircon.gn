@@ -47,7 +47,7 @@ template("boot_shim") {
       deps = [
         ":common",
         "$zx/system/ulib/ddk-platform-defs:headers",
-        "$zx/system/ulib/libzbi",
+        "$zx/system/ulib/zbi",
       ]
       sources = [
         "${board}-uart.c",

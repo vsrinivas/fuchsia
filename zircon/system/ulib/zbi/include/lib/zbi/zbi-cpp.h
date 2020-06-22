@@ -7,8 +7,8 @@
 //
 // Documentation for methods can also be found in ulib/zbi/include/zbi/zbi.h
 
-#ifndef LIBZBI_ZBI_CPP_H_
-#define LIBZBI_ZBI_CPP_H_
+#ifndef LIB_ZBI_ZBI_CPP_H_
+#define LIB_ZBI_ZBI_CPP_H_
 
 #include <stddef.h>
 #include <zircon/boot/image.h>
@@ -66,4 +66,4 @@ class Zbi {
 
 }  // namespace zbi
 
-#endif  // LIBZBI_ZBI_CPP_H_
+#endif  // LIB_ZBI_ZBI_CPP_H_

@@ -15,7 +15,7 @@ test("platform-bus") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/libzbi",
+    "//zircon/public/lib/zbi",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",

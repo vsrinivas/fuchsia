@@ -22,6 +22,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zbi/zbi-cpp.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
@@ -47,7 +48,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_printf.h>
 #include <inspector/inspector.h>
-#include <libzbi/zbi-cpp.h>
 
 #include "composite_device.h"
 #include "devfs.h"

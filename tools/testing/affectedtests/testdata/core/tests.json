@@ -10126,11 +10126,11 @@
     ],
     "test": {
       "cpu": "x64",
-      "label": "//zircon/system/ulib/libzbi/test/zbi:zbi(//build/toolchain:host_x64)",
+      "label": "//zircon/system/ulib/zbi/test/zbi:zbi(//build/toolchain:host_x64)",
       "name": "host_x64/zircon-migrated/libzbi-test",
       "os": "linux",
       "path": "host_x64/zircon-migrated/libzbi-test",
-      "runtime_deps": "host_x64/gen/zircon/system/ulib/libzbi/test/zbi.deps.json"
+      "runtime_deps": "host_x64/gen/zircon/system/ulib/zbi/test/zbi.deps.json"
     }
   },
   {

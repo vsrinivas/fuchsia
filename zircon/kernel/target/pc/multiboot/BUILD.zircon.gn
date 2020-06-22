@@ -87,7 +87,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       "$zx/kernel/arch/x86/page_tables:headers",
       "$zx/kernel/platform/pc:headers",
-      "$zx/system/ulib/libzbi",
+      "$zx/system/ulib/zbi",
     ]
     ldflags = [ "-Wl,-T," + rebase_path("multiboot.ld", root_build_dir) ]
     inputs = [ "multiboot.ld" ]

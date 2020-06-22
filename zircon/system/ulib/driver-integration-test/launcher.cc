@@ -4,6 +4,7 @@
 
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/driver-integration-test/fixture.h>
+#include <lib/zbi/zbi-cpp.h>
 #include <lib/zx/vmo.h>
 #include <memory.h>
 #include <string.h>
@@ -13,7 +14,6 @@
 
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
-#include <libzbi/zbi-cpp.h>
 
 namespace driver_integration_test {
 

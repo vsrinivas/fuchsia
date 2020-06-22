@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include "zbi-cpp.h"
+#ifndef LIB_ZBI_ZBI_ZX_H_
+#define LIB_ZBI_ZBI_ZX_H_
 
 #include <lib/zx/vmo.h>
+
+#include "zbi-cpp.h"
 
 namespace zbi {
 
@@ -42,3 +43,5 @@ class ZbiVMO : public Zbi {
 };
 
 }  // namespace zbi
+
+#endif  // LIB_ZBI_ZBI_ZX_H_

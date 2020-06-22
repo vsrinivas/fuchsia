@@ -4,12 +4,12 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/kernel-mexec/kernel-mexec.h>
 #include <lib/svc/outgoing.h>
+#include <lib/zbi/zbi-cpp.h>
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
 
 #include <vector>
 
-#include <libzbi/zbi-cpp.h>
 #include <zxtest/zxtest.h>
 
 namespace {

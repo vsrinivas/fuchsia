@@ -8,6 +8,7 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/kernel-mexec/kernel-mexec.h>
+#include <lib/zbi/zbi-cpp.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
@@ -22,7 +23,6 @@
 #include <memory>
 
 #include <ddk/device.h>
-#include <libzbi/zbi-cpp.h>
 
 namespace {
 

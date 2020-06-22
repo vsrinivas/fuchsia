@@ -5,10 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/zbi/zbi.h>
 #include <string.h>
 #include <zircon/boot/e820.h>
-
-#include <libzbi/zbi.h>
 
 #include "trampoline.h"
 

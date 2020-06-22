@@ -5,6 +5,8 @@
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/zbi/zbi-cpp.h>
+#include <lib/zbi/zbi-zx.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmar.h>
@@ -14,8 +16,6 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <libzbi/zbi-cpp.h>
-#include <libzbi/zbi-zx.h>
 #include <zxtest/zxtest.h>
 
 namespace {

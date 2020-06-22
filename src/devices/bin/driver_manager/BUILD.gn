@@ -81,7 +81,7 @@ source_set("lib") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/libzbi",
+    "//zircon/public/lib/zbi",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",

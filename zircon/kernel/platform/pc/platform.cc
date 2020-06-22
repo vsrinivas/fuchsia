@@ -26,6 +26,7 @@
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <lib/system-topology.h>
+#include <lib/zbi/zbi-cpp.h>
 #include <mexec.h>
 #include <platform.h>
 #include <string.h>
@@ -40,7 +41,6 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
-#include <libzbi/zbi-cpp.h>
 #include <lk/init.h>
 #include <platform/console.h>
 #include <platform/crashlog.h>

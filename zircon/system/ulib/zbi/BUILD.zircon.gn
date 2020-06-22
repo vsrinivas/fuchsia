@@ -2,14 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("libzbi") {
-  output_prefix_override = true
+zx_library("zbi") {
   sdk = "static"
   sdk_headers = [
-    "libzbi/zbi-cpp.h",
-    "libzbi/zbi-split.h",
-    "libzbi/zbi-zx.h",
-    "libzbi/zbi.h",
+    "lib/zbi/zbi-cpp.h",
+    "lib/zbi/zbi-split.h",
+    "lib/zbi/zbi-zx.h",
+    "lib/zbi/zbi.h",
   ]
   host = true
   kernel = true

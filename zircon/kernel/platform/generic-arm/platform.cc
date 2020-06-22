@@ -49,12 +49,12 @@
 #include <kernel/thread.h>
 #endif
 
+#include <lib/zbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/smc.h>
 #include <zircon/types.h>
 
-#include <libzbi/zbi-cpp.h>
 #include <pdev/pdev.h>
 
 // Defined in start.S.

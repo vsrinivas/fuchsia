@@ -5,11 +5,10 @@
 #include "src/virtualization/bin/vmm/arch/x64/i8250.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zbi/zbi.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
-
-#include <libzbi/zbi.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
 

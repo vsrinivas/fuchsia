@@ -25,7 +25,7 @@ zx_library("kernel-mexec") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/libzbi",
+    "//zircon/public/lib/zbi",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async",

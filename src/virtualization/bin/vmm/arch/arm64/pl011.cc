@@ -6,10 +6,9 @@
 
 #include <endian.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zbi/zbi.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
-
-#include <libzbi/zbi.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
 

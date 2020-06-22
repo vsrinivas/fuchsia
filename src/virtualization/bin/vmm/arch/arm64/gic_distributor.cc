@@ -11,11 +11,11 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zbi/zbi.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/driver-config.h>
 
 #include <fbl/unique_fd.h>
-#include <libzbi/zbi.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"

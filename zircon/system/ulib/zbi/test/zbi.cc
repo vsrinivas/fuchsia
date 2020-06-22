@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <assert.h>
+#include <lib/zbi/zbi-cpp.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,15 +13,13 @@
 #include <memory>
 
 #include <fbl/auto_call.h>
-#include <libzbi/zbi-cpp.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
 #ifdef __Fuchsia__
+#include <lib/zbi/zbi-zx.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-
-#include <libzbi/zbi-zx.h>
 #endif
 
 const char kTestKernel[] = "4567";

@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <lib/zbi/zbi.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,7 +18,6 @@
 #include <zircon/boot/image.h>
 
 #include <fbl/unique_fd.h>
-#include <libzbi/zbi.h>
 
 #include "src/virtualization/bin/vmm/dev_mem.h"
 #include "src/virtualization/bin/vmm/guest.h"

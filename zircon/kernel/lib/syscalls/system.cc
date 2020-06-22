@@ -10,6 +10,7 @@
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
+#include <lib/zbi/zbi-cpp.h>
 #include <mexec.h>
 #include <platform.h>
 #include <string.h>
@@ -29,7 +30,6 @@
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
 #include <kernel/thread.h>
-#include <libzbi/zbi-cpp.h>
 #include <object/event_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>

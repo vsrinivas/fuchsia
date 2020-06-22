@@ -44,8 +44,8 @@ zx_library("pc") {
     "$zx/kernel/lib/topology",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/explicit-memory",
-    "$zx/system/ulib/libzbi",
     "$zx/system/ulib/smbios",
+    "$zx/system/ulib/zbi",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/cksum",
   ]

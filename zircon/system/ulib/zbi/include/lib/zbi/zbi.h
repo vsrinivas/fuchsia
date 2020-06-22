@@ -20,8 +20,8 @@
 // (3) Tested
 //     Tests for this library can be found at zircon/system/utest/zbi/*
 
-#ifndef LIBZBI_ZBI_H_
-#define LIBZBI_ZBI_H_
+#ifndef LIB_ZBI_ZBI_H_
+#define LIB_ZBI_ZBI_H_
 
 #include <stddef.h>
 #include <zircon/boot/image.h>
@@ -187,4 +187,4 @@ zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);
 
 __END_CDECLS
 
-#endif  // LIBZBI_ZBI_H_
+#endif  // LIB_ZBI_ZBI_H_

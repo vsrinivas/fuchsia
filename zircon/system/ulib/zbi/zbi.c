@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zbi/zbi.h>
 #include <stdbool.h>
 #include <string.h>
-
-#include <libzbi/zbi.h>
 
 struct check_state {
   zbi_header_t** err;
