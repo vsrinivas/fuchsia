@@ -80,7 +80,7 @@
         "sample_interval": 1.0,
         "filter_time_constant": 5.0,
         "target_temperature": 80.0,
-        "e_integral_min": -20.0,
+        "e_integral_min": -11.0,
         "e_integral_max": 0.0,
         "sustainable_power": 0.876,
         "proportional_gain": 0.0,
