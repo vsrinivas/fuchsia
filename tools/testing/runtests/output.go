@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	runtestsSuccess = "[runtests][PASSED]"
-	runtestsFailure = "[runtests][FAILED]"
+	SuccessSignature = "[runtests][PASSED]"
+	FailureSignature = "[runtests][FAILED]"
 )
 
 var (
-	resultSignatureRE = regexp.MustCompile(fmt.Sprintf("(%s|%s)", regexp.QuoteMeta(runtestsSuccess), regexp.QuoteMeta(runtestsFailure)))
-	resultMatchLength = len(runtestsSuccess) // Assumes len(runtestsSuccess) == len(runtestsFailure)
+	resultSignatureRE = regexp.MustCompile(fmt.Sprintf("(%s|%s)", regexp.QuoteMeta(SuccessSignature), regexp.QuoteMeta(FailureSignature)))
+	resultMatchLength = len(SuccessSignature) // Assumes len(SuccessSignature) == len(FailureSignature)
 )
 
 // TestPassed reads in the output from a runtests invocation of a single test
@@ -31,5 +31,5 @@ func TestPassed(ctx context.Context, testOutput io.Reader) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("unable to derive test result from runtests output: %w", err)
 	}
-	return string(match) == runtestsSuccess, nil
+	return string(match) == SuccessSignature, nil
 }

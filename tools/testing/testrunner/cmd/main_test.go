@@ -71,7 +71,7 @@ func TestValidateTest(t *testing.T) {
 			},
 			expectErr: true,
 		}, {
-			name: "missing required path",
+			name: "spurious package URL",
 			test: testsharder.Test{
 				Test: build.Test{
 					Name:       "test1",
@@ -81,13 +81,24 @@ func TestValidateTest(t *testing.T) {
 				Runs: 1,
 			},
 			expectErr: true,
-		}, {
-			name: "missing required packageurl",
+		},
+		{
+			name: "missing required path",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name: "test1",
+					OS:   "linux",
+				},
+				Runs: 1,
+			},
+			expectErr: true,
+		},
+		{
+			name: "missing required package_url or path",
 			test: testsharder.Test{
 				Test: build.Test{
 					Name: "test1",
 					OS:   "fuchsia",
-					Path: "/foo/bar",
 				},
 				Runs: 1,
 			},

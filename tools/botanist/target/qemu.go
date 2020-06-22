@@ -40,7 +40,10 @@ const (
 	// Default networking values.
 	defaultMACAddr       = "52:54:00:63:5e:7a"
 	defaultLinkLocalAddr = "fe80::5054:ff:fe63:5e7a"
-	defaultNodename      = "step-atom-yard-juicy"
+
+	// DefaultQEMUNodename is the default nodename given to a target with the
+	// default QEMU MAC address.
+	DefaultQEMUNodename = "step-atom-yard-juicy"
 
 	// The size in bytes of minimimum desired size for the storage-full image.
 	// The image should be large enough to hold all downloaded test packages
@@ -164,7 +167,7 @@ func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 
 // Nodename returns the name of the target node.
 func (t *QEMUTarget) Nodename() string {
-	return defaultNodename
+	return DefaultQEMUNodename
 }
 
 // IPv6Addr returns the global unicast IPv6 address of the qemu instance.

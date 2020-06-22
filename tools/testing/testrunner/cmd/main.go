@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	testsharder "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
@@ -32,9 +33,10 @@ import (
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
 const (
-	nodenameEnvVar = "FUCHSIA_NODENAME"
-	sshKeyEnvVar   = "FUCHSIA_SSH_KEY"
-	// A directory that will be automatically isolated on completion of a task.
+	nodenameEnvVar     = "FUCHSIA_NODENAME"
+	sshKeyEnvVar       = "FUCHSIA_SSH_KEY"
+	serialSocketEnvVar = "FUCHSIA_SERIAL_SOCKET"
+	// A directory that will be automatically archived on completion of a task.
 	testOutdirEnvVar = "FUCHSIA_TEST_OUTDIR"
 )
 
@@ -124,7 +126,8 @@ func main() {
 	}
 	defer cleanUp()
 
-	if err := execute(ctx, tests, outputs, nodename, sshKeyFile); err != nil {
+	serialSocketPath := os.Getenv(serialSocketEnvVar)
+	if err := execute(ctx, tests, outputs, nodename, sshKeyFile, serialSocketPath); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -139,12 +142,15 @@ func validateTest(test testsharder.Test) error {
 	if test.Runs <= 0 {
 		return fmt.Errorf("one or more tests with invalid `runs` field")
 	}
-	if test.OS == "fuchsia" {
-		if test.Test.PackageURL == "" {
-			return fmt.Errorf("one or more fuchsia tests missing `packageurl` field")
+	if test.OS == "fuchsia" && test.PackageURL == "" && test.Path == "" {
+		return fmt.Errorf("one or more fuchsia tests missing the `path` and `package_url` fields")
+	}
+	if test.OS != "fuchsia" {
+		if test.PackageURL != "" {
+			return fmt.Errorf("one or more host tests have a `package_url` field present")
+		} else if test.Path == "" {
+			return fmt.Errorf("one or more host tests missing the `path` field")
 		}
-	} else if test.Test.Path == "" {
-		return fmt.Errorf("one or more host tests missing `path` field")
 	}
 	return nil
 }
@@ -175,7 +181,7 @@ type tester interface {
 	CopySinks(context.Context, []runtests.DataSinkReference) error
 }
 
-func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile string) error {
+func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile, serialSocketPath string) error {
 	var localTests, fuchsiaTests []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
@@ -207,24 +213,24 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 
 	if len(fuchsiaTests) == 0 {
 		return nil
+	} else if nodename == "" {
+		return fmt.Errorf("%q must be set", nodenameEnvVar)
 	}
 
 	var t tester
 	var err error
 	if sshKeyFile != "" {
-		if nodename == "" {
-			return fmt.Errorf("%s must be set", nodenameEnvVar)
-		}
 		t, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.outDir, useRuntests, perTestTimeout)
 	} else {
-		// TODO(fxbug.dev/41930): create a serial test runner in this case.
-		return fmt.Errorf("%s must be set", sshKeyEnvVar)
+		if serialSocketPath == "" {
+			return fmt.Errorf("%q must be set if %q and %q are not", serialSocketEnvVar, sshKeyEnvVar, nodenameEnvVar)
+		}
+		t, err = newFuchsiaSerialTester(ctx, serialSocketPath, perTestTimeout)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)
+		return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 	}
 	defer t.Close()
-
 	return runTests(ctx, fuchsiaTests, t, outputs)
 }
 
@@ -262,15 +268,26 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 }
 
 func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester) (*testrunner.TestResult, error) {
-	result := runtests.TestSuccess
 	// The test case parser specifically uses stdout, so we need to have a
 	// dedicated stdout buffer.
-	stdout := bytes.Buffer{}
-	stdio := stdioBuffer{}
+	stdout := new(bytes.Buffer)
+	stdio := new(stdioBuffer)
 
-	multistdout := io.MultiWriter(os.Stdout, &stdio, &stdout)
-	multistderr := io.MultiWriter(os.Stderr, &stdio)
+	multistdout := io.MultiWriter(os.Stdout, stdio, stdout)
+	multistderr := io.MultiWriter(os.Stderr, stdio)
 
+	// In the case of running tests on QEMU over serial, we do not wish to
+	// forward test output to stdout, as QEMU is already redirecting serial
+	// output there: we do not want to double-print.
+	//
+	// This is a bit of a hack, but is a lesser evil than extending the
+	// testrunner CLI just to sidecar the information of 'is QEMU'.
+	againstQEMU := os.Getenv(nodenameEnvVar) == target.DefaultQEMUNodename
+	if _, ok := t.(*fuchsiaSerialTester); ok && againstQEMU {
+		multistdout = io.MultiWriter(stdio, stdout)
+	}
+
+	result := runtests.TestSuccess
 	startTime := time.Now()
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
 	if err != nil {

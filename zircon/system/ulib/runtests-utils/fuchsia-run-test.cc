@@ -46,8 +46,8 @@
 #include <runtests-utils/service-proxy-dir.h>
 
 // Signatures to print to indicate failure or success.
-constexpr char kFailureSignature[] = "\n[runtests][FAILURE]";
-constexpr char kSuccessSignature[] = "\n[runtests][SUCCESS]";
+constexpr char kFailureSignature[] = "\n[runtests][FAILED]";
+constexpr char kSuccessSignature[] = "\n[runtests][PASSED]";
 
 namespace fio = ::llcpp::fuchsia::io;
 

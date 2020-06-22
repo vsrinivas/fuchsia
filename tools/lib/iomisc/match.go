@@ -9,10 +9,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"regexp"
 	"sync"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/ring"
 )
 
@@ -98,11 +98,22 @@ func (m *MatchingReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// MaxMatchSize returns the configured maximum size a match could have.
+func (m *MatchingReader) MaxMatchSize() int {
+	return m.maxMatchSize
+}
+
+type byteTracker interface {
+	Bytes() []byte
+}
+
 // ReadUntilMatch reads from a MatchingReader until a match has been read,
 // and ultimately tries to return those matches.
 func ReadUntilMatch(ctx context.Context, m *MatchingReader, output io.Writer) ([]byte, error) {
+	matchWindowSize := 2 * m.MaxMatchSize()
+
 	if output == nil {
-		output = ioutil.Discard
+		output = ring.NewBuffer(matchWindowSize)
 	}
 
 	errs := make(chan error)
@@ -124,6 +135,14 @@ func ReadUntilMatch(ctx context.Context, m *MatchingReader, output io.Writer) ([
 
 	select {
 	case <-ctx.Done():
+		// If we time out, it is helpful to see what the last bytes processed
+		// were: dump these bytes if we can.
+		if bt, ok := output.(byteTracker); ok {
+			lastBytes := bt.Bytes()
+			numBytes := min(len(lastBytes), matchWindowSize)
+			lastBytes = lastBytes[len(lastBytes)-numBytes:]
+			logger.Debugf(ctx, "ReadUntilMatch: last %d bytes read before cancellation: %q", numBytes, lastBytes)
+		}
 		return nil, ctx.Err()
 	case err := <-errs:
 		return nil, err

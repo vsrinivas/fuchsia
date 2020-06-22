@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
@@ -36,6 +38,9 @@ const (
 	// Returned by both run-test-component and run-test-suite to indicate the
 	// test timed out.
 	timeoutExitCode = 21
+
+	// Printed to the serial console when ready to accept user input.
+	serialConsoleCursor = "\n$"
 )
 
 type timeoutError struct {
@@ -258,13 +263,71 @@ func (t *fuchsiaSSHTester) Close() error {
 	return t.r.Close()
 }
 
+// FuchsiaSerialTester executes fuchsia tests over serial.
+type fuchsiaSerialTester struct {
+	socket         io.ReadWriteCloser
+	perTestTimeout time.Duration
+	localOutputDir string
+}
+
+func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTestTimeout time.Duration) (*fuchsiaSerialTester, error) {
+	socket, err := net.Dial("unix", serialSocketPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open serial socket connection: %v", err)
+	}
+	// Wait until the system has had a chance to boot and then look for the
+	// cursor, which should indicate that the console is ready for
+	// user-input.
+	m := iomisc.NewSequenceMatchingReader(socket, serialConsoleCursor)
+	if _, err = iomisc.ReadUntilMatch(ctx, m, nil); err != nil {
+		return nil, fmt.Errorf("failed to find cursor: %v", err)
+	}
+
+	return &fuchsiaSerialTester{
+		socket:         socket,
+		perTestTimeout: perTestTimeout,
+	}, nil
+}
+
+func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
+	setCommand(&test, true, dataOutputDir, t.perTestTimeout)
+	cmd := strings.Join(test.Command, " ")
+	logger.Debugf(ctx, "starting: %s\n", cmd)
+	// The UART kernel driver expects a command to be followed by \r\n.
+	if _, err := io.WriteString(t.socket, cmd+"\r\n"); err != nil {
+		return nil, fmt.Errorf("failed to write to serial socket: %v", err)
+	}
+
+	success, err := runtests.TestPassed(ctx, t.socket)
+
+	if err != nil {
+		return nil, err
+	} else if !success {
+		return nil, fmt.Errorf("test failed")
+	}
+	return nil, nil
+}
+
+func (t *fuchsiaSerialTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+	return nil
+}
+
+// Close terminates the underlying Serial socket connection. The object is no
+// longer usable after calling this method.
+func (t *fuchsiaSerialTester) Close() error {
+	return t.socket.Close()
+}
+
 func setCommand(test *testsharder.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) {
 	if len(test.Command) > 0 {
 		return
 	}
 
 	if useRuntests {
-		test.Command = []string{runtestsName, "--output", remoteOutputDir}
+		test.Command = []string{runtestsName}
+		if remoteOutputDir != "" {
+			test.Command = append(test.Command, "--output", remoteOutputDir)
+		}
 		if timeout > 0 {
 			test.Command = append(test.Command, "-i", fmt.Sprintf("%d", int64(timeout.Seconds())))
 		}

@@ -217,6 +217,87 @@ func TestSSHTester(t *testing.T) {
 	}
 }
 
+// Creates pair of ReadWriteClosers that mimics the relationship between serial
+// and socket i/o. Implemented with in-memory pipes, the input of one can
+// synchronously by read as the output of the other.
+func serialAndSocket() (io.ReadWriteCloser, io.ReadWriteCloser) {
+	rSerial, wSocket := io.Pipe()
+	rSocket, wSerial := io.Pipe()
+	serial := &joinedPipeEnds{rSerial, wSerial}
+	socket := &joinedPipeEnds{rSocket, wSocket}
+	return serial, socket
+}
+
+func TestSerialTester(t *testing.T) {
+	ctx := context.Background()
+	serial, socket := serialAndSocket()
+	defer socket.Close()
+	defer serial.Close()
+
+	tester := fuchsiaSerialTester{socket: socket}
+	test := testsharder.Test{
+		Test: build.Test{
+			Path: "foo",
+		},
+	}
+	expectedCmd := "runtests --output /data/infra/testrunner foo\r\n"
+
+	t.Run("test passes", func(t *testing.T) {
+		errs := make(chan error)
+		go func() {
+			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard)
+			errs <- err
+		}()
+
+		// The write to the socket will block until we read from serial.
+		buff := make([]byte, len(expectedCmd))
+		if _, err := io.ReadFull(serial, buff); err != nil {
+			t.Errorf("error reading from serial: %v", err)
+		} else if string(buff) != expectedCmd {
+			t.Errorf("unexpected command: %s", buff)
+		}
+
+		// At this point, the tester will be blocked reading from the socket.
+		if _, err := io.WriteString(serial, runtests.SuccessSignature); err != nil {
+			t.Errorf("failed to write %s to serial", runtests.SuccessSignature)
+		}
+
+		select {
+		case err := <-errs:
+			if err != nil {
+				t.Error("test unexpectedly failed")
+			}
+		}
+	})
+	t.Run("test fails", func(t *testing.T) {
+		errs := make(chan error)
+		go func() {
+			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard)
+			errs <- err
+		}()
+		// The write to the socket will block until we read from serial.
+		buff := make([]byte, len(expectedCmd))
+		if _, err := io.ReadFull(serial, buff); err != nil {
+			t.Errorf("error reading from serial: %v", err)
+		} else if string(buff) != expectedCmd {
+			t.Errorf("unexpected command: %s", buff)
+		}
+
+		// At this point, the tester will be blocked reading from the socket.
+		if _, err := io.WriteString(serial, runtests.FailureSignature); err != nil {
+			t.Errorf("failed to write %s to serial", runtests.FailureSignature)
+		}
+
+		select {
+		case err := <-errs:
+			if err == nil {
+				t.Error("test unexpectedly passed")
+			}
+		}
+	})
+
+}
+
 func TestSetCommand(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -326,4 +407,25 @@ func TestSetCommand(t *testing.T) {
 		})
 
 	}
+}
+
+type joinedPipeEnds struct {
+	r *io.PipeReader
+	w *io.PipeWriter
+}
+
+func (pe *joinedPipeEnds) Read(p []byte) (int, error) {
+	return pe.r.Read(p)
+}
+
+func (pe *joinedPipeEnds) Write(p []byte) (int, error) {
+	return pe.w.Write(p)
+}
+
+func (pe *joinedPipeEnds) Close() error {
+	if err := pe.r.Close(); err != nil {
+		pe.w.Close()
+		return err
+	}
+	return pe.w.Close()
 }
