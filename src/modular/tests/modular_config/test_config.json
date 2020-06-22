@@ -1,5 +1,6 @@
 {
   "basemgr": {
+    "enable_cobalt": true,
     "use_session_shell_for_story_shell_factory": true,
     "base_shell": {
       "url": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
@@ -46,6 +47,9 @@
         "service_name": "fake.Service.Name",
         "agent_url": "fuchsia-pkg://fuchsia.com/fake_service#meta/fake_service.cmx"
       }
+    ],
+    "restart_session_on_agent_crash": [
+      "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
     ]
   }
 }

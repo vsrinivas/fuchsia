@@ -90,6 +90,14 @@
           "type": "array",
           "items": { "$ref": "#/definitions/agent_service_index_entry" },
           "uniqueItems": true
+        },
+        "restart_session_on_agent_crash": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
+          },
+          "uniqueItems": true
         }
       },
       "additionalProperties": false
@@ -124,14 +132,6 @@
       },
       "additionalProperties": false,
       "required": ["service_name", "agent_url"]
-    },
-    "restart_session_on_agent_crash": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
-      },
-      "uniqueItems": true
     }
   },
   "type": "object",
