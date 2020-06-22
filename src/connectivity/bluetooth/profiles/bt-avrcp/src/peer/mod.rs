@@ -104,6 +104,11 @@ struct RemotePeer {
     /// attempt to connect again immediately.
     attempt_connection: bool,
 
+    /// Set true to let the state watcher know that any outstanding `control_channel` processing
+    /// tasks should be canceled and state cleaned up. Set to false after successfully canceling
+    /// the tasks.
+    cancel_tasks: bool,
+
     /// Most recent notification values from the peer. Used to notify new controller listeners to
     /// the current state of the peer.
     notification_cache: HashMap<Discriminant<ControllerEvent>, ControllerEvent>,
@@ -127,8 +132,13 @@ impl RemotePeer {
             browse_command_handler: BrowseChannelHandler::new(target_delegate),
             state_change_listener: StateChangeListener::new(),
             attempt_connection: true,
+            cancel_tasks: false,
             notification_cache: HashMap::new(),
         }
+    }
+
+    fn id(&self) -> PeerId {
+        self.peer_id
     }
 
     /// Caches the current value of this controller notification event for future controller event
@@ -172,6 +182,7 @@ impl RemotePeer {
         self.browse_channel = PeerChannel::Disconnected;
         self.control_channel = PeerChannel::Disconnected;
         self.attempt_connection = attempt_reconnection;
+        self.cancel_tasks = true;
         self.wake_state_watcher();
     }
 
@@ -192,6 +203,7 @@ impl RemotePeer {
         fx_vlog!(tag: "avrcp", 2, "set_control_connection {:?}", self.peer_id);
         self.reset_peer_state();
         self.control_channel = PeerChannel::Connected(Arc::new(peer));
+        self.cancel_tasks = true;
         self.wake_state_watcher();
     }
 
@@ -242,7 +254,7 @@ async fn send_vendor_dependent_command_internal(
         let response = loop {
             let result = stream.next().await.ok_or(Error::CommandFailed)?;
             let response: AvcCommandResponse = result.map_err(|e| Error::AvctpError(e))?;
-            fx_vlog!(tag: "avrcp", 1, "vendor response {:#?}", response);
+            fx_vlog!(tag: "avrcp", 1, "vendor response {:?}", response);
             match (response.response_type(), command.command_type()) {
                 (AvcResponseType::Interim, _) => continue,
                 (AvcResponseType::NotImplemented, _) => return Err(Error::CommandNotSupported),
@@ -285,7 +297,7 @@ async fn get_supported_events_internal(
     peer: Arc<RwLock<RemotePeer>>,
 ) -> Result<Vec<NotificationEventId>, Error> {
     let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
-    fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:#?}", cmd);
+    fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:?}", cmd);
     let buf = send_vendor_dependent_command_internal(peer.clone(), &cmd).await?;
     let capabilities =
         GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
@@ -415,7 +427,9 @@ mod tests {
     use crate::profile::{AvcrpTargetFeatures, AvrcpProtocolVersion};
     use anyhow::Error;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{Channel, ProfileMarker, ProfileRequest};
+    use fidl_fuchsia_bluetooth_bredr::{
+        Channel, ProfileMarker, ProfileRequest, ProfileRequestStream,
+    };
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::{pin_mut, task::Poll};
@@ -425,18 +439,25 @@ mod tests {
         (remote, Channel { socket: Some(socket), ..Channel::new_empty() })
     }
 
+    fn setup_remote_peer(
+        id: PeerId,
+    ) -> Result<(RemotePeerHandle, Arc<TargetDelegate>, ProfileRequestStream), Error> {
+        let (profile_proxy, profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
+        let target_delegate = Arc::new(TargetDelegate::new());
+        let peer_handle = RemotePeerHandle::spawn_peer(id, target_delegate.clone(), profile_proxy);
+
+        Ok((peer_handle, target_delegate, profile_requests))
+    }
+
     // Check that the remote will attempt to connect to a peer if we have a profile.
     #[test]
     fn trigger_connection_test() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
-        let (profile_proxy, mut profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
+        let id = PeerId(1);
+        let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
 
-        let target_delegate = Arc::new(TargetDelegate::new());
-
-        let peer_handle =
-            RemotePeerHandle::spawn_peer(PeerId(1), target_delegate.clone(), profile_proxy);
-
+        // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
             features: AvcrpTargetFeatures::CATEGORY1,
             psm: PSM_AVCTP,
@@ -460,6 +481,71 @@ mod tests {
         // run until stalled, the connection should be put in place.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         assert!(peer_handle.is_connected());
+        Ok(())
+    }
+
+    /// Tests initial connection establishment to a peer.
+    /// Tests peer reconnection correctly terminates the old processing task, including the
+    /// underlying channel, and spawns a new task to handle incoming requests.
+    #[test]
+    fn test_peer_reconnection() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let id = PeerId(123);
+        let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
+
+        // Set the descriptor to simulate service found for peer.
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvcrpTargetFeatures::CATEGORY1,
+            psm: PSM_AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+
+        assert!(!peer_handle.is_connected());
+
+        let next_request_fut = profile_requests.next().on_timeout(1.second().after_now(), || None);
+        pin_mut!(next_request_fut);
+
+        // Peer should have requested a connection.
+        let (remote, channel) = get_channel();
+        match exec.run_singlethreaded(&mut next_request_fut) {
+            Some(Ok(ProfileRequest::Connect { responder, .. })) => {
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // Peer should be connected.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_connected());
+
+        // Should be able to send data over the channel.
+        match remote.write(&[0; 1]) {
+            Ok(1) => {}
+            x => panic!("Expected data write but got {:?} instead", x),
+        }
+
+        // Peer reconnects with a new l2cap connection. Keep the old one alive to validate that it's
+        // closed.
+        let (remote2, socket2) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let reconnect_peer = AvcPeer::new(socket2)?;
+        peer_handle.set_control_connection(reconnect_peer);
+
+        // Run to update watcher state. Peer should be connected.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_connected());
+
+        // Shouldn't be able to send data over the old channel.
+        match remote.write(&[0; 1]) {
+            Err(zx::Status::PEER_CLOSED) => {}
+            x => panic!("Expected PEER_CLOSED but got {:?}", x),
+        }
+
+        // Should be able to send data over the new channel.
+        match remote2.write(&[0; 1]) {
+            Ok(1) => {}
+            x => panic!("Expected data write but got {:?} instead", x),
+        }
+
         Ok(())
     }
 }
