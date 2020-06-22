@@ -213,7 +213,7 @@ impl TestEnv {
         std::mem::replace(&mut *self.interactions.lock(), vec![])
     }
 
-    /// Set the name of the board that system_updater is running on.
+    /// Set the name of the board that system-updater is running on.
     fn set_board_name(&self, board: impl AsRef<str>) {
         // Write the "board" file into the build-info directory.
         let mut file = File::create(self.build_info_path.join("board")).expect("create board file");
@@ -269,18 +269,9 @@ impl TestEnv {
         let build_info_dir = File::open(&self.build_info_path).expect("open config dir");
         let misc_dir = File::open(&self.misc_path).expect("open misc dir");
 
-        // TODO(49915) remove package name lookup when this test binary only needs to test a single
-        // system updater implementation.
-
-        let meta_package = fuchsia_pkg::MetaPackage::deserialize(
-            std::fs::read("/pkg/meta/package").unwrap().as_slice(),
+        let system_updater = AppBuilder::new(
+            "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx",
         )
-        .unwrap();
-
-        let system_updater = AppBuilder::new(format!(
-            "fuchsia-pkg://fuchsia.com/{}#meta/system_updater_isolated.cmx",
-            meta_package.name()
-        ))
         .add_dir_to_namespace("/blob".to_string(), blobfs_dir)
         .expect("/blob to mount")
         .add_dir_to_namespace("/fake".to_string(), fake_dir)
@@ -293,7 +284,7 @@ impl TestEnv {
 
         let output = system_updater
             .output(launcher)
-            .expect("system_updater to launch")
+            .expect("system updater to launch")
             .await
             .expect("no errors while waiting for exit");
 
@@ -614,7 +605,7 @@ async fn test_system_update() {
         skip_recovery: None,
     })
     .await
-    .expect("run system_updater");
+    .expect("run system updater");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -672,7 +663,7 @@ async fn test_system_update_force_recovery() {
         skip_recovery: None,
     })
     .await
-    .expect("run system_updater");
+    .expect("run system updater");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -751,7 +742,7 @@ async fn test_packages_json_takes_precedence() {
         skip_recovery: None,
     })
     .await
-    .expect("run system_updater");
+    .expect("run system updater");
 
     assert_eq!(
         resolved_urls(Arc::clone(&env.interactions)),
@@ -797,7 +788,7 @@ async fn test_metrics_report_untrusted_tuf_repo() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -835,7 +826,7 @@ async fn test_system_update_no_reboot() {
         skip_recovery: None,
     })
     .await
-    .expect("run system_updater");
+    .expect("run system updater");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -889,7 +880,7 @@ async fn test_system_update_force_recovery_reboots_regardless_of_reboot_arg() {
         skip_recovery: None,
     })
     .await
-    .expect("run system_updater");
+    .expect("run system updater");
 
     assert_eq!(
         env.take_interactions(),
@@ -934,7 +925,7 @@ async fn test_broken_logger() {
         skip_recovery: None,
     })
     .await
-    .expect("run system_updater");
+    .expect("run system updater");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 0);
@@ -982,7 +973,7 @@ async fn test_failing_package_fetch() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -1028,7 +1019,7 @@ async fn test_system_update_fails_when_sync_fails() {
         })
         .await;
 
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     assert_eq!(
         env.take_interactions(),
@@ -1063,7 +1054,7 @@ async fn test_normal_requires_zbi() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     assert_eq!(
         env.take_interactions(),
@@ -1100,7 +1091,7 @@ async fn test_force_recovery_rejects_zbi() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     assert_eq!(
         env.take_interactions(),
@@ -1126,7 +1117,7 @@ async fn test_force_recovery_rejects_skip_recovery_flag() {
             skip_recovery: Some(true),
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1186,7 +1177,7 @@ async fn test_invalid_board() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     // Expect to have failed prior to downloading images.
     assert_eq!(resolved_urls(Arc::clone(&env.interactions)), vec![UPDATE_PKG_URL]);
@@ -1194,12 +1185,7 @@ async fn test_invalid_board() {
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
     let logger = loggers.into_iter().next().unwrap();
-    let mut events = OtaMetrics::from_events(logger.cobalt_events.lock().clone());
-    // TODO(49915) 0 is an invalid index, but the go system updater uses it here.  Remove this
-    // conversion when these tests no longer cover the go system updater.
-    if events.phase == 0 {
-        events.phase = metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32;
-    }
+    let events = OtaMetrics::from_events(logger.cobalt_events.lock().clone());
     assert_eq!(
         events,
         OtaMetrics {
@@ -1238,7 +1224,7 @@ async fn test_invalid_update_package_name() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     // Expect to have failed prior to downloading images.
     // The overall result should be similar to an invalid board, and we should have used
@@ -1251,12 +1237,7 @@ async fn test_invalid_update_package_name() {
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
     let logger = loggers.into_iter().next().unwrap();
-    let mut events = OtaMetrics::from_events(logger.cobalt_events.lock().clone());
-    // TODO(49915) 0 is an invalid index, but the go system updater uses it here.  Remove this
-    // conversion when these tests no longer cover the go system updater.
-    if events.phase == 0 {
-        events.phase = metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32;
-    }
+    let events = OtaMetrics::from_events(logger.cobalt_events.lock().clone());
     assert_eq!(
         events,
         OtaMetrics {
@@ -1726,7 +1707,7 @@ async fn test_failing_image_write() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -1775,7 +1756,7 @@ async fn test_uses_custom_update_package() {
         skip_recovery: None,
     })
     .await
-    .expect("run system_updater");
+    .expect("run system updater");
 
     assert_eq!(
         env.take_interactions(),
@@ -1814,7 +1795,7 @@ async fn test_requires_update_package() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     assert_eq!(env.take_interactions(), vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()),]);
 }
@@ -1836,17 +1817,9 @@ async fn test_rejects_invalid_update_package_url() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
-    // TODO(49915) the go system updater does not verify package urls, so it doesn't know the url
-    // is invalid until it tries to resolve it.  Remove the non-empty assertion when these tests no
-    // longer cover the go system updater.
-    let interactions = env.take_interactions();
-    assert!(
-        interactions == vec![] || interactions == vec![Gc, PackageResolve(bogus_url.to_string())],
-        "{:?}",
-        interactions
-    )
+    assert_eq!(env.take_interactions(), vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1871,7 +1844,7 @@ async fn test_rejects_unknown_flags() {
             "bar",
         ])
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
     assert_eq!(env.take_interactions(), vec![]);
 }
 
@@ -1890,7 +1863,7 @@ async fn test_rejects_extra_args() {
     let result = env
         .run_system_updater_args(vec!["--initiator", "manual", "--target", "m3rk13", "foo"])
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     assert_eq!(env.take_interactions(), vec![]);
 }
@@ -2185,7 +2158,7 @@ async fn does_not_promote_target_channel_on_failure() {
             skip_recovery: None,
         })
         .await;
-    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert!(result.is_err(), "system updater succeeded when it should fail");
 
     env.verify_current_channel(None);
 }

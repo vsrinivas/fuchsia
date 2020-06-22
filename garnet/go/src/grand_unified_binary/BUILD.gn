@@ -11,7 +11,6 @@ go_library("lib") {
   deps = [
     "//src/connectivity/network/netstack:netstack_lib",
     "//src/sys/pkg/bin/amber:lib",
-    "//src/sys/pkg/bin/amber/system_updater:lib",
     "//src/sys/pkg/bin/pkgfs:pmd",
   ]
 }

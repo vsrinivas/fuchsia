@@ -68,9 +68,9 @@ impl Installer for FuchsiaInstaller {
             InstallSource::ScheduledTask => "automatic",
             InstallSource::OnDemand => "manual",
         };
-        info!("starting system_updater");
+        info!("starting system updater");
         let system_updater = async move {
-            AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
+            AppBuilder::new("fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx")
                 .arg("--initiator")
                 .arg(initiator)
                 .arg("--update")
@@ -164,7 +164,7 @@ mod tests {
                 controller: Some(controller),
                 ..
             }) => {
-                assert_eq!(url, "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx");
+                assert_eq!(url, "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx");
                 assert_eq!(
                     arguments,
                     Some(

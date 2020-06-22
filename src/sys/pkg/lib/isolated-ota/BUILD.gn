@@ -113,6 +113,7 @@ test_package("isolated-ota-tests") {
     "//garnet/go/src/grand_unified_binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
     "//src/sys/pkg/bin/pkg-resolver:bin",
+    "//src/sys/pkg/bin/system-updater:bin",
   ]
 
   binaries = [
@@ -129,8 +130,8 @@ test_package("isolated-ota-tests") {
       source = "grand_unified_binary"
     },
     {
-      name = "system_updater"
-      source = "grand_unified_binary"
+      name = "system-updater"
+      source = "system_updater"
     },
   ]
 
@@ -158,8 +159,8 @@ test_package("isolated-ota-tests") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/amber/system_updater/meta/system_updater_isolated.cmx")
-      dest = "system_updater.cmx"
+              "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
+      dest = "system-updater.cmx"
     },
   ]
 
@@ -173,9 +174,9 @@ test_package("isolated-ota-tests") {
 
 package("isolated-swd") {
   deps = [
-    "//garnet/go/src/grand_unified_binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
     "//src/sys/pkg/bin/pkg-resolver:bin",
+    "//src/sys/pkg/bin/system-updater:bin",
   ]
 
   binaries = [
@@ -188,8 +189,8 @@ package("isolated-swd") {
       source = "pkg_resolver"
     },
     {
-      name = "system_updater"
-      source = "grand_unified_binary"
+      name = "system-updater"
+      source = "system_updater"
     },
   ]
 
@@ -213,8 +214,8 @@ package("isolated-swd") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/amber/system_updater/meta/system_updater_isolated.cmx")
-      dest = "system_updater-isolated.cmx"
+              "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
+      dest = "system-updater-isolated.cmx"
     },
   ]
 }

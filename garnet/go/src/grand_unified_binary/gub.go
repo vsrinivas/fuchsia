@@ -15,9 +15,8 @@ import (
 	"strings"
 
 	"amber/amberctl"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
-	"system_updater"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"
 )
 
@@ -33,8 +32,6 @@ func main() {
 		pkgsvr.Main()
 	case "amberctl", "amber_ctl":
 		amberctl.Main()
-	case "system_updater":
-		system_updater.Main()
 	case "netstack":
 		netstack.Main()
 	default:

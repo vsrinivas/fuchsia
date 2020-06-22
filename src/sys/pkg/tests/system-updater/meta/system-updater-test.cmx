@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/system-updater-v2-test"
+        "binary": "test/system-updater-test"
     },
     "sandbox": {
         "features": [

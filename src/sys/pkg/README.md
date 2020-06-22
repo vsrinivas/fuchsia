@@ -82,11 +82,11 @@ Updated: November 2019
    </td>
   </tr>
   <tr>
-   <td>system_updater
+   <td>system-updater
    </td>
    <td>Actually performs system updates.
    </td>
-   <td>`//src/sys/pkg/bin/amber/system_updater\
+   <td>`//src/sys/pkg/bin/system-updater\
    </td>
    <td>Go
    </td>

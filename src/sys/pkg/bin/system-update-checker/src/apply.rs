@@ -14,7 +14,8 @@ use fuchsia_zircon as zx;
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-const SYSTEM_UPDATER_RESOURCE_URL: &str = "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx";
+const SYSTEM_UPDATER_RESOURCE_URL: &str =
+    "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx";
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
@@ -86,8 +87,8 @@ impl ComponentRunner for RealComponentRunner {
     ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
         let app_res = launch(&self.launcher_proxy, url, arguments);
         async move {
-            let mut app = app_res.context("launching system_updater component")?;
-            let exit_status = app.wait().await.context("waiting for system_updater")?;
+            let mut app = app_res.context("launching system updater component")?;
+            let exit_status = app.wait().await.context("waiting for system updater")?;
             exit_status.ok().context(Error::SystemUpdaterFailed)?;
             Ok(())
         }
@@ -150,16 +151,16 @@ fn get_system_updater_resource_url(file_system: &impl FileSystem) -> Result<Stri
         }
         let name = parts[0];
 
-        if name != "amber" {
+        if name != "system-updater" {
             continue;
         }
 
         return Ok(format!(
-            "fuchsia-pkg://fuchsia.com/amber?hash={}#meta/system_updater.cmx",
+            "fuchsia-pkg://fuchsia.com/system-updater?hash={}#meta/system-updater.cmx",
             merkle
         ));
     }
-    fx_log_warn!("Unable to find 'amber' in static manifest");
+    fx_log_warn!("Unable to find 'system-updater' in static manifest");
 
     // Backup is to just use unpinned version.
     Ok(SYSTEM_UPDATER_RESOURCE_URL.to_string())
@@ -173,7 +174,7 @@ async fn apply_system_update_impl<'a>(
     time_source: &'a impl TimeSource,
     file_system: &'a impl FileSystem,
 ) -> Result<(), anyhow::Error> {
-    fx_log_info!("starting system_updater");
+    fx_log_info!("starting system updater");
     let fut = component_runner.run_until_exit(
         get_system_updater_resource_url(file_system)?,
         Some(
@@ -240,15 +241,15 @@ mod test_apply_system_update_impl {
         }
     }
 
-    const HAS_AMBER: &str =
-        "amber/0=6b8f5baf0eff6379701cedd3a86ab0fde5dfd8d73c6cf488926b2c94cdf63af0 \n\
+    const HAS_SYSTEM_UPDATER: &str =
+        "system-updater/0=6b8f5baf0eff6379701cedd3a86ab0fde5dfd8d73c6cf488926b2c94cdf63af0 \n\
          pkgfs/0=1d3c71e2124dc84263a56559ab72bccc840679fe95c91efe0b1a49b2bc0d9f62 ";
 
-    const NO_AMBER: &str =
+    const NO_SYSTEM_UPDATER: &str =
         "pkgfs/0=1d3c71e2124dc84263a56559ab72bccc840679fe95c91efe0b1a49b2bc0d9f62 ";
 
     struct FakeFileSystem {
-        has_amber: bool,
+        has_system_updater: bool,
     }
 
     impl FileSystem for FakeFileSystem {
@@ -256,10 +257,10 @@ mod test_apply_system_update_impl {
             if path != "/pkgfs/system/data/static_packages" {
                 return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "invalid path"));
             }
-            if self.has_amber {
-                Ok(HAS_AMBER.to_string())
+            if self.has_system_updater {
+                Ok(HAS_SYSTEM_UPDATER.to_string())
             } else {
-                Ok(NO_AMBER.to_string())
+                Ok(NO_SYSTEM_UPDATER.to_string())
             }
         }
     }
@@ -268,7 +269,7 @@ mod test_apply_system_update_impl {
     async fn test_trigger_pkgfs_gc_if_update_available() {
         let mut component_runner = DoNothingComponentRunner;
         let time_source = FakeTimeSource { now: 0 };
-        let filesystem = FakeFileSystem { has_amber: true };
+        let filesystem = FakeFileSystem { has_system_updater: true };
 
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
@@ -290,7 +291,7 @@ mod test_apply_system_update_impl {
     async fn test_launch_system_updater_if_update_available() {
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
-        let filesystem = FakeFileSystem { has_amber: true };
+        let filesystem = FakeFileSystem { has_system_updater: true };
 
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
@@ -313,7 +314,7 @@ mod test_apply_system_update_impl {
     async fn test_launch_system_updater_even_if_gc_fails() {
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
-        let filesystem = FakeFileSystem { has_amber: true };
+        let filesystem = FakeFileSystem { has_system_updater: true };
 
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
@@ -355,7 +356,7 @@ mod test_apply_system_update_impl {
     async fn test_launch_system_updater_url_obtained_from_static_packages() {
         let mut component_runner = ArgumentCapturingComponentRunner { captured_args: vec![] };
         let time_source = FakeTimeSource { now: 0 };
-        let filesystem = FakeFileSystem { has_amber: true };
+        let filesystem = FakeFileSystem { has_system_updater: true };
 
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
@@ -367,9 +368,9 @@ mod test_apply_system_update_impl {
         )
         .await;
 
-        let expected_url = "fuchsia-pkg://fuchsia.com/amber?hash=\
+        let expected_url = "fuchsia-pkg://fuchsia.com/system-updater?hash=\
                             6b8f5baf0eff6379701cedd3a86ab0fde5dfd8d73c6cf488926b2c94cdf63af0\
-                            #meta/system_updater.cmx"
+                            #meta/system-updater.cmx"
             .to_string();
 
         assert_matches!(
@@ -411,7 +412,7 @@ mod test_apply_system_update_impl {
 
             let mut component_runner = ArgumentCapturingComponentRunner { captured_args: vec![] };
             let time_source = FakeTimeSource { now: start_time };
-            let filesystem = FakeFileSystem { has_amber: false };
+            let filesystem = FakeFileSystem { has_system_updater: false };
 
             let mut executor =
                 fasync::Executor::new().expect("create executor in test");

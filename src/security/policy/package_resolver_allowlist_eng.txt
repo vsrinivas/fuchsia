@@ -1,7 +1,6 @@
 # TODO: don't block components started in a testenv from getting resolver access
 # if they're not interacting with the privileged capability. Until then, this
 # list can grow.
-fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx
 fuchsia-pkg://fuchsia.com/amberctl#meta/amberctl.cmx
 fuchsia-pkg://fuchsia.com/pkgctl#meta/pkgctl.cmx
 fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx
@@ -15,9 +14,8 @@ fuchsia-pkg://fuchsia.com/amberctl-tests#meta/amberctl.cmx
 fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-integration-test.cmx
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl-integration-test.cmx
 fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx
-fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system_updater_isolated.cmx
-fuchsia-pkg://fuchsia.com/system-updater-rust-integration-tests#meta/system_updater_isolated.cmx
+fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_resolver_allowed.cmx
-fuchsia-pkg://fuchsia.com/isolated-swd#meta/system_updater-isolated.cmx
-fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/system_updater.cmx
+fuchsia-pkg://fuchsia.com/isolated-swd#meta/system-updater-isolated.cmx
+fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/system-updater.cmx

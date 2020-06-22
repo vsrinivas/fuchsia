@@ -489,12 +489,8 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-v2-test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-test.cmx",
          "max_severity": "FATAL"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/system-updater-rust-integration-tests#meta/system-updater-v2-test.cmx",
-         "max_severity": "ERROR"
       },
       {
          "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/tel_fake_at_query.cmx",

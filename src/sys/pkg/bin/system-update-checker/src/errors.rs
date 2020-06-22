@@ -17,10 +17,10 @@ pub enum Error {
     #[error("connecting to PackageResolver")]
     ConnectPackageResolver(#[source] anyhow::Error),
 
-    #[error("system_updater component exited with failure")]
+    #[error("system-updater component exited with failure")]
     SystemUpdaterFailed,
 
-    #[error("system_updater component exited with success, it should have rebooted the system")]
+    #[error("system-updater component exited with success, it should have rebooted the system")]
     SystemUpdaterFinished,
 
     #[error("reading /pkgfs/system/data/static_packages")]

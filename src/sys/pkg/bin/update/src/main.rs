@@ -99,9 +99,11 @@ async fn handle_check_now_cmd(
 }
 
 async fn force_install(update_pkg_url: String, reboot: bool) -> Result<(), Error> {
-    AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
+    AppBuilder::new("fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx")
         .arg("--update")
         .arg(update_pkg_url)
+        .arg("--initiator")
+        .arg("manual")
         .arg("--reboot")
         .arg(reboot.to_string())
         .spawn(&fuchsia_component::client::launcher()?)

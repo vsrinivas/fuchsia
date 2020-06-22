@@ -31,7 +31,6 @@ group("e2e_tests") {
 group("core") {
   public_deps = [
     ":core_config",
-    "bin/amber",
     "bin/amber:pkgfs",
     "bin/pkg-cache",
     "bin/pkg-resolver",
@@ -51,8 +50,8 @@ group("recovery-core") {
 group("recovery") {
   public_deps = [
     ":recovery-core",
-    "bin/amber",
     "bin/omaha-client",
+    "bin/system-updater",
   ]
 }
 

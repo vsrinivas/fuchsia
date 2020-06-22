@@ -249,7 +249,6 @@ group("guest_runner") {
   testonly = true
   public_deps = [
     "//garnet/packages/config:network",
-    "//src/sys/pkg/bin/amber",
     "//src/virtualization/bin/guest:guest",
     "//src/virtualization/bin/guest_manager:guest_manager",
     "//src/virtualization/bin/guest_runner:guest_runner",

@@ -19,8 +19,7 @@ use {
     std::sync::Arc,
 };
 
-pub const UPDATER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/isolated-swd#meta/system_updater-isolated.cmx";
+pub const UPDATER_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/system-updater.cmx";
 
 pub struct Updater {}
 
@@ -95,7 +94,7 @@ impl Updater {
 
         let output = updater
             .output(env.launcher())
-            .context("launching system_updater")?
+            .context("launching system updater")?
             .await
             .context("waiting for updater to exit")?;
         if output.ok().is_ok() {
@@ -159,7 +158,7 @@ pub mod tests {
     };
 
     pub const TEST_UPDATER_URL: &str =
-        "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/system_updater.cmx";
+        "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/system-updater.cmx";
     const TEST_CHANNEL: &str = "test";
     const TEST_REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
 
