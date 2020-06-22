@@ -91,9 +91,9 @@ static void timer_diag_coalescing(TimerSlack slack, const zx_time_t* deadline,
     const Deadline dl(deadline[ix], slack);
     timers[ix].Set(dl, timer_diag_cb2, &timer_count);
     printf("[%zu] %" PRIi64 "  -> %" PRIi64 ", %" PRIi64 "\n", ix, dl.when(),
-           timers[ix].scheduled_time_, timers[ix].slack_);
+           timers[ix].scheduled_time_for_test(), timers[ix].slack_for_test());
 
-    if (timers[ix].slack_ != expected_adj[ix]) {
+    if (timers[ix].slack_for_test() != expected_adj[ix]) {
       printf("\n!! unexpected adjustment! expected %" PRIi64 "\n", expected_adj[ix]);
     }
   }
@@ -504,7 +504,7 @@ static bool print_timer_queues() {
   });
 
   // Tell |PrintTimerQueues| the buffer is one less than it really is.
-  PrintTimerQueues(buffer.get(), kBufferSize - 1);
+  TimerQueue::PrintTimerQueues(buffer.get(), kBufferSize - 1);
 
   // See that our sentinel was not overwritten.
   ASSERT_EQ('X', buffer[kBufferSize - 1]);

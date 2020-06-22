@@ -10,10 +10,10 @@
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
-#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
 #include <kernel/deadline.h>
 #include <kernel/spinlock.h>
 
@@ -24,27 +24,11 @@
 // - Setting and canceling timers is not thread safe and cannot be done concurrently.
 // - Timer::cancel() may spin waiting for a pending timer to complete on another cpu.
 
-// For now, Timers are structs with standard layout. Eventually, the list_node inside will no longer
-// force that requirement, and this can become a class with private members.
-struct Timer {
+// Timers may be removed from an arbitrary TimerQueue, so their list
+// node requires the AllowRemoveFromContainer option.
+class Timer : public fbl::DoublyLinkedListable<Timer*, fbl::NodeOptions::AllowRemoveFromContainer> {
+ public:
   using Callback = void (*)(Timer*, zx_time_t now, void* arg);
-
-  static constexpr uint32_t kMagic = fbl::magic("timr");
-  uint32_t magic_ = kMagic;
-
-  struct list_node node_ = LIST_INITIAL_CLEARED_VALUE;
-
-  zx_time_t scheduled_time_ = 0;
-  // Stores the applied slack adjustment from the ideal scheduled_time.
-  zx_duration_t slack_ = 0;
-  Callback callback_ = nullptr;
-  void* arg_ = nullptr;
-
-  // INVALID_CPU, if inactive.
-  volatile cpu_num_t active_cpu_ = INVALID_CPU;
-
-  // true if cancel is pending
-  volatile bool cancel_ = false;
 
   // Timers need a constexpr constructor, as it is valid to construct them in static storage.
   constexpr Timer() = default;
@@ -58,7 +42,6 @@ struct Timer {
   Timer& operator=(const Timer&) = delete;
   Timer& operator=(Timer&&) = delete;
 
-  //
   // Set up a timer that executes once
   //
   // This function specifies a callback function to be run after a specified
@@ -69,10 +52,9 @@ struct Timer {
   // arg: the argument to pass to the callback
   //
   // The timer function is declared as:
-  //   void callback(timer_t *, zx_time_t now, void *arg) { ... }
+  //   void callback(Timer *, zx_time_t now, void *arg) { ... }
   void Set(const Deadline& deadline, Callback callback, void* arg);
 
-  //
   // Cancel a pending timer
   //
   // Returns true if the timer was canceled before it was
@@ -90,6 +72,29 @@ struct Timer {
   // timer cancel, which is needed in a few special cases.
   // returns ZX_OK if spinlock was acquired, ZX_ERR_TIMED_OUT if timer was canceled.
   zx_status_t TrylockOrCancel(SpinLock* lock) TA_TRY_ACQ(false, lock);
+
+  // Private accessors for timer tests.
+  zx_duration_t slack_for_test() const { return slack_; }
+  zx_time_t scheduled_time_for_test() const { return scheduled_time_; }
+
+ private:
+  // TimerQueues can directly manipulate the state of their enqueued Timers.
+  friend class TimerQueue;
+
+  static constexpr uint32_t kMagic = fbl::magic("timr");
+  uint32_t magic_ = kMagic;
+
+  zx_time_t scheduled_time_ = 0;
+  // Stores the applied slack adjustment from the ideal scheduled_time.
+  zx_duration_t slack_ = 0;
+  Callback callback_ = nullptr;
+  void* arg_ = nullptr;
+
+  // INVALID_CPU, if inactive.
+  volatile cpu_num_t active_cpu_ = INVALID_CPU;
+
+  // true if cancel is pending
+  volatile bool cancel_ = false;
 };
 
 // Preemption Timers
@@ -103,7 +108,8 @@ struct Timer {
 // - should not be migrated off their CPU when the CPU is shutdown
 //
 // Note: A preemption timer may fire even after it has been canceled.
-struct TimerQueue {
+class TimerQueue {
+ public:
   // Set/reset the preemption timer.
   //
   // When the preemption timer fires, Scheduler::TimerTick is called.
@@ -121,21 +127,29 @@ struct TimerQueue {
   // may have had timers still on it, in order to restart hardware timers.
   void ThawPercpu();
 
-  // The below are morally private, and will actually be so when this code
-  // migrates off list_node, which requires types to be standard layout.
+  // Prints the contents of all timer queues into |buf| of length |len| and null
+  // terminates |buf|.
+  static void PrintTimerQueues(char* buf, size_t len);
 
-  // Add the |Timer| to this TimerQueue, possibly coalescing deadlines as well.
+  // This is called periodically by timer_tick(), which itself is invoked
+  // periodically by some hardware timer.
+  void Tick(zx_time_t now, cpu_num_t cpu);
+
+ private:
+  // Timers can directly call Insert and Cancel.
+  friend class Timer;
+
+  // Add |timer| to this TimerQueue, possibly coalescing deadlines as well.
   void Insert(Timer* timer, zx_time_t earliest_deadline, zx_time_t latest_deadline);
 
-  // Set the platform's oneshot timer to the minimum of its current deadline and |new_deadline|.
-  //
-  // This is called when the IimerQueue's head changes.
+  // Set the platform's oneshot timer to the minimum of its current
+  // deadline and |new_deadline|.
   //
   // This can only be called when interrupts are disabled.
   void UpdatePlatformTimer(zx_time_t new_deadline);
 
   // Timers on this queue.
-  struct list_node timer_list_ = LIST_INITIAL_VALUE(timer_list_);
+  fbl::DoublyLinkedList<Timer*> timer_list_;
 
   // This TimerQueue's preemption deadline. ZX_TIME_INFINITE means not set.
   zx_time_t preempt_timer_deadline_ = ZX_TIME_INFINITE;
@@ -143,8 +157,5 @@ struct TimerQueue {
   // This TimerQueue's deadline for its platform timer or ZX_TIME_INFINITE if not set
   zx_time_t next_timer_deadline_ = ZX_TIME_INFINITE;
 };
-
-// Prints the contents of all timer queues into |buf| of length |len| and null terminates |buf|.
-void PrintTimerQueues(char* buf, size_t len);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_

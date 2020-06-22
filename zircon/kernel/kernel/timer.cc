@@ -116,40 +116,35 @@ void TimerQueue::Insert(Timer* timer, zx_time_t earliest_deadline, zx_time_t lat
   // - Let |n| be the next timer deadline if any
   // - Let |x| be the end of the list (not a timer)
   // - Let |(| and |)| the earliest_deadline and latest_deadline.
-  //
-  Timer* entry;
 
-  list_for_every_entry (&timer_list_, entry, Timer, node_) {
-    if (entry->scheduled_time_ > latest_deadline) {
+  for (Timer& entry : timer_list_) {
+    if (entry.scheduled_time_ > latest_deadline) {
       // New timer latest is earlier than the current timer.
       // Just add upfront as is, without slack.
       //
       //   ---------t---)--e-------------------------------> time
-      //
       timer->slack_ = 0ll;
-      list_add_before(&entry->node_, &timer->node_);
+      timer_list_.insert(entry, timer);
       return;
     }
 
-    if (entry->scheduled_time_ >= timer->scheduled_time_) {
+    if (entry.scheduled_time_ >= timer->scheduled_time_) {
       //  New timer slack overlaps and is to the left (or equal). We
       //  coalesce with current by scheduling late.
       //
       //  --------(----t---e-)----------------------------> time
-      //
-      timer->slack_ = zx_time_sub_time(entry->scheduled_time_, timer->scheduled_time_);
-      timer->scheduled_time_ = entry->scheduled_time_;
+      timer->slack_ = zx_time_sub_time(entry.scheduled_time_, timer->scheduled_time_);
+      timer->scheduled_time_ = entry.scheduled_time_;
       kcounter_add(timer_coalesced_counter, 1);
-      list_add_after(&entry->node_, &timer->node_);
+      timer_list_.insert_after(timer_list_.make_iterator(entry), timer);
       return;
     }
 
-    if (entry->scheduled_time_ < earliest_deadline) {
+    if (entry.scheduled_time_ < earliest_deadline) {
       // new timer earliest is later than the current timer. This case
       // is handled in a future iteration.
       //
       //   ----------------e--(---t-----------------------> time
-      //
       continue;
     }
 
@@ -158,29 +153,26 @@ void TimerQueue::Insert(Timer* timer, zx_time_t earliest_deadline, zx_time_t lat
     // a better fit?
     //
     //  -------------(--e---t-----?-------------------> time
-    //
 
-    const Timer* next = list_next_type(&timer_list_, &entry->node_, Timer, node_);
-
-    if (next != NULL) {
-      if (next->scheduled_time_ <= timer->scheduled_time_) {
+    auto iter = timer_list_.make_iterator(entry);
+    ++iter;
+    if (iter != timer_list_.end()) {
+      const Timer& next = *iter;
+      if (next.scheduled_time_ <= timer->scheduled_time_) {
         // The new timer is to the right of the next timer. There is no
         // chance the current timer is a better fit.
         //
         //  -------------(--e---n---t----------------------> time
-        //
         continue;
       }
 
-      if (next->scheduled_time_ < latest_deadline) {
+      if (next.scheduled_time_ < latest_deadline) {
         // There is slack overlap with the next timer, and also with the
         // current timer. Which coalescing is a better match?
         //
         //  --------------(-e---t---n-)-----------------------> time
-        //
-        zx_duration_t delta_entry =
-            zx_time_sub_time(timer->scheduled_time_, entry->scheduled_time_);
-        zx_duration_t delta_next = zx_time_sub_time(next->scheduled_time_, timer->scheduled_time_);
+        zx_duration_t delta_entry = zx_time_sub_time(timer->scheduled_time_, entry.scheduled_time_);
+        zx_duration_t delta_next = zx_time_sub_time(next.scheduled_time_, timer->scheduled_time_);
         if (delta_next < delta_entry) {
           // New timer is closer to the next timer, handle it in the
           // next iteration.
@@ -198,22 +190,21 @@ void TimerQueue::Insert(Timer* timer, zx_time_t earliest_deadline, zx_time_t lat
     //     current is closer.
     //
     //  So we coalesce by scheduling early.
-    //
-    timer->slack_ = zx_time_sub_time(entry->scheduled_time_, timer->scheduled_time_);
-    timer->scheduled_time_ = entry->scheduled_time_;
+    timer->slack_ = zx_time_sub_time(entry.scheduled_time_, timer->scheduled_time_);
+    timer->scheduled_time_ = entry.scheduled_time_;
     kcounter_add(timer_coalesced_counter, 1);
-    list_add_after(&entry->node_, &timer->node_);
+    timer_list_.insert_after(timer_list_.make_iterator(entry), timer);
     return;
   }
 
   // Walked off the end of the list and there was no overlap.
   timer->slack_ = 0;
-  list_add_tail(&timer_list_, &timer->node_);
+  timer_list_.push_back(timer);
 }
 
 Timer::~Timer() {
-  // Ensure that we are not on any cpu's list.
-  ZX_DEBUG_ASSERT(!list_in_list(&node_));
+  // Ensure that we are not on any TimerQueue's list.
+  ZX_DEBUG_ASSERT(!InContainer());
   // Ensure that we are not active on some cpu.
   ZX_DEBUG_ASSERT(active_cpu_ == INVALID_CPU);
 }
@@ -227,7 +218,7 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
   DEBUG_ASSERT(deadline.slack().mode() <= TIMER_SLACK_LATE);
   DEBUG_ASSERT(deadline.slack().amount() >= 0);
 
-  if (list_in_list(&node_)) {
+  if (InContainer()) {
     panic("timer %p already in list\n", this);
   }
 
@@ -240,7 +231,7 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
 
   bool currently_active = (active_cpu_ == cpu);
   if (unlikely(currently_active)) {
-    // the timer is active on our own cpu, we must be inside the callback
+    // The timer is active on our own cpu, we must be inside the callback.
     if (cancel_) {
       return;
     }
@@ -262,7 +253,7 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
   timer_queue.Insert(this, earliest_deadline, latest_deadline);
   kcounter_add(timer_created_counter, 1);
 
-  if (list_peek_head_type(&timer_queue.timer_list_, Timer, node_) == this) {
+  if (!timer_queue.timer_list_.is_empty() && &timer_queue.timer_list_.front() == this) {
     // We just modified the head of the timer queue.
     timer_queue.UpdatePlatformTimer(deadline.when());
   }
@@ -314,29 +305,34 @@ bool Timer::Cancel() {
 
   bool callback_not_running;
 
-  // if the timer is in a queue, remove it and adjust hardware timers if needed
-  if (list_in_list(&node_)) {
+  // If this Timer is in a queue, remove it and adjust hardware timers if needed.
+  if (InContainer()) {
     callback_not_running = true;
 
-    // Save a copy of the old head of the queue so later we can see if we modified the head.
     TimerQueue& timer_queue = percpu::Get(cpu).timer_queue;
-    Timer* oldhead = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
 
-    // remove our timer from the queue
-    list_delete(&node_);
+    // Save a copy of the old head of the queue so later we can see if we modified the head.
+    const Timer* oldhead = nullptr;
+    if (!timer_queue.timer_list_.is_empty()) {
+      oldhead = &timer_queue.timer_list_.front();
+    }
+
+    // Remove this Timer from this whatever TimerQueue it's on.
+    RemoveFromContainer();
     kcounter_add(timer_canceled_counter, 1);
 
-    // TODO(cpu): if  after removing |timer| there is one other single timer with
-    // the same scheduled_time and slack non-zero then it is possible to return
-    // that timer to the ideal scheduled_time.
+    // TODO(cpu): If, after removing |timer| there is one other single Timer with
+    // the same scheduled_time_ and slack_ non-zero, then it is possible to return
+    // that timer to the ideal scheduled_time_.
 
-    // see if we've just modified the head of this cpu's timer queue.
-    // if we modified another cpu's queue, we'll just let it fire and sort itself out
+    // See if we've just modified the head of this TimerQueue.
+    //
+    // If Timer was on another cpu's queue, we'll just let it fire and sort itself out.
     if (unlikely(oldhead == this)) {
-      // The Timer we're canceling was at head of queue, so see if we should update platform timer.
-      Timer* newhead = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
-      if (newhead) {
-        timer_queue.UpdatePlatformTimer(newhead->scheduled_time_);
+      // The Timer we're canceling was at head of this queue, so see if we should update platform
+      // timer.
+      if (!timer_queue.timer_list_.is_empty()) {
+        timer_queue.UpdatePlatformTimer(timer_queue.timer_list_.front().scheduled_time_);
       } else if (timer_queue.next_timer_deadline_ == ZX_TIME_INFINITE) {
         LTRACEF("clearing old hw timer, preempt timer not set, nothing in the queue\n");
         platform_stop_timer();
@@ -362,8 +358,6 @@ bool Timer::Cancel() {
 
 // called at interrupt time to process any pending timers
 void timer_tick(zx_time_t now) {
-  Timer* timer;
-
   DEBUG_ASSERT(arch_ints_disabled());
 
   CPU_STATS_INC(timer_ints);
@@ -372,14 +366,16 @@ void timer_tick(zx_time_t now) {
 
   LTRACEF("cpu %u now %" PRIi64 ", sp %p\n", cpu, now, __GET_FRAME());
 
-  TimerQueue& timer_queue = percpu::Get(cpu).timer_queue;
+  percpu::Get(cpu).timer_queue.Tick(now, cpu);
+}
 
+void TimerQueue::Tick(zx_time_t now, cpu_num_t cpu) {
   // The platform timer has fired, so no deadline is set.
-  timer_queue.next_timer_deadline_ = ZX_TIME_INFINITE;
+  next_timer_deadline_ = ZX_TIME_INFINITE;
 
   // Service the preemption timer before acquiring the timer lock.
-  if (now >= timer_queue.preempt_timer_deadline_) {
-    timer_queue.preempt_timer_deadline_ = ZX_TIME_INFINITE;
+  if (now >= preempt_timer_deadline_) {
+    preempt_timer_deadline_ = ZX_TIME_INFINITE;
     Scheduler::TimerTick(SchedTime{now});
   }
 
@@ -387,53 +383,53 @@ void timer_tick(zx_time_t now) {
 
   for (;;) {
     // See if there's an event to process.
-    timer = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
-    if (likely(timer == 0)) {
+    if (timer_list_.is_empty()) {
       break;
     }
-    LTRACEF("next item on timer queue %p at %" PRIi64 " now %" PRIi64 " (%p, arg %p)\n", timer,
-            timer->scheduled_time_, now, timer->callback_, timer->arg_);
-    if (likely(now < timer->scheduled_time_)) {
+
+    Timer& timer = timer_list_.front();
+
+    LTRACEF("next item on timer queue %p at %" PRIi64 " now %" PRIi64 " (%p, arg %p)\n", &timer,
+            timer.scheduled_time_, now, timer.callback_, timer.arg_);
+    if (likely(now < timer.scheduled_time_)) {
       break;
     }
 
     // Process it.
-    LTRACEF("timer %p\n", timer);
-    DEBUG_ASSERT_MSG(timer && timer->magic_ == Timer::kMagic,
-                     "ASSERT: timer failed magic check: timer %p, magic 0x%x\n", timer,
-                     (uint)timer->magic_);
-    list_delete(&timer->node_);
+    LTRACEF("timer %p\n", &timer);
+    DEBUG_ASSERT_MSG(timer.magic_ == Timer::kMagic,
+                     "ASSERT: timer failed magic check: timer %p, magic 0x%x\n", &timer,
+                     (uint)timer.magic_);
+    timer_list_.erase(timer);
 
     // Mark the timer busy.
-    timer->active_cpu_ = cpu;
+    timer.active_cpu_ = cpu;
     // Unlocking the spinlock in CallUnlocked acts as a memory barrier.
 
     // Now that the timer is off of the list, release the spinlock to handle
     // the callback, then re-acquire in case it is requeued.
-    guard.CallUnlocked([timer, now]() {
-      LTRACEF("dequeued timer %p, scheduled %" PRIi64 "\n", timer, timer->scheduled_time_);
+    guard.CallUnlocked([&timer, now]() {
+      LTRACEF("dequeued timer %p, scheduled %" PRIi64 "\n", &timer, timer.scheduled_time_);
 
       CPU_STATS_INC(timers);
       kcounter_add(timer_fired_counter, 1);
 
-      LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback_, timer->arg_);
-      timer->callback_(timer, now, timer->arg_);
+      LTRACEF("timer %p firing callback %p, arg %p\n", &timer, timer.callback_, timer.arg_);
+      timer.callback_(&timer, now, timer.arg_);
 
       DEBUG_ASSERT(arch_ints_disabled());
     });
 
     // Mark it not busy.
-    timer->active_cpu_ = INVALID_CPU;
+    timer.active_cpu_ = INVALID_CPU;
     arch::DeviceMemoryBarrier();
   }
 
   // Get the deadline of the event at the head of the queue (if any).
   zx_time_t deadline = ZX_TIME_INFINITE;
-  timer = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
-  if (timer) {
-    deadline = timer->scheduled_time_;
-
-    // has to be the case or it would have fired already
+  if (!timer_list_.is_empty()) {
+    deadline = timer_list_.front().scheduled_time_;
+    // This has to be the case or it would have fired already.
     DEBUG_ASSERT(deadline > now);
   }
 
@@ -441,10 +437,10 @@ void timer_tick(zx_time_t now) {
   guard.Release();
 
   // Set the platform timer to the *soonest* of queue event and preemption timer.
-  if (timer_queue.preempt_timer_deadline_ < deadline) {
-    deadline = timer_queue.preempt_timer_deadline_;
+  if (preempt_timer_deadline_ < deadline) {
+    deadline = preempt_timer_deadline_;
   }
-  timer_queue.UpdatePlatformTimer(deadline);
+  UpdatePlatformTimer(deadline);
 }
 
 zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
@@ -466,22 +462,28 @@ zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
 void TimerQueue::TransitionOffCpu(TimerQueue& source) {
   Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
 
-  Timer* old_head = list_peek_head_type(&timer_list_, Timer, node_);
+  Timer* old_head = nullptr;
+  if (!timer_list_.is_empty()) {
+    old_head = &timer_list_.front();
+  }
 
-  Timer *entry = nullptr, *tmp_entry = nullptr;
   // Move all timers from |source| to this TimerQueue.
-  list_for_every_entry_safe (&source.timer_list_, entry, tmp_entry, Timer, node_) {
-    list_delete(&entry->node_);
+  Timer* timer;
+  while ((timer = source.timer_list_.pop_front()) != nullptr) {
     // We lost the original asymmetric slack information so when we combine them
     // with the other timer queue they are not coalesced again.
     // TODO(cpu): figure how important this case is.
-    Insert(entry, entry->scheduled_time_, entry->scheduled_time_);
+    Insert(timer, timer->scheduled_time_, timer->scheduled_time_);
     // Note, we do not increment the "created" counter here because we are simply moving these
     // timers from one queue to another and we already counted them when they were first
     // created.
   }
 
-  Timer* new_head = list_peek_head_type(&timer_list_, Timer, node_);
+  Timer* new_head = nullptr;
+  if (!timer_list_.is_empty()) {
+    new_head = &timer_list_.front();
+  }
+
   if (new_head != nullptr && new_head != old_head) {
     // We just modified the head of the timer queue.
     UpdatePlatformTimer(new_head->scheduled_time_);
@@ -496,14 +498,14 @@ void TimerQueue::ThawPercpu(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   Guard<SpinLock, NoIrqSave> guard{TimerLock::Get()};
 
-  // Rxeset next_timer_deadline_ so that UpdatePlatformTimer will reconfigure the timer.
+  // Reset next_timer_deadline_ so that UpdatePlatformTimer will reconfigure the timer.
   next_timer_deadline_ = ZX_TIME_INFINITE;
   zx_time_t deadline = preempt_timer_deadline_;
 
-  Timer* t = list_peek_head_type(&timer_list_, Timer, node_);
-  if (t) {
-    if (t->scheduled_time_ < deadline) {
-      deadline = t->scheduled_time_;
+  if (!timer_list_.is_empty()) {
+    Timer& t = timer_list_.front();
+    if (t.scheduled_time_ < deadline) {
+      deadline = t.scheduled_time_;
     }
   }
 
@@ -512,7 +514,7 @@ void TimerQueue::ThawPercpu(void) {
   UpdatePlatformTimer(deadline);
 }
 
-void PrintTimerQueues(char* buf, size_t len) {
+void TimerQueue::PrintTimerQueues(char* buf, size_t len) {
   size_t ptr = 0;
   zx_time_t now = current_time();
 
@@ -523,19 +525,18 @@ void PrintTimerQueues(char* buf, size_t len) {
       if (ptr >= len) {
         return;
       }
-      Timer* t;
       zx_time_t last = now;
-      list_for_every_entry (&percpu::Get(i).timer_queue.timer_list_, t, Timer, node_) {
-        zx_duration_t delta_now = zx_time_sub_time(t->scheduled_time_, now);
-        zx_duration_t delta_last = zx_time_sub_time(t->scheduled_time_, last);
+      for (Timer& t : percpu::Get(i).timer_queue.timer_list_) {
+        zx_duration_t delta_now = zx_time_sub_time(t.scheduled_time_, now);
+        zx_duration_t delta_last = zx_time_sub_time(t.scheduled_time_, last);
         ptr += snprintf(buf + ptr, len - ptr,
                         "\ttime %" PRIi64 " delta_now %" PRIi64 " delta_last %" PRIi64
                         " func %p arg %p\n",
-                        t->scheduled_time_, delta_now, delta_last, t->callback_, t->arg_);
+                        t.scheduled_time_, delta_now, delta_last, t.callback_, t.arg_);
         if (ptr >= len) {
           return;
         }
-        last = t->scheduled_time_;
+        last = t.scheduled_time_;
       }
     }
   }
@@ -553,7 +554,7 @@ static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  PrintTimerQueues(buf, timer_buffer_size);
+  TimerQueue::PrintTimerQueues(buf, timer_buffer_size);
 
   printf("%s", buf);
 
