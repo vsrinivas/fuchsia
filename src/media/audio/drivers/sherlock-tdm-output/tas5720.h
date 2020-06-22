@@ -37,9 +37,9 @@ class Tas5720 {  // Not final for unit testing.
   zx_status_t Mute(bool mute);
 
  private:
-  static constexpr float kMaxGain = 24.f + 0.f;        // Max digital + analog.
-  static constexpr float kMinGain = -(103.5f + 7.1f);  // Min digital + analog.
-  static constexpr float kGainStep = .5f;
+  static constexpr float kMaxGain = 24.0;
+  static constexpr float kMinGain = -103.5;
+  static constexpr float kGainStep = 0.5;
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value);
