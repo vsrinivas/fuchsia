@@ -6,9 +6,7 @@
 
 #include <lib/zx/time.h>
 
-#include <future>
 #include <initializer_list>
-#include <thread>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -56,37 +54,6 @@ TEST(Memory, WorkloadGenerator) {
     MemoryWorkloadGenerator::Workload w = generator.Next();
     EXPECT_EQ(expected, std::make_pair(w.workload.name, w.cpu));
   }
-}
-
-TEST(Memory, CatchBitFlip) {
-  // Ensure that at least one workload can catch a bitflip triggered by another thread.
-  std::unique_ptr<MemoryRange> memory =
-      MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
-
-  // Create a thread which just keeps setting a bit to "1".
-  std::atomic<bool> stop = false;
-  std::thread bad_memory_thread = std::thread([&memory, &stop]() {
-    auto* bad_byte = reinterpret_cast<std::atomic<uint8_t>*>(&memory->bytes()[ZX_PAGE_SIZE / 2]);
-    while (!stop) {
-      bad_byte->fetch_or(0x1);
-    }
-  });
-
-  // Ensure we catch it with a panic.
-  std::vector<MemoryWorkload> workloads = GenerateMemoryWorkloads();
-  StatusLine status;
-  EXPECT_DEATH(({
-                 while (true) {
-                   for (const MemoryWorkload& workload : workloads) {
-                     workload.exec(&status, memory.get());
-                   }
-                 }
-               }),
-               "Found memory error");
-
-  // Tell the other thread to stop.
-  stop = true;
-  bad_memory_thread.join();
 }
 
 TEST(Memory, StressMemory) {
