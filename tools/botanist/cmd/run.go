@@ -23,6 +23,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
@@ -384,6 +385,14 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	if len(args) == 0 {
 		return subcommands.ExitUsageError
 	}
+
+	cleanUp, err := environment.Ensure()
+	if err != nil {
+		logger.Errorf(ctx, "failed to setup environment: %v\n", err)
+		return subcommands.ExitFailure
+	}
+	defer cleanUp()
+
 	if err := r.execute(ctx, args); err != nil {
 		logger.Errorf(ctx, "%v\n", err)
 		return subcommands.ExitFailure

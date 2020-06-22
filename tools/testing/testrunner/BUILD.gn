@@ -25,6 +25,7 @@ go_library("main") {
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/integration/testsharder:testsharder_lib",
     "//tools/lib/color",
+    "//tools/lib/environment",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/retry",

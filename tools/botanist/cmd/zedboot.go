@@ -15,6 +15,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -216,6 +217,13 @@ func (cmd *ZedbootCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...in
 		}
 		cmdlineArgs = append(cmdlineArgs, strings.Split(string(args), "\n")...)
 	}
+
+	cleanUp, err := environment.Ensure()
+	if err != nil {
+		logger.Errorf(ctx, "failed to setup environment: %v\n", err)
+		return subcommands.ExitFailure
+	}
+	defer cleanUp()
 
 	if err := cmd.execute(ctx, cmdlineArgs); err != nil {
 		logger.Errorf(ctx, "%v\n", err)

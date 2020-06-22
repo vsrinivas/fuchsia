@@ -12,6 +12,7 @@ import (
 	"github.com/google/subcommands"
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -126,6 +127,13 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 }
 
 func (cmd *QEMUCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	cleanUp, err := environment.Ensure()
+	if err != nil {
+		logger.Errorf(ctx, "failed to setup environment: %v\n", err)
+		return subcommands.ExitFailure
+	}
+	defer cleanUp()
+
 	if err := cmd.execute(ctx, f.Args()); err != nil {
 		logger.Errorf(ctx, "%v\n", err)
 		return subcommands.ExitFailure

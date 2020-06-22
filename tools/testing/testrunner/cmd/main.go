@@ -21,6 +21,7 @@ import (
 
 	testsharder "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -116,6 +117,12 @@ func main() {
 
 	nodename := os.Getenv(nodenameEnvVar)
 	sshKeyFile := os.Getenv(sshKeyEnvVar)
+
+	cleanUp, err := environment.Ensure()
+	if err != nil {
+		log.Fatalf("failed to setup environment: %v", err)
+	}
+	defer cleanUp()
 
 	if err := execute(ctx, tests, outputs, nodename, sshKeyFile); err != nil {
 		log.Fatal(err)

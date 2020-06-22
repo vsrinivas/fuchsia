@@ -49,6 +49,7 @@ go_library("main") {
     ":target",
     "//tools/lib/color",
     "//tools/lib/command",
+    "//tools/lib/environment",
     "//tools/lib/flagmisc",
     "//tools/lib/tarutil",
     "//tools/testing/runtests",
