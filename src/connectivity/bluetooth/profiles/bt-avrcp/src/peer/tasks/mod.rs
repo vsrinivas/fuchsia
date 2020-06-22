@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    super::*, fidl_fuchsia_bluetooth_bredr::ChannelParameters, fuchsia_syslog::fx_log_info,
-    notification_stream::NotificationStream,
+    super::*, fidl_fuchsia_bluetooth_bredr::ChannelParameters, fuchsia_async::DurationExt,
+    fuchsia_syslog::fx_log_info, fuchsia_zircon as zx, notification_stream::NotificationStream,
+    rand::Rng,
 };
 
 mod notification_stream;
@@ -137,6 +138,16 @@ fn handle_notification(
 /// The control channel should be in `Connecting` state before spawning this task.
 fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
     fasync::spawn(async move {
+        let random_delay: zx::Duration =
+            zx::Duration::from_nanos(rand::thread_rng().gen_range(
+                MIN_CONNECTION_EST_TIME.into_nanos(),
+                MAX_CONNECTION_EST_TIME.into_nanos(),
+            ));
+        fx_vlog!(tag: "avrcp", 2,
+            "AVRCP waiting {:?} millis before establishing connection",
+            random_delay.into_millis()
+        );
+        fuchsia_async::Timer::new(random_delay.after_now()).await;
         let (peer_id, profile_service) = {
             let peer_guard = peer.read();
             // Return early if we are not in the `Connecting` state.
@@ -178,9 +189,10 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                     _ => {
                         fx_vlog!(tag: "avrcp", 2, "Incoming connection by peer {} established while making outgoing.", peer_id);
 
-                        // an incoming l2cap connection was made while we were making an
-                        // outgoing one. Drop both connections per spec.
-                        peer_guard.reset_connection(false);
+                        // An incoming l2cap connection was made while we were making an
+                        // outgoing one. Drop both connections, per spec, and attempt
+                        // to reconnect.
+                        peer_guard.reset_connection(true);
                     }
                 };
             }
@@ -358,6 +370,7 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                         || peer_guard.controller_descriptor.is_some())
                         && control_channel_abort_handle.is_none()
                     {
+                        fx_vlog!(tag: "avrcp", 2, "state_watcher: Starting control stream task for peer {}", peer_guard.id());
                         control_channel_abort_handle =
                             Some(start_control_stream_processing_task(peer.clone()));
                     }
