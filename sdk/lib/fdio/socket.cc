@@ -208,9 +208,9 @@ zx_status_t zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
         return result.err();
       }
       auto const& name = result.response().name;
-      size_t n = std::min(name.size(), sizeof(ifr->ifr_name));
+      const size_t n = std::min(name.size(), sizeof(ifr->ifr_name));
       memcpy(ifr->ifr_name, name.data(), n);
-      memset(ifr->ifr_name + n, 0, sizeof(ifr->ifr_name) - n);
+      ifr->ifr_name[n] = 0;
       return ZX_OK;
     }
     case SIOCGIFINDEX: {
