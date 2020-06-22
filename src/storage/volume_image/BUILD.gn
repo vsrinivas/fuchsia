@@ -6,16 +6,17 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+source_set("options") {
+  sources = [ "options.cc" ]
+  public = [ "options.h" ]
+  public_deps = [ "//zircon/public/lib/fit" ]
+}
+
 source_set("volume-descriptor") {
-  sources = [
-    "options.cc",
-    "volume_descriptor.cc",
-  ]
-  public = [
-    "options.h",
-    "volume_descriptor.h",
-  ]
+  sources = [ "volume_descriptor.cc" ]
+  public = [ "volume_descriptor.h" ]
   public_deps = [
+    ":options",
     "utils:guid",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",

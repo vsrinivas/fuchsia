@@ -15,6 +15,8 @@ std::string EnumAsString(CompressionSchema schema) {
       return "COMPRESSION_SCHEMA_NONE";
     case CompressionSchema::kLz4:
       return "COMPRESSION_SCHEMA_LZ4";
+    default:
+      return "COMPRESSION_SCHEMA_UNKNOWN";
   }
 }
 

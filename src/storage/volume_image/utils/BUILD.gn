@@ -13,6 +13,28 @@ source_set("compression-interfaces") {
   ]
 }
 
+source_set("lz4-compression") {
+  sources = [ "lz4_compressor.cc" ]
+  public = [ "lz4_compressor.h" ]
+  public_deps = [
+    ":compression-interfaces",
+    "//src/storage/volume_image:options",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/lz4",
+  ]
+}
+
+source_set("lz4-compression-test") {
+  testonly = true
+  sources = [ "lz4_compressor_test.cc" ]
+  deps = [
+    ":lz4-compression",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 source_set("guid") {
   sources = [ "guid.cc" ]
   public = [ "guid.h" ]
@@ -78,5 +100,6 @@ group("tests") {
   deps = [
     ":extent-test",
     ":guid-test",
+    ":lz4-compression-test",
   ]
 }
