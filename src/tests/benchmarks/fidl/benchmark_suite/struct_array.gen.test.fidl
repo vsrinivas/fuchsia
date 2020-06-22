@@ -6,11 +6,13 @@
 
 library benchmarkfidl;
 
-struct StructArrayElement{
+struct StructArrayElement {
     uint8 a;
     // 8 byte padding.
     uint16 b;
 };
+
+[BindingsDenylist = "dart"]
 struct StructArray256 {
     array<StructArrayElement>:256 elems;
 };

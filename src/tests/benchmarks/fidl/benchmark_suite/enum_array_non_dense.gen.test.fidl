@@ -11,6 +11,7 @@ enum EnumArrayNonDenseElement {
     C = 3;
 };
 
+[BindingsDenylist = "dart"]
 struct EnumArrayNonDense256 {
     array<EnumArrayNonDenseElement>:256 values;
 };

@@ -6,7 +6,7 @@
 
 library benchmarkfidl;
 
-
+[BindingsDenylist = "dart"]
 struct TableReserved16Struct {
     TableReserved16 value;
 };
@@ -30,6 +30,7 @@ table TableReserved16 {
     16: uint8 field16;
 };
 
+[BindingsDenylist = "dart"]
 struct TableReserved256Struct {
     TableReserved256 value;
 };

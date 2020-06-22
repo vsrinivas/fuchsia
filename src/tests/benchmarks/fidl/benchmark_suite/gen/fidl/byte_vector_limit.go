@@ -19,6 +19,7 @@ func init() {
 				Config: config.Config{
 					"limit": 1,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})
@@ -26,7 +27,8 @@ func init() {
 
 func fidlGenByteVectorLimit(config config.Config) (string, error) {
 	limit := config.GetInt("limit")
-	return fmt.Sprintf(`struct ByteVectorLimit%[1]d {
+	return fmt.Sprintf(`
+struct ByteVectorLimit%[1]d {
 	vector<uint8>:%[1]d bytes;
 };`, limit), nil
 }

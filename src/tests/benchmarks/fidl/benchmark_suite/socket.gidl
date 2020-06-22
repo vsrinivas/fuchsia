@@ -500,6 +500,7 @@ benchmark("DatagramSocket/SendMsg2/Request") {
 }
 
 benchmark("DatagramSocket/SendMsg2/Result") {
+    bindings_denylist = [dart],
     value = DatagramSocketSendMsg2ResultStruct {
         result: DatagramSocketSendMsg2Result{
             response: DatagramSocketSendMsg2Response{

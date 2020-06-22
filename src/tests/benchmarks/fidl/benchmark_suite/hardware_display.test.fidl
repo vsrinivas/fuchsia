@@ -5,7 +5,8 @@
 library benchmarkfidl;
 
 // Based on fuchsia.hardware.display.Controller.OnVsync.
-struct OnVsyncEvent{
+[BindingsDenylist = "dart"]
+struct OnVsyncEvent {
     uint64 display_id;
     uint64 timestamp;
     vector<uint64>:MAX images;

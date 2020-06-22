@@ -24,36 +24,43 @@ struct StructTree1 {
 				Config: config.Config{
 					"depth": 2,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"depth": 3,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"depth": 4,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"depth": 5,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"depth": 6,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"depth": 7,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"depth": 8,
 				},
+				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

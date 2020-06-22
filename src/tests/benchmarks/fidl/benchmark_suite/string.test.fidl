@@ -4,6 +4,7 @@
 
 library benchmarkfidl;
 
+[BindingsDenylist = "dart"]
 struct StringStruct {
     string str;
 };
