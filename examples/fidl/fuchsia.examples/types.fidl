@@ -1,0 +1,64 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START lib]
+library fuchsia.examples;
+// [END lib]
+
+// [START consts]
+const uint8 BOARD_SIZE = 9;
+const string NAME = "Tic-Tac-Toe";
+// [END consts]
+
+// [START bits]
+bits FileMode : uint16 {
+    READ = 0b001;
+    WRITE = 0b010;
+    EXECUTE = 0b100;
+};
+// [END bits]
+
+// [START enums]
+enum LocationType {
+    MUSEUM = 1;
+    AIRPORT = 2;
+    RESTAURANT = 3;
+};
+// [END enums]
+
+// [START structs]
+struct Color {
+    uint32 id;
+    string:MAX_STRING_LENGTH name = "red";
+};
+// [END structs]
+
+// [START unions]
+union JsonValue {
+    1: reserved;
+    2: int32 int_value;
+    3: string:MAX_STRING_LENGTH string_value;
+};
+// [END unions]
+
+// [START tables]
+table User {
+    1: reserved;
+    2: uint8 age;
+    3: string:MAX_STRING_LENGTH name;
+};
+// [END tables]
+
+// NOTE: a version of this protocol using error types is also used in the
+// bindings reference docs, but is not tested
+// [START protocols]
+struct GameState {
+};
+
+protocol TicTacToe {
+    StartGame(bool start_first);
+    MakeMove(uint8 row, uint8 col) -> (bool success, GameState? new_state);
+    -> OnOpponentMove(GameState new_state);
+};
+// [END protocols]

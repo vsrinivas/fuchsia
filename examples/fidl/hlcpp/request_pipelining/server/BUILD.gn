@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("bin") {
+  output_name = "fidl_echo_launcher_hlcpp_server"
+  sources = [ "main.cc" ]
+  deps = [
+    "//examples/fidl/fuchsia.examples",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("echo-server") {
+  manifest = "server.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("server") {
+  package_name = "echo-launcher-hlcpp-server"
+  deps = [ ":echo-server" ]
+}

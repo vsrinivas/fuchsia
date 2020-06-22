@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/examples/cpp/fidl.h>
+#include <fuchsia/examples/cpp/fidl_test_base.h>
 #include <lib/async-testing/test_loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -13,8 +14,11 @@
 namespace sys {
 namespace {
 
-class EchoImpl : public fidl::examples::echo::Echo {
-  void EchoString(fidl::StringPtr value, EchoStringCallback callback) override { callback(value); }
+class EchoImpl : public fuchsia::examples::testing::Echo_TestBase {
+  void EchoString(std::string value, EchoStringCallback callback) override { callback(value); }
+  void NotImplemented_(const std::string& name) override {
+    ASSERT_TRUE(false) << "Method not implemented: " << name << std::endl;
+  }
 };
 
 TEST(ServiceHandlerTest, ConnectAndInvoke) {
@@ -22,14 +26,15 @@ TEST(ServiceHandlerTest, ConnectAndInvoke) {
 
   // Setup server.
   sys::ServiceHandler default_handler;
-  fuchsia::examples::MyService::Handler my_service(&default_handler);
-  EchoImpl foo_impl;
-  fidl::BindingSet<fidl::examples::echo::Echo> foo_bindings;
-  zx_status_t status = my_service.add_foo(foo_bindings.GetHandler(&foo_impl, loop.dispatcher()));
+  fuchsia::examples::EchoService::Handler my_service(&default_handler);
+  EchoImpl regular_impl;
+  fidl::BindingSet<fuchsia::examples::Echo> regular_echo_bindings;
+  zx_status_t status = my_service.add_regular_echo(
+      regular_echo_bindings.GetHandler(&regular_impl, loop.dispatcher()));
   ASSERT_EQ(ZX_OK, status);
 
   sys::OutgoingDirectory outgoing;
-  status = outgoing.AddService<fuchsia::examples::MyService>(std::move(default_handler));
+  status = outgoing.AddService<fuchsia::examples::EchoService>(std::move(default_handler));
   ASSERT_EQ(ZX_OK, status);
 
   fidl::InterfaceHandle<fuchsia::io::Directory> root;
@@ -42,17 +47,17 @@ TEST(ServiceHandlerTest, ConnectAndInvoke) {
                                    svc.NewRequest().TakeChannel().release());
   ASSERT_EQ(ZX_OK, status);
 
-  auto service = OpenServiceAt<fuchsia::examples::MyService>(svc);
-  auto handle = service.foo().Connect();
+  auto service = OpenServiceAt<fuchsia::examples::EchoService>(svc);
+  auto handle = service.regular_echo().Connect();
   ASSERT_TRUE(handle.is_valid());
 
-  fidl::examples::echo::EchoPtr foo;
-  status = foo.Bind(std::move(handle), loop.dispatcher());
+  fuchsia::examples::EchoPtr regular_echo;
+  status = regular_echo.Bind(std::move(handle), loop.dispatcher());
   ASSERT_EQ(ZX_OK, status);
 
   // Call member.
   bool replied = false;
-  foo->EchoString("", [&replied](fidl::StringPtr value) { replied = true; });
+  regular_echo->EchoString("", [&replied](std::string value) { replied = true; });
   ASSERT_TRUE(loop.RunUntilIdle());
   ASSERT_TRUE(replied);
 }

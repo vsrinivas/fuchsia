@@ -242,6 +242,12 @@ The following keyboard shortcuts help you navigate the terminal:
 -   Shift+PgUp/PgDown scrolls up and down by half page.
 -   Ctrl+Alt+Delete reboots.
 
+### Write software for Fuchsia
+
+For an example of writing [FIDL](/docs/development/languages/fidl) APIs and client
+and server components, review the
+[FIDL tutorials](/docs/development/languages/fidl/tutorials/overview.md)
+
 ## Run tests
 
 To test Fuchsia on your device, see

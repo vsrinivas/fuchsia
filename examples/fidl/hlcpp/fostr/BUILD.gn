@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "fostr_example_test"
+  sources = [ "main.cc" ]
+  deps = [
+    "//examples/fidl/fuchsia.examples",
+    "//garnet/public/lib/fostr/fidl/fuchsia.examples",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("fostr-example-test") {
+  executable_name = "fostr_example_test"
+  deps = [ ":bin" ]
+}
+
+group("fostr") {
+  testonly = true
+  deps = [ ":fostr-example-test" ]
+}

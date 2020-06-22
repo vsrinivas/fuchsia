@@ -11,6 +11,23 @@ toc:
   section:
   - title: "Overview"
     path: /docs/development/languages/fidl/tutorials/overview.md
+  - title: "Compiling FIDL"
+    path: /docs/development/languages/fidl/tutorials/fidl.md
+  - title: "HLCPP"
+    section:
+    - title: "Getting Started"
+      section:
+      - include: /docs/development/languages/fidl/tutorials/hlcpp/basics/_toc.yaml
+    - title: "Debug output"
+      path: /docs/development/languages/fidl/tutorials/hlcpp/topics/fostr.md
+    - title: "Serving multiple clients"
+      path: /docs/development/languages/fidl/tutorials/hlcpp/topics/multiple-clients.md
+    - title: "Request pipelining"
+      path: /docs/development/languages/fidl/tutorials/hlcpp/topics/request-pipelining.md
+    - title: "Services"
+      path: /docs/development/languages/fidl/tutorials/hlcpp/topics/services.md
+    - title: "Testing protocols"
+      path: /docs/development/languages/fidl/tutorials/hlcpp/topics/testing.md
   - title: "HLCPP"
     path: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
   - title: "LLCPP"

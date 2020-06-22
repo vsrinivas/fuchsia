@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# [START first]
+import("//build/test.gni")
+group("unittests") {
+  testonly = true
+  deps = [ ":example-cpp-host-test($host_toolchain)" ]
+}
+
+# [END first]
+
+# [START test]
+test("example-cpp-host-test") {
+  sources = [ "main.cc" ]
+  deps = [
+    "//examples/fidl/fuchsia.examples",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+# [END test]

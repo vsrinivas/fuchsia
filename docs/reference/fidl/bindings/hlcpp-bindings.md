@@ -322,7 +322,7 @@ instead.
 FIDL generates a `TicTacToe` class, which acts as an entry point for interacting
 with the protocol and defines the interface of the service which is used by
 clients to proxy calls to the server, and for the server for implementing the
-protocol.
+protocol. Synchronous clients use a different virtual interface, `TicTacToe_Sync`.
 
 `TicTacToe` contains the following member types:
 
@@ -341,11 +341,23 @@ to the methods in the protocol definition:
   Pure virtual method for a two way protocol method. It takes as arguments the
   request parameters followed by the response handler callback.
 
+`TicTacToe_Sync` has the following pure virtual methods, corresponding to the
+methods in the protocol definition:
+
+* `virtual zx_status_t StartGame(bool start_first)`: Pure virtual method for a
+  fire and forget protocol method. It takes as arguments the request parameters,
+  and returns a `zx_status_t` representing whether the request was sent
+  successfully.
+* `virtual zx_status_t MakeMove(uint8_t row, uint8_t col, bool* out_success, std::unique_ptr<GameState>* out_new_state)`: Pure virtual method for a two way
+  method protocol. It takes as arguments the request parameters, followed by
+  output pointers for each of the response parameters. It returns a `zx_status_t`
+  representing whether the method call was made successfully.
+
 Other code may be generated depending on the
 [attributes](#protocol-and-method-attributes) applied to the protocol or its
 methods.
 
-### Client
+### Client {#protocols-client}
 
 The FIDL toolchain generates two aliases for the classes used to make calls to a
 `TicTacToe` server : `TicTacToePtr`, which aliases
@@ -354,13 +366,15 @@ The FIDL toolchain generates two aliases for the classes used to make calls to a
 representing a synchronous client.
 
 When dereferenced, `TicTacToePtr` and `TicTacToeSyncPtr` return a proxy class
-that implements `TicTacToe`, which is proxies requests to the server. In this
-example, given a `TicTacToePtr` called `async_tictactoe`, requests could be made
-by calling `async_tictactoe->StartGame(start_first)` or
-`async_tictactoe->MakeMove(row, col, callback)`.
+that implements `TicTacToe` and `TicTacToe_Sync`, respectively, which proxies
+requests to the server. In this example, given a `TicTacToePtr` called
+`async_tictactoe`, requests could be made by calling
+`async_tictactoe->StartGame(start_first)` or `async_tictactoe->MakeMove(row,
+col, callback)`.
 
 Examples on how to set up and bind an `InterfacePtr` or a
-`SynchronousInterfacePtr` to a channel are covered in the HLCPP tutorial.
+`SynchronousInterfacePtr` to a channel are covered in the
+[HLCPP tutorial][client-tut].
 
 ### Server
 
@@ -393,7 +407,7 @@ class that contains the following public members:
 
 * `void OnOpponentMove(GameState new_state)`: Send an `OnOpponentMove`.
 
-The [tutorial][hlcpp-tutorial] has an example for obtaining a `Binding`.
+The [tutorial][server-tut] has an example for obtaining a `Binding`.
 
 ### Results {#protocols-results}
 
@@ -500,7 +514,7 @@ attribute, the `virtual` methods on the protocol class are not pure. This allows
 implementations of the protocol class with missing method overrides to compile
 successfully.
 
-#### Discoverable
+#### Discoverable {#discoverable}
 
 A protocol annotated with the
 [`[Discoverable]`](/docs/reference/fidl/language/attributes.md#discoverable)
@@ -532,7 +546,8 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 `NotImplemented_("StartGame")` and `NotImplemented_("MakeMove")`, respectively.
 
 <!-- xrefs -->
-[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
+[client-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/client.md
+[server-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums

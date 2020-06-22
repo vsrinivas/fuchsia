@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+# Declare an executable for the server. This produces a binary with the
+# specified output name that can run on Fuchsia.
+# [START bin]
+executable("bin") {
+  output_name = "fidl_echo_hlcpp_server"
+  sources = [ "main.cc" ]
+  deps = [
+    "//examples/fidl/fuchsia.examples",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+# [END bin]
+
+# [START rest]
+# Declare a component for the server, which consists of the manifest and the
+# binary that the component will run.
+fuchsia_component("echo-server") {
+  manifest = "server.cmx"
+  deps = [ ":bin" ]
+}
+
+# Declare a package that contains a single component, our server.
+fuchsia_package("server") {
+  package_name = "echo-hlcpp-server"
+  deps = [ ":echo-server" ]
+}
+# [END rest]

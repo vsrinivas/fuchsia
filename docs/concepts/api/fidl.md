@@ -628,7 +628,7 @@ This is the same as the previous example.
 This section describes several good design patterns that recur in many FIDL
 protocols.
 
-### Protocol request pipelining
+### Protocol request pipelining {#request-pipelining}
 
 One of the best and most widely used design patterns is _protocol request
 pipelining_.  Rather than returning a channel that supports a protocol, the

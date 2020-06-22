@@ -20,14 +20,14 @@ First build the tool as part of the Fuchsia build. Specify the `doc-checker`
 package during `fx set`.
 
 ```
-fx set core.x64 --with //tools/doc-checker
+fx set core.x64 --with //tools/doc_checker
 fx build
 ```
 
 Run `doc-checker` without argument.
 ```
 cd ${FUCHSIA_SRC_DIR}
-out/{default,x64}/dart-tools/doc_checker
+out/{default,x64}/dart-tools/doc-checker
 ```
 
 See the tool's help for how to hold it right.

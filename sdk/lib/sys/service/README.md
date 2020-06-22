@@ -17,8 +17,8 @@ library fuchsia.examples;
 using fidl.examples.echo;
 
 service MyService {
-  fidl.examples.echo.Echo foo;
-  fidl.examples.echo.Echo bar;
+  fidl.examples.echo.Echo regular_echo;
+  fidl.examples.echo.Echo reversed_echo;
 };
 ```
 
@@ -28,23 +28,23 @@ process with the following structure:
 ```
 /svc/fuchsia.examples.MyService
 /svc/fuchsia.examples.MyService/default
-/svc/fuchsia.examples.MyService/default/foo
-/svc/fuchsia.examples.MyService/default/bar
+/svc/fuchsia.examples.MyService/default/regular
+/svc/fuchsia.examples.MyService/default/reversed
 /svc/fuchsia.examples.MyService/alternate
-/svc/fuchsia.examples.MyService/alternate/foo
-/svc/fuchsia.examples.MyService/alternate/bar
+/svc/fuchsia.examples.MyService/alternate/regular
+/svc/fuchsia.examples.MyService/alternate/reversed
 ```
 
 Here we can see that `MyService` has two instances, `default` and `alternate`,
-and each instance has the members `foo` and `bar`.
+and each instance has the members `regular` and `reversed`.
 
 Using this library, we can interact we can interact with FIDL service
 directories in code more simply. For example, here is how we would open the
-`alternate` instance of `MyService` and bind to the member `foo`:
+`alternate` instance of `MyService` and bind to the member `regular`:
 
 ```
 auto alternate = fidl::OpenService<fuchsia::examples::MyService>("alternate");
-auto foo = alternate.foo().Connect().Bind();
+auto regular = alternate.regular_echo().Connect().Bind();
 ```
 
 For more examples, please see `//examples/fidl`.

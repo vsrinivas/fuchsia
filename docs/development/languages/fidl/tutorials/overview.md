@@ -1,33 +1,40 @@
 # Tutorials
 
-Each tutorial in this section walks through writing a simple FIDL service using
-your language of choice, and will introduce you to the basics of FIDL:
+The tutorials in this section gradually walk you through how to use FIDL
+and run code on Fuchsia. There are no prerequisites other than completing the
+[Getting Started][getting-started] section and being comfortable writing code in
+your chosen language, but the tutorials build on eachother. The progression of
+tutorials is as follows:
 
-  * writing a FIDL protocol
-  * compiling the FIDL protocol into generated bindings in your language of choice
-  * implementing a client of the protocol
-  * implementing a server for the protocol
-  * running the client and server together, on Fuchsia
+1. [Compiling FIDL][compiling-fidl], which is a basic introduction to writing
+   and building FIDL files.
+2. Each binding has a "getting started" section which introduces you to the
+   basics of FIDL and contains an ordered sequence of tutorials covering:
+    1. Compiling FIDL into generated bindings in your language of choice and
+       using the bindings in a project.
+    2. Implementing a server for a FIDL protocol.
+    3. Implementing a client for a FIDL protocol.
+    4. Running the client and server together, on Fuchsia.
+3. Besides the getting started section, each binding section has an assorted set
+   of tutorials based on the specific features of each binding. These do not
+   have any pre-specified order.
 
-The tutorials do not assume any knowledge about FIDL, but do assume that you
-are comfortable writing code in your chosen language. However, you will get more
-out of the tutorial by understanding the [concepts][fidl-concepts] behind FIDL
-first. If you're using C++ and wondering which tutorial to follow, take a look
+Each tutorial is accompanied by example code in the [FIDL examples][src]
+directory. Feel free to follow along by reading the code, or by deleting the
+example code and rewriting it yourself based on the tutorials.
+
+If you're using C++ and wondering which tutorial to follow, take a look
 at the [HLCPP and LLCPP comparison doc][c-family].
 
   * [High Level C++ (HLCPP) Tutorial][hlcpp]
-  * [Low Level C++ (LLCPP) Tutorial][llcpp]
-  * [Rust Tutorial][rust]
-  * [Dart Tutorial][dart]
-  * [Go Tutorial][go]
-  * [C Tutorial][c]
 
 <!-- xrefs -->
 [fidl-concepts]: /docs/concepts/fidl/overview.md
-[hlcpp]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
-[llcpp]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
+[compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
+[hlcpp]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
+<!-- [llcpp]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
 [rust]: /docs/development/languages/fidl/tutorials/tutorial-rust.md
 [dart]: /docs/development/languages/fidl/tutorials/tutorial-dart.md
 [go]: /docs/development/languages/fidl/tutorials/tutorial-go.md
-[c]: /docs/development/languages/fidl/tutorials/tutorial-c.md
+[c]: /docs/development/languages/fidl/tutorials/tutorial-c.md -->
 [c-family]: /docs/development/languages/fidl/guides/c-family-comparison.md

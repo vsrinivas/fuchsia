@@ -23,7 +23,7 @@ class ServiceWatcherTest : public testing::TestBase {
 };
 
 TEST_F(ServiceWatcherTest, Begin) {
-  auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::MyService>(ns());
+  auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::EchoService>(ns());
   ASSERT_TRUE(service_aggregate.is_valid());
 
   std::vector<std::pair<uint8_t, std::string>> instances;
@@ -39,14 +39,14 @@ TEST_F(ServiceWatcherTest, Begin) {
                              std::make_pair(fuchsia::io::WATCH_EVENT_EXISTING, "my_instance")));
 
   instances.clear();
-  int ret = MkDir("/fuchsia.examples.MyService/added");
+  int ret = MkDir("/fuchsia.examples.EchoService/added");
   ASSERT_EQ(0, ret);
   ASSERT_TRUE(loop().RunUntilIdle());
   EXPECT_THAT(instances, ::testing::UnorderedElementsAre(
                              std::make_pair(fuchsia::io::WATCH_EVENT_ADDED, "added")));
 
   instances.clear();
-  ret = RmDir("/fuchsia.examples.MyService/added");
+  ret = RmDir("/fuchsia.examples.EchoService/added");
   ASSERT_EQ(0, ret);
   ASSERT_TRUE(loop().RunUntilIdle());
   EXPECT_THAT(instances, ::testing::UnorderedElementsAre(
@@ -56,7 +56,7 @@ TEST_F(ServiceWatcherTest, Begin) {
   ASSERT_EQ(ZX_OK, status);
 
   instances.clear();
-  ret = MkDir("/fuchsia.examples.MyService/added-after");
+  ret = MkDir("/fuchsia.examples.EchoService/added-after");
   ASSERT_EQ(0, ret);
   ASSERT_FALSE(loop().RunUntilIdle());
   ASSERT_TRUE(instances.empty());

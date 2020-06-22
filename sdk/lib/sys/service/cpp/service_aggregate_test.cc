@@ -19,32 +19,32 @@ TEST_F(ServiceAggregateTest, OpenServiceAggregateAt) {
                                        directory.NewRequest().TakeChannel().release());
   ASSERT_EQ(ZX_OK, status);
 
-  auto service_aggregate = OpenServiceAggregateAt<fuchsia::examples::MyService>(directory);
+  auto service_aggregate = OpenServiceAggregateAt<fuchsia::examples::EchoService>(directory);
   ASSERT_TRUE(service_aggregate.is_valid());
 
   auto named_service_aggregate =
-      OpenNamedServiceAggregateAt(directory, "fuchsia.examples.MyService");
+      OpenNamedServiceAggregateAt(directory, "fuchsia.examples.EchoService");
   ASSERT_TRUE(named_service_aggregate.is_valid());
 
   auto explicit_service_aggregate =
-      OpenNamedServiceAggregateAt(directory, "/svc/fuchsia.examples.MyService");
+      OpenNamedServiceAggregateAt(directory, "/svc/fuchsia.examples.EchoService");
   ASSERT_FALSE(explicit_service_aggregate.is_valid());
 }
 
 TEST_F(ServiceAggregateTest, OpenServiceAggregateIn) {
-  auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::MyService>(ns());
+  auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::EchoService>(ns());
   ASSERT_TRUE(service_aggregate.is_valid());
 
-  auto named_service_aggregate = OpenNamedServiceAggregateIn(ns(), "fuchsia.examples.MyService");
+  auto named_service_aggregate = OpenNamedServiceAggregateIn(ns(), "fuchsia.examples.EchoService");
   ASSERT_TRUE(named_service_aggregate.is_valid());
 
   auto explicit_service_aggregate =
-      OpenNamedServiceAggregateIn(ns(), "/svc/fuchsia.examples.MyService");
+      OpenNamedServiceAggregateIn(ns(), "/svc/fuchsia.examples.EchoService");
   ASSERT_TRUE(explicit_service_aggregate.is_valid());
 }
 
 TEST_F(ServiceAggregateTest, ListInstances) {
-  auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::MyService>(ns());
+  auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::EchoService>(ns());
   ASSERT_TRUE(service_aggregate.is_valid());
 
   auto instances = service_aggregate.ListInstances();

@@ -1,0 +1,32 @@
+// [START includes]
+#include <fuchsia/examples/cpp/fidl.h>
+#include <lib/fostr/fidl/fuchsia/examples/formatting.h>
+
+#include <gtest/gtest.h>
+// [END includes]
+
+namespace {
+
+// [START tests]
+TEST(FidlExamples, Bits) {
+  auto flags = fuchsia::examples::FileMode::READ | fuchsia::examples::FileMode::WRITE;
+  std::cout << flags << std::endl;
+}
+
+TEST(FidlExamples, Enums) {
+  auto enum_val = fuchsia::examples::LocationType::MUSEUM;
+  std::cout << enum_val << std::endl;
+}
+
+TEST(FidlExamples, Structs) {
+  fuchsia::examples::Color default_color;
+  std::cout << default_color << std::endl;
+}
+
+TEST(FidlExamples, Unions) {
+  auto int_val = fuchsia::examples::JsonValue::WithIntValue(1);
+  std::cout << int_val << std::endl;
+}
+// [END tests]
+
+}  // namespace

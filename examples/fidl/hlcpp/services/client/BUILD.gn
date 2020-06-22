@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("bin") {
+  output_name = "fidl_echo_hlcpp_service_client"
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("echo-client") {
+  manifest = "client.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("client") {
+  package_name = "echo-hlcpp-service-client"
+  deps = [ ":echo-client" ]
+}

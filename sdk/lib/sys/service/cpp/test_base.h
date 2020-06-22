@@ -40,11 +40,11 @@ class TestBase : public ::testing::Test {
     char buf[] = "/tmp/svc.XXXXXX";
     svc_ = mkdtemp(buf);
 
-    int ret = MkDir("/fuchsia.examples.MyService");
+    int ret = MkDir("/fuchsia.examples.EchoService");
     ASSERT_EQ(0, ret);
-    ret = MkDir("/fuchsia.examples.MyService/default");
+    ret = MkDir("/fuchsia.examples.EchoService/default");
     ASSERT_EQ(0, ret);
-    ret = MkDir("/fuchsia.examples.MyService/my_instance");
+    ret = MkDir("/fuchsia.examples.EchoService/my_instance");
     ASSERT_EQ(0, ret);
 
     fbl::unique_fd fd(open(svc_.data(), O_RDONLY | O_DIRECTORY));

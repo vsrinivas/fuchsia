@@ -216,7 +216,7 @@ occurs, the client may need to perform corrective actions that depend on how far
 the operation has proceeded &mdash; another reason to be synchronized to the
 completion of each step.
 
-#### Client sends to server, no reply
+#### Client sends to server, no reply {#fire-and-forget}
 
 This model is also known as "fire and forget." In it, the client sends the
 message to the server. and then carries on with its operation. In contrast to

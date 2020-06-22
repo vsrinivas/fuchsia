@@ -3,16 +3,18 @@ toc:
     path: /docs/development/languages/fidl/guides/README.md
   - title: "Running FIDL"
     path: /docs/development/languages/fidl/guides/cli.md
-  - title: "Style Guide"
+  - title: "Style guide"
     path: /docs/development/languages/fidl/guides/style.md
   - title: "Designing APIs"
     path: /docs/development/languages/fidl/guides/api-design.md
   - title: "Evolving APIs"
     path: /docs/development/languages/fidl/guides/abi-compat.md
-  - title: "Maxing Out Pagination"
+  - title: "Maxing out pagination"
     path: /docs/development/languages/fidl/guides/max-out-pagination.md
-  - title: "Picking Between C, LLCPP, and HLCPP Bindings"
+  - title: "Picking between C, LLCPP, and HLCPP bindings"
     path: /docs/development/languages/fidl/guides/c-family-comparison.md
+  - title: "Viewing generated bindings code"
+    path: /docs/development/languages/fidl/guides/generated-code.md
   - title: "Editor Support"
     path: /docs/development/languages/fidl/guides/editors.md
   - title: "Hanging Gets in Rust"

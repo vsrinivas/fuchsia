@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/fidl_echo_hlcpp_multi_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.examples.Echo"
+        ]
+    }
+}
