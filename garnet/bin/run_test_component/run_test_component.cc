@@ -16,6 +16,7 @@
 #include <string>
 
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace run {
@@ -181,6 +182,13 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     result.launch_info.arguments->push_back(argv[i]);
   }
   return result;
+}
+
+std::string GetSimplifiedUrl(const std::string& url) {
+  component::FuchsiaPkgUrl furl;
+  furl.Parse(url);
+  return fxl::Substitute("fuchsia-pkg://$0/$1#$2", furl.host_name(), furl.package_name(),
+                         furl.resource_path());
 }
 
 }  // namespace run

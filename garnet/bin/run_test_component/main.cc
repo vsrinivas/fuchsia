@@ -275,8 +275,9 @@ int main(int argc, const char** argv) {
 
   bool restrict_logs = parse_result.restrict_logs;
   if (restrict_logs) {
+    std::string simplified_url = run::GetSimplifiedUrl(program_name);
     max_severity_allowed = FX_LOG_WARNING;
-    auto it = max_severity_config.config().find(program_name);
+    auto it = max_severity_config.config().find(simplified_url);
     if (it != max_severity_config.config().end()) {
       max_severity_allowed = it->second;
     }

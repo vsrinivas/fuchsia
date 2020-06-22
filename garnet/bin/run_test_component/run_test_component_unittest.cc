@@ -267,7 +267,18 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
     EXPECT_FALSE(result.restrict_logs);
   }
-}  // namespace
+}
+
+TEST(UrlTest, SimplifiedUrl) {
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx",
+            run::GetSimplifiedUrl(
+                "fuchsia-pkg://fuchsia.com/"
+                "my-pkg?hash=3204f2f24920e55bfbcb9c3a058ec2869f229b18d00ef1049ec3f47e5b7e4351#"
+                "meta/my-component.cmx"));
+
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx",
+            run::GetSimplifiedUrl("fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx"));
+}
 
 }  // namespace
 }  // namespace run

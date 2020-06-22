@@ -29,6 +29,11 @@ struct ParseArgsResult {
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
                           const char** argv);
 
+// Strips url of query parameters. For eg
+//  "fuchsia-pkg://fuchsia.com/my-pkg?hash=hash#meta/my-component.cmx" will return
+//  "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx".
+std::string GetSimplifiedUrl(const std::string& url);
+
 }  // namespace run
 
 #endif  // GARNET_BIN_RUN_TEST_COMPONENT_RUN_TEST_COMPONENT_H_
