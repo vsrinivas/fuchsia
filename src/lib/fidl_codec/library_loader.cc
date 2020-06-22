@@ -276,8 +276,6 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
       // direct consumption by the bindings.
       ordinal_(interface.enclosing_library()->ExtractUint64(json_definition, "method", name_,
                                                             "ordinal")),
-      old_ordinal_(interface.enclosing_library()->ExtractUint64(json_definition, "method", name_,
-                                                                "generated_ordinal")),
       is_composed_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
                                                               "is_composed")) {
   if (interface.enclosing_library()->ExtractBool(json_definition, "method", name_, "has_request")) {
@@ -601,25 +599,15 @@ void LibraryLoader::AddContent(const std::string& content, LibraryReadError* err
 }
 
 void LibraryLoader::AddMethod(const InterfaceMethod* method) {
-  // TODO(FIDL-524): At various steps of the migration, the ordinals may be
-  // the same value. Avoid creating duplicate entries.
-  bool ords_are_same = method->ordinal() == method->old_ordinal();
   if (ordinal_map_[method->ordinal()] == nullptr) {
     ordinal_map_[method->ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
-    if (!ords_are_same)
-      ordinal_map_[method->old_ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
   }
   // Ensure composed methods come after non-composed methods.  The fidl_codec
   // libraries pick the first one they find.
   if (method->is_composed()) {
     ordinal_map_[method->ordinal()]->push_back(method);
-    if (!ords_are_same)
-      ordinal_map_[method->old_ordinal()]->push_back(method);
   } else {
     ordinal_map_[method->ordinal()]->insert(ordinal_map_[method->ordinal()]->begin(), method);
-    if (!ords_are_same)
-      ordinal_map_[method->old_ordinal()]->insert(ordinal_map_[method->old_ordinal()]->begin(),
-                                                  method);
   }
 }
 

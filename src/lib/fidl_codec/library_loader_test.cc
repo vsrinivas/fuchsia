@@ -308,14 +308,6 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   ASSERT_NE(ordinal_method, nullptr);
   ASSERT_EQ(kDesiredInterfaceName, ordinal_method->enclosing_interface().name());
   ASSERT_EQ("OnDirectoryReady", ordinal_method->name());
-
-  Ordinal64 correct_old_ordinal = found_method->old_ordinal();
-  const std::vector<const InterfaceMethod*>* old_ordinal_methods =
-      loader.GetByOrdinal(correct_old_ordinal);
-  const InterfaceMethod* old_ordinal_method = (*old_ordinal_methods)[0];
-  ASSERT_NE(old_ordinal_method, nullptr);
-  ASSERT_EQ(kDesiredInterfaceName, old_ordinal_method->enclosing_interface().name());
-  ASSERT_EQ("OnDirectoryReady", old_ordinal_method->name());
 }
 
 void OrdinalCompositionBody(LibraryLoader& loader) {
@@ -344,14 +336,6 @@ void OrdinalCompositionBody(LibraryLoader& loader) {
   ASSERT_EQ("test.fidlcodec.composedinto/ComposedParamProtocol",
             ordinal_method_composed->enclosing_interface().name());
   ASSERT_EQ("Method", ordinal_method_composed->name());
-
-  Ordinal64 correct_old_ordinal = found_method->old_ordinal();
-  const std::vector<const InterfaceMethod*>* old_ordinal_methods =
-      loader.GetByOrdinal(correct_old_ordinal);
-  const InterfaceMethod* old_ordinal_method = (*old_ordinal_methods)[0];
-  ASSERT_NE(old_ordinal_method, nullptr);
-  ASSERT_EQ(kDesiredInterfaceName, old_ordinal_method->enclosing_interface().name());
-  ASSERT_EQ("Method", old_ordinal_method->name());
 }
 
 // Tests that we get the method composed into a protocol when we request a

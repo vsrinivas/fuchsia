@@ -334,7 +334,6 @@ class InterfaceMethod {
   const Interface& enclosing_interface() const { return enclosing_interface_; }
   const std::string& name() const { return name_; }
   Ordinal64 ordinal() const { return ordinal_; }
-  Ordinal64 old_ordinal() const { return old_ordinal_; }
   bool is_composed() const { return is_composed_; }
   Struct* request() const {
     if (request_ != nullptr) {
@@ -365,7 +364,6 @@ class InterfaceMethod {
   const Interface& enclosing_interface_;
   const std::string name_;
   const Ordinal64 ordinal_;
-  const Ordinal64 old_ordinal_;
   const bool is_composed_;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
@@ -553,7 +551,6 @@ class LibraryLoader {
     for (const auto& iface : library->interfaces()) {
       for (const auto& method : iface->methods()) {
         ordinal_map_.erase(method->ordinal());
-        ordinal_map_.erase(method->old_ordinal());
       }
     }
   }

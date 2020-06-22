@@ -43,8 +43,7 @@ std::string echo_service = R"({
       ],
       "methods": [
         {
-          "ordinal": 4731840855269179392,
-          "generated_ordinal": 2936880781197466513,
+          "ordinal": 2936880781197466513,
           "name": "EchoString",
           "location": {
             "filename": "fidlbolt.fidl",
@@ -112,8 +111,7 @@ std::string echo_service = R"({
           "is_composed": false
         },
         {
-          "ordinal": 7323483735821647872,
-          "generated_ordinal": 1120886698987607603,
+          "ordinal": 1120886698987607603,
           "name": "OnPong",
           "location": {
             "filename": "fidlbolt.fidl",
