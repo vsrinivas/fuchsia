@@ -6,9 +6,9 @@ use anyhow::Error;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_control::{
-    ControlMarker, ControlProxy, PairingDelegateMarker, PairingDelegateRequest,
-    PairingDelegateRequestStream, PairingMethod, PairingOptions, PairingSecurityLevel,
-    TechnologyType,
+    ControlMarker, ControlProxy, InputCapabilityType, OutputCapabilityType, PairingDelegateMarker,
+    PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod, PairingOptions,
+    PairingSecurityLevel, TechnologyType,
 };
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component as component;
@@ -177,6 +177,41 @@ impl BluetoothControlFacade {
             };
         }
         Ok(())
+    }
+
+    pub fn set_io_capabilities(&self, input: &str, output: &str) -> Result<(), Error> {
+        let tag = "BluetoothControlFacade::set_io_capabilities";
+        let input_capability = match input {
+            "NONE" => InputCapabilityType::None,
+            "CONFIRMATION" => InputCapabilityType::Confirmation,
+            "KEYBOARD" => InputCapabilityType::Keyboard,
+            _ => {
+                fx_err_and_bail!(&with_line!(tag), format!("Invalid Input Capability {:?}", input))
+            }
+        };
+        let output_capability = match output {
+            "NONE" => OutputCapabilityType::None,
+            "DISPLAY" => OutputCapabilityType::Display,
+            _ => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("Invalid Output Capability {:?}", output)
+            ),
+        };
+        fx_log_info!(
+            tag: &with_line!(tag),
+            "Setting IO capabilities to input: {:?} output: {:?}",
+            input_capability,
+            output_capability
+        );
+        match &self.inner.read().control_interface_proxy {
+            Some(p) => {
+                let _ = p.set_io_capabilities(input_capability, output_capability);
+                Ok(())
+            }
+            None => {
+                fx_err_and_bail!(&with_line!(tag), "No Bluetooth Control Interface Proxy Set.");
+            }
+        }
     }
 
     pub async fn accept_pairing(&self) -> Result<(), Error> {

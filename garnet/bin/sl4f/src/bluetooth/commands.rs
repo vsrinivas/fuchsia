@@ -137,6 +137,12 @@ impl Facade for BluetoothControlFacade {
                 let result = self.set_discoverable(discoverable).await?;
                 Ok(to_value(result)?)
             }
+            "BluetoothSetIOCapabilities" => {
+                let input = parse_arg!(args, as_str, "input")?;
+                let output = parse_arg!(args, as_str, "output")?;
+                let result = self.set_io_capabilities(&input.to_string(), &output.to_string())?;
+                Ok(to_value(result)?)
+            }
             "BluetoothSetName" => {
                 let name = parse_arg!(args, as_str, "name")?;
                 let result = self.set_name(name.to_string()).await?;
