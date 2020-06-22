@@ -34,6 +34,41 @@ source_set("test_utils") {
   ]
 }
 
+executable("flow_ring_handler_test") {
+  output_name = "flow_ring_handler_test"
+  testonly = true
+  sources = [ "flow_ring_handler_test.cc" ]
+  deps = [
+    ":fake_msgbuf_interfaces",
+    ":test_utils",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/sync",
+    "//zircon/system/public",
+  ]
+}
+
+executable("flow_ring_test") {
+  output_name = "flow_ring_test"
+  testonly = true
+  sources = [ "flow_ring_test.cc" ]
+  deps = [
+    ":fake_msgbuf_interfaces",
+    ":test_utils",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/sync",
+    "//zircon/system/public",
+  ]
+}
+
 executable("msgbuf_ring_handler_test") {
   output_name = "msgbuf_ring_handler_test"
   testonly = true
@@ -52,7 +87,12 @@ unittest_package("brcmfmac_msgbuf_test") {
   package_name = "brcmfmac-msgbuf-test"
   deps = []
   tests = []
-  foreach(test_name, [ "msgbuf_ring_handler_test" ]) {
+  foreach(test_name,
+          [
+            "flow_ring_handler_test",
+            "flow_ring_test",
+            "msgbuf_ring_handler_test",
+          ]) {
     deps += [ ":$test_name" ]
     tests += [
       {

@@ -4,6 +4,10 @@
 # Sources for the MSGBUF firmware protocol.
 source_set("msgbuf") {
   sources = [
+    "flow_ring.cc",
+    "flow_ring.h",
+    "flow_ring_handler.cc",
+    "flow_ring_handler.h",
     "msgbuf_interfaces.cc",
     "msgbuf_proto.cc",
     "msgbuf_ring_handler.cc",
@@ -16,6 +20,8 @@ source_set("msgbuf") {
   ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:util",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",

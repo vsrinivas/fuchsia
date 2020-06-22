@@ -13,12 +13,18 @@ namespace brcmfmac {
 struct [[gnu::packed]] MsgbufCommonHeader {
   enum class MsgType : uint8_t {
     kInvalid = 0,
+    kFlowRingCreateRequest = 0x03,
+    kFlowRingCreateResponse = 0x04,
+    kFlowRingDeleteRequest = 0x05,
+    kFlowRingDeleteResponse = 0x06,
     kIoctlRequest = 0x09,
     kIoctlAck = 0x0A,
     kIoctlBufferPost = 0xB,
     kIoctlResponse = 0x0C,
     kEventBufferPost = 0x0D,
     kWlEvent = 0x0E,
+    kTxRequest = 0x0F,
+    kTxResponse = 0x10,
     kRxBufferPost = 0x11,
   };
 
@@ -34,6 +40,32 @@ struct [[gnu::packed]] MsgbufCompletionHeader {
   uint16_t flow_ring_id;
 };
 
+struct [[gnu::packed]] MsgbufFlowRingCreateRequest {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType =
+      MsgbufCommonHeader::MsgType::kFlowRingCreateRequest;
+  MsgbufCommonHeader msg;
+  uint8_t da[6];
+  uint8_t sa[6];
+  uint8_t tid;
+  uint8_t if_flags;
+  uint16_t flow_ring_id;
+  uint8_t tc;
+  uint8_t priority;
+  uint16_t int_vector;
+  uint16_t max_items;
+  uint16_t len_item;
+  uint64_t flow_ring_addr;
+};
+
+struct [[gnu::packed]] MsgbufFlowRingDeleteRequest {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType =
+      MsgbufCommonHeader::MsgType::kFlowRingDeleteRequest;
+  MsgbufCommonHeader msg;
+  uint16_t flow_ring_id;
+  uint16_t reason;
+  uint32_t rsvd0[7];
+};
+
 struct [[gnu::packed]] MsgbufIoctlRequest {
   static constexpr MsgbufCommonHeader::MsgType kMsgType =
       MsgbufCommonHeader::MsgType::kIoctlRequest;
@@ -45,6 +77,19 @@ struct [[gnu::packed]] MsgbufIoctlRequest {
   uint16_t rsvd0[3];
   uint64_t req_buf_addr;
   uint32_t rsvd1[2];
+};
+
+struct [[gnu::packed]] MsgbufTxRequest {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType = MsgbufCommonHeader::MsgType::kTxRequest;
+  MsgbufCommonHeader msg;
+  uint8_t txhdr[14];
+  uint8_t flags;
+  uint8_t seg_cnt;
+  uint64_t metadata_buf_addr;
+  uint64_t data_buf_addr;
+  uint16_t metadata_buf_len;
+  uint16_t data_len;
+  uint32_t rsvd0;
 };
 
 struct [[gnu::packed]] MsgbufIoctlOrEventBufferPost {
@@ -67,6 +112,22 @@ struct [[gnu::packed]] MsgbufRxBufferPost {
   uint64_t data_buf_addr;
 };
 
+struct [[gnu::packed]] MsgbufFlowRingCreateResponse {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType =
+      MsgbufCommonHeader::MsgType::kFlowRingCreateResponse;
+  MsgbufCommonHeader msg;
+  MsgbufCompletionHeader compl_hdr;
+  uint32_t rsvd0[3];
+};
+
+struct [[gnu::packed]] MsgbufFlowRingDeleteResponse {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType =
+      MsgbufCommonHeader::MsgType::kFlowRingDeleteResponse;
+  MsgbufCommonHeader msg;
+  MsgbufCompletionHeader compl_hdr;
+  uint32_t rsvd0[3];
+};
+
 struct [[gnu::packed]] MsgbufIoctlResponse {
   static constexpr MsgbufCommonHeader::MsgType kMsgType =
       MsgbufCommonHeader::MsgType::kIoctlResponse;
@@ -76,6 +137,14 @@ struct [[gnu::packed]] MsgbufIoctlResponse {
   uint16_t trans_id;
   uint32_t cmd;
   uint32_t rsvd0;
+};
+
+struct [[gnu::packed]] MsgbufTxResponse {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType = MsgbufCommonHeader::MsgType::kTxResponse;
+  MsgbufCommonHeader msg;
+  MsgbufCompletionHeader compl_hdr;
+  uint16_t metadata_len;
+  uint16_t tx_status;
 };
 
 struct [[gnu::packed]] MsgbufWlEvent {
