@@ -159,34 +159,11 @@ zx_status_t WatchTee(int dirfd, int event, const char* filename, void* cookie) {
   }
 }
 
-// Wait for a tee devices to exist.
-bool WaitForTeeDevices() {
-  const auto status = wait_for_device(kDeviceClass, ZX_SEC(5));
-  if (status == ZX_OK) {
-    return true;
-  } else if (status != ZX_ERR_NOT_SUPPORTED) {
-    // If the status is ZX_ERR_NOT_SUPPORTED then fallback to the polling method
-    // below. We see this inside of a component.
-    return false;
-  }
-
-  // For 5 seconds we will poll the directory until it has devices in it.
-  const zx::time start = zx::clock::get_monotonic();
-  while (zx::clock::get_monotonic() - start < zx::sec(5)) {
-    if (std::filesystem::is_empty(kDeviceClass)) {
-      zx::nanosleep(zx::deadline_after(zx::msec(10)));
-    } else {
-      return true;
-    }
-  }
-  return false;
-}
-
 }  // namespace
 
 zx_status_t GetHardwareDerivedKey(GetHardwareDerivedKeyCallback callback,
                                   uint8_t key_info[kExpectedKeyInfoSize]) {
-  if (!WaitForTeeDevices()) {
+  if (wait_for_device(kDeviceClass, ZX_SEC(5)) != ZX_OK) {
     fprintf(stderr, "Error waiting for tee device directory!\n");
     return ZX_ERR_IO;
   }
@@ -206,4 +183,21 @@ zx_status_t GetHardwareDerivedKey(GetHardwareDerivedKeyCallback callback,
   return ZX_OK;
 }
 
+zx_status_t GetHardwareDerivedKeyFromService(GetHardwareDerivedKeyCallback callback,
+                                             uint8_t key_info[kExpectedKeyInfoSize]) {
+  // Hardware derived key is expected to be 128-bit AES key.
+  std::unique_ptr<uint8_t[]> key_buffer(new uint8_t[kDerivedKeySize]);
+  size_t key_size = 0;
+  if (!GetKeyFromTeeDevice("/svc/fuchsia.tee.Device", key_info, kExpectedKeyInfoSize,
+                           key_buffer.get(), &key_size, kDerivedKeySize)) {
+    fprintf(stderr, "Failed to get hardware derived key from TEE!\n");
+    return ZX_ERR_IO;
+  }
+  if (key_size != kDerivedKeySize) {
+    fprintf(stderr, "The hardware derived key is of wrong size!\n");
+    return ZX_ERR_IO;
+  }
+
+  return callback(std::move(key_buffer), key_size);
+}
 }  // namespace kms_stateless

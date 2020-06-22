@@ -16,9 +16,15 @@ const size_t kExpectedKeyInfoSize = 32;
 using GetHardwareDerivedKeyCallback =
     fbl::Function<zx_status_t(std::unique_ptr<uint8_t[]>, size_t)>;
 
-// Get a hardware derived key using
+// Get a hardware derived key using the device /dev/class/tee/000 .
+// This is useful in early boot when other services may not be up.
 zx_status_t GetHardwareDerivedKey(GetHardwareDerivedKeyCallback callback,
                                   uint8_t key_info[kExpectedKeyInfoSize]);
+
+// Get a hardware derived key using the service fuchsia.tee.Device .
+// This should be used from components.
+zx_status_t GetHardwareDerivedKeyFromService(GetHardwareDerivedKeyCallback callback,
+                                             uint8_t key_info[kExpectedKeyInfoSize]);
 }  // namespace kms_stateless
 
 #endif  // KMS_STATELESS_KMS_STATELESS_H_
