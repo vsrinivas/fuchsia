@@ -36,6 +36,10 @@ struct SimInterface {
     wlan_channel_t channel_;
   };
 
+  struct SoftApContext {
+    wlan_ssid_t ssid;
+  };
+
   // Useful statistics about operations performed
   struct Stats {
     size_t assoc_attempts_ = 0;
@@ -45,9 +49,18 @@ struct SimInterface {
     std::list<wlanif_assoc_confirm_t> assoc_results_;
     std::list<wlanif_deauth_indication_t> deauth_indications_;
     std::list<wlanif_channel_switch_info_t> csa_indications_;
+    std::list<wlanif_start_confirm_t> start_confirmations_;
+    std::list<wlanif_stop_confirm_t> stop_confirmations_;
   };
 
-  zx_status_t Init(std::shared_ptr<simulation::Environment> env);
+  // SoftAP defaults
+  static constexpr wlan_ssid_t kDefaultSoftApSsid = {.len = 10, .ssid = "Sim_SoftAP"};
+  static constexpr wlan_channel_t kDefaultSoftApChannel = {
+      .primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+  static constexpr uint32_t kDefaultSoftApBeaconPeriod = 100;
+  static constexpr uint32_t kDefaultSoftApDtimPeriod = 100;
+
+  zx_status_t Init(std::shared_ptr<simulation::Environment> env, wlan_info_mac_role_t role);
 
   virtual ~SimInterface() {
     if (ch_sme_ != ZX_HANDLE_INVALID) {
@@ -70,8 +83,8 @@ struct SimInterface {
   virtual void OnAssocInd(const wlanif_assoc_ind_t* ind) {}
   virtual void OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {}
   virtual void OnDisassocInd(const wlanif_disassoc_indication_t* ind) {}
-  virtual void OnStartConf(const wlanif_start_confirm_t* resp) {}
-  virtual void OnStopConf(const wlanif_stop_confirm_t* resp) {}
+  virtual void OnStartConf(const wlanif_start_confirm_t* resp);
+  virtual void OnStopConf(const wlanif_stop_confirm_t* resp);
   virtual void OnEapolConf(const wlanif_eapol_confirm_t* resp) {}
   virtual void OnChannelSwitch(const wlanif_channel_switch_info_t* ind);
   virtual void OnSignalReport(const wlanif_signal_report_indication_t* ind) {}
@@ -83,10 +96,17 @@ struct SimInterface {
   // Start an assocation with a fake AP. We can use these for subsequent association events, but
   // not interleaved association events (which I doubt are terribly useful, anyway). Note that for
   // the moment only non-authenticated associations are supported.
-  virtual void StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-                          const wlan_channel_t& channel);
-  virtual void AssociateWith(const simulation::FakeAp& ap,
-                             std::optional<zx::duration> delay = std::nullopt);
+  void StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
+                  const wlan_channel_t& channel);
+  void AssociateWith(const simulation::FakeAp& ap,
+                     std::optional<zx::duration> delay = std::nullopt);
+
+  // SoftAP operation
+  void StartSoftAp(const wlan_ssid_t& ssid = kDefaultSoftApSsid,
+                   const wlan_channel_t& channel = kDefaultSoftApChannel,
+                   uint32_t beacon_period = kDefaultSoftApBeaconPeriod,
+                   uint32_t dtim_period = kDefaultSoftApDtimPeriod);
+  void StopSoftAp(std::optional<wlan_ssid_t> ssid = std::nullopt);
 
   std::shared_ptr<simulation::Environment> env_;
 
@@ -108,8 +128,14 @@ struct SimInterface {
   // Current state of association
   AssocContext assoc_ctx_;
 
+  // Current state of soft AP
+  SoftApContext soft_ap_ctx_;
+
   // Allows us to track individual operations
   Stats stats_;
+
+ private:
+  wlan_info_mac_role_t role_ = 0;
 };
 
 // A base class that can be used for creating simulation tests. It provides functionality that

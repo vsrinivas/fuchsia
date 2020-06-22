@@ -15,19 +15,12 @@
 
 namespace wlan::brcmfmac {
 
-constexpr uint16_t kDefaultCh = 149;
-constexpr wlan_channel_t kDefaultChannel = {
-    .primary = kDefaultCh, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
-constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
-
 #define OUR_MAC \
   { 0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa }
 #define THEIR_MAC \
   { 0xde, 0xad, 0xbe, 0xef, 0x00, 0x02 }
 const common::MacAddr kOurMac(OUR_MAC);
 const common::MacAddr kTheirMac(THEIR_MAC);
-
-constexpr wlan_ssid_t kDefaultSsid = {.len = 6, .ssid = "Sim_AP"};
 
 // A simple ARP request
 const ether_arp kSampleArpReq = {.ea_hdr = {.ar_hrd = htons(ETH_P_802_3),
@@ -66,8 +59,6 @@ class ArpTest : public SimTest {
   void Tx(const std::vector<uint8_t>& ethFrame);
 
   // Interface management
-  zx_status_t StartSoftAP();
-  zx_status_t StopSoftAP();
   zx_status_t SetMulticastPromisc(bool enable);
 
   // Simulation of client associating to a SoftAP interface
@@ -82,8 +73,6 @@ class ArpTest : public SimTest {
                                                   size_t ethBodySize);
 
  protected:
-  simulation::WlanTxInfo tx_info_ = {.channel = kDefaultChannel};
-
   std::vector<uint8_t> ethFrame;
   GenericIfc sim_ifc_;
 };
@@ -140,38 +129,18 @@ std::vector<uint8_t> ArpTest::CreateEthernetFrame(common::MacAddr dstAddr, commo
   return ethFrame;
 }
 
-zx_status_t ArpTest::StartSoftAP() {
-  wlanif_start_req_t start_req = {
-      .ssid = {.len = 6, .data = "Sim_AP"},
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .beacon_period = 100,
-      .dtim_period = 100,
-      .channel = kDefaultCh,
-      .rsne_len = 0,
-  };
-  sim_ifc_.if_impl_ops_->start_req(sim_ifc_.if_impl_ctx_, &start_req);
-  return ZX_OK;
-}
-
 zx_status_t ArpTest::SetMulticastPromisc(bool enable) {
   wlanif_impl_protocol_ops_t* ops = sim_ifc_.if_impl_ops_;
   void* ctx = sim_ifc_.if_impl_ctx_;
   return ops->set_multicast_promisc(ctx, enable);
 }
 
-zx_status_t ArpTest::StopSoftAP() {
-  wlanif_stop_req_t stop_req{
-      .ssid = {.len = 6, .data = "Sim_AP"},
-  };
-  sim_ifc_.if_impl_ops_->stop_req(sim_ifc_.if_impl_ctx_, &stop_req);
-  return ZX_OK;
-}
-
 void ArpTest::TxAssocReq() {
   // Get the mac address of the SoftAP
   const common::MacAddr mac(kTheirMac);
-  simulation::SimAssocReqFrame assoc_req_frame(mac, kOurMac, kDefaultSsid);
-  env_->Tx(assoc_req_frame, tx_info_, this);
+  simulation::SimAssocReqFrame assoc_req_frame(mac, kOurMac, SimInterface::kDefaultSoftApSsid);
+  simulation::WlanTxInfo tx_info = {.channel = SimInterface::kDefaultSoftApChannel};
+  env_->Tx(assoc_req_frame, tx_info, this);
 }
 
 void ArpTest::VerifyAssoc() {
@@ -184,7 +153,7 @@ void ArpTest::VerifyAssoc() {
 }
 
 void ArpTest::CleanupApInterface() {
-  StopSoftAP();
+  sim_ifc_.StopSoftAp();
   DeleteInterface(sim_ifc_.iface_id_);
 }
 
@@ -193,7 +162,8 @@ void ArpTest::Tx(const std::vector<uint8_t>& ethFrame) {
   common::MacAddr dst(eth_hdr->h_dest);
   common::MacAddr src(eth_hdr->h_source);
   simulation::SimQosDataFrame dataFrame(true, false, dst, src, common::kBcastMac, 0, ethFrame);
-  env_->Tx(dataFrame, kDefaultTxInfo, this);
+  simulation::WlanTxInfo tx_info = {.channel = SimInterface::kDefaultSoftApChannel};
+  env_->Tx(dataFrame, tx_info, this);
 }
 
 void ArpTest::ScheduleArpFrameTx(zx::duration when, bool expect_rx) {
@@ -222,7 +192,7 @@ TEST_F(ArpTest, SoftApArpOffload) {
   Init();
   ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &sim_ifc_, std::nullopt, kOurMac),
             ZX_OK);
-  EXPECT_EQ(StartSoftAP(), ZX_OK);
+  sim_ifc_.StartSoftAp();
 
   // Have the test associate with the AP
   SCHEDULE_CALL(zx::sec(1), &ArpTest::TxAssocReq, this);
@@ -258,7 +228,8 @@ TEST_F(ArpTest, ClientArpOffload) {
             ZX_OK);
 
   // Start a fake AP
-  simulation::FakeAp ap(env_.get(), kTheirMac, kDefaultSsid, kDefaultChannel);
+  simulation::FakeAp ap(env_.get(), kTheirMac, SimInterface::kDefaultSoftApSsid,
+                        SimInterface::kDefaultSoftApChannel);
 
   // Associate with fake AP
   sim_ifc_.AssociateWith(ap, zx::sec(1));

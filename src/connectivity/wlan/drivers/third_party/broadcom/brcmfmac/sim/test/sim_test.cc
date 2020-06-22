@@ -91,10 +91,12 @@ wlanif_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
         },
 };
 
-zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env) {
+zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env,
+                               wlan_info_mac_role_t role) {
   zx_status_t result = zx_channel_create(0, &ch_sme_, &ch_mlme_);
   if (result == ZX_OK) {
     env_ = env;
+    role_ = role;
   }
   return result;
 }
@@ -162,8 +164,19 @@ void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
   if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
 }
 
+void SimInterface::OnStartConf(const wlanif_start_confirm_t* resp) {
+  stats_.start_confirmations_.push_back(*resp);
+}
+
+void SimInterface::OnStopConf(const wlanif_stop_confirm_t* resp) {
+  stats_.stop_confirmations_.push_back(*resp);
+}
+
 void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
                               const wlan_channel_t& channel) {
+  // This should only be performed on a Client interface
+  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
+
   stats_.assoc_attempts_++;
 
   // Save off context
@@ -183,6 +196,9 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& s
 }
 
 void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx::duration> delay) {
+  // This should only be performed on a Client interface
+  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
+
   common::MacAddr bssid = ap.GetBssid();
   wlan_ssid_t ssid = ap.GetSsid();
   wlan_channel_t channel = ap.GetChannel();
@@ -191,6 +207,51 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
     SCHEDULE_CALL(*delay, &SimInterface::StartAssoc, this, bssid, ssid, channel);
   } else {
     StartAssoc(ap.GetBssid(), ap.GetSsid(), ap.GetChannel());
+  }
+}
+
+void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& channel,
+                               uint32_t beacon_period, uint32_t dtim_period) {
+  // This should only be performed on an AP interface
+  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+
+  wlanif_start_req_t start_req = {
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .beacon_period = beacon_period,
+      .dtim_period = dtim_period,
+      .channel = channel.primary,
+      .rsne_len = 0,
+  };
+
+  // Set the SSID field in the request
+  const size_t kSsidLen = sizeof(start_req.ssid.data);
+  ZX_ASSERT(kSsidLen == sizeof(ssid.ssid));
+  start_req.ssid.len = ssid.len;
+  memcpy(start_req.ssid.data, ssid.ssid, kSsidLen);
+
+  // Send request to driver
+  if_impl_ops_->start_req(if_impl_ctx_, &start_req);
+
+  // Remember context
+  soft_ap_ctx_.ssid = ssid;
+
+  // Return value is handled asynchronously in OnStartConf
+}
+
+void SimInterface::StopSoftAp(std::optional<wlan_ssid_t> ssid) {
+  // This should only be performed on an AP interface
+  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+
+  wlanif_stop_req_t stop_req;
+
+  ZX_ASSERT(sizeof(stop_req.ssid.data) == WLAN_MAX_SSID_LEN);
+  if (ssid) {
+    stop_req.ssid.len = ssid->len;
+    memcpy(stop_req.ssid.data, ssid->ssid, WLAN_MAX_SSID_LEN);
+  } else {
+    // If not otherwise specified, use the ssid from the last call to StartSoftAp
+    stop_req.ssid.len = soft_ap_ctx_.ssid.len;
+    memcpy(stop_req.ssid.data, soft_ap_ctx_.ssid.ssid, WLAN_MAX_SSID_LEN);
   }
 }
 
@@ -222,7 +283,7 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
                                     std::optional<const wlanif_impl_ifc_protocol*> sme_protocol,
                                     std::optional<common::MacAddr> mac_addr) {
   zx_status_t status;
-  if ((status = sim_ifc->Init(env_)) != ZX_OK) {
+  if ((status = sim_ifc->Init(env_, role)) != ZX_OK) {
     return status;
   }
 
