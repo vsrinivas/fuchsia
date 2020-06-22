@@ -166,25 +166,26 @@ class TouchApp {
     max_y_ = y;
   }
 
-  std::vector<fidl_report::InputReport> reports;
   int Run() {
+    fidl_report::InputReportsReaderSyncPtr reader;
+    client_->GetInputReportsReader(reader.NewRequest());
+
     zx_status_t status;
     run_ = true;
     while (run_) {
-      // Wait on the event to be readable.
-      status = has_reports_event_.wait_one(DEV_STATE_READABLE, zx::time::infinite(), nullptr);
-      if (status != ZX_OK) {
-        return 1;
-      }
-
       // Get the report.
-      status = client_->GetReports(&reports);
+      fidl_report::InputReportsReader_ReadInputReports_Result result;
+      status = reader->ReadInputReports(&result);
       if (status != ZX_OK) {
         printf("GetReports FIDL call returned %s\n", zx_status_get_string(status));
         return 1;
       }
+      if (result.is_err()) {
+        printf("GetReports FIDL result returned %s\n", zx_status_get_string(result.err()));
+        return 1;
+      }
 
-      for (auto& report : reports) {
+      for (auto& report : result.response().reports) {
         if (!report.has_touch()) {
           continue;
         }
@@ -280,17 +281,6 @@ class TouchApp {
                    device_descriptor.touch().input().contacts()[0].position_y().range.max);
 
       printf("Found touchscreen at %s\n", devname);
-
-      // Get the reports event.
-      zx_status_t wire_status = client_->GetReportsEvent(&status, &has_reports_event_);
-      if (wire_status != ZX_OK) {
-        printf("GetReportsEvent FIDL call returned %s\n", zx_status_get_string(wire_status));
-        return 1;
-      }
-      if (status != ZX_OK) {
-        printf("GetReportsEvent FIDL call returned %s\n", zx_status_get_string(status));
-        return 1;
-      }
       return ZX_OK;
     }
 
@@ -299,7 +289,6 @@ class TouchApp {
 
   uint32_t max_x_ = 0;
   uint32_t max_y_ = 0;
-  zx::event has_reports_event_;
   fidl_report::InputDeviceSyncPtr client_;
   FrameBuffer frame_buffer_;
   display_info_t display_info_ = {};
