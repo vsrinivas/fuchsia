@@ -97,9 +97,11 @@ class JobScheduler {
   // If we want to switch to a mode, then hold off submitting atoms in the
   // other mode until that switch is complete.
   bool want_to_switch_to_protected_ = false;
-  bool want_to_switch_to_nonprotected_ = false;
+  bool want_to_switch_to_unprotected_ = false;
 
   uint64_t found_signaler_atoms_for_testing_ = 0;
+
+  uint32_t current_mode_atom_count_ = 0;
 
   std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
   std::vector<std::shared_ptr<MsdArmAtom>> executing_atoms_;

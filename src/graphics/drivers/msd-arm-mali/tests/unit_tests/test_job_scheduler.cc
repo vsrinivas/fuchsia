@@ -627,6 +627,61 @@ class TestJobScheduler {
     }
   }
 
+  void TestProtectedAtomRun(uint32_t protected_slot) {
+    TestOwner owner;
+    TestConnectionOwner connection_owner;
+    std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, &connection_owner);
+
+    std::shared_ptr<MsdArmConnection> connection2 = MsdArmConnection::Create(0, &connection_owner);
+    JobScheduler scheduler(&owner, 2);
+    // slot A has unprotected atoms, and slot B has protected atoms.
+    std::vector<std::shared_ptr<MsdArmAtom>> atom_slotA;
+    std::vector<std::shared_ptr<MsdArmAtom>> atom_slotB;
+    uint32_t unprotected_slot = 1 - protected_slot;
+    atom_slotA.push_back(std::make_shared<MsdArmAtom>(connection, 1u, unprotected_slot, 0,
+                                                      magma_arm_mali_user_data(), 0));
+    scheduler.EnqueueAtom(atom_slotA.back());
+
+    scheduler.TryToSchedule();
+    EXPECT_EQ(1u, owner.run_list().size());
+    EXPECT_EQ(atom_slotA.front().get(), owner.run_list().back());
+    EXPECT_FALSE(owner.IsInProtectedMode());
+
+    for (uint32_t i = 0; i < 10; i++) {
+      atom_slotB.push_back(std::make_shared<MsdArmAtom>(
+          connection, 1u, protected_slot, 0, magma_arm_mali_user_data(), 0, kAtomFlagProtected));
+      scheduler.EnqueueAtom(atom_slotB.back());
+    }
+    scheduler.TryToSchedule();
+    // New atom can't run until protection mode switch.
+    EXPECT_EQ(1u, owner.run_list().size());
+
+    // If slot 1 is protected then an additional atom will be scheduled from slot 0 before the
+    // scheduler sees the protected atom in slot one and decides to switch. That's slightly unfair,
+    // but still acceptable.
+    uint32_t hysteresis_limit = protected_slot == 1 ? 21 : 20;
+
+    for (uint32_t i = 1; i < 25; i++) {
+      // Continually queue and dequeue unprotected atoms, which should delay when the protected atom
+      // runs.
+      atom_slotA.push_back(std::make_shared<MsdArmAtom>(connection, 1u, unprotected_slot, 0,
+                                                        magma_arm_mali_user_data(), 0));
+      scheduler.EnqueueAtom(atom_slotA.back());
+      scheduler.JobCompleted(owner.run_list().back()->slot(), kArmMaliResultSuccess, 0u);
+
+      EXPECT_EQ(i + 1, owner.run_list().size()) << " i " << i;
+      if (i < hysteresis_limit) {
+        EXPECT_EQ(atom_slotA.back().get(), owner.run_list().back())
+            << " i " << i << "slot B" << atom_slotB.front().get();
+        EXPECT_FALSE(owner.IsInProtectedMode());
+      } else {
+        // After the hysteresis limit it should switch to protected mode.
+        EXPECT_EQ(atom_slotB[i - hysteresis_limit].get(), owner.run_list().back()) << " i " << i;
+        EXPECT_TRUE(owner.IsInProtectedMode());
+      }
+    }
+  }
+
   void TestProtectedMode() {
     TestOwner owner;
     TestConnectionOwner connection_owner;
@@ -636,28 +691,22 @@ class TestJobScheduler {
     JobScheduler scheduler(&owner, 2);
     auto atom1 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
     scheduler.EnqueueAtom(atom1);
+
     auto atom2 = std::make_shared<MsdArmAtom>(connection, 1u, 1, 0, magma_arm_mali_user_data(), 0,
                                               kAtomFlagProtected);
     scheduler.EnqueueAtom(atom2);
 
-    auto atom3 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
+    auto atom3 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0,
+                                              kAtomFlagProtected);
     scheduler.EnqueueAtom(atom3);
-
-    auto atom4 = std::make_shared<MsdArmAtom>(connection, 1u, 1, 0, magma_arm_mali_user_data(), 0,
-                                              kAtomFlagProtected);
-    scheduler.EnqueueAtom(atom4);
-
-    auto atom5 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0,
-                                              kAtomFlagProtected);
-    scheduler.EnqueueAtom(atom5);
 
     // This atom should be canceled (its connection going away) right before
     // it's run.
-    auto atom6 = std::make_shared<MsdArmAtom>(connection2, 1u, 0, 0, magma_arm_mali_user_data(), 0);
-    scheduler.EnqueueAtom(atom6);
-    auto atom7 = std::make_shared<MsdArmAtom>(connection, 1u, 1, 0, magma_arm_mali_user_data(), 0,
+    auto atom4 = std::make_shared<MsdArmAtom>(connection2, 1u, 0, 0, magma_arm_mali_user_data(), 0);
+    scheduler.EnqueueAtom(atom4);
+    auto atom5 = std::make_shared<MsdArmAtom>(connection, 1u, 1, 0, magma_arm_mali_user_data(), 0,
                                               kAtomFlagProtected);
-    scheduler.EnqueueAtom(atom7);
+    scheduler.EnqueueAtom(atom5);
 
     scheduler.TryToSchedule();
     scheduler.TryToSchedule();
@@ -665,42 +714,63 @@ class TestJobScheduler {
     EXPECT_EQ(atom1.get(), owner.run_list().back());
     EXPECT_FALSE(owner.IsInProtectedMode());
 
-    // Scheduler should try to alternate between protected and non-protected
-    // modes.
-
     scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
-    scheduler.TryToSchedule();
-    EXPECT_EQ(2u, owner.run_list().size());
+
+    // atom2 and atom3 should both be able to run at the same time.
+    EXPECT_EQ(3u, owner.run_list().size());
     EXPECT_EQ(atom2.get(), owner.run_list().back());
     EXPECT_TRUE(owner.IsInProtectedMode());
 
-    scheduler.JobCompleted(1, kArmMaliResultSuccess, 0u);
+    scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
     scheduler.TryToSchedule();
+
     EXPECT_EQ(3u, owner.run_list().size());
-    EXPECT_EQ(atom3.get(), owner.run_list().back());
-    EXPECT_FALSE(owner.IsInProtectedMode());
-
-    scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
-    scheduler.TryToSchedule();
-
-    // atom4 and atom5 should both be able to run at the same time.
-    EXPECT_EQ(5u, owner.run_list().size());
-    EXPECT_EQ(atom4.get(), owner.run_list().back());
-    EXPECT_TRUE(owner.IsInProtectedMode());
-
-    scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
-    scheduler.TryToSchedule();
-
-    EXPECT_EQ(5u, owner.run_list().size());
     scheduler.CancelAtomsForConnection(connection2);
 
     scheduler.JobCompleted(1, kArmMaliResultSuccess, 0u);
     scheduler.TryToSchedule();
 
-    // Check that the canceled atom5 doesn't cause atom6 to wait for a
+    // Check that the canceled atom4 doesn't cause atom5 to wait for a
     // transition to happen, because that would hang forever.
-    EXPECT_EQ(6u, owner.run_list().size());
-    EXPECT_EQ(atom7.get(), owner.run_list().back());
+    EXPECT_EQ(4u, owner.run_list().size());
+    EXPECT_EQ(atom5.get(), owner.run_list().back());
+    EXPECT_TRUE(owner.IsInProtectedMode());
+  }
+
+  void TestProtectedPriority() {
+    TestOwner owner;
+    TestConnectionOwner connection_owner;
+    std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, &connection_owner);
+
+    JobScheduler scheduler(&owner, 2);
+    auto atom1 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0,
+                                              kAtomFlagProtected);
+    scheduler.EnqueueAtom(atom1);
+
+    auto atom2 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0,
+                                              kAtomFlagProtected);
+    scheduler.EnqueueAtom(atom2);
+
+    scheduler.TryToSchedule();
+    EXPECT_EQ(1u, owner.run_list().size());
+    EXPECT_EQ(atom1.get(), owner.run_list().back());
+    EXPECT_TRUE(owner.IsInProtectedMode());
+
+    auto high_priority_atom =
+        std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 1);
+    scheduler.EnqueueAtom(high_priority_atom);
+
+    scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
+
+    // The high priority atom should run before atom2, even though a mode switch is necessary.
+    EXPECT_EQ(2u, owner.run_list().size());
+    EXPECT_EQ(high_priority_atom.get(), owner.run_list().back());
+    EXPECT_FALSE(owner.IsInProtectedMode());
+
+    scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
+
+    EXPECT_EQ(3u, owner.run_list().size());
+    EXPECT_EQ(atom2.get(), owner.run_list().back());
     EXPECT_TRUE(owner.IsInProtectedMode());
   }
 
@@ -760,6 +830,12 @@ TEST(JobScheduler, PreemptionNormalCompletionEqualPriority) {
   TestJobScheduler().TestPreemption(true, true);
 }
 
+TEST(JobScheduler, DumpStatus) { TestJobScheduler().TestDumpStatus(); }
+
+TEST(JobScheduler, ProtectedRunSlot0) { TestJobScheduler().TestProtectedAtomRun(0); }
+
+TEST(JobScheduler, ProtectedRunSlot1) { TestJobScheduler().TestProtectedAtomRun(1); }
+
 TEST(JobScheduler, ProtectedMode) { TestJobScheduler().TestProtectedMode(); }
 
-TEST(JobScheduler, DumpStatus) { TestJobScheduler().TestDumpStatus(); }
+TEST(JobScheduler, ProtectedPriority) { TestJobScheduler().TestProtectedPriority(); }

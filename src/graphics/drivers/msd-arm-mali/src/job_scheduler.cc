@@ -70,7 +70,7 @@ void JobScheduler::ValidateCanSwitchProtected() {
   if (!have_protected)
     want_to_switch_to_protected_ = false;
   if (!have_nonprotected)
-    want_to_switch_to_nonprotected_ = false;
+    want_to_switch_to_unprotected_ = false;
 }
 
 static bool HigherPriorityThan(const MsdArmAtom* a, const MsdArmAtom* b) {
@@ -111,7 +111,8 @@ void JobScheduler::ScheduleRunnableAtoms() {
       owner_->SoftStopAtom(atom.get());
     }
   }
-  // Start executing on empty slots.
+
+  // Swap around priorities.
   for (uint32_t slot = 0; slot < runnable_atoms_.size(); slot++) {
     if (executing_atoms_[slot]) {
       continue;
@@ -119,7 +120,8 @@ void JobScheduler::ScheduleRunnableAtoms() {
     auto& runnable = runnable_atoms_[slot];
     if (runnable.empty())
       continue;
-    std::shared_ptr<MsdArmAtom> atom = runnable.front();
+
+    std::shared_ptr<MsdArmAtom>& atom = runnable.front();
     DASSERT(!MsdArmSoftAtom::cast(atom));
     DASSERT(atom->GetFinalDependencyResult() == kArmMaliResultSuccess);
     DASSERT(!atom->IsDependencyOnly());
@@ -138,30 +140,85 @@ void JobScheduler::ScheduleRunnableAtoms() {
         // Keep looping, as there may be an even higher priority atom.
       }
     }
+  }
+
+  bool currently_protected = owner_->IsInProtectedMode();
+  // If there are more runnable (or running) atoms that could run in the current protection mode,
+  // then don't try to switch protection modes. After running 20 atoms avoid skipping the next atom,
+  // to try to prevent starvation.
+  enum SkipType { UNPROTECTED, PROTECTED };
+  // Skip atoms of the current type if we're currently trying to switch to the opposite.
+  bool should_skip_mode[] = {want_to_switch_to_protected_, want_to_switch_to_unprotected_};
+
+  constexpr uint32_t kAtomHysteresisCount = 20;
+  if (!want_to_switch_to_protected_ && !want_to_switch_to_unprotected_ &&
+      current_mode_atom_count_ < kAtomHysteresisCount) {
+    // Find a highest priority atom across all slots to ensure we don't prevent that from running.
+    std::shared_ptr<MsdArmAtom> highest_priority_atom;
+    for (auto& slot : runnable_atoms_) {
+      if (slot.empty())
+        continue;
+      if (!highest_priority_atom ||
+          HigherPriorityThan(slot.front().get(), highest_priority_atom.get())) {
+        highest_priority_atom = slot.front();
+      }
+    }
+
+    // Check if there are any more atoms of the current type to run.
+    for (uint32_t slot = 0; slot < runnable_atoms_.size(); slot++) {
+      if (executing_atoms_[slot]) {
+        // Skip the type that's not currently running.
+        should_skip_mode[!currently_protected] = true;
+        break;
+      }
+      auto& runnable = runnable_atoms_[slot];
+      if (runnable.empty())
+        continue;
+      if (runnable.front()->is_protected() == currently_protected) {
+        DASSERT(highest_priority_atom);
+        if (!HigherPriorityThan(highest_priority_atom.get(), runnable.front().get())) {
+          should_skip_mode[!currently_protected] = true;
+          break;
+        }
+      }
+    }
+  }
+  DASSERT(!should_skip_mode[UNPROTECTED] || !should_skip_mode[PROTECTED]);
+
+  // Execute atoms on empty slots.
+  for (uint32_t slot = 0; slot < runnable_atoms_.size(); slot++) {
+    if (executing_atoms_[slot]) {
+      continue;
+    }
+    auto& runnable = runnable_atoms_[slot];
+    if (runnable.empty())
+      continue;
+    std::shared_ptr<MsdArmAtom> atom = runnable.front();
     DASSERT(atom->slot() == slot);
+
     bool new_atom_protected = atom->is_protected();
-    bool currently_protected = owner_->IsInProtectedMode();
     bool want_switch = false;
+
+    if (should_skip_mode[PROTECTED] && new_atom_protected)
+      continue;
+    if (should_skip_mode[UNPROTECTED] && !new_atom_protected)
+      continue;
 
     if (new_atom_protected != currently_protected) {
       want_switch = true;
       if (new_atom_protected) {
-        DASSERT(!want_to_switch_to_nonprotected_);
+        DASSERT(!want_to_switch_to_unprotected_);
         want_to_switch_to_protected_ = true;
+        should_skip_mode[UNPROTECTED] = true;
       } else {
         DASSERT(!want_to_switch_to_protected_);
-        want_to_switch_to_nonprotected_ = true;
+        want_to_switch_to_unprotected_ = true;
+        should_skip_mode[PROTECTED] = true;
       }
     }
 
-    // Don't execute more atoms in the wrong mode if a switch is pending,
-    // because executing more atoms will delay the time until we can switch.
-    // TODO(MA-524): Allow longer between context switches. Ensure fairness between
-    // slots.
-    if ((want_to_switch_to_protected_ && !new_atom_protected) ||
-        (want_to_switch_to_nonprotected_ && new_atom_protected)) {
-      continue;
-    }
+    DASSERT(!(want_to_switch_to_protected_ && !new_atom_protected));
+    DASSERT(!(want_to_switch_to_unprotected_ && new_atom_protected));
 
     if (want_switch) {
       if (num_executing_atoms() > 0) {
@@ -169,15 +226,22 @@ void JobScheduler::ScheduleRunnableAtoms() {
         continue;
       }
       if (new_atom_protected) {
+        DASSERT(want_to_switch_to_protected_);
         owner_->EnterProtectedMode();
         want_to_switch_to_protected_ = false;
+        DASSERT(should_skip_mode[UNPROTECTED]);
       } else {
+        DASSERT(want_to_switch_to_unprotected_);
         if (!owner_->ExitProtectedMode())
           return;
-        want_to_switch_to_nonprotected_ = false;
+        want_to_switch_to_unprotected_ = false;
+        DASSERT(should_skip_mode[PROTECTED]);
       }
+      currently_protected = owner_->IsInProtectedMode();
+      current_mode_atom_count_ = 0;
     }
 
+    current_mode_atom_count_++;
     atom->set_execution_start_time(clock_callback_());
     atom->set_tick_start_time(clock_callback_());
     DASSERT(!atom->preempted());
