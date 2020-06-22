@@ -27,6 +27,7 @@ shared_library("fs_test") {
   sources = [
     "fs_test.cc",
     "fs_test_fixture.cc",
+    "misc.cc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
@@ -127,6 +128,25 @@ fuchsia_component("clone-tests") {
   ]
 }
 
+executable("directory") {
+  testonly = true
+  sources = [ "directory.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("directory-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/directory.cml"
+  deps = [
+    ":directory",
+    ":manifests",
+  ]
+}
+
 executable("overflow") {
   testonly = true
   sources = [ "overflow.cc" ]
@@ -170,6 +190,7 @@ fuchsia_test_package("fs-tests") {
     ":append-tests",
     ":attr-tests",
     ":clone-tests",
+    ":directory-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
@@ -207,6 +228,7 @@ action("manifests") {
     "$target_gen_dir/append.cml",
     "$target_gen_dir/attr.cml",
     "$target_gen_dir/clone.cml",
+    "$target_gen_dir/directory.cml",
     "$target_gen_dir/max-file.cml",
     "$target_gen_dir/overflow.cml",
     "$target_gen_dir/read-write.cml",
