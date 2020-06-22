@@ -6,7 +6,6 @@
 #define LIB_SYSLOG_CPP_MACROS_H_
 
 #if defined(__Fuchsia__)
-#include <lib/syslog/global.h>
 #include <zircon/types.h>
 #endif
 

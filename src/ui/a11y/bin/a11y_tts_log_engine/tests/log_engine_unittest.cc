@@ -6,7 +6,7 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/global.h>
 #include <lib/syslog/wire_format.h>
 
 #include <memory>

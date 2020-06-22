@@ -332,7 +332,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 }
 
 int GdcDevice::FrameProcessingThread() {
-  FX_LOG(TRACE, kTag, "start");
+  FX_LOGST(TRACE, kTag) << "start";
   for (;;) {
     fbl::AutoLock al(&processing_queue_lock_);
     while (processing_queue_.empty() && !shutdown_) {
@@ -472,7 +472,7 @@ void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
 zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr<GdcDevice>* out) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    FX_LOG(ERROR, kTag, "could not get composite protocol");
+    FX_LOGST(ERROR, kTag) << "could not get composite protocol";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -480,13 +480,13 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
   size_t actual;
   composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
   if (actual != FRAGMENT_COUNT) {
-    FX_LOG(ERROR, kTag, "Could not get fragments");
+    FX_LOGST(ERROR, kTag) << "Could not get fragments";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    FX_LOG(ERROR, kTag, "ZX_PROTOCOL_PDEV not available");
+    FX_LOGST(ERROR, kTag) << "ZX_PROTOCOL_PDEV not available";
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -570,7 +570,7 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  FX_LOG(INFO, kTag, "gdc driver added");
+  FX_LOGST(INFO, kTag) << "gdc driver added";
 
   // gdc device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = gdc_device.release();

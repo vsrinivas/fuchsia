@@ -102,7 +102,7 @@ void GatherMemoryDigest::Gather() {
     strings.emplace_back(KoidPath(process.koid(), "name"), process.name());
   }
 
-  if (FX_VLOG_IS_ENABLED(VERBOSE_FOR_FILE)) {
+  if (FX_VLOG_IS_ON(VERBOSE_FOR_FILE)) {
     FX_VLOGS(VERBOSE_FOR_FILE) << "GatherMemoryDigest::Gather";
     for (auto const& item : list) {
       FX_VLOGS(VERBOSE_FOR_FILE) << item.first << ": " << item.second;

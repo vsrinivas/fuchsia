@@ -13,7 +13,7 @@ void SampleBundle::Upload(DockyardProxy* dockyard_proxy) {
   DockyardProxyStatus status =
       dockyard_proxy->SendSamples(int_sample_list_, string_sample_list_);
 
-  if (FX_VLOG_IS_ENABLED(2)) {
+  if (FX_VLOG_IS_ON(2)) {
     FX_VLOGS(2) << DockyardErrorString("SendSamples", status);
     for (const auto& int_sample : int_sample_list_) {
       FX_VLOGS(2) << int_sample.first << ": " << int_sample.second;

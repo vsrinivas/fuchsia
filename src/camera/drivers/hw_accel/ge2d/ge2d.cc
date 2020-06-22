@@ -794,7 +794,7 @@ void Ge2dDevice::ProcessRemoveTask(TaskInfo& info) {
 }
 
 int Ge2dDevice::FrameProcessingThread() {
-  FX_LOG(TRACE, kTag, "start");
+  FX_LOGST(TRACE, kTag) << "start";
   for (;;) {
     fbl::AutoLock al(&lock_);
     while (processing_queue_.empty() && !shutdown_) {
@@ -837,7 +837,7 @@ zx_status_t Ge2dDevice::WaitForInterrupt(zx_port_packet_t* packet) {
 zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* out) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    FX_LOG(ERROR, kTag, "could not get composite protocol");
+    FX_LOGST(ERROR, kTag) << "could not get composite protocol";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -845,13 +845,13 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
   size_t actual;
   composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
   if (actual != FRAGMENT_COUNT) {
-    FX_LOG(ERROR, kTag, "Could not get fragments");
+    FX_LOGST(ERROR, kTag) << "Could not get fragments";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    FX_LOG(ERROR, kTag, "ZX_PROTOCOL_PDEV not available");
+    FX_LOGST(ERROR, kTag) << "ZX_PROTOCOL_PDEV not available";
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -891,7 +891,7 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
 
   ddk::AmlogicCanvasProtocolClient canvas(fragments[FRAGMENT_CANVAS]);
   if (!canvas.is_valid()) {
-    FX_LOG(ERROR, kTag, "Could not get Amlogic Canvas protocol");
+    FX_LOGST(ERROR, kTag) << "Could not get Amlogic Canvas protocol";
     return ZX_ERR_NO_RESOURCES;
   }
   amlogic_canvas_protocol_t c;
