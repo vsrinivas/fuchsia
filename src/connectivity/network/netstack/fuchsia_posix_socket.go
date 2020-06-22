@@ -292,27 +292,28 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		closing:       make(chan struct{}),
 	}
 
-	// Register synchronously to avoid missing incoming event notifications
-	// between this function returning and the goroutines below being scheduled.
-	// Such races can lead to deadlock.
-	inEntry, inCh := waiter.NewChannelEntry(nil)
-	eps.wq.EventRegister(&inEntry, waiter.EventIn)
+	{
+		// Synchronize with loopRead to ensure that:
+		//
+		// - we observe all incoming event notifications; such notifications can
+		// begin to arrive as soon as this function returns, so we must register
+		// before returning.
+		//
+		// - we correctly initialize the connected state before allowing it to be
+		// observed by the peer; the state is observable as soon as this function
+		// returns, so we must wait to be notified before returning.
+		initCh := make(chan struct{})
+		go func() {
+			inEntry, inCh := waiter.NewChannelEntry(nil)
+			eps.wq.EventRegister(&inEntry, waiter.EventIn)
+			defer eps.wq.EventUnregister(&inEntry)
 
-	initCh := make(chan struct{})
-	go func() {
-		defer close(eps.loopReadDone)
-		defer eps.wq.EventUnregister(&inEntry)
+			eps.loopRead(inCh, initCh)
+		}()
+		<-initCh
+	}
 
-		eps.loopRead(inCh, initCh)
-	}()
-	go func() {
-		defer close(eps.loopWriteDone)
-
-		eps.loopWrite()
-	}()
-
-	// Wait for initial state checking to complete.
-	<-initCh
+	go eps.loopWrite()
 
 	ns.onAddEndpoint(zx.Handle(localS), ep)
 
@@ -487,6 +488,8 @@ func (eps *endpointWithSocket) Accept(fidl.Context) (int32, *endpointWithSocket,
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
 func (eps *endpointWithSocket) loopWrite() {
+	defer close(eps.loopWriteDone)
+
 	closeFn := func() { eps.close(eps.loopReadDone) }
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
@@ -604,8 +607,14 @@ func (eps *endpointWithSocket) loopWrite() {
 
 // loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
 func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
-	var initOnce sync.Once
-	initDone := func() { initOnce.Do(func() { close(initCh) }) }
+	defer close(eps.loopReadDone)
+
+	initDone := func() {
+		if initCh != nil {
+			close(initCh)
+			initCh = nil
+		}
+	}
 
 	closeFn := func() { eps.close(eps.loopWriteDone) }
 
