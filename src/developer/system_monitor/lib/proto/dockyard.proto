@@ -32,6 +32,8 @@ message InitRequest {
   uint32 version = 2;
   // Current time on the device, in nanoseconds.
   uint64 device_time_ns = 3;
+  // The Fuchsia OS revision (generally a git hash).
+  string fuchsia_version = 4;
 }
 
 // Introduction from the Dockyard to the Harvester
