@@ -16,8 +16,7 @@ namespace sherlock {
 
 static constexpr uint32_t kTestFrameRate1 = 48000;
 static constexpr uint32_t kTestFrameRate2 = 96000;
-static constexpr uint8_t kTestNumberOfChannels1 = 1;
-static constexpr uint8_t kTestNumberOfChannels2 = 2;
+static constexpr uint8_t kTestNumberOfChannels = 2;
 static constexpr uint32_t kTestFifoDepth = 16;
 
 using ::llcpp::fuchsia::hardware::audio::Device;
@@ -60,8 +59,8 @@ struct TestStream : public SherlockAudioStreamIn {
   }
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
     audio_stream_format_range_t range;
-    range.min_channels = kTestNumberOfChannels1;
-    range.max_channels = kTestNumberOfChannels2;
+    range.min_channels = kTestNumberOfChannels;
+    range.max_channels = kTestNumberOfChannels;
     range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
     range.min_frames_per_second = kTestFrameRate1;
     range.max_frames_per_second = kTestFrameRate2;
@@ -133,16 +132,6 @@ TEST_F(SherlockAudioStreamInTest, ChannelsToUseBitmaskRightOn) {
 }
 TEST_F(SherlockAudioStreamInTest, ChannelsToUseBitmaskMoreThanNeeded) {
   TestMasks(/*channels*/ 2, /*channels_to_use_bitmask*/ 0xff, /*channels_mask*/ 3, /*mute_mask*/ 0);
-}
-TEST_F(SherlockAudioStreamInTest, ChannelsOneOnly) {
-  TestMasks(/*channels*/ 1, /*channels_to_use_bitmask*/ 1, /*channels_mask*/ 1, /*mute_mask*/ 0);
-}
-TEST_F(SherlockAudioStreamInTest, ChannelsOneOnlyBadChannelsToUseBitmask) {
-  TestMasks(/*channels*/ 1, /*channels_to_use_bitmask*/ 2, /*channels_mask*/ 1, /*mute_mask*/ 1);
-}
-TEST_F(SherlockAudioStreamInTest, ChannelsOneOnlyMoreThanNeededChannelsToUseBitmask) {
-  TestMasks(/*channels*/ 1, /*channels_to_use_bitmask*/ 0xffff'ffff'ffff'ffff, /*channels_mask*/ 1,
-            /*mute_mask*/ 0);
 }
 
 }  // namespace sherlock

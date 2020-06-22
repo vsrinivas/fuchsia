@@ -18,7 +18,7 @@ namespace audio {
 namespace astro {
 
 // Expects 2 mics.
-constexpr size_t kMinNumberOfChannels = 1;
+constexpr size_t kMinNumberOfChannels = 2;
 constexpr size_t kMaxNumberOfChannels = 2;
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
