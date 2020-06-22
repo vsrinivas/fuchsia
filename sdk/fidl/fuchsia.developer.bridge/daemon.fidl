@@ -19,7 +19,7 @@ protocol Daemon {
 
     /// Lists targets by nodename.
     /// TODO(fxb/52798): Use an iterator instead of a limited vector.
-    ListTargets(string:256 value) -> (vector<Target>:512 response);
+    ListTargets(string:fuchsia.device.DEVICE_NAME_MAX value) -> (vector<Target>:512 response);
 
     /// Make the daemon exit.
     Quit() -> (bool success);
