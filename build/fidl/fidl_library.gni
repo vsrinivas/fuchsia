@@ -25,9 +25,6 @@ declare_args() {
 #
 #   should_lint (optional, boolean)
 #     If set to false, the linting step is skipped.
-#   should_normalize (optional, boolean)
-#     If set to true, comments and whitespace are removed before SDK atom is
-#     computed. Defaults to false.
 
 template("fidl_library") {
   assert(
@@ -355,9 +352,6 @@ template("fidl_library") {
       deps = sdk_deps
     }
 
-    should_normalize =
-        !defined(invoker.should_normalize) || invoker.should_normalize
-
     api_normalize_target_name = "${target_name}_normalize"
     normalized_file = "$target_gen_dir/${target_name}.normalized"
     to_normalize = []
@@ -376,18 +370,6 @@ template("fidl_library") {
              ] + to_normalize
     }
 
-    api_files = []
-    if (should_normalize) {
-      api_files = [
-        {
-          source = normalized_file
-          dest = "fidl/$library_name"
-        },
-      ]
-    } else {
-      api_files = all_files
-    }
-
     sdk_atom("${target_name}_sdk") {
       id = "sdk://fidl/$library_name"
 
@@ -396,7 +378,12 @@ template("fidl_library") {
       if (defined(api_reference)) {
         api = api_reference
 
-        api_contents = api_files
+        api_contents = [
+          {
+            source = normalized_file
+            dest = "fidl/$library_name"
+          },
+        ]
       }
 
       meta = {
@@ -414,12 +401,10 @@ template("fidl_library") {
       }
 
       non_sdk_deps = [
+        ":$api_normalize_target_name",
         ":$compilation_target_name",
         ":$meta_target_name",
       ]
-      if (should_normalize) {
-        non_sdk_deps += [ ":$api_normalize_target_name" ]
-      }
 
       deps = []
       foreach(dep, fidl_deps) {
