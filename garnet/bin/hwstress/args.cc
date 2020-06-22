@@ -121,24 +121,22 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
 
   // Ensure mandatory flash test argument is provided
   if (result.subcommand == StressTest::kFlash && result.fvm_path.empty()) {
-    return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
+    return fitx::error("Path to Fuchsia Volume Manager must be specified");
   }
 
   // Validate memory flags.
   if (result.ram_to_test_percent.has_value()) {
     if (result.ram_to_test_percent.value() <= 0 || result.ram_to_test_percent.value() >= 100) {
-      return fitx::error(
-          fxl::StringPrintf("Percent of RAM to test must be between 1 and 99, inclusive."));
+      return fitx::error("Percent of RAM to test must be between 1 and 99, inclusive.");
     }
   }
   if (result.ram_to_test_megabytes.has_value()) {
     if (result.ram_to_test_megabytes.value() <= 0) {
-      return fitx::error(fxl::StringPrintf("RAM to test must be strictly positive."));
+      return fitx::error("RAM to test must be strictly positive.");
     }
   }
   if (result.ram_to_test_megabytes.has_value() && result.ram_to_test_percent.has_value()) {
-    return fitx::error(
-        fxl::StringPrintf("--memory and --percent-memory cannot both be specified."));
+    return fitx::error("--memory and --percent-memory cannot both be specified.");
   }
 
   // Ensure no more parameters were given.
