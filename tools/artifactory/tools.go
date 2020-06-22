@@ -21,6 +21,7 @@ var (
 		// name once the go bootserver has replaced the old c bootserver
 		// and is called bootserver instead of bootserver_new.
 		"bootserver_new": "bootserver",
+		"device-finder":  "device-finder",
 	}
 )
 
