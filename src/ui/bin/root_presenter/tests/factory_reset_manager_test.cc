@@ -80,36 +80,64 @@ class FactoryResetManagerTest : public gtest::TestLoopFixture {
   FakeFactoryReset factory_reset_;
 };
 
-TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleased) {
-  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringDelayCountdown) {
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
   factory_reset_manager_.OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_.countdown_started());
+
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
 
   // Factory reset should cancel if the button is released.
   report.reset = false;
   factory_reset_manager_.OnMediaButtonReport(report);
-  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
-  RunLoopFor(kCountdownDuration);
+  RunLoopFor(kResetCountdownDuration);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(triggered());
+}
+
+TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringResetCountdown) {
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
+
+  fuchsia::ui::input::MediaButtonsReport report;
+  report.reset = true;
+  factory_reset_manager_.OnMediaButtonReport(report);
+
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+
+  RunLoopFor(kButtonCountdownDuration);
+  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+
+  // Factory reset should cancel if the button is released.
+  report.reset = false;
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
+
+  RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
   EXPECT_FALSE(triggered());
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetButtonHeldAndTrigger) {
-  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
 
   factory_reset_manager_.OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_.countdown_started());
 
-  RunLoopFor(kCountdownDuration);
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+
+  RunLoopFor(kButtonCountdownDuration);
+  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+
+  RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
   EXPECT_TRUE(triggered());
+  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerTest, WatchHandler) {
@@ -224,6 +252,22 @@ class FactoryResetManagerSoundTest : public gtest::TestLoopFixture {
     context_provider_.service_directory_provider()->AddService(sound_player_.GetHandler());
   }
 
+  void TriggerFactoryReset() {
+    // Send a media buttons report with the FDR button set to true.
+    fuchsia::ui::input::MediaButtonsReport report;
+    report.reset = true;
+    factory_reset_manager_.OnMediaButtonReport(report);
+
+    // Run a loop for the duration of the countdown delay.
+    EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+    RunLoopFor(kButtonCountdownDuration);
+
+    // Run a loop for the duration of the factory reset countdown.
+    EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+    RunLoopFor(kResetCountdownDuration);
+    RunLoopUntilIdle();
+  }
+
   bool triggered() const { return factory_reset_.triggered(); }
 
   void SetUp() override {
@@ -248,10 +292,7 @@ class FactoryResetManagerSoundTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerPlaysSoundBeforeReset) {
-  EXPECT_FALSE(factory_reset_manager_.countdown_started());
-
-  fuchsia::ui::input::MediaButtonsReport report;
-  report.reset = true;
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
   {
     InSequence s;
@@ -262,19 +303,13 @@ TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerPlaysSoundBeforeReset) {
     EXPECT_CALL(check_, Call("Reset"));
   }
 
-  factory_reset_manager_.OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_.countdown_started());
-
-  RunLoopFor(kCountdownDuration);
-  RunLoopUntilIdle();
+  TriggerFactoryReset();
   EXPECT_TRUE(triggered());
+  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToGetSound) {
-  EXPECT_FALSE(factory_reset_manager_.countdown_started());
-
-  fuchsia::ui::input::MediaButtonsReport report;
-  report.reset = true;
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
   EXPECT_CALL(*media_retriever_, GetResetSound()).WillOnce(Return(ByMove(fit::error(-1))));
   EXPECT_CALL(check_, Call("Reset")).Times(1);
@@ -282,19 +317,14 @@ TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToGetSoun
   EXPECT_CALL(check_, Call("PlaySound")).Times(0);
   EXPECT_CALL(check_, Call("RemoveSound")).Times(0);
 
-  factory_reset_manager_.OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_.countdown_started());
-
-  RunLoopFor(kCountdownDuration);
-  RunLoopUntilIdle();
+  TriggerFactoryReset();
   EXPECT_TRUE(triggered());
+  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToAddSound) {
-  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
-  fuchsia::ui::input::MediaButtonsReport report;
-  report.reset = true;
   sound_player_.add = false;
 
   {
@@ -306,19 +336,14 @@ TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToAddSoun
   EXPECT_CALL(check_, Call("PlaySound")).Times(0);
   EXPECT_CALL(check_, Call("RemoveSound")).Times(0);
 
-  factory_reset_manager_.OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_.countdown_started());
-
-  RunLoopFor(kCountdownDuration);
-  RunLoopUntilIdle();
+  TriggerFactoryReset();
   EXPECT_TRUE(triggered());
+  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToPlaySound) {
-  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+  EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
-  fuchsia::ui::input::MediaButtonsReport report;
-  report.reset = true;
   sound_player_.play = false;
 
   {
@@ -330,12 +355,9 @@ TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToPlaySou
   }
   EXPECT_CALL(check_, Call("RemoveSound")).Times(0);
 
-  factory_reset_manager_.OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_.countdown_started());
-
-  RunLoopFor(kCountdownDuration);
-  RunLoopUntilIdle();
+  TriggerFactoryReset();
   EXPECT_TRUE(triggered());
+  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
 }
 
 }  // namespace testing

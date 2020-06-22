@@ -18,7 +18,15 @@
 
 namespace root_presenter {
 
-constexpr zx::duration kCountdownDuration = zx::sec(10);
+constexpr zx::duration kResetCountdownDuration = zx::sec(10);
+constexpr zx::duration kButtonCountdownDuration = zx::msec(500);
+
+enum class FactoryResetState {
+  NONE,
+  BUTTON_COUNTDOWN,  // Countdown before factory reset starts counting down.
+  RESET_COUNTDOWN,   // Countdown until factory reset is triggered.
+  TRIGGER_RESET      // Factory reset is being triggered.
+};
 
 // This class hooks into Presenter to provide the following behavior:
 // when the FDR button or both volume buttons are pressed, count down to
@@ -55,11 +63,15 @@ class FactoryResetManager {
   // Returns true if the event is handled.
   bool OnMediaButtonReport(const fuchsia::ui::input::MediaButtonsReport& report);
 
-  bool countdown_started() const { return countdown_started_; }
+  FactoryResetState factory_reset_state() const { return factory_reset_state_; }
 
  private:
+  // Handles MediaButtonReports and returns true if the report is processed.
+  bool HandleReportOnNoneState(const fuchsia::ui::input::MediaButtonsReport& report);
+  bool HandleReportOnButtonCountdown(const fuchsia::ui::input::MediaButtonsReport& report);
+  bool HandleReportOnResetCountdown(const fuchsia::ui::input::MediaButtonsReport& report);
+
   void StartFactoryResetCountdown();
-  void CancelFactoryResetCountdown();
 
   void PlayCompleteSoundThenReset();
   void TriggerFactoryReset();
@@ -68,7 +80,7 @@ class FactoryResetManager {
 
   fuchsia::recovery::ui::FactoryResetCountdownState State() const;
 
-  bool countdown_started_ = false;
+  FactoryResetState factory_reset_state_ = FactoryResetState::NONE;
 
   // The time when a factory reset is scheduled to happen. Only valid if coundown_started_ is true
   zx_time_t deadline_ = 0u;
@@ -82,6 +94,7 @@ class FactoryResetManager {
 
   // We wrap the delayed task we post on the async loop to timeout in a
   // CancelableClosure so we can cancel it if the buttons are released.
+  fxl::CancelableClosure start_reset_countdown_after_timeout_;
   fxl::CancelableClosure reset_after_timeout_;
 };
 

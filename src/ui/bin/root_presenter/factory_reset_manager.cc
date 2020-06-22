@@ -63,22 +63,25 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context,
 
 bool FactoryResetManager::OnMediaButtonReport(
     const fuchsia::ui::input::MediaButtonsReport& report) {
-  if (report.reset) {
-    StartFactoryResetCountdown();
-    return true;
+  switch (factory_reset_state_) {
+    case FactoryResetState::NONE: {
+      return HandleReportOnNoneState(report);
+    }
+    case FactoryResetState::BUTTON_COUNTDOWN: {
+      return HandleReportOnButtonCountdown(report);
+    }
+    case FactoryResetState::RESET_COUNTDOWN: {
+      return HandleReportOnResetCountdown(report);
+    }
+    default: {
+      return false;
+    }
   }
-
-  if (countdown_started_) {
-    CancelFactoryResetCountdown();
-    return true;
-  }
-
-  return false;
 }
 
 void FactoryResetManager::PlayCompleteSoundThenReset() {
   FX_LOGS(DEBUG) << "Playing countdown complete sound";
-  countdown_started_ = false;
+  factory_reset_state_ = FactoryResetState::TRIGGER_RESET;
 
   MediaRetriever::ResetSoundResult result = media_retriever_->GetResetSound();
   if (result.is_error()) {
@@ -135,34 +138,67 @@ void FactoryResetManager::NotifyStateChange() {
 
 fuchsia::recovery::ui::FactoryResetCountdownState FactoryResetManager::State() const {
   fuchsia::recovery::ui::FactoryResetCountdownState state;
-  if (countdown_started_) {
+  if (factory_reset_state_ == FactoryResetState::RESET_COUNTDOWN) {
     state.set_scheduled_reset_time(deadline_);
   }
   return state;
 }
 
+bool FactoryResetManager::HandleReportOnNoneState(
+    const fuchsia::ui::input::MediaButtonsReport& report) {
+  if (!report.reset) {
+    return false;
+  }
+
+  factory_reset_state_ = FactoryResetState::BUTTON_COUNTDOWN;
+  start_reset_countdown_after_timeout_.Reset(
+      fit::bind_member(this, &FactoryResetManager::StartFactoryResetCountdown));
+  async::PostDelayedTask(async_get_default_dispatcher(),
+                         start_reset_countdown_after_timeout_.callback(), kButtonCountdownDuration);
+  return true;
+}
+
+bool FactoryResetManager::HandleReportOnButtonCountdown(
+    const fuchsia::ui::input::MediaButtonsReport& report) {
+  // If the reset button is no longer held, cancel the button countdown. Otherwise, ignore the
+  // report.
+  if (!report.reset) {
+    start_reset_countdown_after_timeout_.Cancel();
+    factory_reset_state_ = FactoryResetState::NONE;
+  }
+
+  return true;
+}
+
+bool FactoryResetManager::HandleReportOnResetCountdown(
+    const fuchsia::ui::input::MediaButtonsReport& report) {
+  // If the reset button is no longer held, cancel the reset countdown and notify the state change.
+  // Otherwise, ignore the report.
+  if (!report.reset) {
+    FX_LOGS(WARNING) << "Factory reset canceled";
+    reset_after_timeout_.Cancel();
+    factory_reset_state_ = FactoryResetState::NONE;
+    deadline_ = ZX_TIME_INFINITE_PAST;
+    NotifyStateChange();
+  }
+
+  return true;
+}
+
 void FactoryResetManager::StartFactoryResetCountdown() {
-  if (countdown_started_) {
+  if (factory_reset_state_ == FactoryResetState::RESET_COUNTDOWN) {
     return;
   }
 
   FX_LOGS(WARNING) << "Starting factory reset countdown";
-  countdown_started_ = true;
-  deadline_ = async_now(async_get_default_dispatcher()) + kCountdownDuration.get();
+  factory_reset_state_ = FactoryResetState::RESET_COUNTDOWN;
+  deadline_ = async_now(async_get_default_dispatcher()) + kResetCountdownDuration.get();
   NotifyStateChange();
 
   reset_after_timeout_.Reset(
       fit::bind_member(this, &FactoryResetManager::PlayCompleteSoundThenReset));
   async::PostDelayedTask(async_get_default_dispatcher(), reset_after_timeout_.callback(),
-                         kCountdownDuration);
-}
-
-void FactoryResetManager::CancelFactoryResetCountdown() {
-  FX_LOGS(WARNING) << "Factory reset canceled";
-  reset_after_timeout_.Cancel();
-  countdown_started_ = false;
-  deadline_ = ZX_TIME_INFINITE_PAST;
-  NotifyStateChange();
+                         kResetCountdownDuration);
 }
 
 }  // namespace root_presenter
