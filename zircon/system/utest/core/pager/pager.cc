@@ -2125,31 +2125,20 @@ TEST(Pager, CleanThreadKill) {
 
   // Faulting thread that remains blocked on a page fault until killed.
   TestThread t([vmo]() -> bool { return check_buffer(vmo, 0, 1, true); });
-
-  // Thread that kills the faulting thread.
-  TestThread k([&t]() -> bool {
-    // Wait for the faulting thread to block on a page fault first.
-    if (!t.WaitForBlocked()) {
-      return false;
-    }
-    // Kill the thread.
-    if (!t.Kill()) {
-      return false;
-    }
-    return true;
-  });
-
   ASSERT_TRUE(t.Start());
-  ASSERT_TRUE(k.Start());
+
+  // Wait for the faulting thread to block on a page fault first.
+  ASSERT_TRUE(t.WaitForBlocked());
 
   // Make sure we saw the page fault request. Don't service it.
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
 
+  // Kill the faulting thread.
+  ASSERT_TRUE(t.Kill());
+
   // Make sure the faulting thread does not take a fatal exception when killed.
   // The thread does fail since its page fault never completes, but it does not crash.
   ASSERT_TRUE(t.WaitForFailure());
-
-  ASSERT_TRUE(k.Wait());
 }
 
 }  // namespace pager_tests
