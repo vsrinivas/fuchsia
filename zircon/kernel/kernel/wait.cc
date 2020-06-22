@@ -130,15 +130,15 @@ void WaitQueueCollection::Insert(Thread* thread) {
   ++count_;
 
   if (unlikely(!heads_.is_empty())) {
-    const int pri = thread->scheduler_state_.effective_priority();
+    const int pri = thread->scheduler_state().effective_priority();
 
     // Walk through the sorted list of wait queue heads.
     for (Thread& head : heads_) {
-      if (pri > head.scheduler_state_.effective_priority()) {
+      if (pri > head.scheduler_state().effective_priority()) {
         // Insert ourself here as a new queue head, before |head|.
         heads_.insert(head, thread);
         return;
-      } else if (head.scheduler_state_.effective_priority() == pri) {
+      } else if (head.scheduler_state().effective_priority() == pri) {
         // Same priority, add ourself to the tail of this queue.
         head.wait_queue_state_.sublist_.push_back(thread);
         return;
@@ -190,19 +190,19 @@ void WaitQueueCollection::Validate() const {
 
     // Validate that the queue heads are sorted high to low priority.
     if (last_head) {
-      DEBUG_ASSERT_MSG(last_head->scheduler_state_.effective_priority() >
-                           head.scheduler_state_.effective_priority(),
-                       "%p:%d  %p:%d", last_head, last_head->scheduler_state_.effective_priority(),
-                       &head, head.scheduler_state_.effective_priority());
+      DEBUG_ASSERT_MSG(last_head->scheduler_state().effective_priority() >
+                           head.scheduler_state().effective_priority(),
+                       "%p:%d  %p:%d", last_head, last_head->scheduler_state().effective_priority(),
+                       &head, head.scheduler_state().effective_priority());
     }
 
     // Walk any threads linked to this head, validating that they're the same priority.
     for (const Thread& thread : head.wait_queue_state_.sublist_) {
       DEBUG_ASSERT(thread.magic_ == THREAD_MAGIC);
-      DEBUG_ASSERT_MSG(head.scheduler_state_.effective_priority() ==
-                           thread.scheduler_state_.effective_priority(),
-                       "%p:%d  %p:%d", &head, head.scheduler_state_.effective_priority(), &thread,
-                       thread.scheduler_state_.effective_priority());
+      DEBUG_ASSERT_MSG(head.scheduler_state().effective_priority() ==
+                           thread.scheduler_state().effective_priority(),
+                       "%p:%d  %p:%d", &head, head.scheduler_state().effective_priority(), &thread,
+                       thread.scheduler_state().effective_priority());
     }
 
     last_head = &head;
@@ -230,7 +230,7 @@ int WaitQueue::BlockedPriority() const {
     return -1;
   }
 
-  return t->scheduler_state_.effective_priority();
+  return t->scheduler_state().effective_priority();
 }
 
 // returns a reference to the highest priority thread queued
@@ -518,7 +518,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   DEBUG_ASSERT(wq != NULL);
   DEBUG_ASSERT_MAGIC_CHECK(wq);
 
-  LTRACEF("%p %d -> %d\n", t, old_prio, t->scheduler_state_.effective_priority());
+  LTRACEF("%p %d -> %d\n", t, old_prio, t->scheduler_state().effective_priority());
 
   // |t|'s effective priority has already been re-calculated.  If |t| is
   // currently at the head of the wait queue, then |t|'s old priority is the

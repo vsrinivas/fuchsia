@@ -1117,10 +1117,10 @@ void thread_construct_first(Thread* t, const char* name) {
 
   // Setup the scheduler state before directly manipulating its members.
   Scheduler::InitializeThread(t, HIGHEST_PRIORITY);
-  t->scheduler_state_.curr_cpu_ = cpu;
-  t->scheduler_state_.last_cpu_ = cpu;
-  t->scheduler_state_.next_cpu_ = INVALID_CPU;
-  t->scheduler_state_.hard_affinity_ = cpu_num_to_mask(cpu);
+  t->scheduler_state().curr_cpu_ = cpu;
+  t->scheduler_state().last_cpu_ = cpu;
+  t->scheduler_state().next_cpu_ = INVALID_CPU;
+  t->scheduler_state().hard_affinity_ = cpu_num_to_mask(cpu);
 
   arch_thread_construct_first(t);
   arch_set_current_thread(t);
@@ -1362,10 +1362,10 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO, "dump_thread WARNING: thread at %p has bad magic\n", t);
   }
 
-  zx_duration_t runtime = t->scheduler_state_.runtime_ns();
+  zx_duration_t runtime = t->scheduler_state().runtime_ns();
   if (t->state_ == THREAD_RUNNING) {
     zx_duration_t recent =
-        zx_time_sub_time(current_time(), t->scheduler_state_.last_started_running());
+        zx_time_sub_time(current_time(), t->scheduler_state().last_started_running());
     runtime = zx_duration_add_duration(runtime, recent);
   }
 
@@ -1377,11 +1377,11 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO,
             "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinity %#x, "
             "priority %d [%d,%d], remaining time slice %" PRIi64 "\n",
-            thread_state_to_str(t->state_), (int)t->scheduler_state_.curr_cpu_,
-            (int)t->scheduler_state_.last_cpu_, t->scheduler_state_.hard_affinity_,
-            t->scheduler_state_.soft_affinity_, t->scheduler_state_.effective_priority_,
-            t->scheduler_state_.base_priority_, t->scheduler_state_.inherited_priority_,
-            t->scheduler_state_.remaining_time_slice());
+            thread_state_to_str(t->state_), (int)t->scheduler_state().curr_cpu_,
+            (int)t->scheduler_state().last_cpu_, t->scheduler_state().hard_affinity_,
+            t->scheduler_state().soft_affinity_, t->scheduler_state().effective_priority_,
+            t->scheduler_state().base_priority_, t->scheduler_state().inherited_priority_,
+            t->scheduler_state().remaining_time_slice());
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
     t->stack_.DumpInfo(INFO);
@@ -1401,8 +1401,8 @@ void dump_thread_locked(Thread* t, bool full_dump) {
   } else {
     printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
            thread_state_to_str(t->state_), !t->owned_wait_queues_.is_empty(),
-           t->scheduler_state_.effective_priority_, t->scheduler_state_.base_priority_,
-           t->scheduler_state_.inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name_);
+           t->scheduler_state().effective_priority_, t->scheduler_state().base_priority_,
+           t->scheduler_state().inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name_);
   }
 }
 

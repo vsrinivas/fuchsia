@@ -26,7 +26,7 @@
 // time to the node's own finish time.
 template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordInsert(Iter node) {
-  node->scheduler_state_.min_finish_time_ = node->scheduler_state_.finish_time_;
+  node->scheduler_state().min_finish_time_ = node->scheduler_state().finish_time_;
 }
 
 // Collisions are not allowed as WAVLTree::insert_or_find is not used by the
@@ -48,8 +48,8 @@ void Scheduler::SubtreeMinObserver::RecordInsertReplace(Iter node, Thread* repla
 // point for the new node.
 template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordInsertTraverse(Thread* node, Iter ancestor) {
-  if (ancestor->scheduler_state_.min_finish_time_ > node->scheduler_state_.finish_time_) {
-    ancestor->scheduler_state_.min_finish_time_ = node->scheduler_state_.finish_time_;
+  if (ancestor->scheduler_state().min_finish_time_ > node->scheduler_state().finish_time_) {
+    ancestor->scheduler_state().min_finish_time_ = node->scheduler_state().finish_time_;
   }
 }
 
@@ -74,17 +74,17 @@ template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordRotation(Iter pivot, Iter lr_child, Iter /*rl_child*/,
                                                    Iter parent, Iter sibling) {
   // The overall subtree maintains the same min.
-  pivot->scheduler_state_.min_finish_time_ = parent->scheduler_state_.min_finish_time_;
+  pivot->scheduler_state().min_finish_time_ = parent->scheduler_state().min_finish_time_;
 
   // Compute the min with the newly adopted child.
-  parent->scheduler_state_.min_finish_time_ = parent->scheduler_state_.finish_time_;
+  parent->scheduler_state().min_finish_time_ = parent->scheduler_state().finish_time_;
   if (sibling) {
-    parent->scheduler_state_.min_finish_time_ = ktl::min(
-        parent->scheduler_state_.min_finish_time_, sibling->scheduler_state_.min_finish_time_);
+    parent->scheduler_state().min_finish_time_ = ktl::min(
+        parent->scheduler_state().min_finish_time_, sibling->scheduler_state().min_finish_time_);
   }
   if (lr_child) {
-    parent->scheduler_state_.min_finish_time_ = ktl::min(
-        parent->scheduler_state_.min_finish_time_, lr_child->scheduler_state_.min_finish_time_);
+    parent->scheduler_state().min_finish_time_ = ktl::min(
+        parent->scheduler_state().min_finish_time_, lr_child->scheduler_state().min_finish_time_);
   }
 }
 
@@ -95,14 +95,14 @@ template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordErase(Thread* /*node*/, Iter invalidated) {
   Iter current = invalidated;
   while (current) {
-    current->scheduler_state_.min_finish_time_ = current->scheduler_state_.finish_time_;
+    current->scheduler_state().min_finish_time_ = current->scheduler_state().finish_time_;
     if (Iter left = current.left(); left) {
-      current->scheduler_state_.min_finish_time_ = ktl::min(
-          current->scheduler_state_.min_finish_time_, left->scheduler_state_.min_finish_time_);
+      current->scheduler_state().min_finish_time_ = ktl::min(
+          current->scheduler_state().min_finish_time_, left->scheduler_state().min_finish_time_);
     }
     if (Iter right = current.right(); right) {
-      current->scheduler_state_.min_finish_time_ = ktl::min(
-          current->scheduler_state_.min_finish_time_, right->scheduler_state_.min_finish_time_);
+      current->scheduler_state().min_finish_time_ = ktl::min(
+          current->scheduler_state().min_finish_time_, right->scheduler_state().min_finish_time_);
     }
     current = current.parent();
   }

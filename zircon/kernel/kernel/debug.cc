@@ -219,7 +219,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
       bool is_idle = !!mp_is_cpu_idle(i);
       if (is_idle) {
         zx_duration_t recent_idle_time = zx_time_sub_time(
-            current_time(), percpu.idle_thread.scheduler_state_.last_started_running());
+            current_time(), percpu.idle_thread.scheduler_state().last_started_running());
         idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
       }
 

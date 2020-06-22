@@ -39,7 +39,7 @@ class BrwLockTest {
     Thread* writer_threads[writers];
     Thread* upgrader_threads[upgraders];
 
-    int old_prio = Thread::Current::Get()->scheduler_state_.base_priority();
+    int old_prio = Thread::Current::Get()->scheduler_state().base_priority();
     // Run at high priority so that we can be validating what the other threads are doing.
     // Unless we are a uniprocessor, in which case we will just have to live with poor
     // testing. If we do boost priority then we need to make sure worker threads

@@ -45,7 +45,7 @@ bool mutex_spin_time_test(void) {
   // thread's priority and cpu affinity.
   auto cleanup =
       fbl::MakeAutoCall([affinity = Thread::Current::Get()->GetCpuAffinity(),
-                         priority = Thread::Current::Get()->scheduler_state_.base_priority()]() {
+                         priority = Thread::Current::Get()->scheduler_state().base_priority()]() {
         Thread::Current::Get()->SetCpuAffinity(affinity);
         Thread::Current::Get()->SetPriority(priority);
       });

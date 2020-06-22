@@ -234,7 +234,7 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
 }
 
 AutoPin::AutoPin(uint16_t vpid)
-    : thread_(Thread::Current::Get()), prev_affinity_(thread_->scheduler_state_.hard_affinity()) {}
+    : thread_(Thread::Current::Get()), prev_affinity_(thread_->scheduler_state().hard_affinity()) {}
 
 AutoPin::~AutoPin() { thread_->SetCpuAffinity(prev_affinity_); }
 

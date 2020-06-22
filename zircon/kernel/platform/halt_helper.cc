@@ -37,7 +37,7 @@ void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_rea
 
 zx_status_t platform_halt_secondary_cpus(zx_time_t deadline) {
   // Ensure the current thread is pinned to the boot CPU.
-  DEBUG_ASSERT(Thread::Current::Get()->scheduler_state_.hard_affinity() ==
+  DEBUG_ASSERT(Thread::Current::Get()->scheduler_state().hard_affinity() ==
                cpu_num_to_mask(BOOT_CPU_ID));
 
   // "Unplug" online secondary CPUs before halting them.

@@ -410,7 +410,7 @@ bool set_migrate_ready_threads_test() {
       {
         Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
         state = worker->state_;
-        curr_cpu = worker->scheduler_state_.curr_cpu();
+        curr_cpu = worker->scheduler_state().curr_cpu();
       }
       ASSERT_EQ(state, THREAD_READY, "The worker was in the wrong state.");
       ASSERT_EQ(curr_cpu, kStartingCpu, "The worker was assigned to the wrong CPU.");

@@ -247,7 +247,7 @@ class Scheduler {
   // run queue.
   inline bool IsDeadlineThreadEligible(SchedTime eligible_time) TA_REQ(thread_lock) {
     return !deadline_run_queue_.is_empty() &&
-           deadline_run_queue_.front().scheduler_state_.start_time_ <= eligible_time;
+           deadline_run_queue_.front().scheduler_state().start_time_ <= eligible_time;
   }
 
   // Updates the total expected runtime estimator and exports the atomic shadow
@@ -262,10 +262,10 @@ class Scheduler {
   // scheduler_state member.
   struct TaskTraits {
     using KeyType = SchedulerState::KeyType;
-    static KeyType GetKey(const Thread& thread) { return thread.scheduler_state_.key(); }
+    static KeyType GetKey(const Thread& thread) { return thread.scheduler_state().key(); }
     static bool LessThan(KeyType a, KeyType b) { return a < b; }
     static bool EqualTo(KeyType a, KeyType b) { return a == b; }
-    static auto& node_state(Thread& thread) { return thread.scheduler_state_.run_queue_node_; }
+    static auto& node_state(Thread& thread) { return thread.scheduler_state().run_queue_node_; }
   };
 
   // Observer that maintains the subtree invariant min_finish_time as nodes are
@@ -302,8 +302,8 @@ class Scheduler {
 
   // Returns the run queue for the given thread's scheduling discipline.
   inline RunQueue& GetRunQueue(Thread* thread) {
-    return thread->scheduler_state_.discipline() == SchedDiscipline::Fair ? fair_run_queue_
-                                                                          : deadline_run_queue_;
+    return thread->scheduler_state().discipline() == SchedDiscipline::Fair ? fair_run_queue_
+                                                                           : deadline_run_queue_;
   }
 
   // The run queue of fair scheduled threads ready to run, but not currently running.

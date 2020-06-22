@@ -4,6 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/load_balancer.h>
+#include <lib/load_balancer_percpu.h>
+#include <lib/system-topology.h>
+#include <lib/unittest/unittest.h>
+
 #include <fbl/mutex.h>
 #include <kernel/cpu.h>
 #include <kernel/percpu.h>
@@ -11,10 +16,6 @@
 #include <kernel/thread.h>
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
-#include <lib/load_balancer_percpu.h>
-#include <lib/unittest/unittest.h>
-#include <lib/load_balancer.h>
-#include <lib/system-topology.h>
 
 namespace {
 using load_balancer::CpuState;
@@ -27,9 +28,7 @@ class TestingContext {
     return *percpus_[cpu_num];
   }
 
-  static cpu_num_t CurrentCpu() {
-    return current_cpu_;
-  }
+  static cpu_num_t CurrentCpu() { return current_cpu_; }
 
   static ktl::array<ktl::unique_ptr<percpu>, 4> CreatePercpus() {
     ktl::array<ktl::unique_ptr<percpu>, 4> out;
@@ -71,7 +70,7 @@ ktl::array<percpu*, 4> TestingContext::percpus_{0};
 cpu_num_t TestingContext::current_cpu_ = 0;
 decltype(TestingContext::lock_) TestingContext::lock_;
 
-template<typename T>
+template <typename T>
 bool AllEqual(T* a, T* b, size_t count) {
   for (size_t i = 0; i < count; i++) {
     if (a[i] != b[i]) {
@@ -87,8 +86,7 @@ bool AllEqual(T* a, T* b, size_t count) {
 // Being static members of this class allow the methods to access private
 // members on the Scheduler.
 class LoadBalancerTest {
-public:
-
+ public:
   // Test with all zero values, bit of a sanity test.
   static bool LoadShedThresholdZero() {
     BEGIN_TEST;
@@ -101,7 +99,7 @@ public:
     lb.Cycle();
 
     for (size_t i = 0; i < percpus.size(); i++) {
-      EXPECT_EQ(0, // There is no load on the system.
+      EXPECT_EQ(0,  // There is no load on the system.
                 TestingContext::percpus_[i]->load_balancer.queue_time_threshold());
     }
 
@@ -131,8 +129,7 @@ public:
 
     // Threshold should be the mean.
     for (size_t i = 0; i < percpus.size(); i++) {
-      EXPECT_EQ(value,
-                TestingContext::percpus_[i]->load_balancer.queue_time_threshold());
+      EXPECT_EQ(value, TestingContext::percpus_[i]->load_balancer.queue_time_threshold());
     }
 
     END_TEST;
@@ -162,8 +159,7 @@ public:
 
     // Threshold should be the mean.
     for (size_t i = 0; i < percpus.size(); i++) {
-      EXPECT_EQ(value / 4,
-                TestingContext::percpus_[i]->load_balancer.queue_time_threshold());
+      EXPECT_EQ(value / 4, TestingContext::percpus_[i]->load_balancer.queue_time_threshold());
     }
 
     END_TEST;
@@ -177,8 +173,7 @@ public:
     auto percpus = TestingContext::CreatePercpus();
 
     for (size_t i = 0; i < percpus.size(); i++) {
-      ASSERT_EQ(0,
-                TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
+      ASSERT_EQ(0, TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
       TestingContext::percpus_[i]->performance_scale = ffl::FromRatio((i < 2) ? 1 : 2, 2);
     }
 
@@ -188,10 +183,10 @@ public:
     uint8_t expected_cpus[] = {2, 3, 0, 1};
 
     for (size_t i = 0; i < percpus.size(); i++) {
-      EXPECT_EQ(4, // We get all of the cpus.
+      EXPECT_EQ(4,  // We get all of the cpus.
                 TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
-      EXPECT_TRUE(AllEqual(expected_cpus,
-                TestingContext::percpus_[i]->load_balancer.target_cpus().cpus.data(), 3));
+      EXPECT_TRUE(AllEqual(
+          expected_cpus, TestingContext::percpus_[i]->load_balancer.target_cpus().cpus.data(), 3));
     }
 
     END_TEST;
@@ -212,8 +207,7 @@ public:
     TestingContext::percpus_[3]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(value);
 
     for (size_t i = 0; i < percpus.size(); i++) {
-      ASSERT_EQ(0,
-                TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
+      ASSERT_EQ(0, TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
       TestingContext::percpus_[i]->performance_scale = ffl::FromRatio((i < 2) ? 1 : 2, 2);
     }
 
@@ -224,10 +218,10 @@ public:
     uint8_t expected_cpus[] = {1, 2, 3, 0};
 
     for (size_t i = 0; i < percpus.size(); i++) {
-      EXPECT_EQ(4, // We get all of the cpus.
+      EXPECT_EQ(4,  // We get all of the cpus.
                 TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
-      EXPECT_TRUE(AllEqual(expected_cpus,
-                TestingContext::percpus_[i]->load_balancer.target_cpus().cpus.data(), 3));
+      EXPECT_TRUE(AllEqual(
+          expected_cpus, TestingContext::percpus_[i]->load_balancer.target_cpus().cpus.data(), 3));
     }
 
     END_TEST;
@@ -242,7 +236,7 @@ public:
     auto percpus = TestingContext::CreatePercpus();
 
     Thread thread;
-    thread.scheduler_state_.last_cpu_ = 1;
+    thread.scheduler_state().last_cpu_ = 1;
     percpus[1]->load_balancer.Update({}, 10000);
     percpus[1]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(100);
 
@@ -266,7 +260,7 @@ public:
     Thread thread;
     // thread..last_cpu_ is undefined, like a new thread on the system.
 
-    percpus[kCurrCpu]->load_balancer.Update({.cpus = {3,2,1,0}, .cpu_count = 4}, 10000);
+    percpus[kCurrCpu]->load_balancer.Update({.cpus = {3, 2, 1, 0}, .cpu_count = 4}, 10000);
     percpus[kCurrCpu]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(100);
 
     cpu_num_t selected =
@@ -289,9 +283,9 @@ public:
     auto percpus = TestingContext::CreatePercpus();
 
     Thread thread;
-    thread.scheduler_state_.last_cpu_ = kLastCpu;
+    thread.scheduler_state().last_cpu_ = kLastCpu;
 
-    TestingContext::UpdateAll({.cpus = {3,2,1,0}, .cpu_count = 4}, kThreshold);
+    TestingContext::UpdateAll({.cpus = {3, 2, 1, 0}, .cpu_count = 4}, kThreshold);
     percpus[3]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + kDevAllowed);
     percpus[2]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + kDevAllowed);
     percpus[1]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold - 1);
@@ -317,9 +311,9 @@ public:
     auto percpus = TestingContext::CreatePercpus();
 
     Thread thread;
-    thread.scheduler_state_.last_cpu_ = kLastCpu;
+    thread.scheduler_state().last_cpu_ = kLastCpu;
 
-    TestingContext::UpdateAll({.cpus = {3,2,1,0}, .cpu_count = 4}, kThreshold);
+    TestingContext::UpdateAll({.cpus = {3, 2, 1, 0}, .cpu_count = 4}, kThreshold);
     percpus[3]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 2);
     percpus[2]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
     percpus[1]->scheduler.exported_total_expected_runtime_ns_ =
@@ -345,9 +339,9 @@ public:
     auto percpus = TestingContext::CreatePercpus();
 
     Thread thread;
-    thread.scheduler_state_.last_cpu_ = kLastCpu;
+    thread.scheduler_state().last_cpu_ = kLastCpu;
 
-    TestingContext::UpdateAll({.cpus = {3,2,1,0}, .cpu_count = 4}, kThreshold);
+    TestingContext::UpdateAll({.cpus = {3, 2, 1, 0}, .cpu_count = 4}, kThreshold);
     percpus[3]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(0);
     percpus[2]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
     percpus[1]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 100);
@@ -366,25 +360,20 @@ public:
 };
 
 UNITTEST_START_TESTCASE(load_balancer_tests)
-  UNITTEST("Test load shed threshold with no load.",
-           LoadBalancerTest::LoadShedThresholdZero)
-  UNITTEST("Test load shed threshold with low variance.",
-           LoadBalancerTest::LoadShedThresholdLowVariance)
-  UNITTEST("Test load shed threshold with high variance.",
-           LoadBalancerTest::LoadShedThresholdHighVariance)
-  UNITTEST("Test Selected cpus, prefer big in big.little",
-           LoadBalancerTest::SelectBigFirst)
-  UNITTEST("Test Selected cpus, prefer unloaded",
-           LoadBalancerTest::PreferUnloaded)
-  UNITTEST("Test selecting the last cpu if it is under threshold.",
-           LoadBalancerTest::FindCpuLast)
-  UNITTEST("Test selecting the current cpus best match if it is under threshold.",
-           LoadBalancerTest::FindCpuInitial)
-  UNITTEST("Test selecting the first cpu from the list that is under the threshold.",
-           LoadBalancerTest::FindCpuFirstUnderThreshold)
-  UNITTEST("Test selecting the cpu with the lowest load.",
-           LoadBalancerTest::FindCpuLowestLoad)
-  UNITTEST("Test avoiding a move if we are in the allowed deviation.",
-           LoadBalancerTest::StayOnCurrentIfWithinDeviation)
+UNITTEST("Test load shed threshold with no load.", LoadBalancerTest::LoadShedThresholdZero)
+UNITTEST("Test load shed threshold with low variance.",
+         LoadBalancerTest::LoadShedThresholdLowVariance)
+UNITTEST("Test load shed threshold with high variance.",
+         LoadBalancerTest::LoadShedThresholdHighVariance)
+UNITTEST("Test Selected cpus, prefer big in big.little", LoadBalancerTest::SelectBigFirst)
+UNITTEST("Test Selected cpus, prefer unloaded", LoadBalancerTest::PreferUnloaded)
+UNITTEST("Test selecting the last cpu if it is under threshold.", LoadBalancerTest::FindCpuLast)
+UNITTEST("Test selecting the current cpus best match if it is under threshold.",
+         LoadBalancerTest::FindCpuInitial)
+UNITTEST("Test selecting the first cpu from the list that is under the threshold.",
+         LoadBalancerTest::FindCpuFirstUnderThreshold)
+UNITTEST("Test selecting the cpu with the lowest load.", LoadBalancerTest::FindCpuLowestLoad)
+UNITTEST("Test avoiding a move if we are in the allowed deviation.",
+         LoadBalancerTest::StayOnCurrentIfWithinDeviation)
 UNITTEST_END_TESTCASE(load_balancer_tests, "load_balancer",
                       "Tests for the periodic thread load balancer.")

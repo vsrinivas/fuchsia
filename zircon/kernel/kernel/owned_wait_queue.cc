@@ -190,9 +190,9 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
   ~PiKTracer() { Flush(FlushType::FINAL); }
 
   void Trace(Thread* t, int old_effec_prio, int old_inherited_prio) {
-    if ((old_effec_prio != t->scheduler_state_.effective_priority()) ||
+    if ((old_effec_prio != t->scheduler_state().effective_priority()) ||
         ((Level == PiTracingLevel::Extended) &&
-         (old_inherited_prio != t->scheduler_state_.inherited_priority()))) {
+         (old_inherited_prio != t->scheduler_state().inherited_priority()))) {
       if (thread_ == nullptr) {
         // Generate the start event and a flow id.
         flow_id_ = PiKTracerFlowIdGenerator::gen_.fetch_add(1, ktl::memory_order_relaxed);
@@ -208,9 +208,9 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
       // it will be the final event in the flow.
       thread_ = t;
       priorities_ = (old_effec_prio & 0xFF) |
-                    ((t->scheduler_state_.effective_priority() & 0xFF) << 8) |
+                    ((t->scheduler_state().effective_priority() & 0xFF) << 8) |
                     ((old_inherited_prio & 0xFF) << 16) |
-                    ((t->scheduler_state_.inherited_priority() & 0xFF) << 24);
+                    ((t->scheduler_state().inherited_priority() & 0xFF) << 24);
     }
   }
 
@@ -301,7 +301,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
       // there is nothing to do.  We can just stop.  The maximum inherited
       // priority must have come from a different wait queue.
       //
-      if (old_prio < t->scheduler_state_.inherited_priority()) {
+      if (old_prio < t->scheduler_state().inherited_priority()) {
         return local_resched;
       }
 
@@ -321,14 +321,14 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
 
       // If our calculated new priority is still the same as our current
       // inherited priority, then we are done.
-      if (new_prio == t->scheduler_state_.inherited_priority()) {
+      if (new_prio == t->scheduler_state().inherited_priority()) {
         return local_resched;
       }
     } else {
       // Likewise, if the pressure just went up, but the new pressure is
       // not strictly higher than the current inherited priority, then
       // there is nothing to do.
-      if (new_prio <= t->scheduler_state_.inherited_priority()) {
+      if (new_prio <= t->scheduler_state().inherited_priority()) {
         return local_resched;
       }
     }
@@ -338,8 +338,8 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
     // in a change of the maximum waiter priority of the wait queue blocking
     // this thread (if any).  If not, then we are done.
     const WaitQueue* bwq = t->blocking_wait_queue_;
-    int old_effec_prio = t->scheduler_state_.effective_priority();
-    int old_inherited_prio = t->scheduler_state_.inherited_priority();
+    int old_effec_prio = t->scheduler_state().effective_priority();
+    int old_inherited_prio = t->scheduler_state().inherited_priority();
     int old_queue_prio = bwq ? bwq->BlockedPriority() : -1;
     int new_queue_prio;
 
@@ -349,8 +349,8 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
 
     // If the effective priority of this thread has gone up or down, record
     // it in the kernel counters as a PI promotion or demotion.
-    if (old_effec_prio != t->scheduler_state_.effective_priority()) {
-      if (old_effec_prio < t->scheduler_state_.effective_priority()) {
+    if (old_effec_prio != t->scheduler_state().effective_priority()) {
+      if (old_effec_prio < t->scheduler_state().effective_priority()) {
         pi_promotions.Add(1);
       } else {
         pi_demotions.Add(1);
@@ -435,7 +435,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
       // If we no longer own any queues, then we had better not be inheriting any priority at
       // this point in time.
       DEBUG_ASSERT(!old_owner->owned_wait_queues_.is_empty() ||
-                   (old_owner->scheduler_state_.inherited_priority() == -1));
+                   (old_owner->scheduler_state().inherited_priority() == -1));
     }
 
     // Update to the new owner.  If there is a new owner, fix the

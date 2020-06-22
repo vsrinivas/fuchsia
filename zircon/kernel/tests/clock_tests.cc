@@ -54,7 +54,7 @@ int clock_tests(int, const cmd_args*, uint32_t) {
     printf("%d\n", i + 1);
   }
 
-  cpu_mask_t old_affinity = Thread::Current::Get()->scheduler_state_.hard_affinity();
+  cpu_mask_t old_affinity = Thread::Current::Get()->scheduler_state().hard_affinity();
 
   for (cpu_num_t cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
     if (!mp_is_cpu_online(cpu))

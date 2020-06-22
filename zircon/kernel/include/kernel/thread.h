@@ -664,6 +664,9 @@ struct Thread {
   // Thread API.
   bool has_migrate_fn() const { return migrate_fn_ != nullptr; }
 
+  SchedulerState& scheduler_state() { return scheduler_state_; }
+  const SchedulerState& scheduler_state() const { return scheduler_state_; }
+
  private:
   // OwnedWaitQueues manipulate wait queue state.
   friend class OwnedWaitQueue;
@@ -700,8 +703,10 @@ struct Thread {
   unsigned int flags_;
   unsigned int signals_;
 
+ private:
   SchedulerState scheduler_state_;
 
+ public:
   // if blocked, a pointer to the wait queue
   WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
 

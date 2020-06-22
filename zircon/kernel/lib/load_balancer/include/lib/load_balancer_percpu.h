@@ -90,7 +90,7 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
   // Start on either the last cpu for the thread or the primary load-shed target
   // for the CPU running this logic, it wasn't heavily loaded during the last
   // rebalance.
-  const cpu_num_t last_cpu = thread->scheduler_state_.last_cpu();
+  const cpu_num_t last_cpu = thread->scheduler_state().last_cpu();
   DEBUG_ASSERT(last_cpu != INVALID_CPU || Get(curr_cpu_num()).target_cpus().cpu_count > 0 ||
                curr_cpu_num() == 0);
   // It is possible the target_cpus is unset in early boot, in this case
@@ -106,12 +106,12 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
   // account the new thread's contribution to any core it ends up on and helps
   // keep interactive threads from being excessively moved in the face of cpu-bound
   // threads.
-  const zx_duration_t new_thread_runtime = thread->scheduler_state_.expected_runtime_ns();
+  const zx_duration_t new_thread_runtime = thread->scheduler_state().expected_runtime_ns();
   const zx_duration_t load_shed_threshold =
       zx_duration_sub_duration(initial.queue_time_threshold(), new_thread_runtime);
 
   const cpu_mask_t available_mask =
-      thread->scheduler_state_.GetEffectiveCpuMask(mp_get_active_mask());
+      thread->scheduler_state().GetEffectiveCpuMask(mp_get_active_mask());
   const bool initial_cpu_available = ToMask(initial_cpu) & available_mask;
   const zx_duration_t initial_runtime = GetScheduler(initial_cpu).predicted_queue_time_ns();
   // See if we are ready to shed load.
@@ -161,7 +161,7 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
 
   if (unlikely(thread->has_migrate_fn() && initial_cpu_available)) {
     // Stay where we are, the migrate_fn_ will migrate us later.
-    thread->scheduler_state_.set_next_cpu(lowest_cpu);
+    thread->scheduler_state().set_next_cpu(lowest_cpu);
     return initial_cpu;
   }
 
