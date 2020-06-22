@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{data_repository::DiagnosticsDataRepository, diagnostics, inspect},
+    crate::{
+        data_repository::DiagnosticsDataRepository, diagnostics, inspect, lifecycle,
+        types::DiagnosticsServer,
+    },
     anyhow::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics::{
@@ -67,9 +70,9 @@ impl ArchiveAccessor {
         result_stream: ServerEnd<BatchIteratorMarker>,
         stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
     ) -> Result<(), Error> {
-        let inspect_reader_server_stats = Arc::new(diagnostics::InspectReaderServerStats::new(
-            self.archive_accessor_stats.clone(),
-        ));
+        let inspect_reader_server_stats = Arc::new(
+            diagnostics::DiagnosticsServerStats::for_inspect(self.archive_accessor_stats.clone()),
+        );
 
         match (
             stream_parameters.stream_mode,
@@ -91,11 +94,16 @@ impl ArchiveAccessor {
                             let inspect_reader_server = inspect::ReaderServer::new(
                                 self.diagnostics_repo.clone(),
                                 Some(selectors),
-                                inspect_reader_server_stats,
+                                inspect_reader_server_stats.clone(),
                             );
 
                             inspect_reader_server
-                                .stream_inspect(stream_mode, format, result_stream)
+                                .stream_diagnostics(
+                                    stream_mode,
+                                    format,
+                                    result_stream,
+                                    inspect_reader_server_stats.clone(),
+                                )
                                 .unwrap_or_else(|_| {
                                     warn!("Inspect Reader session crashed.");
                                 });
@@ -121,13 +129,79 @@ impl ArchiveAccessor {
                     let inspect_reader_server = inspect::ReaderServer::new(
                         self.diagnostics_repo.clone(),
                         None,
-                        inspect_reader_server_stats,
+                        inspect_reader_server_stats.clone(),
                     );
 
                     inspect_reader_server
-                        .stream_inspect(stream_mode, format, result_stream)
+                        .stream_diagnostics(
+                            stream_mode,
+                            format,
+                            result_stream,
+                            inspect_reader_server_stats.clone(),
+                        )
                         .unwrap_or_else(|_| {
                             warn!("Inspect Reader session crashed.");
+                        });
+                    Ok(())
+                }
+                _ => {
+                    warn!("Unable to process requested selector configuration.");
+
+                    result_stream
+                        .close_with_epitaph(zx_status::Status::INVALID_ARGS)
+                        .unwrap_or_else(|e| {
+                            warn!("Unable to write epitaph to result stream: {:?}", e)
+                        });
+
+                    Ok(())
+                }
+            },
+        }
+    }
+
+    fn handle_stream_lifecycle_events(
+        &self,
+        result_stream: ServerEnd<BatchIteratorMarker>,
+        stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
+    ) -> Result<(), Error> {
+        let lifecycle_stats = Arc::new(diagnostics::DiagnosticsServerStats::for_lifecycle(
+            self.archive_accessor_stats.clone(),
+        ));
+
+        match (
+            stream_parameters.stream_mode,
+            stream_parameters.format,
+            stream_parameters.client_selector_configuration,
+        ) {
+            (None, _, _) | (_, None, _) | (_, _, None) => {
+                warn!("Client was missing required stream parameters.");
+
+                result_stream.close_with_epitaph(zx_status::Status::INVALID_ARGS).unwrap_or_else(
+                    |e| error!("Unable to write epitaph to result stream: {:?}", e),
+                );
+                Ok(())
+            }
+            (Some(stream_mode), Some(format), Some(selector_config)) => match selector_config {
+                ClientSelectorConfiguration::Selectors(_) => {
+                    warn!("Selectors are not yet supported for lifecycle events.");
+
+                    result_stream.close_with_epitaph(zx_status::Status::WRONG_TYPE).unwrap_or_else(
+                        |e| warn!("Unable to write epitaph to result stream: {:?}", e),
+                    );
+
+                    Ok(())
+                }
+                ClientSelectorConfiguration::SelectAll(_) => {
+                    let lifecycle_reader_server = lifecycle::LifecycleServer::new(
+                        self.diagnostics_repo.clone(),
+                        None,
+                        lifecycle_stats.clone(),
+                    );
+
+                    lifecycle_reader_server
+                        .stream_diagnostics(stream_mode, format, result_stream, lifecycle_stats)
+                        .unwrap_or_else(|_| {
+                            warn!("Lifecycle Reader session crashed.");
                         });
                     Ok(())
                 }
@@ -170,6 +244,10 @@ impl ArchiveAccessor {
                                 Some(DataType::Inspect) => {
                                     self.handle_stream_inspect(result_stream, stream_parameters)?
                                 }
+                                Some(DataType::Lifecycle) => self.handle_stream_lifecycle_events(
+                                    result_stream,
+                                    stream_parameters,
+                                )?,
                                 None => {
                                     warn!("Client failed to specify a valid data type.");
 

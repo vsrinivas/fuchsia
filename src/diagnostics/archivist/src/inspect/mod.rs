@@ -4,24 +4,26 @@
 
 use {
     crate::{
-        data_repository::{
-            DiagnosticsDataRepository, Moniker, PopulatedInspectDataContainer, ReadSnapshot,
-            SnapshotData, UnpopulatedInspectDataContainer,
+        constants,
+        data_repository::DiagnosticsDataRepository,
+        diagnostics::{self, DiagnosticsServerStats},
+        formatter,
+        types::{
+            DiagnosticsServer, Moniker, PopulatedInspectDataContainer, ReadSnapshot, SnapshotData,
+            UnpopulatedInspectDataContainer,
         },
-        diagnostics,
     },
-    anyhow::{format_err, Error},
+    anyhow::Error,
+    async_trait::async_trait,
     diagnostics_schema::{self as schema, Schema},
-    fidl::endpoints::{RequestStream, ServerEnd},
-    fidl_fuchsia_diagnostics::{self, BatchIteratorMarker, BatchIteratorRequestStream},
-    fidl_fuchsia_mem, fuchsia_async as fasync,
+    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_inspect::{reader::PartialNodeHierarchy, NumericProperty},
     fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy},
-    fuchsia_zircon::{self as zx, DurationNum, HandleBased},
+    fuchsia_zircon::{self as zx, DurationNum},
     futures::future::join_all,
     futures::stream::FusedStream,
-    futures::{TryFutureExt, TryStreamExt},
+    futures::TryStreamExt,
     log::error,
     parking_lot::RwLock,
     selectors,
@@ -29,17 +31,6 @@ use {
     std::convert::{TryFrom, TryInto},
     std::sync::Arc,
 };
-
-/// Keep only 64 hierarchy snapshots in memory at a time.
-/// We limit to 64 because each snapshot is sent over a VMO and we can only have
-/// 64 handles sent over a message.
-// TODO(4601): Make this product-configurable.
-// TODO(4601): Consider configuring batch sizes by bytes, not by hierarchy count.
-static IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
-
-// Number of seconds to wait for a single component to have its diagnostics data "pumped".
-// This involves diagnostics directory traversal, contents extraction, and snapshotting.
-pub static PER_COMPONENT_ASYNC_TIMEOUT_SECONDS: i64 = 10;
 
 /// Packet containing a node hierarchy and all the metadata needed to
 /// populate a diagnostics schema for that node hierarchy.
@@ -95,7 +86,7 @@ impl Into<NodeHierarchyData> for SnapshotData {
 pub struct ReaderServer {
     pub inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
     pub configured_selectors: Option<Vec<Arc<fidl_fuchsia_diagnostics::Selector>>>,
-    pub inspect_reader_server_stats: Arc<diagnostics::InspectReaderServerStats>,
+    pub inspect_reader_server_stats: Arc<diagnostics::DiagnosticsServerStats>,
 }
 
 fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHierarchy, Error> {
@@ -108,7 +99,7 @@ fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHier
 
 impl Drop for ReaderServer {
     fn drop(&mut self) {
-        self.inspect_reader_server_stats.global_stats.inspect_reader_servers_destroyed.add(1);
+        self.inspect_reader_server_stats.global_stats.reader_servers_destroyed.add(1);
     }
 }
 
@@ -125,9 +116,9 @@ impl ReaderServer {
     pub fn new(
         inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
         configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
-        inspect_reader_server_stats: Arc<diagnostics::InspectReaderServerStats>,
+        inspect_reader_server_stats: Arc<DiagnosticsServerStats>,
     ) -> Self {
-        inspect_reader_server_stats.global_stats.inspect_reader_servers_constructed.add(1);
+        inspect_reader_server_stats.global_stats.reader_servers_constructed.add(1);
         ReaderServer {
             inspect_repo,
             configured_selectors: configured_selectors.map(|selectors| {
@@ -258,7 +249,7 @@ impl ReaderServer {
             let component_url = inspect_data_packet.component_url.clone();
             let global_stats = self.inspect_reader_server_stats.global_stats.clone();
             PopulatedInspectDataContainer::from(inspect_data_packet).on_timeout(
-                PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
+                constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
                 move || {
                     global_stats.component_timeouts_count.add(1);
                     let error_string = format!(
@@ -383,94 +374,18 @@ impl ReaderServer {
         batch_results
             .into_iter()
             .map(|batch_item| {
-                let formatted_string_result = match format {
-                    fidl_fuchsia_diagnostics::Format::Json => {
-                        let inspect_schema = Schema::for_inspect(
-                            batch_item.moniker,
-                            batch_item.hierarchy_data.hierarchy,
-                            batch_item.hierarchy_data.timestamp,
-                            batch_item.component_url,
-                            batch_item.hierarchy_data.filename,
-                            batch_item.hierarchy_data.errors,
-                        );
+                let inspect_schema = Schema::for_inspect(
+                    batch_item.moniker,
+                    batch_item.hierarchy_data.hierarchy,
+                    batch_item.hierarchy_data.timestamp,
+                    batch_item.component_url,
+                    batch_item.hierarchy_data.filename,
+                    batch_item.hierarchy_data.errors,
+                );
 
-                        Ok(serde_json::to_string_pretty(&inspect_schema)?)
-                    }
-                    fidl_fuchsia_diagnostics::Format::Text => {
-                        Err(format_err!("Text formatting not supported for inspect."))
-                    }
-                };
-
-                let content_string = match formatted_string_result {
-                    Ok(formatted_string) => formatted_string,
-                    Err(e) => {
-                        // TODO(4601): Convert failed formattings into the
-                        // canonical json schema, with a failure message in "data"
-                        error!("parsing results from the inspect source failed: {:?}", e);
-                        "".to_string()
-                    }
-                };
-
-                let vmo_size: u64 = content_string.len() as u64;
-
-                let dump_vmo_result: Result<zx::Vmo, Error> = zx::Vmo::create(vmo_size as u64)
-                    .map_err(|s| format_err!("error creating buffer, zx status: {}", s));
-
-                dump_vmo_result.and_then(|dump_vmo| {
-                    dump_vmo
-                        .write(content_string.as_bytes(), 0)
-                        .map_err(|s| format_err!("error writing buffer, zx status: {}", s))?;
-
-                    let client_vmo =
-                        dump_vmo.duplicate_handle(zx::Rights::READ | zx::Rights::BASIC)?;
-
-                    let mem_buffer = fidl_fuchsia_mem::Buffer { vmo: client_vmo, size: vmo_size };
-
-                    match format {
-                        fidl_fuchsia_diagnostics::Format::Json => {
-                            Ok(fidl_fuchsia_diagnostics::FormattedContent::Json(mem_buffer))
-                        }
-                        fidl_fuchsia_diagnostics::Format::Text => {
-                            Ok(fidl_fuchsia_diagnostics::FormattedContent::Json(mem_buffer))
-                        }
-                    }
-                })
+                formatter::write_schema_to_formatted_content(inspect_schema, format)
             })
             .collect()
-    }
-
-    /// Takes a BatchIterator server channel and upon receiving a GetNext request, serves
-    /// an empty vector denoting that the iterator has reached its end and is terminating.
-    ///
-    /// NOTE: Once the server is on the "terminal" send, it will continue to send the terminal
-    /// batch until the client terminates their connection.
-    pub async fn serve_terminal_batch(
-        &self,
-        stream: &mut BatchIteratorRequestStream,
-    ) -> Result<(), Error> {
-        if stream.is_terminated() {
-            return Ok(());
-        }
-
-        while let Some(req) = stream.try_next().await? {
-            match req {
-                fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
-                    self.inspect_reader_server_stats
-                        .global_stats
-                        .batch_iterator_get_next_requests
-                        .add(1);
-                    self.inspect_reader_server_stats
-                        .global_stats
-                        .batch_iterator_get_next_responses
-                        .add(1);
-                    self.inspect_reader_server_stats.batch_iterator_get_next_requests.add(1);
-                    self.inspect_reader_server_stats.batch_iterator_get_next_responses.add(1);
-                    self.inspect_reader_server_stats.batch_iterator_terminal_responses.add(1);
-                    responder.send(&mut Ok(Vec::new()))?;
-                }
-            }
-        }
-        Ok(())
     }
 
     // Checks a data container for constraints the system places, and if the container is
@@ -483,7 +398,7 @@ impl ReaderServer {
     ) -> PopulatedInspectDataContainer {
         // Convert VMOs that contain too many snapshots to be sent into
         // an error schema explaining what wat went wrong.
-        if container.snapshots.len() > IN_MEMORY_SNAPSHOT_LIMIT {
+        if container.snapshots.len() > constants::IN_MEMORY_SNAPSHOT_LIMIT {
             let no_success_snapshot_data = vec![SnapshotData::failed(
                 schema::Error {
                     message: format!(
@@ -506,17 +421,20 @@ impl ReaderServer {
             container
         }
     }
-
+}
+#[async_trait]
+impl DiagnosticsServer for ReaderServer {
     /// Takes a BatchIterator server channel and starts serving snapshotted
-    /// Inspect hierarchies to clients as vectors of FormattedContent. The hierarchies
+    /// lifecycle events as vectors of FormattedContent. The hierarchies
     /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
     /// diagnostics data aren't taken until a component is included in the upcoming batch.
     ///
     /// NOTE: This API does not send the terminal empty-vector at the end of the snapshot.
-    pub async fn serve_inspect_snapshot(
+    async fn serve_snapshot(
         &self,
         stream: &mut BatchIteratorRequestStream,
         format: &fidl_fuchsia_diagnostics::Format,
+        server_stats: Arc<DiagnosticsServerStats>,
     ) -> Result<(), Error> {
         if stream.is_terminated() {
             return Ok(());
@@ -529,23 +447,22 @@ impl ReaderServer {
         let inspect_repo_length = inspect_repo_data.len();
         let mut inspect_repo_iter = inspect_repo_data.into_iter();
         let mut iter = 0;
-        let max = (inspect_repo_length - 1 / IN_MEMORY_SNAPSHOT_LIMIT) + 1;
+        let max = (inspect_repo_length - 1 / constants::IN_MEMORY_SNAPSHOT_LIMIT) + 1;
         let mut overflow_bucket: Vec<PopulatedInspectDataContainer> = Vec::new();
 
         while let Some(req) = stream.try_next().await? {
             match req {
                 fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
-                    self.inspect_reader_server_stats
-                        .global_stats
-                        .batch_iterator_get_next_requests
-                        .add(1);
-                    self.inspect_reader_server_stats.batch_iterator_get_next_requests.add(1);
+                    server_stats.global_stats.batch_iterator_get_next_requests.add(1);
+                    server_stats.batch_iterator_get_next_requests.add(1);
                     loop {
                         // Only retrieve new data from the repository if the overflow bucket
                         // is empty.
                         let pumped_inspect_data = if overflow_bucket.is_empty() {
                             let snapshot_batch: Vec<UnpopulatedInspectDataContainer> =
-                                (&mut inspect_repo_iter).take(IN_MEMORY_SNAPSHOT_LIMIT).collect();
+                                (&mut inspect_repo_iter)
+                                    .take(constants::IN_MEMORY_SNAPSHOT_LIMIT)
+                                    .collect();
 
                             iter = iter + 1;
 
@@ -565,7 +482,8 @@ impl ReaderServer {
                                 );
                             let snapshots_in_container = populated_data_container.snapshots.len();
 
-                            if (snapshot_count + snapshots_in_container) > IN_MEMORY_SNAPSHOT_LIMIT
+                            if (snapshot_count + snapshots_in_container)
+                                > constants::IN_MEMORY_SNAPSHOT_LIMIT
                             {
                                 overflow_bucket.push(populated_data_container);
                             } else {
@@ -577,16 +495,9 @@ impl ReaderServer {
                         if current_batch.is_empty() {
                             // Either nothing remains in the repository, or the
                             // only remaining things have more than 64 data sources.
-                            self.inspect_reader_server_stats
-                                .batch_iterator_terminal_responses
-                                .add(1);
-                            self.inspect_reader_server_stats
-                                .batch_iterator_get_next_responses
-                                .add(1);
-                            self.inspect_reader_server_stats
-                                .global_stats
-                                .batch_iterator_get_next_responses
-                                .add(1);
+                            server_stats.batch_iterator_terminal_responses.add(1);
+                            server_stats.batch_iterator_get_next_responses.add(1);
+                            server_stats.global_stats.batch_iterator_get_next_responses.add(1);
                             responder.send(&mut Ok(Vec::new()))?;
                             return Ok(());
                         }
@@ -597,15 +508,12 @@ impl ReaderServer {
 
                         batch_hierarchy_data.iter().for_each(|batch_item| {
                             if !batch_item.hierarchy_data.errors.is_empty() {
-                                self.inspect_reader_server_stats
+                                server_stats
                                     .global_stats
                                     .batch_iterator_get_next_result_errors
                                     .add(1);
                             }
-                            self.inspect_reader_server_stats
-                                .global_stats
-                                .batch_iterator_get_next_result_count
-                                .add(1);
+                            server_stats.global_stats.batch_iterator_get_next_result_count.add(1);
                         });
 
                         let formatted_content: Vec<
@@ -622,11 +530,8 @@ impl ReaderServer {
                             continue;
                         }
 
-                        self.inspect_reader_server_stats
-                            .global_stats
-                            .batch_iterator_get_next_responses
-                            .add(1);
-                        self.inspect_reader_server_stats.batch_iterator_get_next_responses.add(1);
+                        server_stats.global_stats.batch_iterator_get_next_responses.add(1);
+                        server_stats.batch_iterator_get_next_responses.add(1);
                         responder.send(&mut Ok(filtered_results))?;
                         break;
                     }
@@ -641,64 +546,6 @@ impl ReaderServer {
         }
         Ok(())
     }
-
-    pub fn stream_inspect(
-        self,
-        stream_mode: fidl_fuchsia_diagnostics::StreamMode,
-        format: fidl_fuchsia_diagnostics::Format,
-        result_stream: ServerEnd<BatchIteratorMarker>,
-    ) -> Result<(), Error> {
-        let result_channel = fasync::Channel::from_channel(result_stream.into_channel())?;
-
-        // Self isn't guaranteed to live into the exception handling of the async block. We need to clone self
-        // to have a version that can be referenced in the exception handling.
-        let errorful_inspect_reader_server_stats = self.inspect_reader_server_stats.clone();
-        fasync::spawn(
-            async move {
-                self.inspect_reader_server_stats
-                    .global_stats
-                    .inspect_batch_iterator_connections_opened
-                    .add(1);
-
-                let mut iterator_req_stream =
-                    fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
-                        result_channel,
-                    );
-
-                if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Snapshot
-                    || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
-                {
-                    self.serve_inspect_snapshot(&mut iterator_req_stream, &format).await?;
-                }
-
-                if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Subscribe
-                    || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
-                {
-                    error!("not yet supported");
-                }
-
-                self.serve_terminal_batch(&mut iterator_req_stream).await?;
-                self.inspect_reader_server_stats
-                    .global_stats
-                    .inspect_batch_iterator_connections_closed
-                    .add(1);
-                Ok(())
-            }
-            .unwrap_or_else(move |e: anyhow::Error| {
-                errorful_inspect_reader_server_stats
-                    .global_stats
-                    .batch_iterator_get_next_errors
-                    .add(1);
-                errorful_inspect_reader_server_stats
-                    .global_stats
-                    .inspect_batch_iterator_connections_closed
-                    .add(1);
-                error!("Error encountered running inspect stream: {:?}", e);
-            }),
-        );
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -706,12 +553,14 @@ mod tests {
     use {
         super::*,
         crate::{
-            data_repository::{DataCollector, InspectDataCollector},
             events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
+            types::InspectDataCollector,
         },
+        anyhow::format_err,
         fdio,
         fidl::endpoints::create_proxy,
         fidl::endpoints::DiscoverableService,
+        fidl::endpoints::ServerEnd,
         fidl_fuchsia_inspect::TreeMarker,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async::{self as fasync, DurationExt},
@@ -1017,14 +866,16 @@ mod tests {
         });
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+
         inspect_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+
         inspect_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy)
+            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
         let key = component_id.unique_key();
@@ -1133,7 +984,12 @@ mod tests {
                 for (cid, proxy) in id_and_directory_proxy {
                     inspect_repo
                         .write()
-                        .add_inspect_artifacts(cid.clone(), TEST_URL, proxy)
+                        .add_inspect_artifacts(
+                            cid.clone(),
+                            TEST_URL,
+                            proxy,
+                            zx::Time::from_nanos(0),
+                        )
                         .unwrap();
                 }
 
@@ -1144,7 +1000,7 @@ mod tests {
                 let test_accessor_stats =
                     Arc::new(diagnostics::ArchiveAccessorStats::new(test_archive_accessor_node));
                 let test_batch_iterator_stats1 = Arc::new(
-                    diagnostics::InspectReaderServerStats::new(test_accessor_stats.clone()),
+                    diagnostics::DiagnosticsServerStats::for_inspect(test_accessor_stats.clone()),
                 );
 
                 let reader_server = ReaderServer::new(
@@ -1155,6 +1011,7 @@ mod tests {
                 let _result_json = read_snapshot_verify_batch_count_and_batch_size(
                     reader_server,
                     expected_batch_results,
+                    test_batch_iterator_stats1.clone(),
                 )
                 .await;
 
@@ -1220,32 +1077,48 @@ mod tests {
             Arc::new(diagnostics::ArchiveAccessorStats::new(test_archive_accessor_node));
 
         let test_batch_iterator_stats1 =
-            Arc::new(diagnostics::InspectReaderServerStats::new(test_accessor_stats.clone()));
+            Arc::new(diagnostics::DiagnosticsServerStats::for_inspect(test_accessor_stats.clone()));
 
         assert_inspect_tree!(inspector, root: {test_archive_accessor_node: {
-        archive_accessor_connections_opened: 0u64,
-        archive_accessor_connections_closed: 0u64,
-        inspect_reader_servers_constructed: 0u64,
-            inspect_reader_servers_destroyed: 0u64,
-            component_timeouts_count: 0u64,
-        stream_diagnostics_requests: 0u64,
-        inspect_batch_iterator_connections_opened: 0u64,
-        inspect_batch_iterator_connections_closed: 0u64,
-        batch_iterator_get_next_requests: 0u64,
-        batch_iterator_get_next_responses: 0u64,
-        batch_iterator_get_next_errors: 0u64,
-        batch_iterator_get_next_result_count: 0u64,
-        batch_iterator_get_next_result_errors: 0u64,
-        batch_iterator_connection0: {
-            batch_iterator_terminal_responses: 0u64,
-            batch_iterator_get_next_responses: 0u64,
-            batch_iterator_get_next_requests: 0u64,
-        }}});
+            lifecycle_batch_iterator_get_next_errors:0u64,
+            inspect_component_timeouts_count:0u64,
+            lifecycle_component_timeouts_count:0u64,
+            inspect_batch_iterator_get_next_responses:0u64,
+            inspect_batch_iterator_connection0:{
+                inspect_batch_iterator_terminal_responses: 0u64,
+                inspect_batch_iterator_get_next_responses: 0u64,
+                inspect_batch_iterator_get_next_requests: 0u64,
+            },
+            lifecycle_batch_iterator_connections_opened:0u64,
+            archive_accessor_connections_closed:0u64,
+            inspect_reader_servers_destroyed:0u64,
+            archive_accessor_connections_opened:0u64,
+            inspect_reader_servers_constructed:0u64,
+            lifecycle_batch_iterator_get_next_result_count:0u64,
+            stream_diagnostics_requests:0u64,
+            inspect_batch_iterator_get_next_requests:0u64,
+            inspect_batch_iterator_get_next_result_count:0u64,
+            lifecycle_reader_servers_destroyed:0u64,
+            lifecycle_batch_iterator_get_next_requests:0u64,
+            lifecycle_batch_iterator_get_next_responses:0u64,
+            lifecycle_batch_iterator_get_next_result_errors:0u64,
+            lifecycle_batch_iterator_connections_closed:0u64,
+            inspect_batch_iterator_connections_opened:0u64,
+            inspect_batch_iterator_get_next_result_errors:0u64,
+            inspect_batch_iterator_connections_closed:0u64,
+            inspect_batch_iterator_get_next_errors:0u64,
+            lifecycle_reader_servers_constructed:0u64}});
 
         let inspector_arc = Arc::new(inspector);
+
         inspect_repo
             .write()
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, out_dir_proxy)
+            .add_inspect_artifacts(
+                component_id.clone(),
+                TEST_URL,
+                out_dir_proxy,
+                zx::Time::from_nanos(0),
+            )
             .unwrap();
 
         let expected_get_next_result_errors = match mode {
@@ -1257,7 +1130,12 @@ mod tests {
             let reader_server =
                 ReaderServer::new(inspect_repo.clone(), None, test_batch_iterator_stats1.clone());
 
-            let result_json = read_snapshot(reader_server, inspector_arc.clone()).await;
+            let result_json = read_snapshot(
+                reader_server,
+                inspector_arc.clone(),
+                test_batch_iterator_stats1.clone(),
+            )
+            .await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 1, "Expect only one schema to be returned.");
@@ -1288,24 +1166,34 @@ mod tests {
             // stream_diagnostics_requests is 0 since its tracked via archive_accessor server,
             // which isnt running in this unit test.
             assert_inspect_tree!(inspector_arc.clone(), root: {test_archive_accessor_node: {
-            archive_accessor_connections_opened: 0u64,
-            archive_accessor_connections_closed: 0u64,
-            inspect_reader_servers_constructed: 1u64,
-            inspect_reader_servers_destroyed: 0u64,
-                stream_diagnostics_requests: 0u64,
-                component_timeouts_count: 0u64,
-            inspect_batch_iterator_connections_opened: 1u64,
-            inspect_batch_iterator_connections_closed: 0u64,
-            batch_iterator_get_next_requests: 2u64,
-            batch_iterator_get_next_responses: 2u64,
-            batch_iterator_get_next_errors: 0u64,
-            batch_iterator_get_next_result_count: 1u64,
-            batch_iterator_get_next_result_errors: expected_get_next_result_errors,
-            batch_iterator_connection0: {
-                batch_iterator_terminal_responses: 1u64,
-                batch_iterator_get_next_responses: 2u64,
-                batch_iterator_get_next_requests: 2u64,
-            }}});
+            lifecycle_batch_iterator_get_next_errors:0u64,
+            inspect_component_timeouts_count:0u64,
+            lifecycle_component_timeouts_count:0u64,
+            inspect_batch_iterator_get_next_responses:2u64,
+            inspect_batch_iterator_connection0:{
+                inspect_batch_iterator_terminal_responses: 1u64,
+                inspect_batch_iterator_get_next_responses: 2u64,
+                inspect_batch_iterator_get_next_requests: 2u64,
+            },
+            lifecycle_batch_iterator_connections_opened:0u64,
+            archive_accessor_connections_closed:0u64,
+            inspect_reader_servers_destroyed:0u64,
+            archive_accessor_connections_opened:0u64,
+            inspect_reader_servers_constructed:1u64,
+            lifecycle_batch_iterator_get_next_result_count:0u64,
+            stream_diagnostics_requests:0u64,
+            inspect_batch_iterator_get_next_requests:2u64,
+            inspect_batch_iterator_get_next_result_count:1u64,
+            lifecycle_reader_servers_destroyed:0u64,
+            lifecycle_batch_iterator_get_next_requests:0u64,
+            lifecycle_batch_iterator_get_next_responses:0u64,
+            lifecycle_batch_iterator_get_next_result_errors:0u64,
+            lifecycle_batch_iterator_connections_closed:0u64,
+            inspect_batch_iterator_connections_opened:1u64,
+            inspect_batch_iterator_get_next_result_errors:expected_get_next_result_errors,
+            inspect_batch_iterator_connections_closed:0u64,
+            inspect_batch_iterator_get_next_errors:0u64,
+            lifecycle_reader_servers_constructed:0u64}});
         }
 
         // There is a race between the RAII destruction of the reader server which must make
@@ -1316,61 +1204,86 @@ mod tests {
 
         // we should see that the reader server has been destroyed.
         assert_inspect_tree!(inspector_arc.clone(), root: {test_archive_accessor_node: {
-        archive_accessor_connections_opened: 0u64,
-        archive_accessor_connections_closed: 0u64,
-        inspect_reader_servers_constructed: 1u64,
-        inspect_reader_servers_destroyed: 1u64,
-            stream_diagnostics_requests: 0u64,
-                            component_timeouts_count: 0u64,
-        inspect_batch_iterator_connections_opened: 1u64,
-        inspect_batch_iterator_connections_closed: 1u64,
-        batch_iterator_get_next_requests: 2u64,
-        batch_iterator_get_next_responses: 2u64,
-        batch_iterator_get_next_errors: 0u64,
-        batch_iterator_get_next_result_count: 1u64,
-        batch_iterator_get_next_result_errors: expected_get_next_result_errors,
-        batch_iterator_connection0: {
-            batch_iterator_terminal_responses: 1u64,
-            batch_iterator_get_next_responses: 2u64,
-            batch_iterator_get_next_requests: 2u64,
-        }}});
+            lifecycle_batch_iterator_get_next_errors:0u64,
+            inspect_component_timeouts_count:0u64,
+            lifecycle_component_timeouts_count:0u64,
+            inspect_batch_iterator_get_next_responses:2u64,
+            inspect_batch_iterator_connection0:{
+                inspect_batch_iterator_terminal_responses: 1u64,
+                inspect_batch_iterator_get_next_responses: 2u64,
+                inspect_batch_iterator_get_next_requests: 2u64,
+            },
+            lifecycle_batch_iterator_connections_opened:0u64,
+            archive_accessor_connections_closed:0u64,
+            inspect_reader_servers_destroyed:1u64,
+            archive_accessor_connections_opened:0u64,
+            inspect_reader_servers_constructed:1u64,
+            lifecycle_batch_iterator_get_next_result_count:0u64,
+            stream_diagnostics_requests:0u64,
+            inspect_batch_iterator_get_next_requests:2u64,
+            inspect_batch_iterator_get_next_result_count:1u64,
+            lifecycle_reader_servers_destroyed:0u64,
+            lifecycle_batch_iterator_get_next_requests:0u64,
+            lifecycle_batch_iterator_get_next_responses:0u64,
+            lifecycle_batch_iterator_get_next_result_errors:0u64,
+            lifecycle_batch_iterator_connections_closed:0u64,
+            inspect_batch_iterator_connections_opened:1u64,
+            inspect_batch_iterator_get_next_result_errors:expected_get_next_result_errors,
+            inspect_batch_iterator_connections_closed:1u64,
+            inspect_batch_iterator_get_next_errors:0u64,
+            lifecycle_reader_servers_constructed:0u64}});
 
         let test_batch_iterator_stats2 =
-            Arc::new(diagnostics::InspectReaderServerStats::new(test_accessor_stats.clone()));
+            Arc::new(diagnostics::DiagnosticsServerStats::for_inspect(test_accessor_stats.clone()));
 
         inspect_repo.write().remove(&component_id);
         {
             let reader_server =
                 ReaderServer::new(inspect_repo.clone(), None, test_batch_iterator_stats2.clone());
-            let result_json = read_snapshot(reader_server, inspector_arc.clone()).await;
+            let result_json = read_snapshot(
+                reader_server,
+                inspector_arc.clone(),
+                test_batch_iterator_stats2.clone(),
+            )
+            .await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 0, "Expect no schemas to be returned.");
 
             assert_inspect_tree!(inspector_arc.clone(), root: {test_archive_accessor_node: {
-            archive_accessor_connections_opened: 0u64,
-            archive_accessor_connections_closed: 0u64,
-            inspect_reader_servers_constructed: 2u64,
-            inspect_reader_servers_destroyed: 1u64,
-                stream_diagnostics_requests: 0u64,
-                component_timeouts_count: 0u64,
-            inspect_batch_iterator_connections_opened: 2u64,
-            inspect_batch_iterator_connections_closed: 1u64,
-            batch_iterator_get_next_requests: 3u64,
-            batch_iterator_get_next_responses: 3u64,
-            batch_iterator_get_next_errors: 0u64,
-            batch_iterator_get_next_result_count: 1u64,
-            batch_iterator_get_next_result_errors: expected_get_next_result_errors,
-            batch_iterator_connection0: {
-                batch_iterator_terminal_responses: 1u64,
-                batch_iterator_get_next_responses: 2u64,
-                batch_iterator_get_next_requests: 2u64,
+            lifecycle_batch_iterator_get_next_errors:0u64,
+            inspect_component_timeouts_count:0u64,
+            lifecycle_component_timeouts_count:0u64,
+            inspect_batch_iterator_get_next_responses:3u64,
+            inspect_batch_iterator_connection0:{
+                inspect_batch_iterator_terminal_responses: 1u64,
+                inspect_batch_iterator_get_next_responses: 2u64,
+                inspect_batch_iterator_get_next_requests: 2u64,
             },
-            batch_iterator_connection1: {
-                batch_iterator_terminal_responses: 1u64,
-                batch_iterator_get_next_responses: 1u64,
-                batch_iterator_get_next_requests: 1u64,
-            }}});
+            inspect_batch_iterator_connection1:{
+                inspect_batch_iterator_terminal_responses: 1u64,
+                inspect_batch_iterator_get_next_responses: 1u64,
+                inspect_batch_iterator_get_next_requests: 1u64,
+            },
+            lifecycle_batch_iterator_connections_opened:0u64,
+            archive_accessor_connections_closed:0u64,
+            inspect_reader_servers_destroyed:1u64,
+            archive_accessor_connections_opened:0u64,
+            inspect_reader_servers_constructed:2u64,
+            lifecycle_batch_iterator_get_next_result_count:0u64,
+            stream_diagnostics_requests:0u64,
+            inspect_batch_iterator_get_next_requests:3u64,
+            inspect_batch_iterator_get_next_result_count:1u64,
+            lifecycle_reader_servers_destroyed:0u64,
+            lifecycle_batch_iterator_get_next_requests:0u64,
+            lifecycle_batch_iterator_get_next_responses:0u64,
+            lifecycle_batch_iterator_get_next_result_errors:0u64,
+            lifecycle_batch_iterator_connections_closed:0u64,
+            inspect_batch_iterator_connections_opened:2u64,
+            inspect_batch_iterator_get_next_result_errors:expected_get_next_result_errors,
+            inspect_batch_iterator_connections_closed:1u64,
+            inspect_batch_iterator_get_next_errors:0u64,
+            lifecycle_reader_servers_constructed:0u64}});
         }
 
         // There is a race between the RAII destruction of the reader server which must make
@@ -1378,31 +1291,40 @@ mod tests {
         // and the inspector seeing both that reader server desruction and the termination of the
         // batch iterator connection.
         wait_for_reader_service_cleanup(inspector_arc.clone(), 2).await;
-
         assert_inspect_tree!(inspector_arc.clone(), root: {test_archive_accessor_node: {
-        archive_accessor_connections_opened: 0u64,
-        archive_accessor_connections_closed: 0u64,
-        inspect_reader_servers_constructed: 2u64,
-        inspect_reader_servers_destroyed: 2u64,
-        stream_diagnostics_requests: 0u64,
-        inspect_batch_iterator_connections_opened: 2u64,
-            inspect_batch_iterator_connections_closed: 2u64,
-            component_timeouts_count: 0u64,
-        batch_iterator_get_next_requests: 3u64,
-        batch_iterator_get_next_responses: 3u64,
-        batch_iterator_get_next_errors: 0u64,
-        batch_iterator_get_next_result_count: 1u64,
-        batch_iterator_get_next_result_errors: expected_get_next_result_errors,
-        batch_iterator_connection0: {
-            batch_iterator_terminal_responses: 1u64,
-            batch_iterator_get_next_responses: 2u64,
-            batch_iterator_get_next_requests: 2u64,
-        },
-        batch_iterator_connection1: {
-            batch_iterator_terminal_responses: 1u64,
-            batch_iterator_get_next_responses: 1u64,
-            batch_iterator_get_next_requests: 1u64,
-        }}});
+            lifecycle_batch_iterator_get_next_errors:0u64,
+            inspect_component_timeouts_count:0u64,
+            lifecycle_component_timeouts_count:0u64,
+            inspect_batch_iterator_get_next_responses:3u64,
+            inspect_batch_iterator_connection0:{
+                inspect_batch_iterator_terminal_responses: 1u64,
+                inspect_batch_iterator_get_next_responses: 2u64,
+                inspect_batch_iterator_get_next_requests: 2u64,
+            },
+            inspect_batch_iterator_connection1:{
+                inspect_batch_iterator_terminal_responses: 1u64,
+                inspect_batch_iterator_get_next_responses: 1u64,
+                inspect_batch_iterator_get_next_requests: 1u64,
+            },
+            lifecycle_batch_iterator_connections_opened:0u64,
+            archive_accessor_connections_closed:0u64,
+            inspect_reader_servers_destroyed:2u64,
+            archive_accessor_connections_opened:0u64,
+            inspect_reader_servers_constructed:2u64,
+            lifecycle_batch_iterator_get_next_result_count:0u64,
+            stream_diagnostics_requests:0u64,
+            inspect_batch_iterator_get_next_requests:3u64,
+            inspect_batch_iterator_get_next_result_count:1u64,
+            lifecycle_reader_servers_destroyed:0u64,
+            lifecycle_batch_iterator_get_next_requests:0u64,
+            lifecycle_batch_iterator_get_next_responses:0u64,
+            lifecycle_batch_iterator_get_next_result_errors:0u64,
+            lifecycle_batch_iterator_connections_closed:0u64,
+            inspect_batch_iterator_connections_opened:2u64,
+            inspect_batch_iterator_get_next_result_errors:expected_get_next_result_errors,
+            inspect_batch_iterator_connections_closed:2u64,
+            inspect_batch_iterator_get_next_errors:0u64,
+            lifecycle_reader_servers_constructed:0u64}});
     }
 
     async fn wait_for_reader_service_cleanup(
@@ -1447,6 +1369,7 @@ mod tests {
     async fn read_snapshot(
         reader_server: ReaderServer,
         _test_inspector: Arc<Inspector>,
+        server_stats: Arc<DiagnosticsServerStats>,
     ) -> serde_json::Value {
         let (consumer, batch_iterator): (
             _,
@@ -1455,10 +1378,11 @@ mod tests {
 
         fasync::spawn(async move {
             reader_server
-                .stream_inspect(
+                .stream_diagnostics(
                     fidl_fuchsia_diagnostics::StreamMode::Snapshot,
                     fidl_fuchsia_diagnostics::Format::Json,
                     batch_iterator,
+                    server_stats.clone(),
                 )
                 .unwrap();
         });
@@ -1491,6 +1415,7 @@ mod tests {
     async fn read_snapshot_verify_batch_count_and_batch_size(
         reader_server: ReaderServer,
         mut expected_batch_sizes: Vec<usize>,
+        server_stats: Arc<DiagnosticsServerStats>,
     ) -> serde_json::Value {
         let (consumer, batch_iterator): (
             _,
@@ -1499,10 +1424,11 @@ mod tests {
 
         fasync::spawn(async move {
             reader_server
-                .stream_inspect(
+                .stream_diagnostics(
                     fidl_fuchsia_diagnostics::StreamMode::Snapshot,
                     fidl_fuchsia_diagnostics::Format::Json,
                     batch_iterator,
+                    server_stats.clone(),
                 )
                 .unwrap();
         });

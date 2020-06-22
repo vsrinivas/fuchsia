@@ -611,6 +611,7 @@ fn populate_inspect_repo(
         diagnostics_ready_data.metadata.component_id,
         diagnostics_ready_data.metadata.component_url,
         diagnostics_directory_proxy,
+        diagnostics_ready_data.metadata.timestamp,
     )
 }
 

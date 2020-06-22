@@ -25,9 +25,10 @@ pub struct Error {
 }
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
-pub enum LifecycleEventType {
+pub enum LifecycleType {
     Started,
-    Existing,
+    Stopped,
+    Running,
     DiagnosticsReady,
 }
 
@@ -45,7 +46,7 @@ pub struct LifecycleEventMetadata {
     pub errors: Option<Vec<Error>>,
 
     /// Type of lifecycle event being encoded in the schema.
-    pub lifecycle_event_type: LifecycleEventType,
+    pub lifecycle_event_type: LifecycleType,
 
     /// The url with which the component was launched.
     pub component_url: String,
@@ -116,9 +117,10 @@ impl Schema<String> {
     /// Creates a new schema for a lifecycle event.
     pub fn for_lifecycle_event(
         moniker: impl Into<String>,
-        lifecycle_event_type: LifecycleEventType,
-        timestamp: Time,
+        lifecycle_event_type: LifecycleType,
+        payload: Option<NodeHierarchy>,
         component_url: impl Into<String>,
+        timestamp: Time,
         errors: Vec<Error>,
     ) -> Schema<String> {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
@@ -134,7 +136,7 @@ impl Schema<String> {
             moniker: moniker.into(),
             version: *SCHEMA_VERSION,
             data_source: DataSource::LifecycleEvent,
-            payload: None,
+            payload,
             metadata: Metadata::LifecycleEvent(lifecycle_event_metadata),
         }
     }
@@ -251,9 +253,10 @@ mod tests {
     fn test_canonical_json_lifecycle_event_formatting() {
         let json_schema = Schema::for_lifecycle_event(
             "a/b/c/d",
-            LifecycleEventType::DiagnosticsReady,
-            Time::from_nanos(123456),
+            LifecycleType::DiagnosticsReady,
+            None,
             TEST_URL,
+            Time::from_nanos(123456),
             Vec::new(),
         );
 
@@ -280,9 +283,10 @@ mod tests {
     fn test_errorful_json_lifecycle_event_formatting() {
         let json_schema = Schema::for_lifecycle_event(
             "a/b/c/d",
-            LifecycleEventType::DiagnosticsReady,
-            Time::from_nanos(123456),
+            LifecycleType::DiagnosticsReady,
+            None,
             TEST_URL,
+            Time::from_nanos(123456),
             vec![Error { message: "too much fun being had.".to_string() }],
         );
 

@@ -68,6 +68,8 @@ enum StreamMode : uint8 {
 enum DataType : uint8 {
     /// Complete inspect hierarchies on the system.
     INSPECT = 1;
+    /// Start|Stop|Running|DiagnosticsReady events on the system.
+    LIFECYCLE = 2;
 };
 
 flexible union ClientSelectorConfiguration {
