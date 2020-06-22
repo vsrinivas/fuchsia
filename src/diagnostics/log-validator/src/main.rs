@@ -5,7 +5,8 @@
 use {
     anyhow::Error,
     argh::FromArgs,
-    fidl_fuchsia_diagnostics_stream::{Argument, Record, Severity, Value},
+    fidl_fuchsia_diagnostics::Severity,
+    fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
     fidl_fuchsia_validate_logs, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},
     pretty_assertions::assert_eq,

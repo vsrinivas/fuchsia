@@ -8,6 +8,7 @@ import 'dart:convert' show Utf8Decoder;
 import 'dart:typed_data';
 
 import 'package:fidl_fuchsia_diagnostics_stream/fidl_async.dart';
+import 'package:fidl_fuchsia_diagnostics/fidl_async.dart';
 import 'package:test/test.dart';
 
 import 'package:fuchsia_diagnostic_streams/src/internal/header.dart';

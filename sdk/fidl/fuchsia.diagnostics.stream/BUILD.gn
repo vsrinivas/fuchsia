@@ -6,10 +6,11 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.diagnostics.stream") {
   sdk_category = "internal"
   sources = [
-    "controller.fidl",
     "record.fidl",
-    "severity.fidl",
     "source.fidl",
   ]
-  public_deps = [ "//zircon/vdso/zx" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//zircon/vdso/zx",
+  ]
 }

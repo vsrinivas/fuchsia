@@ -8,5 +8,8 @@ fidl("fuchsia.logger") {
   sdk_category = "partner"
   api = "fuchsia.logger.api"
   sources = [ "logger.fidl" ]
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [
+    "$zx/vdso/zx",
+    "//sdk/fidl/fuchsia.diagnostics",
+  ]
 }

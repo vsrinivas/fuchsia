@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/stream/cpp/fidl.h>
 #include <lib/zx/clock.h>
 
@@ -21,10 +22,9 @@ TEST(StreamsRecordEncoder, Writable) {
   fuchsia::diagnostics::stream::Argument arg{.name = "arg_name", .value = std::move(value)};
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
-  fuchsia::diagnostics::stream::Record record{
-      .timestamp = 12,
-      .severity = fuchsia::diagnostics::stream::Severity::INFO,
-      .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{.timestamp = 12,
+                                              .severity = fuchsia::diagnostics::Severity::INFO,
+                                              .arguments = std::move(args)};
   // Write Record
   streams::log_record(record, &vec);
   int length = vec.size();
@@ -40,10 +40,9 @@ TEST(StreamsRecordEncoder, WriteRecordString) {
   fuchsia::diagnostics::stream::Argument arg{.name = "world", .value = std::move(value)};
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
-  fuchsia::diagnostics::stream::Record record{
-      .timestamp = 5,
-      .severity = fuchsia::diagnostics::stream::Severity::INFO,
-      .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{.timestamp = 5,
+                                              .severity = fuchsia::diagnostics::Severity::INFO,
+                                              .arguments = std::move(args)};
   streams::log_record(record, &vec);
 
   // Expected Results
@@ -86,10 +85,9 @@ TEST(StreamsRecordEncoder, WriteRecordSignedIntNegative) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{
-      .timestamp = 9,
-      .severity = fuchsia::diagnostics::stream::Severity::INFO,
-      .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{.timestamp = 9,
+                                              .severity = fuchsia::diagnostics::Severity::INFO,
+                                              .arguments = std::move(args)};
   streams::log_record(record, &vec);
   std::vector<uint8_t> expected({0x59, 0, 0,    0,    0,    0,    0,    0x30, 0x9,  0,
                                  0,    0, 0,    0,    0,    0,    0x33, 0,    0x4,  0x80,
@@ -108,10 +106,9 @@ TEST(StreamsRecordEncoder, WriteRecordSignedIntPositive) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{
-      .timestamp = 9,
-      .severity = fuchsia::diagnostics::stream::Severity::INFO,
-      .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{.timestamp = 9,
+                                              .severity = fuchsia::diagnostics::Severity::INFO,
+                                              .arguments = std::move(args)};
   streams::log_record(record, &vec);
   std::vector<uint8_t> expected({0x59, 0, 0,    0, 0,   0,    0, 0x30, 0x9, 0, 0,   0,   0,   0,
                                  0,    0, 0x33, 0, 0x4, 0x80, 0, 0,    0,   0, 'n', 'a', 'm', 'e',
@@ -129,10 +126,9 @@ TEST(StreamsRecordEncoder, WriteRecordUnsignedInt) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{
-      .timestamp = 6,
-      .severity = fuchsia::diagnostics::stream::Severity::INFO,
-      .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{.timestamp = 6,
+                                              .severity = fuchsia::diagnostics::Severity::INFO,
+                                              .arguments = std::move(args)};
   streams::log_record(record, &vec);
   std::vector<uint8_t> expected({0x59, 0, 0,    0, 0,   0,    0, 0x30, 0x6, 0, 0,   0,   0,   0,
                                  0,    0, 0x34, 0, 0x4, 0x80, 0, 0,    0,   0, 'n', 'a', 'm', 'e',
@@ -150,10 +146,9 @@ TEST(StreamsRecordEncoder, WriteRecordFloat) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{
-      .timestamp = 6,
-      .severity = fuchsia::diagnostics::stream::Severity::INFO,
-      .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{.timestamp = 6,
+                                              .severity = fuchsia::diagnostics::Severity::INFO,
+                                              .arguments = std::move(args)};
   streams::log_record(record, &vec);
   std::vector<uint8_t> expected({0x59, 0, 0,    0,    0,    0,    0,    0x30, 0x6,  0,
                                  0,    0, 0,    0,    0,    0,    0x35, 0,    0x4,  0x80,

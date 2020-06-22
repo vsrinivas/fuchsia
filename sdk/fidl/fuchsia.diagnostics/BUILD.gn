@@ -9,8 +9,10 @@ fidl("fuchsia.diagnostics") {
   api = "fuchsia.diagnostics.api"
   sources = [
     "format.fidl",
+    "interest.fidl",
     "reader.fidl",
     "selector.fidl",
+    "severity.fidl",
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.mem" ]

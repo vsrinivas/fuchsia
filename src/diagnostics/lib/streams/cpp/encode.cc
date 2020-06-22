@@ -4,6 +4,7 @@
 
 #include "encode.h"
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/stream/cpp/fidl.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>

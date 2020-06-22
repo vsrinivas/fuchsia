@@ -12,7 +12,8 @@ use {
     thiserror::Error,
 };
 
-pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Severity, Value};
+pub use fidl_fuchsia_diagnostics::Severity;
+pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
 
 pub mod encode;
 pub mod parse;
@@ -179,7 +180,8 @@ mod tests {
             encode::{BufMutShared, Encoder},
             parse::{parse_argument, parse_record, ParseResult},
         },
-        fidl_fuchsia_diagnostics_stream::{Argument, Record, Severity, Value},
+        fidl_fuchsia_diagnostics::Severity,
+        fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
         fuchsia_zircon as zx,
         std::{fmt::Debug, io::Cursor},
     };

@@ -5,6 +5,7 @@
 library fuchsia.logger;
 
 using zx;
+using fuchsia.diagnostics;
 
 /// Log levels used with log related filtering.
 /// Filtering uses a heuristic based on a threshold of
@@ -128,6 +129,11 @@ protocol LogSink {
     /// socket.
     [Transitional]
     ConnectStructured(zx.handle:SOCKET socket);
+
+    /// LogSink implementers emit this event whenever the scope of their
+    /// interest changes. Clients are expected to emit messages based on
+    /// the updated Interest.
+    -> OnInterestChanged(fuchsia.diagnostics.Interest interest);
 };
 
 /// Max log bytes per call to a listener.

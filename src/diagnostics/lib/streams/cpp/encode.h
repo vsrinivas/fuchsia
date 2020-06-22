@@ -5,6 +5,7 @@
 #ifndef SRC_DIAGNOSTICS_LIB_STREAMS_CPP_ENCODE_H_
 #define SRC_DIAGNOSTICS_LIB_STREAMS_CPP_ENCODE_H_
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/stream/cpp/fidl.h>
 #include <zircon/status.h>
 

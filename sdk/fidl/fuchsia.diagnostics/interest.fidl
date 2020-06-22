@@ -1,0 +1,15 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.diagnostics;
+
+/// Interest expresses the scope of clients' desired diagnostics data,
+/// e.g. for filtering messages or controlling their generation.
+table Interest {
+    /// Minimum desired severity. Components should include records at or
+    /// above this severity.
+    ///
+    /// The default is `INFO`.
+    1: Severity min_severity;
+};

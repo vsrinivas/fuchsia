@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 library fuchsia.diagnostics.stream;
+using fuchsia.diagnostics;
 using zx;
 
 /// Maximum number of arguments that can be encoded per record, as specified by the tracing format:
@@ -23,7 +24,7 @@ struct Record {
     /// The monotonic time at which the record was generated.
     zx.time timestamp;
     /// Severity of the record.
-    Severity severity;
+    fuchsia.diagnostics.Severity severity;
     /// The key-value pairs which make up this record.
     vector<Argument>:MAX_ARGS arguments;
 };

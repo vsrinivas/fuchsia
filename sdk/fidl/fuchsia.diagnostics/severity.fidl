@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.diagnostics.stream;
+library fuchsia.diagnostics;
 
 /// The severity of a given record.
+// Note that these severities correspond to and must match the values defined in
+// fuchsia.logger.LogLevelFilter.
 enum Severity : uint8 {
     /// Trace records include detailed information about program execution.
     TRACE = 0x10;
