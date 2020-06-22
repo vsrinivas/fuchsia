@@ -68,7 +68,7 @@ std::vector<RoughTimeServer> TimeServerConfig::ServerList() { return server_list
 bool checkSchema(rapidjson::Document& d) {
   rapidjson::Document sd;
   if (sd.Parse(config_schema).HasParseError()) {
-    FX_LOGS(ERROR) << "Schema not valid";
+    FX_LOGS(WARNING) << "Schema not valid";
     return false;
   }
   rapidjson::SchemaDocument schema(sd);
@@ -78,11 +78,11 @@ bool checkSchema(rapidjson::Document& d) {
     // Output diagnostic information
     rapidjson::StringBuffer sb;
     validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-    FX_LOGS(ERROR) << "Invalid schema: " << sb.GetString();
-    FX_LOGS(ERROR) << "Invalid keyword: " << validator.GetInvalidSchemaKeyword();
+    FX_LOGS(WARNING) << "Invalid schema: " << sb.GetString();
+    FX_LOGS(WARNING) << "Invalid keyword: " << validator.GetInvalidSchemaKeyword();
     sb.Clear();
     validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
-    FX_LOGS(ERROR) << "Invalid document: " << sb.GetString();
+    FX_LOGS(WARNING) << "Invalid document: " << sb.GetString();
     return false;
   }
   return true;
@@ -97,8 +97,8 @@ bool TimeServerConfig::Parse(std::string config_file) {
   rapidjson::Document doc;
   rapidjson::ParseResult ok = doc.Parse(json.c_str());
   if (!ok) {
-    FX_LOGS(ERROR) << "JSON parse error: " << rapidjson::GetParseError_En(ok.Code()) << "("
-                   << ok.Offset() << ")";
+    FX_LOGS(WARNING) << "JSON parse error: " << rapidjson::GetParseError_En(ok.Code()) << "("
+                     << ok.Offset() << ")";
     return false;
   }
   if (!checkSchema(doc)) {
@@ -118,7 +118,7 @@ bool TimeServerConfig::Parse(std::string config_file) {
       std::string address_str = address["address"].GetString();
       uint8_t public_key[roughtime::kPublicKeyLength];
       if (public_key_str.length() != roughtime::kPublicKeyLength * 2) {
-        FX_LOGS(ERROR) << "Invalid public key: " << public_key_str;
+        FX_LOGS(WARNING) << "Invalid public key: " << public_key_str;
         return false;
       }
       for (unsigned int k = 0; k < roughtime::kPublicKeyLength; k++) {

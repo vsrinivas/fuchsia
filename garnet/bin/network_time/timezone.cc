@@ -35,7 +35,9 @@ bool Timezone::Run() {
 std::optional<zx::time_utc> Timezone::UpdateSystemTime(uint32_t tries) {
   TimeServerConfig config;
   if (!config.Parse(server_config_file_)) {
-    FX_LOGS(ERROR) << "Failed to parse config file";
+    // TODO(54524) - move parsing and verification before any fidl calls are handled so we can bail
+    // out early.
+    FX_LOGS(FATAL) << "Failed to parse config file";
     return std::nullopt;
   }
 
@@ -50,7 +52,7 @@ std::optional<zx::time_utc> Timezone::UpdateSystemTime(uint32_t tries) {
   }
 
   if (server == nullptr) {
-    FX_LOGS(ERROR) << "No valid server";
+    FX_LOGS(FATAL) << "No valid server";
     return std::nullopt;
   }
 
@@ -62,8 +64,8 @@ std::optional<zx::time_utc> Timezone::UpdateSystemTime(uint32_t tries) {
         FX_VLOGS(1) << "Can't get time, sleeping for 500ms";
         zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
       } else {
-        FX_LOGS(ERROR) << "Can't get time due to network error after " << tries
-                       << " attempts, abort";
+        FX_LOGS(WARNING) << "Can't get time due to network error after " << tries
+                         << " attempts, abort";
         return std::nullopt;
       }
       continue;

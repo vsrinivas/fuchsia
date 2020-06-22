@@ -58,7 +58,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
     // Log once to cut down on logspam.
     // TODO: Support general LOG_EVERY_N to solve this kind of problem.
     if (!logged_once_) {
-      FX_LOGS(ERROR) << "resolving " << address_ << ": " << gai_strerror(err);
+      FX_LOGS(WARNING) << "resolving " << address_ << ": " << gai_strerror(err);
       logged_once_ = true;
     }
     return {NETWORK_ERROR, {}};
@@ -66,13 +66,13 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   auto ac1 = fit::defer([&]() { freeaddrinfo(addrs); });
   fbl::unique_fd sock_ufd(socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
-    FX_LOGS(ERROR) << "creating UDP socket: " << strerror(errno);
+    FX_LOGS(WARNING) << "creating UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
   int sock_fd = sock_ufd.get();
 
   if (connect(sock_fd, addrs->ai_addr, addrs->ai_addrlen)) {
-    FX_LOGS(ERROR) << "connecting UDP socket: " << strerror(errno);
+    FX_LOGS(WARNING) << "connecting UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
 
@@ -81,7 +81,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
                     NI_NUMERICHOST);
 
   if (err != 0) {
-    FX_LOGS(ERROR) << "getnameinfo: " << gai_strerror(err);
+    FX_LOGS(WARNING) << "getnameinfo: " << gai_strerror(err);
     return {NETWORK_ERROR, {}};
   }
 
@@ -103,7 +103,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   const zx::time start{zx_clock_get_monotonic()};
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
-    FX_LOGS(ERROR) << "send on UDP socket" << strerror(errno);
+    FX_LOGS(WARNING) << "send on UDP socket" << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
 
@@ -116,15 +116,15 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   FD_SET(sock_fd, &readfds);
   int ret = poll(&readfd, 1, timeout);
   if (ret < 0) {
-    FX_LOGS(ERROR) << "poll on UDP socket: " << strerror(errno);
+    FX_LOGS(WARNING) << "poll on UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
   if (ret == 0) {
-    FX_LOGS(ERROR) << "timeout while poll";
+    FX_LOGS(WARNING) << "timeout while poll";
     return {NETWORK_ERROR, {}};
   }
   if (readfd.revents != POLLIN) {
-    FX_LOGS(ERROR) << "poll, revents = " << readfd.revents;
+    FX_LOGS(WARNING) << "poll, revents = " << readfd.revents;
     return {NETWORK_ERROR, {}};
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
@@ -133,7 +133,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   const zx::duration drift = (end - start) / 2;
 
   if (buf_len == -1) {
-    FX_LOGS(ERROR) << "recv from UDP socket: " << strerror(errno);
+    FX_LOGS(WARNING) << "recv from UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
 
@@ -142,7 +142,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   uint64_t timestamp_us;
   if (!roughtime::ParseResponse(&timestamp_us, &radius, &error, public_key_, recv_buf, buf_len,
                                 nonce)) {
-    FX_LOGS(ERROR) << "response from " << address_ << " failed verification: " << error;
+    FX_LOGS(WARNING) << "response from " << address_ << " failed verification: " << error;
     return {BAD_RESPONSE, {}};
   }
 
