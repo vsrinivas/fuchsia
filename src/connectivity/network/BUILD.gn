@@ -7,7 +7,7 @@ declare_args() {
 
   # Transitional flag to enable dns-resolver as the provider for
   # fuchsia.net.name.LookupAdmin and fuchsia.net.NameLookup instead of netstack.
-  use_dns_resolver = true
+  use_dns_resolver = false
 }
 
 group("config") {
