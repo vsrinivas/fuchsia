@@ -93,7 +93,10 @@ test_package("wlanstack-tests") {
   tests = [
     {
       name = "wlanstack_bin_test"
-      environments = basic_envs
-    },
+      environments = [{
+        dimensions = emu_env.dimensions
+        tags = [ "flaky"] # TODO(29873)
+      }]
+    }
   ]
 }
