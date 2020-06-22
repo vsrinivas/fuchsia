@@ -79,7 +79,7 @@ template <typename PatternGenerator>
 MemoryWorkload MakePatternWorkload(std::string_view name, PatternGenerator pattern) {
   MemoryWorkload result;
   result.name = std::string(name);
-  result.exec = [pattern](StatusLine* /*unused*/, MemoryRange* memory) {
+  result.exec = [pattern](StatusLine* /*unused*/, zx::duration /*unused*/, MemoryRange* memory) {
     // Write and verify the pattern followed by its negation.
     TestPatternAndComplement(memory, pattern);
   };
@@ -90,7 +90,7 @@ MemoryWorkload MakePatternWorkload(std::string_view name, PatternGenerator patte
 // Repeatedly open/close individual rows on a RAM bank to try and trigger bit errors.
 //
 // See https://en.wikipedia.org/wiki/Row_hammer for background.
-void RowHammer(StatusLine* status, MemoryRange* memory, uint32_t iterations, uint64_t pattern) {
+void RowHammer(StatusLine* status, MemoryRange* memory, zx::duration duration, uint64_t pattern) {
   constexpr int kAddressesPerIteration = 4;
   constexpr int kReadsPerIteration = 1'000'000;
 
@@ -104,9 +104,13 @@ void RowHammer(StatusLine* status, MemoryRange* memory, uint32_t iterations, uin
 
   // Perform several iterations on different addresses before spending time
   // verifying memory.
-  status->Verbose("Performing %d hammer iterations with pattern %016lx...", iterations, pattern);
+  status->Verbose("Performing RowHammer for %0.2fs with pattern %016lx...",
+                  DurationToSecs(duration), pattern);
   zx::time start = zx::clock::get_monotonic();
-  for (uint32_t i = 0; i < iterations; i++) {
+  uint64_t iterations = 0;
+  while (zx::clock::get_monotonic() - start < duration) {
+    iterations++;
+
     // Select addresses to hammer.
     //
     // Our goal is to force the DRAM to open and close a single row many
@@ -147,9 +151,10 @@ MemoryWorkload MakeRowHammerWorkload(std::string_view name, uint64_t pattern) {
       .name = std::string(name),
 
       // Execute the main RowHammer function.
-      .exec = [pattern](
-                  StatusLine* status,
-                  MemoryRange* memory) { RowHammer(status, memory, /*iterations=*/100, pattern); },
+      .exec =
+          [pattern](StatusLine* status, zx::duration max_duration, MemoryRange* memory) {
+            RowHammer(status, memory, /*duration=*/std::min(max_duration, zx::sec(30)), pattern);
+          },
 
       // Need to use uncached memory to ensure that each access hits main memory.
       .memory_type = CacheMode::kUncached,
@@ -383,7 +388,8 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
 
     // Execute the workload.
     zx::time test_start = zx::clock::get_monotonic();
-    next.workload.exec(status, memory.get());
+    next.workload.exec(status, /*max_duration=*/(end_time - zx::clock::get_monotonic()),
+                       memory.get());
     zx::duration test_duration = zx::clock::get_monotonic() - test_start;
 
     // Calculate test time and throughput.

@@ -24,7 +24,7 @@ TEST(Memory, GenerateMemoryWorkloads) {
   std::unique_ptr<MemoryRange> memory =
       MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
   for (const MemoryWorkload& workload : GenerateMemoryWorkloads()) {
-    workload.exec(&status, memory.get());
+    workload.exec(&status, /*max_duration=*/zx::msec(10), memory.get());
   }
 }
 
