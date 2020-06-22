@@ -22,7 +22,6 @@
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/zbi/zbi-cpp.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>

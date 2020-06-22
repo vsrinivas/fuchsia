@@ -10,7 +10,6 @@
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
-#include <lib/zbi/zbi-cpp.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <stdio.h>

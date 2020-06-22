@@ -10,8 +10,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zbi/zbi-cpp.h>
 #include <lib/zx/vmo.h>
+#include <zircon/boot/image.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 
