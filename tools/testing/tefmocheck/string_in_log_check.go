@@ -79,6 +79,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	allLogTypes := []LogType{SerialLogType, SwarmingOutputType, SyslogType}
 	for _, logType := range allLogTypes {
 		ret = append(ret, stringInLogCheck{String: "ERROR: AddressSanitizer", Log: logType})
+		ret = append(ret, stringInLogCheck{String: "ERROR: LeakSanitizer", Log: logType})
+		ret = append(ret, stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Log: logType})
 		ret = append(ret, stringInLogCheck{String: "ZIRCON KERNEL OOPS", Log: logType})
 		ret = append(ret, stringInLogCheck{String: "ZIRCON KERNEL PANIC", Log: logType})
 	}
