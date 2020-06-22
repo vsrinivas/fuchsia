@@ -4,36 +4,46 @@
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/writer.h"
 
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 namespace feedback {
 
 SystemLogWriter::SystemLogWriter(const std::vector<const std::string>& file_paths,
-                                 const FileSize total_log_size, LogMessageStore* store)
-    : file_paths_(file_paths),
-      individual_file_size_(total_log_size / file_paths.size()),
-      current_file_(individual_file_size_),
-      store_(store) {
+                                 LogMessageStore* store)
+    : file_paths_(file_paths), store_(store) {
   FX_CHECK(file_paths_.size() > 0);
   StartNewFile();
 }
 
-void SystemLogWriter::StartNewFile() { current_file_.Open(file_paths_.front()); }
+void SystemLogWriter::StartNewFile() {
+  if (current_file_descriptor_ >= 0) {
+    close(current_file_descriptor_);
+    current_file_descriptor_ = -1;
+  }
+
+  RotateFilePaths();
+
+  TRACE_DURATION("feedback:io", "SystemLogWriter::OpenFile");
+  current_file_descriptor_ = open(file_paths_.front().c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+}
 
 void SystemLogWriter::Write() {
   TRACE_DURATION("feedback:io", "SystemLogWriter::Write");
-  const std::string str = store_->Consume();
+  bool end_of_block;
+  const std::string str = store_->Consume(&end_of_block);
 
-  FX_CHECK(individual_file_size_.to_bytes() > str.size());
-
-  if (current_file_.BytesRemaining() < str.size()) {
-    current_file_.Close();
-    RotateFilePaths();
-    StartNewFile();
+  // The file descriptor could be negative if the file failed to open.
+  if (current_file_descriptor_ >= 0) {
+    // Overcommit, i.e. write everything we consumed before starting a new file for the next
+    // block as we cannot have a block spanning multiple files.
+    write(current_file_descriptor_, str.c_str(), str.size());
   }
 
-  current_file_.Write(str);
+  if (end_of_block) {
+    StartNewFile();
+  }
 }
 
 void SystemLogWriter::RotateFilePaths() {

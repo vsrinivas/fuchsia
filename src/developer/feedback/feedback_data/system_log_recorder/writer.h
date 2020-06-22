@@ -9,16 +9,13 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/log_message_store.h"
-#include "src/developer/feedback/utils/file_size.h"
-#include "src/developer/feedback/utils/write_only_file.h"
 
 namespace feedback {
 
 // Consumes the full content of a store on request, writing it to a rotating set of files.
 class SystemLogWriter {
  public:
-  SystemLogWriter(const std::vector<const std::string>& log_file_paths, FileSize total_log_size,
-                  LogMessageStore* store);
+  SystemLogWriter(const std::vector<const std::string>& log_file_paths, LogMessageStore* store);
 
   void Write();
 
@@ -31,9 +28,8 @@ class SystemLogWriter {
   void StartNewFile();
 
   const std::vector<const std::string> file_paths_;
-  const FileSize individual_file_size_;
 
-  WriteOnlyFile current_file_;
+  int current_file_descriptor_ = -1;
   LogMessageStore* store_;
 };
 

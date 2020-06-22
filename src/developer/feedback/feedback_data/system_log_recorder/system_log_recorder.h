@@ -8,10 +8,10 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include "lib/zx/time.h"
+#include "src/developer/feedback/feedback_data/system_log_recorder/encoding/encoder.h"
 #include "src/developer/feedback/feedback_data/system_log_recorder/listener.h"
 #include "src/developer/feedback/feedback_data/system_log_recorder/log_message_store.h"
 #include "src/developer/feedback/feedback_data/system_log_recorder/writer.h"
-#include "src/developer/feedback/utils/file_size.h"
 
 namespace feedback {
 
@@ -21,12 +21,12 @@ class SystemLogRecorder {
     zx::duration period;
     size_t max_write_size_bytes;
     const std::vector<const std::string> log_file_paths;
-    FileSize total_log_size;
+    size_t total_log_size_bytes;
   };
 
   SystemLogRecorder(async_dispatcher_t* write_dispatcher,
                     std::shared_ptr<sys::ServiceDirectory> services,
-                    WriteParameters write_parameters);
+                    WriteParameters write_parameters, std::unique_ptr<Encoder> encoder);
   void Start();
 
  private:

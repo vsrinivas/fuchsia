@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/log_message_store.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include "src/developer/feedback/utils/log_format.h"
@@ -27,11 +28,23 @@ std::string MakeRepeatedWarning(const size_t message_count) {
 
 }  // namespace
 
-LogMessageStore::LogMessageStore(size_t max_capacity_bytes)
+LogMessageStore::LogMessageStore(size_t max_block_capacity_bytes,
+                                 size_t max_buffer_capacity_bytes,
+                                 std::unique_ptr<Encoder> encoder)
     : mtx_(),
-      queue_(),
-      max_capacity_bytes_(max_capacity_bytes),
-      bytes_remaining_(max_capacity_bytes_) {}
+      buffer_(),
+      buffer_stats_(max_buffer_capacity_bytes),
+      block_stats_(max_block_capacity_bytes),
+      encoder_(std::move(encoder)) {
+  FX_CHECK(max_block_capacity_bytes >= max_buffer_capacity_bytes);
+}
+
+void LogMessageStore::AddToBuffer(const std::string& str) {
+  const std::string encoded = encoder_->Encode(str);
+  buffer_.push_back(encoded);
+  block_stats_.Use(encoded.size());
+  buffer_stats_.Use(encoded.size());
+}
 
 bool LogMessageStore::Add(fuchsia::logger::LogMessage log) {
   TRACE_DURATION("feedback:io", "LogMessageStore::Add");
@@ -48,65 +61,70 @@ bool LogMessageStore::Add(fuchsia::logger::LogMessage log) {
   // 2. Push the repeated message if any.
   if (last_pushed_message_count_ > 1) {
     const std::string repeated_msg = MakeRepeatedWarning(last_pushed_message_count_);
-    queue_.push_back(std::move(repeated_msg));
-    // We allow the repeated message to go over bound as we control its (small) size.
-    if (bytes_remaining_ < repeated_msg.size()) {
-      bytes_remaining_ = 0;
-    } else {
-      bytes_remaining_ -= repeated_msg.size();
-    }
+    // We always add the repeated message to the buffer, even if it means going over bound as we
+    // control its (small) size.
+    AddToBuffer(repeated_msg);
   }
   last_pushed_message_count_ = 0;
 
   // 3. Early return on full buffer.
-  if (bytes_remaining_ == 0) {
+  if (buffer_stats_.IsFull()) {
     ++num_messages_dropped_;
     return false;
   }
 
   // 4. Serialize incoming message.
-  std::string str = Format(log);
+  const std::string str = Format(log);
 
   // 5. Push the incoming message if below the limit, otherwise drop it.
-  if (str.size() <= bytes_remaining_) {
-    bytes_remaining_ -= str.size();
-    queue_.push_back(std::move(str));
+  if (buffer_stats_.CanUse(str.size())) {
+    AddToBuffer(str);
     last_pushed_message_ = log.msg;
     last_pushed_message_count_ = 1;
     return true;
   } else {
     // We will drop the rest of the incoming messages until the next Consume(). This avoids trying
     // to squeeze in a shorter message that will wrongfully appear before the DROPPED message.
-    bytes_remaining_ = 0;
+    buffer_stats_.MakeFull();
     ++num_messages_dropped_;
     return false;
   }
 }
 
-std::string LogMessageStore::Consume() {
+std::string LogMessageStore::Consume(bool* end_of_block) {
+  FX_CHECK(end_of_block != nullptr);
   TRACE_DURATION("feedback:io", "LogMessageStore::Consume");
 
   std::lock_guard<std::mutex> lk(mtx_);
 
-  // We assume all messages end with a newline character.
-  std::string str = fxl::JoinStrings(queue_);
-
   // Optionally log whether the last message was repeated.
   if (last_pushed_message_count_ > 1) {
-    str += MakeRepeatedWarning(last_pushed_message_count_);
+    AddToBuffer(MakeRepeatedWarning(last_pushed_message_count_));
     last_pushed_message_count_ = 1;
   }
 
   // Optionally log whether some messages were dropped.
   if (num_messages_dropped_ > 0) {
-    str += fxl::StringPrintf(kDroppedFormatStr.c_str(), num_messages_dropped_);
+    AddToBuffer(fxl::StringPrintf(kDroppedFormatStr.c_str(), num_messages_dropped_));
     last_pushed_message_ = "";
     last_pushed_message_count_ = 0;
   }
 
-  queue_.clear();
-  bytes_remaining_ = max_capacity_bytes_;
+  // We assume all messages end with a newline character.
+  std::string str = fxl::JoinStrings(buffer_);
+
+  buffer_.clear();
+  buffer_stats_.Reset();
   num_messages_dropped_ = 0;
+
+  // Reset the encoder at the end of a block.
+  if (block_stats_.IsFull()) {
+    block_stats_.Reset();
+    encoder_->Reset();
+    *end_of_block = true;
+  } else {
+    *end_of_block = false;
+  }
 
   return str;
 }

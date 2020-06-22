@@ -236,20 +236,6 @@ executable("utc_time_provider_unittest_exe") {
   ]
 }
 
-executable("write_only_file_unittest_exe") {
-  testonly = true
-
-  sources = [ "write_only_file_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/utils:files",
-    "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 ###############################################################################
 # RESOURCES
 ###############################################################################
@@ -377,14 +363,6 @@ fuchsia_component("utc_time_provider_unittest") {
   deps = [ ":utc_time_provider_unittest_exe" ]
 }
 
-fuchsia_component("write_only_file_unittest") {
-  testonly = true
-
-  manifest = "meta/write_only_file_unittest.cmx"
-
-  deps = [ ":write_only_file_unittest_exe" ]
-}
-
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -404,7 +382,6 @@ fuchsia_test_package("feedback-utils-tests") {
     ":promise_unittest",
     ":time_unittest",
     ":utc_time_provider_unittest",
-    ":write_only_file_unittest",
   ]
 }
 

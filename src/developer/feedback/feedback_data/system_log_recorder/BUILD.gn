@@ -10,6 +10,7 @@ executable("system_log_recorder") {
 
   deps = [
     ":src",
+    "encoding:production",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
@@ -37,10 +38,10 @@ source_set("src") {
   ]
 
   public_deps = [
+    "encoding:encoder",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:files",
     "//src/developer/feedback/utils:logs",
   ]
 
@@ -59,8 +60,11 @@ source_set("reader") {
     "reader.h",
   ]
 
+  public_deps = [ "encoding:decoder" ]
+
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/trace",
   ]

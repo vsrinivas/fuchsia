@@ -11,8 +11,8 @@
 #include <lib/zx/time.h>
 
 #include "src/developer/feedback/feedback_data/constants.h"
+#include "src/developer/feedback/feedback_data/system_log_recorder/encoding/production_encoding.h"
 #include "src/developer/feedback/feedback_data/system_log_recorder/system_log_recorder.h"
-#include "src/developer/feedback/utils/file_size.h"
 
 constexpr zx::duration kWritePeriod = zx::sec(1);
 
@@ -40,8 +40,9 @@ int main(int argc, const char** argv) {
                                  .period = kWritePeriod,
                                  .max_write_size_bytes = kMaxWriteSizeInBytes,
                                  .log_file_paths = kCurrentLogsFilePaths,
-                                 .total_log_size = FileSize::Kilobytes(kPersistentLogsMaxSizeInKb),
-                             });
+                                 .total_log_size_bytes = kPersistentLogsMaxSizeInKb * 1024,
+                             },
+                             std::unique_ptr<Encoder>(new ProductionEncoder()));
   recorder.Start();
 
   main_loop.Run();

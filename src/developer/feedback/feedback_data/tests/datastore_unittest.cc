@@ -23,6 +23,7 @@
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
+#include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/stubs/board_info_provider.h"
@@ -35,8 +36,6 @@
 #include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/developer/feedback/utils/file_size.h"
-#include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -450,10 +449,9 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
-
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   std::string previous_log_contents = "";
-  for(const auto& filepath : kCurrentLogsFilePaths) {
+  for (const auto& filepath : kCurrentLogsFilePaths) {
     const std::string str = "Log for file:" + filepath + "\n";
     previous_log_contents = str + previous_log_contents;
     WriteFile(filepath, str);

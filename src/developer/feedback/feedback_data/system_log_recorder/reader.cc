@@ -11,6 +11,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "src/lib/fsl/vmo/file.h"
+
 namespace feedback {
 
 namespace {
@@ -24,7 +26,7 @@ size_t GetFileSize(const std::string& file_path) {
 
 }  // namespace
 
-bool Concatenate(const std::vector<const std::string>& input_file_paths,
+bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder* decoder,
                  const std::string& output_file_path) {
   size_t total_bytes = 0;
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
@@ -40,13 +42,11 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths,
     return false;
   }
 
-  std::ifstream in;
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
-    in.open(path->c_str());
-    if (in.is_open()) {
-      out << in.rdbuf();
-    }
-    in.close();
+    fsl::SizedVmo vmo;
+    fsl::VmoFromFilename(*path, &vmo);
+    out << decoder->Decode(vmo);
+    decoder->Reset();
   }
 
   out.flush();

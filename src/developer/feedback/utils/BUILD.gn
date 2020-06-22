@@ -33,16 +33,6 @@ source_set("errors") {
   public_deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("files") {
-  sources = [
-    "file_size.h",
-    "write_only_file.cc",
-    "write_only_file.h",
-  ]
-
-  deps = [ "//zircon/system/ulib/trace" ]
-}
-
 source_set("inspect_node_manager") {
   sources = [
     "inspect_node_manager.cc",
