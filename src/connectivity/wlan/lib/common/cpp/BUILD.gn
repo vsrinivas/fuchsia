@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
 config("wlan_common_config") {
   include_dirs = [ "include" ]
 }
@@ -27,6 +30,7 @@ source_set("common") {
     "include/wlan/common/logging.h",
     "include/wlan/common/mac_frame.h",
     "include/wlan/common/macaddr.h",
+    "include/wlan/common/mcs_rate_lookup.h",
     "include/wlan/common/moving_average.h",
     "include/wlan/common/parse_element.h",
     "include/wlan/common/phy.h",
@@ -35,6 +39,7 @@ source_set("common") {
     "include/wlan/common/write_element.h",
     "mac_frame.cc",
     "macaddr.cc",
+    "mcs_rate_lookup.cc",
     "parse_element.cc",
     "parse_mac_header.cc",
     "perr_destination_parser.cc",
@@ -48,6 +53,7 @@ source_set("common") {
     "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
+    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
     "//zircon/public/lib/async-cpp",
@@ -65,4 +71,26 @@ source_set("common") {
   # TODO(46688): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   public_configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+}
+
+executable("mcs_rate_lookup_test") {
+  output_name = "mcs_rate_lookup_test"
+  testonly = true
+  sources = [ "mcs_rate_lookup_test.cc" ]
+  deps = [
+    ":common",
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+unittest_package("mcs_rate_lookup_tests") {
+  package_name = "mcs-rate-lookup-tests"
+  deps = [ ":mcs_rate_lookup_test" ]
+  tests = [
+    {
+      name = "mcs_rate_lookup_test"
+      environments = basic_envs
+    },
+  ]
 }

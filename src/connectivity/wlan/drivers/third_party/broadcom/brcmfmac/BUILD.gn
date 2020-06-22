@@ -182,6 +182,7 @@ source_set("core") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
+    "//sdk/fidl/fuchsia.wlan.common",
     "//src/devices/lib/broadcom",
     "//src/lib/ddktl",
     "//zircon/public/lib/async",

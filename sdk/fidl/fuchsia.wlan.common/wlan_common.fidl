@@ -71,3 +71,10 @@ enum DriverFeature {
     /// TODO(41640): Remove this flag once FullMAC drivers no longer use SME.
     TEMP_SOFTMAC = 2718281828;
 };
+
+/// HT and VHT guard interval.
+/// See IEEE 802.11-2016 Table 19-1 and Table 21-1.
+enum GuardInterval : uint8 {
+    LONG_GI = 1; // 800 ns
+    SHORT_GI = 2; // 400 ns
+};
