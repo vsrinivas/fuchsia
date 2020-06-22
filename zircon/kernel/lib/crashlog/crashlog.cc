@@ -176,8 +176,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
 
   fprintf(&outfile.stream_, "BACKTRACE (up to 16 calls)\n");
 
-  size_t len =
-      Thread::Current::AppendCurrentBacktrace(outfile.buffer_.data(), outfile.buffer_.size());
+  size_t len = Thread::Current::AppendBacktrace(outfile.buffer_.data(), outfile.buffer_.size());
   outfile.buffer_ = outfile.buffer_.subspan(len);
   fprintf(&outfile.stream_, "\n");
 

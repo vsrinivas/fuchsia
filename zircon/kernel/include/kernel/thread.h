@@ -587,12 +587,16 @@ struct Thread {
       current_thread->preempt_pending_ = true;
     }
 
-    static void PrintCurrentBacktrace();
+    // Print the backtrace on the current thread
+    static void PrintBacktrace();
+
+    // Print the backtrace on the current thread at the given frame.
+    static void PrintBacktraceAtFrame(void* caller_frame);
+
     // Append the backtrace of the current thread to the passed in char pointer up
     // to `len' characters.
     // Returns the number of chars appended.
-    static size_t AppendCurrentBacktrace(char* out, size_t len);
-    static void PrintCurrentBacktraceAtFrame(void* caller_frame);
+    static size_t AppendBacktrace(char* out, size_t len);
 
     static void DumpLocked(bool full) TA_REQ(thread_lock);
     static void Dump(bool full) TA_EXCL(thread_lock);
@@ -826,12 +830,6 @@ void thread_init_early();
 void thread_secondary_cpu_init_early(Thread* t);
 void thread_secondary_cpu_entry() __NO_RETURN;
 void thread_construct_first(Thread* t, const char* name);
-
-// print the backtrace on the current thread
-void thread_print_current_backtrace();
-
-// print the backtrace on the current thread at the given frame
-void thread_print_current_backtrace_at_frame(void* caller_frame);
 
 // Call the arch-specific signal handler.
 extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);

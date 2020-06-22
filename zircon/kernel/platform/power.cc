@@ -65,7 +65,7 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
  */
 __WEAK void platform_specific_halt(platform_halt_action suggested_action,
                                    zircon_crash_reason_t reason, bool halt_on_panic) {
-  thread_print_current_backtrace();
+  Thread::Current::PrintBacktrace();
 
   if constexpr (ENABLE_PANIC_SHELL) {
     if (reason == ZirconCrashReason::Panic) {

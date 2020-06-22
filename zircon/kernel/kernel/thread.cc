@@ -1518,10 +1518,10 @@ static size_t thread_get_backtrace(Thread* t, void* fp, thread_backtrace_t* tb) 
 }
 
 namespace {
-constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
-}
 
-static zx_status_t _thread_print_backtrace(Thread* t, void* fp) {
+constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
+
+zx_status_t thread_print_backtrace(Thread* t, void* fp) {
   if (!t || !fp) {
     return ZX_ERR_BAD_STATE;
   }
@@ -1541,14 +1541,16 @@ static zx_status_t _thread_print_backtrace(Thread* t, void* fp) {
   return ZX_OK;
 }
 
-// print the backtrace of the current thread, at the current spot
-void thread_print_current_backtrace() {
-  _thread_print_backtrace(Thread::Current::Get(), __GET_FRAME(0));
+}  // namespace
+
+// Print the backtrace of the current thread, at the current spot.
+void Thread::Current::PrintBacktrace() {
+  thread_print_backtrace(Thread::Current::Get(), __GET_FRAME(0));
 }
 
-// append the backtrace of the current thread to the passed in char pointer.
-// return the number of chars appended.
-size_t Thread::Current::AppendCurrentBacktrace(char* out, const size_t out_len) {
+// Append the backtrace of the current thread to the passed in char pointer.
+// Return the number of chars appended.
+size_t Thread::Current::AppendBacktrace(char* out, const size_t out_len) {
   Thread* current = Thread::Current::Get();
   void* fp = __GET_FRAME(0);
 
@@ -1577,12 +1579,12 @@ size_t Thread::Current::AppendCurrentBacktrace(char* out, const size_t out_len) 
   return out_len - remain;
 }
 
-// print the backtrace of the current thread, at the given spot
-void thread_print_current_backtrace_at_frame(void* caller_frame) {
-  _thread_print_backtrace(Thread::Current::Get(), caller_frame);
+// Print the backtrace of the current thread, at the given spot.
+void Thread::Current::PrintBacktraceAtFrame(void* caller_frame) {
+  thread_print_backtrace(Thread::Current::Get(), caller_frame);
 }
 
-// print the backtrace of a passed in thread, if possible
+// Print the backtrace of a passed in thread, if possible.
 zx_status_t Thread::PrintBacktrace() {
   // get the starting point if it's in a usable state
   void* fp = NULL;
@@ -1599,7 +1601,7 @@ zx_status_t Thread::PrintBacktrace() {
       return ZX_ERR_BAD_STATE;
   }
 
-  return _thread_print_backtrace(this, fp);
+  return thread_print_backtrace(this, fp);
 }
 
 void Thread::UpdateRuntimeStats(const RuntimeStats& stats) {
