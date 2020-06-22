@@ -68,10 +68,16 @@ async fn monitor_client_events(
 
 async fn monitor_client_connectivity(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    saved_networks: Arc<SavedNetworksManager>,
     selector: Arc<NetworkSelector>,
 ) {
     loop {
         fasync::Timer::new(AUTO_CONNECT_RETRY_SECONDS.seconds().after_now()).await;
+
+        if saved_networks.known_network_count() == 0 {
+            // No saved networks, autoconnect won't succeed. Don't perform a scan/connection attempt
+            continue;
+        }
 
         let temp_iface_manager = iface_manager.clone();
         let temp_iface_manager = temp_iface_manager.lock().await;
@@ -164,8 +170,12 @@ async fn serve_fidl(
             .fuse();
     pin_mut!(client_event_monitor);
 
-    let client_connectivity_monitor =
-        monitor_client_connectivity(cloned_iface_manager.clone(), cloned_selector.clone()).fuse();
+    let client_connectivity_monitor = monitor_client_connectivity(
+        cloned_iface_manager.clone(),
+        saved_networks.clone(),
+        cloned_selector.clone(),
+    )
+    .fuse();
     pin_mut!(client_connectivity_monitor);
 
     loop {

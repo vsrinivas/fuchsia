@@ -203,7 +203,6 @@ impl SavedNetworksManager {
     }
 
     /// Get the count of networks in store, including multiple values with same SSID
-    #[cfg(test)]
     pub fn known_network_count(&self) -> usize {
         self.saved_networks.lock().values().into_iter().flatten().count()
     }

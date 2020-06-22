@@ -138,7 +138,7 @@ async fn serve_provider_requests(
                 InternalMsg::NewPendingScanRequest(output_iterator) => {
                     pending_scans.push(scan::perform_scan(
                         Arc::clone(&iface_manager),
-                        output_iterator, scan::successful_scan_observer, Arc::clone(&network_selector)));
+                        Some(output_iterator), scan::successful_scan_observer, Arc::clone(&network_selector)));
                 }
             },
             // Progress scans.
@@ -461,7 +461,7 @@ pub(crate) async fn connect_to_best_network(
             warn!("failed to reconnect iface: {:?}", e);
         }
     } else {
-        warn!("No saved networks available to connect");
+        info!("No saved networks available to connect");
     }
 }
 
@@ -470,16 +470,7 @@ pub(crate) async fn scan_for_network_selector(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     selector: Arc<network_selection::NetworkSelector>,
 ) {
-    // Drop the requesting side of the transaction because the scan results are not actually needed
-    // in this function, just in the network selector.
-    let (_, server_end) = match fidl::endpoints::create_proxy() {
-        Ok((proxy, server_end)) => (proxy, server_end),
-        Err(e) => {
-            warn!("auto-connect will not be attempted: {:?}", e);
-            return;
-        }
-    };
-    scan::perform_scan(iface_manager, server_end, scan::successful_scan_observer, selector).await;
+    scan::perform_scan(iface_manager, None, scan::successful_scan_observer, selector).await;
 }
 
 /// Handle events from client state machines.

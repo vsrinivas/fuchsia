@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_component::client::connect_to_service,
     futures::{future::join, lock::Mutex, prelude::*},
-    log::{debug, error, info, warn},
+    log::{debug, error, info},
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -41,7 +41,7 @@ impl From<&fidl_sme::BssInfo> for types::Bss {
 /// to better understand its purpose.
 pub(crate) async fn perform_scan<F, G, Fut>(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
+    output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
     successful_scan_observer: F,
     successful_scan_observer_params: G,
 ) where
@@ -57,9 +57,11 @@ pub(crate) async fn perform_scan<F, G, Fut>(
             Ok(txn) => txn,
             Err(error) => {
                 error!("Failed to scan: {:?}", error);
-                send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
-                    .await
-                    .unwrap_or_else(|e| error!("Failed to send scan results: {}", e));
+                if let Some(output_iterator) = output_iterator {
+                    send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
+                        .await
+                        .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
+                }
                 return;
             }
         }
@@ -77,24 +79,31 @@ pub(crate) async fn perform_scan<F, G, Fut>(
                 debug!("Finished getting scan results from SME");
                 let scan_results = convert_scan_info(&scanned_networks);
 
-                // Send the results to the original requester
-                let requester_fut = send_scan_results(output_iterator, &scan_results)
-                    .unwrap_or_else(|e| {
-                        error!("Failed to send scan results to requester: {:?}", e);
-                    });
-
-                // Send the results to all consumers of the successful scan results
+                // Always send the results to all consumers of the successful scan results
                 let observers_fut =
                     successful_scan_observer(scan_results.clone(), successful_scan_observer_params);
 
-                join(requester_fut, observers_fut).await;
+                // If the requester provided a channel, send the results to them
+                if let Some(output_iterator) = output_iterator {
+                    let requester_fut = send_scan_results(output_iterator, &scan_results)
+                        .unwrap_or_else(|e| {
+                            error!("Failed to send scan results to requester: {:?}", e);
+                        });
+                    join(requester_fut, observers_fut).await;
+                } else {
+                    // Otherwise, only the send the results to the observers
+                    observers_fut.await;
+                };
+
                 return;
             }
             fidl_sme::ScanTransactionEvent::OnError { error } => {
                 error!("Scan error from SME: {:?}", error);
-                send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
-                    .await
-                    .unwrap_or_else(|e| error!("Failed to send scan results: {}", e));
+                if let Some(output_iterator) = output_iterator {
+                    send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
+                        .await
+                        .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
+                }
                 return;
             }
         };
@@ -143,7 +152,8 @@ pub async fn successful_scan_observer(
     // Filter out any errors and just log a message.
     // No error recovery, we'll just try again next time a scan result comes in.
     if let Err(e) = send_to_location_sensor(&scan_results).await {
-        warn!("Failed to send scan results to location sensor: {:?}", e)
+        // TODO(52700) Upgrade this to a "warn!" once the location sensor works.
+        debug!("Failed to send scan results to location sensor: {:?}", e)
     } else {
         debug!("Updated location sensor")
     };
@@ -493,7 +503,8 @@ mod tests {
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(client, iter_server, |_, _| async {}, MockNetworkSelection {});
+        let scan_fut =
+            perform_scan(client, Some(iter_server), |_, _| async {}, MockNetworkSelection {});
         pin_mut!(scan_fut);
 
         // Request a chunk of scan results. Progress until waiting on response from server side of
@@ -540,8 +551,12 @@ mod tests {
         // Issue request to scan.
         let (_iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut =
-            perform_scan(client.clone(), iter_server, |_, _| async {}, MockNetworkSelection {});
+        let scan_fut = perform_scan(
+            client.clone(),
+            Some(iter_server),
+            |_, _| async {},
+            MockNetworkSelection {},
+        );
         pin_mut!(scan_fut);
 
         // Progress scan side forward without ever calling getNext() on the scan result iterator
@@ -559,7 +574,7 @@ mod tests {
         let (iter2, iter_server2) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut2 =
-            perform_scan(client, iter_server2, |_, _| async {}, MockNetworkSelection {});
+            perform_scan(client, Some(iter_server2), |_, _| async {}, MockNetworkSelection {});
         pin_mut!(scan_fut2);
 
         // Progress scan side forward
@@ -589,7 +604,8 @@ mod tests {
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_endpoints().expect("failed to create iterator");
-        let scan_fut = perform_scan(client, iter_server, |_, _| async {}, MockNetworkSelection {});
+        let scan_fut =
+            perform_scan(client, Some(iter_server), |_, _| async {}, MockNetworkSelection {});
         pin_mut!(scan_fut);
 
         // Progress scan handler forward so that it will respond to the iterator get next request.
@@ -615,7 +631,8 @@ mod tests {
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(client, iter_server, |_, _| async {}, MockNetworkSelection {});
+        let scan_fut =
+            perform_scan(client, Some(iter_server), |_, _| async {}, MockNetworkSelection {});
         pin_mut!(scan_fut);
 
         // Request a chunk of scan results. Progress until waiting on response from server side of
@@ -666,11 +683,19 @@ mod tests {
             fidl::endpoints::create_proxy().expect("failed to create iterator");
 
         // Issue request to scan on both iterator.
-        let scan_fut0 =
-            perform_scan(client.clone(), iter_server0, |_, _| async {}, MockNetworkSelection {});
+        let scan_fut0 = perform_scan(
+            client.clone(),
+            Some(iter_server0),
+            |_, _| async {},
+            MockNetworkSelection {},
+        );
         pin_mut!(scan_fut0);
-        let scan_fut1 =
-            perform_scan(client, iter_server1, |_, _| async {}, MockNetworkSelection {});
+        let scan_fut1 = perform_scan(
+            client.clone(),
+            Some(iter_server1),
+            |_, _| async {},
+            MockNetworkSelection {},
+        );
         pin_mut!(scan_fut1);
 
         // Request a chunk of scan results on both iterators. Progress until waiting on
@@ -737,7 +762,7 @@ mod tests {
     }
 
     #[test]
-    fn send_successful_scans_to_observers() {
+    fn send_successful_scans_to_observers_with_output_iterator() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
@@ -750,7 +775,7 @@ mod tests {
         // Issue request to scan.
         let scan_fut = perform_scan(
             client,
-            iter_server0,
+            Some(iter_server0),
             move |scan_results, iter_server| async move {
                 send_scan_results(iter_server, &scan_results).await.unwrap();
             },
@@ -804,6 +829,66 @@ mod tests {
             assert_eq!(results, vec![]);
         });
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, vec![]);
+        });
+    }
+
+    #[test]
+    fn send_successful_scans_to_observers_without_output_iterator() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+
+        // Create two sets of endpoints
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+
+        // Issue request to scan.
+        let scan_fut = perform_scan(
+            client,
+            None, // No requester
+            move |scan_results, iter_server| async move {
+                send_scan_results(iter_server, &scan_results).await.unwrap();
+            },
+            iter_server,
+        );
+        pin_mut!(scan_fut);
+
+        // Progress scan handler forward so that it will send an SME request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Create mock scan data and send it via the SME
+        let (input_aps, output_aps) = create_scan_ap_data();
+        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, output_aps);
+        });
+
+        // Request the next chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+
+        // Process scan handler
+        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
+        // scan results.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
             let results = result.expect("Failed to get next scan results").unwrap();
             assert_eq!(results, vec![]);
         });
@@ -881,7 +966,7 @@ mod tests {
         // Include a panic if the observer function is called
         let scan_fut = perform_scan(
             client,
-            iter_server,
+            Some(iter_server),
             |_, _| async { panic!("Should not request observers on failed scan") },
             (),
         );
