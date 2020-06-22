@@ -10,6 +10,7 @@
 #include <limits>
 #include <memory>
 
+#include <fbl/auto_call.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>
 #include <gmock/gmock.h>
@@ -19,6 +20,7 @@
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/utils/lz4_compressor.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/utils/writer.h"
 #include "src/storage/volume_image/volume_descriptor.h"
@@ -223,13 +225,13 @@ TEST(FvmSparseImageTest, FvmSparGeneratePartitionEntryMatchesPartition) {
   EXPECT_EQ(partition.address().mappings.size(), partition_entry.descriptor.extent_count);
 }
 
-TEST(FvmSparseImageTest, FvmSparseCalculateImageSizeForEmptyDescriptorIsHeaderSize) {
+TEST(FvmSparseImageTest, FvmSparseCalculateUncompressedImageSizeForEmptyDescriptorIsHeaderSize) {
   FvmDescriptor descriptor;
-  EXPECT_EQ(sizeof(fvm::sparse_image_t), FvmSparseCalculateImageSize(descriptor));
+  EXPECT_EQ(sizeof(fvm::sparse_image_t), FvmSparseCalculateUncompressedImageSize(descriptor));
 }
 
 TEST(FvmSparseImageTest,
-     FvmSparseCalculateImageSizeWithParitionsAndExtentsMatchesSerializedContent) {
+     FvmSparseCalculateUncompressedImageSizeWithParitionsAndExtentsMatchesSerializedContent) {
   FvmDescriptor descriptor = MakeDescriptor();
   uint64_t header_length = FvmSparseGenerateHeader(descriptor).header_length;
   uint64_t data_length = 0;
@@ -239,7 +241,7 @@ TEST(FvmSparseImageTest,
     }
   }
 
-  EXPECT_EQ(header_length + data_length, FvmSparseCalculateImageSize(descriptor));
+  EXPECT_EQ(header_length + data_length, FvmSparseCalculateUncompressedImageSize(descriptor));
 }
 
 // Fake implementation for reader that delegates operations to a function after performing bound
@@ -333,6 +335,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
 
   auto write_result = FvmSparseWriteImage(descriptor, &writer);
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+  ASSERT_EQ(write_result.value(), FvmSparseCalculateUncompressedImageSize(descriptor));
 
   EXPECT_TRUE(memcmp(&serialized_sparse_image->header, &header, sizeof(fvm::sparse_image_t)) == 0);
 
@@ -360,6 +363,112 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
 
   // Check data is correct.
   uint64_t partition_index = 0;
+  const uint8_t* extents[2][3] = {
+      {serialized_sparse_image->extent_1, serialized_sparse_image->extent_2,
+       serialized_sparse_image->extent_3},
+      {serialized_sparse_image->extent_4, serialized_sparse_image->extent_5}};
+  for (const auto& partition : descriptor.partitions()) {
+    auto read_content = partition_index == 0 ? GetContents<1> : GetContents<2>;
+    std::vector<uint8_t> extent_content;
+    uint64_t extent_index = 0;
+    for (const auto& mapping : partition.address().mappings) {
+      extent_content.resize(mapping.count * partition.volume().block_size, 0);
+      ASSERT_TRUE(
+          read_content(mapping.source * partition.volume().block_size, extent_content).empty());
+      EXPECT_TRUE(memcmp(extents[partition_index][extent_index], extent_content.data(),
+                         extent_content.size()) == 0);
+    }
+  }
+}
+
+TEST(FvmSparseImageTest, FvmSparseWriteImageDataCompressedCompliesWithFormat) {
+  auto serialized_sparse_image = std::make_unique<SerializedSparseImage>();
+  auto buffer = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(serialized_sparse_image.get()),
+                                   sizeof(SerializedSparseImage));
+  BufferWriter writer(buffer);
+
+  FvmOptions options;
+  options.compression.schema = CompressionSchema::kLz4;
+  options.max_volume_size = 20 * (1 << 20);
+  options.slice_size = 8192;
+
+  auto partition_1_result =
+      Partition::Create(kSerializedVolumeImage1, std::make_unique<FakeReader>(GetContents<1>));
+  ASSERT_TRUE(partition_1_result.is_ok()) << partition_1_result.error();
+
+  auto partition_2_result =
+      Partition::Create(kSerializedVolumeImage2, std::make_unique<FakeReader>(GetContents<2>));
+  ASSERT_TRUE(partition_2_result.is_ok()) << partition_2_result.error();
+
+  FvmDescriptor::Builder builder;
+  auto result = builder.SetOptions(options)
+                    .AddPartition(partition_2_result.take_value())
+                    .AddPartition(partition_1_result.take_value())
+                    .Build();
+  ASSERT_TRUE(result.is_ok()) << result.error();
+  auto descriptor = result.take_value();
+
+  auto header = FvmSparseGenerateHeader(descriptor);
+  std::vector<FvmSparsePartitionEntry> partitions;
+  for (const auto& partition : descriptor.partitions()) {
+    partitions.push_back(FvmSparseGeneratePartitionEntry(options.slice_size, partition));
+  }
+
+  Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
+  auto write_result = FvmSparseWriteImage(descriptor, &writer, &compressor);
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+  uint64_t compressed_extents_size = write_result.value() - header.header_length;
+
+  EXPECT_TRUE(memcmp(&serialized_sparse_image->header, &header, sizeof(fvm::sparse_image_t)) == 0);
+
+  // Check partition and entry descriptors.
+  auto it = descriptor.partitions().begin();
+  const auto& partition_1 = *it++;
+  auto partition_1_entry = FvmSparseGeneratePartitionEntry(options.slice_size, partition_1);
+  ASSERT_NO_FATAL_FAILURE(PartitionsAreEqual(serialized_sparse_image->partition_1.descriptor,
+                                             partition_1_entry.descriptor));
+  EXPECT_TRUE(memcmp(&serialized_sparse_image->partition_1.extents[0],
+                     &partition_1_entry.extents[0], sizeof(fvm::extent_descriptor_t)) == 0);
+  EXPECT_TRUE(memcmp(&serialized_sparse_image->partition_1.extents[1],
+                     &partition_1_entry.extents[1], sizeof(fvm::extent_descriptor_t)) == 0);
+  EXPECT_TRUE(memcmp(&serialized_sparse_image->partition_1.extents[2],
+                     &partition_1_entry.extents[2], sizeof(fvm::extent_descriptor_t)) == 0);
+
+  const auto& partition_2 = *it++;
+  auto partition_2_entry = FvmSparseGeneratePartitionEntry(options.slice_size, partition_2);
+  ASSERT_NO_FATAL_FAILURE(PartitionsAreEqual(serialized_sparse_image->partition_2.descriptor,
+                                             partition_2_entry.descriptor));
+  EXPECT_TRUE(memcmp(&serialized_sparse_image->partition_2.extents[0],
+                     &partition_2_entry.extents[0], sizeof(fvm::extent_descriptor_t)) == 0);
+  EXPECT_TRUE(memcmp(&serialized_sparse_image->partition_2.extents[1],
+                     &partition_2_entry.extents[1], sizeof(fvm::extent_descriptor_t)) == 0);
+
+  // Decompress extent data.
+  LZ4F_decompressionContext_t decompression_context = nullptr;
+  auto release_decompressor = fbl::MakeAutoCall([&decompression_context]() {
+    if (decompression_context != nullptr) {
+      LZ4F_freeDecompressionContext(decompression_context);
+    }
+  });
+  auto create_return_code = LZ4F_createDecompressionContext(&decompression_context, LZ4F_VERSION);
+  ASSERT_FALSE(LZ4F_isError(create_return_code)) << LZ4F_getErrorName(create_return_code);
+
+  std::vector<uint8_t> decompressed_extents(
+      sizeof(SerializedSparseImage) - offsetof(SerializedSparseImage, extent_1), 0);
+  size_t decompressed_byte_count = decompressed_extents.size();
+  size_t consumed_compressed_bytes = compressed_extents_size;
+  auto decompress_return_code =
+      LZ4F_decompress(decompression_context, decompressed_extents.data(), &decompressed_byte_count,
+                      serialized_sparse_image->extent_1, &consumed_compressed_bytes, nullptr);
+  ASSERT_FALSE(LZ4F_isError(decompress_return_code));
+  ASSERT_EQ(decompressed_byte_count, decompressed_extents.size());
+  ASSERT_EQ(consumed_compressed_bytes, compressed_extents_size);
+  // Check data is correct.
+  uint64_t partition_index = 0;
+
+  // Copy the uncompressed data over the compressed data.
+  memcpy(serialized_sparse_image->extent_1, decompressed_extents.data(),
+         decompressed_extents.size());
   const uint8_t* extents[2][3] = {
       {serialized_sparse_image->extent_1, serialized_sparse_image->extent_2,
        serialized_sparse_image->extent_3},
@@ -466,7 +575,7 @@ class FvmSparseReaderImpl final : public fvm::ReaderInterface {
   size_t cursor_ = 0;
 };
 
-TEST(FvmSparseImageTest, SparseReaderIsAbleToParseSerializedData) {
+TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
   auto serialized_sparse_image = std::make_unique<SerializedSparseImage>();
   auto buffer = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(serialized_sparse_image.get()),
                                    sizeof(SerializedSparseImage));
@@ -522,6 +631,65 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseSerializedData) {
       extent_index++;
     }
     partition_index++;
+  }
+}
+
+TEST(FvmSparseImageTest, SparseReaderIsAbleToParseCompressedSerializedData) {
+  auto serialized_sparse_image = std::make_unique<SerializedSparseImage>();
+  auto buffer = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(serialized_sparse_image.get()),
+                                   sizeof(SerializedSparseImage));
+  BufferWriter writer(buffer);
+
+  FvmOptions options;
+  options.compression.schema = CompressionSchema::kLz4;
+  options.max_volume_size = 20 * (1 << 20);
+  options.slice_size = 8192;
+
+  auto partition_1_result =
+      Partition::Create(kSerializedVolumeImage1, std::make_unique<FakeReader>(GetContents<1>));
+  ASSERT_TRUE(partition_1_result.is_ok()) << partition_1_result.error();
+
+  auto partition_2_result =
+      Partition::Create(kSerializedVolumeImage2, std::make_unique<FakeReader>(GetContents<2>));
+  ASSERT_TRUE(partition_2_result.is_ok()) << partition_2_result.error();
+
+  FvmDescriptor::Builder builder;
+  auto result = builder.SetOptions(options)
+                    .AddPartition(partition_2_result.take_value())
+                    .AddPartition(partition_1_result.take_value())
+                    .Build();
+  ASSERT_TRUE(result.is_ok()) << result.error();
+  auto descriptor = result.take_value();
+
+  Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
+  auto write_result = FvmSparseWriteImage(descriptor, &writer, &compressor);
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  std::unique_ptr<FvmSparseReaderImpl> sparse_reader_impl(new FvmSparseReaderImpl(buffer));
+  std::unique_ptr<fvm::SparseReader> sparse_reader = nullptr;
+  // This verifies metadata(header, partition descriptors and extent descriptors.)
+  ASSERT_EQ(ZX_OK, fvm::SparseReader::Create(std::move(sparse_reader_impl), &sparse_reader));
+
+  // Verify that data is read accordingly.
+  for (const auto& partition : descriptor.partitions()) {
+    std::vector<uint8_t> decompressed_extent_content;
+    std::vector<uint8_t> original_extent_content;
+
+    // Check that extents match each other.
+    for (const auto& mapping : partition.address().mappings) {
+      decompressed_extent_content.resize(mapping.count * partition.volume().block_size, 0);
+      original_extent_content.resize(mapping.count * partition.volume().block_size, 0);
+      size_t read_bytes = 0;
+      ASSERT_EQ(ZX_OK, sparse_reader->ReadData(decompressed_extent_content.data(),
+                                               decompressed_extent_content.size(), &read_bytes));
+      ASSERT_EQ(decompressed_extent_content.size(), read_bytes);
+      std::string read_result = partition.reader()->Read(
+          mapping.source,
+          fbl::Span(original_extent_content.data(), original_extent_content.size()));
+      ASSERT_TRUE(read_result.empty()) << read_result;
+      EXPECT_TRUE(memcmp(decompressed_extent_content.data(), original_extent_content.data(),
+                         decompressed_extent_content.size()));
+    }
   }
 }
 

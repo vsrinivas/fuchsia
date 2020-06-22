@@ -12,6 +12,7 @@
 #include <fvm/fvm-sparse.h>
 
 #include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/utils/compressor.h"
 #include "src/storage/volume_image/utils/extent.h"
 
 namespace storage::volume_image {
@@ -63,6 +64,105 @@ template <typename T>
 fbl::Span<const uint8_t> FixedSizeStructToSpan(const T& typed_content) {
   return fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&typed_content), sizeof(T));
 }
+
+class NoopCompressor final : public Compressor {
+ public:
+  fit::result<void, std::string> Prepare(Handler handler) final {
+    handler_ = std::move(handler);
+    return fit::ok();
+  }
+
+  fit::result<void, std::string> Compress(fbl::Span<const uint8_t> uncompressed_data) final {
+    handler_(uncompressed_data);
+    return fit::ok();
+  }
+
+  fit::result<void, std::string> Finalize() final { return fit::ok(); }
+
+ private:
+  Handler handler_ = nullptr;
+};
+
+fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescriptor& descriptor,
+                                                               Writer* writer,
+                                                               Compressor* compressor) {
+  uint64_t current_offset = 0;
+
+  // Write the header.
+  fvm::sparse_image_t header = FvmSparseGenerateHeader(descriptor);
+  auto result = writer->Write(current_offset, FixedSizeStructToSpan(header));
+  if (!result.empty()) {
+    return fit::error(result);
+  }
+  current_offset += sizeof(fvm::sparse_image_t);
+
+  for (const auto& partition : descriptor.partitions()) {
+    FvmSparsePartitionEntry entry =
+        FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
+    auto partition_result = writer->Write(current_offset, FixedSizeStructToSpan(entry.descriptor));
+    if (!partition_result.empty()) {
+      return fit::error(partition_result);
+    }
+    current_offset += sizeof(fvm::partition_descriptor_t);
+
+    for (const auto& extent : entry.extents) {
+      auto extent_result = writer->Write(current_offset, FixedSizeStructToSpan(extent));
+      if (!extent_result.empty()) {
+        return fit::error(extent_result);
+      }
+      current_offset += sizeof(fvm::extent_descriptor_t);
+    }
+  }
+
+  if (current_offset != header.header_length) {
+    return fit::error("fvm::sparse_image_t data does not start at header_length.");
+  }
+
+  std::vector<uint8_t> data(kReadBufferSize, 0);
+  compressor->Prepare(
+      [&current_offset, writer](auto compressed_data) -> fit::result<void, std::string> {
+        std::string extent_data_write_error = writer->Write(current_offset, compressed_data);
+        if (!extent_data_write_error.empty()) {
+          return fit::error(extent_data_write_error);
+        }
+        current_offset += compressed_data.size();
+        return fit::ok();
+      });
+  for (const auto& partition : descriptor.partitions()) {
+    const auto* reader = partition.reader();
+    for (const auto& mapping : partition.address().mappings) {
+      uint64_t remaining_bytes = mapping.count * partition.volume().block_size;
+
+      memset(data.data(), 0, data.size());
+
+      uint64_t read_offset = mapping.source * partition.volume().block_size;
+      while (remaining_bytes > 0) {
+        uint64_t bytes_to_read = std::min(kReadBufferSize, remaining_bytes);
+        remaining_bytes -= bytes_to_read;
+        auto buffer_view = fbl::Span(data.data(), bytes_to_read);
+
+        std::string extent_data_read_error = reader->Read(read_offset, buffer_view);
+        if (!extent_data_read_error.empty()) {
+          return fit::error(extent_data_read_error);
+        }
+        read_offset += bytes_to_read;
+
+        auto compress_result = compressor->Compress(buffer_view);
+        if (compress_result.is_error()) {
+          return fit::error(compress_result.take_error());
+        }
+      }
+    }
+  }
+  auto finalize_result = compressor->Finalize();
+  if (finalize_result.is_error()) {
+    return finalize_result.take_error_result();
+  }
+
+  // |current_offset| now contains the total written bytes.
+  return fit::ok(current_offset);
+}
+
 }  // namespace
 
 fvm::sparse_image_t FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
@@ -112,74 +212,16 @@ FvmSparsePartitionEntry FvmSparseGeneratePartitionEntry(uint64_t slice_size,
   return partition_entry;
 }
 
-fit::result<void, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
-                                                   Writer* writer) {
-  uint64_t current_offset = 0;
-
-  // Write the header.
-  fvm::sparse_image_t header = FvmSparseGenerateHeader(descriptor);
-  auto result = writer->Write(current_offset, FixedSizeStructToSpan(header));
-  if (!result.empty()) {
-    return fit::error(result);
+fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
+                                                       Writer* writer, Compressor* compressor) {
+  if (compressor == nullptr) {
+    NoopCompressor noop_compressor;
+    return FvmSparseWriteImageInternal(descriptor, writer, &noop_compressor);
   }
-  current_offset += sizeof(fvm::sparse_image_t);
-
-  for (const auto& partition : descriptor.partitions()) {
-    FvmSparsePartitionEntry entry =
-        FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
-    auto partition_result = writer->Write(current_offset, FixedSizeStructToSpan(entry.descriptor));
-    if (!partition_result.empty()) {
-      return fit::error(partition_result);
-    }
-    current_offset += sizeof(fvm::partition_descriptor_t);
-
-    for (const auto& extent : entry.extents) {
-      auto extent_result = writer->Write(current_offset, FixedSizeStructToSpan(extent));
-      if (!extent_result.empty()) {
-        return fit::error(extent_result);
-      }
-      current_offset += sizeof(fvm::extent_descriptor_t);
-    }
-  }
-
-  if (current_offset != header.header_length) {
-    return fit::error("fvm::sparse_image_t data does not start at header_length.");
-  }
-
-  // TODO(gevalentino): In order to add compression support of the partition data, we need to
-  // provide a compression context for this entire chunk.
-  std::vector<uint8_t> data(kReadBufferSize, 0);
-  for (const auto& partition : descriptor.partitions()) {
-    const auto* reader = partition.reader();
-    for (const auto& mapping : partition.address().mappings) {
-      uint64_t remaining_bytes = mapping.count * partition.volume().block_size;
-
-      memset(data.data(), 0, data.size());
-
-      uint64_t read_offset = mapping.source * partition.volume().block_size;
-      while (remaining_bytes > 0) {
-        uint64_t bytes_to_read = std::min(kReadBufferSize, remaining_bytes);
-        remaining_bytes -= bytes_to_read;
-        auto buffer_view = fbl::Span(data.data(), bytes_to_read);
-
-        std::string extent_data_read_error = reader->Read(read_offset, buffer_view);
-        if (!extent_data_read_error.empty()) {
-          return fit::error(extent_data_read_error);
-        }
-        read_offset += bytes_to_read;
-
-        std::string extent_data_write_error = writer->Write(current_offset, buffer_view);
-        if (!extent_data_write_error.empty()) {
-          return fit::error(extent_data_write_error);
-        }
-        current_offset += bytes_to_read;
-      }
-    }
-  }
-  return fit::ok();
+  return FvmSparseWriteImageInternal(descriptor, writer, compressor);
 }
 
-uint64_t FvmSparseCalculateImageSize(const FvmDescriptor& descriptor) {
+uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor) {
   uint64_t image_size = sizeof(fvm::sparse_image_t);
 
   for (const auto& partition : descriptor.partitions()) {

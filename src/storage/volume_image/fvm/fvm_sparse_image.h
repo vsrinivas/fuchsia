@@ -9,6 +9,7 @@
 
 #include "src/storage/volume_image/fvm/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
+#include "src/storage/volume_image/utils/compressor.h"
 #include "src/storage/volume_image/utils/writer.h"
 
 namespace storage::volume_image {
@@ -41,10 +42,13 @@ FvmSparsePartitionEntry FvmSparseGeneratePartitionEntry(uint64_t slice_size,
                                                         const Partition& partition);
 
 // Returns the size in bytes of the generated sparse image for |descriptor|.
-uint64_t FvmSparseCalculateImageSize(const FvmDescriptor& descriptor);
+uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor);
 
-// Returns |fit::ok| when successfully writing a |sparse_image_t| and its data with |writer|.
-fit::result<void, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor, Writer* writer);
+// Returns the size of the written image in bytes when successfully writing a |sparse_image_t| and
+// its data with |writer|.
+fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
+                                                       Writer* writer,
+                                                       Compressor* compressor = nullptr);
 
 }  // namespace storage::volume_image
 

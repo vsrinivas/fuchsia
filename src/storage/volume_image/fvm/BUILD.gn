@@ -45,11 +45,11 @@ source_set("fvm-sparse-image") {
   public = [ "fvm_sparse_image.h" ]
   public_deps = [
     ":fvm-descriptor",
-    "//src/storage/volume_image/utils:io-interfaces",
+    "//src/storage/volume_image/utils:compression-interfaces",
     "//src/storage/volume_image/utils:io-interfaces",
     "//zircon/system/ulib/fvm",
   ]
-  deps = []
+  deps = [ "//src/storage/volume_image/utils:lz4-compression" ]
 }
 
 source_set("fvm-test") {
@@ -68,8 +68,10 @@ source_set("fvm-test") {
     "//src/lib/json_parser",
     "//src/storage/volume_image/serialization:schema",
     "//src/storage/volume_image/utils:guid",
+    "//src/storage/volume_image/utils:lz4-compression",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/lz4",
     "//zircon/system/ulib/fvm",
   ]
 }
