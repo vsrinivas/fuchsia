@@ -329,7 +329,7 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netemul_dhcp_tests#meta/dhcp_validity_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity-test.cmx",
          "max_severity": "ERROR"
       },
       {
@@ -341,15 +341,15 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_fuchsia_c_api_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-fuchsia-c-api-test.cmx",
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_if_nameindex_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-if-nameindex-test.cmx",
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_no_network_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-no-network-test.cmx",
          "max_severity": "ERROR"
       },
       {

@@ -283,11 +283,6 @@ test("name_provider_service_not_present_test") {
   ]
 }
 
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/connect_test", "")
-  write_file("$root_out_dir/netstack_external_network_test", "")
-}
-
 # This target contains the test package netstack_c_api_tests and the
 # dependencies needed in the image/universe to run the tests within it.
 # There's currently no way to express a dependency between packages in the build
@@ -312,74 +307,83 @@ group("netstack_c_api_tests") {
   ]
 }
 
-test_package("netstack_c_api_tests_inner") {
-  package_name = "netstack_c_api_tests"
-  deps = [
-    ":name_provider_no_network_test",
-    ":name_provider_service_not_present_test",
-    ":netemul_empty_binaries",
-    ":netstack_bsdsocket_c_api_test",
-    ":netstack_external_network_test_client",
-    ":netstack_fuchsia_c_api_test",
-    ":netstack_if_nameindex_test",
-    ":netstack_no_network_test",
-    "connect",
+fuchsia_component("connect") {
+  testonly = true
+  manifest = "meta/connect.cmx"
+  deps = [ "connect" ]
+}
+
+fuchsia_component("connect-test") {
+  testonly = true
+  manifest = "meta/connect_test.cmx"
+  deps = [ ":connect" ]
+}
+
+fuchsia_component("netstack-external-network-test-client") {
+  testonly = true
+  manifest = "meta/netstack_external_network_test_client.cmx"
+  deps = [ ":netstack_external_network_test_client" ]
+}
+
+fuchsia_component("netstack-external-network-test") {
+  testonly = true
+  manifest = "meta/netstack_external_network_test.cmx"
+  deps = [ ":netstack-external-network-test-client" ]
+}
+
+fuchsia_component("name-provider-no-network-test") {
+  testonly = true
+  manifest = "meta/name_provider_no_network_test.cmx"
+  deps = [ ":name_provider_no_network_test" ]
+}
+
+fuchsia_component("name-provider-service-not-present-test") {
+  testonly = true
+  manifest = "meta/name_provider_service_not_present_test.cmx"
+  deps = [ ":name_provider_service_not_present_test" ]
+}
+
+fuchsia_component("netstack-bsdsocket-c-api-test") {
+  testonly = true
+  manifest = "meta/netstack_bsdsocket_c_api_test.cmx"
+  deps = [ ":netstack_bsdsocket_c_api_test" ]
+}
+
+fuchsia_component("netstack-fuchsia-c-api-test") {
+  testonly = true
+  manifest = "meta/netstack_fuchsia_c_api_test.cmx"
+  deps = [ ":netstack_fuchsia_c_api_test" ]
+}
+
+fuchsia_component("netstack-if-nameindex-test") {
+  testonly = true
+  manifest = "meta/netstack_if_nameindex_test.cmx"
+  deps = [ ":netstack_if_nameindex_test" ]
+}
+
+fuchsia_component("netstack-no-network-test") {
+  testonly = true
+  manifest = "meta/netstack_no_network_test.cmx"
+  deps = [ ":netstack_no_network_test" ]
+}
+
+fuchsia_test_package("netstack_c_api_tests_inner") {
+  package_name = "netstack-c-api-tests"
+
+  test_components = [
+    ":connect-test",
+    ":name-provider-no-network-test",
+    ":name-provider-service-not-present-test",
+    ":netstack-external-network-test",
+    ":netstack-bsdsocket-c-api-test",
+    ":netstack-fuchsia-c-api-test",
+    ":netstack-if-nameindex-test",
+    ":netstack-no-network-test",
   ]
+
+  test_specs = {
+    environments = [ emu_env ]
+  }
 
   visibility = [ ":*" ]
-
-  binaries = [
-    {
-      name = "connect"
-    },
-    {
-      name = "netstack_external_network_test_client"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/connect.cmx")
-      dest = "connect.cmx"
-    },
-    {
-      path = rebase_path("meta/netstack_external_network_test_client.cmx")
-      dest = "netstack_external_network_test_client.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "connect_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "name_provider_service_not_present_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "name_provider_no_network_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_bsdsocket_c_api_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_if_nameindex_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_external_network_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_fuchsia_c_api_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_no_network_test"
-      environments = [ emu_env ]
-    },
-  ]
 }

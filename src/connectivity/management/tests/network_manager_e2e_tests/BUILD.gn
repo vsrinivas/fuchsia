@@ -2,38 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/network_manager_e2e_nat_test", "")
+fuchsia_component("network-manager-e2e-nat") {
+  testonly = true
+  manifest = "nat/meta/bin.cmx"
+  deps = [ "nat:network_manager_e2e_nat" ]
 }
 
-test_package("network-manager-e2e-tests") {
-  deps = [ "nat:network_manager_e2e_nat" ]
-  meta = [
-    {
-      path = rebase_path("nat/meta/bin.cmx")
-      dest = "network_manager_e2e_nat.cmx"
-    },
-  ]
-  binaries = [
-    {
-      name = "network_manager_e2e_nat"
-    },
-  ]
-  tests = [
-    {
-      name = "network_manager_e2e_nat_test"
-      manifest = "nat/meta/test.cmx"
-      environments = [ emu_env ]
+fuchsia_component("network-manager-e2e-nat-test") {
+  testonly = true
+  manifest = "nat/meta/test.cmx"
+  deps = [ ":network-manager-e2e-nat" ]
+}
 
-      # TODO(fxbug.dev/52124): fix this test and re-enable it.
-      disabled = true
-    },
-  ]
+fuchsia_test_package("network-manager-e2e-tests") {
+  test_components = [ ":network-manager-e2e-nat-test" ]
+  test_specs = {
+    # TODO(fxbug.dev/52124): fix this test and re-enable it.
+    environments = []
+  }
 }
 
 group("tests") {

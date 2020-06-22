@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
-            "default_url": "fuchsia-pkg://fuchsia.com/network-manager-e2e-tests#meta/network_manager_e2e_nat.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/network-manager-e2e-tests#meta/network_manager-e2e-nat.cmx",
             "environment": {
                 "children": [
                     {

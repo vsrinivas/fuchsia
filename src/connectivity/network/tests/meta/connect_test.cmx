@@ -23,7 +23,7 @@
                                     "--remote",
                                     "192.168.0.1"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/connect.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/connect.cmx"
                             }
                         ]
                     },
@@ -45,7 +45,7 @@
                                 "arguments": [
                                     "server"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/connect.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/connect.cmx"
                             }
                         ]
                     }

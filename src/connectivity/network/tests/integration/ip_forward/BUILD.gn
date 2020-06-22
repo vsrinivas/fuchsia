@@ -3,40 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test_package("netemul-ip-forward-test") {
-  deps = [
-    ":ip_forward",
-    ":netemul_empty_binaries",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ip_forward.cmx")
-      dest = "ip_forward.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "ip_forward"
-    },
-  ]
-
-  tests = [
-    {
-      name = "ipv4_forward_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "ipv6_forward_test"
-      environments = [ emu_env ]
-    },
-  ]
-}
-
-rustc_binary("ip_forward") {
+rustc_binary("bin") {
+  name = "ip_forward"
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
@@ -52,7 +22,27 @@ rustc_binary("ip_forward") {
   ]
 }
 
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/ipv4_forward_test", "")
-  write_file("$root_out_dir/ipv6_forward_test", "")
+fuchsia_component("ip-forward") {
+  testonly = true
+  manifest = "meta/ip_forward.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("ipv4-forward-test") {
+  testonly = true
+  manifest = "meta/ipv4_forward_test.cmx"
+  deps = [ ":ip-forward" ]
+}
+
+fuchsia_component("ipv6-forward-test") {
+  testonly = true
+  manifest = "meta/ipv6_forward_test.cmx"
+  deps = [ ":ip-forward" ]
+}
+
+fuchsia_test_package("netemul-ip-forward-test") {
+  test_components = [
+    ":ipv4-forward-test",
+    ":ipv6-forward-test",
+  ]
 }

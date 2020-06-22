@@ -23,7 +23,7 @@
                             }
                         ],
                         "test": [
-                            "fuchsia-pkg://fuchsia.com/netemul_dhcp_tests#meta/dhcp_validity.cmx"
+                            "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity.cmx"
                         ]
                     }
                 ]

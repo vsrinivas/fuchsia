@@ -2,72 +2,62 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("dhcp_integration_tests") {
   testonly = true
   public_deps = [
-    ":netemul_dhcp_tests",
+    ":netemul-dhcp-tests",
     "//src/connectivity/network/dhcpv6/client",
     "//src/connectivity/network/testing/netemul:guest",
   ]
 }
 
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/dhcp_validity_test", "")
+# This is the config file that dhcpd will use for the dhcp_validity test.  An address pool
+# with a single address is provided so that when the Netstack DHCP client runs, it gets a
+# predictable IP address.
+resource("dhcpd_config") {
+  sources = [ "dhcp_validity/data/dhcpd.conf" ]
+  outputs = [ "data/dhcpd.conf" ]
 }
 
-test_package("netemul_dhcp_tests") {
+# This bash script is run on the Debian guest to configure it for the dhcp_validity test.
+# The guest's ethernet interface is given a static IP address, /etc/default/isc-dhcp-server
+# is written so that DHCP is served on that interface, and then dhcpd is started.
+resource("dhcp_setup") {
+  sources = [ "dhcp_validity/data/dhcp_setup.sh" ]
+  outputs = [ "data/dhcp_setup.sh" ]
+}
+
+# This is the DHCPv6 config file that dhcpd will use for the dhcp_validity test.
+# The list of DNS servers configured in this file is expected in test. The address pool
+# configured in this file is necessary for dhcpd to start, and the actual range is not
+# important.
+resource("dhcp6_setup") {
+  sources = [ "dhcp_validity/data/dhcpd6.conf" ]
+  outputs = [ "data/dhcpd6.conf" ]
+}
+
+fuchsia_component("dhcp-validity") {
+  manifest = "meta/dhcp_validity.cmx"
+  deps = [ "dhcp_validity:test" ]
+}
+
+fuchsia_component("dhcp-validity-test") {
+  manifest = "meta/dhcp_validity_test.cmx"
   deps = [
-    ":netemul_empty_binaries",
-    "dhcp_validity:test",
+    ":dhcp-validity",
+    ":dhcp6_setup",
+    ":dhcp_setup",
+    ":dhcpd_config",
   ]
+}
 
-  resources = [
-    {
-      # This is the DHCPv4 config file that dhcpd will use for the dhcp_validity test. An address
-      # pool with a single address is provided so that when the Netstack DHCPv4 client runs, it
-      # gets a predictable IP address.
-      path = "dhcp_validity/data/dhcpd.conf"
-      dest = "dhcpd.conf"
-    },
-    {
-      # This is the DHCPv6 config file that dhcpd will use for the dhcp_validity test.
-      # The list of DNS servers configured in this file is expected in test. The address pool
-      # configured in this file is necessary for dhcpd to start, and the actual range is not
-      # important.
-      path = "dhcp_validity/data/dhcpd6.conf"
-      dest = "dhcpd6.conf"
-    },
-    {
-      # This bash script is run on the Debian guest to configure it for the dhcp_validity test.
-      # The guest's ethernet interface is given a static IP address, /etc/default/isc-dhcp-server
-      # is written so that DHCP is served on that interface, and then dhcpd is started.
-      path = "dhcp_validity/data/dhcp_setup.sh"
-      dest = "dhcp_setup.sh"
-    },
-  ]
+fuchsia_test_package("netemul-dhcp-tests") {
+  test_components = [ ":dhcp-validity-test" ]
 
-  meta = [
-    {
-      path = rebase_path("meta/dhcp_validity.cmx")
-      dest = "dhcp_validity.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "dhcp_validity"
-    },
-  ]
-
-  tests = [
-    {
-      name = "dhcp_validity_test"
-
-      # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-      environments = nuc_env_fails_on_asan
-    },
-  ]
+  # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  test_specs = {
+    environments = nuc_env_fails_on_asan
+  }
 }

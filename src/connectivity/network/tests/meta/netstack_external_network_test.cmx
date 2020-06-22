@@ -1,7 +1,7 @@
 {
     "facets": {
         "fuchsia.netemul": {
-            "default_url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_external_network_test_client.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-external-network-test-client.cmx",
             "environment": {
                 "devices": [
                     "device"

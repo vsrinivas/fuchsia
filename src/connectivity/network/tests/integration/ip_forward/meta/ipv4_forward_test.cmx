@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
-            "default_url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/ip_forward.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/ip-forward.cmx",
             "environment": {
                 "children": [
                     {
@@ -116,7 +116,7 @@
         }
     },
     "program": {
-        "binary": "test/ip_forward_test"
+        "binary": "test/ip-forward_test"
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
 }
