@@ -41,8 +41,8 @@ zx_status_t Semaphore::Wait(const Deadline& deadline) {
   // operation, or by a timeout or signal.  Whatever happens, return the reason
   // the wait operation ended.
   Thread* current_thread = Thread::Current::Get();
-  current_thread->interruptable_ = true;
+  current_thread->interruptible_ = Interruptible::Yes;
   zx_status_t ret = waitq_.Block(deadline);
-  current_thread->interruptable_ = false;
+  current_thread->interruptible_ = Interruptible::No;
   return ret;
 }

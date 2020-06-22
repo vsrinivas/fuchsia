@@ -208,7 +208,7 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   t->state_ = THREAD_INITIAL;
   t->signals_ = 0;
   t->blocked_status_ = ZX_OK;
-  t->interruptable_ = false;
+  t->interruptible_ = Interruptible::No;
 
   t->retcode_ = 0;
 
@@ -356,14 +356,14 @@ zx_status_t Thread::Suspend() {
       break;
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
-      // thread is blocked on something and marked interruptable
-      if (interruptable_) {
+      // thread is blocked on something and marked interruptible
+      if (interruptible_ == Interruptible::Yes) {
         WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_RETRY);
       }
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (interruptable_) {
+      if (interruptible_ == Interruptible::Yes) {
         blocked_status_ = ZX_ERR_INTERNAL_INTR_RETRY;
 
         local_resched = Scheduler::Unblock(this);
@@ -613,14 +613,14 @@ void Thread::Kill() {
       break;
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
-      // thread is blocked on something and marked interruptable
-      if (interruptable_) {
+      // thread is blocked on something and marked interruptible
+      if (interruptible_ == Interruptible::Yes) {
         WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_KILLED);
       }
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (interruptable_) {
+      if (interruptible_ == Interruptible::Yes) {
         blocked_status_ = ZX_ERR_INTERNAL_INTR_KILLED;
 
         local_resched = Scheduler::Unblock(this);
@@ -1001,10 +1001,11 @@ static zx_duration_t sleep_slack(zx_time_t deadline, zx_time_t now) {
  * if other threads are running.  When the deadline occurrs, this thread will
  * be placed at the head of the run queue.
  *
- * interruptable argument allows this routine to return early if the thread was signaled
+ * interruptible argument allows this routine to return early if the thread was signaled
  * for something.
  */
-zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now) {
+zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible interruptible,
+                                      zx_time_t now) {
   Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
@@ -1021,8 +1022,8 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptab
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
-  // if we've been killed and going in interruptable, abort here
-  if (interruptable && unlikely((current_thread->signals_))) {
+  // if we've been killed and going in interruptible, abort here
+  if (interruptible == Interruptible::Yes && unlikely((current_thread->signals_))) {
     if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
       return ZX_ERR_INTERNAL_INTR_KILLED;
     } else {
@@ -1036,9 +1037,9 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptab
   current_thread->state_ = THREAD_SLEEPING;
   current_thread->blocked_status_ = ZX_OK;
 
-  current_thread->interruptable_ = interruptable;
+  current_thread->interruptible_ = interruptible;
   Scheduler::Block();
-  current_thread->interruptable_ = false;
+  current_thread->interruptible_ = Interruptible::No;
 
   // always cancel the timer, since we may be racing with the timer tick on other cpus
   timer.Cancel();
@@ -1048,20 +1049,20 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptab
 
 zx_status_t Thread::Current::Sleep(zx_time_t deadline) {
   const zx_time_t now = current_time();
-  return SleepEtc(Deadline::no_slack(deadline), false, now);
+  return SleepEtc(Deadline::no_slack(deadline), Interruptible::No, now);
 }
 
 zx_status_t Thread::Current::SleepRelative(zx_duration_t delay) {
   const zx_time_t now = current_time();
   const Deadline deadline = Deadline::no_slack(zx_time_add_duration(now, delay));
-  return SleepEtc(deadline, false, now);
+  return SleepEtc(deadline, Interruptible::No, now);
 }
 
-zx_status_t Thread::Current::SleepInterruptable(zx_time_t deadline) {
+zx_status_t Thread::Current::SleepInterruptible(zx_time_t deadline) {
   const zx_time_t now = current_time();
   const TimerSlack slack(sleep_slack(deadline, now), TIMER_SLACK_LATE);
   const Deadline slackDeadline(deadline, slack);
-  return SleepEtc(slackDeadline, true, now);
+  return SleepEtc(slackDeadline, Interruptible::Yes, now);
 }
 
 /**
@@ -1390,8 +1391,9 @@ void dump_thread_locked(Thread* t, bool full_dump) {
             (t->flags_ & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
             (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "", (t->flags_ & THREAD_FLAG_VCPU) ? "Vc" : "");
 
-    dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d, wait queues owned %s\n",
-            t->blocking_wait_queue_, t->blocked_status_, t->interruptable_,
+    dprintf(INFO, "\twait queue %p, blocked_status %d, interruptible %s, wait queues owned %s\n",
+            t->blocking_wait_queue_, t->blocked_status_,
+            t->interruptible_ == Interruptible::Yes ? "yes" : "no",
             t->owned_wait_queues_.is_empty() ? "no" : "yes");
 
     dprintf(INFO, "\taspace %p\n", t->aspace_);

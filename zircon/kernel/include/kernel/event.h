@@ -56,22 +56,22 @@ class Event {
   // ZX_ERR_INTERNAL_INTR_KILLED - thread killed
   // ZX_ERR_INTERNAL_INTR_RETRY - thread is suspended
   // Or the |status| which the caller specified in Event::Signal(status)
-  zx_status_t Wait(const Deadline& deadline) { return WaitWorker(deadline, true, 0); }
+  zx_status_t Wait(const Deadline& deadline) { return WaitWorker(deadline, Interruptible::Yes, 0); }
 
   // Same as Wait() but waits forever and gives a mask of signals to ignore.
-  // The caller must be interruptable.
+  // The caller must be interruptible.
   zx_status_t WaitWithMask(uint signal_mask) {
-    return WaitWorker(Deadline::infinite(), true, signal_mask);
+    return WaitWorker(Deadline::infinite(), Interruptible::Yes, signal_mask);
   }
 
-  // no deadline, non interruptable version of the above.
-  zx_status_t Wait() { return WaitWorker(Deadline::infinite(), false, 0); }
+  // no deadline, non interruptible version of the above.
+  zx_status_t Wait() { return WaitWorker(Deadline::infinite(), Interruptible::No, 0); }
 
   // Wait until deadline
-  // Interruptable arg allows it to return early with ZX_ERR_INTERNAL_INTR_KILLED if thread
+  // Interruptible arg allows it to return early with ZX_ERR_INTERNAL_INTR_KILLED if thread
   // is signaled for kill or with ZX_ERR_INTERNAL_INTR_RETRY if the thread is suspended.
-  zx_status_t WaitDeadline(zx_time_t deadline, bool interruptable) {
-    return WaitWorker(Deadline::no_slack(deadline), interruptable, 0);
+  zx_status_t WaitDeadline(zx_time_t deadline, Interruptible interruptible) {
+    return WaitWorker(Deadline::no_slack(deadline), interruptible, 0);
   }
 
   // All Signal variations return the number of threads woken.
@@ -95,7 +95,7 @@ class Event {
       : magic_(kMagic), result_(initial ? ZX_OK : kNotSignalled), flags_(flags) {}
 
  private:
-  zx_status_t WaitWorker(const Deadline& deadline, bool interruptable, uint signal_mask);
+  zx_status_t WaitWorker(const Deadline& deadline, Interruptible interruptible, uint signal_mask);
   int SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thread_lock);
 
   static constexpr uint32_t kMagic = fbl::magic("evnt");

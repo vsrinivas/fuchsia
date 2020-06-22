@@ -49,6 +49,9 @@ enum class ResourceOwnership {
   Reader,
 };
 
+// Whether a block or a sleep can be interrupted.
+enum class Interruptible : bool { No, Yes };
+
 // When signaling to a wait queue that the priority of one of its blocked
 // threads has changed, this enum is used as a signal indicating whether or not
 // the priority change should be propagated down the PI chain (if any) or not.
@@ -461,15 +464,16 @@ struct Thread {
 
     // Wait until the deadline has occurred.
     //
-    // If interruptable, may return early with ZX_ERR_INTERNAL_INTR_KILLED if
+    // If interruptible, may return early with ZX_ERR_INTERNAL_INTR_KILLED if
     // thread is signaled for kill.
-    static zx_status_t SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now);
-    // Non-interruptable version of SleepEtc.
+    static zx_status_t SleepEtc(const Deadline& deadline, Interruptible interruptible,
+                                zx_time_t now);
+    // Non-interruptible version of SleepEtc.
     static zx_status_t Sleep(zx_time_t deadline);
-    // Non-interruptable relative delay version of Sleep.
+    // Non-interruptible relative delay version of Sleep.
     static zx_status_t SleepRelative(zx_duration_t delay);
-    // Interruptable version of Sleep.
-    static zx_status_t SleepInterruptable(zx_time_t deadline);
+    // Interruptible version of Sleep.
+    static zx_status_t SleepInterruptible(zx_time_t deadline);
 
     static void SignalPolicyException();
 
@@ -722,8 +726,8 @@ struct Thread {
   // return code if woken up abnormally from suspend, sleep, or block
   zx_status_t blocked_status_;
 
-  // are we allowed to be interrupted on the current thing we're blocked/sleeping on
-  bool interruptable_;
+  // Are we allowed to be interrupted on the current thing we're blocked/sleeping on?
+  Interruptible interruptible_;
 
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in thread context

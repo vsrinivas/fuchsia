@@ -343,8 +343,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
   }
 
   // Wait for the unplug thread to get scheduled on the target.
-  const bool interruptable = false;
-  status = unplug_done.WaitDeadline(deadline, interruptable);
+  status = unplug_done.WaitDeadline(deadline, Interruptible::No);
   if (status != ZX_OK) {
     return status;
   }

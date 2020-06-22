@@ -173,7 +173,7 @@ static void timer_far_deadline(void) {
 
   const Deadline deadline = Deadline::no_slack(ZX_TIME_INFINITE - 5);
   timer.Set(deadline, timer_diag_cb, &event);
-  zx_status_t st = event.WaitDeadline(current_time() + ZX_MSEC(100), false);
+  zx_status_t st = event.WaitDeadline(current_time() + ZX_MSEC(100), Interruptible::No);
   if (st != ZX_ERR_TIMED_OUT) {
     printf("error: unexpected timer fired!\n");
   } else {

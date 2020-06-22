@@ -142,7 +142,7 @@ static int mutex_inherit_test() {
         // wait on a event for a period of time, to try to have other grabber threads
         // need to tweak our priority in either one of the mutexes we hold or the
         // blocking event
-        args->test_blocker.WaitDeadline(current_time() + ZX_USEC(rand() % 10u), true);
+        args->test_blocker.WaitDeadline(current_time() + ZX_USEC(rand() % 10u), Interruptible::Yes);
 
         // release in reverse order
         for (int j = r - 1; j >= 0; j--) {
@@ -200,7 +200,7 @@ static int event_waiter(void* arg) {
 
   while (args.count > 0) {
     printf("thread %p: waiting on event...\n", Thread::Current::Get());
-    zx_status_t status = args.event->WaitDeadline(ZX_TIME_INFINITE, true);
+    zx_status_t status = args.event->WaitDeadline(ZX_TIME_INFINITE, Interruptible::Yes);
     if (status == ZX_ERR_INTERNAL_INTR_KILLED) {
       printf("thread %p: killed\n", Thread::Current::Get());
       return -1;
@@ -560,9 +560,9 @@ static int sleeper_kill_thread(void* arg) {
   Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
-  zx_status_t err = Thread::Current::SleepInterruptable(t + ZX_SEC(5));
+  zx_status_t err = Thread::Current::SleepInterruptible(t + ZX_SEC(5));
   zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
-  TRACEF("thread_sleep_interruptable returns %d after %" PRIi64 " msecs\n", err, duration);
+  TRACEF("thread_sleep_interruptible returns %d after %" PRIi64 " msecs\n", err, duration);
 
   return 0;
 }
@@ -573,7 +573,7 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
   Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
-  zx_status_t err = e->WaitDeadline(ZX_TIME_INFINITE, true);
+  zx_status_t err = e->WaitDeadline(ZX_TIME_INFINITE, Interruptible::Yes);
   zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
   TRACEF("event_wait_deadline returns %d after %" PRIi64 " msecs\n", err, duration);
 
@@ -586,7 +586,7 @@ static int waiter_kill_thread(void* arg) {
   Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
-  zx_status_t err = e->WaitDeadline(t + ZX_SEC(5), true);
+  zx_status_t err = e->WaitDeadline(t + ZX_SEC(5), Interruptible::Yes);
   zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
   TRACEF("event_wait_deadline with deadline returns %d after %" PRIi64 " msecs\n", err, duration);
 
@@ -830,11 +830,11 @@ __NO_INLINE static void priority_test() {
   nt->SetCpuAffinity(cpu_num_to_mask(other));
   nt->Resume();
 
-  zx_status_t status = ev.WaitDeadline(ZX_TIME_INFINITE, true);
+  zx_status_t status = ev.WaitDeadline(ZX_TIME_INFINITE, Interruptible::Yes);
   ASSERT(status == ZX_OK);
   nt->SetPriority(DEFAULT_PRIORITY);
 
-  status = ev.WaitDeadline(ZX_TIME_INFINITE, true);
+  status = ev.WaitDeadline(ZX_TIME_INFINITE, Interruptible::Yes);
   ASSERT(status == ZX_OK);
   nt->SetPriority(HIGH_PRIORITY);
 

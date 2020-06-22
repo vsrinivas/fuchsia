@@ -54,7 +54,8 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
     return ZX_ERR_TIMED_OUT;
   }
 
-  if (current_thread->interruptable_ && (unlikely(current_thread->signals_ & ~signal_mask))) {
+  if (current_thread->interruptible_ == Interruptible::Yes &&
+      (unlikely(current_thread->signals_ & ~signal_mask))) {
     if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
       return ZX_ERR_INTERNAL_INTR_KILLED;
     } else if (current_thread->signals_ & THREAD_SIGNAL_SUSPEND) {
