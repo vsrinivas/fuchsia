@@ -28,12 +28,12 @@ generally non-invasive. If it causes bugs in your shell environment, please
 file project bugs.
 
 If for some reason you need to work with multiple Fuchsia checkouts
-(recommended workflows below should obviate such a need), then you may wish
+(recommended workflows below should obviate such a need), then you may want
 to do something other than the above. In this case, there are a few well
 supported methods:
 
 * Always execute `$FUCHSIA_DIR/scripts/fx` explicitly
-* Use something like a cdenter or dotenv feature to add
+* Use a tool like [dotenv](https://www.npmjs.com/package/dotenv){:.external} to add
   `$FUCHSIA_DIR/.jiri_root/bin` to your `$PATH` while working in a particular
   Fuchsia directory.
 
