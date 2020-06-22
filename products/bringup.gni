@@ -9,6 +9,7 @@ bootfs_only = true
 on_second_thought_keep_on_astro = true
 
 kernel_cmdline_args = [
+  "blobfs.userpager=true",
   "console.shell=true",
   "devmgr.log-to-debuglog=true",
   "kernel.enable-debugging-syscalls=true",
