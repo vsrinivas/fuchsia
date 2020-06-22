@@ -5,9 +5,97 @@
 //! PCAPNG block definitions.
 
 use {
-    anyhow::{format_err, Error},
+    packet::BufferView,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
+
+use crate::Result;
+
+// The `is_valid_block` calls on each block should pass with good test vectors.
+#[test]
+fn good_format_test() -> Result {
+    let shb = SectionHeader {
+        btype: 0x0A0D0D0A,
+        tot_length: 68,
+        magic: 0x1A2B3C4D,
+        major: 1,
+        minor: 0,
+        section_length: -1,
+        tot_length2: 68,
+    };
+
+    let idb = InterfaceDescription {
+        btype: 1,
+        tot_length: 24,
+        linktype: 1,
+        reserved: 0xFFFF,
+        snaplen: 0xABCD,
+        tot_length2: 24,
+    };
+
+    let spb = SimplePacket { btype: 3, tot_length: 56, packet_length: 40 };
+
+    assert!(shb.is_valid_block().is_ok());
+    assert!(idb.is_valid_block().is_ok());
+    assert!(spb.is_valid_block().is_ok());
+    Ok(())
+}
+
+// The `is_valid_block` calls on each block should fail given invalid data.
+#[test]
+fn bad_format_test() -> Result {
+    let shb: [u8; SECTION_HEADER_LENGTH] = [37; SECTION_HEADER_LENGTH];
+    let idb: [u8; INTERFACE_DESCRIPTION_LENGTH] = [24; INTERFACE_DESCRIPTION_LENGTH];
+    let spb: [u8; SIMPLE_PACKET_LENGTH] = [42; SIMPLE_PACKET_LENGTH];
+
+    let mut shb_slice = &mut &shb[..];
+    let mut idb_slice = &mut &idb[..];
+    let mut spb_slice = &mut &spb[..];
+
+    let section_header = shb_slice.take_obj_front::<SectionHeader>().unwrap();
+    let interface_description = idb_slice.take_obj_front::<InterfaceDescription>().unwrap();
+    let simple_packet = spb_slice.take_obj_front::<SimplePacket>().unwrap();
+
+    assert!(section_header.into_ref().is_valid_block().is_err());
+    assert!(interface_description.into_ref().is_valid_block().is_err());
+    assert!(simple_packet.into_ref().is_valid_block().is_err());
+
+    Ok(())
+}
+
+// Consume section header and interface description blocks.
+// Returns unconsumed left-over `buf_mut`.
+pub fn consume_shb_idb<'a>(mut buf_mut: &'a mut &'a [u8]) -> Result<&'a mut &'a [u8]> {
+    let section_header = buf_mut
+        .take_obj_front::<SectionHeader>()
+        .expect("Data cannot be read as a section header block!");
+    section_header.into_ref().is_valid_block()?;
+
+    let interface_description = buf_mut
+        .take_obj_front::<InterfaceDescription>()
+        .expect("Data cannot be read as an interface description block!");
+    interface_description.into_ref().is_valid_block()?;
+    Ok(buf_mut)
+}
+
+// Parse a simple packet block.
+// Returns (unconsumed left-over `buf_mut`, packet, packet size).
+pub fn parse_simple_packet<'a>(
+    mut buf_mut: &'a mut &'a [u8],
+) -> Result<(&'a mut &'a [u8], &'a [u8], usize)> {
+    let simple_packet_slice = buf_mut.take_obj_front::<SimplePacket>().unwrap();
+    let simple_packet = simple_packet_slice.into_ref();
+    simple_packet.is_valid_block()?;
+
+    let packet = buf_mut.take_front(with_padding(simple_packet.packet_length) as usize).unwrap();
+    // The trailing total length of each simple packet block must equal the one at the start.
+    let simple_packet_trailer = buf_mut.take_obj_front::<SimplePacketTrailer>().unwrap();
+    let tot_length = simple_packet.tot_length;
+    let tot_length2 = simple_packet_trailer.tot_length2;
+    assert_eq!(tot_length, tot_length2);
+
+    Ok((buf_mut, packet, simple_packet.packet_length as usize))
+}
 
 // Macros to check values and generate `Errors`.
 macro_rules! check_align {
@@ -15,7 +103,11 @@ macro_rules! check_align {
         if ($value) % 4 == 0 {
             Ok(())
         } else {
-            Err(format_err!("{} = {} is not a multiple of 4 octets.", stringify!($value), $value))
+            Err(anyhow::anyhow!(
+                "{} = {} is not a multiple of 4 octets.",
+                stringify!($value),
+                $value
+            ))
         }
     };
 }
@@ -25,7 +117,7 @@ macro_rules! min_value {
         if ($value) >= ($min) {
             Ok(())
         } else {
-            Err(format_err!("{} = {} is not at least {}.", stringify!($value), $value, $min))
+            Err(anyhow::anyhow!("{} = {} is not at least {}.", stringify!($value), $value, $min))
         }
     };
 }
@@ -35,7 +127,7 @@ macro_rules! eq_value {
         if ($value) == ($exp) {
             Ok(())
         } else {
-            Err(format_err!(
+            Err(anyhow::anyhow!(
                 "Incorrect value of {}, got {}, expected {}.",
                 stringify!($value),
                 $value,
@@ -54,14 +146,14 @@ pub trait PcapngBlock {
     fn total_length(&self) -> u32;
 
     // True if total length is valid.
-    fn has_valid_total_length(&self) -> Result<(), Error> {
+    fn has_valid_total_length(&self) -> Result {
         let total_length = self.total_length();
         check_align!(total_length)?;
         min_value!(total_length, self.minimum_length())
     }
 
     // Assert that the block data layout meets the specifications.
-    fn is_valid_block(&self) -> Result<(), Error>;
+    fn is_valid_block(&self) -> Result;
 }
 
 // PCAPNG section header block with no options.
@@ -120,7 +212,7 @@ impl PcapngBlock for SectionHeader {
         self.tot_length
     }
 
-    fn is_valid_block(&self) -> Result<(), Error> {
+    fn is_valid_block(&self) -> Result {
         let btype = self.btype; // Avoid borrow from unaligned struct in `assert_eq`.
         eq_value!(btype, 0x0A0D0D0A)?; // Magic value.
 
@@ -155,7 +247,7 @@ impl PcapngBlock for InterfaceDescription {
         self.tot_length
     }
 
-    fn is_valid_block(&self) -> Result<(), Error> {
+    fn is_valid_block(&self) -> Result {
         let btype = self.btype;
         eq_value!(btype, 1)?; // Magic value.
 
@@ -186,7 +278,7 @@ impl PcapngBlock for SimplePacket {
         self.tot_length
     }
 
-    fn is_valid_block(&self) -> Result<(), Error> {
+    fn is_valid_block(&self) -> Result {
         let btype = self.btype;
         eq_value!(btype, 3)?; // Magic value.
 

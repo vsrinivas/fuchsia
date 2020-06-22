@@ -35,7 +35,7 @@ class Packet {
 
   void reset() {
     frame_length = 0;
-    frame = nullptr;
+    eth = nullptr;
     ip = nullptr;
     transport = nullptr;
   }
@@ -47,7 +47,10 @@ class Packet {
 
   // `frame_len` is supplied by the client user of filter, so it is expected in host byte order.
   uint16_t frame_length;
-  const struct ethhdr* frame;
+
+  // All the parsed headers will point to the equivalent private storage areas where headers are
+  // copied to, that prevents misaligned memory access when accessing fields.
+  const struct ethhdr* eth;
   union {
     const struct iphdr* ip;  // For both IPv4 and IPv6.
     const struct ip6_hdr* ipv6;
@@ -56,6 +59,17 @@ class Packet {
     const struct tcphdr* tcp;
     const struct udphdr* udp;
     const void* transport;
+  };
+
+ private:
+  struct ethhdr eth_storage_;
+  union {
+    struct iphdr ip_storage_;  // For both IPv4 and IPv6.
+    struct ip6_hdr ipv6_storage_;
+  };
+  union {
+    struct tcphdr tcp_storage_;
+    struct udphdr udp_storage_;
   };
 };
 

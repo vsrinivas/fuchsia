@@ -25,6 +25,7 @@
 #include <zircon/boot/netboot.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <cstdint>
@@ -224,9 +225,9 @@ inline bool to_highlight(const Packet& packet, const NetdumpOptions& options) {
 uint16_t parse_l2_packet(const Packet& packet, const NetdumpOptions& options,
                          std::stringstream* stream) {
   ZX_ASSERT(stream != nullptr);
-  uint16_t ethtype = ntohs(packet.frame->h_proto);
+  uint16_t ethtype = ntohs(packet.eth->h_proto);
   if (options.link_level) {
-    *stream << mac_to_string(packet.frame->h_source) << " > " << mac_to_string(packet.frame->h_dest)
+    *stream << mac_to_string(packet.eth->h_source) << " > " << mac_to_string(packet.eth->h_dest)
             << ", ethertype " << ethtype_to_string(ethtype) << " (0x" << std::hex << ethtype
             << std::dec << "), ";
   }
@@ -446,7 +447,7 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count, const Netdu
 
         bool do_write = true;  // Whether the packet is included for write-out to dumpfile.
         packet.populate(buffer, length);
-        if (packet.frame == nullptr) {
+        if (packet.eth == nullptr) {
           stats->pkts_len_small++;
           stats->bytes_len_small += length;
           // Not setting `do_write` to false in order to record small frames.
@@ -768,6 +769,13 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
+  zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
+  if (directory_request != ZX_HANDLE_INVALID) {
+    // We don't serve anything, we can close the directory request immediately.
+    // This is used in integration tests as a signal that netdump is running and attached to the
+    // device; if one day netdump needs to serve anything the integration tests need to be updated.
+    zx_handle_close(directory_request);
+  }
   netdump::Stats stats = {};
   handle_rx(rx_fifo, iobuf, count, options, &stats);
 

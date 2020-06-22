@@ -37,7 +37,7 @@ static Packet SetupEth(uint16_t ethtype) {
   test_frame.h_proto = ethtype;
   std::copy(src_mac.begin(), src_mac.end(), test_frame.h_source);
   std::copy(dst_mac.begin(), dst_mac.end(), test_frame.h_dest);
-  packet.frame = &test_frame;
+  packet.eth = &test_frame;
   return packet;
 }
 
@@ -88,7 +88,7 @@ void FrameLengthTest(FrameLengthFn filter_fn) {
 
 void EthtypeTest(EthtypeFn filter_fn) {
   Packet null_packet = SetupEth(htons(0x1430));
-  null_packet.frame = nullptr;
+  null_packet.eth = nullptr;
   EXPECT_FALSE(filter_fn(htons(0x1430))->match(null_packet));
 
   EXPECT_TRUE(filter_fn(htons(0x1430))->match(SetupEth(htons(0x1430))));
@@ -403,12 +403,12 @@ inline struct ethhdr* SetupPopulateBuffer(uint16_t ethtype, uint8_t* buffer) {
 TEST(NetdumpFilterTest, PopulatePacketEthernetTest) {
   uint8_t buffer[BUFFER_LENGTH];
   Packet packet;
-  auto frame = SetupPopulateBuffer(0, buffer);
+  auto eth_hdr = SetupPopulateBuffer(0, buffer);
 
   // Unrecognized ethtype.
   packet.populate(buffer, BUFFER_LENGTH);
   EXPECT_EQ(BUFFER_LENGTH, packet.frame_length);
-  EXPECT_EQ(frame, packet.frame);
+  EXPECT_BYTES_EQ(eth_hdr, packet.eth, sizeof(struct ethhdr));
   EXPECT_NULL(packet.ip);
   EXPECT_NULL(packet.transport);
 
@@ -416,21 +416,21 @@ TEST(NetdumpFilterTest, PopulatePacketEthernetTest) {
   SetupPopulateBuffer(ntohs(ETH_P_IP), buffer);
   packet.populate(buffer, ETH_HLEN - 1);
   EXPECT_EQ(ETH_HLEN - 1, packet.frame_length);
-  EXPECT_NULL(packet.frame);
+  EXPECT_NULL(packet.eth);
   EXPECT_NULL(packet.ip);
   EXPECT_NULL(packet.transport);
 
   // Incomplete L3 headers.
   packet.populate(buffer, ETH_HLEN + 1);
   EXPECT_EQ(ETH_HLEN + 1, packet.frame_length);
-  EXPECT_EQ(frame, packet.frame);
+  EXPECT_BYTES_EQ(eth_hdr, packet.eth, sizeof(struct ethhdr));
   EXPECT_NULL(packet.ip);
   EXPECT_NULL(packet.transport);
 }
 
 void PopulatePacketIPTest(size_t iphdr_len, uint8_t* transport_protocol, uint8_t* buffer) {
   Packet packet;
-  auto frame = reinterpret_cast<struct ethhdr*>(buffer);
+  auto eth = reinterpret_cast<struct ethhdr*>(buffer);
   auto ip = reinterpret_cast<struct iphdr*>(buffer + ETH_HLEN);
   void* transport = buffer + ETH_HLEN + iphdr_len;
 
@@ -438,38 +438,38 @@ void PopulatePacketIPTest(size_t iphdr_len, uint8_t* transport_protocol, uint8_t
   *transport_protocol = 0;
   packet.populate(buffer, BUFFER_LENGTH);
   EXPECT_EQ(BUFFER_LENGTH, packet.frame_length);
-  EXPECT_EQ(frame, packet.frame);
-  EXPECT_EQ(ip, packet.ip);
+  EXPECT_BYTES_EQ(eth, packet.eth, sizeof(struct ethhdr));
+  EXPECT_BYTES_EQ(ip, packet.ip, sizeof(struct iphdr));
   EXPECT_NULL(packet.transport);
 
   // UDP headers.
   *transport_protocol = IPPROTO_UDP;
   packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(struct udphdr)));
   EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(struct udphdr), packet.frame_length);
-  EXPECT_EQ(frame, packet.frame);
-  EXPECT_EQ(ip, packet.ip);
-  EXPECT_EQ(transport, packet.transport);
+  EXPECT_BYTES_EQ(eth, packet.eth, sizeof(struct ethhdr));
+  EXPECT_BYTES_EQ(ip, packet.ip, sizeof(struct iphdr));
+  EXPECT_BYTES_EQ(transport, packet.udp, sizeof(struct udphdr));
 
   // Incomplete UDP headers.
   packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + 1));
   EXPECT_EQ(ETH_HLEN + iphdr_len + 1, packet.frame_length);
-  EXPECT_EQ(frame, packet.frame);
-  EXPECT_EQ(ip, packet.ip);
+  EXPECT_BYTES_EQ(eth, packet.eth, sizeof(struct ethhdr));
+  EXPECT_BYTES_EQ(ip, packet.ip, sizeof(struct iphdr));
   EXPECT_NULL(packet.transport);
 
   // TCP headers.
   *transport_protocol = IPPROTO_TCP;
   packet.populate(buffer, BUFFER_LENGTH);
   EXPECT_EQ(BUFFER_LENGTH, packet.frame_length);
-  EXPECT_EQ(frame, packet.frame);
-  EXPECT_EQ(ip, packet.ip);
-  EXPECT_EQ(transport, packet.transport);
+  EXPECT_BYTES_EQ(eth, packet.eth, sizeof(struct ethhdr));
+  EXPECT_BYTES_EQ(ip, packet.ip, sizeof(struct iphdr));
+  EXPECT_BYTES_EQ(transport, packet.tcp, sizeof(struct tcphdr));
 
   // Incomplete TCP headers, length sufficient for UDP but not TCP.
   packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(struct udphdr)));
   EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(struct udphdr), packet.frame_length);
-  EXPECT_EQ(frame, packet.frame);
-  EXPECT_EQ(ip, packet.ip);
+  EXPECT_BYTES_EQ(eth, packet.eth, sizeof(struct ethhdr));
+  EXPECT_BYTES_EQ(ip, packet.ip, sizeof(struct iphdr));
   EXPECT_NULL(packet.transport);
 }
 

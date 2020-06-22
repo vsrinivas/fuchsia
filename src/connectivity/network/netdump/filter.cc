@@ -8,35 +8,41 @@
 
 namespace netdump {
 
+static_assert(ETH_HLEN == sizeof(struct ethhdr));
+
 void Packet::populate(const void* buffer, uint16_t length) {
   reset();
   frame_length = length;
   auto next = reinterpret_cast<const uint8_t*>(buffer);
   auto end = next + length;  // Points to end of buffer.
 
-  if (length < ETH_HLEN) {
+  if (next + sizeof(eth_storage_) > end) {
     return;
   }
-  frame = reinterpret_cast<const struct ethhdr*>(next);
+  memcpy(&eth_storage_, next, sizeof(eth_storage_));
+  eth = &eth_storage_;
   // TODO(CONN-143): Handle VLAN encapsulation.
-  next += ETH_HLEN;
+  next += sizeof(eth_storage_);
 
-  uint16_t ethtype = ntohs(frame->h_proto);
+  uint16_t ethtype = ntohs(eth->h_proto);
   uint8_t transport_protocol = 0;
   switch (ethtype) {
     case ETH_P_IP:
-      if (next + sizeof(struct iphdr) > end) {
+      if (next + sizeof(ip_storage_) > end) {
         return;
       }
-      ip = reinterpret_cast<const struct iphdr*>(next);
+      memcpy(&ip_storage_, next, sizeof(ip_storage_));
+      ip = &ip_storage_;
       next += ip->ihl << 2;  // Skip IPv4 headers, whose length is `ip->ihl` in 32-bit words.
       transport_protocol = ip->protocol;
       break;
     case ETH_P_IPV6:
-      if (next + sizeof(struct ip6_hdr) > end) {
+      if (next + sizeof(ipv6_storage_) > end) {
         return;
       }
-      ipv6 = reinterpret_cast<const struct ip6_hdr*>(next);
+      memcpy(&ipv6_storage_, next, sizeof(ipv6_storage_));
+      ipv6 = &ipv6_storage_;
+      // TODO handle extension headers.
       next += sizeof(struct ip6_hdr);
       transport_protocol = ipv6->ip6_nxt;
       break;
@@ -44,9 +50,23 @@ void Packet::populate(const void* buffer, uint16_t length) {
       return;
   }
 
-  if ((transport_protocol == IPPROTO_TCP && next + sizeof(struct tcphdr) <= end) ||
-      (transport_protocol == IPPROTO_UDP && next + sizeof(struct udphdr) <= end)) {
-    transport = next;
+  switch (transport_protocol) {
+    case IPPROTO_TCP:
+      if (next + sizeof(tcp_storage_) > end) {
+        return;
+      }
+      memcpy(&tcp_storage_, next, sizeof(tcp_storage_));
+      tcp = &tcp_storage_;
+      break;
+    case IPPROTO_UDP:
+      if (next + sizeof(udp_storage_) > end) {
+        return;
+      }
+      memcpy(&udp_storage_, next, sizeof(udp_storage_));
+      udp = &udp_storage_;
+      break;
+    default:
+      break;
   }
 }
 
@@ -94,14 +114,13 @@ EthFilter::EthFilter(const MacAddress& mac, AddressFieldType type) {
 }
 
 bool EthFilter::match(const Packet& packet) {
-  if (packet.frame == nullptr) {
+  if (packet.eth == nullptr) {
     return false;
   }
   if (auto addr = std::get_if<Address>(&spec_)) {
-    return match_address<ETH_ALEN>(addr->type, packet.frame->h_source, packet.frame->h_dest,
-                                   addr->mac);
+    return match_address<ETH_ALEN>(addr->type, packet.eth->h_source, packet.eth->h_dest, addr->mac);
   }
-  return std::get<EthType>(spec_) == packet.frame->h_proto;
+  return std::get<EthType>(spec_) == packet.eth->h_proto;
 }
 
 IpFilter::IpFilter(uint8_t version) : version_(version) {
@@ -184,7 +203,7 @@ IpFilter::IpFilter(const IPv6Address& ipv6_addr, AddressFieldType type) : versio
 }
 
 bool IpFilter::match(const Packet& packet) {
-  if (packet.frame == nullptr || packet.ip == nullptr) {
+  if (packet.eth == nullptr || packet.ip == nullptr) {
     return false;
   }
   switch (version_) {
@@ -192,12 +211,12 @@ bool IpFilter::match(const Packet& packet) {
       // Check that `h_proto` and `version` in IP header are consistent.
       // If they are not, this is a malformed packet and the filter should reject gracefully
       // by returning false.
-      if (packet.frame->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && packet.ip->version == 4) {
+      if (packet.eth->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && packet.ip->version == 4) {
         return match_fn_(packet);
       }
       break;
     case 6:
-      if (packet.frame->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER && packet.ip->version == 6) {
+      if (packet.eth->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER && packet.ip->version == 6) {
         return match_fn_(packet);
       }
       break;
@@ -234,13 +253,13 @@ bool PortFilter::match_ports(uint16_t src_port, uint16_t dst_port) {
 }
 
 bool PortFilter::match(const Packet& packet) {
-  if (packet.frame == nullptr || packet.ip == nullptr || packet.transport == nullptr) {
+  if (packet.eth == nullptr || packet.ip == nullptr || packet.transport == nullptr) {
     return false;
   }
   uint8_t transport_protocol = 0;
-  if (packet.frame->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && packet.ip->version == 4) {
+  if (packet.eth->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && packet.ip->version == 4) {
     transport_protocol = packet.ip->protocol;
-  } else if (packet.frame->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER && packet.ip->version == 6) {
+  } else if (packet.eth->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER && packet.ip->version == 6) {
     transport_protocol = packet.ipv6->ip6_nxt;
   } else {
     return false;  // Unhandled IP version
