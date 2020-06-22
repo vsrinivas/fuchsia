@@ -71,5 +71,22 @@ TEST(CpuStressor, MultipleThreads) {
   stressor.Stop();
 }
 
+TEST(CpuStressor, RequiredSleepForTargetUtilization) {
+  // Used 1 second of CPU time in 1 second of wall time. Need to sleep 1 second to reach 50%
+  // utilization.
+  EXPECT_EQ(RequiredSleepForTargetUtilization(zx::sec(1), zx::sec(1), 0.5), zx::sec(1));
+
+  // Used 1 second of CPU time in 10 seconds of wall time. Don't need to sleep to reach 50%
+  // utilization.
+  EXPECT_EQ(RequiredSleepForTargetUtilization(zx::sec(1), zx::sec(10), 0.5), zx::sec(0));
+
+  // 1 hour + 1 second of CPU time over 2 hours. Need to sleep for 2 seconds.
+  constexpr zx::duration kHour = zx::sec(3600);
+  EXPECT_EQ(RequiredSleepForTargetUtilization(kHour + zx::sec(1), kHour * 2, 0.5), zx::sec(2));
+
+  // 1 second CPU time over 1 second of wall time at 10% utilization. Need to sleep 9 seconds.
+  EXPECT_EQ(RequiredSleepForTargetUtilization(zx::sec(1), zx::sec(1), 0.1), zx::sec(9));
+}
+
 }  // namespace
 }  // namespace hwstress

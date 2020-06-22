@@ -8,13 +8,16 @@
 
 #include <gtest/gtest.h>
 
+#include "args.h"
+
 namespace hwstress {
 namespace {
 
 TEST(Cpu, StressCpu) {
   // Exercise the main StressCpu for a tiny amount of time.
   StatusLine status;
-  EXPECT_TRUE(StressCpu(&status, zx::msec(1)));
+  CommandLineArgs args;
+  EXPECT_TRUE(StressCpu(&status, args, zx::msec(1)));
 }
 
 }  // namespace

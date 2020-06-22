@@ -11,6 +11,7 @@
 #include <thread>
 #include <vector>
 
+#include "lib/zx/time.h"
 #include "profile_manager.h"
 
 namespace hwstress {
@@ -47,6 +48,43 @@ class StopIndicator {
   std::atomic<bool> should_stop_ = false;
 };
 
+// A WorkIterator provides a way for workloads to determine how long
+// they should carry out work for.
+class WorkIndicator {
+ public:
+  explicit WorkIndicator(StopIndicator& indicator, double utilization)
+      : utilization_(utilization), start_time_(zx::clock::get_monotonic()), indicator_(indicator) {}
+
+  // Determine if we should stop, and possibly sleep to reduce CPU utilization.
+  inline bool ShouldStop() {
+    // Fast path: if we desire 100% utilization, don't do any further analysis.
+    if (utilization_ >= 1) {
+      return indicator_.ShouldStop();
+    }
+
+    iterations_++;
+
+    // Determine if it is time to stop.
+    if (indicator_.ShouldStop()) {
+      return true;
+    }
+
+    MaybeSleep();
+    return false;
+  }
+
+ private:
+  // Possibly sleep for a short period of time to ensure that the
+  // current thread's runtime doesn't exceed |utilization_| of the
+  // wall time.
+  void MaybeSleep();
+
+  double utilization_;
+  zx::time start_time_;
+  StopIndicator& indicator_;
+  uint64_t iterations_ = 0;
+};
+
 // A CpuStressor performs the given workload on multiple CPUs in the system,
 // coordinating the creation and destruction of threads.
 class CpuStressor {
@@ -57,8 +95,11 @@ class CpuStressor {
   //
   // |workload| should loop until the given StopIndicator has its
   // |ShouldStop| method return true.
-  CpuStressor(uint32_t threads, std::function<void(const StopIndicator&)> workload,
-              ProfileManager* manager = nullptr);
+  //
+  // |utilization| should be a value between 0.0 and 1.0 indicating the
+  // fraction of CPU that should be used in the long run.
+  CpuStressor(uint32_t threads, std::function<void(WorkIndicator)> workload,
+              double utilization = 1.0, ProfileManager* manager = nullptr);
 
   // Create a CPU stressor that calls the given workload function in
   // a tight loop.
@@ -66,7 +107,10 @@ class CpuStressor {
   // The given workload should perform a small chunk of work (roughly in
   // the range of 100 microseconds to 10 milliseconds) that exercises the
   // CPU.
-  CpuStressor(uint32_t threads, std::function<void()> looping_workload,
+  //
+  // |utilization| should be a value between 0.0 and 1.0 indicating the
+  // fraction of CPU that should be used in the long run.
+  CpuStressor(uint32_t threads, std::function<void()> looping_workload, double utilization = 1.0,
               ProfileManager* manager = nullptr);
 
   // Start the workload. Must not already be started.
@@ -81,11 +125,17 @@ class CpuStressor {
   CpuStressor& operator=(const CpuStressor&) = delete;
 
   uint32_t threads_;
-  std::function<void(const StopIndicator&)> workload_;
+  std::function<void(WorkIndicator)> workload_;
   std::vector<std::unique_ptr<std::thread>> workers_;
   StopIndicator indicator_;
+  double utilization_;               // value in (0.0, 1.0] indicating the fraction of CPU to use.
   ProfileManager* profile_manager_;  // Optional, owned elsewhere.
 };
+
+// Given a thread has had |cpu_time| CPU time and |wall_time| wall time, how long must we sleep to
+// achieve a utilization of |utilization|?
+zx::duration RequiredSleepForTargetUtilization(zx::duration cpu_time, zx::duration wall_time,
+                                               double utilization);
 
 }  // namespace hwstress
 

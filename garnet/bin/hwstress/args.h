@@ -70,6 +70,13 @@ struct CommandLineArgs {
   // Amount of RAM to test.
   OptionalInt64 ram_to_test_percent;
   OptionalInt64 ram_to_test_megabytes;
+
+  //
+  // CPU-specific arguments.
+  //
+
+  // Target CPU utilization, as a percentage in (0.0, 100.0].
+  double utilization_percent = 100.0;
 };
 
 // Print usage information to stdout.

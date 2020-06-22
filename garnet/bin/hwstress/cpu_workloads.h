@@ -16,7 +16,7 @@ namespace hwstress {
 // A CPU stress workload.
 struct CpuWorkload {
   std::string name;
-  std::function<void(const StopIndicator& indicator)> work;
+  std::function<void(WorkIndicator)> work;
 };
 
 // Return a list of available workloads.

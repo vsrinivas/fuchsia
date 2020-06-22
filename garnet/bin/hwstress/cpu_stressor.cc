@@ -16,6 +16,7 @@
 #include <utility>
 
 #include "cpu_workloads.h"
+#include "lib/zx/time.h"
 #include "profile_manager.h"
 #include "status.h"
 #include "temperature_sensor.h"
@@ -23,20 +24,67 @@
 
 namespace hwstress {
 
+zx::duration GetCurrentThreadCpuTime() {
+  zx_info_thread_stats stats = {};
+  zx::thread::self()->get_info(ZX_INFO_THREAD_STATS, &stats, sizeof(stats), nullptr, nullptr);
+  return zx::duration(stats.total_runtime);
+}
+
+zx::duration RequiredSleepForTargetUtilization(zx::duration cpu_time, zx::duration wall_time,
+                                               double utilization) {
+  double sleep_time = (DurationToSecs(cpu_time) / utilization) - DurationToSecs(wall_time);
+
+  // If we have been running under utilization, there is no need to sleep.
+  if (sleep_time <= 0) {
+    return zx::sec(0);
+  }
+
+  // Otherwise, sleep for for an amount of time that will make our utilization
+  // drop below the target.
+  return SecsToDuration(sleep_time);
+}
+
+void WorkIndicator::MaybeSleep() {
+  // Determine how long we need to sleep to reach "utilization", based on
+  // consumed CPU time and wall time.
+  zx::time now = zx::clock::get_monotonic();
+  zx::duration sleep_time =
+      RequiredSleepForTargetUtilization(/*cpu_time=*/GetCurrentThreadCpuTime(),
+                                        /*wall_time=*/(now - start_time_), utilization_);
+
+  // Sleep if we need to decrease our utilization.
+  //
+  // We sleep a tad longer than what we strictly need to. If we didn't, we would
+  // only be able to perform 1 more iteration of the workload before needing to
+  // sleep again.
+  //
+  // Sleeping a tad longer drops our utilization below the target value, and
+  // hence allows us to run longer after we wake up. The goal here is to reduce
+  // the number of sleeps (and hence context switches) overall, so we spend more
+  // time in the workload and less time in the kernel.
+  if (sleep_time > zx::sec(0)) {
+    zx::nanosleep(now + sleep_time + zx::msec(50));
+  }
+}
+
 void StopIndicator::Stop() { should_stop_.store(true, std::memory_order_release); }
 
-CpuStressor::CpuStressor(uint32_t threads, std::function<void(const StopIndicator&)> workload,
-                         ProfileManager* profile_manager)
-    : threads_(threads), workload_(std::move(workload)), profile_manager_(profile_manager) {}
+CpuStressor::CpuStressor(uint32_t threads, std::function<void(WorkIndicator)> workload,
+                         double utilization, ProfileManager* profile_manager)
+    : threads_(threads),
+      workload_(std::move(workload)),
+      utilization_(utilization),
+      profile_manager_(profile_manager) {}
 
 CpuStressor::CpuStressor(uint32_t threads, std::function<void()> looping_workload,
-                         ProfileManager* profile_manager)
+                         double utilization, ProfileManager* profile_manager)
     : threads_(threads),
-      workload_([f = std::move(looping_workload)](const StopIndicator& indicator) {
+      workload_([f = std::move(looping_workload)](WorkIndicator indicator) {
         do {
           f();
         } while (!indicator.ShouldStop());
       }),
+      utilization_(utilization),
       profile_manager_(profile_manager) {}
 
 CpuStressor::~CpuStressor() { Stop(); }
@@ -58,7 +106,7 @@ void CpuStressor::Start() {
       }
 
       // Run the workload.
-      workload(indicator_);
+      workload(WorkIndicator(indicator_, utilization_));
 
       // Ensure the function didn't return while ShouldStop() was still false.
       ZX_ASSERT(indicator_.ShouldStop());

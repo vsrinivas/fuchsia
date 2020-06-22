@@ -69,7 +69,7 @@ void AssertEqual(uint64_t expected, uint64_t actual) {
 // |memset| tends to be highly optimised for using all available memory
 // bandwidth. We use a small enough buffer size to avoid spilling out
 // of L1 cache.
-void MemsetWorkload(const StopIndicator& indicator) {
+void MemsetWorkload(WorkIndicator indicator) {
   constexpr int kBufferSize = 8192;
   auto memory = std::make_unique<uint8_t[]>(kBufferSize);
   do {
@@ -85,7 +85,7 @@ void MemsetWorkload(const StopIndicator& indicator) {
 //
 // Exercises floating point operations on the CPU, though mostly within
 // the |sin| and |cos| functions.
-void SinCosWorkload(const StopIndicator& indicator) {
+void SinCosWorkload(WorkIndicator indicator) {
   do {
     constexpr int kIterations = 10000;
     double result = 0;
@@ -115,7 +115,7 @@ uint64_t Fibonacci(uint64_t n) {
 // Calculate the Fibonacci sequence using recursion.
 //
 // Exercises call/return control flow.
-void FibonacciWorkload(const StopIndicator& indicator) {
+void FibonacciWorkload(WorkIndicator indicator) {
   do {
     uint64_t result = Fibonacci(HideFromCompiler(30));
     AssertEqual(832040, result);
@@ -125,7 +125,7 @@ void FibonacciWorkload(const StopIndicator& indicator) {
 // Perform a 16*16 matrix multiplication using floats.
 //
 // Exercises floating point operations.
-void MatrixMultiplicationWorkload(const StopIndicator& indicator) {
+void MatrixMultiplicationWorkload(WorkIndicator indicator) {
   constexpr int kSize = 16;
   struct Matrix {
     float m[kSize][kSize];
@@ -176,7 +176,7 @@ void MatrixMultiplicationWorkload(const StopIndicator& indicator) {
 // Run the Mersenne Twister random number generator algorithm.
 //
 // This exercises integer bitwise operation and multiplication.
-void MersenneTwisterWorkload(const StopIndicator& indicator) {
+void MersenneTwisterWorkload(WorkIndicator indicator) {
   do {
     std::mt19937_64 generator{};
 

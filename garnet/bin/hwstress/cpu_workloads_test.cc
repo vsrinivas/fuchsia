@@ -16,8 +16,9 @@ namespace hwstress {
 namespace {
 
 TEST(CpuWorkloads, Test) {
-  StopIndicator indicator;
-  indicator.Stop();
+  StopIndicator stop;
+  WorkIndicator indicator(stop, 1.0);
+  stop.Stop();
 
   // Test one iteration of each of the workloads.
   //

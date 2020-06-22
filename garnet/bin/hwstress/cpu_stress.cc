@@ -17,6 +17,7 @@
 #include <thread>
 #include <utility>
 
+#include "args.h"
 #include "cpu_stressor.h"
 #include "cpu_workloads.h"
 #include "status.h"
@@ -28,9 +29,10 @@ namespace hwstress {
 namespace {
 
 void RunWorkload(StatusLine* status, ProfileManager* profile_manager, TemperatureSensor* sensor,
-                 const CpuWorkload& workload, uint32_t num_cpus, zx::duration duration) {
+                 const CpuWorkload& workload, uint32_t num_cpus, zx::duration duration,
+                 double utilization) {
   // Start a workload.
-  CpuStressor stressor{num_cpus, workload.work, profile_manager};
+  CpuStressor stressor{num_cpus, workload.work, utilization, profile_manager};
   stressor.Start();
 
   // Update the status line until the test is finished.
@@ -59,7 +61,8 @@ void RunWorkload(StatusLine* status, ProfileManager* profile_manager, Temperatur
 
 }  // namespace
 
-bool StressCpu(StatusLine* status, zx::duration duration, TemperatureSensor* temperature_sensor) {
+bool StressCpu(StatusLine* status, const CommandLineArgs& args, zx::duration duration,
+               TemperatureSensor* temperature_sensor) {
   // Calculate finish time.
   zx::time start_time = zx::clock::get_monotonic();
   zx::time finish_time = start_time + duration;
@@ -124,7 +127,7 @@ bool StressCpu(StatusLine* status, zx::duration duration, TemperatureSensor* tem
     status->Log("Iteration %ld: %0.2fs per test.", iteration++, DurationToSecs(time_per_test));
     for (const auto& workload : workloads) {
       RunWorkload(status, profile_manager.get(), temperature_sensor, workload, num_cpus,
-                  time_per_test);
+                  time_per_test, /*utilization=*/(args.utilization_percent / 100.0));
     }
     time_per_test *= 2;
   } while (zx::clock::get_monotonic() < finish_time);

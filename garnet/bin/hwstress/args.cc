@@ -30,6 +30,8 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
                     &CommandLineArgs::ram_to_test_megabytes);
   parser->AddSwitch("percent-memory", 0, "Percent of memory to test.",
                     &CommandLineArgs::ram_to_test_percent);
+  parser->AddSwitch("utilization", 'u', "Target CPU utilization percent.",
+                    &CommandLineArgs::utilization_percent);
   return parser;
 }
 
@@ -57,6 +59,14 @@ Global options:
                          indicates to continue testing until stopped.
   -v, --verbose          Show additional logging.
   -h, --help             Show this help.
+
+CPU test options:
+  -u, --utilization=<percent>
+                         Percent of system CPU to use. A value of
+                         100 (the default) indicates that all the
+                         CPU should be used, while 50 would indicate
+                         to use 50% of CPU. Must be strictly greater
+                         than 0, and no more than 100.
 
 Flash test options:
   -f, --fvm-path=<path>  Path to Fuchsia Volume Manager
@@ -137,6 +147,11 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   }
   if (result.ram_to_test_megabytes.has_value() && result.ram_to_test_percent.has_value()) {
     return fitx::error("--memory and --percent-memory cannot both be specified.");
+  }
+
+  // Validate utilization.
+  if (result.utilization_percent <= 0.0 || result.utilization_percent > 100.0) {
+    return fitx::error("--utilization must be greater than 0%%, and no more than 100%%.");
   }
 
   // Ensure no more parameters were given.

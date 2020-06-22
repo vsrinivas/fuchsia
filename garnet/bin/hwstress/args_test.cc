@@ -85,5 +85,18 @@ TEST(Args, ParseMemory) {
   EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--percent-memory", ""}}).is_error());
 }
 
+TEST(Args, ParseCpu) {
+  // Utilization values.
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu"}})->utilization_percent, 100.0);  // default
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-u", "100"}})->utilization_percent, 100.0);
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-u", "50"}})->utilization_percent, 50.0);
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-u", "25.5"}})->utilization_percent, 25.5);
+
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-u", "-3"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-u"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-u", "0"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-u", "101"}}).is_error());
+}
+
 }  // namespace
 }  // namespace hwstress

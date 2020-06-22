@@ -56,7 +56,7 @@ int Run(int argc, const char** argv) {
   bool success = false;
   switch (args.subcommand) {
     case StressTest::kCpu:
-      success = StressCpu(&status, duration, sensor.get());
+      success = StressCpu(&status, args, duration, sensor.get());
       break;
     case StressTest::kFlash:
       fprintf(stderr, "Error: flash test not yet implemented\n");
