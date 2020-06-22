@@ -1630,7 +1630,7 @@ zx_status_t FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
 
 zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
                                             std::optional<fbl::unique_fd> block_device,
-                                            std::unique_ptr<DevicePartitioner>* partitioner) {
+                                            std::unique_ptr<DevicePartitioner>* out_partitioner) {
   zx_status_t status = IsBoard(devfs_root, "sherlock");
   if (status != ZX_OK) {
     return status;
@@ -1644,13 +1644,16 @@ zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root, const zx:
     return status;
   }
 
+  auto partitioner = WrapUnique(new SherlockPartitioner(std::move(gpt)));
   if (initialize_partition_tables) {
-    ERROR("Partition table not initialized. Avoiding automatic initialization.\n");
-    return ZX_ERR_INTERNAL;
+    status = partitioner->InitPartitionTables();
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
+  *out_partitioner = std::move(partitioner);
   LOG("Successfully initialized SherlockPartitioner Device Partitioner\n");
-  *partitioner = WrapUnique(new SherlockPartitioner(std::move(gpt)));
   return ZX_OK;
 }
 

@@ -1058,14 +1058,23 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutGptFails) {
 
 TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutFvmSucceeds) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  ASSERT_NO_FATAL_FAILURES(CreateDisk(&gpt_dev));
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &gpt_dev));
 
-  // Set up a valid GPT.
-  std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
+  {
+    // Pause the block watcher while we write partitions to the disk.
+    // This is to avoid the block watcher seeing an intermediate state of the partition table
+    // and incorrectly treating it as an MBR.
+    // The watcher is automatically resumed when this goes out of scope.
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser.status_value());
 
-  std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_NE(CreatePartitioner(std::nullopt, &partitioner), ZX_OK);
+    // Set up a valid GPT.
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
+
+    std::unique_ptr<paver::DevicePartitioner> partitioner;
+    ASSERT_OK(CreatePartitioner(std::nullopt, &partitioner));
+  }
 }
 
 TEST_F(SherlockPartitionerTests, DISABLED_AddPartitionNotSupported) {
