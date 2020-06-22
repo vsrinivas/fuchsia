@@ -98,7 +98,10 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     zx::eventpair::create(0u, &a, &b_);
 
     a11y::SemanticTreeService::CloseChannelCallback close_channel_callback(
-        [this]() { this->close_channel_called_ = true; });
+        [this](zx_status_t status) {
+          this->close_channel_called_ = true;
+          this->close_channel_status_ = status;
+        });
     auto tree = std::make_unique<MockSemanticTree>();
     tree_ptr_ = tree.get();
     semantic_tree_ = std::make_unique<a11y::SemanticTreeService>(
@@ -151,6 +154,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
   std::unique_ptr<a11y::SemanticTreeService> semantic_tree_;
   MockSemanticTree* tree_ptr_ = nullptr;
   bool close_channel_called_ = false;
+  zx_status_t close_channel_status_ = 0;
   zx_koid_t koid_ = 12345;
   SemanticTreeParser semantic_tree_parser_;
 
@@ -186,6 +190,7 @@ TEST_F(SemanticTreeServiceTest, InvalidTreeUpdatesClosesTheChannel) {
   EXPECT_TRUE(commit_called);
   // This commit failed, check if the callback to close the channel was invoked.
   EXPECT_TRUE(close_channel_called_);
+  EXPECT_EQ(close_channel_status_, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(SemanticTreeServiceTest, DeletesAreOnlySentAfterACommit) {

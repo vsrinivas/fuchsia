@@ -18,14 +18,16 @@ class ViewSemantics {
  public:
   ViewSemantics() = default;
   virtual ~ViewSemantics() = default;
+  // Close the semantics channel with the appropriate status.
+  virtual void CloseChannel(zx_status_t status) = 0;
 
   // Turn on semantic updates for this view.
   virtual void EnableSemanticUpdates(bool enabled) = 0;
 
-  // Returns a weak pointer to the semantic tree for this view. Caller must always check if the pointer is valid
-  // before accessing, as the pointer may be invalidated. The pointer may become invalidated if the
-  // semantic provider disconnects or if an error occurred. This is not thread safe. This pointer
-  // may only be used in the same thread as this service is running.
+  // Returns a weak pointer to the semantic tree for this view. Caller must always check if the
+  // pointer is valid before accessing, as the pointer may be invalidated. The pointer may become
+  // invalidated if the semantic provider disconnects or if an error occurred. This is not thread
+  // safe. This pointer may only be used in the same thread as this service is running.
   virtual fxl::WeakPtr<::a11y::SemanticTree> GetTree() = 0;
 };
 
@@ -34,10 +36,12 @@ class ViewSemanticsFactory {
   ViewSemanticsFactory() = default;
   virtual ~ViewSemanticsFactory() = default;
 
-  virtual std::unique_ptr<ViewSemantics> CreateViewSemantics(std::unique_ptr<SemanticTreeService> tree_service_ptr,
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) = 0;
+  virtual std::unique_ptr<ViewSemantics> CreateViewSemantics(
+      std::unique_ptr<SemanticTreeService> tree_service_ptr,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
+          semantic_tree_request) = 0;
 };
 
 }  //  namespace a11y
 
-#endif // SRC_UI_A11Y_LIB_VIEW_VIEW_SEMANTICS_H_
+#endif  // SRC_UI_A11Y_LIB_VIEW_VIEW_SEMANTICS_H_

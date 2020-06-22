@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+/// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #ifndef SRC_UI_A11Y_LIB_VIEW_A11Y_VIEW_SEMANTICS_H_
@@ -17,9 +17,13 @@ namespace a11y {
 class A11yViewSemantics : public ViewSemantics {
  public:
   A11yViewSemantics(std::unique_ptr<SemanticTreeService> tree_service_ptr,
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request);
+                    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
+                        semantic_tree_request);
 
   ~A11yViewSemantics() override;
+
+  // |ViewSemanticsManager|
+  void CloseChannel(zx_status_t status) override { semantic_tree_binding_.Close(status); }
 
   // |ViewSemanticsManager|
   void EnableSemanticUpdates(bool enabled) override;
@@ -39,10 +43,12 @@ class A11yViewSemanticsFactory : public ViewSemanticsFactory {
   A11yViewSemanticsFactory() = default;
   ~A11yViewSemanticsFactory() override = default;
 
-  std::unique_ptr<ViewSemantics> CreateViewSemantics(std::unique_ptr<SemanticTreeService> tree_service_ptr,
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) override;
+  std::unique_ptr<ViewSemantics> CreateViewSemantics(
+      std::unique_ptr<SemanticTreeService> tree_service_ptr,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
+      override;
 };
 
 }  // namespace a11y
 
-#endif // SRC_UI_A11Y_LIB_VIEW_A11Y_VIEW_SEMANTICS_H_
+#endif  // SRC_UI_A11Y_LIB_VIEW_A11Y_VIEW_SEMANTICS_H_

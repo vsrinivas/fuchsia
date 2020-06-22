@@ -24,6 +24,9 @@ class MockViewSemantics : public a11y::ViewSemantics {
   ~MockViewSemantics() override;
 
   // |ViewSemantics|
+  void CloseChannel(zx_status_t status) override {}
+
+  // |ViewSemantics|
   void EnableSemanticUpdates(bool enabled) override;
 
   // |ViewSemantics|

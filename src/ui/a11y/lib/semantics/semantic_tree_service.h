@@ -27,7 +27,7 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
  public:
   // Callback which will be used to notify that an error is encountered while trying to apply the
   // commit.
-  using CloseChannelCallback = fit::function<void()>;
+  using CloseChannelCallback = fit::function<void(zx_status_t)>;
 
   SemanticTreeService(std::unique_ptr<::a11y::SemanticTree> tree, zx_koid_t koid,
                       fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,

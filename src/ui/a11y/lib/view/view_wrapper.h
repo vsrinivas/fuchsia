@@ -28,6 +28,9 @@ class ViewWrapper {
 
   ~ViewWrapper() = default;
 
+  // Close the semantics channel with the appropriate status.
+  void CloseChannel(zx_status_t status) { view_semantics_->CloseChannel(status); }
+
   // Turn on semantic updates for this view.
   void EnableSemanticUpdates(bool enabled);
 

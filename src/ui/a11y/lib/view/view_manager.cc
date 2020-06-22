@@ -53,7 +53,10 @@ void ViewManager::RegisterViewForSemantics(
 
   zx_koid_t koid = GetKoid(view_ref);
 
-  auto close_channel_callback = [this, koid]() {
+  auto close_channel_callback = [this, koid](zx_status_t status) {
+    if (auto it = view_wrapper_map_.find(koid); it != view_wrapper_map_.end()) {
+      it->second->CloseChannel(status);
+    }
     wait_map_.erase(koid);
     view_wrapper_map_.erase(koid);
   };
