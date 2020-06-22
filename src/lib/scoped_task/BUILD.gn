@@ -45,6 +45,9 @@ rustc_binary("scoped_task_test_spawner") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]
+
+  # TODO(54531): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("scoped-task-tests") {
