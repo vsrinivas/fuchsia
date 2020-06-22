@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context as _, Error},
+    fidl_fuchsia_net as fnet, fidl_fuchsia_net_dhcpv6 as fdhcpv6,
+    fidl_fuchsia_net_name as fnetname, fidl_fuchsia_net_stack as fstack,
+    fidl_fuchsia_net_stack_ext::FidlReturn as _,
     fidl_fuchsia_netemul_guest::{
         CommandListenerMarker, GuestDiscoveryMarker, GuestInteractionMarker,
     },
@@ -13,8 +16,7 @@ use {
     fuchsia_zircon::Duration as ZirconDuration,
     futures::{future, select, StreamExt},
     netemul_guest_lib::wait_for_command_completion,
-    std::net::IpAddr,
-    std::time::Duration,
+    std::{fmt::Write, time::Duration},
 };
 
 /// Run a command on a guest VM to configure its DHCP server.
@@ -44,8 +46,7 @@ pub async fn configure_dhcp_server(guest_name: &str, command_to_run: &str) -> Re
 ///
 /// * `addr` - IpAddress that should appear on a Netstack interface.
 /// * `timeout` - Duration to wait for the address to appear in Netstack.
-pub async fn verify_addr_present(addr: IpAddr, timeout: Duration) -> Result<(), Error> {
-    let addr = fidl_fuchsia_net_ext::IpAddress(addr);
+pub async fn verify_v4_addr_present(addr: fnet::IpAddress, timeout: Duration) -> Result<(), Error> {
     let timeout = ZirconDuration::from(timeout);
 
     let netstack = client::connect_to_service::<NetstackMarker>()?;
@@ -56,23 +57,13 @@ pub async fn verify_addr_present(addr: IpAddr, timeout: Duration) -> Result<(), 
     loop {
         select! {
             event = stream.next() => {
-                match event {
-                    Some(Ok(NetstackEvent::OnInterfacesChanged {interfaces})) => {
-                        let address_present = interfaces
-                            .iter()
-                            .any(|interface| fidl_fuchsia_net_ext::IpAddress::from(interface.addr) == addr);
-                        if address_present {
-                            return Ok(());
-                        }
-                        ifs = interfaces;
-                    },
-                    Some(Err(e)) => {
-                        return Err(format_err!("failed to get network interfaces with {}", e))
-                    },
-                    None => {
-                        return Err(format_err!("could not get event from netstack"))
-                    }
+                let NetstackEvent::OnInterfacesChanged { interfaces } = event
+                    .ok_or(format_err!("netstack event stream ended"))?
+                    .context("failed to get network interface")?;
+                if interfaces.iter().any(|interface| interface.addr == addr) {
+                    return Ok(());
                 }
+                ifs = interfaces;
             },
             () = timer => {
                 break;
@@ -80,10 +71,87 @@ pub async fn verify_addr_present(addr: IpAddr, timeout: Duration) -> Result<(), 
         }
     }
 
-    let mut bail_string = String::from("addresses present:");
+    let mut addresses_present = String::from("addresses present:");
     for interface in ifs {
-        bail_string = format!("{} {:?}: {:?}", bail_string, interface.name, interface.addr);
+        let () = write!(addresses_present, " {:?}: {:?}", interface.name, interface.addr)
+            .context("writing to bail string")?;
     }
-    bail_string = format!("{} address missing: {:?}", bail_string, addr);
-    return Err(format_err!("{}", bail_string));
+    Err(format_err!(
+        "DHCPv4 client got unexpected addresses: {}, address missing: {:?}",
+        addresses_present,
+        addr
+    ))
+}
+
+/// Verifies a DHCPv6 client can receive an expected list of DNS servers.
+///
+/// # Arguments
+///
+/// * `interface_id` - ID identifying the interface to start the DHCPv6 client on.
+/// * `want_dns_servers` - Vector of DNS servers that the DHCPv6 client is expected to receive.
+pub async fn verify_v6_dns_servers(
+    interface_id: u64,
+    want_dns_servers: Vec<fnetname::DnsServer_>,
+) -> Result<(), Error> {
+    let stack = client::connect_to_service::<fstack::StackMarker>()
+        .context("connecting to stack service")?;
+    let info = stack
+        .get_interface_info(interface_id)
+        .await
+        .squash_result()
+        .context("getting interface info")?;
+
+    let addr = info
+        .properties
+        .addresses
+        .into_iter()
+        .find_map(|addr: fstack::InterfaceAddress| match addr.ip_address {
+            fnet::IpAddress::Ipv4(_addr) => None,
+            fnet::IpAddress::Ipv6(addr) => {
+                // Only use link-local addresses.
+                //
+                // TODO(https://github.com/rust-lang/rust/issues/27709): use
+                // `is_unicast_link_local_strict` when it's available in stable Rust.
+                if addr.addr[..8] == [0xfe, 0x80, 0, 0, 0, 0, 0, 0] {
+                    Some(addr)
+                } else {
+                    None
+                }
+            }
+        })
+        .ok_or(format_err!("no addresses found to start DHCPv6 client on"))?;
+
+    let provider = client::connect_to_service::<fdhcpv6::ClientProviderMarker>()
+        .context("connecting to DHCPv6 client")?;
+
+    let (client_end, server_end) = fidl::endpoints::create_endpoints::<fdhcpv6::ClientMarker>()
+        .context("creating DHCPv6 client channel")?;
+    let () = provider.new_client(
+        fdhcpv6::NewClientParams {
+            interface_id: Some(interface_id),
+            address: Some(fnet::Ipv6SocketAddress {
+                address: addr,
+                port: fdhcpv6::DEFAULT_CLIENT_PORT,
+                zone_index: interface_id,
+            }),
+            models: Some(fdhcpv6::OperationalModels {
+                stateless: Some(fdhcpv6::Stateless {
+                    options_to_request: Some(vec![fdhcpv6::RequestableOptionCode::DnsServers]),
+                }),
+            }),
+        },
+        server_end,
+    )?;
+    let client_proxy = client_end.into_proxy().context("getting client proxy from channel")?;
+
+    let got_dns_servers = client_proxy.watch_servers().await.context("watching DNS servers")?;
+    if got_dns_servers == want_dns_servers {
+        Ok(())
+    } else {
+        Err(format_err!(
+            "DHCPv6 client received unexpected DNS servers:\ngot dns servers: {:?}\n, want dns servers: {:?}\n",
+            got_dns_servers,
+            want_dns_servers
+        ))
+    }
 }

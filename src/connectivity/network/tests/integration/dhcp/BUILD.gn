@@ -9,6 +9,7 @@ group("dhcp_integration_tests") {
   testonly = true
   public_deps = [
     ":netemul_dhcp_tests",
+    "//src/connectivity/network/dhcpv6/client",
     "//src/connectivity/network/testing/netemul:guest",
   ]
 }
@@ -25,11 +26,19 @@ test_package("netemul_dhcp_tests") {
 
   resources = [
     {
-      # This is the config file that dhcpd will use for the dhcp_validity test.  An address pool
-      # with a single address is provided so that when the Netstack DHCP client runs, it gets a
-      # predictable IP address.
+      # This is the DHCPv4 config file that dhcpd will use for the dhcp_validity test. An address
+      # pool with a single address is provided so that when the Netstack DHCPv4 client runs, it
+      # gets a predictable IP address.
       path = "dhcp_validity/data/dhcpd.conf"
       dest = "dhcpd.conf"
+    },
+    {
+      # This is the DHCPv6 config file that dhcpd will use for the dhcp_validity test.
+      # The list of DNS servers configured in this file is expected in test. The address pool
+      # configured in this file is necessary for dhcpd to start, and the actual range is not
+      # important.
+      path = "dhcp_validity/data/dhcpd6.conf"
+      dest = "dhcpd6.conf"
     },
     {
       # This bash script is run on the Debian guest to configure it for the dhcp_validity test.

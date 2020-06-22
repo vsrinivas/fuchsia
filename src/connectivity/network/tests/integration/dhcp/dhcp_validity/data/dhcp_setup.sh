@@ -6,8 +6,8 @@
 
 set -euxo pipefail
 
-declare -r IPV4_ADDR="192.168.1.1"
-declare -r IPV4_SUBNET_LENGTH="24"
+declare -r IPV4_ADDR="192.168.1.1/24"
+declare -r IPV6_ADDR="3ffe:501:ffff:100::1/64"
 declare -r DHCP_CONFIG_FILE="/etc/default/isc-dhcp-server"
 
 # The ethernet interface's name varies depending on the number of block devices
@@ -28,11 +28,15 @@ if [[ -z "${iface_name}" ]]; then
 fi
 
 # Write the config to tell isc-dhcp-server what interfaces to serve DHCP on.
-echo "INTERFACESv4=\"${iface_name}\"" > "${DHCP_CONFIG_FILE}"
+rm "${DHCP_CONFIG_FILE}"
+echo "INTERFACESv4=\"${iface_name}\"" >> "${DHCP_CONFIG_FILE}"
+echo "INTERFACESv6=\"${iface_name}\"" >> "${DHCP_CONFIG_FILE}"
 
 # The ethernet interface needs IP addresses or else isc-dhcp-server will not
 # start.
-ifconfig "${iface_name}" "${IPV4_ADDR}/${IPV4_SUBNET_LENGTH}" up
+ifconfig "${iface_name}" "${IPV4_ADDR}"
+ifconfig "${iface_name}" add "${IPV6_ADDR}"
+ifconfig "${iface_name}" up
 
 # netemul will put all of the dhcpd configs in place as a pre-test step.
 service isc-dhcp-server start
