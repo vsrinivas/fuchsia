@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/images/manifest.gni")
+import("//build/unification/zbi/resource.gni")
 import("//src/sys/cmc/build/cml.gni")
 
 # Helper template to create manifests for including items in bootfs.
@@ -135,6 +136,18 @@ template("bootfs_manifest") {
     dest = "config/" + dest
 
     manifest_args += [ "--entry=" + dest + "=" + rebase_path(c.path) ]
+
+    # This resource target is used to locate config files listed in bootfs
+    # manifests and add them to zbi's using a modernized build support.
+    # This allows "new style" zbi's to be constructed using the same dependency
+    # sets as their "old style" counterparts.
+    # See fxb/45680 for more context.
+    resource_target = "${target_name}_resource_" + get_path_info(dest, "file")
+    resource(resource_target) {
+      sources = [ c.path ]
+      outputs = [ "config/${c.dest}" ]
+    }
+    manifest_deps += [ ":$resource_target" ]
   }
 
   foreach(driver, drivers) {
@@ -184,6 +197,18 @@ template("bootfs_manifest") {
     source = rebase_path(cm_out[0])
 
     manifest_args += [ "--entry=" + dest + "=" + source ]
+
+    # This resource target is used to locate meta files listed in bootfs
+    # manifests and add them to zbi's using a modernized build support.
+    # This allows "new style" zbi's to be constructed using the same dependency
+    # sets as their "old style" counterparts.
+    # See fxb/45680 for more context.
+    resource_target = "${target_name}_resource_" + get_path_info(dest, "file")
+    resource(resource_target) {
+      sources = [ source ]
+      outputs = [ dest ]
+    }
+    manifest_deps += [ ":$resource_target" ]
   }
 
   generate_manifest(target_name) {
