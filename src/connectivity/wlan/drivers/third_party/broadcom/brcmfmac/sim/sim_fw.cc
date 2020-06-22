@@ -874,6 +874,10 @@ bool SimFirmware::FindClient(const uint16_t ifidx, const common::MacAddr client_
   return false;
 }
 
+std::vector<brcmf_wsec_key_le> SimFirmware::GetKeyList(uint16_t ifidx) {
+  return iface_tbl_[ifidx].wsec_key_list;
+}
+
 void SimFirmware::RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> frame) {
   BRCMF_DBG(SIM, "Deauth from %s for %s reason: %d", MACSTR(frame->src_addr_),
             MACSTR(frame->dst_addr_), frame->reason_);
@@ -1267,7 +1271,21 @@ zx_status_t SimFirmware::HandleBssCfgSet(const uint16_t ifidx, const char* name,
       return ZX_ERR_IO;
     }
     auto key_buf = static_cast<const uint8_t*>(value);
-    memcpy(&iface_tbl_[ifidx].wsec_key, key_buf + sizeof(uint32_t), sizeof(brcmf_wsec_key_le));
+    auto key = reinterpret_cast<const struct brcmf_wsec_key_le*>(key_buf + sizeof(uint32_t));
+    std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
+
+    auto key_iter = std::find_if(key_list.begin(), key_list.end(),
+                                 [=](brcmf_wsec_key_le& k) { return k.index == key->index; });
+    // If the key with same index exists, override it, if not, add a new key.
+    if (key_iter != key_list.end()) {
+      *key_iter = *key;
+    } else {
+      // Use the first key index as current key index, in real case it will only change by AP.
+      if (key_list.empty())
+        iface_tbl_[ifidx].cur_key_idx = key->index;
+
+      key_list.push_back(*key);
+    }
   }
 
   BRCMF_DBG(SIM, "Ignoring request to set bsscfg iovar '%s'", name);
@@ -1353,7 +1371,19 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
       return ZX_ERR_IO;
     }
     auto wk_req = static_cast<const brcmf_wsec_key_le*>(value);
-    iface_tbl_[ifidx].wsec_key = *wk_req;
+    std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
+    auto key_iter = std::find_if(key_list.begin(), key_list.end(),
+                                 [=](brcmf_wsec_key_le& k) { return k.index == wk_req->index; });
+    // If the key with same index exists, override it, if not, add a new key.
+    if (key_iter != key_list.end()) {
+      *key_iter = *wk_req;
+    } else {
+      // Use the first key index as current key index, in real case it will only change by AP.
+      if (key_list.empty())
+        iface_tbl_[ifidx].cur_key_idx = wk_req->index;
+
+      key_list.push_back(*wk_req);
+    }
   }
 
   if (!std::strcmp(name, "assoc_retry_max")) {
@@ -1501,7 +1531,14 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     if (value_len < sizeof(brcmf_wsec_key_le)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    memcpy(value_out, &iface_tbl_[ifidx].wsec_key, sizeof(brcmf_wsec_key_le));
+    std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
+    auto key_iter = std::find_if(key_list.begin(), key_list.end(), [=](brcmf_wsec_key_le& k) {
+      return k.index == iface_tbl_[ifidx].cur_key_idx;
+    });
+    if (key_iter == key_list.end()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    memcpy(value_out, &(*key_iter), sizeof(brcmf_wsec_key_le));
   } else if (!std::strcmp(name, "chanspec")) {
     if (value_len < sizeof(uint16_t)) {
       return ZX_ERR_INVALID_ARGS;

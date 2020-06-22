@@ -216,6 +216,8 @@ class SimFirmware {
   void BusSetTimer(std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
                    uint64_t* id_out);
   void BusCancelTimer(uint64_t id);
+  // This function returns the wsec_key_list for an iface to outside.
+  std::vector<brcmf_wsec_key_le> GetKeyList(uint16_t ifidx);
 
  private:
   /* SoftAP specific config
@@ -242,6 +244,8 @@ class SimFirmware {
    * bsscfgidx - input from the driver indicating the bss index
    * allocated - maintained by SIM FW to indicate entry is allocated
    * iface_id - the iface id allocated by SIM FW - in this case always the array index of the table
+   * cur_key_idx - The index indicates which key we are using for this iface
+   * wsec_key_list - Storing keys for this iface
    * ap_mode - is the iface in SoftAP(true) or Client(false) mode
    * ap_config - SoftAP specific config (set when interface is configured as SoftAP)
    * arpoe - is ARP offloading enabled on this interface
@@ -256,7 +260,8 @@ class SimFirmware {
     bool allocated;
     int8_t iface_id;
     uint32_t wsec = 0;
-    struct brcmf_wsec_key_le wsec_key;
+    uint32_t cur_key_idx = 0;
+    std::vector<brcmf_wsec_key_le> wsec_key_list;
     uint32_t wpa_auth = 0;
     uint32_t tlv = 0;
     bool ap_mode;
@@ -381,6 +386,7 @@ class SimFirmware {
   bool FindClient(const uint16_t ifidx, const common::MacAddr client_mac);
   void ScheduleLinkEvent(zx::duration when, uint16_t ifidx);
   void SendAPStartLinkEvent(uint16_t ifidx);
+
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.
   brcmf_simdev* simdev_;
