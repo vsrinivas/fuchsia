@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <unistd.h>
 
 namespace feedback {
 
