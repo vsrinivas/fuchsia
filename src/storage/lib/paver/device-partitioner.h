@@ -74,7 +74,7 @@ class BlockWatcherPauser {
   BlockWatcherPauser(zx::channel chan)
       : watcher_(llcpp::fuchsia::fshost::BlockWatcher::SyncClient(std::move(chan))),
         valid_(false) {}
-  zx_status_t Pause();
+  zx::status<> Pause();
 
   llcpp::fuchsia::fshost::BlockWatcher::SyncClient watcher_;
   bool valid_;
@@ -137,33 +137,33 @@ class DevicePartitioner {
 
   // Returns a PartitionClient matching |spec|, creating the partition.
   // Assumes that the partition does not already exist.
-  virtual zx_status_t AddPartition(const PartitionSpec& spec,
-                                   std::unique_ptr<PartitionClient>* out_partition) const = 0;
+  virtual zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+      const PartitionSpec& spec) const = 0;
 
   // Returns a PartitionClient matching |spec| if one exists.
-  virtual zx_status_t FindPartition(const PartitionSpec& spec,
-                                    std::unique_ptr<PartitionClient>* out_partition) const = 0;
+  virtual zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+      const PartitionSpec& spec) const = 0;
 
   // Finalizes the PartitionClient matching |spec| after it has been written.
-  virtual zx_status_t FinalizePartition(const PartitionSpec& spec) const = 0;
+  virtual zx::status<> FinalizePartition(const PartitionSpec& spec) const = 0;
 
   // Wipes Fuchsia Volume Manager partition.
-  virtual zx_status_t WipeFvm() const = 0;
+  virtual zx::status<> WipeFvm() const = 0;
 
   // Initializes partition tables.
-  virtual zx_status_t InitPartitionTables() const = 0;
+  virtual zx::status<> InitPartitionTables() const = 0;
 
   // Wipes partition tables.
-  virtual zx_status_t WipePartitionTables() const = 0;
+  virtual zx::status<> WipePartitionTables() const = 0;
 
   // Determine if the given data file is a valid image for this device.
   //
   // This analysis is best-effort only, providing only basic safety checks.
-  virtual zx_status_t ValidatePayload(const PartitionSpec& spec,
-                                      fbl::Span<const uint8_t> data) const = 0;
+  virtual zx::status<> ValidatePayload(const PartitionSpec& spec,
+                                       fbl::Span<const uint8_t> data) const = 0;
 
   // Flush all buffered write to persistant storage.
-  virtual zx_status_t Flush() const = 0;
+  virtual zx::status<> Flush() const = 0;
 };
 
 // Useful for when a GPT table is available (e.g. x86 devices). Provides common
@@ -172,53 +172,63 @@ class GptDevicePartitioner {
  public:
   using FilterCallback = fbl::Function<bool(const gpt_partition_t&)>;
 
+  struct InitializeGptResult {
+    std::unique_ptr<GptDevicePartitioner> gpt;
+    bool initialize_partition_tables;
+  };
+
   // Find and initialize a GPT based device.
   //
   // If block_device is provided, then search is skipped, and block_device is used
   // directly. If it is not provided, we search for a device with a valid GPT,
   // with an entry for an FVM. If multiple devices with valid GPT containing
   // FVM entries are found, an error is returned.
-  static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, const zx::channel& svc_root,
-                                   std::optional<fbl::unique_fd> block_device,
-                                   std::unique_ptr<GptDevicePartitioner>* gpt_out,
-                                   bool* initialize_partition_tables);
+  static zx::status<InitializeGptResult> InitializeGpt(fbl::unique_fd devfs_root,
+                                                       const zx::channel& svc_root,
+                                                       std::optional<fbl::unique_fd> block_device);
 
   // Returns block info for a specified block device.
-  zx_status_t GetBlockInfo(::llcpp::fuchsia::hardware::block::BlockInfo* block_info) const {
-    memcpy(block_info, &block_info_, sizeof(*block_info));
-    return ZX_OK;
-  }
+  const ::llcpp::fuchsia::hardware::block::BlockInfo& GetBlockInfo() const { return block_info_; }
 
   GptDevice* GetGpt() const { return gpt_.get(); }
   zx::unowned_channel Channel() const { return caller_.channel(); }
+
+  struct FindFirstFitResult {
+    size_t start;
+    size_t length;
+  };
 
   // Find the first spot that has at least |bytes_requested| of space.
   //
   // Returns the |start_out| block and |length_out| blocks, indicating
   // how much space was found, on success. This may be larger than
   // the number of bytes requested.
-  zx_status_t FindFirstFit(size_t bytes_requested, size_t* start_out, size_t* length_out) const;
+  zx::status<FindFirstFitResult> FindFirstFit(size_t bytes_requested) const;
 
   // Creates a partition, adds an entry to the GPT, and returns a file descriptor to it.
   // Assumes that the partition does not already exist.
-  zx_status_t AddPartition(const char* name, const uint8_t* type, size_t minimum_size_bytes,
-                           size_t optional_reserve_bytes,
-                           std::unique_ptr<PartitionClient>* out_partition) const;
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(const char* name, const uint8_t* type,
+                                                            size_t minimum_size_bytes,
+                                                            size_t optional_reserve_bytes) const;
+
+  struct FindPartitionResult {
+    std::unique_ptr<PartitionClient> partition;
+    gpt_partition_t* gpt_partition;
+  };
 
   // Returns a file descriptor to a partition which can be paved,
   // if one exists.
-  zx_status_t FindPartition(FilterCallback filter, std::unique_ptr<PartitionClient>* out_partition,
-                            gpt_partition_t** out = nullptr) const;
+  zx::status<FindPartitionResult> FindPartition(FilterCallback filter) const;
 
   // Wipes a specified partition from the GPT, and overwrites first 8KiB with
   // nonsense.
-  zx_status_t WipeFvm() const;
+  zx::status<> WipeFvm() const;
 
   // Removes all partitions from GPT.
-  zx_status_t WipePartitionTables() const;
+  zx::status<> WipePartitionTables() const;
 
   // Wipes all partitions meeting given criteria.
-  zx_status_t WipePartitions(FilterCallback filter) const;
+  zx::status<> WipePartitions(FilterCallback filter) const;
 
   const fbl::unique_fd& devfs_root() { return devfs_root_; }
 
@@ -232,10 +242,8 @@ class GptDevicePartitioner {
 
   // Initializes GPT for a device which was explicitly provided. If |gpt_device| doesn't have a
   // valid GPT, it will initialize it with a valid one.
-  static zx_status_t InitializeProvidedGptDevice(fbl::unique_fd devfs_root,
-                                                 const zx::channel& svc_root,
-                                                 fbl::unique_fd gpt_device,
-                                                 std::unique_ptr<GptDevicePartitioner>* gpt_out);
+  static zx::status<std::unique_ptr<GptDevicePartitioner>> InitializeProvidedGptDevice(
+      fbl::unique_fd devfs_root, const zx::channel& svc_root, fbl::unique_fd gpt_device);
 
   GptDevicePartitioner(fbl::unique_fd devfs_root, const zx::channel& svc_root, fbl::unique_fd fd,
                        std::unique_ptr<GptDevice> gpt,
@@ -246,8 +254,10 @@ class GptDevicePartitioner {
         gpt_(std::move(gpt)),
         block_info_(block_info) {}
 
-  zx_status_t CreateGptPartition(const char* name, const uint8_t* type, uint64_t offset,
-                                 uint64_t blocks, uint8_t* out_guid) const;
+  zx::status<std::array<uint8_t, GPT_GUID_LEN>> CreateGptPartition(const char* name,
+                                                                   const uint8_t* type,
+                                                                   uint64_t offset,
+                                                                   uint64_t blocks) const;
 
   fbl::unique_fd devfs_root_;
   zx::channel svc_root_;
@@ -259,32 +269,32 @@ class GptDevicePartitioner {
 // DevicePartitioner implementation for EFI based devices.
 class EfiDevicePartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-                                std::optional<fbl::unique_fd> block_device,
-                                std::unique_ptr<DevicePartitioner>* partitioner);
+  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
+      fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
+      std::optional<fbl::unique_fd> block_device);
 
   bool IsFvmWithinFtl() const override { return false; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx_status_t AddPartition(const PartitionSpec& spec,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FindPartition(const PartitionSpec& spec,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FinalizePartition(const PartitionSpec& spec) const override;
+  zx::status<> FinalizePartition(const PartitionSpec& spec) const override;
 
-  zx_status_t WipeFvm() const override;
+  zx::status<> WipeFvm() const override;
 
-  zx_status_t InitPartitionTables() const override;
+  zx::status<> InitPartitionTables() const override;
 
-  zx_status_t WipePartitionTables() const override;
+  zx::status<> WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(const PartitionSpec& spec,
-                              fbl::Span<const uint8_t> data) const override;
+  zx::status<> ValidatePayload(const PartitionSpec& spec,
+                               fbl::Span<const uint8_t> data) const override;
 
-  zx_status_t Flush() const override { return ZX_OK; }
+  zx::status<> Flush() const override { return zx::ok(); }
 
  private:
   EfiDevicePartitioner(Arch arch, std::unique_ptr<GptDevicePartitioner> gpt)
@@ -297,32 +307,32 @@ class EfiDevicePartitioner : public DevicePartitioner {
 // DevicePartitioner implementation for ChromeOS devices.
 class CrosDevicePartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-                                std::optional<fbl::unique_fd> block_device,
-                                std::unique_ptr<DevicePartitioner>* partitioner);
+  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
+      fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
+      std::optional<fbl::unique_fd> block_device);
 
   bool IsFvmWithinFtl() const override { return false; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx_status_t AddPartition(const PartitionSpec& spec,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FindPartition(const PartitionSpec& spec,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FinalizePartition(const PartitionSpec& spec) const override;
+  zx::status<> FinalizePartition(const PartitionSpec& spec) const override;
 
-  zx_status_t WipeFvm() const override;
+  zx::status<> WipeFvm() const override;
 
-  zx_status_t InitPartitionTables() const override;
+  zx::status<> InitPartitionTables() const override;
 
-  zx_status_t WipePartitionTables() const override;
+  zx::status<> WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(const PartitionSpec& spec,
-                              fbl::Span<const uint8_t> data) const override;
+  zx::status<> ValidatePayload(const PartitionSpec& spec,
+                               fbl::Span<const uint8_t> data) const override;
 
-  zx_status_t Flush() const override { return ZX_OK; }
+  zx::status<> Flush() const override { return zx::ok(); }
 
  private:
   CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
@@ -336,31 +346,30 @@ class CrosDevicePartitioner : public DevicePartitioner {
 // ZIRCON-R).
 class FixedDevicePartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root,
-                                std::unique_ptr<DevicePartitioner>* partitioner);
+  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(fbl::unique_fd devfs_root);
 
   bool IsFvmWithinFtl() const override { return false; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx_status_t AddPartition(const PartitionSpec& spec,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FindPartition(const PartitionSpec& spec,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
+  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx_status_t WipeFvm() const override;
+  zx::status<> WipeFvm() const override;
 
-  zx_status_t InitPartitionTables() const override;
+  zx::status<> InitPartitionTables() const override;
 
-  zx_status_t WipePartitionTables() const override;
+  zx::status<> WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(const PartitionSpec& spec,
-                              fbl::Span<const uint8_t> data) const override;
+  zx::status<> ValidatePayload(const PartitionSpec& spec,
+                               fbl::Span<const uint8_t> data) const override;
 
-  zx_status_t Flush() const override { return ZX_OK; }
+  zx::status<> Flush() const override { return zx::ok(); }
 
  private:
   FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
@@ -377,12 +386,11 @@ class SkipBlockDevicePartitioner {
  public:
   SkipBlockDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
 
-  zx_status_t FindPartition(const uint8_t* guid,
-                            std::unique_ptr<PartitionClient>* out_partition) const;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(const uint8_t* guid) const;
 
-  zx_status_t FindFvmPartition(std::unique_ptr<PartitionClient>* out_partition) const;
+  zx::status<std::unique_ptr<PartitionClient>> FindFvmPartition() const;
 
-  zx_status_t WipeFvm() const;
+  zx::status<> WipeFvm() const;
 
   fbl::unique_fd& devfs_root() { return devfs_root_; }
 
@@ -394,41 +402,40 @@ class AstroPartitioner : public DevicePartitioner {
  public:
   enum class AbrWearLevelingOption { ON, OFF };
 
-  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
-                                std::shared_ptr<Context> context,
-                                std::unique_ptr<DevicePartitioner>* partitioner);
+  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
+      fbl::unique_fd devfs_root, const zx::channel& svc_root, std::shared_ptr<Context> context);
 
   bool IsFvmWithinFtl() const override { return true; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx_status_t AddPartition(const PartitionSpec& spec,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FindPartition(const PartitionSpec& spec,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
+  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx_status_t WipeFvm() const override;
+  zx::status<> WipeFvm() const override;
 
-  zx_status_t InitPartitionTables() const override;
+  zx::status<> InitPartitionTables() const override;
 
-  zx_status_t WipePartitionTables() const override;
+  zx::status<> WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(const PartitionSpec& spec,
-                              fbl::Span<const uint8_t> data) const override;
+  zx::status<> ValidatePayload(const PartitionSpec& spec,
+                               fbl::Span<const uint8_t> data) const override;
 
-  zx_status_t Flush() const override;
+  zx::status<> Flush() const override;
 
  private:
   AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block,
                    std::shared_ptr<Context> context)
       : skip_block_(std::move(skip_block)), context_(context) {}
 
-  static zx_status_t InitializeContext(const fbl::unique_fd& devfs_root,
-                                       AbrWearLevelingOption abr_wear_leveling_opt,
-                                       std::shared_ptr<Context> context);
+  static zx::status<> InitializeContext(const fbl::unique_fd& devfs_root,
+                                        AbrWearLevelingOption abr_wear_leveling_opt,
+                                        std::shared_ptr<Context> context);
 
   static bool CanSafelyUpdateLayout(std::shared_ptr<Context> context);
 
@@ -439,31 +446,30 @@ class AstroPartitioner : public DevicePartitioner {
 
 class As370Partitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root,
-                                std::unique_ptr<DevicePartitioner>* partitioner);
+  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(fbl::unique_fd devfs_root);
 
   bool IsFvmWithinFtl() const override { return true; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx_status_t AddPartition(const PartitionSpec& spec,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FindPartition(const PartitionSpec& spec,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
+  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx_status_t WipeFvm() const override;
+  zx::status<> WipeFvm() const override;
 
-  zx_status_t InitPartitionTables() const override;
+  zx::status<> InitPartitionTables() const override;
 
-  zx_status_t WipePartitionTables() const override;
+  zx::status<> WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(const PartitionSpec& spec,
-                              fbl::Span<const uint8_t> data) const override;
+  zx::status<> ValidatePayload(const PartitionSpec& spec,
+                               fbl::Span<const uint8_t> data) const override;
 
-  zx_status_t Flush() const override { return ZX_OK; }
+  zx::status<> Flush() const override { return zx::ok(); }
 
  private:
   As370Partitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
@@ -474,32 +480,32 @@ class As370Partitioner : public DevicePartitioner {
 
 class SherlockPartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
-                                std::optional<fbl::unique_fd> block_device,
-                                std::unique_ptr<DevicePartitioner>* partitioner);
+  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
+      fbl::unique_fd devfs_root, const zx::channel& svc_root,
+      std::optional<fbl::unique_fd> block_device);
 
   bool IsFvmWithinFtl() const override { return false; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx_status_t AddPartition(const PartitionSpec& spec,
-                           std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FindPartition(const PartitionSpec& spec,
-                            std::unique_ptr<PartitionClient>* out_partition) const override;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+      const PartitionSpec& spec) const override;
 
-  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
+  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx_status_t WipeFvm() const override;
+  zx::status<> WipeFvm() const override;
 
-  zx_status_t InitPartitionTables() const override;
+  zx::status<> InitPartitionTables() const override;
 
-  zx_status_t WipePartitionTables() const override;
+  zx::status<> WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(const PartitionSpec& spec,
-                              fbl::Span<const uint8_t> data) const override;
+  zx::status<> ValidatePayload(const PartitionSpec& spec,
+                               fbl::Span<const uint8_t> data) const override;
 
-  zx_status_t Flush() const override { return ZX_OK; }
+  zx::status<> Flush() const override { return zx::ok(); }
 
  private:
   SherlockPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}

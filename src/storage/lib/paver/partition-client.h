@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
@@ -26,24 +27,24 @@ namespace paver {
 class PartitionClient {
  public:
   // Returns the block size which the vmo provided to read/write should be aligned to.
-  virtual zx_status_t GetBlockSize(size_t* out_size) = 0;
+  virtual zx::status<size_t> GetBlockSize() = 0;
 
   // Returns the partition size.
-  virtual zx_status_t GetPartitionSize(size_t* out_size) = 0;
+  virtual zx::status<size_t> GetPartitionSize() = 0;
 
   // Reads the specified size from the partition into |vmo|. |size| must be aligned to the block
   // size returned in `GetBlockSize`.
-  virtual zx_status_t Read(const zx::vmo& vmo, size_t size) = 0;
+  virtual zx::status<> Read(const zx::vmo& vmo, size_t size) = 0;
 
   // Writes |vmo| into the partition. |vmo_size| must be aligned to the block size returned in
   // `GetBlockSize`.
-  virtual zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) = 0;
+  virtual zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) = 0;
 
   // Issues a trim to the entire partition.
-  virtual zx_status_t Trim() = 0;
+  virtual zx::status<> Trim() = 0;
 
   // Flushes all previous operations to persistent storage.
-  virtual zx_status_t Flush() = 0;
+  virtual zx::status<> Flush() = 0;
 
   // Returns a channel to the partition, when backed by a block device.
   virtual zx::channel GetChannel() = 0;
@@ -59,14 +60,14 @@ class BlockPartitionClient final : public PartitionClient {
  public:
   explicit BlockPartitionClient(zx::channel partition) : partition_(std::move(partition)) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size, size_t dev_offset);
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset);
-  zx_status_t Trim() final;
-  zx_status_t Flush() final;
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size, size_t dev_offset);
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset);
+  zx::status<> Trim() final;
+  zx::status<> Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 
@@ -77,10 +78,10 @@ class BlockPartitionClient final : public PartitionClient {
   BlockPartitionClient& operator=(BlockPartitionClient&&) = delete;
 
  private:
-  zx_status_t Setup(const zx::vmo& vmo, vmoid_t* out_vmoid);
-  zx_status_t RegisterFastBlockIo();
-  zx_status_t RegisterVmo(const zx::vmo& vmo, vmoid_t* out_vmoid);
-  zx_status_t ReadBlockInfo();
+  zx::status<vmoid_t> Setup(const zx::vmo& vmo);
+  zx::status<> RegisterFastBlockIo();
+  zx::status<vmoid_t> RegisterVmo(const zx::vmo& vmo);
+  zx::status<> ReadBlockInfo();
 
   ::llcpp::fuchsia::hardware::block::Block::SyncClient partition_;
   std::optional<block_client::Client> client_;
@@ -91,12 +92,12 @@ class SkipBlockPartitionClient : public PartitionClient {
  public:
   explicit SkipBlockPartitionClient(zx::channel partition) : partition_(std::move(partition)) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) override;
-  zx_status_t GetPartitionSize(size_t* out_size) override;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) override;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) override;
-  zx_status_t Trim() override;
-  zx_status_t Flush() override;
+  zx::status<size_t> GetBlockSize() override;
+  zx::status<size_t> GetPartitionSize() override;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) override;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) override;
+  zx::status<> Trim() override;
+  zx::status<> Flush() override;
   zx::channel GetChannel() override;
   fbl::unique_fd block_fd() override;
 
@@ -107,10 +108,10 @@ class SkipBlockPartitionClient : public PartitionClient {
   SkipBlockPartitionClient& operator=(SkipBlockPartitionClient&&) = delete;
 
  protected:
-  zx_status_t WriteBytes(const zx::vmo& vmo, zx_off_t offset, size_t vmo_size);
+  zx::status<> WriteBytes(const zx::vmo& vmo, zx_off_t offset, size_t vmo_size);
 
  private:
-  zx_status_t ReadPartitionInfo();
+  zx::status<> ReadPartitionInfo();
 
   ::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient partition_;
   std::optional<::llcpp::fuchsia::hardware::skipblock::PartitionInfo> partition_info_;
@@ -123,12 +124,12 @@ class SysconfigPartitionClient final : public PartitionClient {
                            ::sysconfig::SyncClient::PartitionType partition)
       : client_(std::move(client)), partition_(partition) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx_status_t Trim() final;
-  zx_status_t Flush() final;
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<> Trim() final;
+  zx::status<> Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 
@@ -150,12 +151,12 @@ class AstroSysconfigPartitionClientBuffered : public PartitionClient {
                                         ::sysconfig::SyncClient::PartitionType partition)
       : context_(context), partition_(partition) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx_status_t Trim() final;
-  zx_status_t Flush() final;
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<> Trim() final;
+  zx::status<> Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 
@@ -179,12 +180,12 @@ class PartitionCopyClient final : public PartitionClient {
   explicit PartitionCopyClient(std::vector<std::unique_ptr<PartitionClient>> partitions)
       : partitions_(std::move(partitions)) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx_status_t Trim() final;
-  zx_status_t Flush() final;
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<> Trim() final;
+  zx::status<> Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 
@@ -205,10 +206,10 @@ class Bl2PartitionClient final : public SkipBlockPartitionClient {
   explicit Bl2PartitionClient(zx::channel partition)
       : SkipBlockPartitionClient(std::move(partition)) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
 
   // No copy, no move.
   Bl2PartitionClient(const Bl2PartitionClient&) = delete;
@@ -226,12 +227,12 @@ class SherlockBootloaderPartitionClient final : public PartitionClient {
   explicit SherlockBootloaderPartitionClient(zx::channel partition)
       : client_(std::move(partition)) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx_status_t Trim() final;
-  zx_status_t Flush() final;
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<> Trim() final;
+  zx::status<> Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 

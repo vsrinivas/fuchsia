@@ -17,18 +17,17 @@ class VmoReader {
   VmoReader(::llcpp::fuchsia::mem::Buffer buffer)
       : vmo_(std::move(buffer.vmo)), size_(buffer.size) {}
 
-  zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) {
+  zx::status<size_t> Read(void* buf, size_t buf_size) {
     if (offset_ >= size_) {
-      return ZX_ERR_OUT_OF_RANGE;
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
     const auto size = std::min(size_ - offset_, buf_size);
-    auto status = vmo_.read(buf, offset_, size);
-    if (status != ZX_OK) {
-      return status;
+    auto status = zx::make_status(vmo_.read(buf, offset_, size));
+    if (status.is_error()) {
+      return status.take_error();
     }
     offset_ += size;
-    *size_actual = size;
-    return ZX_OK;
+    return zx::ok(size);
   }
 
  private:

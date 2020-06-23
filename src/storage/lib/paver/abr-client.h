@@ -6,6 +6,7 @@
 #define SRC_STORAGE_LIB_PAVER_ABR_CLIENT_H_
 
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 
 #include <memory>
 
@@ -21,34 +22,39 @@ namespace abr {
 class Client {
  public:
   // Factory create method.
-  static zx_status_t Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
-                            std::shared_ptr<paver::Context> context,
-                            std::unique_ptr<abr::Client>* out);
+  static zx::status<std::unique_ptr<abr::Client>> Create(fbl::unique_fd devfs_root,
+                                                         const zx::channel& svc_root,
+                                                         std::shared_ptr<paver::Context> context);
   virtual ~Client() = default;
 
   AbrSlotIndex GetBootSlot(bool update_metadata, bool* is_slot_marked_successful) const {
     return AbrGetBootSlot(&abr_ops_, update_metadata, is_slot_marked_successful);
   }
 
-  zx_status_t MarkSlotActive(AbrSlotIndex index) {
+  zx::status<> MarkSlotActive(AbrSlotIndex index) {
     return AbrResultToZxStatus(AbrMarkSlotActive(&abr_ops_, index));
   }
 
-  zx_status_t MarkSlotUnbootable(AbrSlotIndex index) {
+  zx::status<> MarkSlotUnbootable(AbrSlotIndex index) {
     return AbrResultToZxStatus(AbrMarkSlotUnbootable(&abr_ops_, index));
   }
 
-  zx_status_t MarkSlotSuccessful(AbrSlotIndex index) {
+  zx::status<> MarkSlotSuccessful(AbrSlotIndex index) {
     return AbrResultToZxStatus(AbrMarkSlotSuccessful(&abr_ops_, index));
   }
 
-  zx_status_t GetSlotInfo(AbrSlotIndex index, AbrSlotInfo* info) const {
-    return AbrResultToZxStatus(AbrGetSlotInfo(&abr_ops_, index, info));
+  zx::status<AbrSlotInfo> GetSlotInfo(AbrSlotIndex index) const {
+    AbrSlotInfo info;
+    auto status = AbrResultToZxStatus(AbrGetSlotInfo(&abr_ops_, index, &info));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    return zx::ok(info);
   }
 
-  static zx_status_t AbrResultToZxStatus(AbrResult status);
+  static zx::status<> AbrResultToZxStatus(AbrResult status);
 
-  virtual zx_status_t Flush() const = 0;
+  virtual zx::status<> Flush() const = 0;
 
   void InitializeAbrOps();
 
@@ -72,45 +78,45 @@ class Client {
 
   static bool WriteAbrMetaData(void* context, const uint8_t* buffer, size_t size);
 
-  virtual zx_status_t Read(uint8_t* buffer, size_t size) = 0;
+  virtual zx::status<> Read(uint8_t* buffer, size_t size) = 0;
 
-  virtual zx_status_t Write(const uint8_t* buffer, size_t size) = 0;
+  virtual zx::status<> Write(const uint8_t* buffer, size_t size) = 0;
 };
 
 class AstroClient {
  public:
-  static zx_status_t Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
-                            std::shared_ptr<paver::Context> context,
-                            std::unique_ptr<abr::Client>* out);
+  static zx::status<std::unique_ptr<abr::Client>> Create(fbl::unique_fd devfs_root,
+                                                         const zx::channel& svc_root,
+                                                         std::shared_ptr<paver::Context> context);
 };
 
 class SherlockClient {
  public:
-  static zx_status_t Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
-                            std::unique_ptr<abr::Client>* out);
+  static zx::status<std::unique_ptr<abr::Client>> Create(fbl::unique_fd devfs_root,
+                                                         const zx::channel& svc_root);
 };
 
 // Implementation of abr::Client which works with a contiguous partition storing AbrData.
 class AbrPartitionClient : public Client {
  public:
   // |partition| should contain AbrData with no offset.
-  static zx_status_t Create(std::unique_ptr<paver::PartitionClient> partition,
-                            std::unique_ptr<abr::Client>* out);
+  static zx::status<std::unique_ptr<abr::Client>> Create(
+      std::unique_ptr<paver::PartitionClient> partition);
 
  private:
   AbrPartitionClient(std::unique_ptr<paver::PartitionClient> partition, zx::vmo vmo,
                      size_t block_size)
       : partition_(std::move(partition)), vmo_(std::move(vmo)), block_size_(block_size) {}
 
+  zx::status<> Read(uint8_t* buffer, size_t size) override;
+
+  zx::status<> Write(const uint8_t* buffer, size_t size) override;
+
+  zx::status<> Flush() const override { return partition_->Flush(); }
+
   std::unique_ptr<paver::PartitionClient> partition_;
   zx::vmo vmo_;
   size_t block_size_;
-
-  zx_status_t Read(uint8_t* buffer, size_t size) override;
-
-  zx_status_t Write(const uint8_t* buffer, size_t size) override;
-
-  zx_status_t Flush() const override { return partition_->Flush(); }
 };
 
 }  // namespace abr

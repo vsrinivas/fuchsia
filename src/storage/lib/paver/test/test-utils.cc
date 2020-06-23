@@ -119,59 +119,53 @@ FakePartitionClient::FakePartitionClient(size_t block_count, size_t block_size)
   }
 }
 
-zx_status_t FakePartitionClient::GetBlockSize(size_t* out_size) {
-  if (out_size != nullptr) {
-    *out_size = block_size_;
-  }
-  return ZX_OK;
+zx::status<size_t> FakePartitionClient::GetBlockSize() {
+  return zx::ok(block_size_);
 }
 
-zx_status_t FakePartitionClient::GetPartitionSize(size_t* out_size) {
-  if (out_size != nullptr) {
-    *out_size = partition_size_;
-  }
-  return ZX_OK;
+zx::status<size_t> FakePartitionClient::GetPartitionSize() {
+  return zx::ok(partition_size_);
 }
 
-zx_status_t FakePartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::status<> FakePartitionClient::Read(const zx::vmo& vmo, size_t size) {
   if (partition_size_ == 0) {
-    return ZX_OK;
+    return zx::ok();
   }
 
   fzl::VmoMapper mapper;
   if (auto status = mapper.Map(vmo, 0, size, ZX_VM_PERM_WRITE); status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
-  return partition_.read(mapper.start(), 0, size);
+  return zx::make_status(partition_.read(mapper.start(), 0, size));
 }
 
-zx_status_t FakePartitionClient::Write(const zx::vmo& vmo, size_t size) {
+zx::status<> FakePartitionClient::Write(const zx::vmo& vmo, size_t size) {
   if (size > partition_size_) {
     size_t new_size = fbl::round_up(size, block_size_);
     zx_status_t status = partition_.set_size(new_size);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
     partition_size_ = new_size;
   }
 
   fzl::VmoMapper mapper;
   if (auto status = mapper.Map(vmo, 0, size, ZX_VM_PERM_READ); status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
-  return partition_.write(mapper.start(), 0, size);
+  return zx::make_status(partition_.write(mapper.start(), 0, size));
 }
 
-zx_status_t FakePartitionClient::Trim() {
+zx::status<> FakePartitionClient::Trim() {
   zx_status_t status = partition_.set_size(0);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   partition_size_ = 0;
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t FakePartitionClient::Flush() { return ZX_OK; }
+zx::status<> FakePartitionClient::Flush() { return zx::ok(); }
 
 zx::channel FakePartitionClient::GetChannel() { return {}; }
 

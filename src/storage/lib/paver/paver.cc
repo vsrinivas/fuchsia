@@ -99,7 +99,7 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t payload_
     return false;
   }
 
-  if ((status = partition->Read(read_vmo, payload_size_aligned)) != ZX_OK) {
+  if (auto status = partition->Read(read_vmo, payload_size_aligned); status.is_error()) {
     return false;
   }
 
@@ -122,65 +122,68 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t payload_
 
 // Returns a client for the FVM partition. If the FVM volume doesn't exist, a new
 // volume will be created, without any associated children partitions.
-zx_status_t GetFvmPartition(const DevicePartitioner& partitioner,
-                            std::unique_ptr<PartitionClient>* client) {
+zx::status<std::unique_ptr<PartitionClient>> GetFvmPartition(const DevicePartitioner& partitioner) {
   // FVM doesn't need content type support, use the default.
   const PartitionSpec spec(Partition::kFuchsiaVolumeManager);
-  zx_status_t status = partitioner.FindPartition(spec, client);
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_NOT_FOUND) {
-      ERROR("Failure looking for FVM partition: %s\n", zx_status_get_string(status));
-      return status;
+  auto status = partitioner.FindPartition(spec);
+  if (status.is_error()) {
+    if (status.status_value() != ZX_ERR_NOT_FOUND) {
+      ERROR("Failure looking for FVM partition: %s\n", status.status_string());
+      return status.take_error();
     }
 
     LOG("Could not find FVM Partition on device. Attemping to add new partition\n");
 
-    if ((status = partitioner.AddPartition(spec, client)) != ZX_OK) {
-      ERROR("Failure creating FVM partition: %s\n", zx_status_get_string(status));
-      return status;
+    if (auto status = partitioner.AddPartition(spec); status.is_error()) {
+      ERROR("Failure creating FVM partition: %s\n", status.status_string());
+      return status.take_error();
+    } else {
+      return status.take_value();
     }
   } else {
     LOG("FVM Partition already exists\n");
   }
-  return ZX_OK;
+  return status.take_value();
 }
 
-zx_status_t FvmPave(const fbl::unique_fd& devfs_root, const DevicePartitioner& partitioner,
-                    std::unique_ptr<fvm::ReaderInterface> payload) {
+zx::status<> FvmPave(const fbl::unique_fd& devfs_root, const DevicePartitioner& partitioner,
+                     std::unique_ptr<fvm::ReaderInterface> payload) {
   LOG("Paving FVM partition.\n");
-  std::unique_ptr<PartitionClient> partition;
-  zx_status_t status = GetFvmPartition(partitioner, &partition);
-  if (status != ZX_OK) {
-    return status;
+  auto status = GetFvmPartition(partitioner);
+  if (status.is_error()) {
+    return status.take_error();
   }
+  std::unique_ptr<PartitionClient>& partition = status.value();
 
   if (partitioner.IsFvmWithinFtl()) {
     LOG("Attempting to format FTL...\n");
-    status = partitioner.WipeFvm();
-    if (status != ZX_OK) {
-      ERROR("Failed to format FTL: %s\n", zx_status_get_string(status));
+    zx::status<> status = partitioner.WipeFvm();
+    if (status.is_error()) {
+      ERROR("Failed to format FTL: %s\n", status.status_string());
     } else {
       LOG("Formatted partition successfully!\n");
     }
   }
   LOG("Streaming partitions to FVM...\n");
-  status = FvmStreamPartitions(devfs_root, std::move(partition), std::move(payload));
-  if (status != ZX_OK) {
-    ERROR("Failed to stream partitions to FVM: %s\n", zx_status_get_string(status));
-    return status;
+  {
+    auto status = FvmStreamPartitions(devfs_root, std::move(partition), std::move(payload));
+    if (status.is_error()) {
+      ERROR("Failed to stream partitions to FVM: %s\n", status.status_string());
+      return status.take_error();
+    }
   }
   LOG("Completed FVM paving successfully\n");
-  return ZX_OK;
+  return zx::ok();
 }
 
 // Formats the FVM partition and returns a channel to the new volume.
-zx_status_t FormatFvm(const fbl::unique_fd& devfs_root, const DevicePartitioner& partitioner,
-                      zx::channel* channel) {
-  std::unique_ptr<PartitionClient> partition;
-  zx_status_t status = GetFvmPartition(partitioner, &partition);
-  if (status != ZX_OK) {
-    return status;
+zx::status<zx::channel> FormatFvm(const fbl::unique_fd& devfs_root,
+                                  const DevicePartitioner& partitioner) {
+  auto status = GetFvmPartition(partitioner);
+  if (status.is_error()) {
+    return status.take_error();
   }
+  std::unique_ptr<PartitionClient> partition = std::move(status.value());
 
   // TODO(39753): Configuration values should come from the build or environment.
   fvm::sparse_image_t header = {};
@@ -190,72 +193,74 @@ zx_status_t FormatFvm(const fbl::unique_fd& devfs_root, const DevicePartitioner&
       FvmPartitionFormat(devfs_root, partition->block_fd(), header, BindOption::Reformat));
   if (!fvm_fd) {
     ERROR("Couldn't format FVM partition\n");
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
-  status = AllocateEmptyPartitions(devfs_root, fvm_fd);
-  if (status != ZX_OK) {
-    ERROR("Couldn't allocate empty partitions\n");
-    return status;
-  }
+  {
+    auto status = AllocateEmptyPartitions(devfs_root, fvm_fd);
+    if (status.is_error()) {
+      ERROR("Couldn't allocate empty partitions\n");
+      return status.take_error();
+    }
 
-  status = fdio_get_service_handle(fvm_fd.release(), channel->reset_and_get_address());
-  if (status != ZX_OK) {
-    ERROR("Couldn't get fvm handle\n");
-    return ZX_ERR_IO;
+    zx::channel channel;
+    status =
+        zx::make_status(fdio_get_service_handle(fvm_fd.release(), channel.reset_and_get_address()));
+    if (status.is_error()) {
+      ERROR("Couldn't get fvm handle\n");
+      return zx::error(ZX_ERR_IO);
+    }
+    return zx::ok(std::move(channel));
   }
-
-  return ZX_OK;
 }
 
 // Reads an image from disk into a vmo.
-zx_status_t PartitionRead(const DevicePartitioner& partitioner, const PartitionSpec& spec,
-                          zx::vmo* out_vmo, size_t* out_vmo_size) {
+zx::status<::llcpp::fuchsia::mem::Buffer> PartitionRead(const DevicePartitioner& partitioner,
+                                                        const PartitionSpec& spec) {
   LOG("Reading partition \"%s\".\n", spec.ToString().c_str());
 
-  std::unique_ptr<PartitionClient> partition;
-  if (zx_status_t status = partitioner.FindPartition(spec, &partition); status != ZX_OK) {
+  auto status = partitioner.FindPartition(spec);
+  if (status.is_error()) {
     ERROR("Could not find \"%s\" Partition on device: %s\n", spec.ToString().c_str(),
-          zx_status_get_string(status));
-    return status;
+          status.status_string());
+    return status.take_error();
   }
+  std::unique_ptr<PartitionClient>& partition = status.value();
 
-  uint64_t partition_size;
-  if (zx_status_t status = partition->GetPartitionSize(&partition_size); status != ZX_OK) {
+  auto status2 = partition->GetPartitionSize();
+  if (status2.is_error()) {
     ERROR("Error getting partition \"%s\" size: %s\n", spec.ToString().c_str(),
-          zx_status_get_string(status));
-    return status;
+          status2.status_string());
+    return status2.take_error();
   }
+  const uint64_t partition_size = status2.value();
 
   zx::vmo vmo;
-  if (zx_status_t status = zx::vmo::create(fbl::round_up(partition_size, ZX_PAGE_SIZE), 0, &vmo);
-      status != ZX_OK) {
-    ERROR("Error creating vmo for \"%s\": %s\n", spec.ToString().c_str(),
-          zx_status_get_string(status));
-    return status;
+  if (auto status =
+          zx::make_status(zx::vmo::create(fbl::round_up(partition_size, ZX_PAGE_SIZE), 0, &vmo));
+      status.is_error()) {
+    ERROR("Error creating vmo for \"%s\": %s\n", spec.ToString().c_str(), status.status_string());
+    return status.take_error();
   }
 
-  if (zx_status_t status = partition->Read(vmo, static_cast<size_t>(partition_size));
-      status != ZX_OK) {
+  if (auto status = partition->Read(vmo, static_cast<size_t>(partition_size)); status.is_error()) {
     ERROR("Error writing partition data for \"%s\": %s\n", spec.ToString().c_str(),
-          zx_status_get_string(status));
-    return status;
+          status.status_string());
+    return status.take_error();
   }
 
-  *out_vmo = std::move(vmo);
-  *out_vmo_size = static_cast<size_t>(partition_size);
   LOG("Completed successfully\n");
-  return ZX_OK;
+  return zx::ok(::llcpp::fuchsia::mem::Buffer{std::move(vmo), static_cast<size_t>(partition_size)});
 }
 
-zx_status_t ValidatePartitionPayload(const DevicePartitioner& partitioner,
-                                     const zx::vmo& payload_vmo, size_t payload_size,
-                                     const PartitionSpec& spec) {
+zx::status<> ValidatePartitionPayload(const DevicePartitioner& partitioner,
+                                      const zx::vmo& payload_vmo, size_t payload_size,
+                                      const PartitionSpec& spec) {
   fzl::VmoMapper payload_mapper;
-  zx_status_t status = payload_mapper.Map(payload_vmo, 0, 0, ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    ERROR("Could not map payload into memory: %s\n", zx_status_get_string(status));
-    return status;
+  auto status = zx::make_status(payload_mapper.Map(payload_vmo, 0, 0, ZX_VM_PERM_READ));
+  if (status.is_error()) {
+    ERROR("Could not map payload into memory: %s\n", status.status_string());
+    return status.take_error();
   }
   ZX_ASSERT(payload_mapper.size() >= payload_size);
 
@@ -265,8 +270,8 @@ zx_status_t ValidatePartitionPayload(const DevicePartitioner& partitioner,
 }
 
 // Paves an image onto the disk.
-zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_vmo,
-                          size_t payload_size, const PartitionSpec& spec) {
+zx::status<> PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_vmo,
+                           size_t payload_size, const PartitionSpec& spec) {
   LOG("Paving partition \"%s\".\n", spec.ToString().c_str());
 
   // The payload_vmo might be pager-backed. Commit its pages first before using it for
@@ -280,47 +285,52 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
   // We should investigate if the block server can handle page faults without deadlocking. If we can
   // support that, the client will not need to worry about re-entrancy in the block server code, and
   // this ZX_VMO_OP_COMMIT will no longer be needed.
-  zx_status_t status = payload_vmo.op_range(ZX_VMO_OP_COMMIT, 0, payload_size, nullptr, 0);
-  if (status != ZX_OK) {
+  auto status =
+      zx::make_status(payload_vmo.op_range(ZX_VMO_OP_COMMIT, 0, payload_size, nullptr, 0));
+  if (status.is_error()) {
     ERROR("Failed to commit payload VMO for partition \"%s\": %s\n", spec.ToString().c_str(),
-          zx_status_get_string(status));
-    return status;
+          status.status_string());
+    return status.take_error();
   }
 
   // Perform basic safety checking on the partition before we attempt to write it.
   status = ValidatePartitionPayload(partitioner, payload_vmo, payload_size, spec);
-  if (status != ZX_OK) {
+  if (status.is_error()) {
     ERROR("Failed to validate partition \"%s\": %s\n", spec.ToString().c_str(),
-          zx_status_get_string(status));
-    return status;
+          status.status_string());
+    return status.take_error();
   }
 
   // Find or create the appropriate partition.
   std::unique_ptr<PartitionClient> partition;
-  if ((status = partitioner.FindPartition(spec, &partition)) != ZX_OK) {
-    if (status != ZX_ERR_NOT_FOUND) {
+  if (auto status = partitioner.FindPartition(spec); status.is_ok()) {
+    LOG("Partition \"%s\" already exists\n", spec.ToString().c_str());
+    partition = std::move(status.value());
+  } else {
+    if (status.error_value() != ZX_ERR_NOT_FOUND) {
       ERROR("Failure looking for partition \"%s\": %s\n", spec.ToString().c_str(),
-            zx_status_get_string(status));
-      return status;
+            status.status_string());
+      return status.take_error();
     }
 
     LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
         spec.ToString().c_str());
 
-    if ((status = partitioner.AddPartition(spec, &partition)) != ZX_OK) {
+    if (auto status = partitioner.AddPartition(spec); status.is_ok()) {
+      partition = std::move(status.value());
+    } else {
       ERROR("Failure creating partition \"%s\": %s\n", spec.ToString().c_str(),
-            zx_status_get_string(status));
-      return status;
+            status.status_string());
+      return status.take_error();
     }
-  } else {
-    LOG("Partition \"%s\" already exists\n", spec.ToString().c_str());
   }
 
-  size_t block_size_bytes;
-  if ((status = partition->GetBlockSize(&block_size_bytes)) != ZX_OK) {
+  zx::status<size_t> status_or_size = partition->GetBlockSize();
+  if (status_or_size.is_error()) {
     ERROR("Couldn't get partition \"%s\" block size\n", spec.ToString().c_str());
-    return status;
+    return status_or_size.take_error();
   }
+  const size_t block_size_bytes = status_or_size.value();
 
   if (CheckIfSame(partition.get(), payload_vmo, payload_size, block_size_bytes)) {
     LOG("Skipping write as partition \"%s\" contents match payload.\n", spec.ToString().c_str());
@@ -329,42 +339,42 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
     if (payload_size % block_size_bytes != 0) {
       const size_t remaining_bytes = block_size_bytes - (payload_size % block_size_bytes);
       size_t vmo_size;
-      if ((status = payload_vmo.get_size(&vmo_size)) != ZX_OK) {
+      if (auto status = zx::make_status(payload_vmo.get_size(&vmo_size)); status.is_error()) {
         ERROR("Couldn't get vmo size for \"%s\"\n", spec.ToString().c_str());
-        return status;
+        return status.take_error();
       }
       // Grow VMO if it's too small.
       if (vmo_size < payload_size + remaining_bytes) {
         const auto new_size = fbl::round_up(payload_size + remaining_bytes, ZX_PAGE_SIZE);
-        status = payload_vmo.set_size(new_size);
-        if (status != ZX_OK) {
+        status = zx::make_status(payload_vmo.set_size(new_size));
+        if (status.is_error()) {
           ERROR("Couldn't grow vmo for \"%s\"\n", spec.ToString().c_str());
-          return status;
+          return status.take_error();
         }
       }
       auto buffer = std::make_unique<uint8_t[]>(remaining_bytes);
       memset(buffer.get(), 0, remaining_bytes);
-      status = payload_vmo.write(buffer.get(), payload_size, remaining_bytes);
-      if (status != ZX_OK) {
+      status = zx::make_status(payload_vmo.write(buffer.get(), payload_size, remaining_bytes));
+      if (status.is_error()) {
         ERROR("Failed to write padding to vmo for \"%s\"\n", spec.ToString().c_str());
-        return status;
+        return status.take_error();
       }
       payload_size += remaining_bytes;
     }
-    if ((status = partition->Write(payload_vmo, payload_size)) != ZX_OK) {
+    if (auto status = partition->Write(payload_vmo, payload_size); status.is_error()) {
       ERROR("Error writing partition \"%s\" data: %s\n", spec.ToString().c_str(),
-            zx_status_get_string(status));
-      return status;
+            status.status_string());
+      return status.take_error();
     }
   }
 
-  if ((status = partitioner.FinalizePartition(spec)) != ZX_OK) {
+  if (auto status = partitioner.FinalizePartition(spec); status.is_error()) {
     ERROR("Failed to finalize partition \"%s\"\n", spec.ToString().c_str());
-    return status;
+    return status.take_error();
   }
 
   LOG("Completed paving partition \"%s\" successfully\n", spec.ToString().c_str());
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx::channel OpenServiceRoot() {
@@ -470,12 +480,11 @@ void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::
 
 void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
                          ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) {
-  ::llcpp::fuchsia::mem::Buffer buf;
-  zx_status_t status = sink_.ReadAsset(configuration, asset, &buf);
-  if (status == ZX_OK) {
-    completer.ReplySuccess(std::move(buf));
+  auto status = sink_.ReadAsset(configuration, asset);
+  if (status.is_ok()) {
+    completer.ReplySuccess(std::move(status.value()));
   } else {
-    completer.ReplyError(status);
+    completer.ReplyError(status.error_value());
   }
 }
 
@@ -486,17 +495,16 @@ void DataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffe
 }
 
 void DataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
-  zx::channel out;
-  zx_status_t status = sink_.WipeVolume(&out);
-  if (status == ZX_OK) {
-    completer.ReplySuccess(std::move(out));
+  auto status = sink_.WipeVolume();
+  if (status.is_ok()) {
+    completer.ReplySuccess(std::move(status.value()));
   } else {
-    completer.ReplyError(status);
+    completer.ReplyError(status.error_value());
   }
 }
 
-zx_status_t DataSinkImpl::ReadAsset(Configuration configuration, Asset asset,
-                                    ::llcpp::fuchsia::mem::Buffer* buf) {
+zx::status<::llcpp::fuchsia::mem::Buffer> DataSinkImpl::ReadAsset(Configuration configuration,
+                                                                  Asset asset) {
   // No assets support content types yet, use the PartitionSpec default.
   PartitionSpec spec(PartitionType(configuration, asset));
 
@@ -505,14 +513,18 @@ zx_status_t DataSinkImpl::ReadAsset(Configuration configuration, Asset asset,
   // between unknown asset types (which should be ignored) and actual errors
   // that happen to return this same status code.
   if (!partitioner_->SupportsPartition(spec)) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  return PartitionRead(*partitioner_, spec, &buf->vmo, &buf->size);
+  auto status = PartitionRead(*partitioner_, spec);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(status.value()));
 }
 
-zx_status_t DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
-                                     ::llcpp::fuchsia::mem::Buffer payload) {
+zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
+                                      ::llcpp::fuchsia::mem::Buffer payload) {
   // No assets support content types yet, use the PartitionSpec default.
   PartitionSpec spec(PartitionType(configuration, asset));
 
@@ -521,7 +533,7 @@ zx_status_t DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
   // between unknown asset types (which should be ignored) and actual errors
   // that happen to return this same status code.
   if (!partitioner_->SupportsPartition(spec)) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
@@ -537,44 +549,43 @@ std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
     return fidl::aligned<bool>(true);
   }
 
-  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
+  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec).status_value();
 }
 
-zx_status_t DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
-  std::unique_ptr<StreamReader> reader;
-  zx_status_t status = StreamReader::Create(std::move(payload_stream), &reader);
-  if (status != ZX_OK) {
+zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
+  auto status = StreamReader::Create(std::move(payload_stream));
+  if (status.is_error()) {
     ERROR("Unable to create stream.\n");
-    return status;
+    return status.take_error();
   }
-  return FvmPave(devfs_root_, *partitioner_, std::move(reader));
+  return FvmPave(devfs_root_, *partitioner_, std::move(status.value()));
 }
 
 // Deprecated in favor of WriteFirmware().
 // TODO(45606): move clients off this function and delete it.
-zx_status_t DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
+zx::status<> DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
   PartitionSpec spec(Partition::kBootloader);
 
   if (!partitioner_->SupportsPartition(spec)) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
 }
 
-zx_status_t DataSinkImpl::WriteDataFile(fidl::StringView filename,
-                                        ::llcpp::fuchsia::mem::Buffer payload) {
+zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
+                                         ::llcpp::fuchsia::mem::Buffer payload) {
   const char* mount_path = "/volume/data";
   const uint8_t data_guid[] = GUID_DATA_VALUE;
   char minfs_path[PATH_MAX] = {0};
   char path[PATH_MAX] = {0};
-  zx_status_t status = ZX_OK;
+  zx::status<> status = zx::ok();
 
   fbl::unique_fd part_fd(
       open_partition_with_devfs(devfs_root_.get(), nullptr, data_guid, ZX_SEC(1), path));
   if (!part_fd) {
     ERROR("DATA partition not found in FVM\n");
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   auto disk_format = detect_disk_format(part_fd.get());
@@ -592,55 +603,60 @@ zx_status_t DataSinkImpl::WriteDataFile(fidl::StringView filename,
     case DISK_FORMAT_ZXCRYPT: {
       std::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
       uint8_t slot = 0;
-      if ((status = zxcrypt::FdioVolume::UnlockWithDeviceKey(
-               std::move(part_fd), devfs_root_.duplicate(), static_cast<zxcrypt::key_slot_t>(slot),
-               &zxc_volume)) != ZX_OK) {
-        ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
-        return status;
+      if (status = zx::make_status(zxcrypt::FdioVolume::UnlockWithDeviceKey(
+              std::move(part_fd), devfs_root_.duplicate(), static_cast<zxcrypt::key_slot_t>(slot),
+              &zxc_volume));
+          status.is_error()) {
+        ERROR("Couldn't unlock zxcrypt volume: %s\n", status.status_string());
+        return status.take_error();
       }
 
       // Most of the time we'll expect the volume to actually already be
       // unsealed, because we created it and unsealed it moments ago to
       // format minfs.
-      if ((status = zxc_volume->Open(zx::sec(0), &mountpoint_dev_fd)) == ZX_OK) {
+      if (status = zx::make_status(zxc_volume->Open(zx::sec(0), &mountpoint_dev_fd));
+          status.is_ok()) {
         // Already unsealed, great, early exit.
         break;
       }
 
       // Ensure zxcrypt volume manager is bound.
       zx::channel zxc_manager_chan;
-      if ((status = zxc_volume->OpenManager(zx::sec(5),
-                                            zxc_manager_chan.reset_and_get_address())) != ZX_OK) {
-        ERROR("Couldn't open zxcrypt volume manager: %s\n", zx_status_get_string(status));
-        return status;
+      if (status = zx::make_status(
+              zxc_volume->OpenManager(zx::sec(5), zxc_manager_chan.reset_and_get_address()));
+          status.is_error()) {
+        ERROR("Couldn't open zxcrypt volume manager: %s\n", status.status_string());
+        return status.take_error();
       }
 
       // Unseal.
       zxcrypt::FdioVolumeManager zxc_manager(std::move(zxc_manager_chan));
-      if ((status = zxc_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
-        ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
-        return status;
+      if (status = zx::make_status(zxc_manager.UnsealWithDeviceKey(slot)); status.is_error()) {
+        ERROR("Couldn't unseal zxcrypt volume: %s\n", status.status_string());
+        return status.take_error();
       }
 
       // Wait for the device to appear, and open it.
-      if ((status = zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd)) != ZX_OK) {
+      if (status = zx::make_status(zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd));
+          status.is_error()) {
         ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n",
-              zx_status_get_string(status));
-        return status;
+              status.status_string());
+        return status.take_error();
       }
     } break;
 
     default:
       ERROR("unsupported disk format at %s\n", path);
-      return ZX_ERR_NOT_SUPPORTED;
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   mount_options_t opts(default_mount_options);
   opts.create_mountpoint = true;
-  if ((status = mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, &opts,
-                      launch_logs_async)) != ZX_OK) {
-    ERROR("mount error: %s\n", zx_status_get_string(status));
-    return status;
+  if (status = zx::make_status(
+          mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, &opts, launch_logs_async));
+      status.is_error()) {
+    ERROR("mount error: %s\n", status.status_string());
+    return status.take_error();
   }
 
   int filename_size = static_cast<int>(filename.size());
@@ -670,35 +686,37 @@ zx_status_t DataSinkImpl::WriteDataFile(fidl::StringView filename,
     if (!kfd) {
       umount(mount_path);
       ERROR("open %.*s error: %s\n", filename_size, filename.data(), strerror(errno));
-      return ZX_ERR_IO;
+      return zx::error(ZX_ERR_IO);
     }
     VmoReader reader(std::move(payload));
-    size_t actual;
-    while ((status = reader.Read(buf, sizeof(buf), &actual)) == ZX_OK && actual > 0) {
+    auto status = reader.Read(buf, sizeof(buf));
+    while (status.is_ok() && status.value() > 0) {
+      size_t actual = status.value();
       if (write(kfd.get(), buf, actual) != static_cast<ssize_t>(actual)) {
         umount(mount_path);
         ERROR("write %.*s error: %s\n", filename_size, filename.data(), strerror(errno));
-        return ZX_ERR_IO;
+        return zx::error(ZX_ERR_IO);
       }
+      status = reader.Read(buf, sizeof(buf));
     }
     fsync(kfd.get());
   }
 
-  if ((status = umount(mount_path)) != ZX_OK) {
-    ERROR("unmount %s failed: %s\n", mount_path, zx_status_get_string(status));
-    return status;
+  if (status = zx::make_status(umount(mount_path)); status.is_error()) {
+    ERROR("unmount %s failed: %s\n", mount_path, status.status_string());
+    return status.take_error();
   }
 
   LOG("Wrote %.*s\n", filename_size, filename.data());
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t DataSinkImpl::WipeVolume(zx::channel* out) {
-  std::unique_ptr<PartitionClient> partition;
-  zx_status_t status = GetFvmPartition(*partitioner_, &partition);
-  if (status != ZX_OK) {
-    return status;
+zx::status<zx::channel> DataSinkImpl::WipeVolume() {
+  auto status = GetFvmPartition(*partitioner_);
+  if (status.is_error()) {
+    return status.take_error();
   }
+  std::unique_ptr<PartitionClient> partition = std::move(status.value());
 
   // Bind the FVM driver to be in a well known state regarding races with block watcher.
   // The block watcher will attempt to bind the FVM driver automatically based on
@@ -710,21 +728,23 @@ zx_status_t DataSinkImpl::WipeVolume(zx::channel* out) {
   // but the driver will be loaded before moving on.
   TryBindToFvmDriver(devfs_root_, partition->block_fd(), zx::sec(3));
 
-  status = partitioner_->WipeFvm();
-  if (status != ZX_OK) {
-    ERROR("Failure wiping partition: %s\n", zx_status_get_string(status));
-    return status;
+  {
+    auto status = partitioner_->WipeFvm();
+    if (status.is_error()) {
+      ERROR("Failure wiping partition: %s\n", status.status_string());
+      return status.take_error();
+    }
   }
 
-  zx::channel channel;
-  status = FormatFvm(devfs_root_, *partitioner_, &channel);
-  if (status != ZX_OK) {
-    ERROR("Failure formatting partition: %s\n", zx_status_get_string(status));
-    return status;
-  }
+  {
+    auto status = FormatFvm(devfs_root_, *partitioner_);
+    if (status.is_error()) {
+      ERROR("Failure formatting partition: %s\n", status.status_string());
+      return status.take_error();
+    }
 
-  *out = std::move(channel);
-  return ZX_OK;
+    return zx::ok(std::move(status.value()));
+  }
 }
 
 void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
@@ -756,22 +776,21 @@ void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_
 
 void DynamicDataSink::InitializePartitionTables(
     InitializePartitionTablesCompleter::Sync completer) {
-  completer.Reply(sink_.partitioner()->InitPartitionTables());
+  completer.Reply(sink_.partitioner()->InitPartitionTables().status_value());
 }
 
 void DynamicDataSink::WipePartitionTables(WipePartitionTablesCompleter::Sync completer) {
-  completer.Reply(sink_.partitioner()->WipePartitionTables());
+  completer.Reply(sink_.partitioner()->WipePartitionTables().status_value());
 }
 
 void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
                                 ::llcpp::fuchsia::paver::Asset asset,
                                 ReadAssetCompleter::Sync completer) {
-  ::llcpp::fuchsia::mem::Buffer buf;
-  auto status = sink_.ReadAsset(configuration, asset, &buf);
-  if (status == ZX_OK) {
-    completer.ReplySuccess(std::move(buf));
+  auto status = sink_.ReadAsset(configuration, asset);
+  if (status.is_ok()) {
+    completer.ReplySuccess(std::move(status.value()));
   } else {
-    completer.ReplyError(status);
+    completer.ReplyError(status.error_value());
   }
 }
 
@@ -782,25 +801,23 @@ void DynamicDataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem
 }
 
 void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
-  zx::channel out;
-  zx_status_t status = sink_.WipeVolume(&out);
-  if (status == ZX_OK) {
-    completer.ReplySuccess(std::move(out));
+  auto status = sink_.WipeVolume();
+  if (status.is_ok()) {
+    completer.ReplySuccess(std::move(status.value()));
   } else {
-    completer.ReplyError(status);
+    completer.ReplyError(status.error_value());
   }
 }
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                        zx::channel svc_root, std::shared_ptr<Context> context, zx::channel server) {
-  std::unique_ptr<abr::Client> abr_client;
-  if (zx_status_t status =
-          abr::Client::Create(std::move(devfs_root), std::move(svc_root), context, &abr_client);
-      status != ZX_OK) {
-    ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
-    fidl_epitaph_write(server.get(), status);
+  auto status = abr::Client::Create(std::move(devfs_root), std::move(svc_root), context);
+  if (status.is_error()) {
+    ERROR("Failed to get ABR client: %s\n", status.status_string());
+    fidl_epitaph_write(server.get(), status.error_value());
     return;
   }
+  auto& abr_client = status.value();
 
   auto boot_manager = std::make_unique<BootManager>(std::move(abr_client));
   fidl::Bind(dispatcher, std::move(server), std::move(boot_manager));
@@ -817,14 +834,14 @@ void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sy
 
 void BootManager::QueryConfigurationStatus(Configuration configuration,
                                            QueryConfigurationStatusCompleter::Sync completer) {
-  AbrSlotInfo slot;
   auto slot_index = ConfigurationToSlotIndex(configuration);
-  if (auto res = slot_index ? abr_client_->GetSlotInfo(*slot_index, &slot) : ZX_ERR_INVALID_ARGS;
-      res != ZX_OK) {
+  auto status = slot_index ? abr_client_->GetSlotInfo(*slot_index) : zx::error(ZX_ERR_INVALID_ARGS);
+  if (status.is_error()) {
     ERROR("Failed to get slot info %d\n", static_cast<uint32_t>(configuration));
-    completer.ReplyError(res);
+    completer.ReplyError(status.error_value());
     return;
   }
+  const AbrSlotInfo& slot = status.value();
 
   if (!slot.is_bootable) {
     completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE);
@@ -840,10 +857,11 @@ void BootManager::SetConfigurationActive(Configuration configuration,
   LOG("Setting configuration %d as active\n", static_cast<uint32_t>(configuration));
 
   auto slot_index = ConfigurationToSlotIndex(configuration);
-  if (auto res = slot_index ? abr_client_->MarkSlotActive(*slot_index) : ZX_ERR_INVALID_ARGS;
-      res != ZX_OK) {
+  auto status =
+      slot_index ? abr_client_->MarkSlotActive(*slot_index) : zx::error(ZX_ERR_INVALID_ARGS);
+  if (status.is_error()) {
     ERROR("Failed to set configuration: %d active\n", static_cast<uint32_t>(configuration));
-    completer.Reply(res);
+    completer.Reply(status.error_value());
     return;
   }
 
@@ -857,10 +875,11 @@ void BootManager::SetConfigurationUnbootable(Configuration configuration,
   LOG("Setting configuration %d as unbootable\n", static_cast<uint32_t>(configuration));
 
   auto slot_index = ConfigurationToSlotIndex(configuration);
-  if (auto res = slot_index ? abr_client_->MarkSlotUnbootable(*slot_index) : ZX_ERR_INVALID_ARGS;
-      res != ZX_OK) {
+  auto status =
+      slot_index ? abr_client_->MarkSlotUnbootable(*slot_index) : zx::error(ZX_ERR_INVALID_ARGS);
+  if (status.is_error()) {
     ERROR("Failed to set configuration: %d unbootable\n", static_cast<uint32_t>(configuration));
-    completer.Reply(res);
+    completer.Reply(status.error_value());
     return;
   }
 
@@ -880,10 +899,10 @@ void BootManager::SetActiveConfigurationHealthy(
     return;
   }
 
-  if (auto res = abr_client_->MarkSlotSuccessful(*ConfigurationToSlotIndex(*config));
-      res != ZX_OK) {
+  if (auto status = abr_client_->MarkSlotSuccessful(*ConfigurationToSlotIndex(*config));
+      status.is_error()) {
     ERROR("Failed to set configuration: %d healthy\n", static_cast<uint32_t>(*config));
-    completer.Reply(res);
+    completer.Reply(status.error_value());
     return;
   }
 

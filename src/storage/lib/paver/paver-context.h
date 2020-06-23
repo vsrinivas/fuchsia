@@ -2,6 +2,7 @@
 #define ZIRCON_SYSTEM_ULIB_PAVER_PAVER_CONTEXT_H_
 
 #include <lib/sysconfig/sync-client.h>
+#include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
 #include <memory>
@@ -36,28 +37,38 @@ class AstroPartitionerContext : public ContextBase {
 class Context {
  public:
   template <typename T>
-  zx_status_t Initialize(std::function<zx_status_t(std::unique_ptr<T>*)> factory) {
+  zx::status<> Initialize(std::function<zx::status<std::unique_ptr<T>>()> factory) {
     std::lock_guard<std::mutex> lock(mutex_);
     // Already holds a context
     if (impl_) {
-      return ZX_OK;
+      return zx::ok();
     }
-    std::unique_ptr<T> out;
-    if (auto status = factory(&out); status != ZX_OK) {
-      return status;
+    if (auto status = factory(); status.is_ok()) {
+      impl_ = std::move(status.value());
+      return zx::ok();
+    } else {
+      return status.take_error();
     }
-    impl_ = std::move(out);
-    return ZX_OK;
   }
 
   // All functions using the contexts are callbacks so we can grab the
   // lock and do type checking ourselves internally.
   template <typename T>
-  zx_status_t Call(std::function<zx_status_t(T*)> callback) {
+  zx::status<> Call(std::function<zx::status<>(T*)> callback) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!impl_) {
       fprintf(stderr, "Context is not initialized.\n");
-      return ZX_ERR_INTERNAL;
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+    return callback(static_cast<T*>(impl_.get()));
+  }
+
+  template <typename T, typename R>
+  zx::status<R> Call(std::function<zx::status<R>(T*)> callback) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!impl_) {
+      fprintf(stderr, "Context is not initialized.\n");
+      return zx::error(ZX_ERR_INTERNAL);
     }
     return callback(static_cast<T*>(impl_.get()));
   }

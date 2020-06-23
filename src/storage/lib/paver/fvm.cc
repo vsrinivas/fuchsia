@@ -627,24 +627,25 @@ constexpr FvmPartition kBasicPartitions[] = {{{0, GUID_BLOB_VALUE, "blobfs", 0, 
 
 }  // namespace
 
-zx_status_t AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
-                                    const fbl::unique_fd& fvm_fd) {
+zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
+                                     const fbl::unique_fd& fvm_fd) {
   fbl::Array<PartitionInfo> partitions(new PartitionInfo[2], 2);
   partitions[0].pd = const_cast<fvm::partition_descriptor_t*>(&kBasicPartitions[0].descriptor);
   partitions[1].pd = const_cast<fvm::partition_descriptor_t*>(&kBasicPartitions[1].descriptor);
   partitions[0].active = true;
   partitions[1].active = true;
 
-  return AllocatePartitions(devfs_root, fvm_fd, &partitions);
+  return zx::make_status(AllocatePartitions(devfs_root, fvm_fd, &partitions));
 }
 
-zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
-                                std::unique_ptr<PartitionClient> partition_client,
-                                std::unique_ptr<fvm::ReaderInterface> payload) {
+zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
+                                 std::unique_ptr<PartitionClient> partition_client,
+                                 std::unique_ptr<fvm::ReaderInterface> payload) {
   std::unique_ptr<fvm::SparseReader> reader;
-  zx_status_t status;
-  if ((status = fvm::SparseReader::Create(std::move(payload), &reader)) != ZX_OK) {
-    return status;
+  zx::status<> status = zx::ok();
+  if (status = zx::make_status(fvm::SparseReader::Create(std::move(payload), &reader));
+      status.is_error()) {
+    return status.take_error();
   }
 
   LOG("Header Validated - OK\n");
@@ -656,7 +657,7 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
       FvmPartitionFormat(devfs_root, partition_client->block_fd(), *hdr, BindOption::TryBind));
   if (!fvm_fd) {
     ERROR("Couldn't find FVM partition\n");
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
   fbl::Array<PartitionInfo> parts(new PartitionInfo[hdr->partition_count], hdr->partition_count);
@@ -665,18 +666,19 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   //
   // Additionally, delete the old versions of any new partitions.
   size_t requested_slices = 0;
-  if ((status = PreProcessPartitions(fvm_fd, reader, parts, &requested_slices)) != ZX_OK) {
-    ERROR("Failed to validate partitions: %s\n", zx_status_get_string(status));
-    return status;
+  if (status = zx::make_status(PreProcessPartitions(fvm_fd, reader, parts, &requested_slices));
+      status.is_error()) {
+    ERROR("Failed to validate partitions: %s\n", status.status_string());
+    return status.take_error();
   }
 
   // Contend with issues from an image that may be too large for this device.
   VolumeInfo info;
-  status =
-      fvm_query(fvm_fd.get(), reinterpret_cast<fuchsia_hardware_block_volume_VolumeInfo*>(&info));
-  if (status != ZX_OK) {
-    ERROR("Failed to acquire FVM info: %s\n", zx_status_get_string(status));
-    return status;
+  status = zx::make_status(
+      fvm_query(fvm_fd.get(), reinterpret_cast<fuchsia_hardware_block_volume_VolumeInfo*>(&info)));
+  if (status.is_error()) {
+    ERROR("Failed to acquire FVM info: %s\n", status.status_string());
+    return status.take_error();
   }
   size_t free_slices = info.pslice_total_count - info.pslice_allocated_count;
   if (info.pslice_total_count < requested_slices) {
@@ -684,7 +686,7 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     snprintf(buf, sizeof(buf), "Image size (%zu) > Storage size (%zu)",
              requested_slices * hdr->slice_size, info.pslice_total_count * hdr->slice_size);
     Warn(buf, "Image is too large to be paved to device");
-    return ZX_ERR_NO_SPACE;
+    return zx::error(ZX_ERR_NO_SPACE);
   }
   if (free_slices < requested_slices) {
     Warn("Not enough space to non-destructively pave",
@@ -693,7 +695,7 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
         FvmPartitionFormat(devfs_root, partition_client->block_fd(), *hdr, BindOption::Reformat);
     if (!fvm_fd) {
       ERROR("Couldn't reformat FVM partition.\n");
-      return ZX_ERR_IO;
+      return zx::error(ZX_ERR_IO);
     }
     LOG("FVM Reformatted successfully.\n");
   }
@@ -701,9 +703,9 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   LOG("Partitions pre-validated successfully: Enough space exists to pave.\n");
 
   // Actually allocate the storage for the incoming image.
-  if ((status = AllocatePartitions(devfs_root, fvm_fd, &parts)) != ZX_OK) {
-    ERROR("Failed to allocate partitions: %s\n", zx_status_get_string(status));
-    return status;
+  if (status = zx::make_status(AllocatePartitions(devfs_root, fvm_fd, &parts)); status.is_error()) {
+    ERROR("Failed to allocate partitions: %s\n", status.status_string());
+    return status.take_error();
   }
 
   LOG("Partition space pre-allocated successfully.\n");
@@ -712,10 +714,9 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 
   fzl::VmoMapper mapping;
   zx::vmo vmo;
-  if ((status = mapping.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-                                     &vmo)) != ZX_OK) {
+  if (mapping.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo) != ZX_OK) {
     ERROR("Failed to create stream VMO\n");
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   fdio_cpp::FdioCaller volume_manager(std::move(fvm_fd));
@@ -724,22 +725,22 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   for (size_t p = 0; p < parts.size(); p++) {
     vmoid_t vmoid;
     block_client::Client client;
-    zx_status_t status = RegisterFastBlockIo(parts[p].new_part, vmo, &vmoid, &client);
-    if (status != ZX_OK) {
+    auto status = zx::make_status(RegisterFastBlockIo(parts[p].new_part, vmo, &vmoid, &client));
+    if (status.is_error()) {
       ERROR("Failed to register fast block IO\n");
-      return status;
+      return status.take_error();
     }
 
     fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
     auto result = block::Block::Call::GetInfo(partition_connection.channel());
     if (!result.ok()) {
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(result.status()));
-      return result.status();
+      return zx::error(result.status());
     }
     const auto& response = result.value();
     if (response.status != ZX_OK) {
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(response.status));
-      return response.status;
+      return zx::error(response.status);
     }
 
     size_t block_size = response.info->block_size;
@@ -750,15 +751,16 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     request.opcode = BLOCKIO_WRITE;
 
     LOG("Streaming partition %zu\n", p);
-    status = StreamFvmPartition(reader.get(), &parts[p], mapping, client, block_size, &request);
+    status = zx::make_status(
+        StreamFvmPartition(reader.get(), &parts[p], mapping, client, block_size, &request));
     LOG("Done streaming partition %zu\n", p);
-    if (status != ZX_OK) {
-      ERROR("Failed to stream partition status=%d\n", status);
-      return status;
+    if (status.is_error()) {
+      ERROR("Failed to stream partition status=%d\n", status.error_value());
+      return status.take_error();
     }
-    if ((status = FlushClient(&client)) != ZX_OK) {
+    if (status = zx::make_status(FlushClient(&client)); status.is_error()) {
       ERROR("Failed to flush client\n");
-      return status;
+      return status.take_error();
     }
     LOG("Done flushing partition %zu\n", p);
   }
@@ -770,18 +772,18 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     auto result = partition::Partition::Call::GetInstanceGuid(partition_connection.channel());
     if (!result.ok() || result.value().status != ZX_OK) {
       ERROR("Failed to get unique GUID of new partition\n");
-      return ZX_ERR_BAD_STATE;
+      return zx::error(ZX_ERR_BAD_STATE);
     }
     auto* guid = result.value().guid.get();
 
     auto result2 = volume::VolumeManager::Call::Activate(volume_manager.channel(), *guid, *guid);
     if (result2.status() != ZX_OK || result2.value().status != ZX_OK) {
       ERROR("Failed to upgrade partition\n");
-      return ZX_ERR_IO;
+      return zx::error(ZX_ERR_IO);
     }
   }
 
-  return ZX_OK;
+  return zx::ok();
 }
 
 // Unbinds the FVM driver from the given device. Assumes that the driver is either

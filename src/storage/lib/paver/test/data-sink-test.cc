@@ -80,7 +80,7 @@ class MockPartitionClient : public FakePartitionClient {
 
   // Writes the |vmo| to the partition, and verifies that no page faults are generated, i.e. the
   // |vmo| passed in is already populated.
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) override {
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) override {
     EXPECT_NOT_NULL(pager_);
 
     // The payload vmo was pager-backed. Verify that all its pages were committed before
@@ -99,7 +99,7 @@ class MockPartitionClient : public FakePartitionClient {
     for (size_t i = 0; i < vmo_size; i++) {
       EXPECT_EQ(start[i], kData, "i = %zu", i);
     }
-    return ZX_OK;
+    return zx::ok();
   }
 
  private:
@@ -111,13 +111,12 @@ class MockDevicePartitioner : public FakeDevicePartitioner {
   explicit MockDevicePartitioner(MockUserPager* pager) : pager_(pager) {}
 
   // Dummy FindPartition function that creates and returns a MockPartitionClient.
-  zx_status_t FindPartition(const paver::PartitionSpec& spec,
-                            std::unique_ptr<paver::PartitionClient>* out_partition) const override {
-    *out_partition = std::make_unique<MockPartitionClient>(pager_, kBlockCount);
-    return ZX_OK;
+  zx::status<std::unique_ptr<paver::PartitionClient>> FindPartition(
+      const paver::PartitionSpec& spec) const override {
+    return zx::ok(std::make_unique<MockPartitionClient>(pager_, kBlockCount));
   }
 
-  zx_status_t Flush() const override { return ZX_OK; }
+  zx::status<> Flush() const override { return zx::ok(); }
 
  private:
   MockUserPager* pager_;
@@ -142,9 +141,8 @@ TEST(DataSinkTest, WriteAssetPaged) {
 
   // The Configuration and Asset type passed in here are not relevant. They just need to be valid
   // values.
-  ASSERT_NO_FATAL_FAILURES(data_sink.WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
-                                                ::llcpp::fuchsia::paver::Asset::KERNEL,
-                                                std::move(payload)));
+  ASSERT_OK(data_sink.WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                 ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload)));
 }
 
 }  // namespace

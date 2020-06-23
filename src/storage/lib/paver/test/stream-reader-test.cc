@@ -17,8 +17,7 @@ namespace {
 constexpr char kFileData[] = "lalalala";
 
 TEST(StreamReaderTest, InvalidChannel) {
-  std::unique_ptr<paver::StreamReader> reader;
-  ASSERT_NE(paver::StreamReader::Create(zx::channel(), &reader), ZX_OK);
+  ASSERT_NOT_OK(paver::StreamReader::Create(zx::channel()));
 }
 
 class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interface {
@@ -95,14 +94,12 @@ class StreamReaderTest : public zxtest::Test {
   FakePayloadStream stream_;
 };
 
-TEST_F(StreamReaderTest, Create) {
-  std::unique_ptr<paver::StreamReader> reader;
-  ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
-}
+TEST_F(StreamReaderTest, Create) { ASSERT_OK(paver::StreamReader::Create(stream_.client())); }
 
 TEST_F(StreamReaderTest, ReadError) {
-  std::unique_ptr<paver::StreamReader> reader;
-  ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
+  auto status = paver::StreamReader::Create(stream_.client());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::StreamReader> reader = std::move(status.value());
 
   stream_.ReturnErr();
 
@@ -112,8 +109,9 @@ TEST_F(StreamReaderTest, ReadError) {
 }
 
 TEST_F(StreamReaderTest, ReadEof) {
-  std::unique_ptr<paver::StreamReader> reader;
-  ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
+  auto status = paver::StreamReader::Create(stream_.client());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::StreamReader> reader = std::move(status.value());
 
   stream_.ReturnEof();
 
@@ -124,8 +122,9 @@ TEST_F(StreamReaderTest, ReadEof) {
 }
 
 TEST_F(StreamReaderTest, ReadSingle) {
-  std::unique_ptr<paver::StreamReader> reader;
-  ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
+  auto status = paver::StreamReader::Create(stream_.client());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::StreamReader> reader = std::move(status.value());
 
   char buffer[sizeof(kFileData)] = {};
   size_t actual;
@@ -140,8 +139,9 @@ TEST_F(StreamReaderTest, ReadSingle) {
 }
 
 TEST_F(StreamReaderTest, ReadMultiple) {
-  std::unique_ptr<paver::StreamReader> reader;
-  ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
+  auto status = paver::StreamReader::Create(stream_.client());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::StreamReader> reader = std::move(status.value());
 
   char buffer[sizeof(kFileData)] = {};
   size_t actual;
@@ -160,8 +160,9 @@ TEST_F(StreamReaderTest, ReadMultiple) {
 }
 
 TEST_F(StreamReaderTest, ReadPartial) {
-  std::unique_ptr<paver::StreamReader> reader;
-  ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
+  auto status = paver::StreamReader::Create(stream_.client());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::StreamReader> reader = std::move(status.value());
 
   constexpr size_t kBufferSize = sizeof(kFileData) - 3;
   char buffer[kBufferSize] = {};

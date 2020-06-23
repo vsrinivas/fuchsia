@@ -89,27 +89,29 @@ class FakeDevicePartitioner : public paver::DevicePartitioner {
 
   bool SupportsPartition(const paver::PartitionSpec& spec) const override { return true; }
 
-  zx_status_t FindPartition(const paver::PartitionSpec& spec,
-                            std::unique_ptr<paver::PartitionClient>* out_partition) const override {
-    return ZX_OK;
+  zx::status<std::unique_ptr<paver::PartitionClient>> FindPartition(
+      const paver::PartitionSpec& spec) const override {
+    return zx::ok(nullptr);
   }
 
-  zx_status_t FinalizePartition(const paver::PartitionSpec& spec) const override { return ZX_OK; }
-
-  zx_status_t AddPartition(const paver::PartitionSpec& spec,
-                           std::unique_ptr<paver::PartitionClient>* out_partition) const override {
-    return ZX_OK;
+  zx::status<> FinalizePartition(const paver::PartitionSpec& spec) const override {
+    return zx::ok();
   }
 
-  zx_status_t WipeFvm() const override { return ZX_OK; }
+  zx::status<std::unique_ptr<paver::PartitionClient>> AddPartition(
+      const paver::PartitionSpec& spec) const override {
+    return zx::ok(nullptr);
+  }
 
-  zx_status_t InitPartitionTables() const override { return ZX_OK; }
+  zx::status<> WipeFvm() const override { return zx::ok(); }
 
-  zx_status_t WipePartitionTables() const override { return ZX_OK; }
+  zx::status<> InitPartitionTables() const override { return zx::ok(); }
 
-  zx_status_t ValidatePayload(const paver::PartitionSpec& spec,
-                              fbl::Span<const uint8_t> data) const override {
-    return ZX_OK;
+  zx::status<> WipePartitionTables() const override { return zx::ok(); }
+
+  zx::status<> ValidatePayload(const paver::PartitionSpec& spec,
+                               fbl::Span<const uint8_t> data) const override {
+    return zx::ok();
   }
 };
 
@@ -119,12 +121,12 @@ class FakePartitionClient : public paver::PartitionClient {
  public:
   FakePartitionClient(size_t block_count, size_t block_size = PAGE_SIZE);
 
-  zx_status_t GetBlockSize(size_t* out_size);
-  zx_status_t GetPartitionSize(size_t* out_size);
-  zx_status_t Read(const zx::vmo& vmo, size_t size);
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size);
-  zx_status_t Trim();
-  zx_status_t Flush();
+  zx::status<size_t> GetBlockSize();
+  zx::status<size_t> GetPartitionSize();
+  zx::status<> Read(const zx::vmo& vmo, size_t size);
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size);
+  zx::status<> Trim();
+  zx::status<> Flush();
   zx::channel GetChannel();
   fbl::unique_fd block_fd();
 

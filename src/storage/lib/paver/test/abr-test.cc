@@ -28,11 +28,8 @@ TEST(AstroAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  std::unique_ptr<abr::Client> partitioner;
   zx::channel svc_root;
-  ASSERT_NE(
-      abr::AstroClient::Create(devmgr.devfs_root().duplicate(), svc_root, nullptr, &partitioner),
-      ZX_OK);
+  ASSERT_NOT_OK(abr::AstroClient::Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
 }
 
 TEST(SherlockAbrTests, CreateFails) {
@@ -49,10 +46,7 @@ TEST(SherlockAbrTests, CreateFails) {
   ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
   fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release());
 
-  std::unique_ptr<abr::Client> partitioner;
-  ASSERT_NE(abr::SherlockClient::Create(devmgr.devfs_root().duplicate(), std::move(svc_root),
-                                        &partitioner),
-            ZX_OK);
+  ASSERT_NOT_OK(abr::SherlockClient::Create(devmgr.devfs_root().duplicate(), std::move(svc_root)));
 }
 
 }  // namespace

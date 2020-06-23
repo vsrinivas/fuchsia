@@ -29,35 +29,39 @@ class FakePartitionClient final : public paver::PartitionClient {
   explicit FakePartitionClient(size_t block_size, size_t partition_size)
       : block_size_(block_size), partition_size_(partition_size) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final {
-    *out_size = block_size_;
-    return result_;
+  zx::status<size_t> GetBlockSize() final {
+    if (result_ == ZX_OK) {
+      return zx::ok(block_size_);
+    }
+    return zx::error(result_);
   }
-  zx_status_t GetPartitionSize(size_t* out_size) final {
-    *out_size = partition_size_;
-    return result_;
+  zx::status<size_t> GetPartitionSize() final {
+    if (result_ == ZX_OK) {
+      return zx::ok(partition_size_);
+    }
+    return zx::error(result_);
   }
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final {
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final {
     read_called_ = true;
     if (size > partition_size_) {
-      return ZX_ERR_OUT_OF_RANGE;
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
-    return result_;
+    return zx::make_status(result_);
   }
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final {
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final {
     write_called_ = true;
     if (vmo_size > partition_size_) {
-      return ZX_ERR_OUT_OF_RANGE;
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
-    return result_;
+    return zx::make_status(result_);
   }
-  zx_status_t Trim() final {
+  zx::status<> Trim() final {
     trim_called_ = true;
-    return result_;
+    return zx::make_status(result_);
   }
-  zx_status_t Flush() final {
+  zx::status<> Flush() final {
     flush_called_ = true;
-    return result_;
+    return zx::make_status(result_);
   }
 
   zx::channel GetChannel() final { return {}; }
@@ -97,12 +101,12 @@ TEST(PartitionCopyClientTest, GetBlockSizeSinglePartition) {
   partitions.push_back(std::move(fake));
   paver::PartitionCopyClient client(std::move(partitions));
 
-  size_t block_size;
-  ASSERT_OK(client.GetBlockSize(&block_size));
-  ASSERT_EQ(block_size, 10);
+  auto status = client.GetBlockSize();
+  ASSERT_OK(status);
+  ASSERT_EQ(status.value(), 10);
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.GetBlockSize(&block_size), ZX_OK);
+  ASSERT_NOT_OK(client.GetBlockSize());
 }
 
 TEST(PartitionCopyClientTest, GetPartitionSizeSinglePartition) {
@@ -112,12 +116,12 @@ TEST(PartitionCopyClientTest, GetPartitionSizeSinglePartition) {
   partitions.push_back(std::move(fake));
   paver::PartitionCopyClient client(std::move(partitions));
 
-  size_t partition_size;
-  ASSERT_OK(client.GetPartitionSize(&partition_size));
-  ASSERT_EQ(partition_size, 100);
+  auto status = client.GetPartitionSize();
+  ASSERT_OK(status);
+  ASSERT_EQ(status.value(), 100);
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.GetPartitionSize(&partition_size), ZX_OK);
+  ASSERT_NOT_OK(client.GetPartitionSize());
 }
 
 TEST(PartitionCopyClientTest, ReadSinglePartition) {
@@ -132,7 +136,7 @@ TEST(PartitionCopyClientTest, ReadSinglePartition) {
   ASSERT_TRUE(fake_ref->read_called());
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.Read(vmo, 0), ZX_OK);
+  ASSERT_NOT_OK(client.Read(vmo, 0));
 }
 
 TEST(PartitionCopyClientTest, WriteSinglePartition) {
@@ -148,7 +152,7 @@ TEST(PartitionCopyClientTest, WriteSinglePartition) {
   ASSERT_FALSE(fake_ref->trim_called());
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.Write(vmo, 0), ZX_OK);
+  ASSERT_NOT_OK(client.Write(vmo, 0));
   ASSERT_TRUE(fake_ref->trim_called());
 }
 
@@ -164,7 +168,7 @@ TEST(PartitionCopyClientTest, TrimSinglePartition) {
   ASSERT_TRUE(fake_ref->trim_called());
 
   fake_ref->set_result(ZX_ERR_NOT_SUPPORTED);
-  ASSERT_NE(client.Trim(), ZX_OK);
+  ASSERT_NOT_OK(client.Trim());
 }
 
 TEST(PartitionCopyClientTest, FlushSinglePartition) {
@@ -179,7 +183,7 @@ TEST(PartitionCopyClientTest, FlushSinglePartition) {
   ASSERT_TRUE(fake_ref->flush_called());
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.Flush(), ZX_OK);
+  ASSERT_NOT_OK(client.Flush());
 }
 
 TEST(PartitionCopyClientTest, GetChannelSinglePartition) {
@@ -219,16 +223,17 @@ TEST(PartitionCopyClientTest, GetBlockSizeMultiplePartitions) {
   partitions.push_back(std::move(fake2));
   paver::PartitionCopyClient client(std::move(partitions));
 
-  size_t block_size;
-  ASSERT_OK(client.GetBlockSize(&block_size));
-  ASSERT_EQ(block_size, 70);
+  auto status = client.GetBlockSize();
+  ASSERT_OK(status);
+  ASSERT_EQ(status.value(), 70);
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_OK(client.GetBlockSize(&block_size));
-  ASSERT_EQ(block_size, 7);
+  status = client.GetBlockSize();
+  ASSERT_OK(status);
+  ASSERT_EQ(status.value(), 7);
 
   fake_ref2->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.GetBlockSize(&block_size), ZX_OK);
+  ASSERT_NOT_OK(client.GetBlockSize());
 }
 
 TEST(PartitionCopyClientTest, GetPartitionSizeMultiplePartitions) {
@@ -241,16 +246,17 @@ TEST(PartitionCopyClientTest, GetPartitionSizeMultiplePartitions) {
   partitions.push_back(std::move(fake2));
   paver::PartitionCopyClient client(std::move(partitions));
 
-  size_t partition_size;
-  ASSERT_OK(client.GetPartitionSize(&partition_size));
-  ASSERT_EQ(partition_size, 90);
+  auto status = client.GetPartitionSize();
+  ASSERT_OK(status);
+  ASSERT_EQ(status.value(), 90);
 
   fake_ref2->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_OK(client.GetPartitionSize(&partition_size));
-  ASSERT_EQ(partition_size, 100);
+  status = client.GetPartitionSize();
+  ASSERT_OK(status);
+  ASSERT_EQ(status.value(), 100);
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.GetPartitionSize(&partition_size), ZX_OK);
+  ASSERT_NOT_OK(client.GetPartitionSize());
 }
 
 TEST(PartitionCopyClientTest, ReadMultiplePartitions) {
@@ -273,7 +279,7 @@ TEST(PartitionCopyClientTest, ReadMultiplePartitions) {
   ASSERT_TRUE(fake_ref2->read_called());
 
   fake_ref2->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.Read(vmo, 0), ZX_OK);
+  ASSERT_NOT_OK(client.Read(vmo, 0));
 }
 
 TEST(PartitionCopyClientTest, WriteMultiplePartitions) {
@@ -299,7 +305,7 @@ TEST(PartitionCopyClientTest, WriteMultiplePartitions) {
   ASSERT_FALSE(fake_ref2->trim_called());
 
   fake_ref2->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.Write(vmo, 0), ZX_OK);
+  ASSERT_NOT_OK(client.Write(vmo, 0));
 }
 
 TEST(PartitionCopyClientTest, TrimMultiplePartitions) {
@@ -318,7 +324,7 @@ TEST(PartitionCopyClientTest, TrimMultiplePartitions) {
   ASSERT_TRUE(fake_ref2->trim_called());
 
   fake_ref->set_result(ZX_ERR_NOT_SUPPORTED);
-  ASSERT_NE(client.Trim(), ZX_OK);
+  ASSERT_NOT_OK(client.Trim());
 }
 
 TEST(PartitionCopyClientTest, FlushMultiplePartitions) {
@@ -337,7 +343,7 @@ TEST(PartitionCopyClientTest, FlushMultiplePartitions) {
   ASSERT_TRUE(fake_ref2->flush_called());
 
   fake_ref->set_result(ZX_ERR_ACCESS_DENIED);
-  ASSERT_NE(client.Flush(), ZX_OK);
+  ASSERT_NOT_OK(client.Flush());
 }
 
 TEST(PartitionCopyClientTest, GetChannelMultiplePartitions) {
@@ -426,14 +432,18 @@ void Read(std::unique_ptr<paver::PartitionClient> client, std::string* data, siz
 }
 
 TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_BootloaderPartitionSize) {
-  size_t size = 0;
+  {
+    auto status = RawClient()->GetPartitionSize();
+    ASSERT_OK(status);
+    ASSERT_EQ(1024, status.value());
+  }
 
-  ASSERT_OK(RawClient()->GetPartitionSize(&size));
-  ASSERT_EQ(1024, size);
-
-  // Bootloader size should not count block 0.
-  ASSERT_OK(BootloaderClient()->GetPartitionSize(&size));
-  ASSERT_EQ(512, size);
+  {
+    // Bootloader size should not count block 0.
+    auto status = BootloaderClient()->GetPartitionSize();
+    ASSERT_OK(status);
+    ASSERT_EQ(512, status.value());
+  }
 }
 
 TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_ReadBootloaderPartition) {

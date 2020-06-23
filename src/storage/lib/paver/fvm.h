@@ -4,6 +4,8 @@
 #ifndef SRC_STORAGE_LIB_PAVER_FVM_H_
 #define SRC_STORAGE_LIB_PAVER_FVM_H_
 
+#include <lib/zx/status.h>
+
 #include <block-client/cpp/client.h>
 #include <fvm/sparse-reader.h>
 
@@ -41,16 +43,17 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
 // Allocates empty partitions inside the volume manager. Note that the partitions
 // are simply allocated; the actual size of each partition (number of slices etc)
 // is determined when formatting each volume.
-zx_status_t AllocateEmptyPartitions(const fbl::unique_fd& devfs_root, const fbl::unique_fd& fvm_fd);
+zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
+                                     const fbl::unique_fd& fvm_fd);
 
 // Given an fd representing a "sparse FVM format", fill the FVM with the
 // provided partitions described by |partition_fd|.
 //
 // Decides to overwrite or create new partitions based on the type
 // GUID, not the instance GUID.
-zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
-                                std::unique_ptr<PartitionClient> partition_client,
-                                std::unique_ptr<fvm::ReaderInterface> payload);
+zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
+                                 std::unique_ptr<PartitionClient> partition_client,
+                                 std::unique_ptr<fvm::ReaderInterface> payload);
 
 // Unbinds the FVM driver from the given device. Assumes that the driver is either
 // loaded or not (but not in the process of being loaded).

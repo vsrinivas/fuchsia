@@ -56,12 +56,12 @@ class DataSinkImpl {
   DataSinkImpl(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : devfs_root_(std::move(devfs_root)), partitioner_(std::move(partitioner)) {}
 
-  zx_status_t ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                        ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer* buf);
+  zx::status<::llcpp::fuchsia::mem::Buffer> ReadAsset(
+      ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
 
-  zx_status_t WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                         ::llcpp::fuchsia::paver::Asset asset,
-                         ::llcpp::fuchsia::mem::Buffer payload);
+  zx::status<> WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
+                          ::llcpp::fuchsia::paver::Asset asset,
+                          ::llcpp::fuchsia::mem::Buffer payload);
 
   // FIDL llcpp unions don't currently support memory ownership so we need to
   // return something that does own the underlying memory.
@@ -71,13 +71,13 @@ class DataSinkImpl {
   std::variant<zx_status_t, fidl::aligned<bool>> WriteFirmware(
       fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload);
 
-  zx_status_t WriteVolumes(zx::channel payload_stream);
+  zx::status<> WriteVolumes(zx::channel payload_stream);
 
-  zx_status_t WriteBootloader(::llcpp::fuchsia::mem::Buffer payload);
+  zx::status<> WriteBootloader(::llcpp::fuchsia::mem::Buffer payload);
 
-  zx_status_t WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
+  zx::status<> WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
 
-  zx_status_t WipeVolume(zx::channel* out);
+  zx::status<zx::channel> WipeVolume();
 
   DevicePartitioner* partitioner() { return partitioner_.get(); }
 
@@ -103,30 +103,30 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
                   ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
                   WriteAssetCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)));
+    completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
   }
 
   void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync completer) override;
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteVolumes(std::move(payload_stream)));
+    completer.Reply(sink_.WriteVolumes(std::move(payload_stream)).status_value());
   }
 
   void WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
                        WriteBootloaderCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteBootloader(std::move(payload)));
+    completer.Reply(sink_.WriteBootloader(std::move(payload)).status_value());
   }
 
   void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteDataFileCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)));
+    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)).status_value());
   }
 
   void WipeVolume(WipeVolumeCompleter::Sync completer) override;
 
   void Flush(FlushCompleter::Sync completer) override {
-    completer.Reply(sink_.partitioner()->Flush());
+    completer.Reply(sink_.partitioner()->Flush().status_value());
   }
 
  private:
@@ -151,30 +151,30 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
                   ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
                   WriteAssetCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)));
+    completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
   }
 
   void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync completer) override;
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteVolumes(std::move(payload_stream)));
+    completer.Reply(sink_.WriteVolumes(std::move(payload_stream)).status_value());
   }
 
   void WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
                        WriteBootloaderCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteBootloader(std::move(payload)));
+    completer.Reply(sink_.WriteBootloader(std::move(payload)).status_value());
   }
 
   void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteDataFileCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)));
+    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)).status_value());
   }
 
   void WipeVolume(WipeVolumeCompleter::Sync completer) override;
 
   void Flush(FlushCompleter::Sync completer) override {
-    completer.Reply(sink_.partitioner()->Flush());
+    completer.Reply(sink_.partitioner()->Flush().status_value());
   }
 
  private:
@@ -202,7 +202,9 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
   void SetActiveConfigurationHealthy(
       SetActiveConfigurationHealthyCompleter::Sync completer) override;
 
-  void Flush(FlushCompleter::Sync completer) override { completer.Reply(abr_client_->Flush()); }
+  void Flush(FlushCompleter::Sync completer) override {
+    completer.Reply(abr_client_->Flush().status_value());
+  }
 
  private:
   std::unique_ptr<abr::Client> abr_client_;

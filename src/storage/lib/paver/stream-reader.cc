@@ -10,28 +10,27 @@
 
 namespace paver {
 
-zx_status_t StreamReader::Create(zx::channel stream, std::unique_ptr<StreamReader>* reader) {
+zx::status<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel stream) {
   zx::vmo vmo;
-  auto status = zx::vmo::create(8192, 0, &vmo);
-  if (status != ZX_OK) {
+  auto status = zx::make_status(zx::vmo::create(8192, 0, &vmo));
+  if (status.is_error()) {
     ERROR("Unable to create vmo.\n");
-    return status;
+    return status.take_error();
   }
   zx::vmo dup;
-  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  if (status != ZX_OK) {
+  status = zx::make_status(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  if (status.is_error()) {
     ERROR("Unable to duplicate vmo.\n");
-    return status;
+    return status.take_error();
   }
   auto result = ::llcpp::fuchsia::paver::PayloadStream::Call::RegisterVmo(zx::unowned(stream),
                                                                           std::move(dup));
-  status = result.ok() ? result.value().status : result.status();
-  if (status != ZX_OK) {
-    ERROR("Unable to register vmo: %d\n", status);
-    return status;
+  status = zx::make_status(result.ok() ? result.value().status : result.status());
+  if (status.is_error()) {
+    ERROR("Unable to register vmo: %d\n", status.error_value());
+    return status.take_error();
   }
-  reader->reset(new StreamReader(std::move(stream), std::move(vmo)));
-  return ZX_OK;
+  return zx::ok(new StreamReader(std::move(stream), std::move(vmo)));
 }
 
 zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) {

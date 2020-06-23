@@ -7,6 +7,7 @@
 
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -19,7 +20,7 @@ namespace paver {
 // fvm sparse reader library.
 class StreamReader : public fvm::ReaderInterface {
  public:
-  static zx_status_t Create(zx::channel stream, std::unique_ptr<StreamReader>* reader);
+  static zx::status<std::unique_ptr<StreamReader>> Create(zx::channel stream);
 
   virtual ~StreamReader() = default;
 

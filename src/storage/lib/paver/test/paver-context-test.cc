@@ -9,20 +9,18 @@
 namespace {
 TEST(PaverContextTest, Initialize) {
   paver::Context context;
-  ASSERT_OK(context.Initialize<paver::AstroPartitionerContext>([](auto* out) { return ZX_OK; }));
+  ASSERT_OK(context.Initialize<paver::AstroPartitionerContext>([]() { return zx::ok(nullptr); }));
 }
 
 TEST(PaverContextTest, Call) {
   paver::Context context;
-  ASSERT_OK(context.Initialize<paver::AstroPartitionerContext>([](auto* out) {
-    *out = std::make_unique<paver::AstroPartitionerContext>(nullptr);
-    return ZX_OK;
-  }));
-  ASSERT_OK(context.Call<paver::AstroPartitionerContext>([](auto* ctx) { return ZX_OK; }));
+  ASSERT_OK(context.Initialize<paver::AstroPartitionerContext>(
+      []() { return zx::ok(std::make_unique<paver::AstroPartitionerContext>(nullptr)); }));
+  ASSERT_OK(context.Call<paver::AstroPartitionerContext>([](auto* ctx) { return zx::ok(); }));
 }
 
 TEST(PaverContextTest, CallWithUninitializedContext) {
   paver::Context context;
-  ASSERT_NOT_OK(context.Call<paver::AstroPartitionerContext>([](auto* ctx) { return ZX_OK; }));
+  ASSERT_NOT_OK(context.Call<paver::AstroPartitionerContext>([](auto* ctx) { return zx::ok(); }));
 }
 }  // namespace
