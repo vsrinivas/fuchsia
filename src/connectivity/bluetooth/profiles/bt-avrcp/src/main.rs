@@ -29,6 +29,7 @@ use crate::{
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["avrcp", "avctp"]).expect("Unable to initialize logger");
+    fuchsia_syslog::set_verbosity(2);
 
     // Begin searching for AVRCP target/controller SDP records on newly connected remote peers
     // and register our AVRCP service with the BrEdr profile service.
