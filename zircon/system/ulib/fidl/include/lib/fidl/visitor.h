@@ -54,7 +54,7 @@ namespace {
 // All pointers passed to the visitor are guaranteed to be alive throughout the duration
 // of the message traversal.
 // For all callbacks in the visitor, the return value indicates if an error has occurred.
-template <typename MutationTrait_, typename Position_>
+template <typename MutationTrait_, typename Position_, typename EnvelopeCheckpoint_>
 class Visitor {
  public:
   using MutationTrait = MutationTrait_;
@@ -74,6 +74,11 @@ class Visitor {
   // - Position& operator+=(uint32_t size), to advance position by |size| in the message.
   // - template <typename T> Ptr<T> Get(StartingPoint start) const, to cast to a suitable pointer.
   using Position = Position_;
+
+  // A type representing a checkpoint of the current state of the visitor at the time that the
+  // envelope is entered. When the envelope is left, this value is given back to the visitor.
+  // A common implementation is a struct with the number of already-processed bytes and handles.
+  using EnvelopeCheckpoint = EnvelopeCheckpoint_;
 
   // ObjectPointerPointer is ([const] void*) *[const]
   using ObjectPointerPointer = typename MutationTrait::ObjectPointerPointer;
@@ -117,7 +122,7 @@ class Visitor {
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       Position* out_position) {
-    return Status::kSuccess;
+    __builtin_unreachable();
   }
 
   // Visit a handle. The handle pointer will be mutable if the visitor is mutating.
@@ -125,11 +130,11 @@ class Visitor {
   // The handle pointer is derived from |handle_position.Get(start)|.
   Status VisitHandle(Position handle_position, HandlePointer handle_ptr, zx_rights_t handle_rights,
                      zx_obj_type_t handle_subtype) {
-    return Status::kSuccess;
+    __builtin_unreachable();
   }
 
   // Visit a vector or string count. The count pointer will be mutable if the visitor is mutating.
-  Status VisitVectorOrStringCount(CountPointer ptr) {}
+  Status VisitVectorOrStringCount(CountPointer ptr) { __builtin_unreachable(); }
 
   // Visit a region of padding bytes within message objects. They may be between members of a
   // struct, from after the last member to the end of the struct, or from after a union variant
@@ -141,39 +146,31 @@ class Visitor {
   // |padding_position| Position of the start of the padding region.
   // |padding_length|   Size of the padding region. It is always positive.
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-    return Status::kSuccess;
+    __builtin_unreachable();
   }
 
-  // Called when the walker encounters an envelope.
-  // The envelope may be empty or unknown. The implementation should respond accordingly.
+  // Called when the walker encounters an envelope. The envelope may be empty or unknown.
   //
-  // |payload_type| points to the coding table for the envelope payload. When it is null,
-  // either the payload does not require encoding/decoding (e.g. primitives), or the walker
-  // has encountered an unknown ordinal.
+  // The visitor can return a checkpoint of its current state that is untouched by the walker
+  // other than to hand back to the visitor when the envelope is exited.
+  // Typically this checkpoint would include counts of number of bytes and handles processed,
+  // but it can have arbitrary value or even be empty.
+  EnvelopeCheckpoint EnterEnvelope() { __builtin_unreachable(); }
+
+  // Called when the walker leaves an envelope.
   //
-  // When |EnterEnvelope| returns |Error::kSuccess|, since the data pointer of an envelope is also
-  // an indirection, |VisitPointer| will be called on the data pointer. Regardless if the envelope
-  // is empty, |LeaveEnvelope| will be called after processing this envelope.
-  //
-  // Return an error to indicate that the envelope should not be traversed.
-  // There will be no corresponding |LeaveEnvelope| call in this case.
-  Status EnterEnvelope(Position envelope_position, EnvelopePointer envelope_ptr,
-                       const fidl_type_t* payload_type) {
-    return Status::kSuccess;
+  // |envelope| is a pointer to the fidl_envelope_t structure containing the envelope.
+  // |prev_checkpoint| is the checkpoint object returned in the EnterEnvelope call().
+  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
+    __builtin_unreachable();
   }
 
-  // Called when the walker finishes visiting all the data in an envelope.
-  // Decoder/encoder should validate that the expected number of bytes/handles have been consumed.
-  // Linearizer can use this opportunity to set the appropriate num_bytes/num_handles value.
-  // It is possible to have nested enter/leave envelope pairs.
-  // There will be a matching call to |LeaveEnvelope| for every successful |EnterEnvelope|.
+  // Called when the walker encounters an envelope with unknown type that has non-null data.
+  // This takes the place of the continued walk of the internal object that would take place
+  // if they type was known.
   //
-  // |envelope_position| Position of the envelope header.
-  // |envelope_ptr|      Pointer to the envelope header that was just processed.
-  //                     It is derived from |envelope_position.Get(start)|.
-  Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope_ptr) {
-    return Status::kSuccess;
-  }
+  // |envelope| is a pointer to the fidl_envelope_t structure containing the envelope.
+  Status VisitUnknownEnvelope(EnvelopePointer envelope) { __builtin_unreachable(); }
 
   // Called when a traversal error is encountered on the walker side.
   void OnError(const char* error) {}
@@ -217,6 +214,9 @@ constexpr bool CheckVisitorInterface() {
   static_assert(internal::SameInterface<decltype(&Visitor::LeaveEnvelope),
                                         decltype(&ImplSubType::LeaveEnvelope)>,
                 "Incorrect/missing LeaveEnvelope");
+  static_assert(internal::SameInterface<decltype(&Visitor::VisitUnknownEnvelope),
+                                        decltype(&ImplSubType::VisitUnknownEnvelope)>,
+                "Incorrect/missing VisitUnknownEnvelope");
   static_assert(
       internal::SameInterface<decltype(&Visitor::OnError), decltype(&ImplSubType::OnError)>,
       "Incorrect/missing OnError");

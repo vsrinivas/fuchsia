@@ -5,10 +5,9 @@
   "pkg/fidl_base/include/lib/fidl/cpp/message_buffer.h": "567a46e1c6793e3c358dca1acf9791d3",
   "pkg/fidl_base/include/lib/fidl/cpp/message_builder.h": "56deb4b6704b6c59a1c21abb8ac686b3",
   "pkg/fidl_base/include/lib/fidl/cpp/message_part.h": "efcc7af2c309ed28a5758810e95843fb",
-  "pkg/fidl_base/include/lib/fidl/envelope_frames.h": "d494a230043a6dcdb54fcfd631b52076",
   "pkg/fidl_base/include/lib/fidl/internal.h": "ebb75b0e8426d5d7658b949387cce822",
   "pkg/fidl_base/include/lib/fidl/internal_callable_traits.h": "a18e97bafa2f7e388422a7e721d6421d",
   "pkg/fidl_base/include/lib/fidl/txn_header.h": "116078f3450d0a37a8b86677a222bf6c",
-  "pkg/fidl_base/include/lib/fidl/visitor.h": "6452f39ca4e023cf46758ad39197c73f",
-  "pkg/fidl_base/include/lib/fidl/walker.h": "6b2ea3775651903378b37634d665f81e"
+  "pkg/fidl_base/include/lib/fidl/visitor.h": "635a9a0637e659eb92a8f4e2d6797b3d",
+  "pkg/fidl_base/include/lib/fidl/walker.h": "d978153a1f0fae535167aaefdbb8c9a8"
 }

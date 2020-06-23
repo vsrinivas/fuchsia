@@ -19,7 +19,6 @@ zx_library("fidl_base") {
     "lib/fidl/cpp/message_buffer.h",
     "lib/fidl/cpp/message_builder.h",
     "lib/fidl/cpp/message_part.h",
-    "lib/fidl/envelope_frames.h",
     "lib/fidl/internal.h",
     "lib/fidl/internal_callable_traits.h",
     "lib/fidl/visitor.h",

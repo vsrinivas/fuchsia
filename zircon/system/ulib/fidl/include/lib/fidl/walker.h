@@ -142,7 +142,9 @@ class Walker final {
 
   using Position = typename VisitorImpl::Position;
 
-  using VisitorSuper = Visitor<MutationTrait, Position>;
+  using EnvelopeCheckpoint = typename VisitorImpl::EnvelopeCheckpoint;
+
+  using VisitorSuper = Visitor<MutationTrait, Position, EnvelopeCheckpoint>;
 
   using Status = typename VisitorSuper::Status;
 
@@ -177,6 +179,8 @@ class Walker final {
   Result WalkStruct(const FidlCodedStruct* coded_struct, Position position, OutOfLineDepth depth);
   Result WalkStructPointer(const FidlCodedStructPointer* coded_struct, Position position,
                            OutOfLineDepth depth);
+  Result WalkEnvelope(Position envelope_position, const fidl_type_t* payload_type,
+                      OutOfLineDepth depth);
   Result WalkTable(const FidlCodedTable* coded_table, Position position, OutOfLineDepth depth);
   Result WalkXUnion(const FidlCodedXUnion* coded_table, Position position, OutOfLineDepth depth);
   Result WalkArray(const FidlCodedArray* coded_array, Position position, OutOfLineDepth depth);
@@ -379,6 +383,43 @@ Result Walker<VisitorImpl>::WalkStructPointer(const FidlCodedStructPointer* code
 }
 
 template <typename VisitorImpl>
+Result Walker<VisitorImpl>::WalkEnvelope(Position envelope_position,
+                                         const fidl_type_t* payload_type, OutOfLineDepth depth) {
+  auto envelope = PtrTo<fidl_envelope_t>(envelope_position);
+
+  EnvelopeCheckpoint checkpoint = visitor_->EnterEnvelope();
+
+  if (envelope->data != nullptr) {
+    OutOfLineDepth obj_depth = INCREASE_DEPTH(depth);
+    FIDL_DEPTH_GUARD(obj_depth);
+
+    uint32_t num_bytes = payload_type != nullptr ? TypeSize(payload_type) : envelope->num_bytes;
+    Position obj_position;
+    auto status =
+        visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
+                               // casting since |envelope_ptr->data| is always void*
+                               &const_cast<Ptr<void>&>(envelope->data), num_bytes, &obj_position);
+    if (status == Status::kMemoryError || (status == Status::kConstraintViolationError &&
+                                           !VisitorImpl::kContinueAfterConstraintViolation)) {
+      return Result::kExit;
+    }
+
+    if (payload_type != nullptr) {
+      auto result = WalkInternal(payload_type, obj_position, obj_depth);
+      FIDL_RESULT_GUARD(result);
+    } else {
+      status = visitor_->VisitUnknownEnvelope(envelope);
+      FIDL_STATUS_GUARD(status);
+    }
+  }
+
+  auto status = visitor_->LeaveEnvelope(envelope, checkpoint);
+  FIDL_STATUS_GUARD(status);
+
+  return Result::kContinue;
+}
+
+template <typename VisitorImpl>
 Result Walker<VisitorImpl>::WalkTable(const FidlCodedTable* coded_table,
                                       Walker<VisitorImpl>::Position position,
                                       OutOfLineDepth depth) {
@@ -417,34 +458,9 @@ Result Walker<VisitorImpl>::WalkTable(const FidlCodedTable* coded_table,
     }
     Position envelope_position =
         envelope_vector_position + field_index * uint32_t(sizeof(fidl_envelope_t));
-    auto envelope_ptr = PtrTo<fidl_envelope_t>(envelope_position);
-
     const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
-    status = visitor_->EnterEnvelope(envelope_position, envelope_ptr, payload_type);
-    FIDL_STATUS_GUARD(status);
-
-    if (envelope_ptr->data != nullptr) {
-      uint32_t num_bytes =
-          payload_type != nullptr ? TypeSize(payload_type) : envelope_ptr->num_bytes;
-      OutOfLineDepth obj_depth = INCREASE_DEPTH(envelope_vector_depth);
-      FIDL_DEPTH_GUARD(obj_depth);
-      Position obj_position;
-      status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
-                                      // casting since |envelope_ptr->data| is always void*
-                                      &const_cast<Ptr<void>&>(envelope_ptr->data), num_bytes,
-                                      &obj_position);
-      if (status == Status::kMemoryError || (status == Status::kConstraintViolationError &&
-                                             !VisitorImpl::kContinueAfterConstraintViolation)) {
-        return Result::kExit;
-      }
-      if (payload_type != nullptr) {
-        auto result = WalkInternal(payload_type, obj_position, obj_depth);
-        FIDL_RESULT_GUARD(result);
-      }
-    }
-
-    status = visitor_->LeaveEnvelope(envelope_position, envelope_ptr);
-    FIDL_STATUS_GUARD(status);
+    auto result = WalkEnvelope(envelope_position, payload_type, envelope_vector_depth);
+    FIDL_RESULT_GUARD(result);
   }
   return Result::kContinue;
 }
@@ -469,6 +485,9 @@ Result Walker<VisitorImpl>::WalkXUnion(const FidlCodedXUnion* coded_xunion,
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
     }
     return Result::kContinue;
+  } else if (envelope_ptr->data == nullptr) {
+    visitor_->OnError("empty xunion must have zero as ordinal");
+    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
 
   const fidl_type_t* payload_type = nullptr;
@@ -480,38 +499,7 @@ Result Walker<VisitorImpl>::WalkXUnion(const FidlCodedXUnion* coded_xunion,
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
 
-  // Make sure we don't process a malformed envelope
-  auto status = visitor_->EnterEnvelope(envelope_pos, envelope_ptr, payload_type);
-  FIDL_STATUS_GUARD(status);
-  // Skip empty envelopes
-  if (envelope_ptr->data == nullptr) {
-    if (xunion->tag != 0) {
-      visitor_->OnError("empty xunion must have zero as ordinal");
-      if (status == Status::kMemoryError || (status == Status::kConstraintViolationError &&
-                                             !VisitorImpl::kContinueAfterConstraintViolation)) {
-        return Result::kExit;
-      }
-    }
-  } else {
-    uint32_t num_bytes = payload_type != nullptr ? TypeSize(payload_type) : envelope_ptr->num_bytes;
-    OutOfLineDepth obj_depth = INCREASE_DEPTH(depth);
-    FIDL_DEPTH_GUARD(obj_depth);
-    Position obj_position;
-    status = visitor_->VisitPointer(position, VisitorImpl::PointeeType::kOther,
-                                    &const_cast<Ptr<void>&>(envelope_ptr->data), num_bytes,
-                                    &obj_position);
-    if (status == Status::kMemoryError || (status == Status::kConstraintViolationError &&
-                                           !VisitorImpl::kContinueAfterConstraintViolation)) {
-      return Result::kExit;
-    }
-    if (payload_type != nullptr) {
-      auto result = WalkInternal(payload_type, obj_position, obj_depth);
-      FIDL_RESULT_GUARD(result);
-    }
-  }
-  status = visitor_->LeaveEnvelope(envelope_pos, envelope_ptr);
-  FIDL_STATUS_GUARD(status);
-  return Result::kContinue;
+  return WalkEnvelope(envelope_pos, payload_type, depth);
 }
 
 template <typename VisitorImpl>

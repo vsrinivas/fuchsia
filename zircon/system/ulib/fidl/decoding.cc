@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/envelope_frames.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
@@ -37,17 +36,18 @@ struct Position {
   }
 };
 
-constexpr uintptr_t kAllocPresenceMarker = FIDL_ALLOC_PRESENT;
-constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
-
-using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
+struct EnvelopeCheckpoint {
+  uint32_t num_bytes;
+  uint32_t num_handles;
+};
 
 constexpr zx_rights_t subtract_rights(zx_rights_t minuend, zx_rights_t subtrahend) {
   return minuend & ~subtrahend;
 }
 static_assert(subtract_rights(0b011, 0b101) == 0b010, "ensure rights subtraction works correctly");
 
-class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
+class FidlDecoder final
+    : public fidl::Visitor<fidl::MutatingVisitorTrait, Position, EnvelopeCheckpoint> {
  public:
   FidlDecoder(void* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
               uint32_t next_out_of_line, const char** out_error_msg)
@@ -82,10 +82,6 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       Position* out_position) {
-    if (reinterpret_cast<uintptr_t>(*object_ptr_ptr) != kAllocPresenceMarker) {
-      SetError("decoder encountered invalid pointer");
-      return Status::kConstraintViolationError;
-    }
     uint32_t new_offset;
     if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
       SetError("overflow updating out-of-line offset");
@@ -202,56 +198,17 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
     return ValidatePadding(padding_ptr, padding_length);
   }
 
-  Status EnterEnvelope(Position envelope_position, EnvelopePointer envelope,
-                       const fidl_type_t* payload_type) {
-    if (envelope->presence == kAllocAbsenceMarker) {
-      return Status::kSuccess;
-    }
-
-    // Remember the current watermark of bytes and handles, so that after processing
-    // the envelope, we can validate that the claimed num_bytes/num_handles matches the reality.
-    if (!envelope_frames_.Push(EnvelopeState(next_out_of_line_, handle_idx_))) {
-      SetError("Overly deep nested envelopes");
-      return Status::kConstraintViolationError;
-    }
-
-    if (envelope->num_handles > 0) {
-      uint32_t expected_handle_count;
-      if (add_overflow(handle_idx_, envelope->num_handles, &expected_handle_count) ||
-          expected_handle_count > num_handles_) {
-        SetError("Envelope has more handles than expected");
-        return Status::kConstraintViolationError;
-      }
-
-      // If we do not have the coding table for this payload,
-      // treat it as unknown and close its contained handles
-      if (payload_type == nullptr) {
-        if (has_handles()) {
-          memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
-                 envelope->num_handles * sizeof(zx_handle_t));
-          handle_idx_ += envelope->num_handles;
-          unknown_handle_idx_ += envelope->num_handles;
-        } else if (has_handle_infos()) {
-          uint32_t end = handle_idx_ + envelope->num_handles;
-          for (; handle_idx_ < end; handle_idx_++, unknown_handle_idx_++) {
-            unknown_handles_[unknown_handle_idx_] = handle_infos()[handle_idx_].handle;
-          }
-        }
-      }
-    }
-
-    return Status::kSuccess;
+  EnvelopeCheckpoint EnterEnvelope() {
+    return {
+        .num_bytes = next_out_of_line_,
+        .num_handles = handle_idx_,
+    };
   }
 
-  Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
-    if (envelope->presence == kAllocAbsenceMarker) {
-      return Status::kSuccess;
-    }
-
+  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
     // Now that the envelope has been consumed, check the correctness of the envelope header.
-    auto& starting_state = envelope_frames_.Pop();
-    uint32_t num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
-    uint32_t num_handles = handle_idx_ - starting_state.handles_so_far;
+    uint32_t num_bytes = next_out_of_line_ - prev_checkpoint.num_bytes;
+    uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
     if (envelope->num_bytes != num_bytes) {
       SetError("Envelope num_bytes was mis-sized");
       return Status::kConstraintViolationError;
@@ -260,6 +217,26 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
       SetError("Envelope num_handles was mis-sized");
       return Status::kConstraintViolationError;
     }
+    return Status::kSuccess;
+  }
+
+  Status VisitUnknownEnvelope(EnvelopePointer envelope) {
+    // If we do not have the coding table for this payload,
+    // treat it as unknown and close its contained handles
+    if (envelope->num_handles > 0) {
+      if (has_handles()) {
+        memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
+               envelope->num_handles * sizeof(zx_handle_t));
+        handle_idx_ += envelope->num_handles;
+        unknown_handle_idx_ += envelope->num_handles;
+      } else if (has_handle_infos()) {
+        uint32_t end = handle_idx_ + envelope->num_handles;
+        for (; handle_idx_ < end; handle_idx_++, unknown_handle_idx_++) {
+          unknown_handles_[unknown_handle_idx_] = handle_infos()[handle_idx_].handle;
+        }
+      }
+    }
+
     return Status::kSuccess;
   }
 
@@ -319,7 +296,6 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
   uint32_t handle_idx_ = 0;
   uint32_t unknown_handle_idx_ = 0;
   zx_handle_t unknown_handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::EnvelopeFrames envelope_frames_;
 };
 
 template <typename HandleType>

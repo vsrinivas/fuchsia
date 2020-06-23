@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/envelope_frames.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
@@ -53,12 +52,16 @@ struct Position {
   }
 };
 
-using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
+struct EnvelopeCheckpoint {
+  uint32_t num_bytes;
+  uint32_t num_handles;
+};
 
 enum class Mode { EncodeOnly, LinearizeAndEncode };
 
 template <Mode mode>
-class FidlEncoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
+class FidlEncoder final
+    : public fidl::Visitor<fidl::MutatingVisitorTrait, Position, EnvelopeCheckpoint> {
  public:
   FidlEncoder(void* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t num_handles,
               uint32_t next_out_of_line, const char** out_error_msg)
@@ -198,34 +201,16 @@ class FidlEncoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
     return Status::kSuccess;
   }
 
-  Status EnterEnvelope(Position envelope_position, EnvelopePointer envelope,
-                       const fidl_type_t* payload_type) {
-    if (envelope->data == nullptr) {
-      return Status::kSuccess;
-    }
-    // Remember the current watermark of bytes and handles, so that after processing
-    // the envelope, we can either:
-    // - EncodeOnly: validate the claimed num_bytes/num_handles matches the reality.
-    // - LinearizeAndEncode: write the num_bytes/num_handles to the output.
-    if (!envelope_frames_.Push(EnvelopeState(next_out_of_line_, handle_idx_))) {
-      SetError("Overly deep nested envelopes");
-      return Status::kConstraintViolationError;
-    }
-    return Status::kSuccess;
+  EnvelopeCheckpoint EnterEnvelope() {
+    return {
+        .num_bytes = next_out_of_line_,
+        .num_handles = handle_idx_,
+    };
   }
 
-  Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
-    // Now that the envelope has been consumed, check the correctness of the envelope header.
-    uint32_t num_bytes;
-    uint32_t num_handles;
-    if (envelope->data != nullptr) {
-      auto& starting_state = envelope_frames_.Pop();
-      num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
-      num_handles = handle_idx_ - starting_state.handles_so_far;
-    } else {
-      num_bytes = 0;
-      num_handles = 0;
-    }
+  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
+    uint32_t num_bytes = next_out_of_line_ - prev_checkpoint.num_bytes;
+    uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
     if (mode == Mode::LinearizeAndEncode) {
       // Write the num_bytes/num_handles.
       envelope->num_bytes = num_bytes;
@@ -243,6 +228,8 @@ class FidlEncoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
     }
     return Status::kSuccess;
   }
+
+  Status VisitUnknownEnvelope(EnvelopePointer envelope) { return Status::kSuccess; }
 
   void OnError(const char* error) { SetError(error); }
 
@@ -288,7 +275,6 @@ class FidlEncoder final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
   // Encoder state
   zx_status_t status_ = ZX_OK;
   uint32_t handle_idx_ = 0;
-  fidl::EnvelopeFrames envelope_frames_;
 };
 
 template <typename HandleType>

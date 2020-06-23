@@ -24,8 +24,7 @@ class Transaction : public fidl::Transaction {
  public:
   Transaction() = default;
   explicit Transaction(sync_completion_t* wait, sync_completion_t* signal)
-      : wait_(wait),
-        signal_(signal) {}
+      : wait_(wait), signal_(signal) {}
 
   std::unique_ptr<fidl::Transaction> TakeOwnership() override { ZX_ASSERT(false); }
 
@@ -115,14 +114,15 @@ bool concurrent_access_asserts() {
   Completer completer(&txn);
   std::thread t([&] { completer.Reply(1); });
   sync_completion_wait(&wait, ZX_TIME_INFINITE);
+  // TODO(fxb/54499) Hide assertion failed messages from output - they are confusing.
   ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Reply(1); }, &completer,
                "concurrent access should crash");
   ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Close(ZX_OK); },
                &completer, "concurrent access should crash");
   ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->EnableNextDispatch(); },
                &completer, "concurrent access should crash");
-  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->ToAsync(); },
-               &completer, "concurrent access should crash");
+  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->ToAsync(); }, &completer,
+               "concurrent access should crash");
   sync_completion_signal(&signal);
   t.join();  // Don't accidentally invoke ~Completer() while `t` is still in Reply().
 

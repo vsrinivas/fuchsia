@@ -22,7 +22,10 @@ struct Position {
   }
 };
 
-class NoOpVisitor final : public fidl::Visitor<fidl::MutatingVisitorTrait, Position> {
+struct EnvelopeCheckpoint {};
+
+class NoOpVisitor final
+    : public fidl::Visitor<fidl::MutatingVisitorTrait, Position, EnvelopeCheckpoint> {
  public:
   NoOpVisitor() {}
 
@@ -51,14 +54,13 @@ class NoOpVisitor final : public fidl::Visitor<fidl::MutatingVisitorTrait, Posit
     return Status::kSuccess;
   }
 
-  Status EnterEnvelope(Position envelope_position, EnvelopePointer envelope,
-                       const fidl_type_t* payload_type) {
+  EnvelopeCheckpoint EnterEnvelope() { return {}; }
+
+  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
     return Status::kSuccess;
   }
 
-  Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
-    return Status::kSuccess;
-  }
+  Status VisitUnknownEnvelope(EnvelopePointer envelope) { return Status::kSuccess; }
 
   void OnError(const char* error) { error_ = error; }
 
