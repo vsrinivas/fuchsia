@@ -32,6 +32,7 @@ const V1_CONTEXT: &Context = &Context {};
 fn test_{{ .Name }}_encode() {
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
+	bytes.resize(65536, 0xcd); // fill with junk data
 	Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value).unwrap();
 	assert_eq!(*bytes, &{{ .Bytes }}[..]);
 }
@@ -52,6 +53,7 @@ fn test_{{ .Name }}_decode() {
 fn test_{{ .Name }}_encode_failure() {
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
+	bytes.resize(65536, 0xcd); // fill with junk data
 	match Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value) {
 		Err(err) => assert_matches!(err, {{ .ErrorCode }} { .. }),
 		Ok(_) => panic!("unexpected successful encoding"),
