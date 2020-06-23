@@ -32,8 +32,6 @@ import "C"
 
 const tag = "eth"
 
-type FifoEntry = eth.FifoEntry
-
 const bufferSize = 2048
 
 // A Buffer is a segment of memory backed by a mapped VMO.
@@ -54,13 +52,13 @@ func (iob *IOBuffer) index(b Buffer) int {
 	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-iob.GetPointer(0)) / bufferSize
 }
 
-func (iob *IOBuffer) entry(b Buffer) FifoEntry {
+func (iob *IOBuffer) entry(b Buffer) eth.FifoEntry {
 	i := iob.index(b)
 
 	return eth.NewFifoEntry(uint32(i*bufferSize), uint16(len(b)), int32(i))
 }
 
-func (iob *IOBuffer) BufferFromEntry(e FifoEntry) Buffer {
+func (iob *IOBuffer) BufferFromEntry(e eth.FifoEntry) Buffer {
 	return iob.buffer(e.Index())[:e.Length()]
 }
 
@@ -201,7 +199,7 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 }
 
 func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
-	return c.handler.ProcessWrite(pkts, func(entry *FifoEntry, pkt *stack.PacketBuffer) {
+	return c.handler.ProcessWrite(pkts, func(entry *eth.FifoEntry, pkt *stack.PacketBuffer) {
 		entry.SetLength(bufferSize)
 		b := c.iob.BufferFromEntry(*entry)
 		used := copy(b, pkt.Header.View())
@@ -259,7 +257,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		if err := c.handler.RxLoop(func(entry *FifoEntry) {
+		if err := c.handler.RxLoop(func(entry *eth.FifoEntry) {
 			// Process inbound packet.
 			var emptyLinkAddress tcpip.LinkAddress
 			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, &stack.PacketBuffer{
