@@ -571,17 +571,17 @@ struct AacEncoderSettings {
 /// the requested bitrate.
 table H264QuantizationParameters {
     /// Starting value for quantization of key frames.
-    1: uint32 qp_i_base;
+    1: uint32 i_base;
     /// Smallest allowed value for quantization of key frames.
-    2: uint32 qp_i_min;
+    2: uint32 i_min;
     /// Largest allowed value for quantization of key frames.
-    3: uint32 qp_i_max;
+    3: uint32 i_max;
     /// Starting value for quantization of predicted frames.
-    4: uint32 qp_p_base;
+    4: uint32 p_base;
     /// Smallest allowed value for quantization of predicted frames.
-    5: uint32 qp_p_min;
+    5: uint32 p_min;
     /// Largest allowed value for quantization of predicted frames.
-    6: uint32 qp_p_max;
+    6: uint32 p_max;
 };
 
 /// Settings for H264 Encoders.
@@ -607,7 +607,7 @@ table H264EncoderSettings {
     /// Allow customization of quantization parameters for encoding. Each frame
     /// submitted after setting this will use the new values. If omitted, no
     /// change from encoder defaults is made.
-    7: H264QuantizationParameters qp_params;
+    7: H264QuantizationParameters quantization_params;
 };
 
 /// Settings for encoders that tell them how to encode raw
