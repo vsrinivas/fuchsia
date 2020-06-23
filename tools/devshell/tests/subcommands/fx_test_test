@@ -36,6 +36,7 @@ declare fx DATA_DIR
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
+  btf::make_installed_hosttools_mock "device-finder"  > /dev/null
   DATA_DIR="${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_test_test"
 }
 
@@ -96,12 +97,12 @@ TEST_fxtest_hashpinnning() {
   # expect that "fx shell run-test-component URL-WITH-HASH" was executed
   BT_EXPECT ${fx} test --no-build ${testname1} >> "${out}"
   local packageUrl1="fuchsia-pkg://fuchsia.com/example-fuzzers?hash=${hash1}#meta/overflow_fuzzer_test.cmx"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "${packageUrl1}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "_ANY_" "${packageUrl1}"
 
   # expect that "fx shell run-test-component URL-WITH-HASH" was executed
   BT_EXPECT ${fx} test --no-build ${testname2} >> "${out}"
   local packageUrl2="fuchsia-pkg://fuchsia.com/hello_world_cpp_tests?hash=${hash2}#meta/hello_world_cpp_unittests.cmx"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell.mock_state.2" "run-test-component" "${packageUrl2}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell.mock_state.2" "run-test-component" "_ANY_" "${packageUrl2}"
 }
 
 # Test that "fx test" doesn't fail if a component test doesn't have a hashfile
@@ -125,8 +126,75 @@ EOF
   # expect that "fx shell run-test-component URL-WITHOUT-HASH" is executed
   BT_EXPECT ${fx} test --no-build overflow_fuzzer_test >> "${out}"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
-    "run-test-component" "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx"
+    "run-test-component" "_ANY_" "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx"
 }
 
+# Test that "fx test" builds only the "updates" target for device tests
+TEST_fxtest_build_device_only_updates() {
+  mkdir -p "${BT_TEMP_DIR}/out/default"
+  cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
+  [{"environments": [],
+    "test": {
+      "cpu": "arm64",
+      "label": "//examples/fuzzer:fuzzing-examples_pkg(//build/toolchain/fuchsia:arm64)",
+      "name": "overflow_fuzzer_test",
+      "os": "fuchsia",
+      "package_url": "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx",
+      "path": ""
+    }
+  }]
+EOF
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+
+  # expect "fx shell build updates"
+  BT_EXPECT ${fx} test overflow_fuzzer_test >> "${out}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "updates"
+}
+
+# Test that "fx test" builds the default target for an e2e test
+TEST_fxtest_build_e2e() {
+  mkdir -p "${BT_TEMP_DIR}/out/default"
+  cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
+  [{"environments": [{"dimensions": {"device_type": "qemu_x64"}}],
+    "test": {
+      "cpu": "x64",
+      "label": "//examples/example_host_test:host_tools_example_pkg(//build/toolchain/host_x64)",
+      "name": "example_host_test",
+      "os": "linux",
+      "path": "host_x64/example_host_test"
+    }
+  }]
+EOF
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+
+  btf::make_hosttools_mock "example_host_test" > /dev/null
+
+  # expect "fx shell build"
+  BT_EXPECT ${fx} test --e2e example_host_test >> "${out}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build"
+}
+
+# Test that "fx test" only builds the host tool for a host test
+TEST_fxtest_build_host() {
+  mkdir -p "${BT_TEMP_DIR}/out/default"
+  cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
+  [{"environments": [],
+    "test": {
+      "cpu": "x64",
+      "label": "//examples/example_host_test:host_tools_example_pkg(//build/toolchain/host_x64)",
+      "name": "example_host_test",
+      "os": "linux",
+      "path": "host_x64/example_host_test"
+    }
+  }]
+EOF
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+
+  btf::make_hosttools_mock "example_host_test" > /dev/null
+
+  # expect "fx shell build"
+  BT_EXPECT ${fx} test example_host_test >> "${out}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "host_x64/example_host_test"
+}
 
 BT_RUN_TESTS "$@"
