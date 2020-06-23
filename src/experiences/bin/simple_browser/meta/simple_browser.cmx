@@ -4,14 +4,16 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.deprecatedtimezone.Timezone",
+            "fuchsia.device.NameProvider",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
