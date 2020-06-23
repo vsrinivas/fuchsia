@@ -104,7 +104,23 @@ class AmlSdEmmcTest : public zxtest::Test {
     mmio_ = ddk::MmioBuffer(mmio_buffer);
     dut_ = new TestAmlSdEmmc(mmio_buffer);
 
+    dut_->set_board_config({
+        .supports_dma = false,
+        .min_freq = 400000,
+        .max_freq = 120000000,
+        .version_3 = true,
+        .prefs = 0,
+    });
+
+    mmio_.Write32(0xff, kAmlSdEmmcDelay1Offset);
+    mmio_.Write32(0xff, kAmlSdEmmcDelay2Offset);
+    mmio_.Write32(0xff, kAmlSdEmmcAdjustOffset);
+
     dut_->SdmmcHwReset();
+
+    EXPECT_EQ(mmio_.Read32(kAmlSdEmmcDelay1Offset), 0);
+    EXPECT_EQ(mmio_.Read32(kAmlSdEmmcDelay2Offset), 0);
+    EXPECT_EQ(mmio_.Read32(kAmlSdEmmcAdjustOffset), 0);
 
     mmio_.Write32(1, kAmlSdEmmcCfgOffset);  // Set bus width 4.
     memcpy(reinterpret_cast<uint8_t*>(mmio_.get()) + kAmlSdEmmcPingOffset,

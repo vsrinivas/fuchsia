@@ -353,6 +353,16 @@ void AmlSdEmmc::ConfigureDefaultRegs() {
       .ReadFrom(&mmio_)
       .set_reg_value(AmlSdEmmcStatus::kClearStatus)
       .WriteTo(&mmio_);
+
+  // Zero out any delay line or sampling settings that may have come from the bootloader.
+  if (board_config_.version_3) {
+    AmlSdEmmcAdjust::Get().FromValue(0).WriteTo(&mmio_);
+    AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+    AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+  } else {
+    AmlSdEmmcAdjustV2::Get().FromValue(0).WriteTo(&mmio_);
+    AmlSdEmmcDelayV2::Get().FromValue(0).WriteTo(&mmio_);
+  }
 }
 
 void AmlSdEmmc::SdmmcHwReset() {
