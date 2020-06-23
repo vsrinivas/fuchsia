@@ -7,7 +7,8 @@ import("//src/sys/build/components.gni")
 group("test") {
   testonly = true
   deps = [
-    ":netemul-guest-test",
+    ":grpc_client_stress_test_spec",
+    ":guest_test_spec",
     ":netemul-sandbox-test",
     "dummy_proc",
     "dynamic_devices",
@@ -173,7 +174,6 @@ fuchsia_component("multiple-guests-test") {
 fuchsia_test("guest_test_spec") {
   package = ":netemul-guest-test"
   component = ":guest-test"
-  deps = [ ":guest-test" ]
 
   # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
   environments = nuc_env_fails_on_asan
@@ -182,7 +182,6 @@ fuchsia_test("guest_test_spec") {
 fuchsia_test("grpc_client_stress_test_spec") {
   package = ":netemul-guest-test"
   component = ":grpc-client-stress-test"
-  deps = [ ":grpc-client-stress-test" ]
 
   # TODO(47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
   if (nuc_env_fails_on_asan != []) {
@@ -205,7 +204,6 @@ fuchsia_test("grpc_client_stress_test_spec") {
 fuchsia_test("multiple_guests_test_spec") {
   package = ":netemul-guest-test"
   component = ":multiple-guests-test"
-  deps = [ ":multiple-guests-test" ]
 
   # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
   # TODO(51063): test fails with ThinLTO.
@@ -215,9 +213,9 @@ fuchsia_test("multiple_guests_test_spec") {
 fuchsia_package("netemul-guest-test") {
   testonly = true
   deps = [
-    ":grpc_client_stress_test_spec",
-    ":guest_test_spec",
-    ":multiple_guests_test_spec",
+    ":grpc-client-stress-test",
+    ":guest-test",
+    ":multiple-guests-test",
     ":setup_linux_client",
     ":setup_linux_router",
     ":test_script",
