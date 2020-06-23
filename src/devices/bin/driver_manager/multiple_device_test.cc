@@ -704,6 +704,37 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
             llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::POWEROFF);
 }
 
+TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  zx::channel services, services_remote;
+  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+
+  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
+
+  zx::channel channel, channel_remote;
+  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::device::manager::SystemStateTransition::Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
+
+  auto response =
+      llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
+          zx::unowned_channel(channel.get()),
+          llcpp::fuchsia::device::manager::SystemPowerState::SYSTEM_POWER_STATE_MEXEC);
+  ASSERT_OK(response.status());
+  zx_status_t call_status = ZX_OK;
+  if (response->result.is_err()) {
+    call_status = response->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(coordinator()->shutdown_system_state(),
+            llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+}
+
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);

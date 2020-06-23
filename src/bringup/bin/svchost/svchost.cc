@@ -230,6 +230,7 @@ static constexpr const char* devcoordinator_services[] = {
 
 // List of services which are re-routed to devmgr.
 static constexpr const char* devmgr_services[] = {
+    llcpp::fuchsia::device::manager::SystemStateTransition::Name,
     fuchsia_device_manager_Administrator_Name,
     fuchsia_device_manager_DebugDumper_Name,
     fuchsia_hardware_power_statecontrol_Admin_Name,

@@ -150,7 +150,7 @@ zx_status_t connect_to_protocol_with_timeout(const char* name, zx::channel* loca
 }
 
 // Connect to fuchsia.device.manager.SystemStateTransition and set the
-// termination state
+// termination state.
 zx_status_t set_system_state_transition_behavior(device_manager_fidl::SystemPowerState state) {
   zx::channel local;
   zx_status_t status =
@@ -163,7 +163,15 @@ zx_status_t set_system_state_transition_behavior(device_manager_fidl::SystemPowe
       device_manager_fidl::SystemStateTransition::SyncClient(std::move(local));
 
   auto resp = system_state_transition_behavior_client.SetTerminationSystemState(state);
-  return resp.status();
+  if (resp.status() != ZX_OK) {
+    fprintf(stderr, "[shutdown-shim]: transport error sending message to driver_manager: %s\n",
+            resp.error());
+    return resp.status();
+  }
+  if (resp->result.is_err()) {
+    return resp->result.err();
+  }
+  return ZX_OK;
 }
 
 // Connect to fuchsia.sys2.SystemController and initiate a system shutdown.
@@ -212,6 +220,7 @@ zx_status_t drive_shutdown_manually(device_manager_fidl::SystemPowerState state)
 
   // If we're still running after that sleep shutdown should have finished by
   // now. Exit with a non-zero exit code to force the system to restart.
+  fprintf(stderr, "[shutdown-shim]: we shouldn't still be running, crashing the system\n");
   exit(1);
 }
 

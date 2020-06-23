@@ -2042,6 +2042,25 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     return status;
   }
 
+  const auto system_state_manager_register = [this](zx::channel request) {
+    auto status = fidl::Bind<llcpp::fuchsia::device::manager::SystemStateTransition::Interface>(
+        this->config_.dispatcher, std::move(request), std::make_unique<SystemStateManager>(this));
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           llcpp::fuchsia::device::manager::SystemStateTransition::Name,
+           zx_status_get_string(status));
+    }
+    return status;
+  };
+  status = svc_dir->AddEntry(llcpp::fuchsia::device::manager::SystemStateTransition::Name,
+                             fbl::MakeRefCounted<fs::Service>(system_state_manager_register));
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
+         llcpp::fuchsia::device::manager::SystemStateTransition::Name,
+         zx_status_get_string(status));
+    return status;
+  }
+
   const auto bind_debugger = [this](zx::channel request) {
     auto status = fidl::Bind<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
         this->config_.dispatcher, std::move(request), this);
