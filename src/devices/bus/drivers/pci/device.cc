@@ -90,8 +90,6 @@ Device::~Device() {
 zx_status_t Device::CreateProxy() {
   // TODO(cja): Workaround due to ZX-3888
   char proxy_arg[2] = ",";
-  char name[ZX_MAX_NAME_LEN];
-  snprintf(name, sizeof(name), "%02x:%02x.%1x", bus_id(), dev_id(), func_id());
   zx_device_prop_t device_props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
       {BIND_PCI_VID, 0, vendor_id_},
