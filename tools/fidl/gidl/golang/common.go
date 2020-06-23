@@ -185,6 +185,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.NonEmptyStringWithNullBody: "ErrUnexpectedNullRef",
 	gidlir.StrictUnionFieldNotSet:     "ErrInvalidXUnionTag",
 	gidlir.StrictUnionUnknownField:    "ErrInvalidXUnionTag",
+	gidlir.InvalidPaddingByte:         "ErrNonZeroPadding",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

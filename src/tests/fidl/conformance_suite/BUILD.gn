@@ -18,6 +18,7 @@ fidl("conformance_fidl") {
     "//src/tests/fidl/conformance_suite/enums.test.fidl",
     "//src/tests/fidl/conformance_suite/mix_and_match.test.fidl",
     "//src/tests/fidl/conformance_suite/optionals.test.fidl",
+    "//src/tests/fidl/conformance_suite/padding.test.fidl",
     "//src/tests/fidl/conformance_suite/persistent.test.fidl",
     "//src/tests/fidl/conformance_suite/primitives.test.fidl",
     "//src/tests/fidl/conformance_suite/recursive_depth.test.fidl",

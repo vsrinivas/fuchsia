@@ -298,6 +298,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.NonEmptyStringWithNullBody: "fidlNonNullableTypeWithNullValue",
 	gidlir.StrictUnionFieldNotSet:     "fidlStrictXUnionFieldNotSet",
 	gidlir.StrictUnionUnknownField:    "fidlStrictXUnionUnknownField",
+	gidlir.InvalidPaddingByte:         "unknown",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

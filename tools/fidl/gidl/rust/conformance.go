@@ -280,6 +280,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictBitsUnknownBit:       "Invalid",
 	gidlir.StrictEnumUnknownValue:     "Invalid",
 	gidlir.ExceededMaxOutOfLineDepth:  "MaxRecursionDepth",
+	gidlir.InvalidPaddingByte:         "NonZeroPadding",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

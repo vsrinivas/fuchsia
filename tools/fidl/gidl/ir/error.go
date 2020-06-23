@@ -20,6 +20,7 @@ const (
 	ExceededMaxOutOfLineDepth             = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
 	InvalidNumBytesInEnvelope             = "INVALID_NUM_BYTES_IN_ENVELOPE"
 	InvalidNumHandlesInEnvelope           = "INVALID_NUM_HANDLES_IN_ENVELOPE"
+	InvalidPaddingByte                    = "INVALID_PADDING_BYTE"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -33,4 +34,5 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	ExceededMaxOutOfLineDepth:   {},
 	InvalidNumBytesInEnvelope:   {},
 	InvalidNumHandlesInEnvelope: {},
+	InvalidPaddingByte:          {},
 }

@@ -1,0 +1,218 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+struct PaddingBetweenFieldsInt8Int16 {
+    int8 a;
+    int16 b;
+};
+
+struct PaddingBetweenFieldsInt8Int32 {
+    int8 a;
+    int32 b;
+};
+
+struct PaddingBetweenFieldsInt8Int64 {
+    int8 a;
+    int64 b;
+};
+
+struct PaddingBetweenFieldsInt16Int32 {
+    int16 a;
+    int32 b;
+};
+
+struct PaddingBetweenFieldsInt16Int64 {
+    int16 a;
+    int64 b;
+};
+
+struct PaddingBetweenFieldsInt32Int64 {
+    int32 a;
+    int64 b;
+};
+
+struct Struct1Byte {
+    int8 a;
+};
+
+struct Struct2Byte {
+    int16 a;
+};
+
+struct Struct3Byte {
+    int16 a;
+    int8 b;
+};
+
+struct Struct4Byte {
+    int32 a;
+};
+
+struct Struct5Byte {
+    int32 a;
+    int8 b;
+};
+
+struct Struct6Byte {
+    int32 a;
+    int16 b;
+};
+
+struct Struct7Byte {
+    int32 a;
+    int16 b;
+    int8 c;
+};
+
+struct Struct8Byte {
+    int64 a;
+};
+
+struct PaddingEndOfInlineObject1Byte {
+    Struct1Byte a;
+};
+
+struct PaddingEndOfInlineObject2Byte {
+    Struct2Byte a;
+};
+
+struct PaddingEndOfInlineObject3Byte {
+    Struct3Byte a;
+};
+
+struct PaddingEndOfInlineObject4Byte {
+    Struct4Byte a;
+};
+
+struct PaddingEndOfInlineObject5Byte {
+    Struct5Byte a;
+};
+
+struct PaddingEndOfInlineObject6Byte {
+    Struct6Byte a;
+};
+
+struct PaddingEndOfInlineObject7Byte {
+    Struct7Byte a;
+};
+
+struct PaddingEndOfInlineObjectBeforeNextObject1Byte {
+    Struct8Byte? out_of_line;
+    Struct1Byte in_line;
+};
+
+struct PaddingEndOfInlineObjectBeforeNextObject2Byte {
+    Struct8Byte? out_of_line;
+    Struct2Byte in_line;
+};
+
+struct PaddingEndOfInlineObjectBeforeNextObject3Byte {
+    Struct8Byte? out_of_line;
+    Struct3Byte in_line;
+};
+
+struct PaddingEndOfInlineObjectBeforeNextObject4Byte {
+    Struct8Byte? out_of_line;
+    Struct4Byte in_line;
+};
+
+struct PaddingEndOfInlineObjectBeforeNextObject5Byte {
+    Struct8Byte? out_of_line;
+    Struct5Byte in_line;
+};
+
+struct PaddingEndOfInlineObjectBeforeNextObject6Byte {
+    Struct8Byte? out_of_line;
+    Struct6Byte in_line;
+};
+
+struct PaddingEndOfInlineObjectBeforeNextObject7Byte {
+    Struct8Byte? out_of_line;
+    Struct7Byte in_line;
+};
+
+struct PaddingEndOfOutOfLineObject1Byte {
+    Struct1Byte? out_of_line;
+};
+
+struct PaddingEndOfOutOfLineObject2Byte {
+    Struct2Byte? out_of_line;
+};
+
+struct PaddingEndOfOutOfLineObject3Byte {
+    Struct3Byte? out_of_line;
+};
+
+struct PaddingEndOfOutOfLineObject4Byte {
+    Struct4Byte? out_of_line;
+};
+
+struct PaddingEndOfOutOfLineObject5Byte {
+    Struct5Byte? out_of_line;
+};
+
+struct PaddingEndOfOutOfLineObject6Byte {
+    Struct6Byte? out_of_line;
+};
+
+struct PaddingEndOfOutOfLineObject7Byte {
+    Struct7Byte? out_of_line;
+};
+
+struct PaddingInBetweenOutOfLineObjects1Byte {
+    Struct1Byte? first;
+    Struct8Byte? second;
+};
+
+struct PaddingInBetweenOutOfLineObjects2Byte {
+    Struct2Byte? first;
+    Struct8Byte? second;
+};
+
+struct PaddingInBetweenOutOfLineObjects3Byte {
+    Struct3Byte? first;
+    Struct8Byte? second;
+};
+
+struct PaddingInBetweenOutOfLineObjects4Byte {
+    Struct4Byte? first;
+    Struct8Byte? second;
+};
+
+struct PaddingInBetweenOutOfLineObjects5Byte {
+    Struct5Byte? first;
+    Struct8Byte? second;
+};
+
+struct PaddingInBetweenOutOfLineObjects6Byte {
+    Struct6Byte? first;
+    Struct8Byte? second;
+};
+
+struct PaddingInBetweenOutOfLineObjects7Byte {
+    Struct7Byte? first;
+    Struct8Byte? second;
+};
+
+// In case unions use a different out-of-line implementation than structs,
+// spot check padding.
+union PaddedUnion {
+    1: int8 field;
+};
+
+struct PaddedUnionStruct {
+    PaddedUnion u;
+};
+
+// In case tables use a different out-of-line implementation than structs,
+// spot check padding.
+table PaddedTable {
+    1: int8 field;
+};
+
+struct PaddedTableStruct {
+    PaddedTable t;
+};
