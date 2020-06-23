@@ -26,6 +26,7 @@
 #include <thread>
 #include <vector>
 
+#include "src/cobalt/bin/system-metrics/archivist_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/log_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
@@ -60,15 +61,18 @@ std::chrono::seconds SecondsBeforeNextHour(std::chrono::seconds uptime) {
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
     : SystemMetricsDaemon(
-          dispatcher, context, nullptr,
+          dispatcher, context, nullptr, nullptr,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock()),
           std::unique_ptr<cobalt::CpuStatsFetcher>(new cobalt::CpuStatsFetcherImpl()),
           std::unique_ptr<cobalt::TemperatureFetcher>(new cobalt::TemperatureFetcherImpl()),
           std::unique_ptr<cobalt::LogStatsFetcher>(
               new cobalt::LogStatsFetcherImpl(dispatcher, context)),
           std::make_unique<cobalt::ActivityListener>(
-              fit::bind_member(this, &SystemMetricsDaemon::UpdateState))) {
+              fit::bind_member(this, &SystemMetricsDaemon::UpdateState)),
+          std::unique_ptr<cobalt::ArchivistStatsFetcher>(
+              new cobalt::ArchivistStatsFetcherImpl(dispatcher, context))) {
   InitializeLogger();
+  InitializeDiagnosticsLogger();
   // Connect activity listener to service provider.
   activity_provider_ = context->svc()->Connect<fuchsia::ui::activity::Provider>();
   activity_provider_->WatchState(activity_listener_->NewHandle(dispatcher));
@@ -76,20 +80,25 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
 
 SystemMetricsDaemon::SystemMetricsDaemon(
     async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-    fuchsia::cobalt::Logger_Sync* logger, std::unique_ptr<cobalt::SteadyClock> clock,
+    fuchsia::cobalt::Logger_Sync* logger,
+    fuchsia::cobalt::Logger_Sync* component_diagnostics_logger,
+    std::unique_ptr<cobalt::SteadyClock> clock,
     std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
     std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
     std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
-    std::unique_ptr<cobalt::ActivityListener> activity_listener)
+    std::unique_ptr<cobalt::ActivityListener> activity_listener,
+    std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher)
     : dispatcher_(dispatcher),
       context_(context),
       logger_(logger),
+      component_diagnostics_logger_(component_diagnostics_logger),
       start_time_(clock->Now()),
       clock_(std::move(clock)),
       cpu_stats_fetcher_(std::move(cpu_stats_fetcher)),
       temperature_fetcher_(std::move(temperature_fetcher)),
       log_stats_fetcher_(std::move(log_stats_fetcher)),
       activity_listener_(std::move(activity_listener)),
+      archivist_stats_fetcher_(std::move(archivist_stats_fetcher)),
       inspector_(context),
       platform_metric_node_(inspector_.root().CreateChild(kInspecPlatformtNodeName)),
       // Diagram of hierarchy can be seen below:
@@ -114,6 +123,7 @@ void SystemMetricsDaemon::StartLogging() {
   RepeatedlyLogUptime();
   RepeatedlyLogCpuUsage();
   RepeatedlyLogLogStats();
+  RepeatedlyLogArchivistStats();
   LogTemperatureIfSupported(1 /*remaining_attempts*/);
 }
 
@@ -152,6 +162,12 @@ void SystemMetricsDaemon::RepeatedlyLogLogStats() {
         RepeatedlyLogLogStats();
       },
       zx::sec(900));
+}
+
+void SystemMetricsDaemon::RepeatedlyLogArchivistStats() {
+  std::chrono::seconds seconds_to_sleep = LogArchivistStats();
+  async::PostDelayedTask(
+      dispatcher_, [this]() { RepeatedlyLogArchivistStats(); }, zx::sec(seconds_to_sleep.count()));
 }
 
 void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
@@ -440,6 +456,33 @@ void SystemMetricsDaemon::LogLogStats() {
   });
 }
 
+std::chrono::seconds SystemMetricsDaemon::LogArchivistStats() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogArchivistStats");
+  if (!component_diagnostics_logger_) {
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
+    InitializeDiagnosticsLogger();
+    return std::chrono::minutes(5);
+  }
+  archivist_stats_fetcher_->FetchMetrics(
+      [this](cobalt::ArchivistStatsFetcher::Measurement measurement) {
+        fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+        fuchsia::cobalt::CobaltEvent event;
+        event.metric_id = measurement.first.metric_id();
+        event.event_codes = measurement.first.event_codes();
+        event.payload.event_count() = {.count = static_cast<int64_t>(measurement.second)};
+        ReinitializeDiagnosticsIfPeerClosed(
+            component_diagnostics_logger_->LogCobaltEvent(std::move(event), &status));
+        if (status != fuchsia::cobalt::Status::OK) {
+          FX_LOGS(ERROR) << "LogCobaltEvent() for archivist stats returned status="
+                         << StatusToString(status);
+          return false;
+        } else {
+          return true;
+        }
+      });
+  return std::chrono::minutes(15);
+}
+
 void SystemMetricsDaemon::StoreCpuData(double cpu_percentage) {
   uint32_t bucket_index = cpu_bucket_config_->BucketIndex(cpu_percentage * 100);
   activity_state_to_cpu_map_[current_state_][bucket_index]++;
@@ -567,6 +610,36 @@ void SystemMetricsDaemon::InitializeLogger() {
   logger_ = logger_fidl_proxy_.get();
   if (!logger_) {
     FX_LOGS(ERROR) << "Unable to get Logger from factory.";
+  }
+}
+
+zx_status_t SystemMetricsDaemon::ReinitializeDiagnosticsIfPeerClosed(zx_status_t zx_status) {
+  if (zx_status == ZX_ERR_PEER_CLOSED) {
+    FX_LOGS(ERROR) << "Component diagnostics logger connection closed. Reconnecting...";
+    InitializeDiagnosticsLogger();
+  }
+  return zx_status;
+}
+
+void SystemMetricsDaemon::InitializeDiagnosticsLogger() {
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  context_->svc()->Connect(factory_.NewRequest());
+  if (!factory_) {
+    FX_LOGS(ERROR) << "Unable to get LoggerFactory.";
+    return;
+  }
+
+  factory_->CreateLoggerFromProjectId(fuchsia_component_diagnostics::kProjectId,
+                                      component_diagnostics_logger_fidl_proxy_.NewRequest(),
+                                      &status);
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "Unable to get diagnostics Logger from factory. Status="
+                   << StatusToString(status);
+    return;
+  }
+  component_diagnostics_logger_ = component_diagnostics_logger_fidl_proxy_.get();
+  if (!component_diagnostics_logger_) {
+    FX_LOGS(ERROR) << "Unable to get diagnostics Logger from factory.";
   }
 }
 

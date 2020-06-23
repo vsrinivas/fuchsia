@@ -15,10 +15,22 @@ metrics_registry("metrics_registry") {
   generate_binarypb = false
 }
 
+metrics_registry("diagnostics_metrics_registry") {
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 5
+  namespace = "fuchsia_component_diagnostics"
+  generate_cc = true
+  generate_binarypb = false
+}
+
 source_set("system_metrics_daemon_lib") {
   sources = [
     "activity_listener.cc",
     "activity_listener.h",
+    "archivist_stats_fetcher.h",
+    "archivist_stats_fetcher_impl.cc",
+    "archivist_stats_fetcher_impl.h",
     "cpu_stats_fetcher.h",
     "cpu_stats_fetcher_impl.cc",
     "cpu_stats_fetcher_impl.h",
@@ -33,6 +45,7 @@ source_set("system_metrics_daemon_lib") {
   ]
 
   public_deps = [
+    ":diagnostics_metrics_registry_cc",
     ":metrics_registry_cc",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.diagnostics",
@@ -87,7 +100,10 @@ package("cobalt_system_metrics") {
 executable("cobalt_system_metrics_unittests") {
   testonly = true
 
-  sources = [ "system_metrics_daemon_test.cc" ]
+  sources = [
+    "archivist_stats_fetcher_impl_test.cc",
+    "system_metrics_daemon_test.cc",
+  ]
 
   deps = [
     ":system_metrics_daemon_lib",
