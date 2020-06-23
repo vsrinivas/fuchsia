@@ -393,7 +393,11 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	}
 	defer cleanUp()
 
-	if err := r.execute(ctx, args); err != nil {
+	var subcmdArgs []string
+	for _, arg := range args {
+		subcmdArgs = append(subcmdArgs, os.ExpandEnv(arg))
+	}
+	if err := r.execute(ctx, subcmdArgs); err != nil {
 		logger.Errorf(ctx, "%v\n", err)
 		return subcommands.ExitFailure
 	}
