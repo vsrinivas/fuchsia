@@ -61,9 +61,9 @@ async fn commit_transaction_succeeds() {
     let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
     env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
     let rule = make_rule();
-    Status::ok(edit_transaction.add(&mut rule.clone().into()).await.unwrap()).unwrap();
+    let () = edit_transaction.add(&mut rule.clone().into()).await.unwrap().unwrap();
 
-    assert_eq!(Status::from_raw(edit_transaction.commit().await.unwrap()), Status::OK);
+    edit_transaction.commit().await.unwrap().unwrap();
     assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![rule]);
 
     env.stop().await;
@@ -77,9 +77,12 @@ async fn commit_transaction_fails_if_disabled() {
 
     let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
     env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
-    Status::ok(edit_transaction.add(&mut make_rule().into()).await.unwrap()).unwrap();
+    let () = edit_transaction.add(&mut make_rule().into()).await.unwrap().unwrap();
 
-    assert_eq!(Status::from_raw(edit_transaction.commit().await.unwrap()), Status::ACCESS_DENIED);
+    assert_eq!(
+        Status::from_raw(edit_transaction.commit().await.unwrap().unwrap_err()),
+        Status::ACCESS_DENIED
+    );
     assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![]);
 
     env.stop().await;
@@ -131,9 +134,12 @@ async fn dynamic_rewrites_disabled_if_missing_config() {
 
     let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
     env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
-    Status::ok(edit_transaction.add(&mut make_rule().into()).await.unwrap()).unwrap();
+    let () = edit_transaction.add(&mut make_rule().into()).await.unwrap().unwrap();
 
-    assert_eq!(Status::from_raw(edit_transaction.commit().await.unwrap()), Status::ACCESS_DENIED);
+    assert_eq!(
+        Status::from_raw(edit_transaction.commit().await.unwrap().unwrap_err()),
+        Status::ACCESS_DENIED
+    );
     assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![]);
 
     env.stop().await;

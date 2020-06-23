@@ -158,8 +158,8 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
     env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
     let rule = Rule::new("fuchsia.com", "test", "/", "/").unwrap();
-    edit_transaction.add(&mut rule.clone().into()).await.unwrap();
-    edit_transaction.commit().await.unwrap();
+    let () = edit_transaction.add(&mut rule.clone().into()).await.unwrap().unwrap();
+    let () = edit_transaction.commit().await.unwrap().unwrap();
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();

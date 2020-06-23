@@ -247,13 +247,12 @@ func replaceDynamicRewriteRules(rewriteEngine *rewrite.EngineWithCtxInterface, r
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.ResetAll IPC encountered an error: %s", err)
 		}
 
-		s, err := transaction.Add(context.Background(), rule)
+		response, err := transaction.Add(context.Background(), rule)
 		if err != nil {
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Add IPC encountered an error: %s", err)
 		}
-		status := zx.Status(s)
-		if status != zx.ErrOk {
-			return fmt.Errorf("unable to add rewrite rule: %s", status)
+		if response.Which() == rewrite.EditTransactionAddResultErr {
+			return fmt.Errorf("unable to add rewrite rule: %s", zx.Status(response.Err))
 		}
 
 		return nil
@@ -274,37 +273,39 @@ func removeAllDynamicRewriteRules(rewriteEngine *rewrite.EngineWithCtxInterface)
 // the provided callback, retrying on data races a few times before giving up.
 func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineWithCtxInterface, cb func(*rewrite.EditTransactionWithCtxInterface) error) error {
 	for i := 0; i < 10; i++ {
-		err, status := func() (error, zx.Status) {
-			var status zx.Status
+		response, err := func() (rewrite.EditTransactionCommitResult, error) {
+			var r rewrite.EditTransactionCommitResult
 			req, transaction, err := rewrite.NewEditTransactionWithCtxInterfaceRequest()
 			if err != nil {
-				return fmt.Errorf("creating edit transaction: %s", err), status
+				return r, fmt.Errorf("creating edit transaction: %s", err)
 			}
 			defer transaction.Close()
 			if err := rewriteEngine.StartEditTransaction(context.Background(), req); err != nil {
-				return fmt.Errorf("fuchsia.pkg.rewrite.Engine IPC encountered an error: %s", err), status
+				return r, fmt.Errorf("fuchsia.pkg.rewrite.Engine IPC encountered an error: %s", err)
 			}
 
 			if err := cb(transaction); err != nil {
-				return err, status
+				return r, err
 			}
 
-			s, err := transaction.Commit(context.Background())
+			r, err = transaction.Commit(context.Background())
 			if err != nil {
-				return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Commit IPC encountered an error: %s", err), status
+				return r, fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Commit IPC encountered an error: %s", err)
 			}
-			return nil, zx.Status(s)
+			return r, err
 		}()
 		if err != nil {
 			return err
 		}
-		switch status {
-		case zx.ErrOk:
+		if response.Which() != rewrite.EditTransactionAddResultErr {
 			return nil
+		}
+		errorStatus := zx.Status(response.Err)
+		switch errorStatus {
 		case zx.ErrUnavailable:
 			continue
 		default:
-			return fmt.Errorf("unexpected error while committing rewrite rule transaction: %s", status)
+			return fmt.Errorf("unexpected error while committing rewrite rule transaction: %s", errorStatus)
 		}
 	}
 

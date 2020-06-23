@@ -80,7 +80,7 @@ flexible union Rule {
     1: LiteralRule literal;
 };
 
-/// Manages fuchsia-pkg:// rewrite rules.
+/// This manages fuchsia-pkg:// rewrite rules.
 ///
 /// When a package resolver is asked to resolve a fuchsia-pkg URL, it must first
 /// iterate through its sequence of rewrite rules (given by [`List`]). The
@@ -89,26 +89,28 @@ flexible union Rule {
 /// * produces a valid URL when applied to the given URL
 /// If no rules match, the URL is resolved as-is.
 ///
-/// This interface is intended to be implemented by package resolver components,
+/// This is intended to be implemented by package resolver components,
 /// and used by repository administration tools.
 [Discoverable]
 protocol Engine {
     /// Begins a rule edit transaction.
+    ///
+    /// + request `transaction` a request for an [`EditTransaction`].
     StartEditTransaction(request<EditTransaction> transaction);
 
-    /// Return an iterator over all rewrite rules.
+    /// Returns an iterator over all rewrite rules.
     ///
-    /// + request `iterator` is a request for an iterator.
+    /// + request `iterator` a request for an iterator.
     List(request<RuleIterator> iterator);
 
-    /// Return an iterator over all static (immutable) rewrite rules. These
+    /// Returns an iterator over all static (immutable) rewrite rules. These
     /// rules are handled as lower priority than dynamic rules and cannot be
     /// modified (although they can be overridden) by [`EditTransaction`]s.
     ///
-    /// + request `iterator` is a request for an iterator.
+    /// + request `iterator` a request for an iterator.
     ListStatic(request<RuleIterator> iterator);
 
-    /// Rewrite the given `url` with the current rewrite rule set, returning the
+    /// Rewrites the given `url` with the current rewrite rule set, returning the
     /// `rewritten` url.  If no rules match or a rule matches but performs an
     /// identity transformation, this API returns `url` unchanged.
     ///
@@ -118,51 +120,52 @@ protocol Engine {
     ///
     /// + request `url` the url to rewrite.
     /// - response `rewritten` the rewritten url.
-    /// * error `ZX_ERR_INVALID_ARGS` If `url` is not a valid `fuchsia-pkg://`
-    ///    URL. See [`fuchsia-pkg URL`].
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_INVALID_ARGS` if `url` is not a valid `fuchsia-pkg://`
+    ///       URL. See [`fuchsia-pkg URL`].
     ///
     /// [`fuchsia-pkg URL`]:
     ///    https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
     TestApply(string url) -> (string rewritten) error zx.status;
 };
 
+/// A unit of editing for rewrite rules.
 protocol EditTransaction {
-    /// Return an iterator over all dynamic (editable) rewrite rules. The
+    /// Returns an iterator over all dynamic (editable) rewrite rules. The
     /// iterator will reflect any changes made to the rewrite rules so far in
     /// this transaction.
     ///
-    /// + request `iterator` is a request for an iterator.
+    /// + request `iterator` a request for an iterator.
     ListDynamic(request<RuleIterator> iterator);
 
     /// Removes all dynamically configured rewrite rules, leaving only any
     /// statically configured rules.
     ResetAll();
 
-    /// Add a rewrite rule with highest priority. If `rule` already exists, this
+    /// Adds a rewrite rule with highest priority. If `rule` already exists, this
     /// API will prioritize it over other rules.
     ///
     /// + request `rule` the rewrite rule to persist.
-    ///
-    /// * status `ZX_OK` if the rule was staged to be added.
-    /// * status `ZX_ERR_INVALID_ARGS` If `url` is not a valid `fuchsia-pkg://`
-    ///    URL. See [`fuchsia-pkg URL`].
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_INVALID_ARGS` if `url` is not a valid `fuchsia-pkg://`
+    ///      URL. See [`fuchsia-pkg URL`].
     ///
     /// [`fuchsia-pkg URL`]:
     ///    https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
-    Add(Rule rule) -> (zx.status status);
+    Add(Rule rule) -> () error zx.status;
 
-    /// Commit this transaction, or detect another transaction that committed
+    /// Commits this transaction, or detect another transaction that committed
     /// before this one.
     ///
-    /// * status `ZX_OK` the staged edits were successfully committed.
-    /// * status `ZX_ERR_UNAVAILABLE` another transaction committed before this one.
-    /// * status `ZX_ERR_ACCESS_DENIED` editing dynamic rewrite rules is permanently disabled.
-    Commit() -> (zx.status status);
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_UNAVAILABLE` if another transaction committed before this one.
+    ///     * `ZX_ERR_ACCESS_DENIED` if editing dynamic rewrite rules is permanently disabled.
+    Commit() -> () error zx.status;
 };
 
 /// The iterator over all the rewrite rules defined in a [`Engine`].
 protocol RuleIterator {
-    /// Advance the iterator and return the next batch of rules.
+    /// Advances the iterator and returns the next batch of rules.
     ///
     /// - response `rules` a vector of [`Rule`] rules. Will return an empty
     ///    vector when there are no more rules.

@@ -107,31 +107,31 @@ impl RewriteService {
                             transaction.reset_all();
                         }
                         EditTransactionRequest::Add { rule, responder } => {
-                            let status = match rule.try_into() {
+                            let mut response = match rule.try_into() {
                                 Ok(rule) => {
                                     transaction.add(rule);
-                                    Status::OK
+                                    Ok(())
                                 }
-                                Err(_) => Status::INVALID_ARGS,
+                                Err(_) => Err(Status::INVALID_ARGS.into_raw()),
                             };
-                            responder.send(status.into_raw())?;
+                            responder.send(&mut response)?;
                         }
                         EditTransactionRequest::Commit { responder } => {
-                            let status = match state.write().apply(transaction) {
+                            let mut response = match state.write().apply(transaction) {
                                 Ok(()) => {
                                     fx_log_info!("rewrite transaction committed");
-                                    Status::OK
+                                    Ok(())
                                 }
                                 Err(CommitError::TooLate) => {
                                     fx_log_warn!("rewrite transaction out of date");
-                                    Status::UNAVAILABLE
+                                    Err(Status::UNAVAILABLE.into_raw())
                                 }
                                 Err(CommitError::DynamicConfigurationDisabled) => {
                                     fx_log_err!("rewrite transaction failed, dynamic configuration is disabled");
-                                    Status::ACCESS_DENIED
+                                    Err(Status::ACCESS_DENIED.into_raw())
                                 }
                             };
-                            responder.send(status.into_raw())?;
+                            responder.send(&mut response)?;
                             return Ok(());
                         }
                     }
@@ -192,10 +192,10 @@ mod tests {
     }
 
     /// Given the future of a FIDL API call, wait for it to complete, and assert that it
-    /// successfully returns the given [`fuchsia_zircon::Status`].
-    macro_rules! assert_yields_status {
-        ($expr:expr, $status:expr) => {
-            assert_eq!(Status::from_raw($expr.await.unwrap()), $status);
+    /// successfully returns the given Result<(),[`fuchsia_zircon::Status`]>.
+    macro_rules! assert_yields_result {
+        ($expr:expr, $result:expr) => {
+            assert_eq!($expr.await.unwrap().map_err(Status::from_raw), $result);
         };
     }
 
@@ -299,7 +299,7 @@ mod tests {
         service.serve_edit_transaction(request_stream);
 
         client.reset_all().unwrap();
-        assert_yields_status!(client.commit(), Status::OK);
+        assert_yields_result!(client.commit(), Ok(()));
 
         assert_eq!(state.read().transaction(), Transaction::new(vec![], 1));
     }
@@ -333,7 +333,7 @@ mod tests {
         client.reset_all().unwrap();
         assert_eq!(transaction_list_dynamic_rules(&client).await, vec![]);
 
-        assert_yields_status!(client.commit(), Status::OK);
+        assert_yields_result!(client.commit(), Ok(()));
 
         // Ensure the list call from earlier lists the dynamic rules available at the time the
         // iterator was created.
@@ -370,10 +370,10 @@ mod tests {
         client2.reset_all().unwrap();
 
         let rule = rule!("fuchsia.com" => "fuchsia.com", "/foo" => "/foo");
-        assert_yields_status!(client1.add(&mut rule.clone().into()), Status::OK);
+        assert_yields_result!(client1.add(&mut rule.clone().into()), Ok(()));
 
-        assert_yields_status!(client1.commit(), Status::OK);
-        assert_yields_status!(client2.commit(), Status::UNAVAILABLE);
+        assert_yields_result!(client1.commit(), Ok(()));
+        assert_yields_result!(client2.commit(), Err(Status::UNAVAILABLE));
 
         assert_eq!(state.read().transaction(), Transaction::new(vec![rule], 1),);
 
@@ -384,7 +384,7 @@ mod tests {
             client
         };
         client2.reset_all().unwrap();
-        assert_yields_status!(client2.commit(), Status::OK);
+        assert_yields_result!(client2.commit(), Ok(()));
         assert_eq!(state.read().transaction(), Transaction::new(vec![], 2));
     }
 
@@ -407,7 +407,7 @@ mod tests {
 
         let rule = rule!("fuchsia.com" => "devhost.fuchsia.com", "/" => "/");
 
-        assert_yields_status!(edit_client.add(&mut rule.clone().into()), Status::OK);
+        assert_yields_result!(edit_client.add(&mut rule.clone().into()), Ok(()));
 
         assert_eq!(list_rules(state.clone()).await, vec![]);
 
@@ -417,7 +417,7 @@ mod tests {
             client
         };
 
-        assert_yields_status!(edit_client.commit(), Status::OK);
+        assert_yields_result!(edit_client.commit(), Ok(()));
 
         assert_eq!(long_list_call.next().await.unwrap(), vec![]);
 
@@ -486,7 +486,7 @@ mod tests {
         let replacement_rule = rule!("fuchsia.com" => "fuchsia.com", "/a" => "/c");
 
         edit_client.reset_all().unwrap();
-        assert_yields_status!(edit_client.add(&mut replacement_rule.into()), Status::OK);
+        assert_yields_result!(edit_client.add(&mut replacement_rule.into()), Ok(()));
 
         // Pending transaction does not affect apply call.
         assert_eq!(
@@ -494,7 +494,7 @@ mod tests {
             Ok("fuchsia-pkg://fuchsia.com/b".parse().unwrap())
         );
 
-        assert_yields_status!(edit_client.commit(), Status::OK);
+        assert_yields_result!(edit_client.commit(), Ok(()));
 
         // New rule set now applies.
         assert_eq!(
@@ -522,23 +522,23 @@ mod tests {
             rule!("fuchsia.com" => "wrong_replacement.fuchsia.com", "/" => "/bar/"),
         ];
         for rule in rules.into_iter().rev() {
-            assert_yields_status!(client.add(&mut rule.into()), Status::OK);
+            assert_yields_result!(client.add(&mut rule.into()), Ok(()));
         }
-        assert_yields_status!(client.commit(), Status::OK);
+        assert_yields_result!(client.commit(), Ok(()));
 
         // Adding a duplicate of the currently enabled source is a no-op.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
         let rule = rule!("fuchsia.com" => "correct.fuchsia.com", "/" => "/");
-        assert_yields_status!(client.add(&mut rule.into()), Status::OK);
-        assert_yields_status!(client.commit(), Status::OK);
+        assert_yields_result!(client.add(&mut rule.into()), Ok(()));
+        assert_yields_result!(client.commit(), Ok(()));
 
         // Adding a different entry with higher priority enables the new source.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
         let rule = rule!("fuchsia.com" => "correcter.fuchsia.com", "/" => "/");
-        assert_yields_status!(client.add(&mut rule.into()), Status::OK);
-        assert_yields_status!(client.commit(), Status::OK);
+        assert_yields_result!(client.add(&mut rule.into()), Ok(()));
+        assert_yields_result!(client.commit(), Ok(()));
     }
 
     #[fasync::run_until_stalled(test)]
@@ -554,13 +554,13 @@ mod tests {
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
         client.reset_all().unwrap();
-        assert_yields_status!(client.commit(), Status::OK);
+        assert_yields_result!(client.commit(), Ok(()));
 
         // Edits that don't change the enabled source are a no-op.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
         client.reset_all().unwrap();
-        assert_yields_status!(client.commit(), Status::OK);
+        assert_yields_result!(client.commit(), Ok(()));
     }
 
     #[fasync::run_until_stalled(test)]
@@ -573,7 +573,7 @@ mod tests {
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
 
-        let status = Status::from_raw(client.commit().await.unwrap());
+        let status = Status::from_raw(client.commit().await.unwrap().unwrap_err());
 
         assert_eq!(status, Status::ACCESS_DENIED);
     }
