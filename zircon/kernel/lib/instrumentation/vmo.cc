@@ -121,7 +121,9 @@ zx_status_t InstrumentationData::GetVmos(Handle* handles[]) {
     size_t pos_ = 0;
     FILE stream_{this};
 
-    zx_status_t Create() { return VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo_); }
+    zx_status_t Create() {
+      return VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, PAGE_SIZE, &vmo_);
+    }
 
     int Write(ktl::string_view str) {
       zx_status_t status = vmo_->Write(str.data(), pos_, str.size());
@@ -145,6 +147,11 @@ zx_status_t InstrumentationData::GetVmos(Handle* handles[]) {
       if (any_published) {
         // Publish the symbolizer file.
         published = instance.Publish(nullptr);
+      } else {
+        // Nothing to publish, so zero out the symbolizer file VMO so it won't
+        // be published either.
+        status = instance.vmo_->Resize(0);
+        ZX_ASSERT(status == ZX_OK);
       }
     } else {
       status = instance.Create();
