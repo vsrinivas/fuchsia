@@ -5,13 +5,13 @@
 #ifndef SRC_STORAGE_LIB_PAVER_ABR_CLIENT_H_
 #define SRC_STORAGE_LIB_PAVER_ABR_CLIENT_H_
 
+#include <lib/abr/abr.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 
 #include <memory>
 
 #include <fbl/unique_fd.h>
-#include <libabr/libabr.h>
 
 #include "partition-client.h"
 #include "paver-context.h"

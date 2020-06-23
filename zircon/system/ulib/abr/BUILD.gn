@@ -14,18 +14,18 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
-zx_library("libabr") {
+zx_library("abr") {
   output_prefix_override = true
   sdk = "static"
   sdk_headers = [
-    "libabr/abr_data.h",
-    "libabr/abr_ops.h",
-    "libabr/abr_sysdeps.h",
-    "libabr/abr_util.h",
-    "libabr/libabr.h",
+    "lib/abr/data.h",
+    "lib/abr/ops.h",
+    "lib/abr/sysdeps.h",
+    "lib/abr/util.h",
+    "lib/abr/abr.h",
   ]
   sources = [
-    "abr_flow.c",
-    "abr_util.c",
+    "flow.c",
+    "util.c",
   ]
 }

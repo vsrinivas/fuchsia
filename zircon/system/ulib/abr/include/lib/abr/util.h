@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef LIBABR_ABR_UTIL_H_
-#define LIBABR_ABR_UTIL_H_
+#ifndef LIB_ABR_UTIL_H_
+#define LIB_ABR_UTIL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,4 +73,4 @@ int AbrSafeMemcmp(const void* s1, const void* s2, size_t n);
 }
 #endif
 
-#endif /* FIRMWARE_LIBABR_ABR_UTIL_H_ */
+#endif /* LIB_ABR_UTIL_H_ */

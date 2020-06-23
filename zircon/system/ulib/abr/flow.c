@@ -3,9 +3,9 @@
  * found in the LICENSE file.
  */
 
-#include <libabr/abr_data.h>
-#include <libabr/abr_util.h>
-#include <libabr/libabr.h>
+#include <lib/abr/abr.h>
+#include <lib/abr/data.h>
+#include <lib/abr/util.h>
 
 /* Initializes |data| with default valid values. Both A/B slots will be marked as bootable, but not
  * successful, with a full set of retries. Slot A will be higher priority.

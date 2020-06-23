@@ -7,11 +7,11 @@
  * to include directly. Most callers only need to call AbrGetBootSlot().
  */
 
-#ifndef LIBABR_LIBABR_H_
-#define LIBABR_LIBABR_H_
+#ifndef LIB_ABR_ABR_H_
+#define LIB_ABR_ABR_H_
 
-#include "abr_ops.h"
-#include "abr_sysdeps.h"
+#include "ops.h"
+#include "sysdeps.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,4 +150,4 @@ AbrResult AbrSetOneShotRecovery(const AbrOps* abr_ops, bool enable);
 }
 #endif
 
-#endif /* FIRMWARE_LIBABR_LIBABR_H_ */
+#endif /* LIB_ABR_ABR_H_ */

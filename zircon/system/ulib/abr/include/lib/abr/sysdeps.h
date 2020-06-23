@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef LIBABR_ABR_SYSDEPS_H_
-#define LIBABR_ABR_SYSDEPS_H_
+#ifndef LIB_ABR_SYSDEPS_H_
+#define LIB_ABR_SYSDEPS_H_
 
 /* Define this to zero to remove all standard library dependencies. Note you'll
  * need to define some standard types and implement the abr_* functions declared
@@ -60,4 +60,4 @@ uint32_t AbrCrc32(const void* buf, size_t buf_size);
 }
 #endif
 
-#endif /* FIRMWARE_LIBABR_ABR_SYSDEPS_H_ */
+#endif /* LIB_ABR_SYSDEPS_H_ */

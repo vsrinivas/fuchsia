@@ -28,7 +28,7 @@ test("libabr-test") {
   deps = [
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/libabr",
+    "//zircon/system/ulib/abr",
   ]
-  include_dirs = [ "//zircon/system/ulib/libabr" ]
+  include_dirs = [ "//zircon/system/ulib/abr" ]
 }

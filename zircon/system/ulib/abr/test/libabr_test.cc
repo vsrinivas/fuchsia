@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/abr/abr.h>
+#include <lib/abr/data.h>
+#include <lib/abr/util.h>
 #include <lib/cksum.h>
 
 #include <string>
 
-#include <libabr/abr_data.h>
-#include <libabr/abr_util.h>
-#include <libabr/libabr.h>
 #include <zxtest/zxtest.h>
 
 namespace {

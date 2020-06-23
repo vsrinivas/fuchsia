@@ -34,7 +34,7 @@ The following code is an example of how to use libabr to make an A/B decision
 during boot when metadata is read-only.
 
 ```c
-#include "libabr.h"
+#include "lib/abr/abr.h"
 ...
 AbrOps ops = {
   .context = NULL,
@@ -48,12 +48,12 @@ AbrSlotIndex slot_index = AbrGetBootSlot(
 ...
 ```
 
-> Note: libabr.h is the only header you need to include.
+> Note: `abr.h` is the only header you need to include.
 
 ## Metadata
 
 Libabr uses 32 bytes of persistent metadata to maintain state information. The
-related structures are defined in abr_data.h. This data is mutable and may be
+related structures are defined in `data.h`. This data is mutable and may be
 modified by the bootloader or the OS during normal operation. The metadata is
 the only input to the A/B/R boot decision; there are no other arguments,
 configuration, or environment data that affect the A/B/R decision. In other
@@ -117,7 +117,7 @@ system halt.
 
 The library code itself is designed to be portable with minimal dependencies. It
 should work with any modern C toolchain. There are a few dependencies in
-`abr_sysdeps.h` that need to be implemented, but these should be fairly
+`sysdeps.h` that need to be implemented, but these should be fairly
 straightforward in most environments and a libc-dependent implementation is
 provided.
 
@@ -126,7 +126,7 @@ provided.
 There are I/O operations that need to be implemented for managing metadata. How
 and where metadata is stored is implementation-specific. If metadata is
 read-only in the context of an implementation, `write_abr_metadata` can
-be set to NULL. See abr_ops.h for details.
+be set to NULL. See `ops.h` for details.
 
 ### Testing
 

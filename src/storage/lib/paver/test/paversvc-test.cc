@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
+#include <lib/abr/data.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/cksum.h>
@@ -29,7 +30,6 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
-#include <libabr/abr_data.h>
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 

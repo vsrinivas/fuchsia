@@ -3,10 +3,10 @@
  * found in the LICENSE file.
  */
 
-#ifndef LIBABR_ABR_OPS_H_
-#define LIBABR_ABR_OPS_H_
+#ifndef LIB_ABR_OPS_H_
+#define LIB_ABR_OPS_H_
 
-#include "abr_sysdeps.h"
+#include "sysdeps.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,4 +39,4 @@ typedef struct AbrOps {
 }
 #endif
 
-#endif /* FIRMWARE_LIBABR_ABR_OPS_H_ */
+#endif /* LIB_ABR_OPS_H_ */

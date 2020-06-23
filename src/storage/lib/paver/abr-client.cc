@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <lib/abr/abr.h>
 #include <lib/cksum.h>
 #include <lib/fdio/directory.h>
 #include <stdio.h>
@@ -13,8 +14,6 @@
 #include <zircon/status.h>
 
 #include <string_view>
-
-#include <libabr/libabr.h>
 
 #include "device-partitioner.h"
 #include "partition-client.h"
