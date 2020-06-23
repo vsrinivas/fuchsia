@@ -37,7 +37,7 @@ function get_child_pids {
   if is-mac; then
     while IFS='' read -r v; do children+=("$v"); done < <(pgrep -P "$1")
   else
-    while IFS='' read -r v; do children+=("$v"); done < <(ps -o pid= --ppid "$1")
+    while IFS='' read -r v; do children+=("$v"); done < <(ps -o pid:1= --ppid "$1")
   fi
   if (( ${#children[@]} )); then
     for pid in "${children[@]}"; do

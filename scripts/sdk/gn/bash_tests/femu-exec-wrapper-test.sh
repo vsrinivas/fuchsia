@@ -97,6 +97,21 @@ INPUT
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu-exec-wrapper.sh"  \
   --femu-log "${BT_TEMP_DIR}/femu_exec_wrapper_multi_pid.log"  > "${BT_TEMP_DIR}/TEST_femu_exec_wrapper_multi_pid_out.txt" 2>&1
 
+  if ! is-mac; then
+    source "${BT_TEMP_DIR}/isolated/ps.mock_state.1"
+    gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" _ANY_
+    source "${BT_TEMP_DIR}/isolated/ps.mock_state.2"
+    gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "10"
+    source "${BT_TEMP_DIR}/isolated/ps.mock_state.3"
+    gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "11"
+    source "${BT_TEMP_DIR}/isolated/ps.mock_state.4"
+    gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "20"
+    source "${BT_TEMP_DIR}/isolated/ps.mock_state.5"
+    gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "12"
+    source "${BT_TEMP_DIR}/isolated/ps.mock_state.6"
+    gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "13"
+  fi
+
   # read the second mock state since the first kill call is checking to see if the emulator is up and running.
   BT_ASSERT_FILE_EXISTS  "${BT_TEMP_DIR}/mocked/kill.mock_state.2"
   # shellcheck disable=SC1090
