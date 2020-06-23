@@ -330,18 +330,17 @@ async fn resolve_duration_font_test_failure() {
     let env = TestEnvBuilder::new().build();
     let (_, server) = create_endpoints().unwrap();
     assert_eq!(
-        Status::from_raw(
-            env.proxies
-                .font_resolver
-                .resolve(
-                    "fuchsia-pkg://example.com/some-nonexistent-pkg",
-                    &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-                    server,
-                )
-                .await
-                .unwrap()
-        ),
-        Status::NOT_FOUND
+        env.proxies
+            .font_resolver
+            .resolve(
+                "fuchsia-pkg://example.com/some-nonexistent-pkg",
+                &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
+                server,
+            )
+            .await
+            .unwrap()
+            .unwrap_err(),
+        Status::NOT_FOUND.into_raw()
     );
     assert_elapsed_duration_events(
         &env,
@@ -493,18 +492,17 @@ async fn font_resolver_is_font_package_check_not_font() {
     // (existing or not) will fail with NOT_FOUND and emit an event with the NotFont dimension.
     let (_, server) = create_endpoints().unwrap();
     assert_eq!(
-        Status::from_raw(
-            env.proxies
-                .font_resolver
-                .resolve(
-                    "fuchsia-pkg://example.com/some-nonexistent-pkg",
-                    &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-                    server,
-                )
-                .await
-                .unwrap()
-        ),
-        Status::NOT_FOUND
+        env.proxies
+            .font_resolver
+            .resolve(
+                "fuchsia-pkg://example.com/some-nonexistent-pkg",
+                &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
+                server,
+            )
+            .await
+            .unwrap()
+            .unwrap_err(),
+        Status::NOT_FOUND.into_raw()
     );
 
     assert_count_events(

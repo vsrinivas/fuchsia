@@ -592,7 +592,7 @@ pub async fn run_font_resolver_service(
                 responder,
             } = event;
             let start_time = Instant::now();
-            let status = resolve_font(
+            let response = resolve_font(
                 &font_package_manager,
                 &cache,
                 &package_fetcher,
@@ -605,7 +605,7 @@ pub async fn run_font_resolver_service(
             cobalt_sender.log_event_count(
                 metrics::RESOLVE_METRIC_ID,
                 (
-                    resolve_result_to_resolve_code(status),
+                    resolve_result_to_resolve_code(response),
                     metrics::ResolveMetricDimensionResolverType::Font,
                 ),
                 0,
@@ -615,12 +615,12 @@ pub async fn run_font_resolver_service(
             cobalt_sender.log_elapsed_time(
                 metrics::RESOLVE_DURATION_METRIC_ID,
                 (
-                    resolve_result_to_resolve_duration_code(&status),
+                    resolve_result_to_resolve_duration_code(&response),
                     metrics::ResolveDurationMetricDimensionResolverType::Font,
                 ),
                 Instant::now().duration_since(start_time).as_micros() as i64,
             );
-            responder.send(Status::from(status).into_raw())?;
+            responder.send(&mut response.map_err(|s| s.into_raw()))?;
             Ok(())
         })
         .await

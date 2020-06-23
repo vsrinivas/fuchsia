@@ -4,7 +4,7 @@
 
 library fuchsia.pkg;
 
-/// Configures a package resolver.
+/// This configures a package resolver.
 [Discoverable]
 protocol PackageResolverAdmin {
     /// Sets an experiment toggle to a specific state (on or off).
@@ -13,16 +13,13 @@ protocol PackageResolverAdmin {
     /// is running.
     ///
     /// + request `experiment_id` the experiment to enable or disable.
-    /// + request `state` the state the experimnet should be set to.
-    /// * error a zx.status value indicating success or failure.
-    ///     Fails with `ZX_ERR_INVALID_ARGS if the experiment is unknown
-    ///     to the resolver.
+    /// + request `state` the state the experiment should be set to.
     SetExperimentState(ExperimentToggle experiment_id, bool state) -> ();
 };
 
-/// List of known experiment toggles
+/// List of known experiment toggles.
 enum ExperimentToggle : uint64 {
-    /// Does nothing, but visible in inspect.
+    /// This does nothing, but is visible in inspect.
     LIGHTBULB = 0;
 
     // Next unused experiment id: 3

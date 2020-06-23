@@ -65,12 +65,15 @@ impl AssetLoader for AssetLoaderImpl {
         let (dir_proxy, dir_request) = create_proxy::<io::DirectoryMarker>()
             .map_err(|e| AssetCollectionError::ServiceConnectionError(e.into()))?;
 
-        let status =
+        let response =
             font_resolver.resolve(&package_url, &mut update_policy, dir_request).await.map_err(
                 |e| AssetCollectionError::PackageResolverError(package_locator.clone(), e.into()),
             )?;
-        zx::Status::ok(status).map_err(|e| {
-            AssetCollectionError::PackageResolverError(package_locator.clone(), e.into())
+        let () = response.map_err(|i| {
+            AssetCollectionError::PackageResolverError(
+                package_locator.clone(),
+                zx::Status::from_raw(i).into(),
+            )
         })?;
 
         Ok(dir_proxy)

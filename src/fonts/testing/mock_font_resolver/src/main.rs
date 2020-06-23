@@ -45,8 +45,8 @@ async fn run_resolver_service(mut stream: FontResolverRequestStream) -> Result<(
             directory_request,
             responder,
         } = request;
-        let status = resolve(package_url, directory_request).await;
-        responder.send(Status::from(status).into_raw())?;
+        let response = resolve(package_url, directory_request).await;
+        responder.send(&mut response.map_err(|s| s.into_raw()))?;
     }
     Ok(())
 }
