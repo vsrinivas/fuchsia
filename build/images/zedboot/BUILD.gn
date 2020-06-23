@@ -64,6 +64,14 @@ zedboot_binary_patterns = [
   "bin/waitfor",
 ]
 
+# Zedboot must be included to pave devices until recovery has a replacement mechanism. Products can specify override_recovery_label to determine which image to include in zircon-r.
+use_zedboot_as_recovery = false
+zedboot_metadata_slot = "zedboot"
+if (override_recovery_label == "") {
+  use_zedboot_as_recovery = true
+  zedboot_metadata_slot = "zircon-r"
+}
+
 generate_manifest("zedboot.manifest") {
   visibility = [ ":*" ]
   args = []
@@ -164,18 +172,21 @@ zbi("zbi") {
       {
         if (custom_signing_script == "" && !use_vboot) {
           archive = true
-          bootserver_pave = [ "--zirconr" ]
+          if (use_zedboot_as_recovery) {
+            bootserver_pave = [ "--zirconr" ]
+          }
           bootserver_pave_zedboot = [ "--zircona" ]
         }
-        name = "zircon-r"
+        name = zedboot_metadata_slot
         path = "zedboot.zbi"
         type = "zbi"
       },
     ]
-    image_paths = [
-      "IMAGE_ZEDBOOT_ZBI=zedboot.zbi",
-      "IMAGE_ZIRCONR_ZBI=zedboot.zbi",
-    ]
+
+    image_paths = [ "IMAGE_ZEDBOOT_ZBI=zedboot.zbi" ]
+    if (use_zedboot_as_recovery) {
+      image_paths += [ "IMAGE_ZIRCONR_ZBI=zedboot.zbi" ]
+    }
   }
 }
 
@@ -189,14 +200,18 @@ if (custom_signing_script != "") {
       images = [
         {
           archive = true
-          bootserver_pave = [ "--zirconr" ]
+          if (use_zedboot_as_recovery) {
+            bootserver_pave = [ "--zirconr" ]
+          }
+          name = "${zedboot_metadata_slot}.signed"
           bootserver_pave_zedboot = [ "--zircona" ]
-          name = "zircon-r.signed"
           path = "zedboot.zbi.signed"
           type = "zbi.signed"
         },
       ]
-      image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.signed" ]
+      if (use_zedboot_as_recovery) {
+        image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.signed" ]
+      }
     }
   }
 } else if (use_vboot) {
@@ -207,14 +222,18 @@ if (custom_signing_script != "") {
       images = [
         {
           archive = true
-          bootserver_pave = [ "--zirconr" ]
+          if (use_zedboot_as_recovery) {
+            bootserver_pave = [ "--zirconr" ]
+          }
+          name = "${zedboot_metadata_slot}.signed"
           bootserver_pave_zedboot = [ "--zircona" ]
-          name = "zircon-r.signed"
           path = "zedboot.vboot"
           type = "zbi.signed"
         },
       ]
-      image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.vboot" ]
+      if (use_zedboot_as_recovery) {
+        image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.vboot" ]
+      }
     }
   }
 }
@@ -251,14 +270,18 @@ if (use_vbmeta) {
       images = [
         {
           archive = true
-          bootserver_pave = [ "--vbmetar" ]
+          if (use_zedboot_as_recovery) {
+            bootserver_pave = [ "--vbmetar" ]
+          }
+          name = zedboot_metadata_slot
           bootserver_pave_zedboot = [ "--vbmetaa" ]
-          name = "zircon-r"
           path = "zedboot.vbmeta"
           type = "vbmeta"
         },
       ]
-      image_paths = [ "IMAGE_VBMETAR_RAW=zedboot.vbmeta" ]
+      if (use_zedboot_as_recovery) {
+        image_paths = [ "IMAGE_VBMETAR_RAW=zedboot.vbmeta" ]
+      }
     }
   }
 }

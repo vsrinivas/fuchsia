@@ -2114,6 +2114,10 @@ group("default-images") {
       ":updates",
       "recovery",
     ]
+
+    if (override_recovery_label != "") {
+      deps += [ override_recovery_label ]
+    }
   }
 }
 
