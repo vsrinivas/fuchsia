@@ -44,6 +44,8 @@ static zx_status_t default_mask(unsigned int vector) { return ZX_ERR_NOT_SUPPORT
 
 static zx_status_t default_unmask(unsigned int vector) { return ZX_ERR_NOT_SUPPORTED; }
 
+static zx_status_t default_deactivate(unsigned int vector) { return ZX_ERR_NOT_SUPPORTED; }
+
 static zx_status_t default_configure(unsigned int vector, enum interrupt_trigger_mode tm,
                                      enum interrupt_polarity pol) {
   return ZX_ERR_NOT_SUPPORTED;
@@ -97,6 +99,7 @@ static uint32_t default_get_max_vector() { return 0; }
 static const struct pdev_interrupt_ops default_ops = {
     .mask = default_mask,
     .unmask = default_unmask,
+    .deactivate = default_deactivate,
     .configure = default_configure,
     .get_config = default_get_config,
     .is_valid = default_is_valid,
@@ -123,6 +126,8 @@ static const struct pdev_interrupt_ops* intr_ops = &default_ops;
 zx_status_t mask_interrupt(unsigned int vector) { return intr_ops->mask(vector); }
 
 zx_status_t unmask_interrupt(unsigned int vector) { return intr_ops->unmask(vector); }
+
+zx_status_t deactivate_interrupt(unsigned int vector) { return intr_ops->deactivate(vector); }
 
 zx_status_t configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
                                 enum interrupt_polarity pol) {

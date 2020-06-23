@@ -270,6 +270,18 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector) {
   return ZX_OK;
 }
 
+static zx_status_t gic_deactivate_interrupt(unsigned int vector){
+    if (vector >= gic_max_int) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    uint32_t reg = 1 << (vector % 32);
+    GICREG(0, GICD_ICACTIVER(vector / 32)) = reg;
+
+    return ZX_OK;
+
+}
+
 static zx_status_t gic_configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
                                            enum interrupt_polarity pol) {
   LTRACEF("vector %u, trigger mode %d, polarity %d\n", vector, tm, pol);
@@ -474,6 +486,7 @@ static void gic_msi_register_handler(const msi_block_t* block, uint msi_id, int_
 static const struct pdev_interrupt_ops gic_ops = {
     .mask = gic_mask_interrupt,
     .unmask = gic_unmask_interrupt,
+    .deactivate = gic_deactivate_interrupt,
     .configure = gic_configure_interrupt,
     .get_config = gic_get_interrupt_config,
     .is_valid = gic_is_valid_interrupt,

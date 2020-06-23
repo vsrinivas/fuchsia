@@ -25,6 +25,7 @@ struct int_handler_struct* pdev_get_int_handler(unsigned int vector);
 struct pdev_interrupt_ops {
   zx_status_t (*mask)(unsigned int vector);
   zx_status_t (*unmask)(unsigned int vector);
+  zx_status_t (*deactivate)(unsigned int vector);
   zx_status_t (*configure)(unsigned int vector, enum interrupt_trigger_mode tm,
                            enum interrupt_polarity pol);
   zx_status_t (*get_config)(unsigned int vector, enum interrupt_trigger_mode* tm,

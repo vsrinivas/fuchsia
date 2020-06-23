@@ -211,6 +211,17 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector) {
   return ZX_OK;
 }
 
+static zx_status_t gic_deactivate_interrupt(unsigned int vector){
+    if (vector >= max_irqs) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    uint32_t reg = 1 << (vector % 32);
+    GICREG(0, GICD_ICACTIVER(vector / 32)) = reg;
+
+    return ZX_OK;
+}
+
 static zx_status_t gic_configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
                                            enum interrupt_polarity pol) {
   // Only configurable for SPI interrupts
@@ -407,6 +418,7 @@ static void gic_shutdown_cpu() {
 static const struct pdev_interrupt_ops gic_ops = {
     .mask = gic_mask_interrupt,
     .unmask = gic_unmask_interrupt,
+    .deactivate = gic_deactivate_interrupt,
     .configure = gic_configure_interrupt,
     .get_config = gic_get_interrupt_config,
     .is_valid = gic_is_valid_interrupt,

@@ -30,6 +30,7 @@ enum interrupt_polarity {
 
 zx_status_t mask_interrupt(unsigned int vector);
 zx_status_t unmask_interrupt(unsigned int vector);
+zx_status_t deactivate_interrupt(unsigned int vector);
 
 void shutdown_interrupts(void);
 
