@@ -18,10 +18,10 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/feedback_data/attachments/types.h"
-#include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/inspect_archive.h"
-#include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/stubs/inspect_archive.h"
+#include "src/developer/forensics/testing/stubs/inspect_batch_iterator.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {

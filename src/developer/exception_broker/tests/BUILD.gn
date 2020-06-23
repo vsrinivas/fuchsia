@@ -14,7 +14,7 @@ group("tests") {
 
     # Packages for the components that we are injecting in the integration tests.
     "//src/developer/exception_broker",
-    "//src/developer/feedback/testing/fakes:fake-crash-reporter",
+    "//src/developer/forensics/testing/fakes:fake-crash-reporter",
   ]
 }
 
@@ -111,8 +111,8 @@ executable("exception_broker_unittest") {
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/exception_broker:lib",
-    "//src/developer/feedback/testing:gmatchers",
-    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

@@ -16,9 +16,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/cobalt_test_fixture.h"
+#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 
 namespace forensics {
 namespace feedback_data {

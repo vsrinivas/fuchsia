@@ -21,8 +21,8 @@
 #include <third_party/crashpad/util/file/string_file.h>
 
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
-#include "src/developer/feedback/testing/gmatchers.h"
-#include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/gmatchers.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
 

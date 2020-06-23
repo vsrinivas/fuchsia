@@ -16,9 +16,9 @@ executable("archive_unittest_exe") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/testing:gmatchers",
-    "//src/developer/feedback/testing:gpretty_printers",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -33,7 +33,7 @@ executable("bridge_unittest_exe") {
   sources = [ "bridge_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
     "//src/lib/testing/loop_fixture",
@@ -48,9 +48,9 @@ executable("caching_ptr_unittest_exe") {
   sources = [ "caching_ptr_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:channel_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:channel_provider",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:caching_ptr",
     "//src/lib/fxl",
@@ -67,9 +67,9 @@ executable("channel_provider_ptr_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:channel_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:channel_provider",
     "//src/developer/forensics/utils/fidl:channel_provider_ptr",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -84,11 +84,11 @@ executable("cobalt_unittest_exe") {
   sources = [ "cobalt_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:cobalt_test_fixture",
-    "//src/developer/feedback/testing:gpretty_printers",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/forensics/testing:cobalt_test_fixture",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:cobalt",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
@@ -103,10 +103,10 @@ executable("data_provider_ptr_unittest_exe") {
   sources = [ "data_provider_ptr_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:gpretty_printers",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:data_provider",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:data_provider",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:data_provider_ptr",
     "//src/lib/fsl",
@@ -121,9 +121,9 @@ executable("device_id_provider_ptr_unittest_exe") {
   sources = [ "device_id_provider_ptr_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:device_id_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:device_id_provider",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:device_id_provider_ptr",
     "//third_party/googletest:gmock",
@@ -139,7 +139,7 @@ executable("inspect_node_manager_unittest_exe") {
   deps = [
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils:inspect_node_manager",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -153,7 +153,7 @@ executable("inspect_protocol_stats_unittest_exe") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils:inspect_node_manager",
     "//src/developer/forensics/utils:inspect_protocol_stats",
   ]
@@ -178,9 +178,9 @@ executable("oneshot_ptr_unittest_exe") {
   sources = [ "oneshot_ptr_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:channel_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:channel_provider",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//src/lib/fxl",
@@ -197,7 +197,7 @@ executable("promise_unittest_exe") {
   sources = [ "promise_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
@@ -226,9 +226,9 @@ executable("utc_time_provider_unittest_exe") {
   sources = [ "utc_time_provider_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:utc_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:utc_provider",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",

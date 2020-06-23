@@ -12,7 +12,7 @@
 
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/datastore.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 
 namespace forensics {
 namespace feedback_data {

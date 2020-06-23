@@ -16,11 +16,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/feedback/testing/stubs/reboot_methods_watcher_register.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/cobalt_test_fixture.h"
+#include "src/developer/forensics/testing/stubs/cobalt_logger.h"
+#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/testing/stubs/reboot_methods_watcher_register.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"

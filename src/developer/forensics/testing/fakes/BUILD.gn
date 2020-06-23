@@ -1,0 +1,193 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+visibility = [
+  "//src/developer/feedback/*",
+  "//src/developer/forensics/*",
+]
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_package("fake-crash-reporter") {
+  testonly = true
+
+  deps = [ ":fake_crash_reporter" ]
+
+  visibility += [ "//src/developer/exception_broker/tests" ]
+}
+
+fuchsia_package("fake-data-provider") {
+  testonly = true
+
+  deps = [ ":fake_data_provider" ]
+}
+
+fuchsia_package("fake-device-id-provider") {
+  testonly = true
+
+  deps = [ ":fake_device_id_provider" ]
+}
+
+fuchsia_package("fake-last-reboot-info-provider") {
+  testonly = true
+
+  deps = [ ":fake_last_reboot_info_provider" ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("fake_crash_reporter") {
+  manifest = "meta/fake_crash_reporter.cmx"
+
+  deps = [ ":fake_crash_reporter_exe" ]
+}
+
+fuchsia_component("fake_data_provider") {
+  manifest = "meta/fake_data_provider.cmx"
+
+  deps = [
+    ":checkboard_100",
+    ":fake_data_provider_exe",
+  ]
+}
+
+fuchsia_component("fake_device_id_provider") {
+  manifest = "meta/fake_device_id_provider.cmx"
+
+  deps = [ ":fake_device_id_provider_exe" ]
+}
+
+fuchsia_component("fake_last_reboot_info_provider") {
+  manifest = "meta/fake_last_reboot_info_provider.cmx"
+
+  deps = [ ":fake_last_reboot_info_provider_exe" ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("fake_crash_reporter_exe") {
+  sources = [
+    "crash_reporter.cc",
+    "crash_reporter.h",
+    "crash_reporter_main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("fake_data_provider_exe") {
+  sources = [
+    "data_provider.cc",
+    "data_provider.h",
+    "data_provider_main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:archive",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("fake_device_id_provider_exe") {
+  sources = [
+    "device_id_provider.cc",
+    "device_id_provider.h",
+    "device_id_provider_main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/uuid",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("fake_last_reboot_info_provider_exe") {
+  sources = [
+    "last_reboot_info_provider.cc",
+    "last_reboot_info_provider.h",
+    "last_reboot_info_provider_main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("cobalt") {
+  testonly = true
+
+  sources = [ "cobalt.h" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.cobalt.test",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("privacy_settings") {
+  testonly = true
+
+  sources = [
+    "privacy_settings.cc",
+    "privacy_settings.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+###############################################################################
+# RESOURCES
+###############################################################################
+resource("checkboard_100") {
+  sources =
+      [ "//src/developer/forensics/testing/resources/checkerboard_100.png" ]
+
+  outputs = [ "checkboard_100.png" ]
+}

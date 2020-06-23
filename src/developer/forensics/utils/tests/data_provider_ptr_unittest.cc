@@ -13,9 +13,9 @@
 #include <gtest/gtest.h>
 
 #include "fuchsia/feedback/cpp/fidl.h"
-#include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/data_provider.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/stubs/data_provider.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {

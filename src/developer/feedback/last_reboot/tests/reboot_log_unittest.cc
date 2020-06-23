@@ -12,7 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/last_reboot/reboot_watcher.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

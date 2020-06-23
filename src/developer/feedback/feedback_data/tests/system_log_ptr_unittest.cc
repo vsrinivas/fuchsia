@@ -18,9 +18,9 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/feedback_data/attachments/types.h"
-#include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/logger.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/stubs/logger.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
 

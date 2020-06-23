@@ -33,7 +33,7 @@ executable("bugreport_unittest_exe") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/bugreport:src",
-    "//src/developer/feedback/testing/stubs:data_provider",
+    "//src/developer/forensics/testing/stubs:data_provider",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -105,6 +105,6 @@ group("tests") {
     ":bugreport-tests",
 
     # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/feedback/testing/fakes:fake-data-provider",
+    "//src/developer/forensics/testing/fakes:fake-data-provider",
   ]
 }

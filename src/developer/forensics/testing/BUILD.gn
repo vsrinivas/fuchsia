@@ -1,0 +1,87 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//src/developer/feedback/*",
+  "//src/developer/forensics/*",
+]
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("cobalt_test_fixture") {
+  testonly = true
+
+  sources = [ "cobalt_test_fixture.h" ]
+
+  public_deps = [
+    ":unit_test_fixture",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/testing/stubs:cobalt",
+    "//src/developer/forensics/utils/cobalt",
+  ]
+}
+
+source_set("gmatchers") {
+  testonly = true
+
+  visibility += [ "//src/developer/exception_broker/tests/*" ]
+
+  sources = [ "gmatchers.h" ]
+
+  public_deps = [
+    "//src/lib/fsl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("gpretty_printers") {
+  testonly = true
+
+  visibility += [ "//src/developer/exception_broker/tests/*" ]
+
+  sources = [ "gpretty_printers.h" ]
+
+  public_deps = [
+    "//garnet/public/lib/fostr",
+    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/feedback/feedback_data/annotations:types",
+    "//src/developer/feedback/feedback_data/attachments:types",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fsl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("gtest_with_syslog_main") {
+  testonly = true
+
+  sources = [ "gtest_with_syslog_main.cc" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("unit_test_fixture") {
+  testonly = true
+
+  sources = [ "unit_test_fixture.h" ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}

@@ -15,7 +15,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/testing/stubs/data_provider.h"
+#include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"

@@ -16,8 +16,8 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/crash_reports/settings.h"
-#include "src/developer/feedback/testing/fakes/privacy_settings.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/fakes/privacy_settings.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 
 namespace forensics {
 namespace crash_reports {

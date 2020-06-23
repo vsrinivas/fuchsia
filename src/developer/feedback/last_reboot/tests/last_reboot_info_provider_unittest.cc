@@ -12,7 +12,7 @@
 #include "src/developer/feedback/last_reboot/last_reboot_info_provider.h"
 #include "src/developer/feedback/last_reboot/reboot_log.h"
 #include "src/developer/feedback/last_reboot/reboot_reason.h"
-#include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
 
 namespace forensics {
 namespace last_reboot {

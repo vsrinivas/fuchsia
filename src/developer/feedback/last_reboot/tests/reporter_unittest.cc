@@ -17,12 +17,12 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/last_reboot/reboot_log.h"
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/feedback/testing/stubs/crash_reporter.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/cobalt_test_fixture.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/stubs/cobalt_logger.h"
+#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/testing/stubs/crash_reporter.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/event.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/lib/files/file.h"

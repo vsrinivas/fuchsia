@@ -19,10 +19,10 @@
 
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/product.h"
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/channel_provider.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/cobalt_test_fixture.h"
+#include "src/developer/forensics/testing/stubs/channel_provider.h"
+#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {

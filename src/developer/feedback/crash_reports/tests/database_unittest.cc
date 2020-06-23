@@ -19,9 +19,9 @@
 
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/tests/crashpad_database_gremlin.h"
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/forensics/testing/cobalt_test_fixture.h"
+#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
