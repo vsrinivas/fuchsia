@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 test("pci-roothost") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -23,11 +24,23 @@ test("pci-roothost") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.pciroot",
-    "//sdk/lib/fdio",
+    "//src/devices/pci/lib/pci",
+    "//src/devices/testing/fake-msi",
+    "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fake-resource",
+    "//src/lib/fdio",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/pci",
+  ]
+}
+
+unittest_package("pci-roothost-package") {
+  package_name = "pci-roothost"
+  deps = [ ":pci-roothost" ]
+  tests = [
+    {
+      name = "pci-roothost"
+      dest = "pci-roothost-test"
+    },
   ]
 }

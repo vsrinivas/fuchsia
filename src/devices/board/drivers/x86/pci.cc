@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/pci/root.h>
 #include <lib/pci/root_host.h>
+#include <lib/zx/resource.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -29,8 +30,7 @@
 
 // This file contains the implementation for the code supporting the in-progress userland
 // pci bus driver.
-
-PciRootHost RootHost;
+std::unique_ptr<PciRootHost> RootHost = {};
 
 struct ResourceContext {
   zx_handle_t pci_handle;
@@ -127,12 +127,12 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
   RegionAllocator* alloc;
   if (is_mmio) {
     if (base + len < UINT32_MAX) {
-      alloc = &RootHost.Mmio32();
+      alloc = &RootHost->Mmio32();
     } else {
-      alloc = &RootHost.Mmio64();
+      alloc = &RootHost->Mmio64();
     }
   } else {
-    alloc = &RootHost.Io();
+    alloc = &RootHost->Io();
   }
 
   zxlogf(DEBUG, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
@@ -260,12 +260,11 @@ zx_status_t pci_root_host_init() {
     return ZX_OK;
   }
 
-  zx_status_t st = RootHost.Init(zx::unowned_resource(get_root_resource()));
-  if (st != ZX_OK) {
-    return st;
+  if (!RootHost) {
+    RootHost = std::make_unique<PciRootHost>(zx::unowned_resource(get_root_resource()));
   }
 
-  st = read_mcfg_table(&RootHost.mcfgs());
+  zx_status_t st = read_mcfg_table(&RootHost->mcfgs());
   if (st != ZX_OK) {
     return st;
   }
@@ -316,7 +315,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   auto& pinfo = dev_ctx->info;
   memcpy(pinfo.name, dev_ctx->name, sizeof(pinfo.name));
   McfgAllocation mcfg_alloc;
-  status = RootHost.GetSegmentMcfgAllocation(dev_ctx->info.segment_group, &mcfg_alloc);
+  status = RootHost->GetSegmentMcfgAllocation(dev_ctx->info.segment_group, &mcfg_alloc);
   if (status == ZX_OK) {
     // Do the bus values make sense?
     if (found_bbn && mcfg_alloc.start_bus_number != pinfo.start_bus_num) {
@@ -366,7 +365,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   uint8_t last_pci_bbn = dev_ctx->info.start_bus_num;
   memcpy(name, dev_ctx->name, sizeof(name));
 
-  status = Pciroot<pciroot_ctx>::Create(&RootHost, std::move(dev_ctx), parent, ctx->platform_bus(),
+  status = Pciroot<pciroot_ctx>::Create(&*RootHost, std::move(dev_ctx), parent, ctx->platform_bus(),
                                         name);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);

@@ -18,6 +18,7 @@ __END_CDECLS
 #ifdef __cplusplus
 #include <lib/pci/root_host.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/msi.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
 #include <stdint.h>
@@ -72,11 +73,7 @@ class Pciroot : public ddk::Device<Pciroot<PlatformContextType>>,
   // These methods may not exist in usable implementations and are a
   // prototyping side effect. It likely will not make sense for MSI blocks to
   // be dealt with in the PCI driver itself if we can help it.
-  zx_status_t PcirootAllocMsiBlock(uint64_t requested_irqs, bool can_target_64bit,
-                                   msi_block_t* out_block);
-  zx_status_t PcirootFreeMsiBlock(const msi_block_t* block);
-  zx_status_t PcirootMaskUnmaskMsi(uint64_t msi_id, bool mask);
-
+  zx_status_t PcirootAllocateMsi(uint32_t msi_cnt, bool can_target_64bit, zx::msi* allocation);
   // These methods correspond to address space reservations needed by the bus
   // driver for providing a place to map bridges and bars.
   zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t len, pci_address_space_t type,

@@ -15,6 +15,7 @@
 #ifdef __cplusplus
 #include <lib/zx/bti.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/msi.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
 #include <stdint.h>
@@ -52,9 +53,6 @@ class PciRootHost {
 
   PciRootHost(PciRootHost const&) = delete;
   void operator=(const PciRootHost&) = delete;
-  ~PciRootHost();
-  zx_status_t Init(zx::unowned_resource root_resource);
-  void WorkerThreadEntry();
 
   RegionAllocator& Mmio32() { return mmio32_alloc_; }
   RegionAllocator& Mmio64() { return mmio64_alloc_; }
@@ -63,11 +61,12 @@ class PciRootHost {
 
   // If the RootHost cannot be constructed then the platform bus and subsequent downstream drivers
   // are in no state to run anyway.
-  PciRootHost() {
-    auto region_pool = RegionAllocator::RegionPool::Create(ZX_PAGE_SIZE * 4u);
-    ZX_ASSERT(Mmio32().SetRegionPool(region_pool) == ZX_OK);
-    ZX_ASSERT(Mmio64().SetRegionPool(region_pool) == ZX_OK);
-    ZX_ASSERT(Io().SetRegionPool(region_pool) == ZX_OK);
+  explicit PciRootHost(zx::unowned_resource unowned_root) : root_resource_(unowned_root) {
+    ZX_ASSERT(zx::port::create(0, &eventpair_port_) == ZX_OK);
+  }
+
+  zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) {
+    return zx::msi::allocate(*root_resource_, count, msi);
   }
 
   zx_status_t AllocateMmio32Window(zx_paddr_t base, size_t len, zx::resource* out_resource,
@@ -100,20 +99,15 @@ class PciRootHost {
   }
 
  private:
-  enum Message {
-    kSyn = 1,  // Request the worker send an Ack when the port has been drained up to this message.
-    kAck,      // Sent by the worker in response to a kSyn to notify that allocations may proceed.
-    kExit,
-  };
-
-  static zx_status_t SendMessage(const char* tag, zx::port* port, PciRootHost::Message msg);
-  zx_status_t WaitForWorkerAck();
+  void ProcessQueue() __TA_REQUIRES(lock_);
   zx_status_t AllocateWindow(AllocationType type, zx_paddr_t base, size_t size,
-                             zx::resource* out_resource, zx::eventpair* out_endpoint);
+                             zx::resource* out_resource, zx::eventpair* out_endpoint)
+      __TA_EXCLUDES(lock_);
   // Creates a backing pair of eventpair endpoints used to store and track if a
   // process dies while holding a window allocation, allowing the worker thread
   // to add the resources back to the allocation pool.
-  zx_status_t RecordAllocation(RegionAllocator::Region::UPtr region, zx::eventpair* out_endpoint);
+  zx_status_t RecordAllocation(RegionAllocator::Region::UPtr region, zx::eventpair* out_endpoint)
+      __TA_REQUIRES(lock_);
 
   RegionAllocator mmio32_alloc_;
   RegionAllocator mmio64_alloc_;
@@ -127,7 +121,7 @@ class PciRootHost {
     WindowAllocation(zx::eventpair host_peer, RegionAllocator::Region::UPtr allocated_region)
         : host_peer_(std::move(host_peer)), allocated_region_(std::move(allocated_region)) {}
     ~WindowAllocation() {
-      zxlogf(DEBUG, "%s: releasing [%#lx - %#lx]\n", __func__, allocated_region_->base,
+      zxlogf(DEBUG, "%s: releasing [%#lx - %#lx]", __func__, allocated_region_->base,
              allocated_region_->base + allocated_region_->size);
     }
     zx::eventpair host_peer_;
@@ -138,12 +132,9 @@ class PciRootHost {
   uint64_t alloc_key_cnt_ __TA_GUARDED(lock_) = 0;
   std::unordered_map<uint64_t, std::unique_ptr<WindowAllocation>> allocations_ __TA_GUARDED(lock_);
 
-  bool initialized_ = false;
   fbl::Mutex lock_;
-  zx::port worker_port_;
-  zx::port main_port_;
-  std::thread lifetime_thrd_;
-  zx::unowned_resource root_resource_;
+  zx::port eventpair_port_ __TA_GUARDED(lock_);
+  const zx::unowned_resource root_resource_;
 };
 
 #endif  // ifndef __cplusplus

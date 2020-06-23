@@ -287,20 +287,9 @@ zx_status_t Pciroot<pciroot_ctx>::PcirootConfigWrite32(const pci_bdf_t* address,
 }
 
 template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootAllocMsiBlock(uint64_t requested_irqs,
-                                                       bool can_target_64bit,
-                                                       msi_block_t* out_block) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootFreeMsiBlock(const msi_block_t* block) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-template <>
-zx_status_t Pciroot<pciroot_ctx>::PcirootMaskUnmaskMsi(uint64_t msi_id, bool mask) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t Pciroot<pciroot_ctx>::PcirootAllocateMsi(uint32_t msi_cnt, bool can_target_64bit,
+                                                     zx::msi* allocation) {
+  return root_host_->AllocateMsi(msi_cnt, allocation);
 }
 
 template <>
@@ -433,15 +422,7 @@ static zx_status_t pciroot_op_config_write32(void*, const pci_bdf_t*, uint16_t, 
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_alloc_msi_block(void*, uint64_t, bool, msi_block_t*) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t pciroot_op_free_msi_block(void*, const msi_block_t*) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t pciroot_op_mask_unmask_msi(void*, uint64_t, bool) {
+static zx_status_t pciroot_op_allocate_msi(void*, uint32_t, bool, zx_handle_t*) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -455,11 +436,11 @@ static zx_status_t pciroot_op_free_address_space(void*, zx_paddr_t, size_t, pci_
 }
 
 static pciroot_protocol_ops_t pciroot_proto = {
+    .connect_sysmem = pciroot_op_connect_sysmem,
     .get_auxdata = pciroot_op_get_auxdata,
     .get_bti = pciroot_op_get_bti,
-    .connect_sysmem = pciroot_op_connect_sysmem,
-    .get_pci_platform_info = pciroot_op_get_pci_platform_info,
     .get_pci_irq_info = pciroot_op_get_pci_irq_info,
+    .get_pci_platform_info = pciroot_op_get_pci_platform_info,
     .driver_should_proxy_config = pciroot_op_driver_should_proxy_config,
     .config_read8 = pciroot_op_config_read8,
     .config_read16 = pciroot_op_config_read16,
@@ -467,11 +448,9 @@ static pciroot_protocol_ops_t pciroot_proto = {
     .config_write8 = pciroot_op_config_write8,
     .config_write16 = pciroot_op_config_write16,
     .config_write32 = pciroot_op_config_write32,
-    .alloc_msi_block = pciroot_op_alloc_msi_block,
-    .free_msi_block = pciroot_op_free_msi_block,
-    .mask_unmask_msi = pciroot_op_mask_unmask_msi,
     .get_address_space = pciroot_op_get_address_space,
     .free_address_space = pciroot_op_free_address_space,
+    .allocate_msi = pciroot_op_allocate_msi,
 };
 
 pciroot_protocol_ops_t* get_pciroot_ops(void) { return &pciroot_proto; }

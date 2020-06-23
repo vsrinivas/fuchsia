@@ -4,6 +4,8 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
 
+#include <zircon/errors.h>
+
 #include <ddktl/protocol/pciroot.h>
 
 #include "fake_ecam.h"
@@ -91,12 +93,13 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     memcpy(&ecam_.get(*address).ext_config[offset], &value, sizeof(value));
     return ZX_OK;
   }
-  zx_status_t PcirootAllocMsiBlock(uint64_t requested_irqs, bool can_target_64bit,
-                                   msi_block_t* out_block) {
-    return ZX_ERR_NOT_SUPPORTED;
+
+  zx_status_t PcirootAllocateMsi(uint32_t requested_irqs, bool can_target_64bit,
+                                 zx::msi* out_allocation) {
+    return zx_msi_allocate(ZX_HANDLE_INVALID, requested_irqs,
+                           out_allocation->reset_and_get_address());
   }
-  zx_status_t PcirootFreeMsiBlock(const msi_block_t* block) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PcirootMaskUnmaskMsi(uint64_t msi_id, bool mask) { return ZX_ERR_NOT_SUPPORTED; }
+
   zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t len, pci_address_space_t type,
                                      bool low, uint64_t* out_base, zx::resource* resource) {
     allocation_cnt_++;

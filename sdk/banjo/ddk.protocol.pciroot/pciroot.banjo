@@ -41,14 +41,16 @@ enum PciAddressSpace : uint8 {
 [Layout = "ddk-protocol"]
 protocol Pciroot {
     /// Legacy methods
+    /// Create a sysmem connection - used to implement ddk.protocol.sysmem.
+    ConnectSysmem(handle connection) -> (zx.status s);
     GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
-    // Create a sysmem connection - used to implement ddk.protocol.sysmem.
-    ConnectSysmem(handle connection) -> (zx.status s);
-    /// Get the platform information structure from the pciroot protocol to be used for bus init.
-    GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
     /// Get IRQ information, including the swizzle table.
     GetPciIrqInfo() -> (zx.status s, PciIrqInfo info);
+    /// Get the platform information structure from the pciroot protocol to be used for bus init.
+    GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
+
+    /// Contemporary methods:
     /// Returns true if the bus driver should proxy all device config access to pciroot. This is
     /// necessary in cases of IO config on x86, or for controllers that require configuration to
     /// map in device config headers.
@@ -65,10 +67,6 @@ protocol Pciroot {
     ConfigWrite16(zircon.hw.pci.PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
     /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
     ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
-    /// Placeholder methods for MSI configuration. May be removed.
-    AllocMsiBlock(uint64 requested_irqs, bool can_target_64bit) -> (zx.status s, MsiBlock block);
-    FreeMsiBlock(MsiBlock block) -> (zx.status s);
-    MaskUnmaskMsi(uint64 msi_id, bool mask) -> (zx.status s);
     /// Request address space reservations from platform bus to use for mapping bars / bridges
     /// |in_base| is an optional requested start address which should otherwise be 0. |len| is the
     /// size of the request in bytes. |low| dictates whether the allocation should be an address
@@ -82,4 +80,6 @@ protocol Pciroot {
     /// Free address space reserved via GetAddressSpace from platform bus to use for mapping bars / bridges
     /// TODO(cja): parameters/return are not finalized.
     FreeAddressSpace(zx.paddr base, usize len, PciAddressSpace type) -> (zx.status s);
+    /// Allocate |msi_count| MSIs and return a handle to the backing MsiAllocation.
+    AllocateMsi(uint32 msi_count, bool can_target_64bit) -> (zx.status s, handle<msi> allocation);
 };

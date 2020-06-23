@@ -20,6 +20,7 @@ group("tests") {
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-package",
     "//src/devices/nand/drivers/broker/test:nand-broker-package",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-package",
+    "//src/devices/pci/lib/test:pci-roothost-package",
     "//src/devices/rtc/lib/rtc/test:rtc-lib-package",
     "//src/devices/serial/drivers/ftdi/test:ftdi-i2c-test-package",
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
