@@ -44,16 +44,14 @@ impl Watchers {
     /// Plus, for the [`Simple`] directory it is all unnecessary.
     #[must_use = "Caller of add() must send WATCH_EVENT_EXISTING and WATCH_MASK_IDLE on the \
                   returned controller"]
-    pub fn add<TraversalPosition>(
+    pub fn add(
         &mut self,
         scope: ExecutionScope,
-        directory: Arc<dyn Directory<TraversalPosition>>,
+        directory: Arc<dyn Directory>,
         mask: u32,
         channel: Channel,
     ) -> Option<&mut Controller>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
+where {
         let entry = self.0.vacant_entry();
         let key = entry.key();
 

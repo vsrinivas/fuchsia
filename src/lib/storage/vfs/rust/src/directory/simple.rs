@@ -51,7 +51,7 @@ use {
 /// for [`directory::immutable::simple`] and [`directory::mutable::simple`].
 pub struct Simple<Connection>
 where
-    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+    Connection: DerivedConnection + 'static,
 {
     inner: Mutex<Inner>,
 
@@ -65,10 +65,10 @@ where
     //
     //     impl<Connection> DirectoryEntry for Simple<Connection>
     //     where
-    //         Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+    //         Connection: DerivedConnection + 'static,
     //         Arc<Self>: IsConvertableTo<
     //             Type = Arc<
-    //                 <Connection as DerivedConnection<AlphabeticalTraversal>>::Directory
+    //                 <Connection as DerivedConnection>::Directory
     //             >
     //         >
     //
@@ -88,7 +88,7 @@ struct Inner {
 
 impl<Connection> Simple<Connection>
 where
-    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+    Connection: DerivedConnection + 'static,
 {
     pub(super) fn new(mutable: bool) -> Arc<Self> {
         Arc::new(Simple {
@@ -135,7 +135,7 @@ where
 
 impl<Connection> DirectoryEntry for Simple<Connection>
 where
-    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+    Connection: DerivedConnection + 'static,
 {
     fn open(
         self: Arc<Self>,
@@ -150,17 +150,17 @@ where
             (_, None) => {
                 // See comment above `Simple::mutable` as to why this selection is necessary.
                 if self.mutable {
-                    MutableConnection::<AlphabeticalTraversal>::create_connection(
+                    MutableConnection::create_connection(
                         scope,
-                        self as Arc<dyn MutableConnectionClient<AlphabeticalTraversal>>,
+                        self as Arc<dyn MutableConnectionClient>,
                         flags,
                         mode,
                         server_end,
                     );
                 } else {
-                    ImmutableConnection::<AlphabeticalTraversal>::create_connection(
+                    ImmutableConnection::create_connection(
                         scope,
-                        self as Arc<dyn ImmutableConnectionClient<AlphabeticalTraversal>>,
+                        self as Arc<dyn ImmutableConnectionClient>,
                         flags,
                         mode,
                         server_end,
@@ -190,9 +190,9 @@ where
     }
 }
 
-impl<Connection> Directory<AlphabeticalTraversal> for Simple<Connection>
+impl<Connection> Directory for Simple<Connection>
 where
-    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+    Connection: DerivedConnection + 'static,
 {
     fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
         assert_eq_size!(u64, usize);
@@ -210,7 +210,7 @@ where
     fn read_dirents(
         self: Arc<Self>,
         pos: AlphabeticalTraversal,
-        sink: Box<dyn dirents_sink::Sink<AlphabeticalTraversal>>,
+        sink: Box<dyn dirents_sink::Sink>,
     ) -> AsyncReadDirents {
         use dirents_sink::AppendResult;
 
@@ -293,7 +293,7 @@ where
 
 impl<Connection> entry_container::DirectlyMutable for Simple<Connection>
 where
-    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+    Connection: DerivedConnection + 'static,
 {
     fn add_entry_impl(
         self: Arc<Self>,

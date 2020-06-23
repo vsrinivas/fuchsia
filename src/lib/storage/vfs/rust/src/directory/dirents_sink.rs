@@ -4,15 +4,12 @@
 
 //! Types that help describe `get_entry_names` callback for the lazy directories.
 
-use crate::directory::entry::EntryInfo;
+use crate::directory::{entry::EntryInfo, traversal_position::AlphabeticalTraversal};
 
 use std::any::Any;
 
 /// Every sink that can consume directory entries information implements this trait.
-pub trait Sink<TraversalPosition>: Send
-where
-    TraversalPosition: Default + Send + 'static,
-{
+pub trait Sink: Send {
     /// Try to append an entry with the specified entry name and attributes into this sink.
     /// If the entry was successfully added, `pos` is not invoked and the result is
     /// [`AppendResult::Ok`].  If the sink could not consume this entry, `pos` is used to get
@@ -26,12 +23,12 @@ where
         self: Box<Self>,
         entry: &EntryInfo,
         name: &str,
-        pos: &dyn Fn() -> TraversalPosition,
-    ) -> AppendResult<TraversalPosition>;
+        pos: &dyn Fn() -> AlphabeticalTraversal,
+    ) -> AppendResult;
 
     /// If the producer has reached the end of the list of entries, it should call this method to
     /// produce a "sealed" sink.
-    fn seal(self: Box<Self>, pos: TraversalPosition) -> Box<dyn Sealed>;
+    fn seal(self: Box<Self>, pos: AlphabeticalTraversal) -> Box<dyn Sealed>;
 }
 
 /// When a sink has reached it's full capacity or when the producer has exhausted all the values it
@@ -58,12 +55,9 @@ pub trait Sealed: Send {
 }
 
 /// Result of the [`Sink::append`] method. See there for details.
-pub enum AppendResult<TraversalPosition>
-where
-    TraversalPosition: Default + Send + 'static,
-{
+pub enum AppendResult {
     /// Sink have consumed the value and may consume more.
-    Ok(Box<dyn Sink<TraversalPosition>>),
+    Ok(Box<dyn Sink>),
     /// Sink could not consume the last value provided.  It should have remembered the traversal
     /// position given to the most recent [`Sink::append()`] call, allowing the sink owner to
     /// resume the operation later from the same standpoint.

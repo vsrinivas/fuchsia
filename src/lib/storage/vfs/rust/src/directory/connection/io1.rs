@@ -9,6 +9,7 @@ use crate::{
         entry::DirectoryEntry,
         entry_container::{AsyncGetEntry, AsyncReadDirents, Directory},
         read_dirents,
+        traversal_position::AlphabeticalTraversal,
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -45,11 +46,8 @@ pub enum ConnectionState {
 
 /// This is an API a derived directory connection needs to implement, in order for the
 /// `BaseConnection` to be able to interact with it.
-pub trait DerivedConnection<TraversalPosition>: Send + Sync
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    type Directory: BaseConnectionClient<TraversalPosition> + ?Sized;
+pub trait DerivedConnection: Send + Sync {
+    type Directory: BaseConnectionClient + ?Sized;
 
     fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self;
 
@@ -82,28 +80,17 @@ where
 
 /// This is an API a directory needs to implement, in order for the `BaseConnection` to be able to
 /// interact with it.
-pub trait BaseConnectionClient<TraversalPosition>:
-    DirectoryEntry + Directory<TraversalPosition> + Send + Sync
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-}
+pub trait BaseConnectionClient: DirectoryEntry + Directory + Send + Sync {}
 
-impl<TraversalPosition, T> BaseConnectionClient<TraversalPosition> for T
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-    T: DirectoryEntry + Directory<TraversalPosition> + Send + Sync + 'static,
-{
-}
+impl<T> BaseConnectionClient for T where T: DirectoryEntry + Directory + Send + Sync + 'static {}
 
 /// Handles functionality shared between mutable and immutable FIDL connections to a directory.  A
 /// single directory may contain multiple connections.  Instances of the `BaseConnection`
 /// will also hold any state that is "per-connection".  Currently that would be the access flags
 /// and the seek position.
-pub(in crate::directory) struct BaseConnection<Connection, TraversalPosition>
+pub(in crate::directory) struct BaseConnection<Connection>
 where
-    Connection: DerivedConnection<TraversalPosition> + 'static,
-    TraversalPosition: Default + Send + Sync + 'static,
+    Connection: DerivedConnection + 'static,
 {
     /// Execution scope this connection and any async operations and connections it creates will
     /// use.
@@ -128,7 +115,7 @@ where
     ///
     /// but, as, I think, at least for the pseudo directories, this approach is fine, and it simple
     /// enough.
-    seek: TraversalPosition,
+    seek: AlphabeticalTraversal,
 }
 
 /// Subset of the [`DirectoryRequest`] protocol that is handled by the
@@ -259,12 +246,11 @@ impl From<DirectoryRequest> for DirectoryRequestType {
 }
 
 #[must_use = "handle_requests() returns an async task that needs to be run"]
-pub(in crate::directory) async fn handle_requests<Connection, TraversalPosition>(
+pub(in crate::directory) async fn handle_requests<Connection>(
     mut requests: DirectoryRequestStream,
     mut connection: Connection,
 ) where
-    Connection: DerivedConnection<TraversalPosition>,
-    TraversalPosition: Default + Send + Sync + 'static,
+    Connection: DerivedConnection,
 {
     while let Some(request_or_err) = requests.next().await {
         match request_or_err {
@@ -287,10 +273,9 @@ pub(in crate::directory) async fn handle_requests<Connection, TraversalPosition>
     }
 }
 
-impl<Connection, TraversalPosition> BaseConnection<Connection, TraversalPosition>
+impl<Connection> BaseConnection<Connection>
 where
-    Connection: DerivedConnection<TraversalPosition>,
-    TraversalPosition: Default + Send + Sync + 'static,
+    Connection: DerivedConnection,
 {
     /// Constructs an instance of `BaseConnection` - to be used by derived connections, when they
     /// need to create a nested `BaseConnection` "sub-object".  But when implementing
@@ -454,7 +439,7 @@ where
             let directory = self.directory.clone();
             match directory.read_dirents(
                 replace(&mut self.seek, Default::default()),
-                read_dirents::Sink::<TraversalPosition>::new(max_bytes),
+                read_dirents::Sink::new(max_bytes),
             ) {
                 AsyncReadDirents::Immediate(res) => res,
                 AsyncReadDirents::Future(fut) => fut.await,
@@ -462,7 +447,7 @@ where
         };
 
         let done_or_err = match res {
-            Ok(sealed) => sealed.open().downcast::<read_dirents::Done<TraversalPosition>>(),
+            Ok(sealed) => sealed.open().downcast::<read_dirents::Done>(),
             Err(status) => return responder(status, &[]),
         };
 

@@ -35,29 +35,20 @@ use {
 
 /// This is an API a mutable directory needs to implement, in order for a `MutableConnection` to be
 /// able to interact with this it.
-pub trait MutableConnectionClient<TraversalPosition>:
-    BaseConnectionClient<TraversalPosition> + entry_container::DirectlyMutable
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    fn into_base_connection_client(
-        self: Arc<Self>,
-    ) -> Arc<dyn BaseConnectionClient<TraversalPosition>>;
+pub trait MutableConnectionClient: BaseConnectionClient + entry_container::DirectlyMutable {
+    fn into_base_connection_client(self: Arc<Self>) -> Arc<dyn BaseConnectionClient>;
 
     fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn entry_container::DirectlyMutable>;
 
     fn into_token_registry_client(self: Arc<Self>) -> Arc<dyn TokenRegistryClient>;
 }
 
-impl<TraversalPosition, T> MutableConnectionClient<TraversalPosition> for T
+impl<T> MutableConnectionClient for T
 where
-    TraversalPosition: Default + Send + Sync + 'static,
-    T: BaseConnectionClient<TraversalPosition> + entry_container::DirectlyMutable + 'static,
+    T: BaseConnectionClient + entry_container::DirectlyMutable + 'static,
 {
-    fn into_base_connection_client(
-        self: Arc<Self>,
-    ) -> Arc<dyn BaseConnectionClient<TraversalPosition>> {
-        self as Arc<dyn BaseConnectionClient<TraversalPosition>>
+    fn into_base_connection_client(self: Arc<Self>) -> Arc<dyn BaseConnectionClient> {
+        self as Arc<dyn BaseConnectionClient>
     }
 
     fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn entry_container::DirectlyMutable> {
@@ -69,24 +60,15 @@ where
     }
 }
 
-pub struct MutableConnection<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    base: BaseConnection<Self, TraversalPosition>,
+pub struct MutableConnection {
+    base: BaseConnection<Self>,
 }
 
-impl<TraversalPosition> DerivedConnection<TraversalPosition>
-    for MutableConnection<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    type Directory = dyn MutableConnectionClient<TraversalPosition>;
+impl DerivedConnection for MutableConnection {
+    type Directory = dyn MutableConnectionClient;
 
     fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self {
-        MutableConnection {
-            base: BaseConnection::<Self, TraversalPosition>::new(scope, directory, flags),
-        }
+        MutableConnection { base: BaseConnection::<Self>::new(scope, directory, flags) }
     }
 
     fn create_connection(
@@ -126,7 +108,7 @@ where
 
         let connection = Self::new(scope.clone(), directory, flags);
 
-        let task = handle_requests::<Self, TraversalPosition>(requests, connection);
+        let task = handle_requests::<Self>(requests, connection);
         // If we failed to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently).  So there is nothing
         // for us to do, but to ignore the request.  Connection will be closed when the connection
@@ -171,10 +153,7 @@ where
     }
 }
 
-impl<TraversalPosition> MutableConnection<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
+impl MutableConnection {
     async fn handle_derived_request(
         &mut self,
         request: DerivedDirectoryRequest,

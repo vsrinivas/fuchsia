@@ -17,6 +17,7 @@ use crate::{
         entry::{DirectoryEntry, EntryInfo},
         entry_container::{self, AsyncReadDirents, Directory},
         immutable::connection::io1::ImmutableConnection,
+        traversal_position::AlphabeticalTraversal,
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -63,13 +64,12 @@ pub type GetEntryResult = Result<Arc<dyn DirectoryEntry>, Status>;
 /// to this directory.  See [`lazy_with_watchers`].
 ///
 /// See [`Lazy`] for additional details.
-pub fn lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>(
+pub fn lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>(
     get_entry_names: GetEntryNames,
     get_entry: GetEntry,
-) -> Arc<Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
+) -> Arc<Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
 where
-    TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
         + Send
         + Sync
         + 'static,
@@ -85,7 +85,6 @@ where
 ///
 /// See [`Lazy`] for additional details.
 pub fn lazy_with_watchers<
-    TraversalPosition,
     GetEntryNames,
     AsyncGetEntryNames,
     GetEntry,
@@ -96,10 +95,9 @@ pub fn lazy_with_watchers<
     get_entry_names: GetEntryNames,
     get_entry: GetEntry,
     watcher_events: WatcherEvents,
-) -> Arc<Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
+) -> Arc<Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
 where
-    TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
         + Send
         + Sync
         + 'static,
@@ -142,10 +140,9 @@ where
 /// watchers.  They are values of type [`WatcherEvent`].  If this stream reaches it's end existing
 /// watcher connections will be closed and any new watchers will not be able to connect to the node
 /// - they will receive a NOT_SUPPORTED error.
-pub struct Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
+pub struct Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
-    TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
         + Send
         + Sync
         + 'static,
@@ -158,7 +155,7 @@ where
     /// collect entry names and their attributes.
     ///
     /// The first argument allows traversal to resume when there are more entries in the directory
-    /// that can fit in one `Directory::ReadDirents` `io.fidl` request.  `TraversalPosition` is
+    /// that can fit in one `Directory::ReadDirents` `io.fidl` request.  `AlphabeticalTraversal` is
     /// used to allow different directories to use different state to track the traveral progress.
     /// Different directories may also list entries in different order - alphabetical, insertion
     /// order, random.
@@ -172,11 +169,10 @@ where
 
     watchers: UnboundedSender<WatcherCommand>,
 
-    // TODO For some reason I need to have PhantomData fields for TraversalPosition and
+    // TODO For some reason I need to have PhantomData fields for AlphabeticalTraversal and
     // AsyncGetEntryNames.  But not for AsyncGetEntry?  This is quite confusing - possibly a bug in
     // the compiler?  I would not expect the compiler to require a PhantomData for any of these
     // types.
-    _traversal_position: PhantomData<TraversalPosition>,
     _async_get_entry_names: PhantomData<fn() -> AsyncGetEntryNames>,
 }
 
@@ -201,11 +197,10 @@ impl Debug for WatcherCommand {
     }
 }
 
-impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-    Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
+impl<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
+    Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
-    TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
         + Send
         + Sync
         + 'static,
@@ -222,7 +217,6 @@ where
             get_entry_names,
             get_entry,
             watchers: command_sender,
-            _traversal_position: PhantomData,
             _async_get_entry_names: PhantomData,
         })
     }
@@ -242,7 +236,6 @@ where
             get_entry_names,
             get_entry,
             watchers: command_sender,
-            _traversal_position: PhantomData,
             _async_get_entry_names: PhantomData,
         });
 
@@ -257,11 +250,10 @@ where
     }
 }
 
-impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry> DirectoryEntry
-    for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
+impl<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry> DirectoryEntry
+    for Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
-    TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
         + Send
         + Sync
         + 'static,
@@ -280,9 +272,7 @@ where
         let name = match path.next() {
             Some(name) => name.to_string(),
             None => {
-                ImmutableConnection::<TraversalPosition>::create_connection(
-                    scope, self, flags, mode, server_end,
-                );
+                ImmutableConnection::create_connection(scope, self, flags, mode, server_end);
                 return;
             }
         };
@@ -310,12 +300,10 @@ where
     }
 }
 
-impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-    Directory<TraversalPosition>
-    for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
+impl<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry> Directory
+    for Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
-    TraversalPosition: Default + Send + Sync + 'static,
-    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
         + Send
         + Sync
         + 'static,
@@ -332,8 +320,8 @@ where
 
     fn read_dirents(
         self: Arc<Self>,
-        pos: TraversalPosition,
-        sink: Box<dyn dirents_sink::Sink<TraversalPosition>>,
+        pos: AlphabeticalTraversal,
+        sink: Box<dyn dirents_sink::Sink>,
     ) -> AsyncReadDirents {
         AsyncReadDirents::Future(Box::pin((self.get_entry_names)(pos, sink)))
     }

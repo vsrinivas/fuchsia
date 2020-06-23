@@ -6,7 +6,7 @@
 //! content.
 
 use crate::{
-    directory::{dirents_sink, entry::DirectoryEntry},
+    directory::{dirents_sink, entry::DirectoryEntry, traversal_position::AlphabeticalTraversal},
     execution_scope::ExecutionScope,
 };
 
@@ -52,10 +52,7 @@ impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
 
 /// All directories implement this trait.  If a directory can be modified it should
 /// also implement the `MutableDirectory` trait.
-pub trait Directory<TraversalPosition>: Send + Sync
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
+pub trait Directory: Send + Sync {
     /// Returns a reference to a contained directory entry.  Used when linking entries.
     fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry;
 
@@ -63,8 +60,8 @@ where
     /// Once finished, should return a sealed sink.
     fn read_dirents(
         self: Arc<Self>,
-        pos: TraversalPosition,
-        sink: Box<dyn dirents_sink::Sink<TraversalPosition>>,
+        pos: AlphabeticalTraversal,
+        sink: Box<dyn dirents_sink::Sink>,
     ) -> AsyncReadDirents;
 
     /// Register a watcher for this directory.

@@ -72,12 +72,8 @@ type AsyncGetEntryNames = BoxFuture<'static, Result<Box<dyn dirents_sink::Sealed
 // "exists".  Meaning now the caller controlls what `Res` might be.
 fn build_sorted_static_get_entry_names(
     mut entries: Vec<(u8, &'static str)>,
-) -> (impl Fn(
-    AlphabeticalTraversal,
-    Box<dyn dirents_sink::Sink<AlphabeticalTraversal>>,
-) -> AsyncGetEntryNames
-        + Send
-        + Sync) {
+) -> (impl Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames + Send + Sync)
+{
     use dirents_sink::AppendResult;
     use AlphabeticalTraversal::{Dot, End, Name};
 
@@ -295,12 +291,12 @@ mod pos_remembering_proxy_sink {
 
     use std::any::Any;
 
-    pub(super) fn new(sink: Box<dyn Sink<AlphabeticalTraversal>>) -> Box<Proxy> {
+    pub(super) fn new(sink: Box<dyn Sink>) -> Box<Proxy> {
         Box::new(Proxy { wrapped: AppendResult::Ok(sink), pos: Default::default() })
     }
 
     pub(super) struct Proxy {
-        wrapped: AppendResult<AlphabeticalTraversal>,
+        wrapped: AppendResult,
         pos: AlphabeticalTraversal,
     }
 
@@ -317,13 +313,13 @@ mod pos_remembering_proxy_sink {
         }
     }
 
-    impl Sink<AlphabeticalTraversal> for Proxy {
+    impl Sink for Proxy {
         fn append(
             self: Box<Self>,
             entry: &EntryInfo,
             name: &str,
             pos: &dyn Fn() -> AlphabeticalTraversal,
-        ) -> AppendResult<AlphabeticalTraversal> {
+        ) -> AppendResult {
             let sink = match self.wrapped {
                 AppendResult::Ok(sink) => sink,
                 AppendResult::Sealed(_) => panic!("Sink has been already selaed."),

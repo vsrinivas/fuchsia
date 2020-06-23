@@ -31,38 +31,19 @@ use {
     std::sync::Arc,
 };
 
-pub trait ImmutableConnectionClient<TraversalPosition>:
-    BaseConnectionClient<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
+pub trait ImmutableConnectionClient: BaseConnectionClient {}
+
+impl<T> ImmutableConnectionClient for T where T: BaseConnectionClient + 'static {}
+
+pub struct ImmutableConnection {
+    base: BaseConnection<Self>,
 }
 
-impl<TraversalPosition, T> ImmutableConnectionClient<TraversalPosition> for T
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-    T: BaseConnectionClient<TraversalPosition> + 'static,
-{
-}
-
-pub struct ImmutableConnection<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    base: BaseConnection<Self, TraversalPosition>,
-}
-
-impl<TraversalPosition> DerivedConnection<TraversalPosition>
-    for ImmutableConnection<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    type Directory = dyn ImmutableConnectionClient<TraversalPosition>;
+impl DerivedConnection for ImmutableConnection {
+    type Directory = dyn ImmutableConnectionClient;
 
     fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self {
-        ImmutableConnection {
-            base: BaseConnection::<Self, TraversalPosition>::new(scope, directory, flags),
-        }
+        ImmutableConnection { base: BaseConnection::<Self>::new(scope, directory, flags) }
     }
 
     fn create_connection(
@@ -102,7 +83,7 @@ where
 
         let connection = Self::new(scope.clone(), directory, flags);
 
-        let task = handle_requests::<Self, TraversalPosition>(requests, connection);
+        let task = handle_requests::<Self>(requests, connection);
         // If we failed to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently).  So there is nothing
         // for us to do, but to ignore the request.  Connection will be closed when the connection
@@ -140,10 +121,7 @@ where
     }
 }
 
-impl<TraversalPosition> ImmutableConnection<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
+impl ImmutableConnection {
     async fn handle_derived_request(
         &mut self,
         request: DerivedDirectoryRequest,

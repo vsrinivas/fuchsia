@@ -33,12 +33,11 @@ use {
 
 /// Runs a command loop for all watchers attached to a lazy directory, processing
 /// [`WatcherCommand`] commands and any [`WatcherEvents`].
-pub(super) async fn run<TraversalPosition, WatcherEvents>(
-    directory: Arc<dyn Directory<TraversalPosition>>,
+pub(super) async fn run<WatcherEvents>(
+    directory: Arc<dyn Directory>,
     mut commands: UnboundedReceiver<WatcherCommand>,
     watcher_events: WatcherEvents,
 ) where
-    TraversalPosition: Default + Send + Sync + 'static,
     WatcherEvents: Stream<Item = WatcherEvent> + Send + 'static,
 {
     let mut watchers = Watchers::new();
@@ -82,15 +81,13 @@ pub(super) async fn run<TraversalPosition, WatcherEvents>(
     }
 }
 
-async fn handle_register_watcher<TraversalPosition>(
+async fn handle_register_watcher(
     watchers: &mut Watchers,
-    directory: Arc<dyn Directory<TraversalPosition>>,
+    directory: Arc<dyn Directory>,
     scope: ExecutionScope,
     mask: u32,
     channel: Channel,
-) where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
+) {
     // Optimize the case when we do not need to send the list of existing entries.
     if mask & WATCH_MASK_EXISTING == 0 {
         if let Some(controller) = watchers.add(scope, directory, mask, channel) {
@@ -119,7 +116,7 @@ async fn handle_register_watcher<TraversalPosition>(
         };
 
         let sealed_or_err = match res {
-            Ok(sealed) => sealed.open().downcast::<single_buffer::Sealed<TraversalPosition>>(),
+            Ok(sealed) => sealed.open().downcast::<single_buffer::Sealed>(),
             Err(_status) => {
                 controller.disconnect();
                 return;
@@ -156,6 +153,7 @@ mod single_buffer {
     use crate::directory::{
         dirents_sink,
         entry::EntryInfo,
+        traversal_position::AlphabeticalTraversal,
         watchers::event_producers::{encode_name, SingleBufferEventProducer},
     };
 
@@ -177,16 +175,13 @@ mod single_buffer {
         buffer: Vec<u8>,
     }
 
-    impl<TraversalPosition> dirents_sink::Sink<TraversalPosition> for Sink
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
+    impl dirents_sink::Sink for Sink {
         fn append(
             mut self: Box<Self>,
             _entry: &EntryInfo,
             name: &str,
-            pos: &dyn Fn() -> TraversalPosition,
-        ) -> dirents_sink::AppendResult<TraversalPosition> {
+            pos: &dyn Fn() -> AlphabeticalTraversal,
+        ) -> dirents_sink::AppendResult {
             use dirents_sink::AppendResult;
 
             if encode_name(&mut self.buffer, WATCH_EVENT_EXISTING, name) {
@@ -196,28 +191,22 @@ mod single_buffer {
             }
         }
 
-        fn seal(self: Box<Self>, pos: TraversalPosition) -> Box<dyn dirents_sink::Sealed> {
+        fn seal(self: Box<Self>, pos: AlphabeticalTraversal) -> Box<dyn dirents_sink::Sealed> {
             Sealed::new(self.buffer, pos)
         }
     }
 
-    pub(super) struct Sealed<TraversalPosition>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
+    pub(super) struct Sealed {
         buffer: Vec<u8>,
-        pos: TraversalPosition,
+        pos: AlphabeticalTraversal,
     }
 
-    impl<TraversalPosition> Sealed<TraversalPosition>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
-        fn new(buffer: Vec<u8>, pos: TraversalPosition) -> Box<Self> {
+    impl Sealed {
+        fn new(buffer: Vec<u8>, pos: AlphabeticalTraversal) -> Box<Self> {
             Box::new(Self { buffer, pos })
         }
 
-        pub(super) fn unpack(self) -> Option<(TraversalPosition, SingleBufferEventProducer)> {
+        pub(super) fn unpack(self) -> Option<(AlphabeticalTraversal, SingleBufferEventProducer)> {
             if self.buffer.is_empty() {
                 None
             } else {
@@ -226,10 +215,7 @@ mod single_buffer {
         }
     }
 
-    impl<TraversalPosition> dirents_sink::Sealed for Sealed<TraversalPosition>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
+    impl dirents_sink::Sealed for Sealed {
         fn open(self: Box<Self>) -> Box<dyn Any> {
             self
         }
