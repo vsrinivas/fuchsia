@@ -49,6 +49,16 @@ bootstrap/device_manager
 ...
 ```
 
+#### `--manifest`
+
+The name that you specified for the manifest file. If this is specified, the
+output only contains monikers for components whose URL contains the specified
+name.
+
+#### `--with-url`
+
+Prints both the moniker and the URL with which the component was launched.
+
 #### `--help`
 
 Prints usage information about `list`.
@@ -104,6 +114,12 @@ timekeeper.cmx:root/current:utc_nanos
 timekeeper.cmx:root:start_time_monotonic_nanos
 ```
 
+#### `--manifest`
+
+The name that you specified for the manifest file. If this is specified, the
+output only contains monikers for components whose URL contains the specified
+name.
+
 #### `--help`
 
 Prints usage information about `selectors`
@@ -129,6 +145,12 @@ timekeeper.cmx:
       system_uptime_monotonic_nanos = 61617527688648
       utc_nanos = 1591119246552989779
 ```
+
+#### `--manifest`
+
+The name that you specified for the manifest file. If this is specified, the
+output only contains monikers for components whose URL contains the specified
+name.
 
 #### `--help
 
