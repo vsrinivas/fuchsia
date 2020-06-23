@@ -51,7 +51,6 @@ class ActiveScanTest : public SimTest {
 
   bool all_aps_seen_ = false;
 
-  void GetFirmwareMac();
   void GetFirwarePfnMac();
 
  protected:
@@ -83,6 +82,11 @@ void ClientIfc::OnScanEnd(const wlanif_scan_end_t* end) { scan_result_code_ = en
 void ActiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+
+  // Get the interface MAC address
+  wlanif_query_info_t info;
+  client_ifc_.Query(&info);
+  memcpy(sim_fw_mac_.byte, info.mac_addr, ETH_ALEN);
 }
 
 void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
@@ -103,13 +107,6 @@ void ActiveScanTest::EndSimulation() {
   for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
     (*ap_info)->ap_.DisableBeacon();
   }
-}
-
-// This is a cheating function in sim to fetch mac address in firmware directly bypassing
-// the driver.
-void ActiveScanTest::GetFirmwareMac() {
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", sim_fw_mac_.byte, ETH_ALEN);
 }
 
 void ActiveScanTest::GetFirwarePfnMac() {
@@ -220,8 +217,6 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
   StartFakeAp(kAp1Bssid, kAp1Ssid, kDefaultChannel1);
   StartFakeAp(kAp2Bssid, kAp2Ssid, kDefaultChannel1);
   StartFakeAp(kAp3Bssid, kAp3Ssid, kDefaultChannel2);
-  // Get firmware mac address and tmp mac address for active scan
-  GetFirmwareMac();
 
   wlanif_scan_req_t req = {
       .txn_id = ++client_ifc_.scan_txn_id_,
@@ -251,8 +246,6 @@ TEST_F(ActiveScanTest, ScanTwice) {
   constexpr zx::duration kDefaultTestDuration = zx::sec(10);
 
   Init();
-  // Ap is not needed here
-  GetFirmwareMac();
 
   wlanif_scan_req_t req = {
       .txn_id = ++client_ifc_.scan_txn_id_,
@@ -291,7 +284,6 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
   Init();
 
   StartFakeAp(kAp1Bssid, kAp1Ssid, kDefaultChannel1);
-  GetFirmwareMac();
 
   wlanif_ssid_t invalid_scan_ssid = {
       .len = 33,
