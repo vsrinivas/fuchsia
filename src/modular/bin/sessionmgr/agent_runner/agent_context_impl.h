@@ -45,12 +45,26 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   //  1) AgentContext service
   //  2) A set of services from |info.agent_services_factory| for this agent's url.
   //
-  // If |session_restart_on_crash_controller| is not null, it will be used to restart the session
-  // when the agent unexpectedly terminates.
-  explicit AgentContextImpl(
+  // Enumerates the services exposed in the agent's outgoing directory and makes those available
+  // to clients through ConnectToService().
+  //
+  // If |on_crash| is not null, it will be called if the agent unexpectedly terminates.
+  AgentContextImpl(
       const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
       inspect::Node agent_node,
       std::function<void()> on_crash = nullptr);
+
+  // Manages the lifecycle of the already-running component |app_client| as an agent.
+  //
+  // Enumerates the services exposed in the agent's outgoing directory and makes those available
+  // to clients through ConnectToService().
+  //
+  // If |on_crash| is not null, it will be called if the agent unexpectedly terminates.
+  AgentContextImpl(
+    const AgentContextInfo& info, std::string agent_url,
+    std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client, inspect::Node agent_node,
+    std::function<void()> on_crash = nullptr);
+
   ~AgentContextImpl() override;
 
   // Stops the running agent. Calls into |AgentRunner::RemoveAgent()| to remove itself.

@@ -23,6 +23,7 @@
 
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
+#include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
@@ -378,6 +379,113 @@ TEST_F(AgentRunnerTest, ConnectToAgentService_ConnectToServiceNameSuccess) {
   RunLoopUntil([&] { return agent_got_service_request; });
 }
 
+// Test that adding an agent that is already running (as encapsulated by an AppClient<> instance)
+// can serve services.
+TEST_F(AgentRunnerTest, AddRunningAgent_CanConnectToAgentService) {
+  fuchsia::testing::modular::TestProtocolPtr service_ptr;
+  auto service_ptr_request = service_ptr.NewRequest();
+
+  // Create a ServiceNamespace with the test service in it.
+  auto service_namespace = std::make_unique<component::ServiceNamespace>();
+  bool agent_got_service_request = false;
+  service_namespace->AddService<fuchsia::testing::modular::TestProtocol>(
+      [&agent_got_service_request,
+       cached_service_request_koid = get_object_koid(service_ptr_request.channel().get())](
+          fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
+        // Expect the same channel object that was originally provided in AgentServiceRequest.
+        EXPECT_EQ(get_object_koid(request.channel().get()), cached_service_request_koid);
+        agent_got_service_request = true;
+      });
+
+  // Register to intercept the agent launch.
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&](fuchsia::sys::LaunchInfo launch_info,
+                         fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        FX_CHECK(!test_agent);  // Should not launch agent more than once!
+        test_agent = std::make_unique<TestAgent>(std::move(launch_info.directory_request),
+                                                 std::move(ctrl), std::move(service_namespace));
+      });
+
+  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_, kTestAgentUrl}});
+  auto agent_runner = GetOrCreateAgentRunner();
+
+  fuchsia::modular::AppConfig agent_app_config;
+  agent_app_config.url = kTestAgentUrl;
+  auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
+      launcher(), std::move(agent_app_config));
+  agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
+
+  fuchsia::modular::AgentServiceRequest request;
+  request.set_service_name(fuchsia::testing::modular::TestProtocol::Name_);
+  request.set_channel(service_ptr_request.TakeChannel());
+  agent_runner->ConnectToAgentService("requestor_url", std::move(request));
+
+  RunLoopUntil([&] { return agent_got_service_request; });
+}
+
+TEST_F(AgentRunnerTest, AddRunningAgent_IsGracefullyTornDown) {
+  fuchsia::testing::modular::TestProtocolPtr service_ptr;
+  auto service_ptr_request = service_ptr.NewRequest();
+
+  // Register to intercept the agent launch.
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&](fuchsia::sys::LaunchInfo launch_info,
+                         fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent = std::make_unique<TestAgent>(
+            std::move(launch_info.directory_request), std::move(ctrl),
+            /*services_ptr=*/nullptr, /*serve_lifecycle_protocol=*/true);
+      });
+
+  auto agent_runner = GetOrCreateAgentRunner();
+  fuchsia::modular::AppConfig agent_app_config;
+  agent_app_config.url = kTestAgentUrl;
+  auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
+      launcher(), std::move(agent_app_config), /* data_origin = */ "");
+  agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
+
+  // Teardown the agent runner.
+  auto is_torn_down = false;
+  agent_runner->Teardown([&is_torn_down] { is_torn_down = true; });
+  RunLoopUntil([&] { return is_torn_down; });
+
+  EXPECT_TRUE(test_agent->lifecycle_terminate_called());
+  EXPECT_FALSE(test_agent->controller_connected());
+}
+
+TEST_F(AgentRunnerTest, AddRunningAgent_CanBeCriticalAgent) {
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent =
+            std::make_unique<TestAgent>(std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  // The session should be restarted when the agent terminates.
+  set_restart_session_on_agent_crash({kTestAgentUrl});
+
+  auto is_restart_called = false;
+  set_on_session_restart_callback([&is_restart_called] { is_restart_called = true; });
+
+  auto agent_runner = GetOrCreateAgentRunner();
+  fuchsia::modular::AppConfig agent_app_config;
+  agent_app_config.url = kTestAgentUrl;
+  auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
+      launcher(), std::move(agent_app_config), /* data_origin = */ "");
+  agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
+  RunLoopUntil([&test_agent] { return !!test_agent; });
+
+  // The agent is now running, so the session should not have been restarted yet.
+  EXPECT_FALSE(is_restart_called);
+
+  // Terminate the agent.
+  test_agent->KillApplication();
+
+  RunLoopUntil([&is_restart_called] { return is_restart_called; });
+}
+
 // Tests that AgentRunner terminates an agent component on teardown. In this case, the agent does
 // not serve |fuchsia::modular::Lifecycle| protocol that allows a graceful teardown.
 TEST_F(AgentRunnerTest, TerminateOnTeardown) {
@@ -452,7 +560,7 @@ TEST_F(AgentRunnerTest, TerminateGracefullyOnTeardown) {
 
 // When an agent dies and it is not listed in |restart_session_on_agent_crash|,
 // the session should not be restarted.
-TEST_F(AgentRunnerTest, NoSessionRestartOnCrash) {
+TEST_F(AgentRunnerTest, CriticalAgents_NoSessionRestartOnCrash) {
   std::unique_ptr<TestAgent> test_agent;
   launcher()->RegisterComponent(
       kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,
@@ -484,7 +592,7 @@ TEST_F(AgentRunnerTest, NoSessionRestartOnCrash) {
 
 // When an agent dies and it is listed in |restart_session_on_agent_crash|,
 // the session should restarted.
-TEST_F(AgentRunnerTest, SessionRestartOnCrash) {
+TEST_F(AgentRunnerTest, CriticalAgents_SessionRestartOnCrash) {
   std::unique_ptr<TestAgent> test_agent;
   launcher()->RegisterComponent(
       kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,

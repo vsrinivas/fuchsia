@@ -54,6 +54,7 @@ executable("agent_runner_unittest") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/pseudo_dir",
     "//src/modular/tests:fuchsia.testing.modular",
@@ -78,5 +79,6 @@ source_set("public") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/modular/bin/sessionmgr:agent_services_factory",
     "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/fidl:app_client",
   ]
 }

@@ -186,10 +186,9 @@ class AgentContextImpl::OnAppErrorCall : public Operation<> {
   AgentContextImpl* const agent_context_impl_;
 };
 
-AgentContextImpl::AgentContextImpl(
-    const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
-    inspect::Node agent_node,
-    std::function<void()> on_crash)
+AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
+                                   fuchsia::modular::AppConfig agent_config,
+                                   inspect::Node agent_node, std::function<void()> on_crash)
     : url_(agent_config.url),
       component_context_impl_(info.component_context_info, url_, url_),
       agent_runner_(info.component_context_info.agent_runner),
@@ -234,6 +233,20 @@ AgentContextImpl::AgentContextImpl(
 
   app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       info.launcher, std::move(agent_config), /*data_origin=*/"", std::move(service_list));
+  operation_queue_.Add(std::make_unique<FinishInitializeCall>(this));
+}
+
+AgentContextImpl::AgentContextImpl(
+    const AgentContextInfo& info, std::string agent_url,
+    std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client, inspect::Node agent_node,
+    std::function<void()> on_crash)
+    : url_(agent_url),
+      app_client_(std::move(app_client)),
+      component_context_impl_(info.component_context_info, url_, url_),
+      agent_runner_(info.component_context_info.agent_runner),
+      agent_services_factory_(info.agent_services_factory),
+      agent_node_(std::move(agent_node)),
+      on_crash_(std::move(on_crash)) {
   operation_queue_.Add(std::make_unique<FinishInitializeCall>(this));
 }
 
@@ -292,12 +305,11 @@ void AgentContextImpl::GetComponentContext(
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {
   FX_LOGS(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
 
-  operation_queue_.Add(
-      std::make_unique<StopCall>(this, [this, callback = std::move(callback)] {
-        agent_runner_->RemoveAgent(url_);
-        callback();
-        // |this| is no longer valid at this point.
-      }));
+  operation_queue_.Add(std::make_unique<StopCall>(this, [this, callback = std::move(callback)] {
+    agent_runner_->RemoveAgent(url_);
+    callback();
+    // |this| is no longer valid at this point.
+  }));
 }
 
 void AgentContextImpl::StopOnAppError() {

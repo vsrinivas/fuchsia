@@ -21,6 +21,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/fidl/app_client.h"
 
 namespace component {
 class ServiceProviderImpl;
@@ -34,13 +35,12 @@ class AgentContextImpl;
 // manages the life time of a running agent.
 class AgentRunner {
  public:
-    // If |sessionmgr_context| is provided, fuchsia.intl.PropertyProvider is exposed to agents.
-    // |on_critical_agent_crash| is called when a "critical agent" (all agents
-    // with entries in |restart_session_on_agent_crash|). It is expected to
-    // restart the session.
+  // If |sessionmgr_context| is provided, fuchsia.intl.PropertyProvider is exposed to agents.
+  // |on_critical_agent_crash| is called when a "critical agent" (all agents
+  // with entries in |restart_session_on_agent_crash|). It is expected to
+  // restart the session.
   AgentRunner(fuchsia::sys::Launcher* launcher, AgentServicesFactory* agent_services_factory,
-              inspect::Node* session_inspect_node,
-              std::function<void()> on_critical_agent_crash,
+              inspect::Node* session_inspect_node, std::function<void()> on_critical_agent_crash,
               std::map<std::string, std::string> agent_service_index = {},
               std::vector<std::string> session_agents = {},
               std::vector<std::string> restart_session_on_agent_crash = {},
@@ -62,6 +62,11 @@ class AgentRunner {
   // to connect to agent services directly through that environment.
   void PublishAgentServices(const std::string& requestor_url,
                             component::ServiceProviderImpl* service_provider);
+
+  // Adds a component that is already running (or in the process of starting) to the
+  // list of agents managed by AgentRunner.
+  void AddRunningAgent(std::string agent_url,
+                       std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client);
 
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |Agent.Connect|. Called using ComponentContext.

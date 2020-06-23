@@ -119,6 +119,30 @@ void AgentRunner::PublishAgentServices(const std::string& requestor_url,
   }
 }
 
+void AgentRunner::AddRunningAgent(
+    std::string agent_url,
+    std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client) {
+  // Start the agent and issue all callbacks.
+  ComponentContextInfo component_info = {this, session_agents_};
+  AgentContextInfo info = {component_info, launcher_, agent_services_factory_, sessionmgr_context_};
+  fuchsia::modular::AppConfig agent_config;
+  agent_config.url = agent_url;
+
+  // AgentContextImpl will call on_critical_agent_crash if this agent is listed
+  // in |restart_session_on_agent_crash_| and terminates unexpectedly.
+  bool restart_session_on_crash =
+      std::find(restart_session_on_agent_crash_.begin(), restart_session_on_agent_crash_.end(),
+                agent_url) != restart_session_on_agent_crash_.end();
+
+  FX_CHECK(
+      running_agents_
+          .emplace(agent_url, std::make_unique<AgentContextImpl>(
+                                  info, agent_url, std::move(app_client),
+                                  session_inspect_node_->CreateChild(agent_url),
+                                  restart_session_on_crash ? on_critical_agent_crash_ : nullptr))
+          .second);
+}
+
 void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::function<void()> done) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
@@ -155,12 +179,13 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
       std::find(restart_session_on_agent_crash_.begin(), restart_session_on_agent_crash_.end(),
                 agent_url) != restart_session_on_agent_crash_.end();
 
-  FX_CHECK(running_agents_
-               .emplace(agent_url, std::make_unique<AgentContextImpl>(
-                                       info, std::move(agent_config),
-                                       session_inspect_node_->CreateChild(agent_url),
-                                       restart_session_on_crash ? on_critical_agent_crash_ : nullptr))
-               .second);
+  FX_CHECK(
+      running_agents_
+          .emplace(agent_url,
+                   std::make_unique<AgentContextImpl>(
+                       info, std::move(agent_config), session_inspect_node_->CreateChild(agent_url),
+                       restart_session_on_crash ? on_critical_agent_crash_ : nullptr))
+          .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);
   if (run_callbacks_it != run_agent_callbacks_.end()) {
