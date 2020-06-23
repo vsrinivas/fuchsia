@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/process/c/fidl.h>
+#include <fuchsia/process/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -16,9 +16,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/dlfcn.h>
@@ -30,6 +27,9 @@
 #include <zircon/utc.h>
 
 #include <bitset>
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
 #include <list>
 #include <string>
 #include <utility>
@@ -40,6 +40,7 @@
 #include "private.h"
 
 namespace fio = ::llcpp::fuchsia::io;
+namespace fprocess = ::llcpp::fuchsia::process;
 
 #define FDIO_RESOLVE_PREFIX "#!resolve "
 #define FDIO_RESOLVE_PREFIX_LEN 10
@@ -53,7 +54,7 @@ namespace fio = ::llcpp::fuchsia::io;
 // '#!' case with an arbitrary interpreter - but we use the fuchsia.process/Resolver limit rather
 // than define a separate arbitrary limit.
 #define FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN \
-  (fuchsia_process_MAX_RESOLVE_NAME_SIZE + FDIO_RESOLVE_PREFIX_LEN)
+  (fprocess::MAX_RESOLVE_NAME_SIZE + FDIO_RESOLVE_PREFIX_LEN)
 static_assert(FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN < PAGE_SIZE,
               "max #! interpreter line length must be less than page size");
 
@@ -130,47 +131,36 @@ static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) 
   return status;
 }
 
-static void measure_cstring_array(const char* const* array, size_t* count_out, size_t* len_out) {
-  size_t i = 0;
-  size_t len = 0;
-  while (array[i]) {
-    len += FIDL_ALIGN(strlen(array[i]));
-    ++i;
-  }
-  *count_out = i;
-  *len_out = len;
-}
-
 // resolve_name makes a call to the fuchsia.process.Resolver service and may return a vmo and
 // associated loader service, if the name resolves within the current realm.
 static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
                                 zx::channel* out_ldsvc, char* err_msg) {
-  zx::channel resolver, resolver_request;
-  zx_status_t status = zx::channel::create(0, &resolver, &resolver_request);
-  if (status != ZX_OK) {
-    report_error(err_msg, "failed to create channel: %d", status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  status = fdio_service_connect("/svc/fuchsia.process.Resolver", resolver_request.release());
+  fprocess::Resolver::SyncClient resolver;
+  zx_status_t status =
+      fdio_service_connect_by_name(fprocess::Resolver::Name, resolver.mutable_channel());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to resolver service: %d", status);
     return ZX_ERR_INTERNAL;
   }
 
-  zx_status_t io_status = fuchsia_process_ResolverResolve(resolver.get(), name, name_len, &status,
-                                                          out_executable->reset_and_get_address(),
-                                                          out_ldsvc->reset_and_get_address());
-  if (io_status != ZX_OK) {
-    report_error(err_msg, "failed to send resolver request: %d", io_status);
+  auto response = resolver.Resolve(fidl::unowned_str(name, name_len));
+
+  status = response.status();
+  if (status != ZX_OK) {
+    report_error(err_msg, "failed to send resolver request: %d", status);
     return ZX_ERR_INTERNAL;
   }
 
+  status = response->status;
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to resolve %.*s", name_len, name);
+    report_error(err_msg, "failed to resolve %.*s: %d", name_len, name, status);
+    return status;
   }
 
-  return status;
+  *out_executable = std::move(response->executable);
+  *out_ldsvc = std::move(response->ldsvc);
+
+  return ZX_OK;
 }
 
 // Find the starting point of the interpreter and the interpreter arguments in a #! script header.
@@ -327,69 +317,20 @@ static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
   return ZX_OK;
 }
 
-static zx_status_t send_cstring_array(const zx::channel& launcher, uint64_t ordinal,
-                                      const char* const* array) {
-  size_t count = 0;
-  size_t len = 0;
-
-  // TODO(abarth): In principle, we should chunk array into separate
-  // messages if we exceed ZX_CHANNEL_MAX_MSG_BYTES.
-  measure_cstring_array(array, &count, &len);
-
-  if (count == 0)
-    return ZX_OK;
-
-  size_t msg_len = sizeof(fidl_message_header_t) + sizeof(fidl_vector_t) +
-                   count * sizeof(fidl_vector_t) + FIDL_ALIGN(len);
-  uint8_t msg[msg_len];
-  memset(msg, 0, msg_len);
-
-  fidl_message_header_t* hdr = (fidl_message_header_t*)msg;
-  fidl_vector_t* vector = (fidl_vector_t*)hdr + 1;
-  fidl_vector_t* bytes = (fidl_vector_t*)(vector + 1);
-  uint8_t* payload = (uint8_t*)(bytes + count);
-
-  fidl_init_txn_header(hdr, 0, ordinal);
-  vector->count = count;
-  vector->data = (void*)FIDL_ALLOC_PRESENT;
-
-  size_t offset = 0;
-  for (size_t i = 0; i < count; ++i) {
-    size_t size = strlen(array[i]);
-    bytes[i].count = size;
-    bytes[i].data = (void*)FIDL_ALLOC_PRESENT;
-    memcpy(payload + offset, array[i], size);
-    offset += FIDL_ALIGN(size);
-  }
-
-  return launcher.write(0, msg, static_cast<uint32_t>(msg_len), nullptr, 0);
-}
-
-static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capacity, uint32_t flags,
-                                zx_handle_t job, zx::channel ldsvc, zx_handle_t utc_clock,
-                                size_t action_count, const fdio_spawn_action_t* actions,
-                                char* err_msg) {
+static zx_status_t send_handles(fprocess::Launcher::SyncClient* launcher, size_t handle_capacity,
+                                uint32_t flags, zx_handle_t job, zx::channel ldsvc,
+                                zx_handle_t utc_clock, size_t action_count,
+                                const fdio_spawn_action_t* actions, char* err_msg) {
   // TODO(abarth): In principle, we should chunk array into separate
   // messages if we exceed ZX_CHANNEL_MAX_MSG_HANDLES.
 
-  size_t msg_capacity = sizeof(fuchsia_process_LauncherAddHandlesRequest) +
-                        FIDL_ALIGN(handle_capacity * sizeof(fuchsia_process_HandleInfo));
-  uint8_t msg[msg_capacity];
-  memset(msg, 0, msg_capacity);
-
-  fuchsia_process_LauncherAddHandlesRequest* req = (fuchsia_process_LauncherAddHandlesRequest*)msg;
-  fuchsia_process_HandleInfo* handle_infos = (fuchsia_process_HandleInfo*)(req + 1);
-
-  zx_handle_t handles[handle_capacity];
-
-  memset(handles, 0, sizeof(handles));
-
-  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddHandlesGenOrdinal);
+  fprocess::HandleInfo handle_infos[handle_capacity];
+  // VLAs cannot be initialized.
+  memset(handle_infos, 0, sizeof(handle_infos));
 
   zx_status_t status = ZX_OK;
   uint32_t h = 0;
   size_t a = 0;
-  size_t msg_len = 0;
 
   std::bitset<FDIO_MAX_FD> fds_in_use;
   auto check_fd = [&fds_in_use](int fd) -> zx_status_t {
@@ -405,9 +346,10 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
   };
 
   if ((flags & FDIO_SPAWN_CLONE_JOB) != 0) {
-    handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-    handle_infos[h].id = PA_JOB_DEFAULT;
-    status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &handles[h++]);
+    auto* handle_info = &handle_infos[h++];
+    handle_info->id = PA_JOB_DEFAULT;
+    status =
+        zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, handle_info->handle.reset_and_get_address());
     if (status != ZX_OK) {
       report_error(err_msg, "failed to duplicate job: %d", status);
       goto cleanup;
@@ -417,16 +359,16 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
   // ldsvc may be valid if flags contains FDIO_SPAWN_DEFAULT_LDSVC or if a ldsvc was obtained
   // through handling a '#!resolve' directive.
   if (ldsvc.is_valid()) {
-    handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-    handle_infos[h].id = PA_LDSVC_LOADER;
-    handles[h++] = ldsvc.release();
+    auto* handle_info = &handle_infos[h++];
+    handle_info->id = PA_LDSVC_LOADER;
+    handle_info->handle = std::move(ldsvc);
   }
 
   for (; a < action_count; ++a) {
     zx_handle_t fd_handle = ZX_HANDLE_INVALID;
 
     switch (actions[a].action) {
-      case FDIO_SPAWN_ACTION_CLONE_FD:
+      case FDIO_SPAWN_ACTION_CLONE_FD: {
         status = check_fd(actions[a].fd.target_fd);
         if (status != ZX_OK) {
           report_error(err_msg, "invalid target %d to clone fd %d (action index %zu): %d",
@@ -440,7 +382,8 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
           goto cleanup;
         }
         break;
-      case FDIO_SPAWN_ACTION_TRANSFER_FD:
+      }
+      case FDIO_SPAWN_ACTION_TRANSFER_FD: {
         status = check_fd(actions[a].fd.target_fd);
         if (status != ZX_OK) {
           report_error(err_msg, "invalid target %d to transfer fd %d (action index %zu): %d",
@@ -454,7 +397,8 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
           goto cleanup;
         }
         break;
-      case FDIO_SPAWN_ACTION_ADD_HANDLE:
+      }
+      case FDIO_SPAWN_ACTION_ADD_HANDLE: {
         if (PA_HND_TYPE(actions[a].h.id) == PA_FD) {
           int fd = PA_HND_ARG(actions[a].h.id) & ~FDIO_FLAG_USE_FOR_STDIO;
           status = check_fd(fd);
@@ -464,17 +408,19 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
             goto cleanup;
           }
         }
-        handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-        handle_infos[h].id = actions[a].h.id;
-        handles[h++] = actions[a].h.handle;
+        auto* handle_info = &handle_infos[h++];
+        handle_info->id = actions[a].h.id;
+        handle_info->handle.reset(actions[a].h.handle);
         continue;
-      default:
+      }
+      default: {
         continue;
+      }
     }
 
-    handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-    handle_infos[h].id = PA_HND(PA_FD, actions[a].fd.target_fd);
-    handles[h++] = fd_handle;
+    auto* handle_info = &handle_infos[h++];
+    handle_info->id = PA_HND(PA_FD, actions[a].fd.target_fd);
+    handle_info->handle.reset(fd_handle);
   }
 
   // Do these after generic actions so that actions can set these fds first.
@@ -496,18 +442,19 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
         report_error(err_msg, "failed to clone fd %d: %d", fd, status);
         goto cleanup;
       }
-      handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-      handle_infos[h].id = PA_HND(PA_FD, fd);
-      handles[h++] = fd_handle;
+      auto* handle_info = &handle_infos[h++];
+      handle_info->id = PA_HND(PA_FD, fd);
+      handle_info->handle.reset(fd_handle);
     }
   }
 
   if ((flags & FDIO_SPAWN_CLONE_UTC_CLOCK) != 0) {
     if (utc_clock != ZX_HANDLE_INVALID) {
-      handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-      handle_infos[h].id = PA_CLOCK_UTC;
-      status = zx_handle_duplicate(
-          utc_clock, ZX_RIGHT_READ | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER, &handles[h++]);
+      auto* handle_info = &handle_infos[h++];
+      handle_info->id = PA_CLOCK_UTC;
+      status =
+          zx_handle_duplicate(utc_clock, ZX_RIGHT_READ | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER,
+                              handle_info->handle.reset_and_get_address());
       if (status != ZX_OK) {
         report_error(err_msg, "failed to clone UTC clock: %d", status);
         goto cleanup;
@@ -515,14 +462,9 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
     }
   }
 
-  req->handles.count = h;
-  req->handles.data = (void*)FIDL_ALLOC_PRESENT;
-
   ZX_DEBUG_ASSERT(h <= handle_capacity);
 
-  msg_len = sizeof(fuchsia_process_LauncherAddHandlesRequest) +
-            FIDL_ALIGN(h * sizeof(fuchsia_process_HandleInfo));
-  status = launcher.write(0, msg, static_cast<uint32_t>(msg_len), handles, h);
+  status = launcher->AddHandles(fidl::VectorView(fidl::unowned_ptr(handle_infos), h)).status();
 
   if (status != ZX_OK)
     report_error(err_msg, "failed send handles: %d", status);
@@ -530,8 +472,6 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
   return status;
 
 cleanup:
-  zx_handle_close_many(handles, h);
-
   // If |a| is less than |action_count|, that means we encountered an error
   // before we processed all the actions. We need to iterate through the rest
   // of the table and close the file descriptors and handles that we're
@@ -550,39 +490,21 @@ cleanup:
   return status;
 }
 
-static zx_status_t send_namespace(const zx::channel& launcher, size_t name_count, size_t name_len,
+static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size_t name_count,
                                   fdio_flat_namespace_t* flat, size_t action_count,
                                   const fdio_spawn_action_t* actions, char* err_msg) {
-  size_t msg_len = sizeof(fuchsia_process_LauncherAddNamesRequest) +
-                   FIDL_ALIGN(name_count * sizeof(fuchsia_process_NameInfo)) + FIDL_ALIGN(name_len);
-  uint8_t msg[msg_len];
-  memset(msg, 0, msg_len);
-
-  fuchsia_process_LauncherAddNamesRequest* req = (fuchsia_process_LauncherAddNamesRequest*)msg;
-  fuchsia_process_NameInfo* names = (fuchsia_process_NameInfo*)(req + 1);
-  uint8_t* payload = (uint8_t*)(names + name_count);
-
-  zx_handle_t handles[name_count];
-
-  memset(handles, 0, sizeof(handles));
-
-  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddNamesGenOrdinal);
-  req->names.count = name_count;
-  req->names.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+  fprocess::NameInfo names[name_count];
+  // VLAs cannot be initialized.
+  memset(names, 0, sizeof(names));
 
   size_t n = 0;
-  uint32_t h = 0;
-  size_t offset = 0;
 
   if (flat) {
     while (n < flat->count) {
-      size_t size = strlen(flat->path[n]);
-      names[n].path.size = size;
-      names[n].path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-      names[n].directory = FIDL_HANDLE_PRESENT;
-      memcpy(payload + offset, flat->path[n], size);
-      offset += FIDL_ALIGN(size);
-      handles[h++] = flat->handle[n];
+      auto* name = &names[n];
+      auto path = flat->path[n];
+      name->path = fidl::unowned_str(path, strlen(path));
+      name->directory.reset(flat->handle[n]);
       flat->handle[n] = ZX_HANDLE_INVALID;
       n++;
     }
@@ -590,21 +512,17 @@ static zx_status_t send_namespace(const zx::channel& launcher, size_t name_count
 
   for (size_t i = 0; i < action_count; ++i) {
     if (actions[i].action == FDIO_SPAWN_ACTION_ADD_NS_ENTRY) {
-      size_t size = strlen(actions[i].ns.prefix);
-      names[n].path.size = size;
-      names[n].path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-      names[n].directory = FIDL_HANDLE_PRESENT;
-      memcpy(payload + offset, actions[i].ns.prefix, size);
-      offset += FIDL_ALIGN(size);
-      handles[h++] = actions[i].ns.handle;
+      auto* name = &names[n];
+      auto path = actions[i].ns.prefix;
+      name->path = fidl::unowned_str(path, strlen(path));
+      name->directory.reset(actions[i].ns.handle);
       n++;
     }
   }
 
   ZX_DEBUG_ASSERT(n == name_count);
-  ZX_DEBUG_ASSERT(h == name_count);
 
-  zx_status_t status = launcher.write(0, msg, static_cast<uint32_t>(msg_len), handles, h);
+  zx_status_t status = launcher->AddNames(fidl::VectorView(fidl::unowned_ptr(names), n)).status();
 
   if (status != ZX_OK)
     report_error(err_msg, "failed send namespace: %d", status);
@@ -688,28 +606,25 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   zx_status_t status = ZX_OK;
   fdio_flat_namespace_t* flat = nullptr;
   size_t name_count = 0;
-  size_t name_len = 0;
   size_t handle_capacity = 0;
   std::vector<std::string_view> shared_dirs;
-  zx::channel launcher;
-  zx::channel launcher_request;
-  zx_handle_t msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_COUNT];
+  fprocess::Launcher::SyncClient launcher;
   zx::channel ldsvc;
   const char* process_name = nullptr;
   size_t process_name_size = 0;
   std::list<std::string> extra_args;
   zx_handle_t utc_clock = ZX_HANDLE_INVALID;
-  zx::vmo executable(executable_vmo);
+  fprocess::LaunchInfo launch_info = {
+      .executable = zx::vmo(executable_vmo),
+  };
   executable_vmo = ZX_HANDLE_INVALID;
-
-  memset(msg_handles, 0, sizeof(msg_handles));
 
   if (err_msg)
     err_msg[0] = '\0';
 
   // We intentionally don't fill in |err_msg| for invalid args.
 
-  if (!executable.is_valid() || !argv || (action_count != 0 && !actions)) {
+  if (!launch_info.executable.is_valid() || !argv || (action_count != 0 && !actions)) {
     status = ZX_ERR_INVALID_ARGS;
     goto cleanup;
   }
@@ -731,7 +646,6 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
           goto cleanup;
         }
         ++name_count;
-        name_len += FIDL_ALIGN(strlen(actions[i].ns.prefix));
         break;
       case FDIO_SPAWN_ACTION_ADD_HANDLE:
         if (actions[i].h.handle == ZX_HANDLE_INVALID) {
@@ -819,13 +733,10 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     }
 
     name_count += flat->count;
-    for (size_t i = 0; i < flat->count; ++i) {
-      name_len += FIDL_ALIGN(strlen(flat->path[i]));
-    }
   }
 
   // resolve any '#!' directives that are present, updating executable and ldsvc as needed
-  status = handle_interpreters(&executable, &ldsvc, &extra_args, err_msg);
+  status = handle_interpreters(&launch_info.executable, &ldsvc, &extra_args, err_msg);
   if (status != ZX_OK) {
     goto cleanup;
   }
@@ -833,50 +744,65 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     ++handle_capacity;
   }
 
-  status = zx::channel::create(0, &launcher, &launcher_request);
-  if (status != ZX_OK) {
-    report_error(err_msg, "failed to create channel for process launcher: %d", status);
-    goto cleanup;
-  }
-
-  status = fdio_service_connect("/svc/fuchsia.process.Launcher", launcher_request.release());
+  status = fdio_service_connect_by_name(fprocess::Launcher::Name, launcher.mutable_channel());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to launcher service: %d", status);
     goto cleanup;
   }
 
-  // send any extra arguments from handle_interpreters, then the normal arguments
-  if (!extra_args.empty()) {
-    std::vector<const char*> extra_argv;
-    extra_argv.reserve(extra_args.size() + 1);
-    for (const auto& arg : extra_args) {
-      extra_argv.push_back(arg.c_str());
+  // send any extra arguments from handle_interpreters, then the normal arguments.
+  {
+    size_t capacity = extra_args.size();
+    for (auto it = argv; *it; ++it) {
+      ++capacity;
     }
-    extra_argv.push_back(nullptr);
 
-    status =
-        send_cstring_array(launcher, fuchsia_process_LauncherAddArgsGenOrdinal, extra_argv.data());
+    std::vector<fidl::VectorView<uint8_t>> args;
+    args.reserve(capacity);
+    for (const auto& arg : extra_args) {
+      auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(arg.data()));
+      args.emplace_back(fidl::unowned_ptr(ptr), arg.length());
+    }
+    for (auto it = argv; *it; ++it) {
+      auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
+      args.emplace_back(fidl::unowned_ptr(ptr), strlen(*it));
+    }
+
+    status = launcher.AddArgs(fidl::unowned_vec(args)).status();
     if (status != ZX_OK) {
-      report_error(err_msg, "failed to send extra argument vector: %d", status);
+      report_error(err_msg, "failed to send argument vector: %d", status);
       goto cleanup;
     }
   }
-  status = send_cstring_array(launcher, fuchsia_process_LauncherAddArgsGenOrdinal, argv);
-  if (status != ZX_OK) {
-    report_error(err_msg, "failed to send argument vector: %d", status);
-    goto cleanup;
-  }
 
   if (explicit_environ) {
-    status = send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsGenOrdinal,
-                                explicit_environ);
+    size_t capacity = 0;
+    for (auto it = explicit_environ; *it; ++it) {
+      ++capacity;
+    }
+    std::vector<fidl::VectorView<uint8_t>> env;
+    env.reserve(capacity);
+    for (auto it = explicit_environ; *it; ++it) {
+      auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
+      env.emplace_back(fidl::unowned_ptr(ptr), strlen(*it));
+    }
+    status = launcher.AddEnvirons(fidl::unowned_vec(env)).status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment: %d", status);
       goto cleanup;
     }
   } else if ((flags & FDIO_SPAWN_CLONE_ENVIRON) != 0) {
-    status = send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsGenOrdinal,
-                                (const char* const*)environ);
+    size_t capacity = 0;
+    for (auto it = environ; *it; ++it) {
+      ++capacity;
+    }
+    std::vector<fidl::VectorView<uint8_t>> env;
+    env.reserve(capacity);
+    for (auto it = environ; *it; ++it) {
+      auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
+      env.emplace_back(fidl::unowned_ptr(ptr), strlen(*it));
+    }
+    status = launcher.AddEnvirons(fidl::unowned_vec(env)).status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment clone with FDIO_SPAWN_CLONE_ENVIRON: %d",
                    status);
@@ -885,7 +811,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   }
 
   if (handle_capacity) {
-    status = send_handles(launcher, handle_capacity, flags, job, std::move(ldsvc), utc_clock,
+    status = send_handles(&launcher, handle_capacity, flags, job, std::move(ldsvc), utc_clock,
                           action_count, actions, err_msg);
     if (status != ZX_OK) {
       // When |send_handles| fails, it consumes all the action handles
@@ -908,7 +834,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   }
 
   if (name_count) {
-    status = send_namespace(launcher, name_count, name_len, flat, action_count, actions, err_msg);
+    status = send_namespace(&launcher, name_count, flat, action_count, actions, err_msg);
     if (status != ZX_OK) {
       action_count = 0;
       goto cleanup;
@@ -921,67 +847,25 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   if (process_name_size >= ZX_MAX_NAME_LEN)
     process_name_size = ZX_MAX_NAME_LEN - 1;
 
+  launch_info.name = fidl::unowned_str(process_name, process_name_size);
+  status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, launch_info.job.reset_and_get_address());
+  if (status != ZX_OK) {
+    report_error(err_msg, "failed to duplicate job handle: %d", status);
+    goto cleanup;
+  }
   {
-    struct {
-      FIDL_ALIGNDECL
-      fuchsia_process_LauncherLaunchRequest req;
-      uint8_t process_name[FIDL_ALIGN(ZX_MAX_NAME_LEN)];
-    } msg;
-
-    memset(&msg, 0, sizeof(msg));
-    size_t msg_len = sizeof(fuchsia_process_LauncherLaunchRequest) + FIDL_ALIGN(process_name_size);
-
-    fidl_init_txn_header(&msg.req.hdr, 0, fuchsia_process_LauncherLaunchGenOrdinal);
-    msg.req.info.executable = FIDL_HANDLE_PRESENT;
-    msg.req.info.job = FIDL_HANDLE_PRESENT;
-    msg.req.info.name.size = process_name_size;
-    msg.req.info.name.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-    memcpy(msg.process_name, process_name, process_name_size);
-
-    msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE] = executable.release();
-
-    status =
-        zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_JOB]);
-    if (status != ZX_OK) {
-      report_error(err_msg, "failed to duplicate job handle: %d", status);
-      goto cleanup;
-    }
-
-    fuchsia_process_LauncherLaunchResponse reply;
-
-    zx_handle_t process = ZX_HANDLE_INVALID;
-
-    memset(&reply, 0, sizeof(reply));
-
-    zx_channel_call_args_t args;
-    args.wr_bytes = &msg;
-    args.wr_handles = msg_handles;
-    args.rd_bytes = &reply;
-    args.rd_handles = &process;
-    args.wr_num_bytes = static_cast<uint32_t>(msg_len);
-    args.wr_num_handles = FDIO_SPAWN_LAUNCH_HANDLE_COUNT;
-    args.rd_num_bytes = sizeof(reply);
-    args.rd_num_handles = FDIO_SPAWN_LAUNCH_REPLY_HANDLE_COUNT;
-
-    uint32_t actual_bytes = 0;
-    uint32_t actual_handles = 0;
-
-    status = launcher.call(0, zx::time::infinite(), &args, &actual_bytes, &actual_handles);
-
-    // zx_channel_call always consumes handles.
-    memset(msg_handles, 0, sizeof(msg_handles));
-
+    auto reply = launcher.Launch(std::move(launch_info));
+    status = reply.status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send launch message: %d", status);
       goto cleanup;
     }
 
-    status = reply.status;
-
+    status = reply->status;
     if (status == ZX_OK) {
       // The launcher claimed to succeed but didn't actually give us a
       // process handle. Something is wrong with the launcher.
-      if (process == ZX_HANDLE_INVALID) {
+      if (!reply->process.is_valid()) {
         status = ZX_ERR_BAD_HANDLE;
         report_error(err_msg, "failed receive process handle");
         // This jump skips over closing the process handle, but that's
@@ -990,15 +874,11 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
       }
 
       if (process_out) {
-        *process_out = process;
-        process = ZX_HANDLE_INVALID;
+        *process_out = reply->process.release();
       }
     } else {
       report_error(err_msg, "fuchsia.process.Launcher failed");
     }
-
-    if (process != ZX_HANDLE_INVALID)
-      zx_handle_close(process);
   }
 
 cleanup:
@@ -1020,12 +900,6 @@ cleanup:
   if (flat) {
     fdio_ns_free_flat_ns(flat);
   }
-
-  if (msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE] != ZX_HANDLE_INVALID)
-    zx_handle_close(msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE]);
-
-  if (msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_JOB] != ZX_HANDLE_INVALID)
-    zx_handle_close(msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_JOB]);
 
   // If we observe ZX_ERR_NOT_FOUND in the VMO spawn, it really means a
   // dependency of launching could not be fulfilled, but clients of spawn_etc
