@@ -662,8 +662,10 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args* argv, uint32_t flags) {
   }
 
   auto bus_drv = PcieBusDriver::GetDriver();
-  if (bus_drv == nullptr)
+  if (bus_drv == nullptr) {
+    printf("PCIe driver is not initialized\n");
     return ZX_ERR_BAD_STATE;
+  }
 
   bus_drv->ForeachDevice(dump_pcie_device, &params);
 
@@ -707,8 +709,10 @@ int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args* argv, uint32_t flag
   }
 
   auto bus_drv = PcieBusDriver::GetDriver();
-  if (bus_drv == nullptr)
+  if (bus_drv == nullptr) {
+    printf("PCIe driver is not initialized\n");
     return ZX_ERR_BAD_STATE;
+  }
 
   fbl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
@@ -746,8 +750,10 @@ int PcieDebugConsole::CmdPciReset(int argc, const cmd_args* argv, uint32_t flags
   }
 
   auto bus_drv = PcieBusDriver::GetDriver();
-  if (bus_drv == nullptr)
+  if (bus_drv == nullptr) {
+    printf("PCIe driver is not initialized\n");
     return ZX_ERR_BAD_STATE;
+  }
 
   fbl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
@@ -768,8 +774,10 @@ int PcieDebugConsole::CmdPciReset(int argc, const cmd_args* argv, uint32_t flags
 
 int PcieDebugConsole::CmdPciRescan(int argc, const cmd_args* argv, uint32_t flags) {
   auto bus_drv = PcieBusDriver::GetDriver();
-  if (bus_drv == nullptr)
+  if (bus_drv == nullptr) {
+    printf("PCIe driver is not initialized\n");
     return ZX_ERR_BAD_STATE;
+  }
 
   return bus_drv->RescanDevices();
 }
@@ -781,6 +789,11 @@ int PcieDebugConsole::CmdPciRegionDump(int argc, const cmd_args* argv, uint32_t 
   };
 
   auto bus_drv = PcieBusDriver::GetDriver();
+  if (bus_drv == nullptr) {
+    printf("PCIe driver is not initialized\n");
+    return ZX_ERR_BAD_STATE;
+  }
+
   printf("mmio_low:\n");
   bus_drv->mmio_lo_regions_.WalkAllocatedRegions(walk_cb);
   printf("mmio_high:\n");
