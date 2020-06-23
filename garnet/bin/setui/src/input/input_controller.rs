@@ -49,6 +49,9 @@ impl InputControllerInner {
     /// Gets the input state.
     async fn get_info(&mut self) -> Result<InputInfo, SwitchboardError> {
         let mut input_info = self.client.read().await;
+        let mut input_monitor = self.input_monitor.lock().await;
+        input_monitor.ensure_monitor().await;
+        self.hardware_mic_muted = input_monitor.get_mute_state();
         let muted = self.hardware_mic_muted || self.software_mic_muted;
 
         input_info.microphone = Microphone { muted };

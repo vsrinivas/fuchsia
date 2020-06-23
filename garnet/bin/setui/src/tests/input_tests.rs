@@ -129,12 +129,19 @@ async fn test_watch() {
 // Test that a set then watch is executed correctly.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_set_watch() {
-    let (service_registry, _) = create_services().await;
+    let (service_registry, fake_services) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
     let input_proxy = env.connect_to_service::<InputMarker>().unwrap();
 
     set_mic_mute(&input_proxy, true).await;
     get_and_check_mic_mute(&input_proxy, true).await;
+
+    switch_hardware_mic_mute(&fake_services, true).await;
+    set_mic_mute(&input_proxy, false).await;
+    get_and_check_mic_mute(&input_proxy, true).await;
+
+    switch_hardware_mic_mute(&fake_services, false).await;
+    get_and_check_mic_mute(&input_proxy, false).await;
 }
 
 // Test to ensure mic input change events are received.
