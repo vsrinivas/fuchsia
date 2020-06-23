@@ -9,7 +9,8 @@ use {
         model::collector::DataCollector,
         model::model::{Component, DataModel, Manifest, Route},
         plugins::components::{
-            graph_controller::*, http::HttpGetter, package_reader::*, types::*, util,
+            controllers::component_controllers::*, controllers::route_controllers::*,
+            http::HttpGetter, package_reader::*, types::*, util,
         },
     },
     anyhow::{anyhow, Result},
@@ -28,8 +29,24 @@ lazy_static! {
 }
 pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
 
-// TODO: make this impl the DataCollector trait and actually do the collection
-// and hand off to model creation.
+plugin!(
+    ComponentGraphPlugin,
+    PluginHooks::new(
+        vec![Arc::new(PackageDataCollector::new().unwrap())],
+        controller_hooks! {
+            "/components" => ComponentsGraphController::default(),
+            "/component/id" => ComponentIdGraphController::default(),
+            "/component/from_uri" => ComponentFromUriGraphController::default(),
+            "/component/uses" => ComponentUsesGraphController::default(),
+            "/component/used" => ComponentUsedGraphController::default(),
+            "/component/raw_manifest" => RawManifestGraphController::default(),
+            "/component/manifest/sandbox" => ComponentSandboxGraphController::default(),
+            "/routes" => RoutesGraphController::default(),
+        }
+    ),
+    vec![]
+);
+
 pub struct PackageDataCollector {
     package_reader: Box<dyn PackageReader>,
 }
@@ -291,19 +308,6 @@ impl DataCollector for PackageDataCollector {
         Ok(())
     }
 }
-
-plugin!(
-    ComponentGraphPlugin,
-    PluginHooks::new(
-        vec![Arc::new(PackageDataCollector::new().unwrap())],
-        controller_hooks! {
-            "/components" => ComponentGraphController::default(),
-            "/routes" => RouteGraphController::default(),
-            "/manifests" => ManifestGraphController::default(),
-        }
-    ),
-    vec![]
-);
 
 // It doesn't seem incredibly useful to test the json parsing or the far file
 // parsing, as those are mainly provided by dependencies.
