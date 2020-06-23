@@ -1151,9 +1151,9 @@ zx_status_t UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (!enable) {
-    return TRBWait(UsbHciDisableEndpoint(device_id, ep_desc, ss_com_desc));
+    return RunSynchronously(UsbHciDisableEndpoint(device_id, ep_desc, ss_com_desc));
   }
-  return TRBWait(UsbHciEnableEndpoint(device_id, ep_desc, ss_com_desc));
+  return RunSynchronously(UsbHciEnableEndpoint(device_id, ep_desc, ss_com_desc));
 }
 
 TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
@@ -1446,31 +1446,19 @@ zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address)
   if (!context) {
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t status;
-  sync_completion_t completion;
-  ScheduleTask(
+  return RunSynchronously(
       SubmitCommand(reset_command, std::move(context))
           .then([&](fit::result<TRB*, zx_status_t>& result) -> fit::result<TRB*, zx_status_t> {
             if (result.is_error()) {
-              status = result.error();
-              sync_completion_signal(&completion);
               return result;
             }
             CommandCompletionEvent* evt = static_cast<CommandCompletionEvent*>(result.value());
             if (evt->CompletionCode() != CommandCompletionEvent::Success) {
-              status = ZX_ERR_IO;
-              sync_completion_signal(&completion);
               return fit::error(ZX_ERR_IO);
             }
-            sync_completion_signal(&completion);
             return result;
           })
           .box());
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return status;
 }
 
 // TODO (ZX-4864): Either decide what these reset methods should do,
@@ -1496,7 +1484,7 @@ size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address)
 }
 
 zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
-  return TRBWait(UsbHciCancelAllAsync(device_id, ep_address));
+  return RunSynchronously(UsbHciCancelAllAsync(device_id, ep_address));
 }
 
 TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address) {

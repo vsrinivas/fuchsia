@@ -261,7 +261,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   }
 
   // Schedules the promise for execution and synchronously waits for it to complete
-  zx_status_t TRBWait(fit::promise<TRB*, zx_status_t> promise) {
+  zx_status_t RunSynchronously(fit::promise<TRB*, zx_status_t> promise) {
     sync_completion_t completion;
     zx_status_t completion_code;
     auto continuation = promise.then([&](fit::result<TRB*, zx_status_t>& result) {

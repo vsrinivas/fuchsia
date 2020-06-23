@@ -347,7 +347,7 @@ TEST_F(EnumerationTests, EnableSlotCommandPassesThroughFailureCode) {
   auto enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
   enable_slot_task->completer->complete_error(ZX_ERR_UNAVAILABLE);
-  ASSERT_EQ(controller().TRBWait(std::move(enumeration_task)), ZX_ERR_UNAVAILABLE);
+  ASSERT_EQ(controller().RunSynchronously(std::move(enumeration_task)), ZX_ERR_UNAVAILABLE);
 }
 
 TEST_F(EnumerationTests, EnableSlotCommandReturnsIOErrorOnFailure) {
@@ -360,7 +360,7 @@ TEST_F(EnumerationTests, EnableSlotCommandReturnsIOErrorOnFailure) {
   reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
       ->set_CompletionCode(CommandCompletionEvent::UndefinedError);
   enable_slot_task->completer->complete_ok(enum_slot_trb);
-  ASSERT_EQ(controller().TRBWait(std::move(enumeration_task)), ZX_ERR_IO);
+  ASSERT_EQ(controller().RunSynchronously(std::move(enumeration_task)), ZX_ERR_IO);
 }
 
 TEST_F(EnumerationTests, EnableSlotCommandSetsDeviceInformationOnSuccess) {

@@ -168,7 +168,9 @@ struct ResetEndpoint : TRB {
   DEF_SUBFIELD(control, 31, 24, SLOT);
   DEF_SUBFIELD(control, 20, 16, ENDPOINT);
   DEF_SUBBIT(control, 9, TSP);
-  ResetEndpoint() { Control::Get().FromValue(0).set_Type(Control::ResetDeviceCommand).ToTrb(this); }
+  ResetEndpoint() {
+    Control::Get().FromValue(0).set_Type(Control::ResetEndpointCommand).ToTrb(this);
+  }
 };
 
 // Section 6.4.3.8

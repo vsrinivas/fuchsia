@@ -395,6 +395,20 @@ class XhciHarness : public zxtest::Test {
     device_->UsbHciEnableEndpoint(device_id, &ep_desc, nullptr);
   }
 
+  zx_status_t ResetEndpointCommand(uint32_t device_id, uint8_t ep_address) {
+    return device_->UsbHciResetEndpoint(device_id, ep_address);
+  }
+
+  zx_status_t CompleteCommand(TRB* trb, CommandCompletionEvent* event) {
+    std::unique_ptr<TRBContext> context;
+    zx_status_t status = device_->get_command_ring()->CompleteTRB(trb, &context);
+    if (status != ZX_OK) {
+      return status;
+    }
+    context->completer->complete_ok(event);
+    return ZX_OK;
+  }
+
   void SetDoorbellListener(fit::function<void(uint8_t, uint8_t)> listener) {
     pdev_.SetDoorbellCallback(std::move(listener));
   }
@@ -791,6 +805,39 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
   ring->CompleteTRB(trb, &context);
   context->request->Complete(ZX_OK, sizeof(void*));
   ASSERT_TRUE(invoked);
+}
+
+TEST_F(XhciMmioHarness, ResetEndpointTest) {
+  ConnectDevice(1, USB_SPEED_HIGH);
+  EnableEndpoint(0, 1, true);
+  zx_status_t reset_status;
+  auto cr = FakeTRB::get(crcr()->next);
+  Control control_trb = Control::FromTRB(cr);
+  ASSERT_EQ(control_trb.Type(), Control::AddressDeviceCommand);
+  CommandCompletionEvent event;
+  event.set_CompletionCode(CommandCompletionEvent::Success);
+  ASSERT_OK(CompleteCommand(cr, &event));
+  cr = FakeTRB::get(cr->next);
+  control_trb = Control::FromTRB(cr);
+  ASSERT_EQ(control_trb.Type(), Control::ConfigureEndpointCommand);
+  ASSERT_OK(CompleteCommand(cr, &event));
+  bool got_reset_endpoint = false;
+  SetDoorbellListener([&](uint8_t doorbell, uint8_t target) {
+    if (doorbell == 0) {
+      cr = FakeTRB::get(cr->next);
+      Control control = Control::FromTRB(cr);
+      if (control.Type() == Control::ResetEndpointCommand) {
+        auto reset_command = reinterpret_cast<ResetEndpoint*>(cr);
+        ASSERT_EQ(reset_command->ENDPOINT(), 1);
+        ASSERT_EQ(reset_command->SLOT(), 1);
+        got_reset_endpoint = true;
+        ASSERT_OK(CompleteCommand(cr, &event));
+      }
+    }
+  });
+  reset_status = ResetEndpointCommand(0, 1);
+  ASSERT_TRUE(got_reset_endpoint);
+  ASSERT_OK(reset_status);
 }
 
 TEST_F(XhciMmioHarness, GetMaxDeviceCount) { ASSERT_EQ(GetMaxDeviceCount(), 34); }
