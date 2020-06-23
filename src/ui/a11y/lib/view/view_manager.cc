@@ -216,8 +216,8 @@ void ViewManager::UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node)
 bool ViewManager::DrawHighlight(SemanticNodeIdentifier newly_highlighted_node) {
   auto it = view_wrapper_map_.find(newly_highlighted_node.koid);
   if (it == view_wrapper_map_.end()) {
-    FX_LOGS(ERROR) << "ViewManager::UpdateHighlights: Invalid newly highlighted view koid: "
-                   << newly_highlighted_node.koid;
+    FX_LOGS(WARNING) << "ViewManager::UpdateHighlights: Invalid newly highlighted view koid: "
+                     << newly_highlighted_node.koid;
     return false;
   }
 
