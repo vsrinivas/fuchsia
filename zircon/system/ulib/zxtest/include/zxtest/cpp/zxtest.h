@@ -141,14 +141,14 @@
     }                                                                                            \
   } while (0)
 
-#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                   \
-  do {                                                                                           \
-    if (!zxtest::internal::EvaluateCondition(actual, expected, #actual, #expected,               \
-                                             {.filename = file, .line_number = line}, fatal,     \
-                                             _DESC_PROVIDER(desc, __VA_ARGS__), _COMPARE_FN(op), \
-                                             _STATUS_PRINTER, _STATUS_PRINTER)) {                \
-      _RETURN_IF_FATAL(fatal);                                                                   \
-    }                                                                                            \
+#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                    \
+  do {                                                                                            \
+    if (!zxtest::internal::EvaluateStatusCondition(                                               \
+            actual, expected, #actual, #expected, {.filename = file, .line_number = line}, fatal, \
+            _DESC_PROVIDER(desc, __VA_ARGS__), _COMPARE_FN(op), _STATUS_PRINTER,                  \
+            _STATUS_PRINTER)) {                                                                   \
+      _RETURN_IF_FATAL(fatal);                                                                    \
+    }                                                                                             \
   } while (0)
 
 #define _ASSERT_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, ...)        \

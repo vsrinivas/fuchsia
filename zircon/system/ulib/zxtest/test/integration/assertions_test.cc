@@ -1068,4 +1068,30 @@ TEST(ZxTestAssertionsTest, AssertNotStatusFailureFatal) {
   TEST_CHECKPOINT();
 }
 
+TEST(ZxTestAssertionsTest, AssertStatusValueMethod) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_STATUS aborted test on success.");
+  struct TestType {
+    zx_status_t status_value() const {
+      return ZX_OK;
+    }
+  };
+
+  TestType type;
+  EXPECT_OK(type, "EXPECT_OK equality failed.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionsTest, AssertStatusMethod) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_STATUS aborted test on success.");
+  struct TestType {
+    zx_status_t status() const {
+      return ZX_OK;
+    }
+  };
+
+  TestType type;
+  EXPECT_OK(type, "EXPECT_OK equality failed.");
+  TEST_CHECKPOINT();
+}
+
 }  // namespace
