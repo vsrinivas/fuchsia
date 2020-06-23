@@ -63,6 +63,15 @@ declare_args() {
 #   cgo (optional, default: true)
 #     If true, will support linking against C code. Set to false for
 #     pure Go code to support cross-compilation.
+#
+#   output_name (optional)
+#     The name of the binary that that will be generated.
+#     It defaults to the target name.
+#
+#   output_dir (optional)
+#     Directory that the resulting binary should be placed in.
+#     See: `gn help output_dir`
+#
 template("go_build") {
   assert(defined(invoker.gopackages),
          "gopackages must be defined for $target_name")
@@ -83,6 +92,12 @@ template("go_build") {
   }
   if (carchive) {
     output_name = "${output_name}.a"
+  }
+
+  if (defined(invoker.output_dir)) {
+    output_dir = invoker.output_dir
+  } else {
+    output_dir = root_out_dir
   }
 
   # Variants don't have any effect for Go builds. But dependencies from other
@@ -125,6 +140,7 @@ template("go_build") {
       }
     }
     not_needed(invoker, "*")
+    not_needed([ "output_dir" ])
   } else {
     define_sdk_target = defined(invoker.sdk_category) &&
                         invoker.sdk_category != "excluded" && !is_test
@@ -132,10 +148,10 @@ template("go_build") {
     # Strip target binaries and binaries that are included in the SDK.
     use_strip = (is_fuchsia || define_sdk_target) && !carchive
 
-    output_path = "${root_out_dir}/${output_name}"
+    output_path = "${output_dir}/${output_name}"
     if (use_strip) {
-      output_path = "${root_out_dir}/exe.unstripped/${output_name}"
-      stripped_output_path = "${root_out_dir}/${output_name}"
+      output_path = "${output_dir}/exe.unstripped/${output_name}"
+      stripped_output_path = "${output_dir}/${output_name}"
     }
 
     action(main_target_name) {
