@@ -14,6 +14,10 @@ use scoped_task;
 use std::any::Any;
 use std::env;
 use std::ffi::{CStr, CString};
+use std::fs::File;
+use std::io::Write;
+use std::os::unix::io::FromRawFd;
+use std::panic;
 use std::sync::mpsc;
 use std::thread;
 
@@ -53,20 +57,31 @@ fn main() {
         zx::Time::INFINITE.sleep();
     }
 
+    // This test deliberately races threads where one is shutting down the process.
+    // This can lead to panics when trying to use the libstd buffered I/O, so we
+    // print logs and non-fatal errors directly to stdout instead.
+    let mut stdout = unsafe { File::from_raw_fd(1) };
+
     let mut _process = None;
     let (sender, receiver) = mpsc::channel();
     if opts.spawn {
         if opts.spawn_on_thread {
+            // Install scoped_task hook second so it runs before the above hook.
             scoped_task::install_hooks();
+
             thread::spawn(move || {
                 let proc = spawn_sleeper(opts);
                 if let Err(e) = &proc {
-                    println!("{:#}", e);
+                    let _ = writeln!(stdout, "{:#}", e);
                     assert!(!opts.wait, "spawning should always succeed with --wait");
                 }
 
-                println!("process spawned");
-                sender.send(()).unwrap();
+                let _ = writeln!(stdout, "process spawned");
+                if let Err(e) = sender.send(()) {
+                    let _ = writeln!(stdout, "{:#}", e);
+                    assert!(!opts.wait, "sending should always succeed with --wait");
+                }
+
                 zx::Time::INFINITE.sleep();
             });
         } else {
