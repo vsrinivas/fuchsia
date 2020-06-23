@@ -110,4 +110,4 @@ TODO
 <!-- xrefs -->
 [layout-attribute]: /docs/reference/fidl/language/attributes.md#layout
 [llcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
-[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
+[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/overview.md

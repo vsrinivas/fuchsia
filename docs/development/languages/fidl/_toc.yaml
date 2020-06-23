@@ -28,8 +28,6 @@ toc:
       path: /docs/development/languages/fidl/tutorials/hlcpp/topics/services.md
     - title: "Testing protocols"
       path: /docs/development/languages/fidl/tutorials/hlcpp/topics/testing.md
-  - title: "HLCPP"
-    path: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
   - title: "LLCPP"
     path: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
   - title: "Rust"

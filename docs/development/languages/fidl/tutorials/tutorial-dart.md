@@ -185,20 +185,5 @@ You should see the output:
 ***** Response: hello
 ```
 
-## `Echo` across languages and runtimes
-As a final exercise, you can now mix & match `Echo` clients and servers as you
-see fit. Let's try having the Dart client call the C++ server (from the
-[C++ version of the example][tutorial-cpp]).
-
-```sh
-$ fx shell run fuchsia-pkg://fuchsia.com/echo_client_async_dart#meta/echo_client_async_dart.cmx \
-    --server fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx
-```
-
-The Dart client will start the C++ server and connect to it. `EchoString()`
-works across language boundaries, all that matters is that the ABI defined by
-FIDL is observed on both ends.
-
 <!-- xrefs -->
 [concepts]: /docs/concepts/fidl/overview.md
-[tutorial-cpp]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
