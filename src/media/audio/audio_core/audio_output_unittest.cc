@@ -10,7 +10,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
-// #include "src/media/audio/lib/clock/testing/clock_test.h"
+#include "src/media/audio/lib/effects_loader/testing/test_effects.h"
 
 namespace media::audio {
 namespace {
@@ -129,6 +129,12 @@ class TestAudioOutput : public AudioOutput {
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
+  void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
+    float* floats = reinterpret_cast<float*>(buffer);
+    for (size_t i = 0; i < num_samples; ++i) {
+      ASSERT_FLOAT_EQ(expected_sample, floats[i]);
+    }
+  }
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
   std::shared_ptr<TestAudioOutput> audio_output_ = std::make_shared<TestAudioOutput>(
       &threading_model(), &context().device_manager(), &context().link_matrix());
@@ -284,6 +290,99 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
   audio_output_->Process();
   EXPECT_EQ(frames_finished, kNumBuffers * kBufferFrames);
   EXPECT_EQ(mix_jobs, kNumBuffers);
+}
+
+TEST_F(AudioOutputTest, UpdateOutputPipeline) {
+  // Setup test.
+  auto test_effects = testing::TestEffectsModule::Open();
+  test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  const Format kDefaultFormat =
+      Format::Create(fuchsia::media::AudioStreamType{
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value();
+  const TimelineFunction kDefaultTransform = TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs()));
+
+  // Create OutputPipeline with no effects and verify output.
+  static PipelineConfig default_config = PipelineConfig::Default();
+  static VolumeCurve default_volume_curve =
+      VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+  audio_output_->SetupMixTask(default_config, default_volume_curve, 128, kDefaultTransform);
+  auto pipeline = audio_output_->output_pipeline();
+
+  {
+    auto buf = pipeline->ReadLock(zx::time(0), 0, 48);
+
+    EXPECT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 0u);
+    EXPECT_EQ(buf->length().Floor(), 48u);
+    CheckBuffer(buf->payload(), 0.0, 96);
+  }
+
+  // Update OutputPipeline with effects and verify output.
+  PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::BACKGROUND,
+          },
+      .effects =
+          {
+              {
+                  .lib_name = "test_effects.so",
+                  .effect_name = "add_1.0",
+                  .instance_name = "",
+                  .effect_config = "",
+              },
+          },
+      .inputs = {{
+          .name = "mix",
+          .input_streams =
+              {
+                  RenderUsage::MEDIA,
+                  RenderUsage::SYSTEM_AGENT,
+                  RenderUsage::INTERRUPTION,
+                  RenderUsage::COMMUNICATION,
+              },
+          .effects =
+              {
+                  {
+                      .lib_name = "test_effects.so",
+                      .effect_name = "add_1.0",
+                      .instance_name = "",
+                      .effect_config = "",
+                  },
+              },
+          .output_rate = 48000,
+          .output_channels = 2,
+      }},
+      .output_rate = 48000,
+      .output_channels = 2,
+  };
+  auto pipeline_config = PipelineConfig(root);
+  auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+
+  bool updated_pipeline_config = false;
+  auto promise = audio_output_->UpdatePipelineConfig(pipeline_config, volume_curve);
+  context().threading_model().FidlDomain().executor()->schedule_task(
+      promise.then([&updated_pipeline_config](fit::result<void, zx_status_t>& result) {
+        updated_pipeline_config = true;
+      }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(updated_pipeline_config);
+  pipeline = audio_output_->output_pipeline();
+
+  {
+    auto buf = pipeline->ReadLock(zx::time(0), 0, 48);
+    EXPECT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 0u);
+    EXPECT_EQ(buf->length().Floor(), 48u);
+    CheckBuffer(buf->payload(), 2.0, 96);
+  }
 }
 
 }  // namespace

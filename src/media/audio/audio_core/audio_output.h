@@ -28,6 +28,10 @@ class AudioOutput : public AudioDevice {
   fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override;
 
+  // Replace the existing PipelineConfig and VolumeCurve with new versions, for the sake of tuning.
+  fit::promise<void, zx_status_t> UpdatePipelineConfig(const PipelineConfig& config,
+                                                       const VolumeCurve& volume_curve) override;
+
   OutputPipeline* output_pipeline() const { return pipeline_.get(); }
 
  protected:
@@ -122,6 +126,7 @@ class AudioOutput : public AudioDevice {
   zx::duration min_lead_time_;
   zx::time next_sched_time_mono_;
   bool next_sched_time_known_;
+  size_t max_block_size_frames_;
 
   std::unique_ptr<OutputPipeline> pipeline_;
 };

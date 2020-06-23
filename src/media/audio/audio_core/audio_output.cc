@@ -171,6 +171,7 @@ std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
 void AudioOutput::SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
                                size_t max_block_size_frames,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
+  max_block_size_frames_ = max_block_size_frames;
   pipeline_ = CreateOutputPipeline(config, volume_curve, max_block_size_frames,
                                    device_reference_clock_to_fractional_frame, reference_clock());
 }
@@ -192,6 +193,21 @@ fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioOutput::Update
     }
     completer.complete_error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
   });
+  return bridge.consumer.promise();
+}
+
+fit::promise<void, zx_status_t> AudioOutput::UpdatePipelineConfig(const PipelineConfig& config,
+                                                                  const VolumeCurve& volume_curve) {
+  fit::bridge<void, zx_status_t> bridge;
+  mix_domain().PostTask(
+      [this, config, volume_curve, completer = std::move(bridge.completer)]() mutable {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+        auto snapshot = pipeline_->ReferenceClockToFractionalFrames();
+        pipeline_ = CreateOutputPipeline(config, volume_curve, max_block_size_frames_,
+                                         snapshot.timeline_function, reference_clock());
+        FX_DCHECK(pipeline_);
+        completer.complete_ok();
+      });
   return bridge.consumer.promise();
 }
 

@@ -21,6 +21,7 @@
 #include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/link_matrix.h"
+#include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/wakeup_event.h"
 
@@ -74,6 +75,12 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   virtual fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) {
     return fit::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+  }
+
+  // Sets the output pipeline to the given pipeline config.
+  virtual fit::promise<void, zx_status_t> UpdatePipelineConfig(const PipelineConfig& config,
+                                                               const VolumeCurve& volume_curve) {
+    return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Accessor set gain. Limits the gain command to what the hardware allows, and
