@@ -16,17 +16,13 @@
 #include <fbl/mutex.h>
 #include <fs/managed_vfs.h>
 #include <fs/vfs_types.h>
-#include <unittest/unittest.h>
-
-#include "filesystems.h"
+#include <zxtest/zxtest.h>
 
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-bool TestConnectionRights() {
-  BEGIN_TEST;
-
+TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
@@ -44,7 +40,10 @@ bool TestConnectionRights() {
     fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
     zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) override {
       zx::vmo vmo;
-      ASSERT_EQ(zx::vmo::create(4096, 0u, &vmo), ZX_OK);
+      zx_status_t status = zx::vmo::create(4096, 0u, &vmo);
+      EXPECT_EQ(status, ZX_OK);
+      if (status != ZX_OK)
+        return status;
       *out_vmo = std::move(vmo);
       *out_size = 0;
       return ZX_OK;
@@ -112,12 +111,6 @@ bool TestConnectionRights() {
   });
   sync_completion_wait(&completion, zx::time::infinite().get());
   loop.Shutdown();
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(GetBufferTest)
-RUN_TEST(TestConnectionRights)
-END_TEST_CASE(GetBufferTest)
