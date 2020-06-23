@@ -121,7 +121,7 @@ static UserCopyCaptureFaultsResult _arch_copy_to_from_user(void* dst, const void
 
   Thread* thr = Thread::Current::Get();
   X64CopyToFromUserRet ret =
-      _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, FAULT_RETURN_MASK);
+      _x86_copy_to_or_from_user(dst, src, len, &thr->arch().page_fault_resume, FAULT_RETURN_MASK);
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
 
   // In the DO_FAULTS version of this expansion, do not make any attempt to

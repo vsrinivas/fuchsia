@@ -829,7 +829,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       // processor.
       x86_percpu* percpu = x86_get_percpu();
       vmwrite(static_cast<uint64_t>(VmcsField16::HOST_TR_SELECTOR), TSS_SELECTOR(percpu->cpu_num));
-      vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_FS_BASE), thread->arch_.fs_base);
+      vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_FS_BASE), thread->arch().fs_base);
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_GS_BASE), read_msr(X86_MSR_IA32_GS_BASE));
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_TR_BASE),
               reinterpret_cast<uint64_t>(&percpu->default_tss));
@@ -856,14 +856,14 @@ void Vcpu::RestoreGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
   DEBUG_ASSERT(arch_ints_disabled());
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
-    x86_extended_register_save_state(thread->arch_.extended_register_state);
+    x86_extended_register_save_state(thread->arch().extended_register_state);
     x86_extended_register_restore_state(guest_extended_registers_.get());
     return;
   }
 
   // Save host state.
   vmx_state_.host_state.xcr0 = x86_xgetbv(0);
-  x86_extended_register_save_state(thread->arch_.extended_register_state);
+  x86_extended_register_save_state(thread->arch().extended_register_state);
 
   // Restore guest state.
   x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
@@ -876,7 +876,7 @@ void Vcpu::SaveGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
     x86_extended_register_save_state(guest_extended_registers_.get());
-    x86_extended_register_restore_state(thread->arch_.extended_register_state);
+    x86_extended_register_restore_state(thread->arch().extended_register_state);
     return;
   }
 
@@ -887,7 +887,7 @@ void Vcpu::SaveGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
 
   // Restore host state.
   x86_xsetbv(0, vmx_state_.host_state.xcr0);
-  x86_extended_register_restore_state(thread->arch_.extended_register_state);
+  x86_extended_register_restore_state(thread->arch().extended_register_state);
 }
 
 // Injects an interrupt into the guest, if there is one pending.

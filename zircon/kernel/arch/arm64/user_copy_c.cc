@@ -25,7 +25,7 @@ zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
   // reading user-controlled addresses.
   internal::confine_user_address_range(reinterpret_cast<vaddr_t*>(&src), &len, kUserAspaceTop);
 
-  return _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch_.data_fault_resume,
+  return _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch().data_fault_resume,
                           ARM64_USER_COPY_DO_FAULTS)
       .status;
 }
@@ -35,7 +35,7 @@ zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch_.data_fault_resume,
+  return _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch().data_fault_resume,
                           ARM64_USER_COPY_DO_FAULTS)
       .status;
 }
@@ -53,7 +53,7 @@ UserCopyCaptureFaultsResult arch_copy_from_user_capture_faults(void* dst, const 
   internal::confine_user_address_range(reinterpret_cast<vaddr_t*>(&src), &len, kUserAspaceTop);
 
   Arm64UserCopyRet ret =
-      _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch_.data_fault_resume,
+      _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch().data_fault_resume,
                        ARM64_USER_COPY_CAPTURE_FAULTS);
 
   // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the
@@ -72,7 +72,7 @@ UserCopyCaptureFaultsResult arch_copy_to_user_capture_faults(void* dst, const vo
   }
 
   Arm64UserCopyRet ret =
-      _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch_.data_fault_resume,
+      _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch().data_fault_resume,
                        ARM64_USER_COPY_CAPTURE_FAULTS);
 
   // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the

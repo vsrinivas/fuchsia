@@ -10,7 +10,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_CURRENT_THREAD_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_CURRENT_THREAD_H_
 
-static inline Thread* arch_get_current_thread(void) {
+static inline Thread* arch_get_current_thread() {
   /* Read directly from gs, rather than via x86_get_percpu()->current_thread,
    * so that this is atomic.  Otherwise, we could context switch between the
    * read of percpu from gs and the read of the current_thread pointer, and

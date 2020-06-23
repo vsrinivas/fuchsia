@@ -10,7 +10,7 @@
 #include <lib/arch/intrin.h>
 
 /* use the cpu local thread context pointer to store current_thread */
-static inline Thread* arch_get_current_thread(void) {
+static inline Thread* arch_get_current_thread() {
 #ifdef __clang__
   // Clang with --target=aarch64-fuchsia -mtp=el1 reads
   // TPIDR_EL1 for __builtin_thread_pointer (instead of the usual

@@ -25,7 +25,7 @@ static_assert(sizeof(arm64_context_switch_frame) % 16 == 0, "");
 
 void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // zero out the entire arch state
-  t->arch_ = {};
+  t->arch() = {};
 
   // create a default stack frame on the stack
   vaddr_t stack_top = t->stack_.top();
@@ -42,17 +42,17 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // This is really a global (boot-time) constant value.
   // But it's stored in each thread struct to satisfy the
   // compiler ABI (TPIDR_EL1 + ZX_TLS_STACK_GUARD_OFFSET).
-  t->arch_.stack_guard = Thread::Current::Get()->arch_.stack_guard;
+  t->arch().stack_guard = Thread::Current::Get()->arch().stack_guard;
 
   // set the stack pointer
-  t->arch_.sp = (vaddr_t)frame;
+  t->arch().sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
   DEBUG_ASSERT(IS_ALIGNED(t->stack_.unsafe_top(), 16));
-  t->arch_.unsafe_sp = t->stack_.unsafe_top();
+  t->arch().unsafe_sp = t->stack_.unsafe_top();
 #endif
 #if __has_feature(shadow_call_stack)
   // The shadow call stack grows up.
-  t->arch_.shadow_call_sp = reinterpret_cast<uintptr_t*>(t->stack_.shadow_call_base());
+  t->arch().shadow_call_sp = reinterpret_cast<uintptr_t*>(t->stack_.shadow_call_base());
 #endif
 }
 
@@ -61,11 +61,11 @@ __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
   // pointer points to now (set up in start.S) into the real thread
   // structure being set up now.
   Thread* fake = Thread::Current::Get();
-  t->arch_.stack_guard = fake->arch_.stack_guard;
-  t->arch_.unsafe_sp = fake->arch_.unsafe_sp;
+  t->arch().stack_guard = fake->arch().stack_guard;
+  t->arch().unsafe_sp = fake->arch().unsafe_sp;
 
   // make sure the thread saves a copy of the current cpu pointer
-  t->arch_.current_percpu_ptr = arm64_read_percpu_ptr();
+  t->arch().current_percpu_ptr = arm64_read_percpu_ptr();
 
   // Force the thread pointer immediately to the real struct.  This way
   // our callers don't have to avoid safe-stack code or risk losing track
@@ -78,19 +78,19 @@ __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
 }
 
 __NO_SAFESTACK static void arm64_tpidr_save_state(Thread* thread) {
-  thread->arch_.tpidr_el0 = __arm_rsr64("tpidr_el0");
-  thread->arch_.tpidrro_el0 = __arm_rsr64("tpidrro_el0");
+  thread->arch().tpidr_el0 = __arm_rsr64("tpidr_el0");
+  thread->arch().tpidrro_el0 = __arm_rsr64("tpidrro_el0");
 }
 
 __NO_SAFESTACK static void arm64_tpidr_restore_state(Thread* thread) {
-  __arm_wsr64("tpidr_el0", thread->arch_.tpidr_el0);
-  __arm_wsr64("tpidrro_el0", thread->arch_.tpidrro_el0);
+  __arm_wsr64("tpidr_el0", thread->arch().tpidr_el0);
+  __arm_wsr64("tpidrro_el0", thread->arch().tpidrro_el0);
 }
 
 __NO_SAFESTACK static void arm64_debug_restore_state(Thread* thread) {
   // If the thread has debug state, then install it, replacing the current contents.
-  if (unlikely(thread->arch_.track_debug_state)) {
-    arm64_write_hw_debug_regs(&thread->arch_.debug_state);
+  if (unlikely(thread->arch().track_debug_state)) {
+    arm64_write_hw_debug_regs(&thread->arch().debug_state);
   }
 }
 
@@ -119,7 +119,7 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // Set the current cpu pointer in the new thread's structure so it can be
   // restored on exception entry. Use the direct variable instead of the accessor here
   // to avoid an extra function call to a non SAFESTACK accessor function
-  newthread->arch_.current_percpu_ptr = __arm64_percpu;
+  newthread->arch().current_percpu_ptr = __arm64_percpu;
 
   if (likely(!oldthread->IsUserStateSavedLocked())) {
     arm64_fpu_context_switch(oldthread, newthread);
@@ -154,17 +154,17 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // Call into the inner assembly context switch routine to save integer registers on the old stack
   // and swap to the new stack.
 #if __has_feature(shadow_call_stack)
-  arm64_context_switch(&oldthread->arch_.sp, newthread->arch_.sp, &oldthread->arch_.shadow_call_sp,
-                       newthread->arch_.shadow_call_sp);
+  arm64_context_switch(&oldthread->arch().sp, newthread->arch().sp,
+                       &oldthread->arch().shadow_call_sp, newthread->arch().shadow_call_sp);
 #else
-  arm64_context_switch(&oldthread->arch_.sp, newthread->arch_.sp);
+  arm64_context_switch(&oldthread->arch().sp, newthread->arch().sp);
 #endif
 }
 
 void arch_dump_thread(Thread* t) {
   if (t->state_ != THREAD_RUNNING) {
     dprintf(INFO, "\tarch: ");
-    dprintf(INFO, "sp 0x%lx\n", t->arch_.sp);
+    dprintf(INFO, "sp 0x%lx\n", t->arch().sp);
   }
 }
 
@@ -178,7 +178,7 @@ void* arch_thread_get_blocked_fp(Thread* t) {
 }
 
 arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread) {
-  return reinterpret_cast<struct arm64_context_switch_frame*>(thread->arch_.sp);
+  return reinterpret_cast<struct arm64_context_switch_frame*>(thread->arch().sp);
 }
 
 __NO_SAFESTACK void arch_save_user_state(Thread* thread) {
@@ -195,13 +195,13 @@ __NO_SAFESTACK void arch_restore_user_state(Thread* thread) {
 
 void arch_set_suspended_general_regs(struct Thread* thread, GeneralRegsSource source,
                                      void* iframe) {
-  DEBUG_ASSERT(thread->arch_.suspended_general_regs == nullptr);
+  DEBUG_ASSERT(thread->arch().suspended_general_regs == nullptr);
   DEBUG_ASSERT(iframe != nullptr);
   DEBUG_ASSERT_MSG(source == GeneralRegsSource::Iframe, "invalid source %u\n",
                    static_cast<uint32_t>(source));
-  thread->arch_.suspended_general_regs = static_cast<iframe_t*>(iframe);
+  thread->arch().suspended_general_regs = static_cast<iframe_t*>(iframe);
 }
 
 void arch_reset_suspended_general_regs(struct Thread* thread) {
-  thread->arch_.suspended_general_regs = nullptr;
+  thread->arch().suspended_general_regs = nullptr;
 }

@@ -293,7 +293,7 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr %#x, iss %#x\n",
           iframe->elr, is_user, far, esr, iss);
 
-  uint64_t dfr = Thread::Current::Get()->arch_.data_fault_resume;
+  uint64_t dfr = Thread::Current::Get()->arch().data_fault_resume;
   if (unlikely(dfr && !BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before ARM64_DFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
@@ -546,8 +546,8 @@ bool arch_install_exception_context(Thread* thread, const arch_exception_context
   }
 
   arch_set_suspended_general_regs(thread, GeneralRegsSource::Iframe, context->frame);
-  thread->arch_.debug_state.esr = context->esr;
-  thread->arch_.debug_state.far = context->far;
+  thread->arch().debug_state.esr = context->esr;
+  thread->arch().debug_state.far = context->far;
   return true;
 }
 

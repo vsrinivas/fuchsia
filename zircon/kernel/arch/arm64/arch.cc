@@ -143,7 +143,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
 #endif
   arm64_secondary_sp_list[i].mpid = mpid;
   arm64_secondary_sp_list[i].sp = sp;
-  arm64_secondary_sp_list[i].stack_guard = Thread::Current::Get()->arch_.stack_guard;
+  arm64_secondary_sp_list[i].stack_guard = Thread::Current::Get()->arch().stack_guard;
   arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
   arm64_secondary_sp_list[i].shadow_call_sp = shadow_call_sp;
 
@@ -235,10 +235,10 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
 
 void arch_late_init_percpu(void) {
   bool disable_spec_mitigations = gCmdline.GetBool("kernel.arm64.disable_spec_mitigations",
-                                                  /*default_value=*/false);
+                                                   /*default_value=*/false);
 
-  arm64_read_percpu_ptr()->should_invalidate_bp_on_context_switch = !disable_spec_mitigations &&
-    arm64_uarch_needs_spectre_v2_mitigation();
+  arm64_read_percpu_ptr()->should_invalidate_bp_on_context_switch =
+      !disable_spec_mitigations && arm64_uarch_needs_spectre_v2_mitigation();
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {

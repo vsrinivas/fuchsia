@@ -33,11 +33,11 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch_.suspended_general_regs == nullptr) {
+  if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  arm64_iframe_t* in = thread->arch_.suspended_general_regs;
+  arm64_iframe_t* in = thread->arch().suspended_general_regs;
   DEBUG_ASSERT(in);
 
   static_assert(sizeof(in->r) == sizeof(out->r), "");
@@ -46,7 +46,7 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
   out->sp = in->usp;
   out->pc = in->elr;
   out->cpsr = in->spsr & kUserVisibleFlags;
-  out->tpidr = thread->arch_.tpidr_el0;
+  out->tpidr = thread->arch().tpidr_el0;
 
   return ZX_OK;
 }
@@ -58,11 +58,11 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch_.suspended_general_regs == nullptr) {
+  if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  arm64_iframe_t* out = thread->arch_.suspended_general_regs;
+  arm64_iframe_t* out = thread->arch().suspended_general_regs;
   DEBUG_ASSERT(out);
 
   static_assert(sizeof(out->r) == sizeof(in->r), "");
@@ -71,7 +71,7 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
   out->usp = in->sp;
   out->elr = in->pc;
   out->spsr = (out->spsr & ~kUserVisibleFlags) | (in->cpsr & kUserVisibleFlags);
-  thread->arch_.tpidr_el0 = in->tpidr;
+  thread->arch().tpidr_el0 = in->tpidr;
 
   return ZX_OK;
 }
@@ -83,10 +83,10 @@ zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* 
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch_.suspended_general_regs == nullptr) {
+  if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  arm64_iframe_t* regs = thread->arch_.suspended_general_regs;
+  arm64_iframe_t* regs = thread->arch().suspended_general_regs;
 
   const bool mdscr_ss_enable = !!(regs->mdscr & kMdscrSSMask);
   const bool spsr_ss_enable = !!(regs->spsr & kSSMaskSPSR);
@@ -106,10 +106,10 @@ zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_st
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch_.suspended_general_regs == nullptr) {
+  if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  arm64_iframe_t* regs = thread->arch_.suspended_general_regs;
+  arm64_iframe_t* regs = thread->arch().suspended_general_regs;
   if (*in) {
     regs->mdscr |= kMdscrSSMask;
     regs->spsr |= kSSMaskSPSR;
@@ -135,7 +135,7 @@ zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* ou
 
   DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
-  const fpstate* in = &thread->arch_.fpstate;
+  const fpstate* in = &thread->arch().fpstate;
   out->fpcr = in->fpcr;
   out->fpsr = in->fpsr;
   for (int i = 0; i < 32; i++) {
@@ -151,7 +151,7 @@ zx_status_t arch_set_vector_regs(Thread* thread, const zx_thread_state_vector_re
 
   DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
-  fpstate* out = &thread->arch_.fpstate;
+  fpstate* out = &thread->arch().fpstate;
   out->fpcr = in->fpcr;
   out->fpsr = in->fpsr;
   for (int i = 0; i < 32; i++) {
@@ -176,18 +176,18 @@ zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out)
 
   // HW breakpoints.
   for (size_t i = 0; i < out->hw_bps_count; i++) {
-    out->hw_bps[i].dbgbcr = thread->arch_.debug_state.hw_bps[i].dbgbcr;
-    out->hw_bps[i].dbgbvr = thread->arch_.debug_state.hw_bps[i].dbgbvr;
+    out->hw_bps[i].dbgbcr = thread->arch().debug_state.hw_bps[i].dbgbcr;
+    out->hw_bps[i].dbgbvr = thread->arch().debug_state.hw_bps[i].dbgbvr;
   }
 
   // Watchpoints.
   for (size_t i = 0; i < out->hw_wps_count; i++) {
-    out->hw_wps[i].dbgwcr = thread->arch_.debug_state.hw_wps[i].dbgwcr;
-    out->hw_wps[i].dbgwvr = thread->arch_.debug_state.hw_wps[i].dbgwvr;
+    out->hw_wps[i].dbgwcr = thread->arch().debug_state.hw_wps[i].dbgwcr;
+    out->hw_wps[i].dbgwvr = thread->arch().debug_state.hw_wps[i].dbgwvr;
   }
 
-  out->esr = thread->arch_.debug_state.esr;
-  out->far = thread->arch_.debug_state.far;
+  out->esr = thread->arch().debug_state.esr;
+  out->far = thread->arch().debug_state.far;
 
   return ZX_OK;
 }
@@ -222,18 +222,18 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
   // meaning that the debug HW state will be cleared almost immediatelly.
   // This should always be there.
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (!thread->arch_.suspended_general_regs) {
+  if (!thread->arch().suspended_general_regs) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   bool hw_debug_needed = (active_breakpoints > 0) || (active_watchpoints > 0);
 
   arm64_set_debug_state_for_thread(thread, hw_debug_needed);
-  state.esr = thread->arch_.debug_state.esr;
-  state.far = thread->arch_.debug_state.far;
+  state.esr = thread->arch().debug_state.esr;
+  state.far = thread->arch().debug_state.far;
 
-  thread->arch_.track_debug_state = true;
-  thread->arch_.debug_state = state;
+  thread->arch().track_debug_state = true;
+  thread->arch().debug_state = state;
 
   return ZX_OK;
 }

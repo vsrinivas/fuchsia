@@ -127,7 +127,7 @@ static void x86_debug_handler(x86_iframe_t* frame) {
   Thread* thread = Thread::Current::Get();
 
   // We save the current state so that exception handlers can check what kind of exception it was.
-  x86_read_debug_status(&thread->arch_.debug_state.dr6);
+  x86_read_debug_status(&thread->arch().debug_state.dr6);
 
   // NOTE: a HW breakpoint exception can also represent a single step.
   // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
@@ -136,10 +136,10 @@ static void x86_debug_handler(x86_iframe_t* frame) {
     // doesn't automatically do it.
     //
     // After this point, any exception handler that reads DR6 won't see the single step bit active.
-    X86_DBG_STATUS_BD_SET(&thread->arch_.debug_state.dr6, 0);
-    X86_DBG_STATUS_BS_SET(&thread->arch_.debug_state.dr6, 0);
-    X86_DBG_STATUS_BT_SET(&thread->arch_.debug_state.dr6, 0);
-    x86_write_debug_status(thread->arch_.debug_state.dr6);
+    X86_DBG_STATUS_BD_SET(&thread->arch().debug_state.dr6, 0);
+    X86_DBG_STATUS_BS_SET(&thread->arch().debug_state.dr6, 0);
+    X86_DBG_STATUS_BT_SET(&thread->arch().debug_state.dr6, 0);
+    x86_write_debug_status(thread->arch().debug_state.dr6);
 
     return;
   }
@@ -290,7 +290,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
 
   /* Check if the page fault handler should be skipped. It is skipped if there's a page_fault_resume
    * address and the highest bit is 0. */
-  uint64_t pfr = Thread::Current::Get()->arch_.page_fault_resume;
+  uint64_t pfr = Thread::Current::Get()->arch().page_fault_resume;
   if (unlikely(pfr && !BIT_SET(pfr, X86_PFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before X86_PFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel

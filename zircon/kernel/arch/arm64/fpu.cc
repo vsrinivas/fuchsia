@@ -24,7 +24,7 @@
 static inline bool is_fpu_enabled(uint64_t cpacr) { return !!(BITS(cpacr, 21, 20) != 0); }
 
 static void arm64_fpu_load_regs(Thread* t) {
-  struct fpstate* fpstate = &t->arch_.fpstate;
+  struct fpstate* fpstate = &t->arch().fpstate;
 
   LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name_, fpstate);
 
@@ -52,7 +52,7 @@ static void arm64_fpu_load_regs(Thread* t) {
 }
 
 __NO_SAFESTACK static void arm64_fpu_save_regs(Thread* t) {
-  struct fpstate* fpstate = &t->arch_.fpstate;
+  struct fpstate* fpstate = &t->arch().fpstate;
 
   LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name_, fpstate);
 
@@ -88,7 +88,7 @@ __NO_SAFESTACK static void arm64_fpu_save_regs(Thread* t) {
 __NO_SAFESTACK static bool use_lazy_fpu_restore(Thread* t) {
   // The number 8 here was selected by measuring |fp_restore_count| running
   // a particular workload.
-  return (t->arch_.fp_restore_count < 8u);
+  return (t->arch().fp_restore_count < 8u);
 }
 
 __NO_SAFESTACK void arm64_fpu_save_state(Thread* t) {
@@ -167,7 +167,7 @@ void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
   Thread* t = Thread::Current::Get();
   if (likely(t)) {
     DEBUG_ASSERT(use_lazy_fpu_restore(t));
-    t->arch_.fp_restore_count++;
+    t->arch().fp_restore_count++;
     arm64_fpu_load_regs(t);
   }
 }

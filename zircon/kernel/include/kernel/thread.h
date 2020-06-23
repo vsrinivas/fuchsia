@@ -39,6 +39,11 @@ class OwnedWaitQueue;
 class ThreadDispatcher;
 struct vmm_aspace;
 
+// These forward declarations are needed so that Thread can friend
+// them before they are defined.
+static inline Thread* arch_get_current_thread();
+static inline void arch_set_current_thread(Thread*);
+
 // When blocking this enum indicates the kind of resource ownership that is being waited for
 // that is causing the block.
 enum class ResourceOwnership {
@@ -675,7 +680,14 @@ struct Thread {
   SchedulerState& scheduler_state() { return scheduler_state_; }
   const SchedulerState& scheduler_state() const { return scheduler_state_; }
 
+  arch_thread& arch() { return arch_; }
+
  private:
+  // The architecture-specific methods for getting and setting the
+  // current thread may need to see Thread's arch_ member via offsetof.
+  friend inline Thread* arch_get_current_thread();
+  friend inline void arch_set_current_thread(Thread*);
+
   // OwnedWaitQueues manipulate wait queue state.
   friend class OwnedWaitQueue;
 
@@ -744,9 +756,11 @@ struct Thread {
   uint64_t user_tid_;
   uint64_t user_pid_;
 
-  // architecture stuff
+ private:
+  // Architecture-specific stuff.
   struct arch_thread arch_;
 
+ public:
   KernelStack stack_;
 
   // entry point
