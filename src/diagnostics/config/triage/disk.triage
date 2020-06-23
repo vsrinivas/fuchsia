@@ -1,64 +1,114 @@
 {
-  select: {
-    total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
-    used: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes"
-  },
-  eval: {
-    ratio: "used / (total + 0.0)",
-    disk98: "ratio > 0.98"
-  },
-  act: {
-    disk_full: {
-      trigger: "disk98",
-      print: "Disk is >98% full"
-    }
-  },
-  test: {
-    is_full: {
-      yes: [
-        "disk_full"
-      ],
-      no: [],
-      inspect: [
-        {
-          path: "archivist.cmx",
-          contents: {
-            root: {
-              data_stats: {
-                global_data: {
-                  stats: {
-                    total_bytes: 100,
-                    used_bytes: 99
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]
+    select: {
+        total_old: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
+        used_old: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes",
+        total: "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
+        used: "INSPECT:bootstrap/fshost:root/data_stats/stats:used_bytes",
     },
-    not_full: {
-      yes: [],
-      no: [
-        "disk_full"
-      ],
-      inspect: [
-        {
-          path: "archivist.cmx",
-          contents: {
-            root: {
-              data_stats: {
-                global_data: {
-                  stats: {
-                    total_bytes: 100,
-                    used_bytes: 98
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]
-    }
-  }
+    eval: {
+        ratio: "used / total",
+        disk98: "ratio > 0.98",
+        ratio_old: "used_old / total_old",
+        disk98_old: "ratio_old > 0.98",
+    },
+    act: {
+        disk_full: {
+            trigger: "disk98",
+            print: "Disk is >98% full",
+        },
+        disk_full_old: {
+            trigger: "disk98_old",
+            print: "Disk is >98% full",
+        },
+    },
+    test: {
+        is_full_old: {
+            yes: [
+                "disk_full_old",
+            ],
+            no: [],
+            inspect: [
+                {
+                    path: "archivist.cmx",
+                    contents: {
+                        root: {
+                            data_stats: {
+                                global_data: {
+                                    stats: {
+                                        total_bytes: 100,
+                                        used_bytes: 99,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+        },
+        not_full_old: {
+            yes: [],
+            no: [
+                "disk_full_old",
+            ],
+            inspect: [
+                {
+                    path: "archivist.cmx",
+                    contents: {
+                        root: {
+                            data_stats: {
+                                global_data: {
+                                    stats: {
+                                        total_bytes: 100,
+                                        used_bytes: 98,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+        },
+        is_full: {
+            yes: [
+                "disk_full",
+            ],
+            no: [],
+            inspect: [
+                {
+                    moniker: "bootstrap/fshost",
+                    payload: {
+                        root: {
+                            data_stats: {
+                                stats: {
+                                    total_bytes: 100,
+                                    used_bytes: 99,
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+        },
+        not_full: {
+            yes: [],
+            no: [
+                "disk_full",
+            ],
+            inspect: [
+                {
+                    moniker: "bootstrap/fshost",
+                    payload: {
+                        root: {
+                            data_stats: {
+                                stats: {
+                                    total_bytes: 100,
+                                    used_bytes: 98,
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+        },
+    },
 }
