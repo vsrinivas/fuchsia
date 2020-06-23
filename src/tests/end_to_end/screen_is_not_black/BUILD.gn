@@ -59,9 +59,9 @@ dart_test("screen_is_not_black_test") {
   environments = _ENVIRONMENTS
 }
 
-# Same as above, except doesn't attempt to start basemgr.  For use in
+# Same as above, except doesn't attempt to start basemgr. For use in
 # environments where basemgr is not available nor required to take a
-# screenshot.
+# screenshot. For example, workstation, which uses Session Framework.
 dart_test("screen_is_not_black_no_basemgr_test") {
   sources = [ "screen_is_not_black_test.dart" ]
 

@@ -37,17 +37,9 @@ cache_package_labels += [
   "//src/power:battery",
 ]
 
-universe_package_labels -= [
-  # Workstation needs the "yes basemgr" test, see below.
-  # The test below is included with terminal.gni.
-  "//src/tests/end_to_end/screen_is_not_black:no_basemgr_test",
-]
-
 universe_package_labels += [
   "//examples/fidl:tests",
 
-  # The "yes basemgr" test.
-  "//src/tests/end_to_end/screen_is_not_black:test",
   "//src/ui/examples:bouncing_ball",
   "//src/ui/examples:spinning_square_view",
 ]
