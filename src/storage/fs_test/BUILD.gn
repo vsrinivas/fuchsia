@@ -45,6 +45,7 @@ shared_library("fs_test") {
   ]
   public_deps = [
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs-management",
@@ -147,6 +148,24 @@ fuchsia_component("directory-tests") {
   ]
 }
 
+executable("dot_dot") {
+  testonly = true
+  sources = [ "dot_dot.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("dot-dot-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/dot-dot.cml"
+  deps = [
+    ":dot_dot",
+    ":manifests",
+  ]
+}
+
 executable("overflow") {
   testonly = true
   sources = [ "overflow.cc" ]
@@ -191,6 +210,7 @@ fuchsia_test_package("fs-tests") {
     ":attr-tests",
     ":clone-tests",
     ":directory-tests",
+    ":dot-dot-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
@@ -229,6 +249,7 @@ action("manifests") {
     "$target_gen_dir/attr.cml",
     "$target_gen_dir/clone.cml",
     "$target_gen_dir/directory.cml",
+    "$target_gen_dir/dot-dot.cml",
     "$target_gen_dir/max-file.cml",
     "$target_gen_dir/overflow.cml",
     "$target_gen_dir/read-write.cml",
