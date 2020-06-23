@@ -209,48 +209,48 @@ ok 8 host_x64/fake_tests (4.378744489s)
 [
 		{
 			"display_name": "TestParseEmpty",
-			"suite_name": "TestParseEmpty",
-			"case_name": "",
+			"suite_name": "",
+			"case_name": "TestParseEmpty",
 			"status": "Pass",
 			"duration_nanos": 10000000,
 			"format": "Go"
 		},
 		{
 			"display_name": "TestParseInvalid",
-			"suite_name": "TestParseInvalid",
-			"case_name": "",
+			"suite_name": "",
+			"case_name": "TestParseInvalid",
 			"status": "Pass",
 			"duration_nanos": 20000000,
 			"format": "Go"
 		},
 		{
 			"display_name": "TestParseGoogleTest",
-			"suite_name": "TestParseGoogleTest",
-			"case_name": "",
+			"suite_name": "",
+			"case_name": "TestParseGoogleTest",
 			"status": "Fail",
 			"duration_nanos": 3000000000,
 			"format": "Go"
 		},
 		{
 			"display_name": "TestFail",
-			"suite_name": "TestFail",
-			"case_name": "",
+			"suite_name": "",
+			"case_name": "TestFail",
 			"status": "Fail",
 			"duration_nanos": 0,
 			"format": "Go"
 		},
 		{
 			"display_name": "TestSkip",
-			"suite_name": "TestSkip",
-			"case_name": "",
+			"suite_name": "",
+			"case_name": "TestSkip",
 			"status": "Skip",
 			"duration_nanos": 0,
 			"format": "Go"
 		},
 		{
 			"display_name": "TestAdd",
-			"suite_name": "TestAdd",
-			"case_name": "",
+			"suite_name": "",
+			"case_name": "TestAdd",
 			"status": "Pass",
 			"duration_nanos": 0,
 			"format": "Go"
@@ -349,8 +349,8 @@ created by testing.(*T).Run
 [
 	{
 		"display_name": "TestReboot",
-		"suite_name": "TestReboot",
-		"case_name": "",
+		"suite_name": "",
+		"case_name": "TestReboot",
 		"status": "Fail",
 		"duration_nanos": 1000000000,
 		"format": "Go"

@@ -18,25 +18,25 @@ var (
 
 func parseGoTest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
-	var suiteName string
+	var preambleName string
 	for _, line := range lines {
 		var matched bool
 		line := string(line)
 		m := goTestPreamblePattern.FindStringSubmatch(line)
 		if m != nil {
-			// Will be overridden below by the panic matcher
-			// or the test case matcher if present.
-			suiteName = m[1]
+			preambleName = m[1]
 			continue
 		}
 		var status TestCaseStatus
 		var displayName string
+		var suiteName string
 		var caseName string
 		var duration time.Duration
 		m = goTestPanicPattern.FindStringSubmatch(line)
 		if m != nil {
 			status = Fail
-			displayName = suiteName
+			caseName = preambleName
+			displayName = preambleName
 			duration, _ = time.ParseDuration(m[1])
 			matched = true
 		}
@@ -50,11 +50,12 @@ func parseGoTest(lines [][]byte) []TestCaseResult {
 			case "SKIP":
 				status = Skip
 			}
-			suiteName = m[2]
-			caseName = m[3]
-			if caseName == "" {
-				displayName = suiteName
+			if m[3] == "" {
+				caseName = m[2]
+				displayName = caseName
 			} else {
+				suiteName = m[2]
+				caseName = m[3]
 				displayName = fmt.Sprintf("%s/%s", suiteName, caseName)
 			}
 			duration, _ = time.ParseDuration(m[4])
