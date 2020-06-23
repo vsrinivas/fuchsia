@@ -1314,7 +1314,8 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
   }
   tx_seq_max = (swheader & SDPCM_WINDOW_MASK) >> SDPCM_WINDOW_SHIFT;
   if ((uint8_t)(tx_seq_max - bus->tx_seq) > 0x40) {
-    BRCMF_ERR("seq %d: max tx seq number error", rx_seq);
+    BRCMF_ERR("tx_seq_max is %d, bus->tx_seq is %d: max tx seq number error", tx_seq_max,
+              bus->tx_seq);
     tx_seq_max = bus->tx_seq + 2;
   }
   bus->tx_max = tx_seq_max;
