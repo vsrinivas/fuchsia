@@ -172,6 +172,10 @@ void SimInterface::OnStopConf(const wlanif_stop_confirm_t* resp) {
   stats_.stop_confirmations.push_back(*resp);
 }
 
+void SimInterface::Query(wlanif_query_info_t* out_info) {
+  if_impl_ops_->query(if_impl_ctx_, out_info);
+}
+
 void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
                               const wlan_channel_t& channel) {
   // This should only be performed on a Client interface

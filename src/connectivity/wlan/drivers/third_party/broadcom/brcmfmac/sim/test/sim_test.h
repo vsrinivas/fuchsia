@@ -94,6 +94,9 @@ class SimInterface {
   virtual void OnRelayCapturedFrame(const wlanif_captured_frame_result_t* result) {}
   virtual void OnDataRecv(const void* data, size_t data_size, uint32_t flags) {}
 
+  // Query an interface
+  void Query(wlanif_query_info_t* out_info);
+
   // Start an assocation with a fake AP. We can use these for subsequent association events, but
   // not interleaved association events (which I doubt are terribly useful, anyway). Note that for
   // the moment only non-authenticated associations are supported.
