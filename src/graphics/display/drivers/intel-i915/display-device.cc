@@ -51,8 +51,8 @@ DisplayDevice::~DisplayDevice() {
   }
   if (display_ref_) {
     fbl::AutoLock lock(&display_ref_->mtx);
-    device_remove_deprecated(backlight_device_);
     display_ref_->display_device = nullptr;
+    device_async_remove(backlight_device_);
   }
 }
 
