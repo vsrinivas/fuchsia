@@ -47,15 +47,15 @@
 // instead.
 //
 inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint signal_mask,
-                                               ResourceOwnership reason) TA_REQ(thread_lock) {
+                                               ResourceOwnership reason,
+                                               Interruptible interruptible) TA_REQ(thread_lock) {
   Thread* current_thread = Thread::Current::Get();
 
   if (deadline.when() != ZX_TIME_INFINITE && deadline.when() <= current_time()) {
     return ZX_ERR_TIMED_OUT;
   }
 
-  if (current_thread->wait_queue_state_.interruptible_ == Interruptible::Yes &&
-      (unlikely(current_thread->signals_ & ~signal_mask))) {
+  if (interruptible == Interruptible::Yes && (unlikely(current_thread->signals_ & ~signal_mask))) {
     if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
       return ZX_ERR_INTERNAL_INTR_KILLED;
     } else if (current_thread->signals_ & THREAD_SIGNAL_SUSPEND) {
@@ -63,11 +63,15 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
     }
   }
 
+  WaitQueueState& state = current_thread->wait_queue_state_;
+
+  state.interruptible_ = interruptible;
+
   collection_.Insert(current_thread);
   current_thread->state_ =
       (reason == ResourceOwnership::Normal) ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
-  current_thread->wait_queue_state_.blocking_wait_queue_ = this;
-  current_thread->wait_queue_state_.blocked_status_ = ZX_OK;
+  state.blocking_wait_queue_ = this;
+  state.blocked_status_ = ZX_OK;
 
   return ZX_OK;
 }
@@ -91,6 +95,8 @@ inline zx_status_t WaitQueue::BlockEtcPostamble(const Deadline& deadline) TA_REQ
   if (deadline.when() != ZX_TIME_INFINITE) {
     timer.Cancel();
   }
+
+  current_thread->wait_queue_state_.interruptible_ = Interruptible::No;
 
   return current_thread->wait_queue_state_.blocked_status_;
 }

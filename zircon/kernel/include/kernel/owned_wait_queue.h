@@ -129,7 +129,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // permitted to become the new owner of the wait_queue.  Any existing owner
   // will be replaced with no owner in this situation.
   zx_status_t BlockAndAssignOwner(const Deadline& deadline, Thread* new_owner,
-                                  ResourceOwnership resource_ownership) TA_REQ(thread_lock);
+                                  ResourceOwnership resource_ownership, Interruptible interruptible)
+      TA_REQ(thread_lock);
 
   // Wake the up to specified number of threads from the wait queue and then
   // handle the ownership bookkeeping based on what the Hook told us to do.

@@ -391,10 +391,8 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
 
     wait_tracer.FutexWait(futex_id, new_owner);
 
-    current_core_thread->wait_queue_state_.interruptible_ = Interruptible::Yes;
-    result =
-        futex_ref->waiters_.BlockAndAssignOwner(deadline, new_owner, ResourceOwnership::Normal);
-    current_core_thread->wait_queue_state_.interruptible_ = Interruptible::No;
+    result = futex_ref->waiters_.BlockAndAssignOwner(deadline, new_owner, ResourceOwnership::Normal,
+                                                     Interruptible::Yes);
 
     // Do _not_ allow the PendingOpRef helper to release our pending op
     // reference.  Having just woken up, either the thread which woke us will

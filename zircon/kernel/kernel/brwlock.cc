@@ -20,13 +20,16 @@ template <BrwLockEnablePi PI>
 void BrwLock<PI>::Block(bool write) {
   zx_status_t ret;
 
+  auto reason = write ? ResourceOwnership::Normal : ResourceOwnership::Reader;
+
   if constexpr (PI == BrwLockEnablePi::Yes) {
     ret = wait_.BlockAndAssignOwner(Deadline::infinite(),
-                                    state_.writer_.load(ktl::memory_order_relaxed),
-                                    write ? ResourceOwnership::Normal : ResourceOwnership::Reader);
+                                    state_.writer_.load(ktl::memory_order_relaxed), reason,
+                                    Interruptible::No);
   } else {
-    ret = write ? wait_.Block(Deadline::infinite()) : wait_.BlockReadLock(Deadline::infinite());
+    ret = wait_.BlockEtc(Deadline::infinite(), 0, reason, Interruptible::No);
   }
+
   if (unlikely(ret < ZX_OK)) {
     panic(
         "BrwLock<%d>::Block: Block returned with error %d lock %p, thr %p, "

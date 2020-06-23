@@ -115,6 +115,27 @@ static void init_thread_lock_state(Thread* t) {
 #endif
 }
 
+void WaitQueueState::Block(Interruptible interruptible, zx_status_t status) {
+  blocked_status_ = status;
+  interruptible_ = interruptible;
+  Scheduler::Block();
+  interruptible_ = Interruptible::No;
+}
+
+void WaitQueueState::UnblockIfInterruptible(Thread* thread, zx_status_t status) {
+  if (interruptible_ == Interruptible::Yes) {
+    WaitQueue::UnblockThread(thread, status);
+  }
+}
+
+bool WaitQueueState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) {
+  if (interruptible_ == Interruptible::Yes) {
+    blocked_status_ = status;
+    return Scheduler::Unblock(thread);
+  }
+  return false;
+}
+
 // Default constructor/destructor.
 Thread::Thread() {}
 
@@ -207,8 +228,6 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   t->arg_ = arg;
   t->state_ = THREAD_INITIAL;
   t->signals_ = 0;
-  t->wait_queue_state_.blocked_status_ = ZX_OK;
-  t->wait_queue_state_.interruptible_ = Interruptible::No;
 
   t->retcode_ = 0;
 
@@ -357,17 +376,11 @@ zx_status_t Thread::Suspend() {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptible
-      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
-        WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_RETRY);
-      }
+      wait_queue_state_.UnblockIfInterruptible(this, ZX_ERR_INTERNAL_INTR_RETRY);
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
-        wait_queue_state_.blocked_status_ = ZX_ERR_INTERNAL_INTR_RETRY;
-
-        local_resched = Scheduler::Unblock(this);
-      }
+      local_resched = wait_queue_state_.UnsleepIfInterruptible(this, ZX_ERR_INTERNAL_INTR_RETRY);
       break;
   }
 
@@ -405,7 +418,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
 
     // wait for the thread to die
     if (state_ != THREAD_DEATH) {
-      zx_status_t status = retcode_wait_queue_.Block(deadline);
+      zx_status_t status = retcode_wait_queue_.Block(deadline, Interruptible::No);
       if (status != ZX_OK) {
         return status;
       }
@@ -614,17 +627,11 @@ void Thread::Kill() {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptible
-      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
-        WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_KILLED);
-      }
+      wait_queue_state_.UnblockIfInterruptible(this, ZX_ERR_INTERNAL_INTR_KILLED);
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
-        wait_queue_state_.blocked_status_ = ZX_ERR_INTERNAL_INTR_KILLED;
-
-        local_resched = Scheduler::Unblock(this);
-      }
+      local_resched = wait_queue_state_.UnsleepIfInterruptible(this, ZX_ERR_INTERNAL_INTR_KILLED);
       break;
     case THREAD_DEATH:
       // thread is already dead
@@ -1035,11 +1042,8 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
   timer.Set(deadline, thread_sleep_handler, current_thread);
 
   current_thread->state_ = THREAD_SLEEPING;
-  current_thread->wait_queue_state_.blocked_status_ = ZX_OK;
 
-  current_thread->wait_queue_state_.interruptible_ = interruptible;
-  Scheduler::Block();
-  current_thread->wait_queue_state_.interruptible_ = Interruptible::No;
+  current_thread->wait_queue_state_.Block(interruptible, ZX_OK);
 
   // always cancel the timer, since we may be racing with the timer tick on other cpus
   timer.Cancel();

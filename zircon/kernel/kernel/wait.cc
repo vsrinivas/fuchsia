@@ -246,10 +246,11 @@ const Thread* WaitQueue::Peek() const { return collection_.Peek(); }
  * queue and then blocks until some other thread wakes the queue
  * up again.
  *
- * @param  deadline    The time at which to abort the wait
- * @param  slack       The amount of time it is acceptable to deviate from deadline
- * @param  signal_mask Mask of existing signals to ignore
- * @param  read_lock   True if blocking for a shared resource
+ * @param  deadline       The time at which to abort the wait
+ * @param  slack          The amount of time it is acceptable to deviate from deadline
+ * @param  signal_mask    Mask of existing signals to ignore
+ * @param  reason         Reason for the block
+ * @param  interruptible  Whether the block can be interrupted
  *
  * If the deadline is zero, this function returns immediately with
  * ZX_ERR_TIMED_OUT.  If the deadline is ZX_TIME_INFINITE, this function
@@ -260,7 +261,8 @@ const Thread* WaitQueue::Peek() const { return collection_.Peek(); }
  * value specified when the queue was woken by wait_queue_wake_one().
  */
 zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
-                                ResourceOwnership reason) TA_REQ(thread_lock) {
+                                ResourceOwnership reason, Interruptible interruptible)
+    TA_REQ(thread_lock) {
   Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT_MAGIC_CHECK(this);
@@ -277,7 +279,7 @@ zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
     ValidateQueue();
   }
 
-  zx_status_t res = BlockEtcPreamble(deadline, signal_mask, reason);
+  zx_status_t res = BlockEtcPreamble(deadline, signal_mask, reason, interruptible);
   if (res != ZX_OK) {
     return res;
   }

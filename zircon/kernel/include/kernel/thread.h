@@ -81,7 +81,8 @@ struct WaitQueueSublistTrait {
 using WaitQueueSublist = fbl::DoublyLinkedListCustomTraits<Thread*, WaitQueueSublistTrait>;
 
 // Encapsulation of all the per-thread state for the wait queue data structure.
-struct WaitQueueState {
+class WaitQueueState {
+ public:
   WaitQueueState() = default;
 
   // Disallow copying.
@@ -90,6 +91,11 @@ struct WaitQueueState {
 
   bool IsHead() const { return heads_node_.InContainer(); }
   bool InWaitQueue() const { return IsHead() || sublist_node_.InContainer(); }
+
+  void Block(Interruptible interruptible, zx_status_t status) TA_REQ(thread_lock);
+
+  void UnblockIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+  bool UnsleepIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
 
   // If blocked, a pointer to the WaitQueue the Thread is on.
   WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
@@ -119,6 +125,14 @@ struct WaitQueueState {
 
   // Return code if woken up abnormally from suspend, sleep, or block.
   zx_status_t blocked_status_ = ZX_OK;
+
+  // TODO(54383) More of WaitQueueState should be private than this.
+ private:
+  // WaitQueues can directly manipulate the contents of the per-thread state.
+  friend class WaitQueue;
+
+  // Dumping routines are allowed to see inside us.
+  friend void dump_thread_locked(Thread* t, bool full_dump);
 
   // Are we allowed to be interrupted on the current thing we're blocked/sleeping on?
   Interruptible interruptible_ = Interruptible::No;
@@ -190,25 +204,21 @@ class WaitQueue {
   // The returned status is whatever the caller of WaitQueue::Wake_*() specifies.
   // A deadline other than Deadline::infinite() will abort at the specified time
   // and return ZX_ERR_TIMED_OUT. A deadline in the past will immediately return.
-  zx_status_t Block(const Deadline& deadline) TA_REQ(thread_lock) {
-    return BlockEtc(deadline, 0, ResourceOwnership::Normal);
+  zx_status_t Block(const Deadline& deadline, Interruptible interruptible) TA_REQ(thread_lock) {
+    return BlockEtc(deadline, 0, ResourceOwnership::Normal, interruptible);
   }
 
   // Block on a wait queue with a zx_time_t-typed deadline.
-  zx_status_t Block(zx_time_t deadline) TA_REQ(thread_lock) {
-    return BlockEtc(Deadline::no_slack(deadline), 0, ResourceOwnership::Normal);
+  zx_status_t Block(zx_time_t deadline, Interruptible interruptible) TA_REQ(thread_lock) {
+    return BlockEtc(Deadline::no_slack(deadline), 0, ResourceOwnership::Normal, interruptible);
   }
 
   // Block on a wait queue, ignoring existing signals in |signal_mask|.
   // The returned status is whatever the caller of WaitQueue::Wake_*() specifies, or
   // ZX_ERR_TIMED_OUT if the deadline has elapsed or is in the past.
   // This will never timeout when called with a deadline of Deadline::infinite().
-  zx_status_t BlockEtc(const Deadline& deadline, uint signal_mask, ResourceOwnership reason)
-      TA_REQ(thread_lock);
-
-  zx_status_t BlockReadLock(const Deadline& deadline) TA_REQ(thread_lock) {
-    return BlockEtc(deadline, 0, ResourceOwnership::Reader);
-  }
+  zx_status_t BlockEtc(const Deadline& deadline, uint signal_mask, ResourceOwnership reason,
+                       Interruptible interruptible) TA_REQ(thread_lock);
 
   // Returns the current highest priority blocked thread on this wait queue, or
   // nullptr if no threads are blocked.
@@ -260,7 +270,8 @@ class WaitQueue {
   // WaitQueue::BlockEtc and OwnedWaitQueue::BlockAndAssignOwner to
   // share.
   inline zx_status_t BlockEtcPreamble(const Deadline& deadline, uint signal_mask,
-                                      ResourceOwnership reason) TA_REQ(thread_lock);
+                                      ResourceOwnership reason, Interruptible interuptible)
+      TA_REQ(thread_lock);
   inline zx_status_t BlockEtcPostamble(const Deadline& deadline) TA_REQ(thread_lock);
 
   // Dequeue the specified thread and set its blocked_status.  Do not actually

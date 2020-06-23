@@ -204,8 +204,8 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
     // proper queue owner as we block.
     Thread* cur_owner = holder_from_val(old_mutex_state);
     KTracer{}.KernelMutexBlock(this, cur_owner, wait_.Count() + 1);
-    zx_status_t ret =
-        wait_.BlockAndAssignOwner(Deadline::infinite(), cur_owner, ResourceOwnership::Normal);
+    zx_status_t ret = wait_.BlockAndAssignOwner(Deadline::infinite(), cur_owner,
+                                                ResourceOwnership::Normal, Interruptible::No);
 
     if (unlikely(ret < ZX_OK)) {
       // mutexes are not interruptible and cannot time out, so it

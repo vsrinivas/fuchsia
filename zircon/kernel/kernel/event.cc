@@ -52,15 +52,12 @@ Event::~Event() {
 
 zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interruptible,
                               uint signal_mask) {
-  Thread* current_thread = Thread::Current::Get();
   zx_status_t ret = ZX_OK;
 
   DEBUG_ASSERT(magic_ == kMagic);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-
-  current_thread->wait_queue_state_.interruptible_ = interruptible;
 
   if (result_ != kNotSignalled) {
     ret = result_;
@@ -72,10 +69,8 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interrupti
     }
   } else {
     /* unsignaled, block here */
-    ret = wait_.BlockEtc(deadline, signal_mask, ResourceOwnership::Normal);
+    ret = wait_.BlockEtc(deadline, signal_mask, ResourceOwnership::Normal, interruptible);
   }
-
-  current_thread->wait_queue_state_.interruptible_ = Interruptible::No;
 
   return ret;
 }

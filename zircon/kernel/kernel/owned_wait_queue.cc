@@ -517,7 +517,8 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
 }
 
 zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread* new_owner,
-                                                ResourceOwnership resource_ownership) {
+                                                ResourceOwnership resource_ownership,
+                                                Interruptible interruptible) {
   Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(magic() == kOwnedMagic);
@@ -532,7 +533,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
   // Perform the first half of the BlockEtc operation.  If this fails, then
   // the state of the actual wait queue is unchanged and we can just get out
   // now.
-  zx_status_t res = BlockEtcPreamble(deadline, 0u, resource_ownership);
+  zx_status_t res = BlockEtcPreamble(deadline, 0u, resource_ownership, interruptible);
   if (res != ZX_OK) {
     // There are only three reasons why the pre-wait operation should ever fail.
     //

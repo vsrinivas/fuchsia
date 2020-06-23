@@ -40,9 +40,5 @@ zx_status_t Semaphore::Wait(const Deadline& deadline) {
   // Wait in an interruptible state.  We will either be woken by a Post
   // operation, or by a timeout or signal.  Whatever happens, return the reason
   // the wait operation ended.
-  Thread* current_thread = Thread::Current::Get();
-  current_thread->wait_queue_state_.interruptible_ = Interruptible::Yes;
-  zx_status_t ret = waitq_.Block(deadline);
-  current_thread->wait_queue_state_.interruptible_ = Interruptible::No;
-  return ret;
+  return waitq_.Block(deadline, Interruptible::Yes);
 }
