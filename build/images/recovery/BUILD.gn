@@ -4,16 +4,10 @@
 
 import("//build/board.gni")
 import("//build/images/assemble_system.gni")
+import("//build/images/recovery/recovery_args.gni")
 import("//build/images/ta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
-
-declare_args() {
-  # List of binaries to include in the bootfs manifest for recovery. This
-  # overrides the option set by `bootfs_zircon_groups` so that only the requested
-  # binaries are included in the final image.
-  bootfs_allowlist_recovery = []
-}
 
 group("recovery") {
   testonly = true
