@@ -16,7 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("cmdline") {
-  testonly = true
+  output_name = "cmdline-test"
 
   sources = [ "args_parser_unittest.cc" ]
 
@@ -32,8 +32,7 @@ unittest_package("cmdline-package") {
 
   tests = [
     {
-      name = "cmdline"
-      dest = "cmdline-test"
+      name = "cmdline-test"
     },
   ]
 }
