@@ -18,6 +18,8 @@ __BEGIN_CDECLS
 void platform_debug_panic_start(void);
 void platform_dputs_thread(const char* str, size_t len);
 void platform_dputs_irq(const char* str, size_t len);
+// Returns 1 if a character was was retrieved, 0 if no character was retrieved,
+// and negative on error.
 int platform_dgetc(char* c, bool wait);
 static inline void platform_dputc(char c) { platform_dputs_thread(&c, 1); }
 

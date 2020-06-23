@@ -197,7 +197,7 @@ static int read_debug_line(const char** outbuffer, void* cookie) {
   for (;;) {
     /* loop until we get a char */
     int ci;
-    if ((ci = cgetchar()) < 0)
+    if ((ci = cgetchar()) <= 0)
       continue;
 
     char c = static_cast<char>(ci);
@@ -709,7 +709,7 @@ static void panic_puts(const char* str) {
 
 static int panic_getc(void) {
   char c;
-  if (platform_pgetc(&c, false) < 0) {
+  if (platform_pgetc(&c, false) <= 0) {
     return -1;
   } else {
     return c;

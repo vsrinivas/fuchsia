@@ -48,9 +48,18 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
   size_t idx = 0;
   for (; idx < max_len; ++idx) {
     char c;
-    int err = platform_dgetc(&c, true);
+    // Wait only on the first character.
+    // The API for this function can return any number of characters up to the supplied buffer
+    // length, however there is no notification mechanism for when there are bytes to read.
+    // Hence, we need to read at least one character or applications will be forced to spin poll.
+    // We avoid reading all the characters so that interactive applications can stay responsive
+    // without losing efficiency by being forced to read one character at a time.
+    bool wait = (idx == 0);
+    int err = platform_dgetc(&c, wait);
     if (err < 0) {
       return err;
+    } else if (err == 0) {
+      break;
     }
 
     if (c == '\r') {
