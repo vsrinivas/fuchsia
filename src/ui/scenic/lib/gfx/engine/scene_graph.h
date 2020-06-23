@@ -129,8 +129,10 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   // and (2) dispatch a FocusEvent to the clients that have gained and lost focus.
   void MaybeDispatchFidlFocusChainAndFocusEvents(const std::vector<zx_koid_t>& old_focus_chain);
 
-  // Dispatch current focus chain to the FocusChainListener.
+  // Dispatch current focus chain to all FocusChainListeners.
   void DispatchFocusChain();
+  // Dispatch current focus chain to a FocusChainListener.
+  void DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener);
 
   //
   // Fields
@@ -142,7 +144,8 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   ViewTreeUpdates view_tree_updates_;
 
   fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
-  fuchsia::ui::focus::FocusChainListenerPtr focus_chain_listener_;
+  uint64_t next_focus_chain_listener_id_ = 0;
+  std::map<uint64_t, fuchsia::ui::focus::FocusChainListenerPtr> focus_chain_listeners_;
 
   // Lifetime of ViewFocuserEndpoint is tied to owning Session's lifetime.
   // An early disconnect of ViewFocuserEndpoint is okay.

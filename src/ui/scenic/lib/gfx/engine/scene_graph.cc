@@ -106,9 +106,19 @@ ViewTree::FocusChangeStatus SceneGraph::RequestFocusChange(zx_koid_t requestor, 
 }
 
 void SceneGraph::Register(fidl::InterfaceHandle<FocusChainListener> focus_chain_listener) {
-  focus_chain_listener_.Bind(std::move(focus_chain_listener));
+  const uint64_t id = next_focus_chain_listener_id_++;
+  fuchsia::ui::focus::FocusChainListenerPtr new_listener;
+  new_listener.Bind(std::move(focus_chain_listener));
+  new_listener.set_error_handler([weak = weak_factory_.GetWeakPtr(), id](zx_status_t) {
+    if (weak) {
+      weak->focus_chain_listeners_.erase(id);
+    }
+  });
+  auto [ignore, success] = focus_chain_listeners_.emplace(id, std::move(new_listener));
+  FX_DCHECK(success);
+
   // Dispatch current chain on register.
-  DispatchFocusChain();
+  DispatchFocusChainTo(focus_chain_listeners_.at(id));
 }
 
 void SceneGraph::RegisterViewFocuser(SessionId session_id,
@@ -155,11 +165,17 @@ std::string FocusChainToString(const std::vector<zx_koid_t>& focus_chain) {
   return output.str();
 }
 
+void SceneGraph::DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener) {
+  FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
+  listener->OnFocusChange(view_tree_.CloneFocusChain(), std::move(callback));
+}
+
 void SceneGraph::DispatchFocusChain() {
   TRACE_DURATION("gfx", "SceneGraphFocusChainDispatch", "chain_depth",
                  view_tree_.focus_chain().size());
-  FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
-  focus_chain_listener_->OnFocusChange(view_tree_.CloneFocusChain(), std::move(callback));
+  for (auto& [id, listener] : focus_chain_listeners_) {
+    DispatchFocusChainTo(listener);
+  }
 }
 
 void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
@@ -176,9 +192,7 @@ void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
               << "\t Old focus chain: " << FocusChainToString(old_focus_chain) << std::endl
               << "\t New focus chain: " << FocusChainToString(new_focus_chain);
 
-  if (focus_chain_listener_) {
-    DispatchFocusChain();
-  }
+  DispatchFocusChain();
 
   const zx_time_t focus_time = dispatcher_clock_now();
   if (!old_focus_chain.empty()) {

@@ -111,8 +111,10 @@ class FocusChainRegisterTest : public scenic_impl::gfx::test::GfxSystemTest,
     }
   }
 
- private:
+ protected:
   FocusChainListenerRegistryPtr focus_chain_listener_registry_;
+
+ private:
   fidl::Binding<FocusChainListener> focus_chain_listener_;
   std::vector<FocusChain> observed_focus_chains_;
 };
@@ -507,6 +509,75 @@ TEST_F(FocusChainTest, EmptySceneTransitions) {
   });
 
   EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  ASSERT_TRUE(LastFocusChain());
+  EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
+}
+
+TEST_F(FocusChainTest, MultipleListeners) {
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);  // Initial focus chain on register.
+
+  class DummyListener : public FocusChainListener {
+   public:
+    DummyListener() : focus_chain_listener_(this) {}
+    // |fuchsia::ui::focus::FocusChainListener|
+    void OnFocusChange(FocusChain focus_chain, OnFocusChangeCallback callback) override {
+      ++num_focus_chains_received_;
+    }
+
+    fidl::Binding<FocusChainListener> focus_chain_listener_;
+    uint64_t num_focus_chains_received_ = 0;
+  };
+
+  DummyListener listener2;
+  fidl::InterfaceHandle<FocusChainListener> listener_handle;
+  listener2.focus_chain_listener_.Bind(listener_handle.NewRequest());
+  focus_chain_listener_registry_->Register(std::move(listener_handle));
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(listener2.num_focus_chains_received_, 1u);
+
+  struct RootClient : public SessionWrapper {
+    RootClient(scenic_impl::Scenic* scenic) : SessionWrapper(scenic) {}
+
+    std::unique_ptr<scenic::Scene> scene;
+  } some_session(scenic()), root_session(scenic());
+
+  some_session.RunNow([test = this, state = &some_session](
+                          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
+    // Merely creating a scene, without hooking it up to a compositor properly, should not
+    // trigger a focus change.
+    state->scene = std::make_unique<scenic::Scene>(session);
+    state->scene->AddChild(*session_anchor);
+
+    test->RequestToPresent(session);
+  });
+
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+
+  root_session.RunNow([test = this, state = &root_session](
+                          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
+    // Create a scene that is hooked up to a compositor. This set of
+    // commands should trigger the creation of a focus chain, with length 1.
+    scenic::Compositor compositor(session);
+    scenic::LayerStack layer_stack(session);
+    compositor.SetLayerStack(layer_stack);
+
+    scenic::Layer layer(session);
+    layer.SetSize(9 /*px*/, 9 /*px*/);
+    layer_stack.AddLayer(layer);
+    scenic::Renderer renderer(session);
+    layer.SetRenderer(renderer);
+    state->scene = std::make_unique<scenic::Scene>(session);
+    scenic::Camera camera(*state->scene);
+    renderer.SetCamera(camera);
+
+    state->scene->AddChild(*session_anchor);
+
+    test->RequestToPresent(session);
+  });
+
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(listener2.num_focus_chains_received_, 2u);
   ASSERT_TRUE(LastFocusChain());
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
 }
