@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    fidl::encoding::Decodable,
     fidl_fuchsia_media::*,
     fidl_fuchsia_mediacodec::*,
     fuchsia_stream_processors::*,
@@ -473,9 +474,9 @@ impl StreamProcessor {
             stream_lifetime_ordinal: Some(1),
             start_offset: Some(0),
             valid_length_bytes: Some(size as u32),
-            timestamp_ish: None,
             start_access_unit: Some(true),
             known_end_access_unit: Some(true),
+            ..Packet::new_empty()
         };
         write.processor.queue_input_packet(packet).map_err(fidl_error_to_io_error)?;
         // pick another buffer for the input cursor

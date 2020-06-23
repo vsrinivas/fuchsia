@@ -3,6 +3,7 @@ use crate::{buffer_set::*, elementary_stream::*};
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl::encoding::Decodable;
 use fidl_fuchsia_media::*;
 use fuchsia_stream_processors::*;
 use fuchsia_zircon as zx;
@@ -125,6 +126,7 @@ impl<'a, I: Iterator<Item = ElementaryStreamChunk>> InputPacketStream<I> {
             timestamp_ish: chunk.timestamp,
             start_access_unit: Some(chunk.start_access_unit),
             known_end_access_unit: Some(chunk.known_end_access_unit),
+            ..Packet::new_empty()
         }))
     }
 

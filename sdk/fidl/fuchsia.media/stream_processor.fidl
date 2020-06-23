@@ -7,8 +7,6 @@ library fuchsia.media;
 using fuchsia.sysmem;
 using zx;
 
-/// StreamBufferConstraints
-///
 /// This struct helps ensure that packet count and buffer space are sufficient
 /// to avoid major problems.  For example, a video decoder needs sufficient
 /// video frame buffers to hold all potential reference frames concurrently +
@@ -52,8 +50,6 @@ table StreamBufferConstraints {
     /// stale, so there would be no benefit to disallowing even values).
     1: uint64 buffer_constraints_version_ordinal;
 
-    /// default_settings
-    ///
     /// These settings are "default" settings, not "recommended" settings.
     ///
     /// These "default" settings can be passed to SetInputBufferSettings() /
@@ -806,8 +802,6 @@ table Packet {
     ///    (not crashing, not treating as an error).
     6: uint64 timestamp_ish;
 
-    /// start_access_unit
-    ///
     /// If promise_separate_access_units_on_input (TODO(dustingreen): or any
     /// similar mode for output) is true, this bool must be set appropriately
     /// depending on whether byte 0 _is_ or _is not_ the start of an access
@@ -820,8 +814,6 @@ table Packet {
     /// ignored.
     7: bool start_access_unit;
 
-    /// known_end_access_unit
-    ///
     /// A client is never required to set this boolean to true.
     ///
     /// If promise_separate_access_units_on_input is true, for input data, this
@@ -834,6 +826,11 @@ table Packet {
     /// If promise_separate_access_units_on_input is false, this boolean is
     /// ignored.
     8: bool known_end_access_unit;
+
+    /// Used for compressed video packets. If not present should be assumed to
+    /// be unknown. If false, indicates the packet is not part of a key frame. If
+    /// true, indicates the packet is part of a key frame.
+    9: bool key_frame;
 };
 
 /// Overview of operation:
