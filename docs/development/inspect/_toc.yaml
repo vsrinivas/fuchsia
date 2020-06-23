@@ -14,8 +14,6 @@ toc:
   path: /docs/development/inspect/quickstart.md
 - title: "Health check"
   path: /docs/development/inspect/health.md
-- title: "Inspect API"
-  path: /docs/development/inspect/gsw-inspect.md
 - title: "Iquery command"
   path: /docs/development/inspect/iquery.md
 - title: "Inspect file format"

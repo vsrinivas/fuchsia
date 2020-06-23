@@ -7,13 +7,12 @@ Inspection](README.md) depending on your needs:
 
 **I want to learn more about Inspect concepts**
 
-Read [Getting Started with Inspect](gsw-inspect.md) and the
-[README](README.md).
+Read the [README](README.md).
 
 **I want to know how to use the iquery tool**
 
 Read the [iquery manual](iquery.md). For detailed examples of usage,
-see [Getting Started with Inspect](gsw-inspect.md).
+see the [Codelab](codelab/codelab.md).
 
 This document provides a simplified example of iquery below.
 

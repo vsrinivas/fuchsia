@@ -11,7 +11,7 @@ iquery [--format <format>] <command> [<args>]
 ## Description
 
 `iquery` is a utility program for inspecting component nodes exposed over the
-[Inspect API](gsw-inspect.md). It accepts a set of options and a command with
+[Inspect API](README.md). It accepts a set of options and a command with
 its respective options.
 
 ## Options
