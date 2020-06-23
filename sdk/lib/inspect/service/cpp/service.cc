@@ -119,7 +119,7 @@ fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> MakeTreeHandler(
                              [binding_ptr = bindings.get()](InspectTreeService* ptr) {
                                binding_ptr->RemoveBinding(ptr);
                              }),
-                         std::move(request));
+                         std::move(request), dispatcher);
   };
 }
 
