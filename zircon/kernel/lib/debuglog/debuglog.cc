@@ -132,6 +132,10 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, const void* data_ptr,
   {
     AutoSpinLock lock{&this->lock};
 
+    if (this->shutdown_requested_) {
+      return ZX_ERR_BAD_STATE;
+    }
+
     // Discard records at tail until there is enough
     // space for the new record.
     while ((this->head - this->tail) > (DLOG_SIZE - wiresize)) {
@@ -186,6 +190,11 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, const void* data_ptr,
   }();
 
   return ZX_OK;
+}
+
+void DLog::shutdown() {
+    AutoSpinLock lock{&this->lock};
+    this->shutdown_requested_ = true;
 }
 
 // TODO: support reading multiple messages at a time
@@ -441,6 +450,12 @@ static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
 
 zx_status_t dlog_shutdown(zx_time_t deadline) {
   dprintf(INFO, "Shutting down debuglog\n");
+
+  // It is critical to shutdown the |DLog| to prevent new records from being inserted because the
+  // |dumper_thread| will continue to read records and drain the queue even after shutdown is
+  // requested.  If we don't stop the flow up stream, then a sufficiently speedy write could prevent
+  // the |dumper_thread| from terminating.
+  DLOG.shutdown();
 
   // Shutdown the notifier thread first. Ordering is important because the notifier thread is
   // responsible for passing log records to the dumper.

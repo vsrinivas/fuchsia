@@ -7,9 +7,12 @@
 #ifndef ZIRCON_KERNEL_LIB_DEBUGLOG_DEBUGLOG_INTERNAL_H_
 #define ZIRCON_KERNEL_LIB_DEBUGLOG_DEBUGLOG_INTERNAL_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
+
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
+#include <ktl/atomic.h>
 
 #define DLOG_SIZE (128u * 1024u)
 #define DLOG_MASK (DLOG_SIZE - 1u)
@@ -22,11 +25,16 @@ struct DLog {
 
   zx_status_t write(uint32_t severity, uint32_t flags, const void* data_ptr, size_t len);
 
+  // Mark this DLog as being shutdown.  Once called, subsequent |write| operations will fail.
+  void shutdown();
+
   SpinLock lock;
 
   size_t head TA_GUARDED(lock) = 0;
   size_t tail TA_GUARDED(lock) = 0;
 
+  // Indicates that the system has begun to panic.  When true, |write| will immediately return an
+  // error.
   bool panic = false;
 
   AutounsignalEvent event;
@@ -35,6 +43,11 @@ struct DLog {
   fbl::DoublyLinkedList<DlogReader*> readers;
 
   uint8_t data[DLOG_SIZE]{0};
+
+ private:
+  // Indicates that this |DLog| object is being shutdown.  When true, |write| will immediately
+  // return an error.
+  bool shutdown_requested_ TA_GUARDED(lock) = false;
 };
 
 #endif  // ZIRCON_KERNEL_LIB_DEBUGLOG_DEBUGLOG_INTERNAL_H_

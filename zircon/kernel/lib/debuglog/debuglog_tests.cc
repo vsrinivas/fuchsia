@@ -147,6 +147,35 @@ bool log_reader_rollout() {
   END_TEST;
 }
 
+// Test that write fails with an error once the |DLog| has been shutdown.
+bool shutdown() {
+  BEGIN_TEST;
+
+  fbl::AllocChecker ac;
+  ktl::unique_ptr<DLog> log = ktl::make_unique<DLog>(&ac);
+  ASSERT_TRUE(ac.check());
+
+  // Write one message and see that it succeeds.
+  char msg[] = "Message!";
+  ASSERT_EQ(ZX_OK, log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg)));
+
+  // Now ask the DLog to shutdown, write another, see that it fails.
+  log->shutdown();
+  ASSERT_EQ(ZX_ERR_BAD_STATE, log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg)));
+
+  // See that there is only one message in the DLog.
+  DlogReader reader;
+  reader.InitializeForTest(log.get());
+  size_t got;
+  uint8_t read_buf[DLOG_MAX_RECORD];
+  ASSERT_EQ(ZX_OK, reader.Read(0, read_buf, sizeof(read_buf), &got));
+  ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
+  ASSERT_EQ(ZX_ERR_SHOULD_WAIT, reader.Read(0, read_buf, sizeof(read_buf), &got));
+  reader.Disconnect();
+
+  END_TEST;
+}
+
 }  // namespace
 
 #define DEBUGLOG_UNITTEST(fname) UNITTEST(#fname, fname)
@@ -155,4 +184,5 @@ UNITTEST_START_TESTCASE(debuglog_tests)
 DEBUGLOG_UNITTEST(log_format)
 DEBUGLOG_UNITTEST(log_wrap)
 DEBUGLOG_UNITTEST(log_reader_rollout)
+DEBUGLOG_UNITTEST(shutdown)
 UNITTEST_END_TESTCASE(debuglog_tests, "debuglog_tests", "Debuglog test")
