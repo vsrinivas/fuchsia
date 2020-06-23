@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 library fuchsia.developer.bridge;
-using fuchsia.developer.remotecontrol as rc;
 using fuchsia.device;
+using fuchsia.net;
 
 struct TargetIp {
-    rc.IpAddress ip;
+    fuchsia.net.IpAddress ip;
     uint32 scope_id;
 };
 

@@ -14,6 +14,8 @@ if (host_toolchain == current_toolchain) {
     deps = [
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+      "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+      "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/hoist",

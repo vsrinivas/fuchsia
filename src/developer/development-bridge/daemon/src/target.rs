@@ -12,9 +12,10 @@ use {
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::{
-        IdentifyHostError, InterfaceAddress, IpAddress, Ipv4Address, Ipv6Address,
-        RemoteControlMarker, RemoteControlProxy,
+        IdentifyHostError, RemoteControlMarker, RemoteControlProxy,
     },
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
+    fidl_fuchsia_net_stack::InterfaceAddress,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::lock::{Mutex, MutexGuard},
@@ -655,10 +656,8 @@ mod test {
                                 .context("sending testing error response")
                                 .unwrap();
                         } else {
-                            let result: Vec<rcs::InterfaceAddress> = vec![rcs::InterfaceAddress {
-                                ip_address: rcs::IpAddress::Ipv4(rcs::Ipv4Address {
-                                    addr: [192, 168, 0, 1],
-                                }),
+                            let result: Vec<InterfaceAddress> = vec![InterfaceAddress {
+                                ip_address: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
                                 prefix_len: 24,
                             }];
                             let nodename = if nodename_response.len() == 0 {

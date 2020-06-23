@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
     fidl_fuchsia_diagnostics::Selector,
-    fidl_fuchsia_io as io, fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
+    fidl_fuchsia_io as io, fidl_fuchsia_net_stack as fnetstack,
     fidl_fuchsia_test_manager as ftest_manager, fuchsia_zircon as zx,
     futures::prelude::*,
     std::rc::Rc,
@@ -162,7 +162,7 @@ impl RemoteControlService {
         self: &Rc<Self>,
         responder: rcs::RemoteControlIdentifyHostResponder,
     ) -> Result<(), Error> {
-        let ilist = match self.netstack_proxy.list_interfaces().await {
+        let mut ilist = match self.netstack_proxy.list_interfaces().await {
             Ok(l) => l,
             Err(e) => {
                 log::error!("Getting interface list failed: {}", e);
@@ -173,24 +173,10 @@ impl RemoteControlService {
             }
         };
 
-        let mut result: Vec<rcs::InterfaceAddress> = vec![];
-
-        for int in ilist.iter() {
-            for addr in int.properties.addresses.iter() {
-                let iaddr = rcs::InterfaceAddress {
-                    ip_address: match addr.ip_address {
-                        fnet::IpAddress::Ipv4(i) => {
-                            rcs::IpAddress::Ipv4(rcs::Ipv4Address { addr: i.addr })
-                        }
-                        fnet::IpAddress::Ipv6(i) => {
-                            rcs::IpAddress::Ipv6(rcs::Ipv6Address { addr: i.addr })
-                        }
-                    },
-                    prefix_len: addr.prefix_len,
-                };
-                result.push(iaddr);
-            }
-        }
+        let result = ilist
+            .iter_mut()
+            .flat_map(|int| int.properties.addresses.drain(..))
+            .collect::<Vec<fnetstack::InterfaceAddress>>();
 
         let nodename = match self.name_provider_proxy.get_device_name().await {
             Ok(result) => match result {
@@ -228,8 +214,8 @@ mod tests {
     use {
         super::*, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_hardware_ethernet::MacAddress, fidl_fuchsia_io::NodeMarker,
-        fuchsia_async as fasync, fuchsia_zircon as zx, selectors::parse_selector,
-        service_discovery::PathEntry, std::path::PathBuf,
+        fidl_fuchsia_net as fnet, fuchsia_async as fasync, fuchsia_zircon as zx,
+        selectors::parse_selector, service_discovery::PathEntry, std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
@@ -346,13 +332,13 @@ mod tests {
         let addrs = resp.addresses.unwrap();
         assert_eq!(addrs.len(), 2);
 
-        let v4 = addrs[0];
+        let v4 = &addrs[0];
         assert_eq!(v4.prefix_len, 4);
-        assert_eq!(v4.ip_address, rcs::IpAddress::Ipv4(rcs::Ipv4Address { addr: IPV4_ADDR }));
+        assert_eq!(v4.ip_address, fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_ADDR }));
 
-        let v6 = addrs[1];
+        let v6 = &addrs[1];
         assert_eq!(v6.prefix_len, 6);
-        assert_eq!(v6.ip_address, rcs::IpAddress::Ipv6(rcs::Ipv6Address { addr: IPV6_ADDR }));
+        assert_eq!(v6.ip_address, fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }));
 
         Ok(())
     }

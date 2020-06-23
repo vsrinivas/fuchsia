@@ -5,38 +5,10 @@
 library fuchsia.developer.remotecontrol;
 
 using fuchsia.device;
-
-// These are all copied from `fuchsia.net`. We sadly can't depend on fuchsia.net
-// because this has to build on the host.
-
-/// Ipv4Address is expressed in network byte order, so the most significant byte
-/// ("127" in the address "127.0.0.1") will be at index 0.
-struct Ipv4Address {
-    array<uint8>:4 addr;
-};
-
-/// Ipv6Address is expressed in network byte order, so the most significant byte
-/// ("ff" in the address "ff02::1") will be at index 0.
-struct Ipv6Address {
-    array<uint8>:16 addr;
-};
-
-/// Represents an IP address that may be either v4 or v6.
-union IpAddress {
-    1: Ipv4Address ipv4;
-    2: Ipv6Address ipv6;
-};
-
-struct InterfaceAddress {
-    /// The IP address of the interface.
-    IpAddress ip_address;
-
-    /// The length of the network portion of the interface IP address.
-    uint8 prefix_len;
-};
+using fuchsia.net.stack;
 
 table IdentifyHostResponse {
-    1: vector<InterfaceAddress>:255 addresses;
+    1: vector<fuchsia.net.stack.InterfaceAddress>:255 addresses;
     2: string:fuchsia.device.DEVICE_NAME_MAX nodename;
 };
 

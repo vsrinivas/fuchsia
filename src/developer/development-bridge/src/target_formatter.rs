@@ -186,20 +186,20 @@ impl TryFrom<Vec<bridge::Target>> for TargetFormatter {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl_fuchsia_developer_remotecontrol as rc;
+    use fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address};
 
     fn make_valid_target() -> bridge::Target {
         bridge::Target {
             nodename: Some("fooberdoober".to_string()),
             addresses: Some(vec![
                 bridge::TargetAddrInfo::Ip(bridge::TargetIp {
-                    ip: rc::IpAddress::Ipv6(rc::Ipv6Address {
+                    ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 2,
                 }),
                 bridge::TargetAddrInfo::Ip(bridge::TargetIp {
-                    ip: rc::IpAddress::Ipv4(rc::Ipv4Address { addr: [122, 24, 25, 25] }),
+                    ip: IpAddress::Ipv4(Ipv4Address { addr: [122, 24, 25, 25] }),
                     scope_id: 4,
                 }),
             ]),
@@ -226,7 +226,7 @@ mod test {
             bridge::Target {
                 nodename: Some("lorberding".to_string()),
                 addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
-                    ip: rc::IpAddress::Ipv6(rc::Ipv6Address {
+                    ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 2,
