@@ -9,6 +9,7 @@ driver_package("testing_firmware_file") {
   testonly = true
   libraries = [
     {
+      name = "test_firmware"
       dest = "firmware/test_firmware.txt"
       source = rebase_path("test_firmware.txt")
     },
