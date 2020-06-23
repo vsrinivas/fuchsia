@@ -130,7 +130,7 @@ impl Peer {
         router: &Arc<Router>,
         but_why: &str,
     ) -> Arc<Self> {
-        log::info!(
+        log::trace!(
             "[{:?}] NEW CLIENT: peer={:?} conn_id={:?} because {:?}",
             router.node_id(),
             node_id,
@@ -182,7 +182,12 @@ impl Peer {
         router: &Arc<Router>,
     ) -> Arc<Self> {
         let router = &router;
-        log::info!("[{:?}] NEW SERVER: peer={:?} conn_id={:?}", router.node_id(), node_id, conn_id,);
+        log::trace!(
+            "[{:?}] NEW SERVER: peer={:?} conn_id={:?}",
+            router.node_id(),
+            node_id,
+            conn_id,
+        );
         let conn =
             AsyncConnection::from_connection(conn, Endpoint::Server, router.node_id(), node_id);
         let conn_stats = Arc::new(PeerConnStats::default());
@@ -343,30 +348,37 @@ async fn client_handshake(
     log::trace!("[{:?} clipeer:{:?}] client connection stream started", my_node_id, peer_node_id);
     // Send FIDL header
     log::trace!("[{:?} clipeer:{:?}] send fidl header", my_node_id, peer_node_id);
-    conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
-    log::trace!("[{:?} clipeer:{:?}] send config request", my_node_id, peer_node_id);
-    // Send config request
-    let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
     conn_stream_writer
-        .send(FrameType::Data, &encode_fidl(&mut ConfigRequest {})?, false, &conn_stats.config)
-        .await?;
-    // Receive FIDL header
-    log::trace!("[{:?} clipeer:{:?}] read fidl header", my_node_id, peer_node_id);
-    let mut fidl_hdr = [0u8; 4];
-    conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
-    // Await config response
-    log::trace!("[{:?} clipeer:{:?}] read config", my_node_id, peer_node_id);
-    let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
-    let _ = Config::from_response(
-        if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
-            decode_fidl(&mut bytes)?
-        } else {
-            bail!("Failed to read config response")
-        },
-    );
-    log::trace!("[{:?} clipeer:{:?}] handshake completed", my_node_id, peer_node_id);
+        .send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false)
+        .timeout_after(Duration::from_secs(60))
+        .await??;
+    async move {
+        log::trace!("[{:?} clipeer:{:?}] send config request", my_node_id, peer_node_id);
+        // Send config request
+        let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
+        conn_stream_writer
+            .send(FrameType::Data, &encode_fidl(&mut ConfigRequest {})?, false, &conn_stats.config)
+            .await?;
+        // Receive FIDL header
+        log::trace!("[{:?} clipeer:{:?}] read fidl header", my_node_id, peer_node_id);
+        let mut fidl_hdr = [0u8; 4];
+        conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
+        // Await config response
+        log::trace!("[{:?} clipeer:{:?}] read config", my_node_id, peer_node_id);
+        let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
+        let _ = Config::from_response(
+            if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
+                decode_fidl(&mut bytes)?
+            } else {
+                bail!("Failed to read config response")
+            },
+        );
+        log::trace!("[{:?} clipeer:{:?}] handshake completed", my_node_id, peer_node_id);
 
-    Ok((conn_stream_writer, conn_stream_reader))
+        Ok((conn_stream_writer, conn_stream_reader))
+    }
+    .timeout_after(Duration::from_secs(20))
+    .await?
 }
 
 async fn client_conn_stream(
@@ -386,8 +398,7 @@ async fn client_conn_stream(
         conn_stream_reader,
         conn_stats.clone(),
     )
-    .timeout_after(Duration::from_secs(20))
-    .await??;
+    .await?;
 
     let on_link_status_ack = &Mutex::new(None);
     let conn_stream_writer = &Mutex::new(conn_stream_writer);

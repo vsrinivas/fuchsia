@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/serial_link_lib_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/serial"
+        ]
+    }
+}

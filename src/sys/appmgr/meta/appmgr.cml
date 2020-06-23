@@ -176,6 +176,10 @@
             protocol: "/svc/fuchsia.developer.remotecontrol.RemoteControl",
             as: "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl",
         },
+        {
+            protocol: "/svc/fuchsia.hardware.serial.NewDeviceProxy",
+            as: "/svc_for_sys/fuchsia.hardware.serial.NewDeviceProxy",
+        },
 
         // From sysinfo
         {

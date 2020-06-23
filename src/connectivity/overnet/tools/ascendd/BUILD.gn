@@ -16,6 +16,7 @@ if (!is_fuchsia) {
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/core",
       "//src/connectivity/overnet/lib/hoist",
+      "//src/connectivity/overnet/lib/serial_link",
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
@@ -23,6 +24,8 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:rand",
+      "//third_party/rust_crates:termios",
       "//third_party/rust_crates:thiserror",
     ]
 
@@ -38,6 +41,7 @@ if (!is_fuchsia) {
       "//src/connectivity/overnet/lib/hoist",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:async-std",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
     ]

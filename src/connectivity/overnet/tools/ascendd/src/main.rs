@@ -4,7 +4,8 @@
 
 use {anyhow::Error, ascendd_lib::run_ascendd};
 
-fn main() -> Result<(), Error> {
+#[async_std::main]
+async fn main() -> Result<(), Error> {
     hoist::logger::init()?;
-    hoist::run(run_ascendd(argh::from_env()))
+    run_ascendd(argh::from_env(), Box::new(async_std::io::stderr())).await
 }

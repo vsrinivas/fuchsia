@@ -6,6 +6,7 @@ group("tools") {
   testonly = true
   deps = [
     "ascendd:host",
+    "debug-serial",
     "onet",
     "onet:host",
   ]
@@ -13,5 +14,8 @@ group("tools") {
 
 group("tests") {
   testonly = true
-  deps = [ "onet:tests" ]
+  deps = [
+    "debug-serial:tests",
+    "onet:tests",
+  ]
 }

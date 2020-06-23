@@ -37,6 +37,7 @@ mod stat_counter;
 mod stream_framer;
 
 // Export selected types from modules.
+pub use coding::{decode_fidl, encode_fidl};
 pub use future_help::log_errors;
 pub use labels::{Endpoint, NodeId, NodeLinkId};
 pub use link::{LinkReceiver, LinkSender};

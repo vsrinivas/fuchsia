@@ -119,7 +119,7 @@ impl NodeTable {
     fn build_routes(&self) -> impl Iterator<Item = (NodeId, NodeLinkId)> {
         let mut todo = BinaryHeap::new();
 
-        log::info!("{:?} BUILD ROUTES: {:?}", self.root_node, self.nodes);
+        log::trace!("{:?} BUILD ROUTES: {:?}", self.root_node, self.nodes);
 
         let mut progress = BTreeMap::<NodeId, NodeProgress>::new();
         for (link_id, link) in self.nodes.get(&self.root_node).unwrap().links.iter() {

@@ -7,6 +7,7 @@
 #![deny(missing_docs)]
 
 mod mdns;
+mod serial;
 
 use anyhow::{Context as _, Error};
 use argh::FromArgs;
@@ -40,6 +41,11 @@ struct Opts {
     #[argh(switch)]
     /// open a udp port
     udp: bool,
+
+    #[argh(option, default = "\"debug\".to_string()")]
+    /// add serial links
+    /// Can be 'none', 'all', or a specific path to a serial device.
+    serial: String,
 }
 
 struct UdpSocketHolder {
@@ -228,6 +234,11 @@ async fn main() -> Result<(), Error> {
             root_cert: "/pkg/data/root.crt",
         }),
     )?;
+
+    fasync::spawn_local(log_errors(
+        crate::serial::run_serial_link_handlers(Arc::downgrade(&node), opt.serial),
+        "serial handler failed",
+    ));
 
     if opt.udp {
         let udp_socket = Arc::new(UdpSocketHolder::new(node.node_id(), opt.mdns_publish)?);

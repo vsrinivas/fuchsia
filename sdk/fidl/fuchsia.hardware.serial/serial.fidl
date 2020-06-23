@@ -13,6 +13,8 @@ enum Class : uint8 {
     BLUETOOTH_HCI = 2;
     /// An interactive console
     CONSOLE = 3;
+    /// Kernel debug serial
+    KERNEL_DEBUG = 4;
 };
 
 /// Number of bits per character
@@ -74,6 +76,7 @@ protocol NewDevice {
     Write(vector<uint8>:MAX data) -> () error zx.status;
 };
 
+[Discoverable]
 protocol NewDeviceProxy {
     GetChannel(request<NewDevice> req);
 };

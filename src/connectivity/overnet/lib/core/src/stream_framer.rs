@@ -76,6 +76,8 @@ pub struct Deframed {
 /// The type of frame.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FrameType {
+    /// The first frame of an Overnet conversation.
+    OvernetHello,
     /// A frame intended for Overnet.
     Overnet,
 }
@@ -92,7 +94,11 @@ struct BVec(Vec<u8>);
 
 impl std::fmt::Debug for BVec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}b]", self.0.len())
+        if self.0.len() <= 4 {
+            self.0.fmt(f)
+        } else {
+            write!(f, "{:?}+{}b", &self.0[..4], self.0.len() - 4)
+        }
     }
 }
 
@@ -480,6 +486,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
                     Poll::Ready(()) => {
                         let mut unframed = unparsed.split_off(1);
                         std::mem::swap(&mut unframed, &mut unparsed);
+                        log::warn!("timeout - drop byte {:?} rest {:?}", unframed, unparsed);
                         waiting_read.map(|w| w.wake());
                         *incoming = Incoming::Queuing {
                             unframed: Some(BVec(unframed)),
@@ -540,7 +547,8 @@ impl Format for LossyBinary {
             ));
         }
         match frame_type {
-            FrameType::Overnet => outgoing.write_u8(0u8)?, // '\0'
+            FrameType::Overnet => outgoing.write_u8(0u8)?,
+            FrameType::OvernetHello => outgoing.write_u8(255u8)?,
         }
         outgoing.reserve(2 + 4 + bytes.len() + 1);
         outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
@@ -559,6 +567,7 @@ impl Format for LossyBinary {
             }
             let frame_type = match buf[0] {
                 0u8 => FrameType::Overnet,
+                255u8 => FrameType::OvernetHello,
                 _ => {
                     // Not a start marker: remove and continue
                     start += 1;
@@ -620,6 +629,7 @@ impl Format for LosslessBinary {
         }
         match frame_type {
             FrameType::Overnet => outgoing.write_u8(0u8)?,
+            FrameType::OvernetHello => outgoing.write_u8(255u8)?,
         }
         outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
         outgoing.extend_from_slice(bytes);
@@ -633,6 +643,7 @@ impl Format for LosslessBinary {
         }
         let frame_type = match bytes[0] {
             0u8 => FrameType::Overnet,
+            255u8 => FrameType::OvernetHello,
             _ => return Err(format_err!("Bad frame type {:?}", bytes[0])),
         };
         log::trace!("DEFRAME: frame_type={:?}", frame_type);

@@ -23,8 +23,28 @@
             name: "remote-control",
             url: "fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control.cm",
         },
+        {
+            name: "debug_serial",
+            url: "fuchsia-pkg://fuchsia.com/debug-serial#meta/debug-serial.cm",
+        },
     ],
     offer: [
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            from: "#appmgr",
+            to: [ "#debug_serial" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "/svc/fuchsia.boot.RootResource" ],
+            from: "realm",
+            to: [ "#debug_serial" ],
+        },
+        {
+            protocol: "/svc/fuchsia.hardware.serial.NewDeviceProxy",
+            from: "#debug_serial",
+            to: [ "#appmgr" ],
+        },
         {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",

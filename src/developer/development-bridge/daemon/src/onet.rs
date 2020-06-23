@@ -222,10 +222,12 @@ impl Drop for HostPipeConnection {
 
 pub async fn run_ascendd() -> Result<(), Error> {
     log::info!("Starting ascendd");
-    ascendd_lib::run_ascendd(ascendd_lib::Opt {
-        sockpath: Some(SOCKET.to_string()),
-        ..Default::default()
-    })
+    ascendd_lib::run_ascendd(
+        ascendd_lib::Opt { sockpath: Some(SOCKET.to_string()), ..Default::default() },
+        // TODO: this just prints serial output to stdout - ffx probably wants to take a more
+        // nuanced approach here.
+        Box::new(async_std::io::stdout()),
+    )
     .await
     .map_err(|e| e.context("running ascendd"))
 }

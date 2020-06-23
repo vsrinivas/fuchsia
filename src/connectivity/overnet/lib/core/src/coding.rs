@@ -6,6 +6,7 @@
 
 use anyhow::Error;
 
+/// Decode some bytes into a FIDL type
 pub fn decode_fidl<T: fidl::encoding::Decodable>(bytes: &mut [u8]) -> Result<T, Error> {
     let mut value = T::new_empty();
     // WARNING: Since we are decoding without a transaction header, we have to
@@ -16,6 +17,7 @@ pub fn decode_fidl<T: fidl::encoding::Decodable>(bytes: &mut [u8]) -> Result<T, 
     Ok(value)
 }
 
+/// Encode a FIDL type into some bytes
 pub fn encode_fidl(value: &mut impl fidl::encoding::Encodable) -> Result<Vec<u8>, Error> {
     let (mut bytes, mut handles) = (Vec::new(), Vec::new());
     fidl::encoding::Encoder::encode(&mut bytes, &mut handles, value)?;

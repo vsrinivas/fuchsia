@@ -857,7 +857,7 @@ impl Router {
     }
 
     pub(crate) async fn remove_peer(self: &Arc<Self>, conn_id: ConnectionId) {
-        log::trace!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
+        log::info!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
         let mut peers = self.peers.lock().await;
         if let Some(peer) = peers.connections.remove(&conn_id) {
             match peer.endpoint() {
@@ -1482,7 +1482,7 @@ mod tests {
                     log::trace!("forwarding failed: {:?}", e)
                 }
             });
-            f(router1.clone(), router2.clone()).await;
+            f(router1, router2).await;
         })
     }
 
@@ -1623,7 +1623,7 @@ mod tests {
                 }
             });
             let (frame_type, mut greeting_bytes) = deframer.read().await.unwrap();
-            assert_eq!(frame_type, Some(FrameType::Overnet));
+            assert_eq!(frame_type, Some(FrameType::OvernetHello));
             let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut()).unwrap();
             assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
             assert_eq!(greeting.node_id, Some(node_id.into()));

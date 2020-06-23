@@ -109,6 +109,7 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
                 magic_string: Some(ASCENDD_CLIENT_CONNECTION_STRING.to_string()),
                 node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node.node_id().0 }),
                 connection_label,
+                key: None,
             };
             let mut bytes = Vec::new();
             let mut handles = Vec::new();

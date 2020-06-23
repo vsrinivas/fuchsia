@@ -12,4 +12,6 @@ table StreamSocketGreeting {
     2: NodeId node_id;
     /// Optional label for debugging
     3: string:32 connection_label;
+    /// Optional key (used on lossy connections to uniquely identify a handshake pair)
+    4: uint64 key;
 };

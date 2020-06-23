@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod serial;
+
+use crate::serial::run_serial_link_handlers;
 use anyhow::{ensure, format_err, Error};
 use argh::FromArgs;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
@@ -19,6 +22,13 @@ pub struct Opt {
     /// path to the ascendd socket.
     /// If not provided, this will default to a new socket-file in /tmp.
     pub sockpath: Option<String>,
+
+    #[argh(option, long = "serial")]
+    /// selector for which serial devices to communicate over.
+    /// Could be 'none' to not communcate over serial, 'all' to query all serial devices and try to
+    /// communicate with them, or a path to a serial device to communicate over *that* device.
+    /// If not provided, this will default to 'none'.
+    pub serial: Option<String>,
 }
 
 async fn read_incoming(
@@ -62,6 +72,7 @@ async fn process_incoming(
             std::env::current_exe(),
             std::process::id()
         )),
+        key: None,
     };
     let mut bytes = Vec::new();
     let mut handles = Vec::new();
@@ -140,10 +151,11 @@ async fn run_stream(
     .map(drop)
 }
 
-pub async fn run_ascendd(opt: Opt) -> Result<(), Error> {
-    let Opt { sockpath } = opt;
+pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin) -> Result<(), Error> {
+    let Opt { sockpath, serial } = opt;
 
     let sockpath = sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
+    let serial = serial.unwrap_or("none".to_string());
 
     log::info!("[log] starting ascendd");
     let _ = std::fs::remove_file(&sockpath);
@@ -157,16 +169,23 @@ pub async fn run_ascendd(opt: Opt) -> Result<(), Error> {
         Box::new(hoist::hard_coded_security_context()),
     )?;
 
-    incoming
-        .incoming()
-        .for_each_concurrent(None, |stream| {
-            let node = node.clone();
-            async move {
-                if let Err(e) = run_stream(node, stream).await {
-                    log::warn!("Failed processing socket: {:?}", e);
-                }
-            }
-        })
-        .await;
-    Ok(())
+    futures::future::try_join(
+        run_serial_link_handlers(Arc::downgrade(&node), &serial, stdout),
+        async move {
+            incoming
+                .incoming()
+                .for_each_concurrent(None, |stream| {
+                    let node = node.clone();
+                    async move {
+                        if let Err(e) = run_stream(node, stream).await {
+                            log::warn!("Failed processing socket: {:?}", e);
+                        }
+                    }
+                })
+                .await;
+            Ok(())
+        },
+    )
+    .await
+    .map(drop)
 }

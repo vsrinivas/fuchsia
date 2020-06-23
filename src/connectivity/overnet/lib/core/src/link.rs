@@ -298,7 +298,13 @@ impl LinkReceiver {
                         hdr
                     )
                 })?;
-            log::trace!("{:?} handle with peer {:?}", routing.own_node_id, peer.debug_id());
+            log::trace!(
+                "{:?} handle with peer {:?} (routing_label: {:?}  hdr: {:?})",
+                routing.own_node_id,
+                peer.debug_id(),
+                routing_label,
+                hdr
+            );
             peer.receive_frame(packet).await.with_context(|| {
                 format!(
                     concat!(

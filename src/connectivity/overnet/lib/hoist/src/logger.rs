@@ -33,7 +33,9 @@ impl log::Log for Logger {
                 .unwrap_or(String::new()),
             record.args()
         );
-        eprintln!("{}", msg);
+        let _ = std::panic::catch_unwind(|| {
+            eprintln!("{}", msg);
+        });
     }
 
     fn flush(&self) {}
