@@ -166,11 +166,10 @@ iquery show-file `iquery list-files /hub | grep -v system_objects | grep compone
 In the example above, `iquery` is run to find a list of Inspect
 locations that do not contain "system\_objects" and that do contain
 "component\_name". Then, `iquery` is run on the result of the first
-filter to recursively list data in the matching locations. Internally,
-this is how the `fx iquery` tool is implemented. You may instead write:
+filter to recursively list data in the matching locations. You may instead write:
 
 ```
-fx iquery component_name
+fx iquery show --manifest component_name
 ```
 
 ### Archivist {#archivist}

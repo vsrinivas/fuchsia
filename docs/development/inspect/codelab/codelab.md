@@ -505,7 +505,8 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      $ fx iquery inspect_cpp_codelab_part_1
+      $ fx iquery show codelab_\*/inspect_cpp_codelab_part_1.cmx
+      # or `fx iquery show --manifest_inspect_cpp_codelab_part_1`
       /hub/r/codelab/1234/c/inspect_cpp_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
         version = part1
       ```
@@ -513,7 +514,8 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Rust}
 
       ```
-      $ fx iquery inspect_rust_codelab_part_1
+      $ fx iquery show codelab_\*/inspect_rust_codelab_part_1.cmx
+      # or `fx iquery show --manifest_inspect_rust_codelab_part_1`
       /hub/r/codelab/1234/c/inspect_rust_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
         version = part1
       ```
@@ -521,7 +523,8 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Dart}
 
       ```
-      $ fx iquery inspect_dart_codelab_part_1
+      $ fx iquery show codelab_\*/inspect_dart_codelab_part_1.cmx
+      # or `fx iquery show --manifest_inspect_dart_codelab_part_1`
       /hub/r/codelab/1234/c/inspect_dart_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
         version = part1
       ```
@@ -531,7 +534,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      $ fx iquery -f json inspect_cpp_codelab_part_1
+      $ fx iquery -f json show codelab_\*/inspect_cpp_codelab_part_1.cmx
       [
           {
               "contents": {
@@ -547,7 +550,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Rust}
 
       ```
-      $ fx iquery -f json inspect_rust_codelab_part_1
+      $ fx iquery -f json show codelab_\*/inspect_rust_codelab_part_1.cmx
       [
           {
               "contents": {
@@ -563,7 +566,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Dart}
 
       ```
-      $ fx iquery -f json inspect_dart_codelab_part_1
+      $ fx iquery -f json show codelab_\*/inspect_dart_codelab_part_1.cmx
       [
           {
               "contents": {
@@ -681,19 +684,19 @@ is even being handled by your component.
    * {C++}
 
       ```
-      $ fx iquery -f json inspect_cpp_codelab_part_1
+      $ fx iquery -f json --manifest inspect_cpp_codelab_part_1
       ```
 
    * {Rust}
 
       ```
-      $ fx iquery -f json inspect_rust_codelab_part_1
+      $ fx iquery -f json --manifest inspect_rust_codelab_part_1
       ```
 
    * {Dart}
 
       ```
-      $ fx iquery -f json inspect_dart_codelab_part_1
+      $ fx iquery -f json --manifest inspect_dart_codelab_part_1
       ```
 
    You should now see:

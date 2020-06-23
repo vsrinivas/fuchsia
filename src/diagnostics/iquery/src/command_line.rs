@@ -22,7 +22,7 @@ pub enum SubCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
 pub struct CommandLine {
-    #[argh(option, default = "Format::Text")]
+    #[argh(option, default = "Format::Text", short = 'f')]
     /// the format to be used to display the results (json, text).
     pub format: Format,
 

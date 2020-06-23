@@ -185,10 +185,10 @@ bt-gap, bt-host, bt-a2dp-sink, and bt-snoop all expose information though Inspec
 
 #### Usage
 
-* bt-gap/bt-host: `fx iquery bt-gap` exposes information on host devices managed by bt-gap, pairing capabilities, stored bonds, and actively connected peers.
-* bt-a2dp-sink: `fx iquery bt-a2dp-sink` exposes information on audio streaming capabilities and active streams
-* bt-snoop: `fx iquery bt-snoop` exposes information about which hci devices are being logged and how much data is stored.
-* All Bluetooth components: `fx iquery bt-*`
+* bt-gap/bt-host: `fx iquery show bt-gap` exposes information on host devices managed by bt-gap, pairing capabilities, stored bonds, and actively connected peers.
+* bt-a2dp-sink: `fx iquery show bt-a2dp-sink` exposes information on audio streaming capabilities and active streams
+* bt-snoop: `fx iquery show bt-snoop` exposes information about which hci devices are being logged and how much data is stored.
+* All Bluetooth components: `fx iquery show bt-*`
 
 See the [iquery documentation](/docs/development/inspect/iquery) for complete instructions on using `iquery`.
 

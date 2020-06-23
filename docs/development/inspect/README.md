@@ -208,7 +208,7 @@ describes an integration test framework for Inspect language libraries.
 The primary userspace tool is [iquery](iquery.md), which has its own
 manual page.
 
-You can use the `fx iquery` command to dump out data for the entire
+You can use the `fx iquery show` command to dump out data for the entire
 system, or `fx bugreport` to generate a directory of diagnostic
 information from the system (which includes inspect).
 
