@@ -15,6 +15,7 @@
             "wifi"
         ],
         "features": [
+            "build-info",
             "deprecated-shell"
         ],
         "services": [

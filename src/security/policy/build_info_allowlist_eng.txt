@@ -10,6 +10,7 @@ fuchsia-pkg://fuchsia.com/has-build-info#meta/has-build-info.cmx
 fuchsia-pkg://fuchsia.com/reconnect-agent#meta/reconnect-agent.cmx
 fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx
 fuchsia-pkg://fuchsia.com/setui_service_tests#meta/settings_lib_test.cmx
+fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx
 fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
 fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx
