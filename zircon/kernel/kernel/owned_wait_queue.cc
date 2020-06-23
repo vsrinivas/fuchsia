@@ -368,7 +368,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
     // blocking wait queue in a meaningful way.  If this wait_queue is an
     // OwnedWait queue, and it currently has an owner, then continue to
     // propagate the change.  Otherwise, we are done.
-    if ((bwq != nullptr) && (bwq->magic_ == OwnedWaitQueue::kOwnedMagic)) {
+    if ((bwq != nullptr) && (bwq->magic() == OwnedWaitQueue::kOwnedMagic)) {
       t = static_cast<const OwnedWaitQueue*>(bwq)->owner();
       if (t != nullptr) {
         old_prio = old_queue_prio;
@@ -463,7 +463,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
 
 bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner,
                                          Hook on_thread_wake_hook) {
-  DEBUG_ASSERT(magic_ == kOwnedMagic);
+  DEBUG_ASSERT(magic() == kOwnedMagic);
   DEBUG_ASSERT(out_new_owner != nullptr);
 
   // Note: This methods relies on the wait queue to be kept sorted in the
@@ -520,7 +520,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
                                                 ResourceOwnership resource_ownership) {
   Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(magic_ == kOwnedMagic);
+  DEBUG_ASSERT(magic() == kOwnedMagic);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
@@ -572,7 +572,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
 }
 
 bool OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) {
-  DEBUG_ASSERT(magic_ == kOwnedMagic);
+  DEBUG_ASSERT(magic() == kOwnedMagic);
 
   Thread* new_owner;
   int old_queue_prio = BlockedPriority();
@@ -588,9 +588,9 @@ bool OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) 
 bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue_target,
                                     uint32_t requeue_count, Thread* requeue_owner,
                                     Hook on_thread_wake_hook, Hook on_thread_requeue_hook) {
-  DEBUG_ASSERT(magic_ == kOwnedMagic);
+  DEBUG_ASSERT(magic() == kOwnedMagic);
   DEBUG_ASSERT(requeue_target != nullptr);
-  DEBUG_ASSERT(requeue_target->magic_ == kOwnedMagic);
+  DEBUG_ASSERT(requeue_target->magic() == kOwnedMagic);
 
   // If the potential new owner of the requeue wait queue is already dead,
   // then it cannot become the owner of the requeue wait queue.

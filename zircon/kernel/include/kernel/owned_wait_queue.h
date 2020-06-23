@@ -111,7 +111,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   //
   // Returns true if a local reschedule is required, or false otherwise.
   bool AssignOwner(Thread* new_owner) TA_REQ(thread_lock) __WARN_UNUSED_RESULT {
-    DEBUG_ASSERT(magic_ == kOwnedMagic);
+    DEBUG_ASSERT(magic() == kOwnedMagic);
 
     // If the new owner is the same as the old owner, then we have nothing
     // special to do here.  Just short-circuit.

@@ -116,7 +116,8 @@ struct WaitQueueState {
 // This maintains an ordered collection of Threads.
 //
 // All such collections are protected by the thread_lock.
-struct WaitQueueCollection {
+class WaitQueueCollection {
+ public:
   constexpr WaitQueueCollection() {}
 
   // The number of threads currently in the collection.
@@ -160,8 +161,6 @@ struct WaitQueueCollection {
 
 // NOTE: must be inside critical section when using these
 class WaitQueue {
-  // TODO(kulakowski) Currently, all of this is public, until Thread is completely migrated off
-  // list_nodes, which force it to be standard layout.
  public:
   constexpr WaitQueue() : WaitQueue(kMagic) {}
   ~WaitQueue();
@@ -215,23 +214,14 @@ class WaitQueue {
 
   uint32_t Count() const TA_REQ(thread_lock) { return collection_.Count(); }
 
-  // Dequeue the first waiting thread, and set its blocking status, then return a
-  // pointer to the thread which was dequeued.  Do not actually schedule the
-  // thread to run.
-  Thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock);
-
-  // Dequeue the specified thread and set its blocked_status.  Do not actually
-  // schedule the thread to run.
-  void DequeueThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
-
-  explicit constexpr WaitQueue(uint32_t magic) : magic_(magic) {}
-
-  // Move the specified thread from the source wait queue to the dest wait queue.
-  static void MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) TA_REQ(thread_lock);
-
   // Returns the highest priority of all the blocked threads on this WaitQueue.
   // Returns -1 if no threads are blocked.
   int BlockedPriority() const TA_REQ(thread_lock);
+
+  // Used by WaitQueue and OwnedWaitQueue to manage changes to the maximum
+  // priority of a wait queue due to external effects (thread priority change,
+  // thread timeout, thread killed).
+  bool UpdatePriority(int old_prio) TA_REQ(thread_lock);
 
   // A thread's priority has changed.  Update the wait queue bookkeeping to
   // properly reflect this change.
@@ -245,12 +235,13 @@ class WaitQueue {
   // This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
   static bool PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
 
-  // Used by WaitQueue and OwnedWaitQueue to manage changes to the maximum
-  // priority of a wait queue due to external effects (thread priority change,
-  // thread timeout, thread killed).
-  bool UpdatePriority(int old_prio) TA_REQ(thread_lock);
+  // OwnedWaitQueue needs to be able to call this on WaitQueues to
+  // determine if they are base WaitQueues or the OwnedWaitQueue
+  // subclass.
+  uint32_t magic() const { return magic_; }
 
-  static void TimeoutHandler(Timer* timer, zx_time_t now, void* arg);
+ protected:
+  explicit constexpr WaitQueue(uint32_t magic) : magic_(magic) {}
 
   // Inline helpers (defined in wait_queue_internal.h) for
   // WaitQueue::BlockEtc and OwnedWaitQueue::BlockAndAssignOwner to
@@ -258,6 +249,21 @@ class WaitQueue {
   inline zx_status_t BlockEtcPreamble(const Deadline& deadline, uint signal_mask,
                                       ResourceOwnership reason) TA_REQ(thread_lock);
   inline zx_status_t BlockEtcPostamble(const Deadline& deadline) TA_REQ(thread_lock);
+
+  // Dequeue the specified thread and set its blocked_status.  Do not actually
+  // schedule the thread to run.
+  void DequeueThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
+
+  // Move the specified thread from the source wait queue to the dest wait queue.
+  static void MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) TA_REQ(thread_lock);
+
+ private:
+  // Dequeue the first waiting thread, and set its blocking status, then return a
+  // pointer to the thread which was dequeued.  Do not actually schedule the
+  // thread to run.
+  Thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock);
+
+  static void TimeoutHandler(Timer* timer, zx_time_t now, void* arg);
 
   // Internal helper for dequeueing a single Thread.
   void Dequeue(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
@@ -272,6 +278,8 @@ class WaitQueue {
   static constexpr uint32_t kMagic = fbl::magic("wait");
   uint32_t magic_;
 
+  // The OwnedWaitQueue subclass also manipulates the collection.
+ protected:
   WaitQueueCollection collection_;
 };
 
