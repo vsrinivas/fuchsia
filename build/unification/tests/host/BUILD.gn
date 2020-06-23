@@ -145,10 +145,6 @@ group("migrated-tests") {
 
     #------------------
     #------------------
-    "//zircon/system/utest/fidl",
-
-    #------------------
-    #------------------
     "//zircon/system/utest/fs-host",
 
     #------------------

@@ -23,10 +23,8 @@ group("tests") {
     "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_tests",
     "//sdk/lib/fidl/cpp/fuzzing:fidl_cpp_fuzzing_tests",
-    "//src/lib/fidl/c/coding_tables_tests:bin",
-    "//src/lib/fidl/llcpp/tests:fidl_llcpp_builder_test",
-    "//src/lib/fidl/llcpp/tests:fidl_llcpp_conformance_test",
-    "//src/lib/fidl/llcpp/tests:fidl_llcpp_types_test",
+    "//src/lib/fidl/c:tests",
+    "//src/lib/fidl/llcpp/tests",
     "//src/lib/fidl/rust:tests",
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/benchmarks/fidl/runner:tests",
@@ -35,8 +33,6 @@ group("tests") {
     "//tools/fidl:tests",
     "//topaz/tests/dart_fidl_benchmarks",
     "//zircon/system/ulib/fidl-async-2/test",
-    "//zircon/system/utest/fidl",
-    "//zircon/system/utest/fidl($host_toolchain)",
     "//zircon/system/utest/fidl-compiler($host_toolchain)",
   ]
 }

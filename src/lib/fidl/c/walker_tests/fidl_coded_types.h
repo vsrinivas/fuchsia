@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIDL_FIDL_CODED_TYPES_H_
-#define ZIRCON_SYSTEM_UTEST_FIDL_FIDL_CODED_TYPES_H_
+#ifndef SRC_LIB_FIDL_C_WALKER_TESTS_FIDL_CODED_TYPES_H_
+#define SRC_LIB_FIDL_C_WALKER_TESTS_FIDL_CODED_TYPES_H_
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
@@ -90,4 +90,4 @@ extern const FidlCodedStruct nested_struct_ptrs_message_type;
 }
 #endif
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIDL_FIDL_CODED_TYPES_H_
+#endif  // SRC_LIB_FIDL_C_WALKER_TESTS_FIDL_CODED_TYPES_H_

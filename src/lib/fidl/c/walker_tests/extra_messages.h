@@ -4,8 +4,8 @@
 
 // TODO(fxb/48186) Auto-generate this file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_
-#define ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_
+#ifndef SRC_LIB_FIDL_C_WALKER_TESTS_EXTRA_MESSAGES_H_
+#define SRC_LIB_FIDL_C_WALKER_TESTS_EXTRA_MESSAGES_H_
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
@@ -237,4 +237,4 @@ TEST_ENUM_DEF(Uint64, uint64_t)
 
 }  // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_
+#endif  // SRC_LIB_FIDL_C_WALKER_TESTS_EXTRA_MESSAGES_H_

@@ -21,7 +21,7 @@ The [FIDL][fidl-readme] toolchain is composed of roughly three parts:
 ### Code Location
 
 The front-end lives at [//zircon/tools/fidl/][fidlc-source],
-with tests in [//zircon/system/utest/fidl/][fidlc-tests].
+with tests in [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 
 The back-end and runtime library locations are based on the target:
 
@@ -194,7 +194,7 @@ git update-index --no-skip-worktree zircon/public/gn/config/levels.gni
 `fidlc` tests are at:
 
 * [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
-* [//zircon/system/utest/fidl/][fidlc-tests].
+* [//src/lib/fidl/c/walker_tests/][walker-tests].
 * [//src/lib/fidl/c/coding_tables_tests/][fidlc-coding-tables-tests].
 * [//src/lib/fidl/c/simple_tests][fidl-simple] (C runtime tests).
 
@@ -209,17 +209,6 @@ The binary can be located by running `fidldev test --dry-run --no-regen fidlc`.
 
 ```sh
 $FUCHSIA_DIR/out/default/host_x64/fidl-compiler -- --case attributes_tests
-```
-
-Build and run `fidl-test`:
-
-Note: `--with-base` puts all zircon tests in `/boot` with the `bringup.x64`
-target, or `/system` when you the `core.x64` target.
-
-```sh
-fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
-fx build
-fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-test
 ```
 
 To regenerate the `fidlc` JSON goldens:
@@ -322,27 +311,6 @@ To run a specific test or to pass flags to a specific test, run `fidldev` with
 the `--dry-run`, `--no-build`, `--no-regen` flags to obtain the desired test
 commands.
 
-There is one test that must be run separately as a zbi test, which is the
-`fidl-test`:
-
-```
-fx qemu -kN -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-test
-```
-
-When the test completes, you're running in the QEMU emulator.
-To exit, use **`Ctrl-A x`**.
-
-Alternatively, if you build including the shell you can run these commands from
-the shell:
-
-```sh
-Tab 1> fx set core.x64 --with-base //garnet/packages/tests:zircon
-Tab 1> fx build && fx qemu -kN
-
-Tab 2> fx shell
-Tab 2(shell)> runtests --names fidl-test
-```
-
 ### Compatibility Test
 
 Details about how the compatibility tests work and where the code is located can be
@@ -399,7 +367,7 @@ fx build
 | fidlgen rust             | `fx test fidlgen_rust_test`         | //tools/fidl/fidlgen_rust                                                 |
 | fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | //tools/fidl/fidlgen_syzkaller                                            |
 | fidlgen dart             | `fx test fidlgen_dart_backend_test` | //topaz/bin/fidlgen_dart                                                  |
-| fidl c runtime host test | `fx test fidl-c-tests`              | //zircon/system/ulib/fidl                                                 |
+| fidl c runtime host test | `fx test fidl_walker_tests`         | //zircon/system/ulib/fidl                                                 |
 | c++ host unittests       | `fx test fidl_cpp_host_unittests`   | //sdk/lib/fidl                                                            |
 | c++ bindings tests       | `fx test fidl_tests`                | //sdk/lib/fidl                                                            |
 | llcpp bindings tests     | `fx test fidl_llcpp_types_test`     | //tools/fidl/fidlgen_llcpp //zircon/system/ulib/fidl                      |
@@ -407,15 +375,6 @@ fx build
 | dart bindings tests      | `fx test fidl_bindings_test`        | //topaz/public/dart/fidl                                                  |
 | rust bindings tests      | `fx test fidl-rust-tests`           | //src/lib/fidl/rust/fidl                                                  |
 | measure tape test        | `fx test measure-tape-tests`        | //tools/fidl/measure-tape                                                 |
-
-The following requires: `fx set bringup.x64 --with-base //garnet/packages/tests:zircon`
-
-| Name                      | Test Command                                                                                                  | Directories Covered     |
-|---------------------------|---------------------------------------------------------------------------------------------------------------|-------------------------|
-| fidlc host test           | `$FUCHSIA_DIR/out/default/host_x64/exe.unstripped/fidl-compiler`                                              | zircon/system/host/fidl |
-| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-test`                                      | zircon/system/ulib/fidl |
-| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-simple-test`                               | zircon/system/ulib/fidl |
-| fidl c-llcpp interop test | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-llcpp-interop-test`                        | zircon/system/ulib/fidl |
 
 ### All Benchmarks
 
@@ -633,7 +592,7 @@ fidl fmt --library my_library.fidl -i
 [fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
 [fidl-simple]: /src/lib/fidl/c/simple_tests/
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
-[fidlc-tests]: /zircon/system/utest/fidl/
+[walker-tests]: /src/lib/fidl/c/walker_tests/
 [fidldev]: /tools/fidl/fidldev/README.md
 [jsonir]: /docs/reference/fidl/language/json-ir.md
 [rtl-c]: /zircon/system/ulib/fidl/

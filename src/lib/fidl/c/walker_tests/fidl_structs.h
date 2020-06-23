@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIDL_FIDL_STRUCTS_H_
-#define ZIRCON_SYSTEM_UTEST_FIDL_FIDL_STRUCTS_H_
+#ifndef SRC_LIB_FIDL_C_WALKER_TESTS_FIDL_STRUCTS_H_
+#define SRC_LIB_FIDL_C_WALKER_TESTS_FIDL_STRUCTS_H_
 
 #include <lib/fidl/coding.h>
 #include <stdalign.h>
@@ -365,4 +365,4 @@ struct nested_struct_ptrs_message_layout {
   alignas(FIDL_ALIGNMENT) struct_ptr_level_3 out_out_in_out_3;
 };
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIDL_FIDL_STRUCTS_H_
+#endif  // SRC_LIB_FIDL_C_WALKER_TESTS_FIDL_STRUCTS_H_

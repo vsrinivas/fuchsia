@@ -1,0 +1,118 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+
+source_set("test_sources") {
+  testonly = true
+  sources = [
+    "fidl_align_tests.cc",
+    "fidl_coded_types.cc",
+    "handle_closing_tests.cc",
+    "llcpp_client_test.cc",
+    "llcpp_gen_api_test.cc",
+    "llcpp_server_test.cc",
+    "llcpp_transaction_tests.cc",
+    "llcpp_types_tests.cc",
+    "main.cc",
+    "on_error_handle_tests.cc",
+  ]
+  include_dirs = [ "generated" ]
+  public_deps = [
+    ":fidl.test.coding_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/unittest",
+  ]
+}
+
+source_set("host_test_sources") {
+  testonly = true
+  sources = [
+    "abi_tests.cc",
+    "cpp_types_tests.cc",
+    "fidl_align_tests.cc",
+    "validate_string_tests.cc",
+  ]
+  public_deps = [
+    "//zircon/public/lib/fidl_base",
+    "//zircon/system/ulib/unittest:unittest-static",
+  ]
+}
+
+if (is_fuchsia) {
+  executable("test_bin") {
+    output_name = "fidl-handle-policy-test-app"
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+    testonly = true
+    sources = []
+    deps = [ ":test_sources" ]
+
+    # TODO(46873): Fix the leaks and remove this.
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  }
+
+  executable("test_launcher_bin") {
+    testonly = true
+    output_name = "run_with_handle_policy_tests"
+    sources = [ "run_with_handle_policy_tests.cc" ]
+    deps = [
+      ":fidl.test.coding_llcpp",
+      ":test_bin",
+      "//third_party/googletest:gtest_main",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
+    ]
+  }
+
+  fuchsia_unittest_package("run-with-handle-policy-tests") {
+    manifest = "run_with_handle_policy_tests.cmx"
+
+    # deps = [ ":test_launcher_bin", ":test_bin_resource" ]
+    deps = [ ":test_launcher_bin" ]
+  }
+}
+
+if (is_linux || is_mac) {
+  # Some of the tests can run on host.
+  test("fidl_walker_tests") {
+    if (is_fuchsia) {
+      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+      if (configs + fdio_config - fdio_config != configs) {
+        configs -= fdio_config
+      }
+    }
+    testonly = true
+    sources = []
+    deps = [ ":host_test_sources" ]
+  }
+}
+
+fidl("fidl.test.coding") {
+  visibility = [ ":*" ]
+  sources = [
+    "extra_messages.test.fidl",
+    "llcpp.test.fidl",
+    "messages.test.fidl",
+  ]
+}

@@ -424,4 +424,4 @@ anonymous [`Name`](#name)s.
 [fidlgen]: /garnet/go/src/fidl/compiler/backend
 [fidlgen-dart]: /topaz/bin/fidlgen_dart
 [schema]: /docs/reference/fidl/language/json-ir.md
-[coding-readme]: /zircon/system/utest/fidl/README.md
+[coding-readme]: /src/lib/fidl/c/walker_tests/README.md

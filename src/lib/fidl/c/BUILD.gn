@@ -30,5 +30,9 @@ test_package("fidl-c-tests") {
 group("tests") {
   testonly = true
 
-  deps = [ ":fidl-c-tests" ]
+  deps = [
+    ":fidl-c-tests",
+    "walker_tests:fidl_walker_tests($host_toolchain)",
+    "walker_tests:run-with-handle-policy-tests",
+  ]
 }

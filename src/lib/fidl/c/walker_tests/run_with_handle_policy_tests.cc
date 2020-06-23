@@ -25,16 +25,14 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <unittest/unittest.h>
+#include <gtest/gtest.h>
 
 namespace {
 
 // Launches handle_policy_test_app with a strict ZX_POL_BAD_HANDLE policy, such that the app would
 // crash if an invalid handle was closed (e.g. double-closing).
 
-bool LaunchHelper(const char* argv[]) {
-  BEGIN_HELPER;
-
+void LaunchHelper(const char* argv[]) {
   const char* path = argv[0];
   fbl::unique_fd fds[2];
   int temp_fds[2] = {-1, -1};
@@ -73,7 +71,7 @@ bool LaunchHelper(const char* argv[]) {
   status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr,
                           std::size(fdio_actions), fdio_actions, process.reset_and_get_address(),
                           err_msg);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(status, ZX_OK) << err_msg;
   // Pipe through output.
   char buf[1024];
   ssize_t bytes_read = 0;
@@ -88,27 +86,17 @@ bool LaunchHelper(const char* argv[]) {
   status = process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(proc_info.return_code, 0);
-
-  END_HELPER;
 }
 
-bool TestWithStrictHandlePolicy() {
-  BEGIN_TEST;
+}  // namespace
 
+TEST(Walker, TestWithStrictHandlePolicy) {
   // This test app contains a subset of fidl-tests; refer to BUILD.gn
   const char* root_dir = getenv("TEST_ROOT_DIR");
   if (root_dir == nullptr) {
     root_dir = "";
   }
-  const std::string test_app = std::string(root_dir) + "/bin/fidl-handle-policy-test-app";
+  const std::string test_app = std::string(root_dir) + "/pkg/bin/fidl-handle-policy-test-app";
   const char* args[] = {test_app.c_str(), nullptr};
-  ASSERT_TRUE(LaunchHelper(args));
-
-  END_TEST;
+  LaunchHelper(args);
 }
-
-}  // namespace
-
-BEGIN_TEST_CASE(handle_policy)
-RUN_TEST(TestWithStrictHandlePolicy)
-END_TEST_CASE(handle_policy)
