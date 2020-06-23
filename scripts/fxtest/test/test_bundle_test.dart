@@ -28,6 +28,12 @@ void main() {
       final commandTokens = testDef.executionHandle.getInvocationTokens([]);
       expect(
         commandTokens.fullCommand,
+        ['/whatever/fx', 'shell', 'run-test-component', componentUrl].join(' '),
+      );
+      final commandTokens2 =
+          testDef.executionHandle.getInvocationTokens(['--restrict-logs']);
+      expect(
+        commandTokens2.fullCommand,
         [
           '/whatever/fx',
           'shell',

@@ -86,7 +86,7 @@ class TestBundle {
           break;
         case TestType.e2e:
           // The presence of an e2e test requires a full build
-          return null;
+          return <String>{};
         default:
           break;
       }

@@ -560,7 +560,7 @@ void main() {
           ])),
           // calculateMinimalBuildTargets returns null for a full build
           // (default target)
-          isNull);
+          <String>{});
     });
   });
 }

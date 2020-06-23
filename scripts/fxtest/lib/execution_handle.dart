@@ -132,14 +132,10 @@ class ExecutionHandle {
     return CommandTokens(commandTokens);
   }
 
-  static List<String> get defaultComponentTokens =>
-      const <String>['shell', 'run-test-component', '--restrict-logs'];
-
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cmx".
   CommandTokens _getComponentTokens(List<String> runnerFlags) {
-    // See fxbug.dev/49735 for background on --restrict-logs.
-    List<String> subCommand = defaultComponentTokens + runnerFlags;
+    List<String> subCommand = ['shell', 'run-test-component'] + runnerFlags;
     return CommandTokens([fx, ...subCommand, handle]);
   }
 

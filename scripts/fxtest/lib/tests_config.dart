@@ -39,6 +39,7 @@ class Flags {
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
   final bool shouldOnlyRunHostTests;
+  final bool shouldRestrictLogs;
   final bool shouldPrintSkipped;
   final bool shouldRandomizeTestOrder;
   final bool shouldSilenceUnsupported;
@@ -64,6 +65,7 @@ class Flags {
     this.shouldFailFast = false,
     this.shouldOnlyRunDeviceTests = false,
     this.shouldOnlyRunHostTests = false,
+    this.shouldRestrictLogs = false,
     this.shouldPrintSkipped = false,
     this.shouldRandomizeTestOrder = false,
     this.shouldRebuild = true,
@@ -92,6 +94,7 @@ class Flags {
       shouldLog: argResults['log'],
       shouldOnlyRunDeviceTests: argResults['device'],
       shouldOnlyRunHostTests: argResults['host'],
+      shouldRestrictLogs: argResults['restrict-logs'],
       shouldPrintSkipped: argResults['skipped'],
 
       // True (aka, yes rebuild) if `no-build` is missing or set to `False`
@@ -123,6 +126,7 @@ class Flags {
   shouldLog: $shouldLog
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
   shouldOnlyRunHostTests: $shouldOnlyRunHostTests
+  shouldRestrictLogs: $shouldRestrictLogs
   shouldPrintSkipped: $shouldPrintSkipped
   shouldRandomizeTestOrder: $shouldRandomizeTestOrder
   shouldSilenceUnsupported: $shouldSilenceUnsupported
@@ -190,6 +194,9 @@ class TestsConfig {
     var runnerTokens = <String>[];
     if (flags.realm != null) {
       runnerTokens.add('--realm-label=${flags.realm}');
+    }
+    if (flags.shouldRestrictLogs) {
+      runnerTokens.add('--restrict-logs');
     }
     if (flags.minSeverityLogs != null) {
       runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
