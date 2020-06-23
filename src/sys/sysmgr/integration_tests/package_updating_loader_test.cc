@@ -49,7 +49,11 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
     }
     args_ = std::make_tuple(package_uri, v_selectors, update_policy);
     fdio_service_connect("/pkg", dir.TakeChannel().release());
-    callback(status_);
+    if (status_ == ZX_OK) {
+      callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithResponse({}));
+    } else {
+      callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithErr(int(status_)));
+    }
   }
 
   virtual void GetHash(fuchsia::pkg::PackageUrl package_url, GetHashCallback callback) override {

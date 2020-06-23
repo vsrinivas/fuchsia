@@ -732,15 +732,14 @@ pub fn resolve_package(
 ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
     let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
     let selectors: Vec<&str> = vec![];
-    let status_fut = resolver.resolve(
+    let response_fut = resolver.resolve(
         url,
         &mut selectors.into_iter(),
         &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
         package_server_end,
     );
     async move {
-        let status = status_fut.await.expect("package resolve fidl call");
-        Status::ok(status)?;
+        let () = response_fut.await.unwrap().map_err(Status::from_raw)?;
         Ok(package)
     }
 }

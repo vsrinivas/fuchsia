@@ -125,12 +125,14 @@ pub async fn run_resolver_service(
                             fx_log_warn!("resolve does not support selectors yet");
                         }
                         let start_time = Instant::now();
-                        let status = resolve(&cache, &package_fetcher, package_url, dir).await;
-                        let event_code = status_to_resolve_error(status);
+                        let response = resolve(&cache, &package_fetcher, package_url, dir).await;
 
                         cobalt_sender.log_event_count(
                             metrics::RESOLVE_METRIC_ID,
-                            (event_code, metrics::ResolveMetricDimensionResolverType::Regular),
+                            (
+                                resolve_result_to_resolve_code(response),
+                                metrics::ResolveMetricDimensionResolverType::Regular,
+                            ),
                             0,
                             1,
                         );
@@ -138,12 +140,12 @@ pub async fn run_resolver_service(
                         cobalt_sender.log_elapsed_time(
                             metrics::RESOLVE_DURATION_METRIC_ID,
                             (
-                                result_to_resolve_duration_result_code(&status),
+                                resolve_result_to_resolve_duration_code(&response),
                                 metrics::ResolveDurationMetricDimensionResolverType::Regular,
                             ),
                             Instant::now().duration_since(start_time).as_micros() as i64,
                         );
-                        responder.send(Status::from(status).into_raw())?;
+                        responder.send(&mut response.map_err(|status| status.into_raw()))?;
                         Ok(())
                     }
 
@@ -600,11 +602,12 @@ pub async fn run_font_resolver_service(
             )
             .await;
 
-            let event_code = status_to_resolve_error(status);
-
             cobalt_sender.log_event_count(
                 metrics::RESOLVE_METRIC_ID,
-                (event_code, metrics::ResolveMetricDimensionResolverType::Font),
+                (
+                    resolve_result_to_resolve_code(status),
+                    metrics::ResolveMetricDimensionResolverType::Font,
+                ),
                 0,
                 1,
             );
@@ -612,7 +615,7 @@ pub async fn run_font_resolver_service(
             cobalt_sender.log_elapsed_time(
                 metrics::RESOLVE_DURATION_METRIC_ID,
                 (
-                    result_to_resolve_duration_result_code(&status),
+                    resolve_result_to_resolve_duration_code(&status),
                     metrics::ResolveDurationMetricDimensionResolverType::Font,
                 ),
                 Instant::now().duration_since(start_time).as_micros() as i64,
@@ -669,7 +672,7 @@ fn handle_bad_package_open(open_error: crate::cache::PackageOpenError, pkg_url: 
     status
 }
 
-fn result_to_resolve_duration_result_code(
+fn resolve_result_to_resolve_duration_code(
     res: &Result<(), Status>,
 ) -> metrics::ResolveDurationMetricDimensionResult {
     match res {
@@ -678,8 +681,10 @@ fn result_to_resolve_duration_result_code(
     }
 }
 
-fn status_to_resolve_error(status: Result<(), Status>) -> metrics::ResolveMetricDimensionResult {
-    match status {
+fn resolve_result_to_resolve_code(
+    result: Result<(), Status>,
+) -> metrics::ResolveMetricDimensionResult {
+    match result {
         Ok(()) => metrics::ResolveMetricDimensionResult::ZxOk,
         Err(Status::INTERNAL) => metrics::ResolveMetricDimensionResult::ZxErrInternal,
         Err(Status::NOT_SUPPORTED) => metrics::ResolveMetricDimensionResult::ZxErrNotSupported,

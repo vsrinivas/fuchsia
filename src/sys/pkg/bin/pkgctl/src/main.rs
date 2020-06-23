@@ -63,15 +63,15 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
 
             let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
-            let res = resolver
+            let () = resolver
                 .resolve(
                     &pkg_url,
                     &mut selectors.iter().map(|s| s.as_str()),
                     &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
                     dir_server_end,
                 )
-                .await?;
-            zx::Status::ok(res)?;
+                .await?
+                .map_err(zx::Status::from_raw)?;
 
             println!("package contents:");
             let mut stream = files_async::readdir_recursive(&dir, /*timeout=*/ None);

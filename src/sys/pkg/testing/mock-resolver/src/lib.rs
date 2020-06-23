@@ -220,7 +220,7 @@ impl MockResolverService {
 
         (*self.resolve_hook)(&package_url);
 
-        let response_status = match response {
+        let mut response = match response {
             Ok(package_dir) => {
                 // Open the package directory using the directory request given by the client
                 // asking to resolve the package, but proxy it through our handler so that we can
@@ -236,11 +236,13 @@ impl MockResolverService {
                     backing_dir_proxy,
                 ));
 
-                Status::OK
+                Ok(())
             }
-            Err(status) => status,
+            // TODO(fxb/53187): remove this line and fix affected tests.
+            Err(Status::OK) => Ok(()),
+            Err(status) => Err(status.into_raw()),
         };
-        responder.send(response_status.into_raw())?;
+        responder.send(&mut response)?;
         Ok(())
     }
 
@@ -301,6 +303,7 @@ mod tests {
                 package_dir_server_end,
             )
             .await
+            .unwrap()
             .unwrap();
 
         // Check that we can read from /meta (meta-as-file mode)

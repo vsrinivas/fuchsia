@@ -69,8 +69,8 @@ async fn resolve_package(
         .map_err(ResolveError::Fidl)
         .with_context(|| format!("resolving {}", url))?;
 
-    let () = fuchsia_zircon::Status::ok(res)
-        .map_err(ResolveError::Status)
+    let () = res
+        .map_err(|raw| ResolveError::Status(fuchsia_zircon::Status::from_raw(raw)))
         .with_context(|| format!("resolving {}", url))?;
 
     Ok(dir)

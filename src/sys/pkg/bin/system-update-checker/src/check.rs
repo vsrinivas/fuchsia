@@ -107,8 +107,10 @@ async fn latest_update_package(
         &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
         dir_server_end,
     );
-    let status = fut.await.map_err(errors::UpdatePackage::ResolveFidl)?;
-    zx::Status::ok(status).map_err(errors::UpdatePackage::Resolve)?;
+    let () = fut
+        .await
+        .map_err(errors::UpdatePackage::ResolveFidl)?
+        .map_err(|raw| errors::UpdatePackage::Resolve(zx::Status::from_raw(raw)))?;
     Ok(UpdatePackage::new(dir_proxy))
 }
 
@@ -137,7 +139,9 @@ async fn latest_system_image_merkle(
 #[cfg(test)]
 pub mod test_check_for_system_update_impl {
     use super::*;
-    use fidl_fuchsia_pkg::{PackageResolverGetHashResult, PackageUrl};
+    use fidl_fuchsia_pkg::{
+        PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
+    };
     use fuchsia_async::{self as fasync, futures::future};
     use lazy_static::lazy_static;
     use maplit::hashmap;
@@ -249,7 +253,7 @@ pub mod test_check_for_system_update_impl {
         }
     }
     impl PackageResolverProxyInterface for PackageResolverProxyTempDir {
-        type ResolveResponseFut = future::Ready<Result<i32, fidl::Error>>;
+        type ResolveResponseFut = future::Ready<Result<PackageResolverResolveResult, fidl::Error>>;
         fn resolve(
             &self,
             package_url: &str,
@@ -268,7 +272,7 @@ pub mod test_check_for_system_update_impl {
                 dir.into_channel(),
             )
             .unwrap();
-            future::ok(zx::sys::ZX_OK)
+            future::ok(Ok(()))
         }
 
         type GetHashResponseFut = future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
@@ -305,7 +309,8 @@ pub mod test_check_for_system_update_impl {
     async fn test_resolve_update_package_fidl_error() {
         struct PackageResolverProxyFidlError;
         impl PackageResolverProxyInterface for PackageResolverProxyFidlError {
-            type ResolveResponseFut = future::Ready<Result<i32, fidl::Error>>;
+            type ResolveResponseFut =
+                future::Ready<Result<PackageResolverResolveResult, fidl::Error>>;
             fn resolve(
                 &self,
                 _package_url: &str,
@@ -334,7 +339,8 @@ pub mod test_check_for_system_update_impl {
     async fn test_resolve_update_package_zx_error() {
         struct PackageResolverProxyZxError;
         impl PackageResolverProxyInterface for PackageResolverProxyZxError {
-            type ResolveResponseFut = future::Ready<Result<i32, fidl::Error>>;
+            type ResolveResponseFut =
+                future::Ready<Result<PackageResolverResolveResult, fidl::Error>>;
             fn resolve(
                 &self,
                 _package_url: &str,
@@ -342,7 +348,7 @@ pub mod test_check_for_system_update_impl {
                 _update_policy: &mut UpdatePolicy,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
-                future::ok(zx::sys::ZX_ERR_INTERNAL)
+                future::ok(Err(fuchsia_zircon::Status::INTERNAL.into_raw()))
             }
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
@@ -363,7 +369,8 @@ pub mod test_check_for_system_update_impl {
     async fn test_resolve_update_package_directory_closed() {
         struct PackageResolverProxyDirectoryCloser;
         impl PackageResolverProxyInterface for PackageResolverProxyDirectoryCloser {
-            type ResolveResponseFut = future::Ready<Result<i32, fidl::Error>>;
+            type ResolveResponseFut =
+                future::Ready<Result<PackageResolverResolveResult, fidl::Error>>;
             fn resolve(
                 &self,
                 _package_url: &str,
@@ -371,7 +378,7 @@ pub mod test_check_for_system_update_impl {
                 _update_policy: &mut UpdatePolicy,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
-                future::ok(zx::sys::ZX_OK)
+                future::ok(Ok(()))
             }
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;

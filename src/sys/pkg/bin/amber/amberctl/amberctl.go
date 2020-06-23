@@ -710,8 +710,8 @@ func (e ErrDaemon) Error() string {
 }
 
 type resolveResult struct {
-	status zx.Status
-	err    error
+	response pkg.PackageResolverResolveResult
+	err      error
 }
 
 func getUpdateComplete(r *pkg.PackageResolverWithCtxInterface, name string, version *string, merkle *string) error {
@@ -734,10 +734,10 @@ func getUpdateComplete(r *pkg.PackageResolverWithCtxInterface, name string, vers
 
 	ch := make(chan resolveResult)
 	go func() {
-		status, err := r.Resolve(context.Background(), pkgUri, selectors, updatePolicy, dirReq)
+		response, err := r.Resolve(context.Background(), pkgUri, selectors, updatePolicy, dirReq)
 		ch <- resolveResult{
-			status: zx.Status(status),
-			err:    err,
+			response: response,
+			err:      err,
 		}
 	}()
 
@@ -747,8 +747,8 @@ func getUpdateComplete(r *pkg.PackageResolverWithCtxInterface, name string, vers
 			if result.err != nil {
 				return fmt.Errorf("error getting update: %s", result.err)
 			}
-			if result.status != zx.ErrOk {
-				return fmt.Errorf("fetch: Resolve status: %s", result.status)
+			if result.response.Which() == pkg.PackageResolverResolveResultErr {
+				return fmt.Errorf("fetch: Resolve status: %s", zx.Status(result.response.Err))
 			}
 			return nil
 		case <-time.After(3 * time.Second):

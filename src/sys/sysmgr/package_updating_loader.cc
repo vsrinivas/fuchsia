@@ -66,11 +66,11 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   fuchsia::io::DirectoryPtr dir;
   auto dir_request = dir.NewRequest(dispatcher_);
-  auto done_cb = [this, url, fuchsia_url, dir = std::move(dir),
-                  callback = std::move(callback)](zx_status_t status) mutable {
-    if (status != ZX_OK) {
+  auto done_cb = [this, url, fuchsia_url, dir = std::move(dir), callback = std::move(callback)](
+                     fuchsia::pkg::PackageResolver_Resolve_Result result) mutable {
+    if (result.is_err()) {
       // TODO: only fail soft on NOT_FOUND?
-      FX_VLOGS(1) << "Package update failed with " << zx_status_get_string(status)
+      FX_VLOGS(1) << "Package update failed with " << zx_status_get_string(result.err())
                   << ". Loading package without update: " << url;
       PackageLoader::LoadUrl(url, std::move(callback));
       return;

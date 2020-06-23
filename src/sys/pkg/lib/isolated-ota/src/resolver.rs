@@ -205,7 +205,7 @@ pub mod tests {
             let selectors: Vec<&str> = vec![];
             let (package, package_remote) =
                 fidl::endpoints::create_proxy().context("creating package directory endpoints")?;
-            let status = resolver
+            let () = resolver
                 .resolve(
                     url,
                     &mut selectors.into_iter(),
@@ -213,8 +213,8 @@ pub mod tests {
                     package_remote,
                 )
                 .await
-                .unwrap();
-            zx::Status::ok(status).context("resolving package")?;
+                .unwrap()
+                .map_err(zx::Status::from_raw)?;
             Ok(package)
         }
     }

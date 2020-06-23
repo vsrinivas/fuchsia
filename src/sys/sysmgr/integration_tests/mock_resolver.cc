@@ -30,7 +30,7 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
                ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                ResolveCallback callback) override {
     fdio_service_connect("/pkg", dir.TakeChannel().release());
-    callback(ZX_OK);
+    callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithResponse({}));
   }
 
   virtual void GetHash(fuchsia::pkg::PackageUrl package_url, GetHashCallback callback) override {

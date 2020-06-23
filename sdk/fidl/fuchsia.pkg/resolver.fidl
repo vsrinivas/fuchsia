@@ -7,9 +7,9 @@ library fuchsia.pkg;
 using fuchsia.io;
 using zx;
 
-/// Resolves packages from a registry.
+/// This resolves packages from a repository.
 ///
-/// This interface is intended to be implemented by package resolver components, and used by
+/// This is intended to be implemented by package resolver components, and used by
 /// repository administration tools.
 [Discoverable]
 protocol PackageResolver {
@@ -18,52 +18,48 @@ protocol PackageResolver {
     ///
     /// Ensures that a package is on the local filesystem.
     ///
-    /// Arguments:
-    /// * `package_url` The package URL for a package (TODO: link to docs).
-    /// * `selectors` are the package selectors (TODO: link to docs).
-    /// * `dir` is a request for a directory that will be resolved when the package has been
-    ///   successfully cached.
-    ///
-    /// Return Values:
-    /// * `ZX_OK` if the package was successfully opened.
-    /// * `ZX_ERR_ACCESS_DENIED` if the resolver does not have permission to fetch a package blob.
-    /// * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error while
-    ///   handling the request
-    /// * `ZX_ERR_IO` if there is some other unspecified error during I/O.
-    /// * `ZX_ERR_NOT_FOUND` if the package or a package blob does not exist.
-    /// * `ZX_ERR_ADDRESS_UNREACHABLE` if the resolver does not know about the repo.
-    /// * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
-    /// * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
+    /// + request `package_url` the package URL for a package (TODO: link to docs).
+    /// + request `selectors` the package selectors (TODO: link to docs).
+    /// + request `update_policy` the policy to use when fetching packages.
+    /// + request `dir` a request for a directory that will be resolved when the package has
+    ///   been successfully cached.
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_ACCESS_DENIED` if the resolver does not have permission to fetch a
+    ///       package blob.
+    ///     * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error while
+    ///       handling the request
+    ///     * `ZX_ERR_IO` if there is some other unspecified error during I/O.
+    ///     * `ZX_ERR_NOT_FOUND` if the package or a package blob does not exist.
+    ///     * `ZX_ERR_ADDRESS_UNREACHABLE` if the resolver does not know about the repo.
+    ///     * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
+    ///     * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
     // TODO(fxb/45811) change `package_url` from string to PackageUrl
     Resolve(
         string package_url,
         vector<string> selectors,
         UpdatePolicy update_policy,
         request<fuchsia.io.Directory> dir
-        ) -> (zx.status status);
+        ) -> () error zx.status;
 
     /// Determines the hash of a package.
     ///
-    /// Arguments:
-    /// * `package_url` The package URL for a package.
-    ///
-    /// Return Values:
-    /// * `ZX_OK` if the hash of the package was successfully obtained.
-    /// * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error while
-    ///   handling the request
-    /// * `ZX_ERR_NOT_FOUND` if the package does not exist.
-    /// * `ZX_ERR_ADDRESS_UNREACHABLE` if the resolver does not know about the repo.
+    /// + request `package_url` the package URL for a package.
+    /// - response `meta_far_blob_id` the hash of the package.
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error
+    ///       while handling the request
+    ///     * `ZX_ERR_NOT_FOUND` if the package does not exist.
+    ///     * `ZX_ERR_ADDRESS_UNREACHABLE` if the resolver does not know about the repo.
     GetHash(
         PackageUrl package_url
         ) -> (BlobId meta_far_blob_id) error zx.status;
 };
 
-/// The `UpdatePolicy` provides different policies to be used when the `PackageResolver` is
-/// fetching packages.
+/// The policy to use when resolving packages.
 struct UpdatePolicy {
-    /// Should the resolver fetch the package if it is not present on the local system.
+    /// Whether the resolver should fetch the package if it is not present on the local system.
     bool fetch_if_absent;
 
-    /// Should the resolver allow old versions of the package to be used.
+    /// Whether the resolver should allow old versions of the package to be used.
     bool allow_old_versions;
 };
