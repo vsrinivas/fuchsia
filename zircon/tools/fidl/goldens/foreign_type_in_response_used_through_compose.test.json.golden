@@ -33,7 +33,6 @@
       "methods": [
         {
           "ordinal": 7703637629648977298,
-          "generated_ordinal": 7703637629648977298,
           "name": "GetFoo",
           "location": {
             "filename": "middle.test.fidl",

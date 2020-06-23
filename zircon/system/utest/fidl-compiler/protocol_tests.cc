@@ -327,29 +327,27 @@ protocol D {
   END_TEST;
 }
 
+// See GetGeneratedOrdinal64ForTesting in test_library.h
 bool invalid_composed_protocols_have_clashing_ordinals() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
-library a;
+library methodhasher;
 
-// a.b/lo and a.cv/f have colliding computed ordinals, so this is an illegal
-// FIDL definition.
-
-protocol b {
-   lo();
+protocol SpecialComposed {
+   ClashOne();
 };
 
-protocol cv {
-    compose b;
-    f();
+protocol Special {
+    compose SpecialComposed;
+    ClashTwo();
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "f_");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "ClashTwo_");
 
   END_TEST;
 }

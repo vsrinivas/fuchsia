@@ -28,7 +28,6 @@
       "methods": [
         {
           "ordinal": 6332745893922832518,
-          "generated_ordinal": 6332745893922832518,
           "name": "GetChild",
           "location": {
             "filename": "protocol_request.test.fidl",
@@ -84,7 +83,6 @@
         },
         {
           "ordinal": 26635226975931008,
-          "generated_ordinal": 26635226975931008,
           "name": "GetChildRequest",
           "location": {
             "filename": "protocol_request.test.fidl",
@@ -140,7 +138,6 @@
         },
         {
           "ordinal": 7680932945371199613,
-          "generated_ordinal": 7680932945371199613,
           "name": "TakeChild",
           "location": {
             "filename": "protocol_request.test.fidl",
@@ -185,7 +182,6 @@
         },
         {
           "ordinal": 7803173423056840247,
-          "generated_ordinal": 7803173423056840247,
           "name": "TakeChildRequest",
           "location": {
             "filename": "protocol_request.test.fidl",

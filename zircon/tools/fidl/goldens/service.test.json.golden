@@ -18,7 +18,6 @@
       "methods": [
         {
           "ordinal": 6344653839727902267,
-          "generated_ordinal": 6344653839727902267,
           "name": "MethodOnFirst",
           "location": {
             "filename": "service.test.fidl",
@@ -54,7 +53,6 @@
       "methods": [
         {
           "ordinal": 6306721464597794337,
-          "generated_ordinal": 6306721464597794337,
           "name": "MethodOnSecond",
           "location": {
             "filename": "service.test.fidl",

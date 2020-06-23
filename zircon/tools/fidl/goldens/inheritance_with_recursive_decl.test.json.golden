@@ -18,7 +18,6 @@
       "methods": [
         {
           "ordinal": 2566928499103139852,
-          "generated_ordinal": 2566928499103139852,
           "name": "First",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
@@ -74,7 +73,6 @@
       "methods": [
         {
           "ordinal": 2566928499103139852,
-          "generated_ordinal": 2566928499103139852,
           "name": "First",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
@@ -119,7 +117,6 @@
         },
         {
           "ordinal": 2628306304378964143,
-          "generated_ordinal": 2628306304378964143,
           "name": "Second",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",

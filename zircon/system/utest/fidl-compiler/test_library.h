@@ -9,6 +9,7 @@
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
 #include <fidl/linter.h>
+#include <fidl/ordinals.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tables_generator.h>
@@ -31,6 +32,29 @@ class SharedAmongstLibraries {
   std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries;
 };
 
+namespace {
+
+// See ordinals_test.cc
+fidl::raw::Ordinal64 GetGeneratedOrdinal64ForTesting(
+    const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
+    const std::string_view& selector_name, const fidl::raw::SourceElement& source_element) {
+  static std::map<std::string, uint64_t> special_selectors = {
+      {"ThisOneHashesToZero", 0},
+      {"ClashOne", 456789},
+      {"ClashOneReplacement", 987654},
+      {"ClashTwo", 456789},
+  };
+  if (library_name.size() == 1 && library_name[0] == "methodhasher" &&
+      (protocol_name == "Special" || protocol_name == "SpecialComposed")) {
+    auto it = special_selectors.find(std::string(selector_name));
+    assert(it != special_selectors.end() && "only special selectors allowed");
+    return fidl::raw::Ordinal64(source_element, it->second);
+  }
+  return fidl::ordinals::GetGeneratedOrdinal64(library_name, protocol_name, selector_name,
+                                               source_element);
+}
+};  // namespace
+
 class TestLibrary final {
  public:
   explicit TestLibrary() : TestLibrary(&owned_shared_) {}
@@ -43,6 +67,7 @@ class TestLibrary final {
         all_libraries_(&shared->all_libraries),
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
         library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_,
+                                                       GetGeneratedOrdinal64ForTesting,
                                                        experimental_flags_)) {}
 
   explicit TestLibrary(const std::string& raw_source_code,

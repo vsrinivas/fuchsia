@@ -14,19 +14,6 @@ namespace ordinals {
 // function returns its value; otherwise, it returns the name parameter.
 std::string GetSelector(const raw::AttributeList* attributes, SourceSpan name);
 
-// Computes the 32bits ordinal for this |method|.
-//
-// The ordinal value is equal to
-//
-//    *((int32_t *)sha256(library_name + "." + protocol_name + "/" + selector_name)) & 0x7fffffff;
-//
-// Note: the slash separator is between the protocol_name and selector_name.
-//
-// The selector_name is retrieved using GetSelector.
-raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
-                                     const std::string_view& protocol_name,
-                                     const raw::ProtocolMethod& method);
-
 // Computes the 64bits ordinal for this |method|.
 //
 // The ordinal value is equal to
@@ -39,7 +26,8 @@ raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& librar
 // The selector_name is retrieved using GetSelector.
 raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& library_name,
                                      const std::string_view& protocol_name,
-                                     const raw::ProtocolMethod& method);
+                                     const std::string_view& selector_name,
+                                     const raw::SourceElement& source_element);
 
 }  // namespace ordinals
 }  // namespace fidl

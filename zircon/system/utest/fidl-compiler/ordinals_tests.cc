@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "error_test.h"
 #include "test_library.h"
 
 #define BORINGSSL_NO_CXX
@@ -13,70 +14,26 @@
 
 namespace {
 
-// Some of the tests below required generating strings offline until their
-// SHA-256 sums had particular properties.  The code used to calculate a
-// collision in the first 32 bits is included below, in case it proves useful in
-// the future.
-
-// #include <climits>
-// #include <iostream>
-// #include <openssl/sha.h>
-// #include <stdio.h>
-// #include <string.h>
-// #include <string>
-
-// std::string next_name(std::string& curr) {
-//     std::string next = curr;
-//     int i = next.length() - 1;
-//     for (; i >= 0; i--) {
-//         if (next[i] < 'z') {
-//             next[i]++;
-//             break;
-//         } else {
-//             next[i] = 'a';
-//         }
-//     }
-//     if (i == -1) {
-//         next = 'a' + next;
-//     }
-//     return next;
-// }
-
-// int main(int argc, char** argv) {
-//     uint8_t* bitvec = new uint8_t[UINT_MAX];
-//     std::string base("a.b/");
-//     memset(bitvec, 0, UINT_MAX);
-//     bool keep_going = true;
-//     std::string curr_name = "a";
-//     uint32_t ordinal = 0;
-//     uint64_t iterations = 0;
-//     do {
-//         uint8_t digest[SHA256_DIGEST_LENGTH];
-//         curr_name = next_name(curr_name);
-//         std::string full_name = base + curr_name;
-//         SHA256(reinterpret_cast<const uint8_t*>(full_name.data()), full_name.size(), digest);
-//         ordinal = *(reinterpret_cast<uint32_t*>(digest)) & 0x7fffffff;
-//         keep_going = bitvec[ordinal] == 0;
-//         bitvec[ordinal] = 1;
-//     } while (keep_going);
-//     fprintf(stderr, "ordinal = %d name = %s\n", ordinal, curr_name.c_str());
-// }
+// Since a number of these tests rely on specific properties of 64b hashes
+// which are computationally prohibitive to reverse engineer, we rely on
+// a stubbed out method hasher `GetGeneratedOrdinal64ForTesting` defined
+// in test_library.h.
 
 bool ordinal_cannot_be_zero() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
-library a;
+library methodhasher;
 
-// The first 32 bits of the SHA256 hash of a.b/fcuvhse are 0.
-protocol b {
-    fcuvhse() -> (int64 i);
+protocol Special {
+    ThisOneHashesToZero() -> (int64 i);
 };
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size(), "Ordinal value 0 should be disallowed");
+  ASSERT_EQ(1, errors.size());
+  ASSERT_ERR(errors[0], fidl::ErrGeneratedZeroValueOrdinal);
 
   END_TEST;
 }
@@ -85,50 +42,24 @@ bool clashing_ordinal_values() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
-library a;
+library methodhasher;
 
-// The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
-// the same.  This will trigger an error when ordinals are generated.
-protocol b {
-    ljz(string s, bool b) -> (int32 i);
-    clgn(string s) -> (handle<channel> r);
+protocol Special {
+    ClashOne(string s, bool b) -> (int32 i);
+    ClashTwo(string s) -> (handle<channel> r);
 };
 
-)FIDL");
+// )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-
-  EXPECT_EQ(1, errors.size());
-
-  // TODO(FLK-435): Print some basic diagnostic info if this test flakes, so that we can try to
-  // track down the root cause.
-  if (errors.size() != 1) {
-    fprintf(stderr, "=== BEGIN DEBUG INFO FOR FLK-435 ===\n");
-
-    auto b = library.LookupProtocol("b");
-
-    fprintf(stderr, "b->methods.size() = %zu\n", b->methods.size());
-
-    for (size_t i = 0; i < b->methods.size(); i++) {
-      const auto& method = b->methods.at(i);
-      fprintf(stderr, "[%zu] name=%s ordinal32=%x, ordinal64=%" PRIx64 "\n", i,
-              std::string(method.name.data()).c_str(), method.generated_ordinal32->value,
-              method.generated_ordinal64->value);
-    }
-
-    fprintf(stderr, "errors.size() = %zu\n", errors.size());
-    for (size_t i = 0; i < errors.size(); i++) {
-      fprintf(stderr, "error[%zu] = %s\n", i, errors.at(i)->msg.c_str());
-    }
-
-    fprintf(stderr, "=== END DEBUG INFO FOR FLK-435 ===\n");
-  }
+  ASSERT_EQ(1, errors.size());
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
+  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
   std::smatch sm;
   std::string error_msg(errors[0]->msg);
-  EXPECT_TRUE(std::regex_search(error_msg, sm, pattern),
+  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern),
               ("Selector pattern not found in error: " + errors[0]->msg).c_str());
 
   END_TEST;
@@ -138,14 +69,12 @@ bool clashing_ordinal_values_with_attribute() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
-library a;
+library methodhasher;
 
-// The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
-// the same.  This will trigger an error when ordinals are generated.
-protocol b {
-    [Selector = "ljz"]
+protocol Special {
+    [Selector = "ClashOne"]
     foo(string s, bool b) -> (int32 i);
-    [Selector = "clgn"]
+    [Selector = "ClashTwo"]
     bar(string s) -> (handle<channel> r);
 };
 
@@ -153,9 +82,10 @@ protocol b {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
+  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
   std::smatch sm;
   std::string error_msg(errors[0]->msg);
   ASSERT_TRUE(std::regex_search(error_msg, sm, pattern),
@@ -168,14 +98,12 @@ bool attribute_resolves_clashes() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
-library a;
+library methodhasher;
 
-// The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
-// the same.  This will trigger an error when ordinals are generated.
-protocol b {
-    [Selector = "ljz_"]
-    ljz(string s, bool b) -> (int32 i);
-    clgn(string s) -> (handle<channel> r);
+protocol Special {
+    [Selector = "ClashOneReplacement"]
+    ClashOne(string s, bool b) -> (int32 i);
+    ClashTwo(string s) -> (handle<channel> r);
 };
 
 )FIDL");
@@ -195,21 +123,15 @@ protocol protocol {
 )FIDL");
   ASSERT_TRUE(library.Compile());
 
-  const char hash_name32[] = "a.b.c.protocol/selector";
-  uint8_t digest32[SHA256_DIGEST_LENGTH];
-  SHA256(reinterpret_cast<const uint8_t*>(hash_name32), strlen(hash_name32), digest32);
-  uint64_t expected_hash32 = *(reinterpret_cast<uint64_t*>(digest32)) & 0x7fffffff;
-
   const char hash_name64[] = "a.b.c/protocol.selector";
   uint8_t digest64[SHA256_DIGEST_LENGTH];
   SHA256(reinterpret_cast<const uint8_t*>(hash_name64), strlen(hash_name64), digest64);
   uint64_t expected_hash64 = *(reinterpret_cast<uint64_t*>(digest64)) & 0x7fffffffffffffff;
 
   const fidl::flat::Protocol* iface = library.LookupProtocol("protocol");
-  uint64_t actual_hash32 = iface->methods[0].generated_ordinal32->value;
-  ASSERT_EQ(actual_hash32, expected_hash32, "Expected 32bits hash is not correct");
   uint64_t actual_hash64 = iface->methods[0].generated_ordinal64->value;
   ASSERT_EQ(actual_hash64, expected_hash64, "Expected 64bits hash is not correct");
+
   END_TEST;
 }
 

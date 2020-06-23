@@ -1650,10 +1650,10 @@ void Library::ConsumeProtocolDeclaration(
 
   std::vector<Protocol::Method> methods;
   for (auto& method : protocol_declaration->methods) {
-    auto generated_ordinal32 = std::make_unique<raw::Ordinal32>(
-        fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.decl_name(), *method));
+    auto selector_name =
+        fidl::ordinals::GetSelector(method->attributes.get(), method->identifier->span());
     auto generated_ordinal64 = std::make_unique<raw::Ordinal64>(
-        fidl::ordinals::GetGeneratedOrdinal64(library_name_, name.decl_name(), *method));
+        method_hasher_(library_name_, name.decl_name(), selector_name, *method->identifier));
     auto attributes = std::move(method->attributes);
     SourceSpan method_name = method->identifier->span();
 
@@ -1686,9 +1686,9 @@ void Library::ConsumeProtocolDeclaration(
     }
 
     assert(maybe_request != nullptr || maybe_response != nullptr);
-    methods.emplace_back(std::move(attributes), std::move(generated_ordinal32),
-                         std::move(generated_ordinal64), std::move(method_name),
-                         std::move(maybe_request), std::move(maybe_response));
+    methods.emplace_back(std::move(attributes), std::move(generated_ordinal64),
+                         std::move(method_name), std::move(maybe_request),
+                         std::move(maybe_response));
   }
 
   RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(name),
@@ -3094,15 +3094,15 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
         return Fail(ErrDuplicateMethodNameCanonical, method.name, original_name,
                     previous_span.data(), previous_span, canonical_name);
       }
+      if (method.generated_ordinal64->value == 0)
+        return Fail(ErrGeneratedZeroValueOrdinal, method.generated_ordinal64->span());
       auto ordinal_result =
-          method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
-      if (method.generated_ordinal32->value == 0)
-        return Fail(ErrGeneratedZeroValueOrdinal, method.generated_ordinal32->span());
+          method_scope.ordinals.Insert(method.generated_ordinal64->value, method.name);
       if (!ordinal_result.ok()) {
         std::string replacement_method(
             fidl::ordinals::GetSelector(method.attributes.get(), method.name));
         replacement_method.push_back('_');
-        return Fail(ErrDuplicateMethodOrdinal, method.generated_ordinal32->span(),
+        return Fail(ErrDuplicateMethodOrdinal, method.generated_ordinal64->span(),
                     ordinal_result.previous_occurrence(), replacement_method);
       }
 

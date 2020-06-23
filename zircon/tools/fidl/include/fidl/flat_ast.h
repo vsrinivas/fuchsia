@@ -427,11 +427,9 @@ struct Protocol final : public TypeDecl {
     Method& operator=(Method&&) = default;
 
     Method(std::unique_ptr<raw::AttributeList> attributes,
-           std::unique_ptr<raw::Ordinal32> generated_ordinal32,
            std::unique_ptr<raw::Ordinal64> generated_ordinal64, SourceSpan name,
            Struct* maybe_request, Struct* maybe_response)
         : attributes(std::move(attributes)),
-          generated_ordinal32(std::move(generated_ordinal32)),
           generated_ordinal64(std::move(generated_ordinal64)),
           name(std::move(name)),
           maybe_request(maybe_request),
@@ -440,8 +438,6 @@ struct Protocol final : public TypeDecl {
     }
 
     std::unique_ptr<raw::AttributeList> attributes;
-    // To be removed when FIDL-524 has completed.
-    std::unique_ptr<raw::Ordinal32> generated_ordinal32;
     std::unique_ptr<raw::Ordinal64> generated_ordinal64;
     SourceSpan name;
     Struct* maybe_request;
@@ -720,6 +716,10 @@ class ConsumeStep;
 class CompileStep;
 class VerifyAttributesStep;
 
+using MethodHasher = fit::function<raw::Ordinal64(
+    const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
+    const std::string_view& selector_name, const raw::SourceElement& source_element)>;
+
 class Library {
   friend StepBase;
   friend ConsumeStep;
@@ -728,10 +728,11 @@ class Library {
 
  public:
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
-          ExperimentalFlags experimental_flags)
+          MethodHasher method_hasher, ExperimentalFlags experimental_flags)
       : all_libraries_(all_libraries),
         reporter_(reporter),
         typespace_(typespace),
+        method_hasher_(std::move(method_hasher)),
         experimental_flags_(experimental_flags) {}
 
   bool ConsumeFile(std::unique_ptr<raw::File> file);
@@ -910,6 +911,7 @@ class Library {
 
   Reporter* reporter_;
   Typespace* typespace_;
+  const MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;
 
   uint32_t anon_counter_ = 0;

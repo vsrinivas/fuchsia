@@ -25,6 +25,7 @@
 #include <fidl/json_schema.h>
 #include <fidl/lexer.h>
 #include <fidl/names.h>
+#include <fidl/ordinals.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
 #include <fidl/tables_generator.h>
@@ -397,6 +398,7 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
       continue;
     }
     auto library = std::make_unique<fidl::flat::Library>(&all_libraries, reporter, typespace,
+                                                         fidl::ordinals::GetGeneratedOrdinal64,
                                                          experimental_flags);
     for (const auto& source_file : source_manager.sources()) {
       if (!Parse(*source_file, reporter, library.get(), experimental_flags)) {

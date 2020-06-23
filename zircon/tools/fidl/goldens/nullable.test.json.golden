@@ -42,7 +42,6 @@
       "methods": [
         {
           "ordinal": 1238508415331800925,
-          "generated_ordinal": 1238508415331800925,
           "name": "Add",
           "location": {
             "filename": "nullable.test.fidl",
