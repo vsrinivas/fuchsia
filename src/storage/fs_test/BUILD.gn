@@ -166,6 +166,25 @@ fuchsia_component("dot-dot-tests") {
   ]
 }
 
+executable("fcntl") {
+  testonly = true
+  sources = [ "fcntl.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("fcntl-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/fcntl.cml"
+  deps = [
+    ":fcntl",
+    ":manifests",
+  ]
+}
+
 executable("overflow") {
   testonly = true
   sources = [ "overflow.cc" ]
@@ -211,6 +230,7 @@ fuchsia_test_package("fs-tests") {
     ":clone-tests",
     ":directory-tests",
     ":dot-dot-tests",
+    ":fcntl-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
@@ -250,6 +270,7 @@ action("manifests") {
     "$target_gen_dir/clone.cml",
     "$target_gen_dir/directory.cml",
     "$target_gen_dir/dot-dot.cml",
+    "$target_gen_dir/fcntl.cml",
     "$target_gen_dir/max-file.cml",
     "$target_gen_dir/overflow.cml",
     "$target_gen_dir/read-write.cml",
