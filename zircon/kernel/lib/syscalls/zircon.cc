@@ -217,7 +217,7 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
   if (ptr.reinterpret<const char>().copy_array_from_user(buf, len) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 
-  return log->Write(DEBUGLOG_INFO, options, buf, len);
+  return log->Write(DEBUGLOG_INFO, options, {buf, len});
 }
 
 // zx_status_t zx_debuglog_read

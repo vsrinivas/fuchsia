@@ -20,84 +20,93 @@
 #include <platform/debug.h>
 #include <vm/vm.h>
 
-/* routines for dealing with main console io */
-
 static SpinLock dputc_spin_lock;
 
-void __kernel_serial_write(const char* str, size_t len) {
+void serial_write(ktl::string_view str) {
   AutoSpinLock guard(&dputc_spin_lock);
 
-  /* write out the serial port */
-  platform_dputs_irq(str, len);
+  // Write out the serial port.
+  platform_dputs_irq(str.data(), str.size());
 }
 
 static SpinLock print_spin_lock;
-static fbl::DoublyLinkedList<PrintCallback*> print_callbacks;
+static fbl::DoublyLinkedList<PrintCallback*> print_callbacks TA_GUARDED(print_spin_lock);
 
-void __kernel_console_write(const char* str, size_t len) {
-  // Print to any registered loggers.
-  if (!print_callbacks.is_empty()) {
-    AutoSpinLock guard(&print_spin_lock);
+void console_write(ktl::string_view str) {
+  // Print to any registered console loggers.
+  AutoSpinLock guard(&print_spin_lock);
 
-    for (PrintCallback& print_callback : print_callbacks) {
-      print_callback.Print(str, len);
-    }
+  for (PrintCallback& print_callback : print_callbacks) {
+    print_callback.Print(str);
   }
 }
 
-static void __kernel_stdout_write(const char* str, size_t len) {
+static void stdout_write(ktl::string_view str) {
   if (dlog_bypass() == false) {
-    if (dlog_write(DEBUGLOG_INFO, 0, str, len) == ZX_OK)
+    if (dlog_write(DEBUGLOG_INFO, 0, str) == ZX_OK)
       return;
   }
-  __kernel_console_write(str, len);
-  __kernel_serial_write(str, len);
+  console_write(str);
+  serial_write(str);
 }
 
-#if WITH_DEBUG_LINEBUFFER
-static void __kernel_stdout_write_buffered(const char* str, size_t len) {
+static void stdout_write_buffered(ktl::string_view str) {
   Thread* t = Thread::Current::Get();
 
-  if (unlikely(t == NULL)) {
-    __kernel_stdout_write(str, len);
+  if (unlikely(t == nullptr)) {
+    stdout_write(str);
     return;
   }
 
-  char* buf = t->linebuffer_;
-  size_t pos = t->linebuffer_pos_;
-
-  // look for corruption and don't continue
-  if (unlikely(!is_kernel_address((uintptr_t)buf) || pos >= THREAD_LINEBUFFER_LENGTH)) {
-    const char* str = "<linebuffer corruption>\n";
-    __kernel_stdout_write(str, strlen(str));
-    return;
-  }
-
-  while (len-- > 0) {
-    char c = *str++;
-    buf[pos++] = c;
-    if (c == '\n') {
-      __kernel_stdout_write(buf, pos);
-      pos = 0;
-      continue;
-    }
-    if (pos == (THREAD_LINEBUFFER_LENGTH - 1)) {
-      buf[pos++] = '\n';
-      __kernel_stdout_write(buf, pos);
-      pos = 0;
-      continue;
-    }
-  }
-  t->linebuffer_pos_ = pos;
+  t->linebuffer().Write(str);
 }
 
-static constexpr auto kStdoutWrite = __kernel_stdout_write_buffered;
+void Linebuffer::Write(ktl::string_view str) {
+  // Look for corruption and don't continue.
+  if (unlikely(!is_kernel_address((uintptr_t)buffer_.data()) || pos_ >= buffer_.size())) {
+    stdout_write("<linebuffer corruption>\n"sv);
+    return;
+  }
 
-#else  // !WITH_DEBUG_LINEBUFFER
+  while (!str.empty()) {
+    size_t remaining = buffer_.size() - pos_;
+    auto substring = str.substr(0, remaining);
+    size_t newline_pos = substring.find_first_of('\n');
 
-static constexpr auto kStdoutWrite = __kernel_stdout_write;
+    size_t size;
+    bool inject;
+    bool flush;
+    if (newline_pos != substring.npos) {
+      // A newline that fits in our remaining buffer.
+      size = newline_pos + 1;
+      inject = false;
+      flush = true;
+    } else if (substring.size() == remaining) {
+      // We fill the buffer, injecting a newline.
+      size = remaining - 1;
+      inject = true;
+      flush = true;
+    } else {
+      // We only add to the buffer.
+      size = substring.size();
+      inject = false;
+      flush = false;
+    }
 
-#endif  // WITH_DEBUG_LINEBUFFER
+    memcpy(&buffer_[pos_], substring.data(), size);
+    str.remove_prefix(size);
+    pos_ += size;
+
+    if (inject) {
+      buffer_[pos_] = '\n';
+      pos_ += 1;
+    }
+    if (flush) {
+      stdout_write({buffer_.data(), pos_});
+      pos_ = 0;
+    }
+  }
+}
 
 void register_print_callback(PrintCallback* cb) {
   AutoSpinLock guard(&print_spin_lock);
@@ -114,7 +123,7 @@ void unregister_print_callback(PrintCallback* cb) {
 // This is what printf calls.  Really this could and should be const.
 // But all the stdio function signatures require non-const `FILE*`.
 FILE FILE::stdout_{[](void*, ktl::string_view str) {
-                     kStdoutWrite(str.data(), str.size());
+                     stdout_write_buffered(str);
                      return static_cast<int>(str.size());
                    },
                    nullptr};

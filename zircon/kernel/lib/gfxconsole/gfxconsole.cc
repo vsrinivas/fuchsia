@@ -138,12 +138,12 @@ static bool gfxconsole_putc(char c) {
   return inval;
 }
 
-static void gfxconsole_print_callback(PrintCallback* cb, const char* str, size_t len) {
+static void gfxconsole_print_callback(PrintCallback* cb, ktl::string_view str) {
   int refresh_full_screen = 0;
-  for (size_t i = 0; i < len; i++) {
-    if (str[i] == '\n')
+  for (char c : str) {
+    if (c == '\n')
       gfxconsole_putc('\r');
-    refresh_full_screen |= gfxconsole_putc(str[i]);
+    refresh_full_screen |= gfxconsole_putc(c);
   }
 
   // blit from the software surface to the hardware

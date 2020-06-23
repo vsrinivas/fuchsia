@@ -22,7 +22,7 @@ bool log_format() {
 
   char msg[] = "Hello World";
 
-  log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg));
+  log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
 
   dlog_header* header = reinterpret_cast<dlog_header*>(log->data);
 
@@ -58,13 +58,13 @@ bool log_wrap() {
     size_t write = to_write - sizeof(dlog_header);
     write = write > DLOG_MAX_DATA ? DLOG_MAX_DATA : write;
 
-    log->write(DEBUGLOG_WARNING, 0, dummy, write);
+    log->write(DEBUGLOG_WARNING, 0, {dummy, write});
     to_write -= write + sizeof(dlog_header);
   }
 
   EXPECT_EQ(pad, log->head);
 
-  log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg));
+  log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
 
   dlog_header* header = reinterpret_cast<dlog_header*>(log->data + pad);
 
@@ -96,7 +96,7 @@ bool log_reader_rollout() {
 
   char msg[] = "Hello World";
 
-  log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg));
+  log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
 
   uint8_t read_buf[DLOG_MAX_RECORD];
   size_t got;
@@ -121,7 +121,7 @@ bool log_reader_rollout() {
   EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&msg[0]), msg_bytes, sizeof(msg));
 
   for (size_t i = 0; i < DLOG_SIZE; i += sizeof(dlog_header) + sizeof(msg)) {
-    log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg));
+    log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
   }
 
   ASSERT_EQ(ZX_OK, reader.Read(0, read_buf, sizeof(read_buf), &got));
@@ -157,11 +157,11 @@ bool shutdown() {
 
   // Write one message and see that it succeeds.
   char msg[] = "Message!";
-  ASSERT_EQ(ZX_OK, log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg)));
+  ASSERT_EQ(ZX_OK, log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)}));
 
   // Now ask the DLog to shutdown, write another, see that it fails.
   log->shutdown();
-  ASSERT_EQ(ZX_ERR_BAD_STATE, log->write(DEBUGLOG_WARNING, 0, msg, sizeof(msg)));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, log->write(DEBUGLOG_WARNING, 0, msg));
 
   // See that there is only one message in the DLog.
   DlogReader reader;

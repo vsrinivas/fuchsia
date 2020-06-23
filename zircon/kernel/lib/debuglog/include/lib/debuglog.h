@@ -14,6 +14,7 @@
 
 #include <kernel/event.h>
 #include <kernel/mutex.h>
+#include <ktl/string_view.h>
 
 struct DLog;
 typedef struct dlog_header dlog_header_t;
@@ -58,9 +59,8 @@ class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
 #define DLOG_HDR_GET_FIFOLEN(n) ((n)&0xFFF)
 #define DLOG_HDR_GET_READLEN(n) (((n) >> 12) & 0xFFF)
 
-#define DLOG_MIN_RECORD (32u)
-#define DLOG_MAX_DATA (224u)
-#define DLOG_MAX_RECORD (DLOG_MIN_RECORD + DLOG_MAX_DATA)
+#define DLOG_MAX_RECORD (size_t{256})
+#define DLOG_MAX_DATA (DLOG_MAX_RECORD - sizeof(dlog_header))
 
 // This structure is designed to be copied into a zx_log_record_t from zircon/syscalls/log.h . Only
 // the header field is repurposed, and the rest is then transferred to userspace as-is.
@@ -87,13 +87,12 @@ struct dlog_record {
   char data[DLOG_MAX_DATA];
 };
 
-static_assert(sizeof(dlog_header_t) == DLOG_MIN_RECORD, "");
 static_assert(sizeof(dlog_record_t) == DLOG_MAX_RECORD, "");
 
-zx_status_t dlog_write(uint32_t severity, uint32_t flags, const void* ptr, size_t len);
+zx_status_t dlog_write(uint32_t severity, uint32_t flags, ktl::string_view str);
 
 // used by sys_debug_write()
-void dlog_serial_write(const char* data, size_t len);
+void dlog_serial_write(ktl::string_view str);
 
 // bluescreen_init should be called at the "start" of a fatal fault or
 // panic to ensure that the fault output (via kernel printf/dprintf)

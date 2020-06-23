@@ -18,27 +18,23 @@
 
 static char buf[1048];
 
-static void uart_blocking_print_test(void) {
-  int count;
-
-  for (count = 0; count < 5; count++) {
+static void uart_blocking_print_test() {
+  for (int count = 0; count < 5; count++) {
     snprintf(buf, sizeof(buf),
              "Blocking Test Count %d (FIRST LINE)\n"
              "AND THIS SHOULD BE THE SECOND LINE Count %d\n",
              count, count);
-    dlog_serial_write(buf, strlen(buf));
+    dlog_serial_write(buf);
   }
 }
 
-static void uart_nonblocking_print_test(void) {
-  int count;
-
-  for (count = 0; count < 5; count++) {
+static void uart_nonblocking_print_test() {
+  for (int count = 0; count < 5; count++) {
     snprintf(buf, sizeof(buf),
              "NON-Blocking Test Count %d (FIRST LINE)\n"
              "AND THIS SHOULD BE THE SECOND LINE Count %d\n",
              count, count);
-    __kernel_serial_write(buf, strlen(buf));
+    serial_write(buf);
   }
 }
 
@@ -69,9 +65,9 @@ static void uart_print_lots_of_lines(bool block) {
     *s++ = '\n';
     *s = '\0';
     if (block)
-      dlog_serial_write(buf, strlen(buf));
+      dlog_serial_write(buf);
     else
-      __kernel_serial_write(buf, strlen(buf));
+      serial_write(buf);
   }
 }
 

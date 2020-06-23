@@ -12,8 +12,22 @@
 #include <zircon/compiler.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <ktl/array.h>
+#include <ktl/string_view.h>
 
-/* LK specific calls to register to get input/output of the main console */
+class Linebuffer {
+ public:
+  // Buffer the contents of |str|, sending lines at a time to be
+  // output via kStdout.
+  //
+  // Lines break either at '\n' characters in |str|, or when the
+  // internal buffer gets full.
+  void Write(ktl::string_view str);
+
+ private:
+  size_t pos_ = 0;
+  ktl::array<char, 128> buffer_;
+};
 
 class PrintCallback : public fbl::DoublyLinkedListable<PrintCallback*> {
  public:
@@ -22,25 +36,25 @@ class PrintCallback : public fbl::DoublyLinkedListable<PrintCallback*> {
   PrintCallback& operator=(const PrintCallback&) = delete;
   PrintCallback& operator=(PrintCallback&&) = delete;
 
-  using Callback = void(PrintCallback* cb, const char* str, size_t len);
+  using Callback = void(PrintCallback* cb, ktl::string_view str);
 
   constexpr explicit PrintCallback(Callback* callback) : callback_(callback) {}
 
-  void Print(const char* str, size_t len) {
+  void Print(ktl::string_view str) {
     if (callback_)
-      callback_(this, str, len);
+      callback_(this, str);
   }
 
  private:
   Callback* callback_;
 };
 
-/* register callback to receive debug prints */
+// Register a callback to receive debug prints.
 void register_print_callback(PrintCallback* cb);
 void unregister_print_callback(PrintCallback* cb);
 
-/* back doors to directly write to the kernel serial and console */
-void __kernel_serial_write(const char* str, size_t len);
-void __kernel_console_write(const char* str, size_t len);
+// Back doors to directly write to the kernel serial and console, respectively.
+void serial_write(ktl::string_view str);
+void console_write(ktl::string_view str);
 
 #endif  // ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_

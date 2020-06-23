@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
 
 #include <debug.h>
+#include <lib/io.h>
 #include <platform.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -340,8 +341,6 @@ typedef void (*thread_trampoline_routine)() __NO_RETURN;
 // This includes the trailing NUL.
 // N.B. This must match ZX_MAX_NAME_LEN.
 #define THREAD_NAME_LENGTH 32
-
-#define THREAD_LINEBUFFER_LENGTH 128
 
 // thread priority
 #define NUM_PRIORITIES (32)
@@ -714,6 +713,8 @@ struct Thread {
 
   arch_thread& arch() { return arch_; }
 
+  Linebuffer& linebuffer() { return linebuffer_; }
+
  private:
   // The architecture-specific methods for getting and setting the
   // current thread may need to see Thread's arch_ member via offsetof.
@@ -827,14 +828,12 @@ struct Thread {
   void* recursive_object_deletion_list_ = nullptr;
 
   char name_[THREAD_NAME_LENGTH];
-#if WITH_DEBUG_LINEBUFFER
-  // buffering for debug/klog output
-  size_t linebuffer_pos_;
-  char linebuffer_[THREAD_LINEBUFFER_LENGTH];
-#endif
 
   // TODO(54383) More of Thread should be private than this.
  private:
+  // Buffering for Debuglog output.
+  Linebuffer linebuffer_;
+
   // Indicates whether user register state (debug, vector, fp regs, etc.) has been saved to the
   // arch_thread_t as part of thread suspension / exception handling.
   //

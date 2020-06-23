@@ -84,7 +84,7 @@ zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
   // This path to serial out arbitrates with the debug log
   // drainer and/or kernel ll debug path to minimize interleaving
   // of serial output between various sources
-  dlog_serial_write(buf, len);
+  dlog_serial_write({buf, len});
 
   return ZX_OK;
 }

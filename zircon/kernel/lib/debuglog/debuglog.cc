@@ -94,14 +94,16 @@ bool dlog_bypass(void) { return dlog_bypass_; }
 //  [....XXXX....]  [XX........XX]
 //           H         H
 
-zx_status_t dlog_write(uint32_t severity, uint32_t flags, const void* data_ptr, size_t len) {
-  return DLOG.write(severity, flags, data_ptr, len);
+zx_status_t dlog_write(uint32_t severity, uint32_t flags, ktl::string_view str) {
+  return DLOG.write(severity, flags, str);
 }
 
-zx_status_t DLog::write(uint32_t severity, uint32_t flags, const void* data_ptr, size_t len) {
-  const uint8_t* ptr = static_cast<const uint8_t*>(data_ptr);
+zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str) {
+  str = str.substr(0, DLOG_MAX_DATA);
 
-  len = len > DLOG_MAX_DATA ? DLOG_MAX_DATA : len;
+  const char* ptr = str.data();
+
+  const size_t len = str.size();
 
   if (this->panic) {
     return ZX_ERR_BAD_STATE;
@@ -110,11 +112,11 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, const void* data_ptr,
   // Our size "on the wire" must be a multiple of 4, so we know
   // that worst case there will be room for a header skipping
   // the last n bytes when the fifo wraps
-  size_t wiresize = DLOG_MIN_RECORD + ALIGN4(len);
+  size_t wiresize = sizeof(dlog_header) + ALIGN4(len);
 
   // Prepare the record header before taking the lock
   dlog_header_t hdr;
-  hdr.header = static_cast<uint32_t>(DLOG_HDR_SET(wiresize, DLOG_MIN_RECORD + len));
+  hdr.header = static_cast<uint32_t>(DLOG_HDR_SET(wiresize, sizeof(dlog_header) + len));
   hdr.datalen = static_cast<uint16_t>(len);
   hdr.severity = static_cast<uint8_t>(severity);
   hdr.flags = static_cast<uint8_t>(flags);
@@ -193,8 +195,8 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, const void* data_ptr,
 }
 
 void DLog::shutdown() {
-    AutoSpinLock lock{&this->lock};
-    this->shutdown_requested_ = true;
+  AutoSpinLock lock{&this->lock};
+  this->shutdown_requested_ = true;
 }
 
 // TODO: support reading multiple messages at a time
@@ -346,16 +348,16 @@ namespace {
 DECLARE_SINGLETON_MUTEX(DlogSerialWriteLock);
 }  // namespace
 
-void dlog_serial_write(const char* data, size_t len) {
+void dlog_serial_write(ktl::string_view str) {
   if (dlog_bypass_ == true) {
     // If LL DEBUG is enabled we take this path which uses a spinlock
     // and prevents the direct writes from the kernel from interleaving
     // with our output
-    __kernel_serial_write(data, len);
+    serial_write(str);
   } else {
     // Otherwise we can use a mutex and avoid time under spinlock
     Guard<Mutex> guard{DlogSerialWriteLock::Get()};
-    platform_dputs_thread(data, len);
+    platform_dputs_thread(str.data(), str.size());
   }
 }
 
@@ -400,16 +402,16 @@ static int debuglog_dumper(void* arg) {
       } else {
         rec.data[rec.hdr.datalen] = 0;
       }
-      int n;
-      n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ":%05" PRIu64 "> %s\n",
-                   (int)(rec.hdr.timestamp / ZX_SEC(1)),
-                   (int)((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL), rec.hdr.pid, rec.hdr.tid,
-                   rec.data);
+      int n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ":%05" PRIu64 "> %s\n",
+                       (int)(rec.hdr.timestamp / ZX_SEC(1)),
+                       (int)((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL), rec.hdr.pid, rec.hdr.tid,
+                       rec.data);
       if (n > (int)sizeof(tmp)) {
         n = sizeof(tmp);
       }
-      __kernel_console_write(tmp, n);
-      dlog_serial_write(tmp, n);
+      ktl::string_view str{tmp, static_cast<size_t>(n)};
+      console_write(str);
+      dlog_serial_write(str);
     }
   }
 

@@ -13,6 +13,7 @@
 
 #include <fbl/canary.h>
 #include <kernel/mutex.h>
+#include <ktl/string_view.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 
@@ -24,7 +25,7 @@ class LogDispatcher final : public SoloDispatcher<LogDispatcher, ZX_DEFAULT_LOG_
   ~LogDispatcher() final;
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_LOG; }
 
-  zx_status_t Write(uint32_t severity, uint32_t flags, const void* ptr, size_t len);
+  zx_status_t Write(uint32_t severity, uint32_t flags, ktl::string_view str);
   zx_status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
 
  private:

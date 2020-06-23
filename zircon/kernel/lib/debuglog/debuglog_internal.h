@@ -12,7 +12,7 @@
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
-#include <ktl/atomic.h>
+#include <ktl/string_view.h>
 
 #define DLOG_SIZE (128u * 1024u)
 #define DLOG_MASK (DLOG_SIZE - 1u)
@@ -23,7 +23,7 @@
 struct DLog {
   explicit constexpr DLog() {}
 
-  zx_status_t write(uint32_t severity, uint32_t flags, const void* data_ptr, size_t len);
+  zx_status_t write(uint32_t severity, uint32_t flags, ktl::string_view str);
 
   // Mark this DLog as being shutdown.  Once called, subsequent |write| operations will fail.
   void shutdown();

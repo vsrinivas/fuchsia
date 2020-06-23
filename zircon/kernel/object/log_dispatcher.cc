@@ -65,10 +65,10 @@ void LogDispatcher::Notify(void* cookie) {
   log->Signal();
 }
 
-zx_status_t LogDispatcher::Write(uint32_t severity, uint32_t flags, const void* ptr, size_t len) {
+zx_status_t LogDispatcher::Write(uint32_t severity, uint32_t flags, ktl::string_view str) {
   canary_.Assert();
 
-  return dlog_write(severity, flags_ | flags, ptr, len);
+  return dlog_write(severity, flags_ | flags, str);
 }
 
 zx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actual) {
