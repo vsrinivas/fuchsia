@@ -28,6 +28,8 @@ class DriverHostContext {
   explicit DriverHostContext(const async_loop_config_t* config, zx::resource root_resource = {})
       : loop_(config), vfs_(loop_.dispatcher()), root_resource_(std::move(root_resource)) {}
 
+  ~DriverHostContext();
+
   zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch);
 
   zx_status_t ScheduleWork(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
@@ -222,6 +224,9 @@ class DriverHostContext {
   zx::resource root_resource_;
 
   DriverHostInspect inspect_;
+
+  fbl::TaggedDoublyLinkedList<zx_device*, zx_device::ChildrenListTag> dead_devices_;
+  unsigned int dead_devices_count_ = 0;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_

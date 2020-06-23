@@ -16,7 +16,7 @@ namespace {
 TEST(DriverHostTest, MkDevpath) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("test", &drv));
+  ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   constexpr char device_name[] = "device-name";

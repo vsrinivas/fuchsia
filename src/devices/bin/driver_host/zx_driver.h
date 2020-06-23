@@ -12,6 +12,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
+class DriverInspect;
 typedef struct fx_logger fx_logger_t;
 
 namespace internal {
@@ -35,7 +36,9 @@ void set_creation_context(internal::CreationContext* ctx);
 
 // Note that this must be a struct to match the public opaque declaration.
 struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCounted<zx_driver> {
-  static zx_status_t Create(std::string_view libname, fbl::RefPtr<zx_driver>* out_driver);
+  // |drivers| should outlive zx_driver struct
+  static zx_status_t Create(std::string_view libname, InspectNodeCollection& drivers,
+                            fbl::RefPtr<zx_driver>* out_driver);
 
   ~zx_driver();
 
@@ -47,15 +50,29 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
   const fbl::String& libname() const { return libname_; }
 
-  void set_name(const char* name) { name_ = name; }
+  void set_name(const char* name) {
+    name_ = name;
+    inspect_.set_name(name);
+  }
 
-  void set_driver_rec(zx_driver_rec_t* driver_rec) { driver_rec_ = driver_rec; }
+  void set_driver_rec(zx_driver_rec_t* driver_rec) {
+    driver_rec_ = driver_rec;
+    inspect_.set_driver_rec(driver_rec);
+  }
 
-  void set_ops(const zx_driver_ops_t* ops) { ops_ = ops; }
+  void set_ops(const zx_driver_ops_t* ops) {
+    ops_ = ops;
+    inspect_.set_ops(ops);
+  }
 
-  void set_status(zx_status_t status) { status_ = status; }
+  void set_status(zx_status_t status) {
+    status_ = status;
+    inspect_.set_status(status);
+  }
 
   fx_logger_t* logger() const { return logger_; }
+
+  DriverInspect& inspect() { return inspect_; }
 
   // Interface to |ops|. These names contain Op in order to not
   // collide with e.g. RefPtr names.
@@ -102,7 +119,7 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
  private:
   friend std::unique_ptr<zx_driver> std::make_unique<zx_driver>();
-  zx_driver(fx_logger_t* logger, std::string_view libname);
+  zx_driver(fx_logger_t* logger, std::string_view libname, InspectNodeCollection& drivers);
 
   const char* name_ = nullptr;
   zx_driver_rec_t* driver_rec_ = nullptr;
@@ -112,6 +129,8 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   fx_logger_t* logger_;
   fbl::String libname_;
   zx_status_t status_ = ZX_OK;
+
+  DriverInspect inspect_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_ZX_DRIVER_H_

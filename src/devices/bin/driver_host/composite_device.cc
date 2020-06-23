@@ -61,13 +61,14 @@ class CompositeDeviceInstance {
 }  // namespace
 
 // Get the placeholder driver structure for the composite driver
-fbl::RefPtr<zx_driver> GetCompositeDriver() {
+fbl::RefPtr<zx_driver> GetCompositeDriver(DriverHostContext* ctx) {
   static fbl::Mutex lock;
   static fbl::RefPtr<zx_driver> composite TA_GUARDED(lock);
 
   fbl::AutoLock guard(&lock);
   if (composite == nullptr) {
-    zx_status_t status = zx_driver::Create("<internal:composite>", &composite);
+    zx_status_t status =
+        zx_driver::Create("<internal:composite>", ctx->inspect().drivers(), &composite);
     if (status != ZX_OK) {
       return nullptr;
     }

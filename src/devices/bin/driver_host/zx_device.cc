@@ -27,6 +27,8 @@ zx_device::zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* drv)
 
   memcpy(name_, name.data(), len);
   name_[len] = '\0';
+
+  inspect_.emplace(driver->inspect().devices(), name_);
 }
 
 zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, zx_driver_t* driver,
@@ -129,6 +131,7 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
             .is_supported)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  inspect_->set_power_states(power_states, count);
   return ZX_OK;
 }
 
@@ -157,6 +160,7 @@ zx_status_t zx_device::SetPerformanceStates(
   if (!(performance_states_[fuchsia_device_DEVICE_PERFORMANCE_STATE_P0].is_supported)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  inspect_->set_performance_states(performance_states, count);
   return ZX_OK;
 }
 
@@ -192,6 +196,7 @@ zx_status_t zx_device::SetSystemPowerStateMapping(const SystemPowerStateMapping&
     // system sleep power states.
     system_power_states_mapping_[i] = mapping[i];
   }
+  inspect_->set_system_power_state_mapping(mapping);
   return ZX_OK;
 }
 
@@ -254,6 +259,13 @@ void zx_device::set_local_id(uint64_t id) {
   if (id != 0) {
     local_id_map_.insert(fbl::RefPtr(this));
   }
+  inspect_->set_local_id(id);
+
+  // Update parent local id all inspect data of children.
+  // This is needed because sometimes parent local id is set after the children are created.
+  for (auto& child : children_) {
+    child.inspect().set_parent(fbl::RefPtr(this));
+  }
 }
 
 fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
@@ -278,6 +290,7 @@ fbl::RefPtr<CompositeDevice> zx_device::take_composite() { return std::move(comp
 
 void zx_device::set_composite(fbl::RefPtr<CompositeDevice> composite) {
   composite_ = std::move(composite);
+  inspect_->set_composite();
 }
 
 bool zx_device::IsPerformanceStateSupported(uint32_t requested_state) {
@@ -285,4 +298,21 @@ bool zx_device::IsPerformanceStateSupported(uint32_t requested_state) {
     return false;
   }
   return performance_states_[requested_state].is_supported;
+}
+
+void zx_device::add_child(zx_device* child) {
+  children_.push_back(child);
+  if (child->flags_ & DEV_FLAG_INSTANCE) {
+    inspect_->increment_instance_count();
+  } else {
+    inspect_->increment_child_count();
+  }
+}
+void zx_device::remove_child(zx_device& child) {
+  children_.erase(child);
+  if (child.flags_ & DEV_FLAG_INSTANCE) {
+    inspect_->decrement_instance_count();
+  } else {
+    inspect_->decrement_child_count();
+  }
 }

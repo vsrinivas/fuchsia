@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_H_
-#define SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_H_
+#define SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_H_
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -41,8 +41,6 @@ namespace fuchsia = ::llcpp::fuchsia;
 
 // Safe external APIs are in device.h and device_internal.h
 
-extern const zx_protocol_device_t kDeviceDefaultOps;
-
 namespace internal {
 
 // Get the DriverHostContext that should be used by all external API methods
@@ -77,10 +75,15 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
   fbl::RefPtr<zx_driver> proxy_driver_;
 };
 
+extern const zx_protocol_device_t kDeviceDefaultOps;
+extern const device_power_state_info_t kDeviceDefaultPowerStates[2];
+extern const device_performance_state_info_t kDeviceDefaultPerfStates[1];
+extern const zx_device::SystemPowerStateMapping kDeviceDefaultStateMapping;
+
 }  // namespace internal
 
 // Construct a string describing the path of |dev| relative to its most
 // distant ancestor in this driver_host.
 const char* mkdevpath(const zx_device_t& dev, char* path, size_t max);
 
-#endif  // SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_H_

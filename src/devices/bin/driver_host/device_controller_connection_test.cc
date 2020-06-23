@@ -24,7 +24,7 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("test", &drv));
+  ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
@@ -50,7 +50,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("test", &drv));
+  ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
@@ -139,7 +139,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("test", &drv));
+  ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
@@ -170,7 +170,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("test", &drv));
+  ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));

@@ -141,7 +141,7 @@ class CoreTest : public zxtest::Test {
   CoreTest() : ctx_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ctx_.loop().StartThread("driver_host-test-loop");
     internal::RegisterContextForApi(&ctx_);
-    ASSERT_OK(zx_driver::Create("core-test", &drv_));
+    ASSERT_OK(zx_driver::Create("core-test", ctx_.inspect().drivers(), &drv_));
   }
 
   ~CoreTest() { internal::RegisterContextForApi(nullptr); }

@@ -419,7 +419,7 @@ zx_status_t Device::SendUnbind(UnbindCompletion completion) {
   return ZX_OK;
 }
 
-zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
+zx_status_t Device::SendCompleteRemoval(RemoveCompletion completion) {
   if (remove_completion_) {
     // We already have a pending remove.
     return ZX_ERR_UNAVAILABLE;

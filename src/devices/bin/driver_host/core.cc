@@ -88,7 +88,7 @@ static zx_status_t default_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) 
 
 static void default_child_pre_release(void* ctx, void* child_ctx) {}
 
-const zx_protocol_device_t kDeviceDefaultOps = []() {
+const zx_protocol_device_t internal::kDeviceDefaultOps = []() {
   zx_protocol_device_t ops = {};
   ops.open = default_open;
   ops.close = default_close;
@@ -137,26 +137,8 @@ static zx_protocol_device_t device_invalid_ops = []() {
   return ops;
 }();
 
-// Maximum number of dead devices to hold on the dead device list
-// before we start free'ing the oldest when adding a new one.
-#define DEAD_DEVICE_MAX 7
-
 void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
-  // Wrap the deferred-deletion list in a struct, so we can give it a proper
-  // dtor.  Otherwise, this causes the binary to crash on exit due to an
-  // is_empty assert in fbl::DoublyLinkedList.  This was particularly a
-  // problem for unit tests.
-  struct DeadList {
-    ~DeadList() {
-      while (!devices.is_empty()) {
-        delete devices.pop_front();
-      }
-    }
-    fbl::TaggedDoublyLinkedList<zx_device*, zx_device::ChildrenListTag> devices;
-  };
-
-  static DeadList dead_list;
-  static unsigned dead_count = 0;
+  inspect_.DeviceDestroyStats().Update();
 
   // ensure any ops will be fatal
   dev->set_ops(&device_invalid_ops);
@@ -169,9 +151,10 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
 
   // ensure all pointers are invalid
   dev->ctx = nullptr;
-  dev->driver = nullptr;
   dev->set_parent(nullptr);
   dev->conn.store(nullptr);
+  dev->FreeInspect();
+  dev->driver = nullptr;
   {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
     dev->proxy_ios = nullptr;
@@ -181,13 +164,13 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
   // so the compiler can't (easily) optimize away the poisoning
   // we do above.
   ZX_DEBUG_ASSERT(!fbl::InContainer<zx_device::ChildrenListTag>(*dev));
-  dead_list.devices.push_back(dev);
+  dead_devices_.push_back(dev);
 
-  if (dead_count == DEAD_DEVICE_MAX) {
-    zx_device_t* to_delete = dead_list.devices.pop_front();
+  if (dead_devices_count_ == DEAD_DEVICE_MAX) {
+    zx_device_t* to_delete = dead_devices_.pop_front();
     delete to_delete;
   } else {
-    dead_count++;
+    dead_devices_count_++;
   }
 }
 
@@ -377,6 +360,7 @@ uint32_t get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_pe
 zx_status_t DriverHostContext::DeviceCreate(zx_driver_t* drv, const char* name, void* ctx,
                                             const zx_protocol_device_t* ops,
                                             fbl::RefPtr<zx_device_t>* out) {
+  inspect_.DeviceCreateStats().Update();
   if (!drv) {
     LOGF(ERROR, "Cannot find driver");
     return ZX_ERR_INVALID_ARGS;
@@ -412,6 +396,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
                                          const fbl::RefPtr<zx_device_t>& parent,
                                          const zx_device_prop_t* props, uint32_t prop_count,
                                          const char* proxy_args, zx::channel client_remote) {
+  inspect_.DeviceAddStats().Update();
   auto mark_dead = fbl::MakeAutoCall([&dev]() {
     if (dev) {
       dev->set_flag(DEV_FLAG_DEAD);
@@ -602,6 +587,7 @@ zx_status_t DriverHostContext::DeviceCompleteRemoval(const fbl::RefPtr<zx_device
   DriverManagerRemove(std::move(dev_add_ref));
 
   dev->set_flag(DEV_FLAG_DEAD);
+
   return ZX_OK;
 }
 
@@ -622,7 +608,6 @@ zx_status_t DriverHostContext::DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev)
     }
   }
   enum_lock_release();
-
   return ZX_OK;
 }
 
@@ -696,6 +681,7 @@ zx_status_t DriverHostContext::DeviceRebind(const fbl::RefPtr<zx_device_t>& dev)
 
 zx_status_t DriverHostContext::DeviceOpen(const fbl::RefPtr<zx_device_t>& dev,
                                           fbl::RefPtr<zx_device_t>* out, uint32_t flags) {
+  inspect_.DeviceOpenStats().Update();
   if (dev->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, *dev, "Cannot open device %p, device is dead", dev.get());
     return ZX_ERR_BAD_STATE;
@@ -706,6 +692,9 @@ zx_status_t DriverHostContext::DeviceOpen(const fbl::RefPtr<zx_device_t>& dev,
   {
     api_lock_.Release();
     r = dev->OpenOp(&opened_dev, flags);
+    if (r == ZX_OK) {
+      dev->inspect().increment_open_count();
+    }
     api_lock_.Acquire();
   }
   if (r < 0) {
@@ -725,8 +714,12 @@ zx_status_t DriverHostContext::DeviceOpen(const fbl::RefPtr<zx_device_t>& dev,
 }
 
 zx_status_t DriverHostContext::DeviceClose(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
+  inspect_.DeviceCloseStats().Update();
   api_lock_.Release();
   zx_status_t status = dev->CloseOp(flags);
+  if (status == ZX_OK) {
+    dev->inspect().increment_close_count();
+  }
   api_lock_.Acquire();
   return status;
 }

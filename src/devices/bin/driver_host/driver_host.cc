@@ -145,7 +145,8 @@ const char* mkdevpath(const zx_device_t& dev, char* const path, size_t max) {
   return end;
 }
 
-zx_status_t zx_driver::Create(std::string_view libname, fbl::RefPtr<zx_driver>* out_driver) {
+zx_status_t zx_driver::Create(std::string_view libname, InspectNodeCollection& drivers,
+                              fbl::RefPtr<zx_driver>* out_driver) {
   char process_name[ZX_MAX_NAME_LEN] = {};
   zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   const char* tags[] = {process_name, "driver"};
@@ -162,12 +163,12 @@ zx_status_t zx_driver::Create(std::string_view libname, fbl::RefPtr<zx_driver>* 
     return status;
   }
 
-  *out_driver = fbl::AdoptRef(new zx_driver(logger, libname));
+  *out_driver = fbl::AdoptRef(new zx_driver(logger, libname, drivers));
   return ZX_OK;
 }
 
-zx_driver::zx_driver(fx_logger_t* logger, std::string_view libname)
-    : logger_(logger), libname_(libname) {}
+zx_driver::zx_driver(fx_logger_t* logger, std::string_view libname, InspectNodeCollection& drivers)
+    : logger_(logger), libname_(libname), inspect_(drivers, std::string(libname)) {}
 
 zx_driver::~zx_driver() { fx_logger_destroy(logger_); }
 
@@ -340,7 +341,7 @@ zx_status_t DriverHostContext::FindDriver(std::string_view libname, zx::vmo vmo,
   }
 
   fbl::RefPtr<zx_driver> new_driver;
-  zx_status_t status = zx_driver::Create(libname, &new_driver);
+  zx_status_t status = zx_driver::Create(libname, inspect().drivers(), &new_driver);
   if (status != ZX_OK) {
     return status;
   }
@@ -540,7 +541,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
     }
   }
 
-  auto driver = GetCompositeDriver();
+  auto driver = GetCompositeDriver(driver_host_context_);
   if (driver == nullptr) {
     completer.Reply(ZX_ERR_INTERNAL);
     return;
@@ -589,7 +590,8 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
   // Since there are no proxy drivers backing the device, a dummy proxy driver will be used for
   // device creation.
   if (!proxy_driver_) {
-    auto status = zx_driver::Create("proxy", &proxy_driver_);
+    auto status =
+        zx_driver::Create("proxy", driver_host_context_->inspect().drivers(), &proxy_driver_);
     if (status != ZX_OK) {
       return;
     }

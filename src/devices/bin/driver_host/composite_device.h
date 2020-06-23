@@ -20,7 +20,7 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& device,
                                       CompositeFragments&& fragments);
 
 // Returns a zx_driver instance for composite devices
-fbl::RefPtr<zx_driver> GetCompositeDriver();
+fbl::RefPtr<zx_driver> GetCompositeDriver(DriverHostContext* ctx);
 
 // These objects are state shared by all fragments of the composite device that
 // enables one of them (the first to try) to begin teardown of the composite

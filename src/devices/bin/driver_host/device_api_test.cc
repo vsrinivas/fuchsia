@@ -17,7 +17,7 @@ namespace {
 TEST(DeviceApiTest, OpsNotImplemented) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("device-api-test", &drv));
+  ASSERT_OK(zx_driver::Create("device-api-test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
@@ -47,7 +47,7 @@ zx_off_t test_get_size(void* ctx) {
 TEST(DeviceApiTest, GetProtocol) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("device-api-test", &drv));
+  ASSERT_OK(zx_driver::Create("device-api-test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
@@ -65,7 +65,7 @@ TEST(DeviceApiTest, GetProtocol) {
 TEST(DeviceApiTest, GetSize) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<zx_driver> drv;
-  ASSERT_OK(zx_driver::Create("device-api-test", &drv));
+  ASSERT_OK(zx_driver::Create("device-api-test", ctx.inspect().drivers(), &drv));
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));

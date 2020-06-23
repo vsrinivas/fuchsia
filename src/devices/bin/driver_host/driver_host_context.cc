@@ -10,7 +10,14 @@
 #include <fbl/auto_lock.h>
 #include <fs/vfs.h>
 
+#include "composite_device.h"
 #include "src/devices/lib/log/log.h"
+
+DriverHostContext::~DriverHostContext() {
+  while (!dead_devices_.is_empty()) {
+    delete dead_devices_.pop_front();
+  }
+}
 
 void DriverHostContext::PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback) {
   auto work_item = std::make_unique<WorkItem>(dev, std::move(callback));

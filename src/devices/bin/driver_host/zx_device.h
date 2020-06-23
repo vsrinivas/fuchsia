@@ -35,10 +35,12 @@
 #include <fbl/vector.h>
 
 #include "devfs_vnode.h"
+#include "inspect.h"
 
 class CompositeDevice;
 class DeviceControllerConnection;
 class DriverHostContext;
+class DeviceInspect;
 struct ProxyIostate;
 
 // RAII object around async trace entries
@@ -83,6 +85,10 @@ class AsyncTrace {
 
 // 'MDEV'
 #define DEV_MAGIC 0x4D444556
+
+// Maximum number of dead devices to hold on the dead device list
+// before we start free'ing the oldest when adding a new one.
+constexpr size_t DEAD_DEVICE_MAX = 7;
 
 // Tags used to manage the different containers a zx_device may exist in
 namespace internal {
@@ -177,12 +183,14 @@ struct zx_device
   zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("read", &trace_label));
+    inspect_->ReadOpStats().Update();
     return Dispatch(ops_->read, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
   }
 
   zx_status_t WriteOp(const void* buf, size_t count, zx_off_t off, size_t* actual) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("write", &trace_label));
+    inspect_->WriteOpStats().Update();
     return Dispatch(ops_->write, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
   }
 
@@ -195,6 +203,7 @@ struct zx_device
   zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("message", &trace_label));
+    inspect_->MessageOpStats().Update();
     return Dispatch(ops_->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
   }
 
@@ -231,11 +240,20 @@ struct zx_device
   void* ctx = nullptr;
 
   const zx_protocol_device_t* ops() const { return ops_; }
-  void set_ops(const zx_protocol_device_t* ops) { ops_ = ops; }
+  void set_ops(const zx_protocol_device_t* ops) {
+    ops_ = ops;
+    inspect_->set_ops(ops);
+  }
 
   uint32_t flags() const { return flags_; }
-  void set_flag(uint32_t flag) { flags_ |= flag; }
-  void unset_flag(uint32_t flag) { flags_ &= ~flag; }
+  void set_flag(uint32_t flag) {
+    flags_ |= flag;
+    inspect_->set_flags(flags_);
+  }
+  void unset_flag(uint32_t flag) {
+    flags_ &= ~flag;
+    inspect_->set_flags(flags_);
+  }
 
   zx::eventpair event;
   zx::eventpair local_event;
@@ -260,17 +278,24 @@ struct zx_device
   // most devices implement a single
   // protocol beyond the base device protocol
   uint32_t protocol_id() const { return protocol_id_; }
-  void set_protocol_id(uint32_t protocol_id) { protocol_id_ = protocol_id; }
+
+  void set_protocol_id(uint32_t protocol_id) {
+    protocol_id_ = protocol_id;
+    inspect_->set_protocol_id(protocol_id);
+  }
   void* protocol_ops = nullptr;
 
   // driver that has published this device
   zx_driver_t* driver = nullptr;
 
   const fbl::RefPtr<zx_device_t>& parent() const { return parent_; }
-  void set_parent(fbl::RefPtr<zx_device_t> parent) { parent_ = parent; }
+  void set_parent(fbl::RefPtr<zx_device_t> parent) {
+    parent_ = parent;
+    inspect_->set_parent(parent);
+  }
 
-  void add_child(zx_device* child) { children_.push_back(child); }
-  void remove_child(zx_device& child) { children_.erase(child); }
+  void add_child(zx_device* child);
+  void remove_child(zx_device& child);
   const fbl::TaggedDoublyLinkedList<zx_device*, ChildrenListTag>& children() { return children_; }
 
   // This is an atomic so that the connection's async loop can inspect this
@@ -316,7 +341,10 @@ struct zx_device
 
   bool IsPerformanceStateSupported(uint32_t requested_state);
   bool auto_suspend_configured() { return auto_suspend_configured_; }
-  void set_auto_suspend_configured(bool value) { auto_suspend_configured_ = value; }
+  void set_auto_suspend_configured(bool value) {
+    auto_suspend_configured_ = value;
+    inspect_->set_auto_suspend(value);
+  }
 
   zx_status_t SetSystemPowerStateMapping(const SystemPowerStateMapping& mapping);
 
@@ -327,7 +355,10 @@ struct zx_device
 
   uint32_t current_performance_state() { return current_performance_state_; }
 
-  void set_current_performance_state(uint32_t state) { current_performance_state_ = state; }
+  void set_current_performance_state(uint32_t state) {
+    current_performance_state_ = state;
+    inspect_->set_current_performance_state(state);
+  }
 
   // Begin an async tracing entry for this device.  It will have the given category, and the name
   // "<device_name>:<tag>".
@@ -342,6 +373,9 @@ struct zx_device
   DriverHostContext* driver_host_context() const { return driver_host_context_; };
   bool complete_bind_rebind_after_init() const { return complete_bind_rebind_after_init_; }
   void set_complete_bind_rebind_after_init(bool value) { complete_bind_rebind_after_init_ = value; }
+
+  DeviceInspect& inspect() { return *inspect_; }
+  void FreeInspect() { inspect_.reset();}
 
  private:
   explicit zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* driver);
@@ -425,6 +459,7 @@ struct zx_device
   bool auto_suspend_configured_ = false;
 
   DriverHostContext* const driver_host_context_;
+  std::optional<DeviceInspect> inspect_;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

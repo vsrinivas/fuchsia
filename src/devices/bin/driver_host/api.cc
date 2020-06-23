@@ -30,6 +30,25 @@
   (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE | \
    DEVICE_ADD_INVISIBLE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
 
+namespace internal {
+const device_power_state_info_t kDeviceDefaultPowerStates[2] = {
+    {.state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0},
+    {.state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD}};
+
+const device_performance_state_info_t kDeviceDefaultPerfStates[1] = {
+    {.state_id = fuchsia_device_DEVICE_PERFORMANCE_STATE_P0},
+};
+
+const zx_device::SystemPowerStateMapping kDeviceDefaultStateMapping = []() {
+  zx_device::SystemPowerStateMapping states_mapping{};
+  for (auto& entry : states_mapping) {
+    entry.dev_state = ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+    entry.wakeup_enable = false;
+  }
+  return states_mapping;
+}();
+}  // namespace internal
+
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
   zx_status_t r;
@@ -84,10 +103,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (!args->power_states) {
       // TODO(fxb/34081): Remove when all drivers declare power states
       // Temporarily allocate working and non-working power states
-      device_power_state_info_t power_states[2] = {};
-      power_states[0].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0;
-      power_states[1].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD;
-      r = dev->SetPowerStates(power_states, 2);
+      r = dev->SetPowerStates(internal::kDeviceDefaultPowerStates,
+                              countof(internal::kDeviceDefaultPowerStates));
     } else {
       r = dev->SetPowerStates(args->power_states, args->power_state_count);
     }
@@ -98,9 +115,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (args->performance_states && (args->performance_state_count != 0)) {
       r = dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
     } else {
-      device_performance_state_info_t perf_power_states[1] = {};
-      perf_power_states[0].state_id = fuchsia_device_DEVICE_PERFORMANCE_STATE_P0;
-      r = dev->SetPerformanceStates(perf_power_states, 1);
+      r = dev->SetPerformanceStates(internal::kDeviceDefaultPerfStates,
+                                    countof(internal::kDeviceDefaultPerfStates));
     }
 
     if (r != ZX_OK) {
@@ -109,12 +125,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
     // Set default system to device power state mapping. This can be later
     // updated by the system power manager.
-    zx_device::SystemPowerStateMapping states_mapping{};
-    for (auto& entry : states_mapping) {
-      entry.dev_state = ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D3COLD;
-      entry.wakeup_enable = false;
-    }
-    r = dev->SetSystemPowerStateMapping(states_mapping);
+    r = dev->SetSystemPowerStateMapping(internal::kDeviceDefaultStateMapping);
     if (r != ZX_OK) {
       return r;
     }
