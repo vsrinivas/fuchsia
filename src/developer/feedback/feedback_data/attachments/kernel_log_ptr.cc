@@ -8,8 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/log.h>
 
-#include "src/developer/feedback/utils/errors.h"
-#include "src/developer/feedback/utils/fit/promise.h"
+#include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/fit/promise.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {

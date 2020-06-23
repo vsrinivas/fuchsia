@@ -14,7 +14,7 @@
 
 #include "src/developer/feedback/feedback_data/datastore.h"
 #include "src/developer/feedback/feedback_data/integrity_reporter.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics {
 namespace feedback_data {

@@ -14,7 +14,7 @@
 #include <string>
 
 #include "src/developer/feedback/crash_reports/product.h"
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/errors.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/file/file_writer.h"
 

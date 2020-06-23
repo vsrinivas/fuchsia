@@ -14,7 +14,7 @@
 
 #include "src/developer/feedback/crash_reports/constants.h"
 #include "src/developer/feedback/crash_reports/errors.h"
-#include "src/developer/feedback/utils/time.h"
+#include "src/developer/forensics/utils/time.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
 

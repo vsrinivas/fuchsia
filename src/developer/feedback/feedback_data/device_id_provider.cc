@@ -8,7 +8,7 @@
 
 #include <optional>
 
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/errors.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"

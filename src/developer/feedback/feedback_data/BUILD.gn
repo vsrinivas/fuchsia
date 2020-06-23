@@ -105,7 +105,7 @@ source_set("data_provider") {
     ":integrity_reporter",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -124,8 +124,8 @@ source_set("data_provider") {
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
     "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/feedback_data/attachments:utils",
-    "//src/developer/feedback/utils:archive",
-    "//src/developer/feedback/utils/fit",
+    "//src/developer/forensics/utils:archive",
+    "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/libpng",
@@ -143,7 +143,7 @@ source_set("datastore") {
     "//src/developer/feedback/feedback_data/annotations:annotation_providers",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:types",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
@@ -190,7 +190,7 @@ source_set("device_id_provider") {
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils:errors",
+    "//src/developer/forensics/utils:errors",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/uuid",
@@ -202,7 +202,7 @@ source_set("errors") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils:errors",
+    "//src/developer/forensics/utils:errors",
   ]
 }
 
@@ -219,7 +219,7 @@ source_set("main_service") {
     ":datastore",
     ":device_id_provider",
     ":inspect_manager",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
@@ -241,9 +241,9 @@ source_set("inspect_manager") {
     "inspect_manager.h",
   ]
 
-  public_deps = [ "//src/developer/feedback/utils:inspect_node_manager" ]
+  public_deps = [ "//src/developer/forensics/utils:inspect_node_manager" ]
 
-  deps = [ "//src/developer/feedback/utils:inspect_protocol_stats" ]
+  deps = [ "//src/developer/forensics/utils:inspect_protocol_stats" ]
 }
 
 source_set("integrity_reporter") {
@@ -260,7 +260,7 @@ source_set("integrity_reporter") {
 
   deps = [
     ":errors",
-    "//src/developer/feedback/utils:errors",
+    "//src/developer/forensics/utils:errors",
     "//third_party/rapidjson",
   ]
 }

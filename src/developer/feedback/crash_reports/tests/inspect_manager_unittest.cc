@@ -22,7 +22,7 @@
 #include "src/developer/feedback/crash_reports/errors.h"
 #include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/crash_reports/settings.h"
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
 

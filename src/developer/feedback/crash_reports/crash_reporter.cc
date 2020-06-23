@@ -22,9 +22,9 @@
 #include "src/developer/feedback/crash_reports/crash_server.h"
 #include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/crash_reports/report_util.h"
-#include "src/developer/feedback/utils/cobalt/metrics.h"
-#include "src/developer/feedback/utils/errors.h"
-#include "src/developer/feedback/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 
 namespace forensics {
 namespace crash_reports {

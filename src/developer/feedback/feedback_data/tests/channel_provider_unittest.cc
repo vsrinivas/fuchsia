@@ -22,8 +22,8 @@
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt/event.h"
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/cobalt/event.h"
+#include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
 namespace feedback_data {

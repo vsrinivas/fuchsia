@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//src/developer/feedback/*" ]
+visibility = [
+  "//src/developer/feedback/*",
+  "//src/developer/forensics/*",
+]
 
 ###############################################################################
 # SOURCES
@@ -52,7 +55,7 @@ source_set("cobalt") {
   public_deps = [
     ":fidl_server",
     "//sdk/fidl/fuchsia.cobalt",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
   ]
 
   deps = [

@@ -9,7 +9,7 @@
 #include <string>
 
 #include "src/developer/feedback/feedback_data/constants.h"
-#include "src/developer/feedback/utils/archive.h"
+#include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"

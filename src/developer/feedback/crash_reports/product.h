@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
 namespace crash_reports {

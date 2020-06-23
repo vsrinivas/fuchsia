@@ -9,7 +9,7 @@
 
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/settings.h"
-#include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
 namespace crash_reports {

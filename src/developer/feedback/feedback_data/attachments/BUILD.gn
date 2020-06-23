@@ -26,8 +26,8 @@ source_set("attachment_providers") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:errors",
-    "//src/developer/feedback/utils/fidl:oneshot_ptr",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
@@ -38,9 +38,9 @@ source_set("attachment_providers") {
     "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
-    "//src/developer/feedback/utils:errors",
-    "//src/developer/feedback/utils:logs",
-    "//src/developer/feedback/utils/fit",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:logs",
+    "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
   ]
 }
@@ -58,7 +58,7 @@ source_set("static_attachments") {
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/feedback_data/system_log_recorder:reader",
     "//src/developer/feedback/feedback_data/system_log_recorder/encoding:production",
-    "//src/developer/feedback/utils:errors",
+    "//src/developer/forensics/utils:errors",
     "//src/lib/files",
   ]
 }
@@ -68,7 +68,7 @@ source_set("types") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils:errors",
+    "//src/developer/forensics/utils:errors",
   ]
 }
 
@@ -86,7 +86,7 @@ source_set("utils") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
-    "//src/developer/feedback/utils:archive",
+    "//src/developer/forensics/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]

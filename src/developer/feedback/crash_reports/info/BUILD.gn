@@ -27,8 +27,8 @@ source_set("info") {
     "//src/developer/feedback/crash_reports:config",
     "//src/developer/feedback/crash_reports:product",
     "//src/developer/feedback/crash_reports:settings",
-    "//src/developer/feedback/utils:inspect_protocol_stats",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils:inspect_protocol_stats",
+    "//src/developer/forensics/utils/cobalt",
     "//src/lib/timekeeper",
   ]
 
@@ -49,7 +49,7 @@ source_set("inspect_manager") {
     "//src/developer/feedback/crash_reports:errors",
     "//src/developer/feedback/crash_reports:product",
     "//src/developer/feedback/crash_reports:settings",
-    "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/developer/forensics/utils:inspect_node_manager",
     "//src/lib/fxl",
     "//src/lib/timekeeper",
   ]
@@ -57,8 +57,8 @@ source_set("inspect_manager") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports:constants",
-    "//src/developer/feedback/utils:inspect_protocol_stats",
-    "//src/developer/feedback/utils:time",
+    "//src/developer/forensics/utils:inspect_protocol_stats",
+    "//src/developer/forensics/utils:time",
     "//src/lib/files:files",
   ]
 }

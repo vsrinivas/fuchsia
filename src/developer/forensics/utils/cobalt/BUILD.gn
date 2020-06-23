@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/cobalt/metrics_registry.gni")
+
+visibility = [
+  "//src/developer/feedback/*",
+  "//src/developer/forensics/*",
+]
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("cobalt") {
+  sources = [
+    "event.cc",
+    "event.h",
+    "logger.cc",
+    "logger.h",
+    "metrics.h",
+  ]
+
+  public_deps = [
+    ":metrics_registry",
+    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/backoff:backoff",
+    "//src/lib/timekeeper",
+    "//src/lib/timekeeper:system",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+  ]
+}
+
+###############################################################################
+# METRICS
+###############################################################################
+metrics_registry("metrics_registry") {
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 4228153068
+  namespace = "cobalt_registry"
+  generate_cc = true
+  generate_binarypb = false
+}

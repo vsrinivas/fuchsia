@@ -15,7 +15,7 @@
 #include "src/developer/feedback/feedback_data/annotations/product_info_provider.h"
 #include "src/developer/feedback/feedback_data/annotations/time_provider.h"
 #include "src/developer/feedback/feedback_data/constants.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {

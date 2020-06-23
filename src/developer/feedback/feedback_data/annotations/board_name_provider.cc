@@ -16,7 +16,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
 namespace feedback_data {

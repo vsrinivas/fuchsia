@@ -16,8 +16,8 @@
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/crash_reports/settings.h"
-#include "src/developer/feedback/utils/inspect_node_manager.h"
-#include "src/developer/feedback/utils/inspect_protocol_stats.h"
+#include "src/developer/forensics/utils/inspect_node_manager.h"
+#include "src/developer/forensics/utils/inspect_protocol_stats.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {

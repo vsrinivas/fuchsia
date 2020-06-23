@@ -21,7 +21,7 @@
 #include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/log_format.h"
+#include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"

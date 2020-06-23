@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/testing/fakes/cobalt.h"
-#include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 
 namespace forensics {

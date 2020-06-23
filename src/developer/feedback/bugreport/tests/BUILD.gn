@@ -15,7 +15,7 @@ executable("bugreport_integration_test_exe") {
   deps = [
     "//sdk/fidl/fuchsia.mem",
     "//src/developer/feedback/bugreport:src",
-    "//src/developer/feedback/utils:archive",
+    "//src/developer/forensics/utils:archive",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",

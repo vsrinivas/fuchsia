@@ -26,7 +26,6 @@ group("tests") {
     "crash_reports/tests",
     "feedback_data/tests",
     "last_reboot/tests",
-    "utils/tests",
   ]
 }
 

@@ -9,7 +9,7 @@
 
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
-#include "src/developer/feedback/utils/inspect_protocol_stats.h"
+#include "src/developer/forensics/utils/inspect_protocol_stats.h"
 
 namespace forensics {
 namespace crash_reports {

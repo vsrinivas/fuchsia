@@ -12,8 +12,8 @@
 
 #include <memory>
 
-#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
-#include "src/developer/feedback/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {

@@ -14,9 +14,9 @@
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/developer/feedback/utils/cobalt/metrics.h"
-#include "src/developer/feedback/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 
 namespace forensics {
 namespace feedback_data {

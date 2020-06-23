@@ -9,7 +9,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
 namespace last_reboot {

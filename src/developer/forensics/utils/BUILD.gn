@@ -1,0 +1,108 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//src/developer/feedback/*",
+  "//src/developer/forensics/*",
+]
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("archive") {
+  sources = [
+    "archive.cc",
+    "archive.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//third_party/zlib:minizip",
+  ]
+}
+
+source_set("errors") {
+  sources = [ "errors.h" ]
+
+  public_deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("inspect_node_manager") {
+  sources = [
+    "inspect_node_manager.cc",
+    "inspect_node_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("inspect_protocol_stats") {
+  sources = [
+    "inspect_protocol_stats.cc",
+    "inspect_protocol_stats.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/forensics/utils:inspect_node_manager",
+  ]
+}
+
+source_set("logs") {
+  sources = [
+    "log_format.cc",
+    "log_format.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.logger" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("time") {
+  sources = [
+    "time.cc",
+    "time.h",
+  ]
+
+  public_deps = [
+    "//src/lib/timekeeper",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [ "//src/lib/fxl" ]
+}
+
+source_set("utc_time_provider") {
+  sources = [
+    "utc_time_provider.cc",
+    "utc_time_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.time",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/timekeeper:system",
+  ]
+
+  deps = [
+    ":time",
+    "//sdk/lib/syslog/cpp",
+  ]
+}

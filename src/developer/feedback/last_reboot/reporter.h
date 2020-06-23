@@ -15,8 +15,8 @@
 #include <string>
 
 #include "src/developer/feedback/last_reboot/reboot_log.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
 namespace forensics {

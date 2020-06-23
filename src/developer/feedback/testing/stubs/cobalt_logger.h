@@ -11,7 +11,7 @@
 #include <utility>
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
-#include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/forensics/utils/cobalt/event.h"
 
 namespace forensics {
 namespace stubs {

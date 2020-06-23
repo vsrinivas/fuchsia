@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics {
 namespace last_reboot {

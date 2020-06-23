@@ -15,9 +15,9 @@
 #include "src/developer/feedback/last_reboot/reboot_log.h"
 #include "src/developer/feedback/last_reboot/reboot_watcher.h"
 #include "src/developer/feedback/last_reboot/reporter.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/developer/feedback/utils/inspect_node_manager.h"
-#include "src/developer/feedback/utils/inspect_protocol_stats.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/inspect_node_manager.h"
+#include "src/developer/forensics/utils/inspect_protocol_stats.h"
 
 namespace forensics {
 namespace last_reboot {

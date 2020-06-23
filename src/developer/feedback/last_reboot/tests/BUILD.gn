@@ -79,7 +79,7 @@ executable("reboot_reason_unittest_exe") {
   deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/last_reboot:reboot_reason",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -119,7 +119,7 @@ executable("reporter_unittest_exe") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/testing/stubs:crash_reporter",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

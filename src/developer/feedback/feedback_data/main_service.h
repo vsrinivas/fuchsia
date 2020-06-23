@@ -18,7 +18,7 @@
 #include "src/developer/feedback/feedback_data/datastore.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 #include "src/developer/feedback/feedback_data/inspect_manager.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {

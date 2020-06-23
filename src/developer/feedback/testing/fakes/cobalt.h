@@ -12,7 +12,7 @@
 
 #include <memory>
 
-#include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
 namespace fakes {

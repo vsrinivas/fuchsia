@@ -131,8 +131,8 @@ source_set("crash_register") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crash_reports/info",
-    "//src/developer/feedback/utils:errors",
-    "//src/developer/feedback/utils/fit",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fit",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
   ]
@@ -140,7 +140,7 @@ source_set("crash_register") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils/fidl:channel_provider_ptr",
+    "//src/developer/forensics/utils/fidl:channel_provider_ptr",
   ]
 }
 
@@ -160,11 +160,11 @@ source_set("crash_reporter") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crash_reports/info",
-    "//src/developer/feedback/utils:errors",
-    "//src/developer/feedback/utils:utc_time_provider",
-    "//src/developer/feedback/utils/fidl:data_provider_ptr",
-    "//src/developer/feedback/utils/fidl:device_id_provider_ptr",
-    "//src/developer/feedback/utils/fit",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:utc_time_provider",
+    "//src/developer/forensics/utils/fidl:data_provider_ptr",
+    "//src/developer/forensics/utils/fidl:device_id_provider_ptr",
+    "//src/developer/forensics/utils/fit",
     "//src/lib/timekeeper",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
@@ -173,7 +173,7 @@ source_set("crash_reporter") {
   deps = [
     ":report_util",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/fit",
   ]
 }
@@ -204,7 +204,7 @@ source_set("database") {
   public_deps = [
     "//sdk/fidl/fuchsia.mem",
     "//src/developer/feedback/crash_reports/info",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",
@@ -223,7 +223,7 @@ source_set("errors") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils:errors",
+    "//src/developer/forensics/utils:errors",
   ]
 }
 
@@ -258,7 +258,7 @@ source_set("product") {
     "product.h",
   ]
 
-  public_deps = [ "//src/developer/feedback/utils:errors" ]
+  public_deps = [ "//src/developer/forensics/utils:errors" ]
 }
 
 source_set("queue") {
@@ -295,7 +295,7 @@ source_set("report_util") {
     ":product",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
-    "//src/developer/feedback/utils:errors",
+    "//src/developer/forensics/utils:errors",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",
   ]

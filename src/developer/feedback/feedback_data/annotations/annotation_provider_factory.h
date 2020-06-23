@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics {
 namespace feedback_data {

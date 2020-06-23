@@ -16,6 +16,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "utils/tests",
     "//src/developer/exception_broker/tests",
     "//src/developer/feedback:tests",
   ]

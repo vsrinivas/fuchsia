@@ -18,7 +18,7 @@
 #include "src/developer/feedback/feedback_data/attachments/system_log_ptr.h"
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
-#include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {

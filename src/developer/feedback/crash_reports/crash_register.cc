@@ -8,8 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
-#include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
-#include "src/developer/feedback/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/fidl/channel_provider_ptr.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 
 namespace forensics {
 namespace crash_reports {

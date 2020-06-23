@@ -7,8 +7,8 @@
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
-#include "src/developer/feedback/utils/errors.h"
-#include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
+#include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/fidl/channel_provider_ptr.h"
 
 namespace forensics {
 namespace feedback_data {

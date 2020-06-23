@@ -7,7 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-#include "src/developer/feedback/utils/log_format.h"
+#include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

@@ -98,7 +98,7 @@ executable("fake_data_provider_exe") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils:archive",
+    "//src/developer/forensics/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -154,7 +154,7 @@ source_set("cobalt") {
     "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
   ]
 }

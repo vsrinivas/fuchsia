@@ -7,8 +7,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/feedback/utils/errors.h"
-#include "src/developer/feedback/utils/fit/promise.h"
+#include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/fit/promise.h"
 
 namespace forensics {
 namespace feedback_data {

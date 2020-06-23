@@ -24,9 +24,9 @@
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt/event.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/cobalt/event.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace forensics {

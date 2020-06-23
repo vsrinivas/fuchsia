@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "src/developer/feedback/crash_reports/info/inspect_manager.h"
-#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics {
 namespace crash_reports {

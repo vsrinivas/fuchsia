@@ -18,7 +18,7 @@
 #include "src/developer/feedback/crash_reports/crash_reporter.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/info/main_service_info.h"
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/clock.h"
 

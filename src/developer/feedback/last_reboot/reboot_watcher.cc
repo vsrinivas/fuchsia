@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/last_reboot/reboot_watcher.h"
 
-#include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

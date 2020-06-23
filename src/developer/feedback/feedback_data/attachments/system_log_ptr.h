@@ -15,8 +15,8 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_data/attachments/types.h"
-#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
-#include "src/developer/feedback/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 
 namespace forensics {
 namespace feedback_data {

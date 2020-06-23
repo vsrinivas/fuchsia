@@ -74,9 +74,9 @@ source_set("main_service") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/developer/feedback/utils:inspect_node_manager",
-    "//src/developer/feedback/utils:inspect_protocol_stats",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils:inspect_node_manager",
+    "//src/developer/forensics/utils:inspect_protocol_stats",
+    "//src/developer/forensics/utils/cobalt",
   ]
 }
 
@@ -103,7 +103,7 @@ source_set("reboot_reason") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -120,7 +120,7 @@ source_set("reboot_watcher") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/lib/fidl/cpp",
-    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/forensics/utils/cobalt",
   ]
 
   deps = [
@@ -141,9 +141,9 @@ source_set("reporter") {
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:errors",
-    "//src/developer/feedback/utils/cobalt",
-    "//src/developer/feedback/utils/fidl:oneshot_ptr",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//zircon/public/lib/fit",
   ]
 

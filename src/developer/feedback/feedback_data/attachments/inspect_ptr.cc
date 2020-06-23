@@ -15,9 +15,9 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/utils/errors.h"
-#include "src/developer/feedback/utils/fit/promise.h"
-#include "src/developer/feedback/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/fit/promise.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/join_strings.h"
 

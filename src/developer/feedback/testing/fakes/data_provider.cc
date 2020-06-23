@@ -11,7 +11,7 @@
 #include <memory>
 #include <vector>
 
-#include "src/developer/feedback/utils/archive.h"
+#include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"

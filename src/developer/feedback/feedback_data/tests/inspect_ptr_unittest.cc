@@ -22,7 +22,7 @@
 #include "src/developer/feedback/testing/stubs/inspect_archive.h"
 #include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
 namespace feedback_data {

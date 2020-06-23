@@ -17,8 +17,8 @@
 #include "src/developer/feedback/crash_reports/info/crash_register_info.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/product.h"
-#include "src/developer/feedback/utils/errors.h"
-#include "src/developer/feedback/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 
 namespace forensics {
 namespace crash_reports {

@@ -42,7 +42,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:logs",
+    "//src/developer/forensics/utils:logs",
   ]
 
   deps = [
