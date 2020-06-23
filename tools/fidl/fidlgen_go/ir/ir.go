@@ -335,7 +335,9 @@ type Protocol struct {
 // Method represents a method of a FIDL protocol in terms of golang structures.
 type Method struct {
 	types.Attributes
-	types.Ordinals
+
+	Ordinal     uint64
+	OrdinalName string
 
 	// Name is the name of the Method, including the protocol name as a prefix.
 	Name string
@@ -923,13 +925,10 @@ func (c *compiler) compileTable(val types.Table) Table {
 func (c *compiler) compileMethod(protocolName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
-		Attributes: val.Attributes,
-		Name:       methodName,
-		Ordinals: types.NewOrdinalsStep7(
-			val,
-			c.compileCompoundIdentifier(protocolName, true, methodName+"Ordinal"),
-			c.compileCompoundIdentifier(protocolName, true, methodName+"GenOrdinal"),
-		),
+		Attributes:      val.Attributes,
+		Name:            methodName,
+		Ordinal:         val.Ordinal,
+		OrdinalName:     c.compileCompoundIdentifier(protocolName, true, methodName+"Ordinal"),
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
 		IsTransitional:  val.IsTransitional(),

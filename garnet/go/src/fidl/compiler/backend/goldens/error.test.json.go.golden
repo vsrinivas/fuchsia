@@ -83,7 +83,7 @@ func ExampleFooResultWithErr(err uint32) ExampleFooResult {
 }
 
 const (
-	ExampleFooGenOrdinal uint64 = 0xbaf4e613e45f29b
+	ExampleFooOrdinal uint64 = 0xbaf4e613e45f29b
 )
 
 type ExampleWithCtxInterface _bindings.ChannelProxy
@@ -93,7 +93,7 @@ func (p *ExampleWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (Example
 		S: s,
 	}
 	resp_ := &exampleWithCtxFooResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleFooGenOrdinal, req_, resp_, ExampleFooGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleFooOrdinal, req_, resp_)
 	return resp_.Result, err_
 }
 
@@ -116,7 +116,7 @@ type ExampleWithCtxStub struct {
 
 func (s_ *ExampleWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ExampleFooGenOrdinal:
+	case ExampleFooOrdinal:
 		in_ := exampleWithCtxFooRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {

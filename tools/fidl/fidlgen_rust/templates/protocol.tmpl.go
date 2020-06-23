@@ -5,12 +5,6 @@
 package templates
 
 const Protocol = `
-{{- define "OrdinalMatchPattern" -}}
-  {{- range $index, $ordinal := . -}}
-    {{- if $index }} | {{ end -}}{{ $ordinal.Ordinal }}
-  {{- end -}}
-{{ end }}
-
 {{- define "ProtocolDeclaration" -}}
 {{- $protocol := . }}
 
@@ -106,7 +100,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
 				{{- else -}}, {{ $request.Name }} {{- end -}}
 				{{- end -}}
 				),
-				{{ $method.Ordinals.Write.Ordinal }},
+				{{ $method.Ordinal | printf "%#x" }},
 				___deadline,
 			)
 		{{- else -}}
@@ -116,7 +110,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
 				{{- else -}}, {{ $request.Name }} {{- end -}}
 				{{- end -}}
 				),
-				{{ $method.Ordinals.Write.Ordinal }},
+				{{ $method.Ordinal | printf "%#x" }},
 			)
 		{{- end -}}
 	}
@@ -228,7 +222,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 		{{- if (eq $index 0) -}} {{ $request.Name }}
 		{{- else -}}, {{ $request.Name }} {{- end -}}
 		{{- end -}}
-	), {{ $method.Ordinals.Write.Ordinal }})
+	), {{ $method.Ordinal | printf "%#x" }})
 	}
 	{{- end -}}
 	{{- end -}}
@@ -261,11 +255,10 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 		let (bytes, _handles) = buf.split_mut();
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		std::task::Poll::Ready(Some(match tx_header.ordinal() {
 			{{- range $method := $protocol.Methods }}
 			{{- if not $method.HasRequest }}
-			{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
+			{{ .Ordinal | printf "%#x" }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Response -}}
 					{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -474,11 +467,10 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
 			}
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			std::task::Poll::Ready(Some(match header.ordinal() {
 				{{- range $method := $protocol.Methods }}
 				{{- if $method.HasRequest }}
-				{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
+				{{ .Ordinal | printf "%#x" }} => {
 					let mut req: (
 						{{- range $index, $param := $method.Request -}}
 							{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -549,11 +541,10 @@ impl {{ $protocol.Name }}RequestMessage {
 	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<{{ $protocol.Name }}RequestMessage, fidl::Error> {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		match header.ordinal() {
 			{{- range $method := $protocol.Methods }}
 			{{- if $method.HasRequest }}
-			{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
+			{{ .Ordinal | printf "%#x" }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Request -}}
 						{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -686,7 +677,7 @@ impl {{ $protocol.Name }}Encoder {
 			{{- else -}}
 			0,
 			{{- end -}}
-			{{ $method.Ordinals.Write.Ordinal }});
+			{{ $method.Ordinal | printf "%#x" }});
 		let mut body = (
 			{{- range $index, $param := $method.Request -}}
 			in_{{ $param.Name -}},
@@ -714,7 +705,7 @@ impl {{ $protocol.Name }}Encoder {
 			{{- else -}}
 			0,
 			{{- end -}}
-			{{ $method.Ordinals.Write.Ordinal }});
+			{{ $method.Ordinal | printf "%#x" }});
 		let mut body = (
 			{{- range $index, $param := $method.Response -}}
 			in_{{ $param.Name -}},
@@ -758,7 +749,7 @@ impl {{ $protocol.Name }}ControlHandle {
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			0, {{ $method.Ordinals.Write.Ordinal }});
+			0, {{ $method.Ordinal | printf "%#x" }});
 
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}

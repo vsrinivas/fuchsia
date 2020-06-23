@@ -22,7 +22,7 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 namespace internal {
 
 {{- range .Methods }}
-constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu;
+constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal | printf "%#x" }}lu;
 {{- end }}
 
 }  // namespace

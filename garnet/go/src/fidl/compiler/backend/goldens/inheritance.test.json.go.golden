@@ -51,7 +51,7 @@ func (msg *subWithCtxFooResponse) Marshaler() _bindings.Marshaler {
 }
 
 const (
-	SuperFooGenOrdinal uint64 = 0x4f6c089228ba7c92
+	SuperFooOrdinal uint64 = 0x4f6c089228ba7c92
 )
 
 type SuperWithCtxInterface _bindings.ChannelProxy
@@ -61,7 +61,7 @@ func (p *SuperWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, er
 		S: s,
 	}
 	resp_ := &superWithCtxFooResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(SuperFooGenOrdinal, req_, resp_, SuperFooGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(SuperFooOrdinal, req_, resp_)
 	return resp_.Y, err_
 }
 
@@ -84,7 +84,7 @@ type SuperWithCtxStub struct {
 
 func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case SuperFooGenOrdinal:
+	case SuperFooOrdinal:
 		in_ := superWithCtxFooRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -104,7 +104,7 @@ func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 type SuperEventProxy _bindings.ChannelProxy
 
 const (
-	SubFooGenOrdinal uint64 = 0x4f6c089228ba7c92
+	SubFooOrdinal uint64 = 0x4f6c089228ba7c92
 )
 
 type SubWithCtxInterface _bindings.ChannelProxy
@@ -114,7 +114,7 @@ func (p *SubWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, erro
 		S: s,
 	}
 	resp_ := &subWithCtxFooResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(SubFooGenOrdinal, req_, resp_, SubFooGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(SubFooOrdinal, req_, resp_)
 	return resp_.Y, err_
 }
 
@@ -137,7 +137,7 @@ type SubWithCtxStub struct {
 
 func (s_ *SubWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case SubFooGenOrdinal:
+	case SubFooOrdinal:
 		in_ := subWithCtxFooRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {

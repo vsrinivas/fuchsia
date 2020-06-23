@@ -7,14 +7,14 @@ import (
 )
 
 const (
-	FirstProtocolMethodOnFirstGenOrdinal uint64 = 0x580cbd0d43ccbe3b
+	FirstProtocolMethodOnFirstOrdinal uint64 = 0x580cbd0d43ccbe3b
 )
 
 type FirstProtocolWithCtxInterface _bindings.ChannelProxy
 
 func (p *FirstProtocolWithCtxInterface) MethodOnFirst(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(FirstProtocolMethodOnFirstGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(FirstProtocolMethodOnFirstOrdinal, req_)
 	return err_
 }
 
@@ -37,7 +37,7 @@ type FirstProtocolWithCtxStub struct {
 
 func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case FirstProtocolMethodOnFirstGenOrdinal:
+	case FirstProtocolMethodOnFirstOrdinal:
 		err_ := s_.Impl.MethodOnFirst(args_.Ctx)
 		return nil, false, err_
 	}
@@ -47,14 +47,14 @@ func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 type FirstProtocolEventProxy _bindings.ChannelProxy
 
 const (
-	SecondProtocolMethodOnSecondGenOrdinal uint64 = 0x5785f9c1f2aece21
+	SecondProtocolMethodOnSecondOrdinal uint64 = 0x5785f9c1f2aece21
 )
 
 type SecondProtocolWithCtxInterface _bindings.ChannelProxy
 
 func (p *SecondProtocolWithCtxInterface) MethodOnSecond(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(SecondProtocolMethodOnSecondGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(SecondProtocolMethodOnSecondOrdinal, req_)
 	return err_
 }
 
@@ -77,7 +77,7 @@ type SecondProtocolWithCtxStub struct {
 
 func (s_ *SecondProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case SecondProtocolMethodOnSecondGenOrdinal:
+	case SecondProtocolMethodOnSecondOrdinal:
 		err_ := s_.Impl.MethodOnSecond(args_.Ctx)
 		return nil, false, err_
 	}

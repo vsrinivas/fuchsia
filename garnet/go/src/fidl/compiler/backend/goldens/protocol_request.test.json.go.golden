@@ -79,10 +79,10 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 type ChildEventProxy _bindings.ChannelProxy
 
 const (
-	ParentGetChildGenOrdinal         uint64 = 0x57e26ed694158086
-	ParentGetChildRequestGenOrdinal  uint64 = 0x5ea0990a698a80
-	ParentTakeChildGenOrdinal        uint64 = 0x6a9827d18871f87d
-	ParentTakeChildRequestGenOrdinal uint64 = 0x6c4a70e2a2126637
+	ParentGetChildOrdinal         uint64 = 0x57e26ed694158086
+	ParentGetChildRequestOrdinal  uint64 = 0x5ea0990a698a80
+	ParentTakeChildOrdinal        uint64 = 0x6a9827d18871f87d
+	ParentTakeChildRequestOrdinal uint64 = 0x6c4a70e2a2126637
 )
 
 type ParentWithCtxInterface _bindings.ChannelProxy
@@ -90,14 +90,14 @@ type ParentWithCtxInterface _bindings.ChannelProxy
 func (p *ParentWithCtxInterface) GetChild(ctx_ _bindings.Context) (ChildWithCtxInterface, error) {
 	var req_ _bindings.Message
 	resp_ := &parentWithCtxGetChildResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildGenOrdinal, req_, resp_, ParentGetChildGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildOrdinal, req_, resp_)
 	return resp_.C, err_
 }
 
 func (p *ParentWithCtxInterface) GetChildRequest(ctx_ _bindings.Context) (ChildWithCtxInterfaceRequest, error) {
 	var req_ _bindings.Message
 	resp_ := &parentWithCtxGetChildRequestResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestGenOrdinal, req_, resp_, ParentGetChildRequestGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestOrdinal, req_, resp_)
 	return resp_.R, err_
 }
 
@@ -105,7 +105,7 @@ func (p *ParentWithCtxInterface) TakeChild(ctx_ _bindings.Context, c ChildWithCt
 	req_ := &parentWithCtxTakeChildRequest{
 		C: c,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildOrdinal, req_)
 	return err_
 }
 
@@ -113,7 +113,7 @@ func (p *ParentWithCtxInterface) TakeChildRequest(ctx_ _bindings.Context, r Chil
 	req_ := &parentWithCtxTakeChildRequestRequest{
 		R: r,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestOrdinal, req_)
 	return err_
 }
 
@@ -139,17 +139,17 @@ type ParentWithCtxStub struct {
 
 func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ParentGetChildGenOrdinal:
+	case ParentGetChildOrdinal:
 		c, err_ := s_.Impl.GetChild(args_.Ctx)
 		out_ := parentWithCtxGetChildResponse{}
 		out_.C = c
 		return &out_, true, err_
-	case ParentGetChildRequestGenOrdinal:
+	case ParentGetChildRequestOrdinal:
 		r, err_ := s_.Impl.GetChildRequest(args_.Ctx)
 		out_ := parentWithCtxGetChildRequestResponse{}
 		out_.R = r
 		return &out_, true, err_
-	case ParentTakeChildGenOrdinal:
+	case ParentTakeChildOrdinal:
 		in_ := parentWithCtxTakeChildRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -160,7 +160,7 @@ func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.M
 		}
 		err_ := s_.Impl.TakeChild(args_.Ctx, in_.C)
 		return nil, false, err_
-	case ParentTakeChildRequestGenOrdinal:
+	case ParentTakeChildRequestOrdinal:
 		in_ := parentWithCtxTakeChildRequestRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {

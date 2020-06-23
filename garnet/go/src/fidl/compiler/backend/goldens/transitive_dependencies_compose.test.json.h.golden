@@ -21,7 +21,7 @@ using TopSyncPtr = ::fidl::SynchronousInterfacePtr<Top>;
 class Top_SyncProxy;
 using TopHandle = ::fidl::InterfaceHandle<Top>;
 namespace internal {
-constexpr uint64_t kTop_GetFoo_Ordinal = 3210163844600846111lu;
+constexpr uint64_t kTop_GetFoo_Ordinal = 0x2c8ccb022c3c571flu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

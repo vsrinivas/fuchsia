@@ -29,7 +29,7 @@ using SimpleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
 class SimpleProtocol_SyncProxy;
 using SimpleProtocolHandle = ::fidl::InterfaceHandle<SimpleProtocol>;
 namespace internal {
-constexpr uint64_t kSimpleProtocol_Add_Ordinal = 1238508415331800925lu;
+constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x113010d7832f175dlu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

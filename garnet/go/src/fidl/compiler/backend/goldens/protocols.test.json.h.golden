@@ -37,9 +37,9 @@ using TransitionalSyncPtr = ::fidl::SynchronousInterfacePtr<Transitional>;
 class Transitional_SyncProxy;
 using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
 namespace internal {
-constexpr uint64_t kTransitional_Request_Ordinal = 8417059970765918690lu;
-constexpr uint64_t kTransitional_OneWay_Ordinal = 4736529736500432226lu;
-constexpr uint64_t kTransitional_Event_Ordinal = 1744293851714922796lu;
+constexpr uint64_t kTransitional_Request_Ordinal = 0x74cf6772aaa991e2lu;
+constexpr uint64_t kTransitional_OneWay_Ordinal = 0x41bb88b33c2ecd62lu;
+constexpr uint64_t kTransitional_Event_Ordinal = 0x1834fa04375da92clu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -55,11 +55,10 @@ using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 class ChannelProtocol_SyncProxy;
 using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
 namespace internal {
-constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 1954005452660588540lu;
-constexpr uint64_t kChannelProtocol_EventA_Ordinal = 2691096518916888736lu;
-constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 6751311874614576291lu;
-constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
-    3948151641640179063lu;
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x1b1e059b3f02bffclu;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x2558b206a254d8a0lu;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x5db17a61464744a3lu;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x36caa6fff7569577lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -79,26 +78,26 @@ using WithAndWithoutRequestResponseHandle =
     ::fidl::InterfaceHandle<WithAndWithoutRequestResponse>;
 namespace internal {
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
-    257584335957785512lu;
+    0x3931f96bc77fba8lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
-        8101632395109729785lu;
+        0x706ec7bd335005f9lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
-        5054636755429784136lu;
+        0x4625ad5934067a48lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
-        5108499630221504549lu;
+        0x46e5095902913025lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
-        108302452954061159lu;
+        0x180c481d4a15967lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
-        383797738148261568lu;
+        0x553860267eceec0lu;
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
-    301337558307652787lu;
+    0x42e90e9a86944b3lu;
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
-    3069035692499413769lu;
+    0x2a9767b3ae6c2b09lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -130,10 +129,10 @@ class WithErrorSyntax_SyncProxy;
 using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
 namespace internal {
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
-    6422511116044938191lu;
+    0x592157d505db2bcflu;
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
-    2364249812017832126lu;
-constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 4597390537870356095lu;
+    0x20cf80ad7d9b60belu;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x3fcd36560f812e7flu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

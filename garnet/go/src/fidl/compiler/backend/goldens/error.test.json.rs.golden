@@ -157,7 +157,6 @@ impl futures::Stream for ExampleEventStream {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         std::task::Poll::Ready(Some(match tx_header.ordinal() {
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: tx_header.ordinal(),
@@ -277,7 +276,6 @@ impl futures::Stream for ExampleRequestStream {
                 ))));
             }
 
-            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
             std::task::Poll::Ready(Some(match header.ordinal() {
                 0xbaf4e613e45f29b => {
                     let mut req: (String) = fidl::encoding::Decodable::new_empty();
@@ -319,7 +317,6 @@ impl ExampleRequestMessage {
     ) -> Result<ExampleRequestMessage, fidl::Error> {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         match header.ordinal() {
             0xbaf4e613e45f29b => {
                 let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();

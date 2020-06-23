@@ -143,8 +143,8 @@ func (u *Table) ClearField() {
 }
 
 const (
-	InterfaceMethodGenOrdinal  uint64 = 0x60e700e002995ef8
-	InterfaceOnEventGenOrdinal uint64 = 0x914c226136244ed
+	InterfaceMethodOrdinal  uint64 = 0x60e700e002995ef8
+	InterfaceOnEventOrdinal uint64 = 0x914c226136244ed
 )
 
 type InterfaceWithCtxInterface _bindings.ChannelProxy
@@ -154,7 +154,7 @@ type InterfaceWithCtxInterface _bindings.ChannelProxy
 // method comment #3
 func (p *InterfaceWithCtxInterface) Method(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodOrdinal, req_)
 	return err_
 }
 
@@ -163,7 +163,7 @@ func (p *InterfaceWithCtxInterface) Method(ctx_ _bindings.Context) error {
 // event comment #3
 func (p *InterfaceWithCtxInterface) ExpectOnEvent(ctx_ _bindings.Context) error {
 	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventGenOrdinal, resp_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_)
 	return err_
 }
 
@@ -195,7 +195,7 @@ type InterfaceWithCtxStub struct {
 
 func (s_ *InterfaceWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case InterfaceMethodGenOrdinal:
+	case InterfaceMethodOrdinal:
 		err_ := s_.Impl.Method(args_.Ctx)
 		return nil, false, err_
 	}
@@ -206,5 +206,5 @@ type InterfaceEventProxy _bindings.ChannelProxy
 
 func (p *InterfaceEventProxy) OnEvent() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).Send(InterfaceOnEventGenOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(InterfaceOnEventOrdinal, event_)
 }

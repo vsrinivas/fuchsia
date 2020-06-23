@@ -162,7 +162,7 @@ func SimpleUnionWithB(b float32) SimpleUnion {
 }
 
 const (
-	SimpleProtocolAddGenOrdinal uint64 = 0x113010d7832f175d
+	SimpleProtocolAddOrdinal uint64 = 0x113010d7832f175d
 )
 
 type SimpleProtocolWithCtxInterface _bindings.ChannelProxy
@@ -173,7 +173,7 @@ func (p *SimpleProtocolWithCtxInterface) Add(ctx_ _bindings.Context, a int32, b 
 		B: b,
 	}
 	resp_ := &simpleProtocolWithCtxAddResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(SimpleProtocolAddGenOrdinal, req_, resp_, SimpleProtocolAddGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(SimpleProtocolAddOrdinal, req_, resp_)
 	return resp_.Sum, err_
 }
 
@@ -196,7 +196,7 @@ type SimpleProtocolWithCtxStub struct {
 
 func (s_ *SimpleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case SimpleProtocolAddGenOrdinal:
+	case SimpleProtocolAddOrdinal:
 		in_ := simpleProtocolWithCtxAddRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {

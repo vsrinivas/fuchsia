@@ -416,35 +416,35 @@ func WithErrorSyntaxErrorAsEnumResultWithErr(err ErrorEnun) WithErrorSyntaxError
 }
 
 const (
-	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal      uint64 = 0x3931f96bc77fba8
-	WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal   uint64 = 0x706ec7bd335005f9
-	WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal    uint64 = 0x4625ad5934067a48
-	WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal    uint64 = 0x46e5095902913025
-	WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal uint64 = 0x180c481d4a15967
-	WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal  uint64 = 0x553860267eceec0
-	WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal          uint64 = 0x42e90e9a86944b3
-	WithAndWithoutRequestResponseOnWithResponseGenOrdinal           uint64 = 0x2a9767b3ae6c2b09
+	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal      uint64 = 0x3931f96bc77fba8
+	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal   uint64 = 0x706ec7bd335005f9
+	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal    uint64 = 0x4625ad5934067a48
+	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal    uint64 = 0x46e5095902913025
+	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint64 = 0x180c481d4a15967
+	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal  uint64 = 0x553860267eceec0
+	WithAndWithoutRequestResponseOnEmptyResponseOrdinal          uint64 = 0x42e90e9a86944b3
+	WithAndWithoutRequestResponseOnWithResponseOrdinal           uint64 = 0x2a9767b3ae6c2b09
 )
 
 type WithAndWithoutRequestResponseWithCtxInterface _bindings.ChannelProxy
 
 func (p *WithAndWithoutRequestResponseWithCtxInterface) NoRequestNoResponse(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseNoRequestNoResponseOrdinal, req_)
 	return err_
 }
 
 func (p *WithAndWithoutRequestResponseWithCtxInterface) NoRequestEmptyResponse(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
 	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal, req_, resp_)
 	return err_
 }
 
 func (p *WithAndWithoutRequestResponseWithCtxInterface) NoRequestWithResponse(ctx_ _bindings.Context) (string, error) {
 	var req_ _bindings.Message
 	resp_ := &withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestWithResponseOrdinal, req_, resp_)
 	return resp_.Ret, err_
 }
 
@@ -452,7 +452,7 @@ func (p *WithAndWithoutRequestResponseWithCtxInterface) WithRequestNoResponse(ct
 	req_ := &withAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest{
 		Arg: arg,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal, req_)
 	return err_
 }
 
@@ -461,7 +461,7 @@ func (p *WithAndWithoutRequestResponseWithCtxInterface) WithRequestEmptyResponse
 		Arg: arg,
 	}
 	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal, req_, resp_)
 	return err_
 }
 
@@ -470,19 +470,19 @@ func (p *WithAndWithoutRequestResponseWithCtxInterface) WithRequestWithResponse(
 		Arg: arg,
 	}
 	resp_ := &withAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestWithResponseOrdinal, req_, resp_)
 	return resp_.Ret, err_
 }
 
 func (p *WithAndWithoutRequestResponseWithCtxInterface) ExpectOnEmptyResponse(ctx_ _bindings.Context) error {
 	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal, resp_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, resp_)
 	return err_
 }
 
 func (p *WithAndWithoutRequestResponseWithCtxInterface) ExpectOnWithResponse(ctx_ _bindings.Context) (string, error) {
 	resp_ := &withAndWithoutRequestResponseWithCtxOnWithResponseResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseGenOrdinal, resp_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, resp_)
 	return resp_.Ret, err_
 }
 
@@ -510,18 +510,18 @@ type WithAndWithoutRequestResponseWithCtxStub struct {
 
 func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal:
+	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
 		err_ := s_.Impl.NoRequestNoResponse(args_.Ctx)
 		return nil, false, err_
-	case WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal:
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
 		err_ := s_.Impl.NoRequestEmptyResponse(args_.Ctx)
 		return nil, true, err_
-	case WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal:
+	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
 		ret, err_ := s_.Impl.NoRequestWithResponse(args_.Ctx)
 		out_ := withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, true, err_
-	case WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal:
+	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
 		in_ := withAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -532,7 +532,7 @@ func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.Dis
 		}
 		err_ := s_.Impl.WithRequestNoResponse(args_.Ctx, in_.Arg)
 		return nil, false, err_
-	case WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal:
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
 		in_ := withAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -543,7 +543,7 @@ func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.Dis
 		}
 		err_ := s_.Impl.WithRequestEmptyResponse(args_.Ctx, in_.Arg)
 		return nil, true, err_
-	case WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal:
+	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
 		in_ := withAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -564,19 +564,19 @@ type WithAndWithoutRequestResponseEventProxy _bindings.ChannelProxy
 
 func (p *WithAndWithoutRequestResponseEventProxy) OnEmptyResponse() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, event_)
 }
 func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) error {
 	event_ := &withAndWithoutRequestResponseWithCtxOnWithResponseResponse{
 		Ret: ret,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseGenOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseOrdinal, event_)
 }
 
 const (
-	WithErrorSyntaxResponseAsStructGenOrdinal uint64 = 0x592157d505db2bcf
-	WithErrorSyntaxErrorAsPrimitiveGenOrdinal uint64 = 0x20cf80ad7d9b60be
-	WithErrorSyntaxErrorAsEnumGenOrdinal      uint64 = 0x3fcd36560f812e7f
+	WithErrorSyntaxResponseAsStructOrdinal uint64 = 0x592157d505db2bcf
+	WithErrorSyntaxErrorAsPrimitiveOrdinal uint64 = 0x20cf80ad7d9b60be
+	WithErrorSyntaxErrorAsEnumOrdinal      uint64 = 0x3fcd36560f812e7f
 )
 
 type WithErrorSyntaxWithCtxInterface _bindings.ChannelProxy
@@ -584,21 +584,21 @@ type WithErrorSyntaxWithCtxInterface _bindings.ChannelProxy
 func (p *WithErrorSyntaxWithCtxInterface) ResponseAsStruct(ctx_ _bindings.Context) (WithErrorSyntaxResponseAsStructResult, error) {
 	var req_ _bindings.Message
 	resp_ := &withErrorSyntaxWithCtxResponseAsStructResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxResponseAsStructGenOrdinal, req_, resp_, WithErrorSyntaxResponseAsStructGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxResponseAsStructOrdinal, req_, resp_)
 	return resp_.Result, err_
 }
 
 func (p *WithErrorSyntaxWithCtxInterface) ErrorAsPrimitive(ctx_ _bindings.Context) (WithErrorSyntaxErrorAsPrimitiveResult, error) {
 	var req_ _bindings.Message
 	resp_ := &withErrorSyntaxWithCtxErrorAsPrimitiveResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsPrimitiveGenOrdinal, req_, resp_, WithErrorSyntaxErrorAsPrimitiveGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsPrimitiveOrdinal, req_, resp_)
 	return resp_.Result, err_
 }
 
 func (p *WithErrorSyntaxWithCtxInterface) ErrorAsEnum(ctx_ _bindings.Context) (WithErrorSyntaxErrorAsEnumResult, error) {
 	var req_ _bindings.Message
 	resp_ := &withErrorSyntaxWithCtxErrorAsEnumResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsEnumGenOrdinal, req_, resp_, WithErrorSyntaxErrorAsEnumGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsEnumOrdinal, req_, resp_)
 	return resp_.Result, err_
 }
 
@@ -623,17 +623,17 @@ type WithErrorSyntaxWithCtxStub struct {
 
 func (s_ *WithErrorSyntaxWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case WithErrorSyntaxResponseAsStructGenOrdinal:
+	case WithErrorSyntaxResponseAsStructOrdinal:
 		result, err_ := s_.Impl.ResponseAsStruct(args_.Ctx)
 		out_ := withErrorSyntaxWithCtxResponseAsStructResponse{}
 		out_.Result = result
 		return &out_, true, err_
-	case WithErrorSyntaxErrorAsPrimitiveGenOrdinal:
+	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
 		result, err_ := s_.Impl.ErrorAsPrimitive(args_.Ctx)
 		out_ := withErrorSyntaxWithCtxErrorAsPrimitiveResponse{}
 		out_.Result = result
 		return &out_, true, err_
-	case WithErrorSyntaxErrorAsEnumGenOrdinal:
+	case WithErrorSyntaxErrorAsEnumOrdinal:
 		result, err_ := s_.Impl.ErrorAsEnum(args_.Ctx)
 		out_ := withErrorSyntaxWithCtxErrorAsEnumResponse{}
 		out_.Result = result
@@ -645,10 +645,10 @@ func (s_ *WithErrorSyntaxWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 type WithErrorSyntaxEventProxy _bindings.ChannelProxy
 
 const (
-	ChannelProtocolMethodAGenOrdinal      uint64 = 0x1b1e059b3f02bffc
-	ChannelProtocolEventAGenOrdinal       uint64 = 0x2558b206a254d8a0
-	ChannelProtocolMethodBGenOrdinal      uint64 = 0x5db17a61464744a3
-	ChannelProtocolMutateSocketGenOrdinal uint64 = 0x36caa6fff7569577
+	ChannelProtocolMethodAOrdinal      uint64 = 0x1b1e059b3f02bffc
+	ChannelProtocolEventAOrdinal       uint64 = 0x2558b206a254d8a0
+	ChannelProtocolMethodBOrdinal      uint64 = 0x5db17a61464744a3
+	ChannelProtocolMutateSocketOrdinal uint64 = 0x36caa6fff7569577
 )
 
 type ChannelProtocolWithCtxInterface _bindings.ChannelProxy
@@ -658,13 +658,13 @@ func (p *ChannelProtocolWithCtxInterface) MethodA(ctx_ _bindings.Context, a int6
 		A: a,
 		B: b,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolMethodAGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolMethodAOrdinal, req_)
 	return err_
 }
 
 func (p *ChannelProtocolWithCtxInterface) ExpectEventA(ctx_ _bindings.Context) (int64, int64, error) {
 	resp_ := &channelProtocolWithCtxEventAResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAGenOrdinal, resp_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err_
 }
 
@@ -674,7 +674,7 @@ func (p *ChannelProtocolWithCtxInterface) MethodB(ctx_ _bindings.Context, a int6
 		B: b,
 	}
 	resp_ := &channelProtocolWithCtxMethodBResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMethodBGenOrdinal, req_, resp_, ChannelProtocolMethodBGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err_
 }
 
@@ -683,7 +683,7 @@ func (p *ChannelProtocolWithCtxInterface) MutateSocket(ctx_ _bindings.Context, a
 		A: a,
 	}
 	resp_ := &channelProtocolWithCtxMutateSocketResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMutateSocketGenOrdinal, req_, resp_, ChannelProtocolMutateSocketGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMutateSocketOrdinal, req_, resp_)
 	return resp_.B, err_
 }
 
@@ -708,7 +708,7 @@ type ChannelProtocolWithCtxStub struct {
 
 func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ChannelProtocolMethodAGenOrdinal:
+	case ChannelProtocolMethodAOrdinal:
 		in_ := channelProtocolWithCtxMethodARequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -719,7 +719,7 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		}
 		err_ := s_.Impl.MethodA(args_.Ctx, in_.A, in_.B)
 		return nil, false, err_
-	case ChannelProtocolMethodBGenOrdinal:
+	case ChannelProtocolMethodBOrdinal:
 		in_ := channelProtocolWithCtxMethodBRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -732,7 +732,7 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		out_ := channelProtocolWithCtxMethodBResponse{}
 		out_.Result = result
 		return &out_, true, err_
-	case ChannelProtocolMutateSocketGenOrdinal:
+	case ChannelProtocolMutateSocketOrdinal:
 		in_ := channelProtocolWithCtxMutateSocketRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -756,13 +756,13 @@ func (p *ChannelProtocolEventProxy) EventA(a int64, b int64) error {
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolEventAGenOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolEventAOrdinal, event_)
 }
 
 const (
-	TransitionalRequestGenOrdinal uint64 = 0x74cf6772aaa991e2
-	TransitionalOneWayGenOrdinal  uint64 = 0x41bb88b33c2ecd62
-	TransitionalEventGenOrdinal   uint64 = 0x1834fa04375da92c
+	TransitionalRequestOrdinal uint64 = 0x74cf6772aaa991e2
+	TransitionalOneWayOrdinal  uint64 = 0x41bb88b33c2ecd62
+	TransitionalEventOrdinal   uint64 = 0x1834fa04375da92c
 )
 
 type TransitionalWithCtxInterface _bindings.ChannelProxy
@@ -772,7 +772,7 @@ func (p *TransitionalWithCtxInterface) Request(ctx_ _bindings.Context, x int64) 
 		X: x,
 	}
 	resp_ := &transitionalWithCtxRequestResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(TransitionalRequestGenOrdinal, req_, resp_, TransitionalRequestGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(TransitionalRequestOrdinal, req_, resp_)
 	return resp_.Y, err_
 }
 
@@ -780,13 +780,13 @@ func (p *TransitionalWithCtxInterface) OneWay(ctx_ _bindings.Context, x int64) e
 	req_ := &transitionalWithCtxOneWayRequest{
 		X: x,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(TransitionalOneWayGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(TransitionalOneWayOrdinal, req_)
 	return err_
 }
 
 func (p *TransitionalWithCtxInterface) ExpectEvent(ctx_ _bindings.Context) (int64, error) {
 	resp_ := &transitionalWithCtxEventResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(TransitionalEventGenOrdinal, resp_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(TransitionalEventOrdinal, resp_)
 	return resp_.X, err_
 }
 
@@ -817,7 +817,7 @@ type TransitionalWithCtxStub struct {
 
 func (s_ *TransitionalWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case TransitionalRequestGenOrdinal:
+	case TransitionalRequestOrdinal:
 		in_ := transitionalWithCtxRequestRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -830,7 +830,7 @@ func (s_ *TransitionalWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 		out_ := transitionalWithCtxRequestResponse{}
 		out_.Y = y
 		return &out_, true, err_
-	case TransitionalOneWayGenOrdinal:
+	case TransitionalOneWayOrdinal:
 		in_ := transitionalWithCtxOneWayRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -851,5 +851,5 @@ func (p *TransitionalEventProxy) Event(x int64) error {
 	event_ := &transitionalWithCtxEventResponse{
 		X: x,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(TransitionalEventGenOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(TransitionalEventOrdinal, event_)
 }

@@ -25,8 +25,8 @@ using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
 class Interface_SyncProxy;
 using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
 namespace internal {
-constexpr uint64_t kInterface_Method_Ordinal = 6982550709377523448lu;
-constexpr uint64_t kInterface_OnEvent_Ordinal = 654361314665317613lu;
+constexpr uint64_t kInterface_Method_Ordinal = 0x60e700e002995ef8lu;
+constexpr uint64_t kInterface_OnEvent_Ordinal = 0x914c226136244edlu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

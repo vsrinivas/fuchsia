@@ -662,7 +662,6 @@ type ServiceMember struct {
 type Method struct {
 	Attributes
 	Ordinal             uint64                    `json:"ordinal"`
-	GenOrdinal          uint64                    `json:"generated_ordinal"`
 	Name                Identifier                `json:"name"`
 	HasRequest          bool                      `json:"has_request"`
 	Request             []Parameter               `json:"maybe_request,omitempty"`

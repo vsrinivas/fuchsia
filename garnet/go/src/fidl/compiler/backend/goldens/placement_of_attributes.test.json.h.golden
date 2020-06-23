@@ -20,7 +20,7 @@ using ExampleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 class ExampleProtocol_SyncProxy;
 using ExampleProtocolHandle = ::fidl::InterfaceHandle<ExampleProtocol>;
 namespace internal {
-constexpr uint64_t kExampleProtocol_Method_Ordinal = 1965996700874037518lu;
+constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x1b489f95492fd90elu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

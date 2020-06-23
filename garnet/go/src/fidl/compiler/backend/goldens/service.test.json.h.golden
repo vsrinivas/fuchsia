@@ -20,7 +20,7 @@ class SecondProtocol_SyncProxy;
 using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
 namespace internal {
 constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
-    6306721464597794337lu;
+    0x5785f9c1f2aece21lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -36,7 +36,7 @@ using FirstProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<FirstProtocol>;
 class FirstProtocol_SyncProxy;
 using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
 namespace internal {
-constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 6344653839727902267lu;
+constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x580cbd0d43ccbe3blu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

@@ -9,9 +9,7 @@ const Protocol = `
 
 const (
 {{- range .Methods }}
-	{{- range .Ordinals.Reads }}
-	{{ .Name }} uint64 = {{ .Ordinal }}
-	{{- end }}
+	{{ .OrdinalName }} uint64 = {{ .Ordinal | printf "%#x" }}
 {{- end }}
 )
 
@@ -59,22 +57,13 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .HasRequest }}
 		{{- if .HasResponse }}
-	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_
-		{{- range $index, $ordinal := .Ordinals.Reads -}}, {{ $ordinal.Name }}{{- end -}})
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName }}, req_, resp_)
 		{{- else }}
-	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, req_)
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, req_)
 		{{- end }}
 	{{- else }}
 		{{- if .HasResponse }}
-	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Recv(
-		{{- with $first_ordinal := index .Ordinals.Reads 0 -}}
-			{{- $first_ordinal.Name -}}
-		{{- end -}}
-		, resp_
-		{{- range $index, $ordinal := .Ordinals.Reads -}}
-			{{- if $index -}}, {{ $ordinal.Name }}{{- end -}}
-		{{- end -}}
-		)
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, resp_)
 		{{- else }}
 	err_ := nil
 		{{- end }}
@@ -179,12 +168,7 @@ func (s_ *{{ .StubName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mes
 	switch args_.Ordinal {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
-	{{- range $index, $ordinal := .Ordinals.Reads }}
-		{{- if $index }}
-		fallthrough
-		{{- end }}
-	case {{ $ordinal.Name }}:
-	{{- end }}
+	case {{ .OrdinalName }}:
 		{{- if .HasRequest }}
 		{{- if .Request }}
 		in_ := {{ .Request.Name }}{}
@@ -251,7 +235,7 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 	var event_ _bindings.Message
 	{{- end }}
 	{{- end }}
-	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, event_)
+	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, event_)
 }
 {{- end }}
 {{- end }}

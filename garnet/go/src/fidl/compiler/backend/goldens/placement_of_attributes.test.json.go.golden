@@ -159,7 +159,7 @@ func (u *ExampleTable) ClearMember() {
 }
 
 const (
-	ExampleProtocolMethodGenOrdinal uint64 = 0x1b489f95492fd90e
+	ExampleProtocolMethodOrdinal uint64 = 0x1b489f95492fd90e
 )
 
 type ExampleProtocolWithCtxInterface _bindings.ChannelProxy
@@ -168,7 +168,7 @@ func (p *ExampleProtocolWithCtxInterface) Method(ctx_ _bindings.Context, arg exa
 	req_ := &exampleProtocolWithCtxMethodRequest{
 		Arg: arg,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ExampleProtocolMethodGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ExampleProtocolMethodOrdinal, req_)
 	return err_
 }
 
@@ -191,7 +191,7 @@ type ExampleProtocolWithCtxStub struct {
 
 func (s_ *ExampleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ExampleProtocolMethodGenOrdinal:
+	case ExampleProtocolMethodOrdinal:
 		in_ := exampleProtocolWithCtxMethodRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {

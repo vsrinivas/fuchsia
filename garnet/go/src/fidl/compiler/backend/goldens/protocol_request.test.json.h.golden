@@ -19,10 +19,10 @@ using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 namespace internal {
-constexpr uint64_t kParent_GetChild_Ordinal = 6332745893922832518lu;
-constexpr uint64_t kParent_GetChildRequest_Ordinal = 26635226975931008lu;
-constexpr uint64_t kParent_TakeChild_Ordinal = 7680932945371199613lu;
-constexpr uint64_t kParent_TakeChildRequest_Ordinal = 7803173423056840247lu;
+constexpr uint64_t kParent_GetChild_Ordinal = 0x57e26ed694158086lu;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x5ea0990a698a80lu;
+constexpr uint64_t kParent_TakeChild_Ordinal = 0x6a9827d18871f87dlu;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x6c4a70e2a2126637lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

@@ -36,10 +36,10 @@ using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
 namespace internal {
 constexpr uint64_t
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
-        8255078252057434586lu;
+        0x728fedeed6ef99dalu;
 constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
-        1140178169303334883lu;
+        0xfd2ba0109faffe3lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

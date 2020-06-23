@@ -40,7 +40,7 @@ func (msg *childWithCtxSecondRequest) Marshaler() _bindings.Marshaler {
 }
 
 const (
-	ParentFirstGenOrdinal uint64 = 0x239f8fdea8de880c
+	ParentFirstOrdinal uint64 = 0x239f8fdea8de880c
 )
 
 type ParentWithCtxInterface _bindings.ChannelProxy
@@ -49,7 +49,7 @@ func (p *ParentWithCtxInterface) First(ctx_ _bindings.Context, request ParentWit
 	req_ := &parentWithCtxFirstRequest{
 		Request: request,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentFirstGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentFirstOrdinal, req_)
 	return err_
 }
 
@@ -72,7 +72,7 @@ type ParentWithCtxStub struct {
 
 func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ParentFirstGenOrdinal:
+	case ParentFirstOrdinal:
 		in_ := parentWithCtxFirstRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -90,8 +90,8 @@ func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.M
 type ParentEventProxy _bindings.ChannelProxy
 
 const (
-	ChildFirstGenOrdinal  uint64 = 0x239f8fdea8de880c
-	ChildSecondGenOrdinal uint64 = 0x24799ea8916d88af
+	ChildFirstOrdinal  uint64 = 0x239f8fdea8de880c
+	ChildSecondOrdinal uint64 = 0x24799ea8916d88af
 )
 
 type ChildWithCtxInterface _bindings.ChannelProxy
@@ -100,7 +100,7 @@ func (p *ChildWithCtxInterface) First(ctx_ _bindings.Context, request ParentWith
 	req_ := &childWithCtxFirstRequest{
 		Request: request,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChildFirstGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChildFirstOrdinal, req_)
 	return err_
 }
 
@@ -108,7 +108,7 @@ func (p *ChildWithCtxInterface) Second(ctx_ _bindings.Context, request ParentWit
 	req_ := &childWithCtxSecondRequest{
 		Request: request,
 	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChildSecondGenOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChildSecondOrdinal, req_)
 	return err_
 }
 
@@ -132,7 +132,7 @@ type ChildWithCtxStub struct {
 
 func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ChildFirstGenOrdinal:
+	case ChildFirstOrdinal:
 		in_ := childWithCtxFirstRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
@@ -143,7 +143,7 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 		}
 		err_ := s_.Impl.First(args_.Ctx, in_.Request)
 		return nil, false, err_
-	case ChildSecondGenOrdinal:
+	case ChildSecondOrdinal:
 		in_ := childWithCtxSecondRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {

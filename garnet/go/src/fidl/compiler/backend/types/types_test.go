@@ -13,8 +13,7 @@ import (
 
 func TestCanUnmarshalLargeOrdinal(t *testing.T) {
 	input := `{
-		"ordinal": 18446744073709551615,
-		"generated_ordinal": 18446744073709551615
+		"ordinal": 18446744073709551615
 	}`
 
 	var method Method
@@ -24,9 +23,6 @@ func TestCanUnmarshalLargeOrdinal(t *testing.T) {
 	}
 	if method.Ordinal != math.MaxUint64 {
 		t.Fatalf("method.Ordinal: expected math.MaxUint64, found %d", method.Ordinal)
-	}
-	if method.GenOrdinal != math.MaxUint64 {
-		t.Fatalf("method.GenOrdinal: expected math.MaxUint64, found %d", method.GenOrdinal)
 	}
 }
 

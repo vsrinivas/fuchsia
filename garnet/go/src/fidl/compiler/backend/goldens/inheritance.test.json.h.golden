@@ -20,7 +20,7 @@ using superSyncPtr = ::fidl::SynchronousInterfacePtr<super>;
 class super_SyncProxy;
 using superHandle = ::fidl::InterfaceHandle<super>;
 namespace internal {
-constexpr uint64_t ksuper_foo_Ordinal = 5722958650322615442lu;
+constexpr uint64_t ksuper_foo_Ordinal = 0x4f6c089228ba7c92lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -36,7 +36,7 @@ using subSyncPtr = ::fidl::SynchronousInterfacePtr<sub>;
 class sub_SyncProxy;
 using subHandle = ::fidl::InterfaceHandle<sub>;
 namespace internal {
-constexpr uint64_t ksub_foo_Ordinal = 5722958650322615442lu;
+constexpr uint64_t ksub_foo_Ordinal = 0x4f6c089228ba7c92lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

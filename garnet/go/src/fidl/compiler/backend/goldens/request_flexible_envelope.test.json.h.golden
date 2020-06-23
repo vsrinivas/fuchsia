@@ -23,9 +23,9 @@ class Protocol_SyncProxy;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
 namespace internal {
 constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal =
-    8264567585134801538lu;
+    0x72b1a46e5e2af282lu;
 constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
-    4801763909694511442lu;
+    0x42a34ad5c4a1d952lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

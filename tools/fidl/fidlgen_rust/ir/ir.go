@@ -137,7 +137,7 @@ type Protocol struct {
 
 type Method struct {
 	types.Attributes
-	Ordinals       types.Ordinals
+	Ordinal        uint64
 	Name           string
 	CamelName      string
 	HasRequest     bool
@@ -726,7 +726,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 		camelName := compileCamelIdentifier(v.Name)
 		m := Method{
 			Attributes:     v.Attributes,
-			Ordinals:       types.NewOrdinalsStep7(v, "UNUSED", "UNUSED"),
+			Ordinal:        v.Ordinal,
 			Name:           name,
 			CamelName:      camelName,
 			HasRequest:     v.HasRequest,

@@ -21,10 +21,9 @@ using EmptyProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<EmptyProtocol>;
 class EmptyProtocol_SyncProxy;
 using EmptyProtocolHandle = ::fidl::InterfaceHandle<EmptyProtocol>;
 namespace internal {
-constexpr uint64_t kEmptyProtocol_Send_Ordinal = 550167292114688515lu;
-constexpr uint64_t kEmptyProtocol_Receive_Ordinal = 7186107129703123093lu;
-constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal =
-    2187042876758414869lu;
+constexpr uint64_t kEmptyProtocol_Send_Ordinal = 0x7a2963cbd88da03lu;
+constexpr uint64_t kEmptyProtocol_Receive_Ordinal = 0x63ba2e5c5fdb4895lu;
+constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal = 0x1e59efe8b1bbd615lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__

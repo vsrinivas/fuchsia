@@ -56,6 +56,19 @@ example, in a function whose parameters are generated based on a FIDL
 definition, it MUST be impossible for the names of the local variables in the
 generated to clash with possible generated names.
 
+## Ordinals
+
+### Method ordinals
+
+Ordinals used for methods are large 64-bit numbers. Bindings SHOULD emit these
+ordinals in hexadecimal, i.e. `0x60e700e002995ef8`, not `6982550709377523448`.
+
+### Union, and table ordinals
+
+Ordinals used for `union` and `table` start at 1, and must form a dense space.
+Therefore, these numbers are typically small, and bindings SHOULD emit these
+ordinals in decimal notation.
+
 ## Native types
 
 It is RECOMMENDED that bindings use the most specific and ergonomic native types
