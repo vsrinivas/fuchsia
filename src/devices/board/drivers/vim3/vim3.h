@@ -22,6 +22,7 @@ namespace vim3 {
 
 // BTI IDs for our devices
 enum {
+  BTI_EMMC,
   BTI_ETHERNET,
   BTI_SYSMEM,
 };
@@ -45,6 +46,7 @@ class Vim3 : public Vim3Type {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vim3);
 
   zx_status_t ClkInit();
+  zx_status_t EmmcInit();
   zx_status_t EthInit();
   zx_status_t GpioInit();
   zx_status_t I2cInit();
