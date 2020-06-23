@@ -4,4 +4,5 @@
 
 export 'src/utils/change_notifiers.dart';
 export 'src/utils/frame_rate_tracer.dart';
+export 'src/utils/pointer_data_resampler.dart';
 export 'src/utils/pointer_events_listener.dart';

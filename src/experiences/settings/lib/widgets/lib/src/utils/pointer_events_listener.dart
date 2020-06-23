@@ -12,6 +12,8 @@ import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 
 import 'package:flutter/scheduler.dart';
 
+import 'pointer_data_resampler.dart';
+
 /// The default sampling offset.
 ///
 /// Sampling offset is relative to presentation time. If we produce frames
@@ -19,19 +21,6 @@ import 'package:flutter/scheduler.dart';
 /// is 33.334 ms. This however assumes zero latency from the input driver.
 /// 4.666 ms margin is added for this.
 const _defaultSamplingOffset = Duration(milliseconds: -38);
-
-class _Event {
-  PointerEvent p;
-  Flow flow1;
-  Flow flow2;
-  _Event(this.p, this.flow1, this.flow2);
-}
-
-class _DownPointer {
-  _Event last;
-  _Event next;
-  _DownPointer(this.last, this.next);
-}
 
 /// Listens for pointer events through the updated API and injects them into Flutter input pipeline.
 class PointerEventsListener2 extends PointerCaptureListener {
@@ -96,14 +85,17 @@ class PointerEventsListener extends PointerCaptureListenerHack {
   // [onPointerDataCallback] used to dispatch pointer data callbacks.
   var _callback;
 
-  // Offset used for re-sampling of move events.
+  // Offset used for resampling.
   final _samplingOffset;
 
-  final _queuedEvents = <_Event>[];
+  // Flag to track if a frame callback has been scheduled.
   var _frameCallbackScheduled = false;
 
-  var _sampleTimeNs = 0;
-  final _downPointers = <int, _DownPointer>{};
+  // Current sample time for resampling.
+  var _sampleTime = Duration();
+
+  // Resamplers used to filter incoming touch events.
+  final _resamplers = <int, PointerDataResampler>{};
 
   PointerEventsListener({
     SchedulerBinding scheduler,
@@ -184,199 +176,43 @@ class PointerEventsListener extends PointerCaptureListenerHack {
     final eventArguments = <String, int>{
       'eventTimeUs': event.eventTime ~/ 1000,
     };
-    final flow1 = Flow.begin();
     Timeline.timeSync('PointerEventsListener.onPointerEvent', () {
-      final flow2 = Flow.begin();
-      Timeline.timeSync('PointerEventsListener.queueEvent', () {
-        final frameTime =
-            _scheduler.currentSystemFrameTimeStamp.inMicroseconds * 1000;
-        // Sanity check event time by clamping to frameTime.
-        final eventTime =
-            event.eventTime < frameTime ? event.eventTime : frameTime;
-        _queuedEvents.add(_Event(
-            _clone(event, event.phase, event.x, event.y, eventTime),
-            flow1,
-            flow2));
-      }, flow: flow2);
-      _dispatchQueuedEvents();
-    }, arguments: eventArguments, flow: flow1);
+      if (_kindFromPointerEvent(event) != ui.PointerDeviceKind.touch) {
+        _callback(ui.PointerDataPacket(data: [_getPacket(event)]));
+        return;
+      }
+      final frameTime =
+          _scheduler.currentSystemFrameTimeStamp.inMicroseconds * 1000;
+      // Sanity check event time by clamping to frameTime.
+      final eventTime =
+          event.eventTime < frameTime ? event.eventTime : frameTime;
+      var data =
+          _getPacket(_clone(event, event.phase, event.x, event.y, eventTime));
+      var resampler =
+          _resamplers.putIfAbsent(data.device, () => PointerDataResampler());
+      resampler.addData(data);
+      _dispatchEvents();
+    }, arguments: eventArguments);
   }
 
-  void _dispatchQueuedEvents() {
-    Timeline.timeSync('PointerEventsListener.dispatchQueuedEvents', () {
-      _consumePendingEvents();
-      _updateDownPointers();
-      _dispatchResampledChanges();
+  void _dispatchEvents() {
+    for (var resampler in _resamplers.values) {
+      final packets = resampler.sample(_sampleTime);
+      if (packets.isNotEmpty) {
+        Timeline.timeSync('PointerEventsListener.dispatchPackets', () {
+          _callback(ui.PointerDataPacket(data: packets));
+        });
+      }
 
-      // Schedule frame callback if down pointers exists or events are
-      // still queued. We need the frame callback to determine sample
-      // time. This however makes us produce frames whenever touch points
-      // are present. Probably OK as we'll likely receive an update to
+      // Schedule frame callback if another call to `sample` is needed.
+      // We need the frame callback to determine sample time. This
+      // however makes us produce frames whenever touch points are
+      // present. Probably OK as we'll likely receive an update to
       // the touch point location each frame that will result in us
       // actually having to produce a frame.
-      if (_queuedEvents.isNotEmpty || _downPointers.isNotEmpty) {
+      if (resampler.hasPendingData() || _downEvent.containsValue(true)) {
         _scheduleFrameCallback();
       }
-    });
-  }
-
-  void _consumePendingEvents() {
-    final packets = <ui.PointerData>[];
-
-    while (_queuedEvents.isNotEmpty) {
-      final event = _queuedEvents.first;
-
-      // Dispatch non-touch changes directly.
-      var dispatchEvent = true;
-
-      if (event.p.type == PointerEventType.touch) {
-        // Stop consuming touch events if more recent than current sample time.
-        if (event.p.eventTime > _sampleTimeNs) {
-          break;
-        }
-
-        switch (event.p.phase) {
-          case PointerEventPhase.down:
-            _downPointers[event.p.pointerId] = _DownPointer(event, event);
-            break;
-          case PointerEventPhase.move:
-            // Create a _DownPointer event if it does not already exist, i.e.
-            // user is touching screen on boot.
-            if (!_downPointers.containsKey(event.p.pointerId)) {
-              _downPointers[event.p.pointerId] = _DownPointer(event, event);
-            }
-            _downPointers[event.p.pointerId].next = event;
-            break;
-          case PointerEventPhase.up:
-          case PointerEventPhase.cancel:
-            final p = _downPointers[event.p.pointerId];
-            if (p != null) {
-              // Remove _DownPointer if `up` phase has been handled.
-              if (p.last.p.phase == PointerEventPhase.up) {
-                _downPointers.remove(event.p.pointerId);
-              } else {
-                _downPointers[event.p.pointerId].next = event;
-              }
-            }
-            break;
-          case PointerEventPhase.add:
-          case PointerEventPhase.remove:
-          case PointerEventPhase.hover:
-            break;
-        }
-
-        // Touch changes will be re-sampled instead of dispatched directly.
-        dispatchEvent = false;
-      }
-
-      if (dispatchEvent) {
-        final eventArguments = <String, int>{
-          'eventTimeUs': event.p.eventTime ~/ 1000,
-        };
-        Timeline.timeSync('PointerEventsListener.consumePendingEvent', () {
-          final packet = _getPacket(event.p);
-          if (packet != null) {
-            packets.add(packet);
-          }
-        }, arguments: eventArguments, flow: Flow.end(event.flow1.id));
-      }
-
-      _queuedEvents.removeAt(0);
-    }
-
-    if (packets.isNotEmpty) {
-      Timeline.timeSync('PointerEventsListener.dispatchPackets', () {
-        _callback(ui.PointerDataPacket(data: packets));
-      });
-    }
-  }
-
-  void _updateDownPointers() {
-    // Update [_downPointers] by examining queued changes.
-    for (var event in _queuedEvents) {
-      final p = _downPointers[event.p.pointerId];
-      if (p != null) {
-        switch (event.p.phase) {
-          case PointerEventPhase.down:
-          case PointerEventPhase.move:
-          case PointerEventPhase.cancel:
-          case PointerEventPhase.up:
-            // Update next event if not already passed sample time.
-            if (p.next.p.eventTime < _sampleTimeNs) {
-              _downPointers[event.p.pointerId].next = event;
-            }
-            break;
-          case PointerEventPhase.add:
-          case PointerEventPhase.remove:
-          case PointerEventPhase.hover:
-            break;
-        }
-      }
-    }
-  }
-
-  void _dispatchResampledChanges() {
-    final packets = <ui.PointerData>[];
-
-    // Add resampled changes for [_downPointers].
-    for (var v in _downPointers.values) {
-      var x = v.next.p.x;
-      var y = v.next.p.y;
-
-      // Re-sample if next time stamp is past sample time.
-      if (v.next.p.eventTime > _sampleTimeNs &&
-          v.next.p.eventTime > v.last.p.eventTime) {
-        var resampleArguments = <String, int>{
-          'lastEventTimeUs': v.last.p.eventTime ~/ 1000,
-          'nextEventTimeUs': v.next.p.eventTime ~/ 1000
-        };
-        Timeline.timeSync('PointerEventsListener.resampledEvent', () {
-          final interval = (v.next.p.eventTime - v.last.p.eventTime).toDouble();
-          final scalar =
-              (_sampleTimeNs - v.last.p.eventTime).toDouble() / interval;
-          x = v.last.p.x + (v.next.p.x - v.last.p.x) * scalar;
-          y = v.last.p.y + (v.next.p.y - v.last.p.y) * scalar;
-        }, arguments: resampleArguments);
-      }
-
-      // Add resampled change if time stamp is greater than last event.
-      if (_sampleTimeNs > v.last.p.eventTime) {
-        final event = _clone(v.next.p, v.next.p.phase, x, y, _sampleTimeNs);
-        final eventArguments = <String, int>{
-          'eventTimeUs': _sampleTimeNs ~/ 1000,
-        };
-        Timeline.timeSync('PointerEventsListener.addResampledEvents', () {
-          var addMove = true;
-          // Add `down` event if needed.
-          if (_downEvent[v.next.p.pointerId] != true) {
-            final event =
-                _clone(v.next.p, PointerEventPhase.down, x, y, _sampleTimeNs);
-            final packet = _getPacket(event);
-            if (packet != null) {
-              packets.add(packet);
-            }
-            // Skip `move` phase if we already added a `down` event.
-            addMove = false;
-          }
-          if (addMove || v.next.p.phase != PointerEventPhase.move) {
-            final packet = _getPacket(event);
-            if (packet != null) {
-              packets.add(packet);
-            }
-          }
-        }, arguments: eventArguments, flow: Flow.end(v.last.flow2.id));
-
-        Timeline.timeSync('PointerEventsListener.updateLastEvent', () {
-          v.last.p = event;
-          v.last.flow2 = v.next.flow2;
-        }, flow: Flow.end(v.next.flow1.id));
-      }
-    }
-
-    if (packets.isNotEmpty) {
-      Timeline.timeSync('PointerEventsListener.dispatchPackets', () {
-        _callback(ui.PointerDataPacket(data: packets));
-      });
     }
   }
 
@@ -384,27 +220,16 @@ class PointerEventsListener extends PointerCaptureListenerHack {
     if (_frameCallbackScheduled) {
       return;
     }
-    _frameCallbackScheduled = true;
-    _scheduler.scheduleFrameCallback((_) {
-      _frameCallbackScheduled = false;
-      _sampleTimeNs = (_scheduler.currentSystemFrameTimeStamp + _samplingOffset)
-              .inMicroseconds *
-          1000;
-      var frameArguments = <String, int>{
-        'frameTimeUs': _scheduler.currentSystemFrameTimeStamp.inMicroseconds,
-      };
-      if (_queuedEvents.isNotEmpty) {
-        final lastEventTime = _queuedEvents.last.p.eventTime;
-        frameArguments['lastEventTimeUs'] = lastEventTime ~/ 1000;
-        frameArguments['eventTimeMarginUs'] =
-            (lastEventTime - _sampleTimeNs) ~/ 1000;
-      }
-      Timeline.timeSync('PointerEventsListener.onFrameCallback', () {
-        _dispatchQueuedEvents();
-      }, arguments: frameArguments);
-    });
     Timeline.timeSync('PointerEventsListener.scheduleFrameCallback', () {
-      _scheduler.scheduleFrame();
+      _frameCallbackScheduled = true;
+      _scheduler.scheduleFrameCallback((_) {
+        Timeline.timeSync('PointerEventsListener.onFrameCallback', () {
+          _frameCallbackScheduled = false;
+          _sampleTime =
+              _scheduler.currentSystemFrameTimeStamp + _samplingOffset;
+          _dispatchEvents();
+        });
+      });
     });
   }
 

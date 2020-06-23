@@ -71,7 +71,6 @@ void main() {
         verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
             .captured
             .single;
-    verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
     frameTime = Duration(milliseconds: 7);
@@ -91,7 +90,6 @@ void main() {
     callback = verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
         .captured
         .single;
-    verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
     frameTime = Duration(milliseconds: 9);
@@ -122,12 +120,14 @@ void main() {
     expect(result.isEmpty, true);
 
     final event1 =
-        _createSimulatedPointerEvent(PointerEventPhase.up, 7000, 0.0, 0.0);
+        _createSimulatedPointerEvent(PointerEventPhase.move, 7000, 0.0, 0.0);
+    final event2 =
+        _createSimulatedPointerEvent(PointerEventPhase.up, 8000, 0.0, 0.0);
 
-    frameTime = Duration(milliseconds: 7);
+    frameTime = Duration(milliseconds: 8);
     when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
 
-    pointerEventsListener.onPointerEvent(event1);
+    pointerEventsListener..onPointerEvent(event1)..onPointerEvent(event2);
 
     // No pointer events should have been dispatched yet.
     expect(result.isEmpty, true);
@@ -137,17 +137,25 @@ void main() {
         verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
             .captured
             .single;
-    verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
     frameTime = Duration(milliseconds: 12);
     when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
     callback(Duration());
 
-    // First event time stamp should have been ignored and two pointer events
+    // First event time stamp should have been ignored and one pointer event
     // should have been dispatched.
-    expect(result.length, 2);
+    expect(result.length, 1);
+    expect(result[0].timeStamp, frameTime + _samplingOffset);
     expect(result[0].change, ui.PointerChange.down);
+
+    frameTime = Duration(milliseconds: 13);
+    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
+    callback(Duration());
+
+    // Last pointer event should have been dispatched.
+    expect(result.length, 2);
+    expect(result[1].timeStamp, frameTime + _samplingOffset);
     expect(result[1].change, ui.PointerChange.up);
   });
 
@@ -178,7 +186,6 @@ void main() {
         verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
             .captured
             .single;
-    verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
     frameTime = Duration(milliseconds: 7);
@@ -188,7 +195,7 @@ void main() {
     // One pointer event should have been dispatched.
     expect(result.length, 1);
     expect(result[0].timeStamp, frameTime + _samplingOffset);
-    expect(result[0].change, ui.PointerChange.down);
+    expect(result[0].change, ui.PointerChange.add);
     expect(result[0].physicalX, 5.0 * ui.window.devicePixelRatio);
     expect(result[0].physicalY, 0.0);
     expect(result[0].physicalDeltaX, 0.0);
@@ -198,21 +205,26 @@ void main() {
     callback = verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
         .captured
         .single;
-    verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
     frameTime = Duration(milliseconds: 9);
     when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
     callback(Duration());
 
-    // Another pointer event should have been dispatched.
-    expect(result.length, 2);
+    // Two more pointer events should have been dispatched.
+    expect(result.length, 3);
     expect(result[1].timeStamp, frameTime + _samplingOffset);
-    expect(result[1].change, ui.PointerChange.up);
+    expect(result[1].change, ui.PointerChange.down);
     expect(result[1].physicalX, 25.0 * ui.window.devicePixelRatio);
     expect(result[1].physicalY, 0.0);
     expect(result[1].physicalDeltaX, 20.0 * ui.window.devicePixelRatio);
     expect(result[1].physicalDeltaY, 0.0);
+    expect(result[2].timeStamp, frameTime + _samplingOffset);
+    expect(result[2].change, ui.PointerChange.up);
+    expect(result[2].physicalX, 25.0 * ui.window.devicePixelRatio);
+    expect(result[2].physicalY, 0.0);
+    expect(result[2].physicalDeltaX, 0.0);
+    expect(result[2].physicalDeltaY, 0.0);
   });
 
   test('skip ahead', () {
@@ -242,7 +254,6 @@ void main() {
         verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
             .captured
             .single;
-    verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
     frameTime = Duration(milliseconds: 7);
@@ -262,7 +273,6 @@ void main() {
     callback = verify(scheduler.scheduleFrameCallback(captureThat(isNotNull)))
         .captured
         .single;
-    verify(scheduler.scheduleFrame());
     clearInteractions(scheduler);
 
     frameTime = Duration(milliseconds: 16);
