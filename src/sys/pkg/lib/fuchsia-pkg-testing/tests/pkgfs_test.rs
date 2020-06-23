@@ -20,6 +20,8 @@ use {
     },
 };
 
+mod get_buffer;
+
 fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, io::Error> {
     Ok(d.map(|i| i.map(|entry| entry.file_name().to_string_lossy().into()))
         .collect::<Result<Vec<_>, _>>()?)

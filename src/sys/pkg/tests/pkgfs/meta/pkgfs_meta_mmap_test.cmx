@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/pkgfs_meta_mmap_test"
-    }
-}
