@@ -27,7 +27,6 @@ group("tests") {
     "//src/lib/fidl/llcpp/tests",
     "//src/lib/fidl/rust:tests",
     "//src/tests/benchmarks/fidl:benchmarks",
-    "//src/tests/benchmarks/fidl/runner:tests",
     "//src/tests/fidl_go_conformance:tests",
     "//third_party/go:go_fidl_tests",
     "//tools/fidl:tests",
