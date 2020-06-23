@@ -78,7 +78,7 @@ void PhyDevice::Unbind() {
   zxlogf(INFO, "wlan::testing::PhyDevice::Unbind()");
   std::lock_guard<std::mutex> guard(lock_);
   dispatcher_.reset();
-  device_remove_deprecated(zxdev_);
+  device_unbind_reply(zxdev_);
 }
 
 void PhyDevice::Release() {
