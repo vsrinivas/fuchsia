@@ -41,14 +41,14 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 				}
 			}
 			if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
-				metrics.num_single_license_files++
+				metrics.increment("num_single_license_files")
 				file_tree.addSingleLicenseFile(path)
 			} else {
 				if isValidExtension(path, config) {
-					metrics.num_non_single_license_files++
+					metrics.increment("num_non_single_license_files")
 					file_tree.addFile(path)
 				} else {
-					metrics.num_extensions_excluded++
+					metrics.increment("num_extensions_excluded")
 				}
 			}
 			return nil
@@ -57,7 +57,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 			fmt.Println(err.Error())
 		}
 	} else {
-		// TODO target specific file tree
+		// TODO(solomonkinard) target specific file tree
 	}
 
 	return &file_tree
@@ -68,12 +68,13 @@ type FileTree struct {
 	name               string
 	children           map[string]*FileTree
 	files              []string
-	singleLicenseFiles []string
+	singleLicenseFiles map[string][]*License
 	parent             *FileTree
 }
 
 func (license_file_tree *FileTree) Init() {
 	license_file_tree.children = make(map[string]*FileTree)
+	license_file_tree.singleLicenseFiles = make(map[string][]*License)
 }
 
 func (file_tree *FileTree) getSetCurr(path string) *FileTree {
@@ -96,7 +97,7 @@ func (file_tree *FileTree) addFile(path string) {
 
 func (file_tree *FileTree) addSingleLicenseFile(path string) {
 	curr := file_tree.getSetCurr(path)
-	curr.singleLicenseFiles = append(curr.singleLicenseFiles, filepath.Base(path))
+	curr.singleLicenseFiles[filepath.Base(path)] = []*License{}
 }
 
 func (file_tree *FileTree) getProjectLicense(path string) *FileTree {
@@ -111,6 +112,9 @@ func (file_tree *FileTree) getProjectLicense(path string) *FileTree {
 			break
 		}
 		curr = curr.children[piece]
+	}
+	if len(pieces) > 1 && len(curr.singleLicenseFiles) > 0 {
+		gold = curr
 	}
 	return gold
 }
@@ -142,4 +146,67 @@ func isValidExtension(path string, config *Config) bool {
 	}
 	_, found := config.TextExtensions[extension[1:]]
 	return found
+}
+
+func readFromFile(path string, max_read_size int) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	data := make([]byte, max_read_size)
+	count, err := file.Read(data)
+	if err != nil {
+		// TODO(solomonkinard) symlinks not found e.g. integration/fuchsia/infra/test_durations/README.md
+		return nil, err
+	}
+	data = data[:count]
+	return data, nil
+}
+
+func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
+	ch := make(chan *FileTree)
+	go func() {
+		var curr *FileTree
+		var q []*FileTree
+		q = append(q, file_tree)
+		var pos int
+		for len(q) > 0 {
+			pos = len(q) - 1
+			curr = q[pos]
+			q = q[:pos]
+			if len(curr.singleLicenseFiles) > 0 {
+				ch <- curr
+			}
+			for _, child := range curr.children {
+				q = append(q, child)
+			}
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+func (file_tree *FileTree) getFileIterator() <-chan string {
+	ch := make(chan string)
+	go func() {
+		var curr *FileTree
+		var q []*FileTree
+		q = append(q, file_tree)
+		var pos int
+		for len(q) > 0 {
+			pos = len(q) - 1
+			curr = q[pos]
+			q = q[:pos]
+			base := curr.getPath()
+			for _, file := range curr.files {
+				ch <- base + file
+			}
+			for _, child := range curr.children {
+				q = append(q, child)
+			}
+		}
+		close(ch)
+	}()
+	return ch
 }

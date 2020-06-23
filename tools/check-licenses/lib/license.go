@@ -26,6 +26,15 @@ type Match struct {
 // LicenseFindMatch runs concurrently for all licenses, synchronizing result production for subsequent consumption
 func (license *License) LicenseFindMatch(index int, data []byte, sm *sync.Map, wg *sync.WaitGroup) {
 	defer wg.Done()
-	matched := license.pattern.Find(data)
-	sm.Store(index, matched)
+	sm.Store(index, license.pattern.Find(data))
+}
+
+func (license *License) append(path string) {
+	// TODO(solomonkinard) use first license match (durign single license file check) instead of pattern
+	// TODO(solomonkinard) once the above is done, delete the len() check here since it will be impossible
+	if len(license.matches) == 0 {
+		license.matches = append(license.matches, Match{
+			value: []byte(license.pattern.String())})
+	}
+	license.matches[0].files = append(license.matches[0].files, path)
 }

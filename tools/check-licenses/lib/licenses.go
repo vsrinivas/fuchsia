@@ -74,9 +74,32 @@ func (licenses *Licenses) add(license *License) {
 }
 
 // MatchFile returns true if any License matches input data
-func (licenses *Licenses) MatchFile(data []byte, count int, path string, metrics *Metrics) bool {
+func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metrics *Metrics, file_tree *FileTree) {
+	// TODO(solomonokinard) deduplicate Match*File()
+	// TODO(solomonkinard) async regex pattern matching
+	var wg sync.WaitGroup
+	wg.Add(len(licenses.licenses))
+	var sm sync.Map
+	for i, license := range licenses.licenses {
+		go license.LicenseFindMatch(i, data, &sm, &wg)
+	}
+	wg.Wait()
+	for i, license := range licenses.licenses {
+		result, found := sm.Load(i)
+		if !found {
+			fmt.Printf("single license file: No result found for key %d\n", i)
+			continue
+		}
+		if matched := result.([]byte); matched != nil {
+			metrics.increment("num_single_license_file_match")
+			file_tree.singleLicenseFiles[base] = append(file_tree.singleLicenseFiles[base], license)
+		}
+	}
+}
+
+func (licenses *Licenses) MatchFile(data []byte, path string, metrics *Metrics) bool {
 	is_matched := false
-	// TODO async regex pattern matching
+	// TODO(solomonkinard) async regex pattern matching
 	var wg sync.WaitGroup
 	wg.Add(len(licenses.licenses))
 	var sm sync.Map
@@ -92,13 +115,12 @@ func (licenses *Licenses) MatchFile(data []byte, count int, path string, metrics
 		}
 		if matched := result.([]byte); matched != nil {
 			is_matched = true
-			metrics.num_licensed++
+			metrics.increment("num_licensed")
 			if len(license.matches) == 0 {
 				license.matches = append(license.matches, Match{
 					value: matched})
 			}
 			license.matches[0].files = append(license.matches[0].files, path)
-			fmt.Printf("  - %s\n", matched)
 		}
 	}
 	return is_matched

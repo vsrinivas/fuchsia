@@ -15,19 +15,32 @@ import (
 // Walk gathers all Licenses then checks for a match within each filtered file
 func Walk(config *Config) error {
 	metrics := new(Metrics)
+	metrics.Init()
 	file_tree := NewFileTree(config, metrics)
 	licenses, err := NewLicenses(config.LicensePatternDir)
 	if err != nil {
 		return err
 	}
-	for path := range FileIterator(file_tree) { // file, not singleLicenseFile
-		processFile(path, metrics, licenses, config, file_tree)
+	for tree := range file_tree.getSingleLicenseFileIterator() {
+		for singleLicenseFile := range tree.singleLicenseFiles {
+			if err := processSingleLicenseFile(singleLicenseFile, metrics, licenses, config, tree); err != nil {
+				// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
+				fmt.Printf("warning: %s. Skipping file: %s.\n", err, tree.getPath())
+			}
+		}
+	}
+	for path := range file_tree.getFileIterator() {
+		if err := processFile(path, metrics, licenses, config, file_tree); err != nil {
+			// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
+			fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
+		}
 	}
 	file, err := createOutputFile(config)
 	if err != nil {
 		return err
 	}
 	saveToOutputFile(file, licenses, config, metrics)
+	metrics.print()
 	return nil
 }
 
@@ -36,6 +49,7 @@ func createOutputFile(config *Config) (*os.File, error) {
 }
 
 func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics *Metrics) error {
+	// TODO(solomonkinard) save path of single license files if license found there too
 	var unused []*License
 	var used []*License
 	for i := range licenses.licenses {
@@ -52,11 +66,12 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 		Used      []*License
 		Unused    []*License
 	}{
+		// TODO(solomonkinard) signature can be checksum of generated file
 		"SiGnAtUrE",
 		used,
 		unused,
 	}
-	var templateStr string
+	templateStr := templates.TemplateTxt
 	switch config.OutputFileExtension {
 	case "txt":
 		templateStr = templates.TemplateTxt
@@ -82,70 +97,45 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 	if err := tmpl.Execute(file, object); err != nil {
 		return err
 	}
-	fmt.Println("Metrics:")
-	fmt.Printf("num_licensed: %d\n", metrics.num_licensed)
-	fmt.Printf("num_unlicensed: %d\n", metrics.num_unlicensed)
-	fmt.Printf("num_with_project_license %d\n", metrics.num_with_project_license)
-	fmt.Printf("num_extensions_excluded: %d\n", metrics.num_extensions_excluded)
-	fmt.Printf("num_single_license_files: %d\n", metrics.num_single_license_files)
-	fmt.Printf("num_non_single_license_files %d\n", metrics.num_non_single_license_files)
 	return nil
 }
 
-// FileIterator returns each regular file path from the in memory FileTree
-func FileIterator(file_tree *FileTree) <-chan string {
-	ch := make(chan string)
-	go func() {
-		var curr *FileTree
-		var q []*FileTree
-		q = append(q, file_tree)
-		var pos int
-		for {
-			if len(q) == 0 {
-				break
-			}
-			pos = len(q) - 1
-			curr = q[pos]
-			q = q[:pos]
-			base := curr.getPath()
-			for _, file := range curr.files {
-				ch <- base + file
-			}
-			for _, child := range curr.children {
-				q = append(q, child)
-			}
-		}
-		close(ch)
-	}()
-	return ch
+func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
+	// TODO(solomonkinard) larger limit for single license files?
+	path := file_tree.getPath() + "/" + base
+	data, err := readFromFile(path, config.MaxReadSize)
+	if err != nil {
+		return err
+	}
+	licenses.MatchSingleLicenseFile(data, base, metrics, file_tree)
+	return nil
 }
 
-func processFile(path string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) {
+func processFile(path string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
 	fmt.Printf("visited file or dir: %q\n", path)
-	file, err := os.Open(path)
+	data, err := readFromFile(path, config.MaxReadSize)
 	if err != nil {
-		fmt.Printf("error opening: %v\n", err)
+		return err
 	}
-	defer file.Close()
-	data := make([]byte, config.MaxReadSize)
-	count, err := file.Read(data)
-	if err != nil {
-		fmt.Printf("error reading: %v\n", err)
-	}
-	is_matched := licenses.MatchFile(data, count, path, metrics)
+	is_matched := licenses.MatchFile(data, path, metrics)
 	if !is_matched {
 		project := file_tree.getProjectLicense(path)
 		if project == nil {
-			metrics.num_unlicensed++
+			metrics.increment("num_unlicensed")
 			fmt.Printf("File license: missing. Project license: missing. path: %s\n", path)
 		} else {
-			// TODO derive one of the project licenses
-			metrics.num_with_project_license++
+			metrics.increment("num_with_project_license")
 			fmt.Printf("File license: missing. Project license: exists. path: %s\n", path)
+			for _, arr_license := range project.singleLicenseFiles {
+				for _, license := range arr_license {
+					fmt.Printf("project license: %s\n", license.category)
+					metrics.increment("num_matched_to_project_file")
+					license.append(path)
+				}
+			}
 		}
 	}
-
-	// TODO if no license match, use nearest matching LICENSE file
+	return nil
 }
 
-// TODO tools/zedmon/client/pubspec.yaml" error reading: EOF
+// TODO(solomonkinard) tools/zedmon/client/pubspec.yaml" error reading: EOF
