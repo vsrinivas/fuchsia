@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_LOG_H_
-#define SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_LOG_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_LOG_H_
+#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_LOG_H_
 
 #include <lib/zx/time.h>
 
@@ -39,4 +39,4 @@ class RebootLog {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_LOG_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_LOG_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_REASON_H_
-#define SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_REASON_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_REASON_H_
+#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_REASON_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
@@ -45,4 +45,4 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason r
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_REASON_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_REASON_H_

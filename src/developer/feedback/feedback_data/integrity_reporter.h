@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INTEGRTY_REPORTER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INTEGRTY_REPORTER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INTEGRITY_REPORTER_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INTEGRITY_REPORTER_H_
 
 #include <lib/fit/result.h>
 
@@ -38,4 +38,4 @@ class IntegrityReporter {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INTEGRTY_REPORTER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INTEGRITY_REPORTER_H_

@@ -36,8 +36,7 @@ using stubs::BuildLogMessage;
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
 const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X")).size();
 const size_t kDroppedFormatStrSize = std::string("!!! DROPPED X MESSAGES !!!\n").size();
-const size_t kRepeatedFormatStrSize =
-    std::string("!!! MESSAGE REPEATED X MORE TIMES !!!\n").size();
+const size_t kRepeatedFormatStrSize = std::string("!!! MESSAGE REPEATED X MORE TIMES !!!\n").size();
 // We set the block size to an arbitrary large numbers for test cases where the block logic does
 // not matter.
 const size_t kVeryLargeBlockSize = kMaxLogLineSize * 100;
@@ -314,7 +313,8 @@ TEST_F(ListenerTest, AddsMessages) {
   InjectServiceProvider(&logger);
 
   // Set up the store to hold all of the added messages.
-  LogMessageStore store(kVeryLargeBlockSize, /*max_buffer_capacity_bytes=*/1024, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, /*max_buffer_capacity_bytes=*/1024,
+                        MakeIdentityEncoder());
 
   SystemLogListener listener(services(), &store);
   listener.StartListening();

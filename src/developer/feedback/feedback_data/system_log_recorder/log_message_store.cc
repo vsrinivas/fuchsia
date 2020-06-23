@@ -28,8 +28,7 @@ std::string MakeRepeatedWarning(const size_t message_count) {
 
 }  // namespace
 
-LogMessageStore::LogMessageStore(size_t max_block_capacity_bytes,
-                                 size_t max_buffer_capacity_bytes,
+LogMessageStore::LogMessageStore(size_t max_block_capacity_bytes, size_t max_buffer_capacity_bytes,
                                  std::unique_ptr<Encoder> encoder)
     : mtx_(),
       buffer_(),

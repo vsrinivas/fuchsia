@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_LAST_REBOOT_INFO_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_LAST_REBOOT_INFO_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
@@ -24,4 +24,4 @@ class LastRebootInfoProvider : public fuchsia::feedback::LastRebootInfoProvider 
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_LAST_REBOOT_INFO_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
