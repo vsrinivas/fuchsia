@@ -38,6 +38,7 @@ struct Thread;
 class OwnedWaitQueue;
 class ThreadDispatcher;
 struct vmm_aspace;
+class WaitQueue;
 
 // These forward declarations are needed so that Thread can friend
 // them before they are defined.
@@ -90,6 +91,12 @@ struct WaitQueueState {
   bool IsHead() const { return heads_node_.InContainer(); }
   bool InWaitQueue() const { return IsHead() || sublist_node_.InContainer(); }
 
+  // If blocked, a pointer to the WaitQueue the Thread is on.
+  WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
+
+  // A list of the WaitQueues currently owned by this Thread.
+  fbl::DoublyLinkedList<OwnedWaitQueue*> owned_wait_queues_ TA_GUARDED(thread_lock);
+
   // Any given thread is either a WaitQueue head (in which case
   // sublist_ is in use, and may be non-empty), or not (in which case
   // sublist_node_ is used).
@@ -109,6 +116,12 @@ struct WaitQueueState {
   // The Thread's position in a WaitQueue heads list. If active, this
   // Thread is a WaitQueue head (and so, IsHead() is true).
   WaitQueueHeadsTrait::NodeState heads_node_;
+
+  // Return code if woken up abnormally from suspend, sleep, or block.
+  zx_status_t blocked_status_ = ZX_OK;
+
+  // Are we allowed to be interrupted on the current thing we're blocked/sleeping on?
+  Interruptible interruptible_ = Interruptible::No;
 };
 
 // Encapsulation of the data structure backing the wait queue.
@@ -735,19 +748,7 @@ struct Thread {
   SchedulerState scheduler_state_;
 
  public:
-  // if blocked, a pointer to the wait queue
-  WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
-
-  // a list of the wait queues currently owned by this thread.
-  fbl::DoublyLinkedList<OwnedWaitQueue*> owned_wait_queues_ TA_GUARDED(thread_lock);
-
   WaitQueueState wait_queue_state_;
-
-  // return code if woken up abnormally from suspend, sleep, or block
-  zx_status_t blocked_status_;
-
-  // Are we allowed to be interrupted on the current thing we're blocked/sleeping on?
-  Interruptible interruptible_;
 
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in thread context

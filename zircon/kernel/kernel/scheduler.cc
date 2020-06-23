@@ -1508,7 +1508,7 @@ void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority_, Sched
       // but has not yet transitioned to ready.
       state->discipline_ = SchedDiscipline::Fair;
       state->fair_.weight = weight;
-      if (thread->blocking_wait_queue_) {
+      if (thread->wait_queue_state_.blocking_wait_queue_) {
         WaitQueue::PriorityChanged(thread, original_priority_, propagate);
       }
       break;
@@ -1597,7 +1597,7 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
       // but has not yet transitioned to ready.
       state->discipline_ = SchedDiscipline::Deadline;
       state->deadline_ = params;
-      if (thread->blocking_wait_queue_) {
+      if (thread->wait_queue_state_.blocking_wait_queue_) {
         WaitQueue::PriorityChanged(thread, original_priority_, propagate);
       }
       break;

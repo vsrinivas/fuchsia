@@ -104,11 +104,11 @@ void WaitQueue::Dequeue(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_l
   DEBUG_ASSERT(t != nullptr);
   DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
-  DEBUG_ASSERT(t->blocking_wait_queue_ == this);
+  DEBUG_ASSERT(t->wait_queue_state_.blocking_wait_queue_ == this);
 
   collection_.Remove(t);
-  t->blocked_status_ = wait_queue_error;
-  t->blocking_wait_queue_ = nullptr;
+  t->wait_queue_state_.blocked_status_ = wait_queue_error;
+  t->wait_queue_state_.blocking_wait_queue_ = nullptr;
 }
 
 Thread* WaitQueueCollection::Peek() {
@@ -375,12 +375,12 @@ void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
   DEBUG_ASSERT(t != nullptr);
   DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
-  DEBUG_ASSERT(t->blocking_wait_queue_ == source);
+  DEBUG_ASSERT(t->wait_queue_state_.blocking_wait_queue_ == source);
   DEBUG_ASSERT(source->collection_.Count() > 0);
 
   source->collection_.Remove(t);
   dest->collection_.Insert(t);
-  t->blocking_wait_queue_ = dest;
+  t->wait_queue_state_.blocking_wait_queue_ = dest;
 }
 
 /**
@@ -488,7 +488,7 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
     return ZX_ERR_BAD_STATE;
   }
 
-  WaitQueue* wq = t->blocking_wait_queue_;
+  WaitQueue* wq = t->wait_queue_state_.blocking_wait_queue_;
   DEBUG_ASSERT(wq != nullptr);
   DEBUG_ASSERT_MAGIC_CHECK(wq);
   DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
@@ -514,7 +514,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   DEBUG_ASSERT(thread_lock.IsHeld());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
 
-  WaitQueue* wq = t->blocking_wait_queue_;
+  WaitQueue* wq = t->wait_queue_state_.blocking_wait_queue_;
   DEBUG_ASSERT(wq != NULL);
   DEBUG_ASSERT_MAGIC_CHECK(wq);
 
@@ -536,7 +536,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   bool ret = (propagate == PropagatePI::Yes) ? wq->UpdatePriority(old_wq_prio) : false;
 
   if (WAIT_QUEUE_VALIDATION) {
-    t->blocking_wait_queue_->ValidateQueue();
+    t->wait_queue_state_.blocking_wait_queue_->ValidateQueue();
   }
   return ret;
 }

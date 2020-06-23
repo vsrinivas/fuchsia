@@ -54,7 +54,7 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
     return ZX_ERR_TIMED_OUT;
   }
 
-  if (current_thread->interruptible_ == Interruptible::Yes &&
+  if (current_thread->wait_queue_state_.interruptible_ == Interruptible::Yes &&
       (unlikely(current_thread->signals_ & ~signal_mask))) {
     if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
       return ZX_ERR_INTERNAL_INTR_KILLED;
@@ -66,8 +66,8 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
   collection_.Insert(current_thread);
   current_thread->state_ =
       (reason == ResourceOwnership::Normal) ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
-  current_thread->blocking_wait_queue_ = this;
-  current_thread->blocked_status_ = ZX_OK;
+  current_thread->wait_queue_state_.blocking_wait_queue_ = this;
+  current_thread->wait_queue_state_.blocked_status_ = ZX_OK;
 
   return ZX_OK;
 }
@@ -85,14 +85,14 @@ inline zx_status_t WaitQueue::BlockEtcPostamble(const Deadline& deadline) TA_REQ
 
   Scheduler::Block();
 
-  ktrace_ptr(TAG_KWAIT_UNBLOCK, this, current_thread->blocked_status_, 0);
+  ktrace_ptr(TAG_KWAIT_UNBLOCK, this, current_thread->wait_queue_state_.blocked_status_, 0);
 
   // we don't really know if the timer fired or not, so it's better safe to try to cancel it
   if (deadline.when() != ZX_TIME_INFINITE) {
     timer.Cancel();
   }
 
-  return current_thread->blocked_status_;
+  return current_thread->wait_queue_state_.blocked_status_;
 }
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_QUEUE_INTERNAL_H_

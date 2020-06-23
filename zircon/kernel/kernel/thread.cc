@@ -122,7 +122,7 @@ Thread::~Thread() {
   // At this point, the thread must not be on the global thread list.
   DEBUG_ASSERT(!thread_list_node_.InContainer());
 
-  DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
+  DEBUG_ASSERT(wait_queue_state_.blocking_wait_queue_ == nullptr);
 
   // owned_wait_queues is a fbl:: list of unmanaged pointers.  It will debug
   // assert if it is not empty when it destructs; we do not need to do so
@@ -207,8 +207,8 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   t->arg_ = arg;
   t->state_ = THREAD_INITIAL;
   t->signals_ = 0;
-  t->blocked_status_ = ZX_OK;
-  t->interruptible_ = Interruptible::No;
+  t->wait_queue_state_.blocked_status_ = ZX_OK;
+  t->wait_queue_state_.interruptible_ = Interruptible::No;
 
   t->retcode_ = 0;
 
@@ -357,14 +357,14 @@ zx_status_t Thread::Suspend() {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptible
-      if (interruptible_ == Interruptible::Yes) {
+      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
         WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_RETRY);
       }
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (interruptible_ == Interruptible::Yes) {
-        blocked_status_ = ZX_ERR_INTERNAL_INTR_RETRY;
+      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
+        wait_queue_state_.blocked_status_ = ZX_ERR_INTERNAL_INTR_RETRY;
 
         local_resched = Scheduler::Unblock(this);
       }
@@ -413,7 +413,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
 
     DEBUG_ASSERT(magic_ == THREAD_MAGIC);
     DEBUG_ASSERT(state_ == THREAD_DEATH);
-    DEBUG_ASSERT(blocking_wait_queue_ == NULL);
+    DEBUG_ASSERT(wait_queue_state_.blocking_wait_queue_ == NULL);
     DEBUG_ASSERT(!wait_queue_state_.InWaitQueue());
 
     // save the return code
@@ -614,14 +614,14 @@ void Thread::Kill() {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptible
-      if (interruptible_ == Interruptible::Yes) {
+      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
         WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_KILLED);
       }
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (interruptible_ == Interruptible::Yes) {
-        blocked_status_ = ZX_ERR_INTERNAL_INTR_KILLED;
+      if (wait_queue_state_.interruptible_ == Interruptible::Yes) {
+        wait_queue_state_.blocked_status_ = ZX_ERR_INTERNAL_INTR_KILLED;
 
         local_resched = Scheduler::Unblock(this);
       }
@@ -968,7 +968,7 @@ static void thread_sleep_handler(Timer* timer, zx_time_t now, void* arg) {
     return;
   }
 
-  t->blocked_status_ = ZX_OK;
+  t->wait_queue_state_.blocked_status_ = ZX_OK;
 
   // unblock the thread
   if (Scheduler::Unblock(t)) {
@@ -1035,16 +1035,16 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
   timer.Set(deadline, thread_sleep_handler, current_thread);
 
   current_thread->state_ = THREAD_SLEEPING;
-  current_thread->blocked_status_ = ZX_OK;
+  current_thread->wait_queue_state_.blocked_status_ = ZX_OK;
 
-  current_thread->interruptible_ = interruptible;
+  current_thread->wait_queue_state_.interruptible_ = interruptible;
   Scheduler::Block();
-  current_thread->interruptible_ = Interruptible::No;
+  current_thread->wait_queue_state_.interruptible_ = Interruptible::No;
 
   // always cancel the timer, since we may be racing with the timer tick on other cpus
   timer.Cancel();
 
-  return current_thread->blocked_status_;
+  return current_thread->wait_queue_state_.blocked_status_;
 }
 
 zx_status_t Thread::Current::Sleep(zx_time_t deadline) {
@@ -1392,9 +1392,9 @@ void dump_thread_locked(Thread* t, bool full_dump) {
             (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "", (t->flags_ & THREAD_FLAG_VCPU) ? "Vc" : "");
 
     dprintf(INFO, "\twait queue %p, blocked_status %d, interruptible %s, wait queues owned %s\n",
-            t->blocking_wait_queue_, t->blocked_status_,
-            t->interruptible_ == Interruptible::Yes ? "yes" : "no",
-            t->owned_wait_queues_.is_empty() ? "no" : "yes");
+            t->wait_queue_state_.blocking_wait_queue_, t->wait_queue_state_.blocked_status_,
+            t->wait_queue_state_.interruptible_ == Interruptible::Yes ? "yes" : "no",
+            t->wait_queue_state_.owned_wait_queues_.is_empty() ? "no" : "yes");
 
     dprintf(INFO, "\taspace %p\n", t->aspace_);
     dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n", t->user_thread_.get(),
@@ -1402,7 +1402,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     arch_dump_thread(t);
   } else {
     printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
-           thread_state_to_str(t->state_), !t->owned_wait_queues_.is_empty(),
+           thread_state_to_str(t->state_), !t->wait_queue_state_.owned_wait_queues_.is_empty(),
            t->scheduler_state().effective_priority_, t->scheduler_state().base_priority_,
            t->scheduler_state().inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name_);
   }

@@ -258,14 +258,14 @@ void OwnedWaitQueue::DisownAllQueues(Thread* t) {
   // It is important that this thread not be blocked by any other wait queues
   // during this operation.  If it was possible for the thread to be blocked,
   // we would need to update all of the PI chain bookkeeping too.
-  DEBUG_ASSERT(t->blocking_wait_queue_ == nullptr);
+  DEBUG_ASSERT(t->wait_queue_state_.blocking_wait_queue_ == nullptr);
 
-  for (auto& q : t->owned_wait_queues_) {
+  for (auto& q : t->wait_queue_state_.owned_wait_queues_) {
     DEBUG_ASSERT(q.owner_ == t);
     q.owner_ = nullptr;
   }
 
-  t->owned_wait_queues_.clear();
+  t->wait_queue_state_.owned_wait_queues_.clear();
 }
 
 bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
@@ -309,7 +309,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
       // to recompute the new maximum priority across all of the wait
       // queues currently owned by this thread.
       __UNUSED int orig_new_prio = new_prio;
-      for (const auto& owq : t->owned_wait_queues_) {
+      for (const auto& owq : t->wait_queue_state_.owned_wait_queues_) {
         int queue_prio = owq.BlockedPriority();
 
         // If our bookkeeping is accurate, it should be impossible for
@@ -337,7 +337,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
     // our inherited priority.  Update it, and check to see if that resulted
     // in a change of the maximum waiter priority of the wait queue blocking
     // this thread (if any).  If not, then we are done.
-    const WaitQueue* bwq = t->blocking_wait_queue_;
+    const WaitQueue* bwq = t->wait_queue_state_.blocking_wait_queue_;
     int old_effec_prio = t->scheduler_state().effective_priority();
     int old_inherited_prio = t->scheduler_state().inherited_priority();
     int old_queue_prio = bwq ? bwq->BlockedPriority() : -1;
@@ -425,7 +425,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
     Thread* old_owner = owner();
     if (old_owner != nullptr) {
       DEBUG_ASSERT(this->InContainer());
-      old_owner->owned_wait_queues_.erase(*this);
+      old_owner->wait_queue_state_.owned_wait_queues_.erase(*this);
       owner_ = nullptr;
 
       if ((old_prio >= 0) && QueuePressureChanged(old_owner, old_prio, -1, &accum_cpu_mask)) {
@@ -434,7 +434,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
 
       // If we no longer own any queues, then we had better not be inheriting any priority at
       // this point in time.
-      DEBUG_ASSERT(!old_owner->owned_wait_queues_.is_empty() ||
+      DEBUG_ASSERT(!old_owner->wait_queue_state_.owned_wait_queues_.is_empty() ||
                    (old_owner->scheduler_state().inherited_priority() == -1));
     }
 
@@ -444,7 +444,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
     owner_ = new_owner;
     if (new_owner != nullptr) {
       DEBUG_ASSERT(!this->InContainer());
-      new_owner->owned_wait_queues_.push_back(this);
+      new_owner->wait_queue_state_.owned_wait_queues_.push_back(this);
 
       if ((new_prio >= 0) && QueuePressureChanged(new_owner, -1, new_prio, &accum_cpu_mask)) {
         local_resched = true;

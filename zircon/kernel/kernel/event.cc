@@ -60,7 +60,7 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interrupti
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
-  current_thread->interruptible_ = interruptible;
+  current_thread->wait_queue_state_.interruptible_ = interruptible;
 
   if (result_ != kNotSignalled) {
     ret = result_;
@@ -75,7 +75,7 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interrupti
     ret = wait_.BlockEtc(deadline, signal_mask, ResourceOwnership::Normal);
   }
 
-  current_thread->interruptible_ = Interruptible::No;
+  current_thread->wait_queue_state_.interruptible_ = Interruptible::No;
 
   return ret;
 }

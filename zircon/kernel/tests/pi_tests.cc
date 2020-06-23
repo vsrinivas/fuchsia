@@ -171,9 +171,9 @@ class Barrier {
       return;
     }
 
-    Thread::Current::Get()->interruptible_ = Interruptible::Yes;
+    Thread::Current::Get()->wait_queue_state_.interruptible_ = Interruptible::Yes;
     queue_.Block(deadline);
-    Thread::Current::Get()->interruptible_ = Interruptible::No;
+    Thread::Current::Get()->wait_queue_state_.interruptible_ = Interruptible::No;
   }
 
   bool state() const { return signaled_.load(); }
@@ -408,9 +408,9 @@ bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, 
 
   op_ = [this, owned_wq, owner_thrd = owner ? owner->thread_ : nullptr, timeout]() {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-    thread_->interruptible_ = Interruptible::Yes;
+    thread_->wait_queue_state_.interruptible_ = Interruptible::Yes;
     owned_wq->BlockAndAssignOwner(timeout, owner_thrd, ResourceOwnership::Normal);
-    thread_->interruptible_ = Interruptible::No;
+    thread_->wait_queue_state_.interruptible_ = Interruptible::No;
   };
 
   state_.store(State::WAITING_TO_START);
