@@ -19,7 +19,8 @@ use {
     std::sync::Arc,
 };
 
-pub const UPDATER_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/system-updater.cmx";
+pub const UPDATER_URL: &str =
+    "fuchsia-pkg://fuchsia.com/isolated-swd#meta/system-updater-isolated.cmx";
 
 pub struct Updater {}
 
