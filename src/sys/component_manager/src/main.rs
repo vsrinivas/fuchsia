@@ -13,9 +13,7 @@ use {
         },
         config::RuntimeConfig,
         elf_runner::ElfRunner,
-        klog,
-        model::{binding::Binder, moniker::AbsoluteMoniker, realm::BindReason},
-        startup,
+        klog, startup,
     },
     fuchsia_async as fasync,
     fuchsia_runtime::{job_default, process_self},
@@ -112,7 +110,6 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
     // Create an ELF runner for the root component.
     let runner = Arc::new(ElfRunner::new(&args));
 
-    let root_url = args.root_component_url.clone();
     let mut builtin_environment_builder = BuiltinEnvironmentBuilder::new()
         .set_args(args)
         .set_config(config)
@@ -124,13 +121,7 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
     let builtin_environment = builtin_environment_builder.build().await?;
     builtin_environment.bind_service_fs_to_out().await?;
 
-    let root_moniker = AbsoluteMoniker::root();
-    builtin_environment
-        .model
-        .bind(&root_moniker, &BindReason::Root)
-        .await
-        .map_err(|e| Error::from(e))
-        .context(format!("failed to bind to root component {}", root_url))?;
+    builtin_environment.model.start().await;
 
     Ok(builtin_environment)
 }

@@ -124,7 +124,7 @@ impl Hash for Action {
     }
 }
 
-struct ActionStatus {
+pub(crate) struct ActionStatus {
     inner: Mutex<ActionStatusInner>,
 }
 
@@ -134,7 +134,7 @@ struct ActionStatusInner {
 }
 
 impl ActionStatus {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         ActionStatus { inner: Mutex::new(ActionStatusInner { result: None, wakers: vec![] }) }
     }
 }
@@ -148,7 +148,7 @@ impl ActionStatus {
 /// as a result of the call. If so, the caller should invoke `Action::handle()` to
 /// ensure the change in actions is acted upon.
 pub struct ActionSet {
-    rep: HashMap<Action, Arc<ActionStatus>>,
+    pub(crate) rep: HashMap<Action, Arc<ActionStatus>>,
 }
 
 /// Type of notification returned by `ActionSet::register()`.
@@ -157,6 +157,10 @@ pub type Notification = BoxFuture<'static, Result<(), ModelError>>;
 impl ActionSet {
     pub fn new() -> Self {
         ActionSet { rep: HashMap::new() }
+    }
+
+    pub fn contains(&self, action: &Action) -> bool {
+        self.rep.contains_key(action)
     }
 
     /// Registers an action in the set, returning a notification that completes when the action

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod actions;
 pub mod binding;
 pub mod error;
 pub mod event_logger;
@@ -14,7 +15,6 @@ pub mod realm;
 // fuctionality in this module. Factor out the externally-depended code into its own module.
 pub mod testing;
 
-pub(crate) mod actions;
 pub(crate) mod environment;
 pub(crate) mod events;
 pub(crate) mod resolver;

@@ -4,7 +4,12 @@
 
 use {
     crate::model::{
-        environment::Environment, error::ModelError, moniker::AbsoluteMoniker, realm::Realm,
+        actions::Action,
+        binding::Binder,
+        environment::Environment,
+        error::ModelError,
+        moniker::AbsoluteMoniker,
+        realm::{BindReason, Realm},
     },
     std::sync::Arc,
 };
@@ -57,5 +62,83 @@ impl Model {
         }
         let _ = cur_realm.lock_resolved_state().await?;
         Ok(cur_realm)
+    }
+
+    /// Binds to the root realm, starting the component tree
+    pub async fn start(self: &Arc<Model>) {
+        let root_moniker = AbsoluteMoniker::root();
+        if let Err(e) = self.bind(&root_moniker, &BindReason::Root).await {
+            // If we fail binding to the root realm, but the root realm is being shutdown, that's
+            // ok. The system is tearing down, so it doesn't matter any more if we never got
+            // everything started that we wanted to.
+            let action_set = self.root_realm.lock_actions().await;
+            if !action_set.contains(&Action::Shutdown) {
+                panic!(
+                    "failed to bind to root component {}: {:?}",
+                    self.root_realm.component_url, e
+                );
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        crate::{
+            config::RuntimeConfig,
+            model::actions::{Action, ActionStatus},
+            model::testing::test_helpers::{new_test_model, ComponentDeclBuilder, TestModelResult},
+        },
+        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        std::sync::Arc,
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn shutting_down_when_start_fails() {
+        let components = vec![(
+            "root",
+            ComponentDeclBuilder::new()
+                .add_child(cm_rust::ChildDecl {
+                    name: "bad-scheme".to_string(),
+                    url: "bad-scheme://sdf".to_string(),
+                    startup: fsys::StartupMode::Eager,
+                    environment: None,
+                })
+                .build(),
+        )];
+
+        let TestModelResult { model, .. } =
+            new_test_model("root", components, RuntimeConfig::default()).await;
+
+        model
+            .root_realm
+            .lock_actions()
+            .await
+            .rep
+            .insert(Action::Shutdown, Arc::new(ActionStatus::new()));
+
+        model.start().await;
+    }
+
+    #[should_panic]
+    #[fasync::run_singlethreaded(test)]
+    async fn not_shutting_down_when_start_fails() {
+        let components = vec![(
+            "root",
+            ComponentDeclBuilder::new()
+                .add_child(cm_rust::ChildDecl {
+                    name: "bad-scheme".to_string(),
+                    url: "bad-scheme://sdf".to_string(),
+                    startup: fsys::StartupMode::Eager,
+                    environment: None,
+                })
+                .build(),
+        )];
+
+        let TestModelResult { model, .. } =
+            new_test_model("root", components, RuntimeConfig::default()).await;
+
+        model.start().await;
     }
 }
