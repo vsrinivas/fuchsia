@@ -35,6 +35,20 @@ Dart       | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//
 
 ### Other FIDL Tools
 
+A number of FIDL tools are located in the [`fidl-misc` repo][fidl-misc]. To
+clone this repo, run
+
+```sh
+git clone https://fuchsia.googlesource.com/fidl-misc
+```
+
+It is then recommended to export the path to this directory, to make setting
+aliases easier:
+
+```sh
+export FIDLMISC_DIR=...
+```
+
 **TBD: linter, formatter, gidl, difl, regen scripts, etc.**
 
 ### Common Development Tools
@@ -155,7 +169,7 @@ Tests are run using the [fidldev][fidldev] tool. Examples assume that the
 `fidldev` script is somewhere on your PATH, e.g. by adding an alias:
 
 ```sh
-alias fidldev=$FUCHSIA_DIR/tools/fidl/fidldev/fidldev.py
+alias fidldev=$FIDLMISC_DIR/fidldev/fidldev.py
 ```
 
 ### fidlc
@@ -593,7 +607,6 @@ fidl fmt --library my_library.fidl -i
 [fidl-simple]: /src/lib/fidl/c/simple_tests/
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
 [walker-tests]: /src/lib/fidl/c/walker_tests/
-[fidldev]: /tools/fidl/fidldev/README.md
 [jsonir]: /docs/reference/fidl/language/json-ir.md
 [rtl-c]: /zircon/system/ulib/fidl/
 [rtl-cpp]: /src/lib/fidl/llcpp/tests/
@@ -603,3 +616,5 @@ fidl fmt --library my_library.fidl -i
 [getting_started]: /docs/getting_started.md
 [compat_readme]: /garnet/public/lib/fidl/compatibility_test/README.md
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
+[fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
+[fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/refs/heads/master/fidldev
