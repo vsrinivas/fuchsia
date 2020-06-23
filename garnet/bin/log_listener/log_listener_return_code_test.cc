@@ -17,7 +17,7 @@ static constexpr char kLogListenerPath[] = "/pkg/bin/log_listener";
 TEST(LogListenerReturnCode, ReturnNonzeroOnBadArgs) {
   // Spawn log_listener with bad args
   uint32_t flags = FDIO_SPAWN_CLONE_ALL;
-  const char** argv = new const char* [] { kLogListenerPath, "very", "invalid", "arguments", NULL };
+  const char* argv[] = {kLogListenerPath, "very", "invalid", "arguments", NULL};
   zx_handle_t process = ZX_HANDLE_INVALID;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, flags, kLogListenerPath, argv, &process);
   ASSERT_EQ(ZX_OK, status);
