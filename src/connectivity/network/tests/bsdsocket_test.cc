@@ -1852,26 +1852,26 @@ TEST(NetStreamTest, Shutdown) {
   EXPECT_EQ(close(inbound), 0) << strerror(errno);
 }
 
-TEST(NetStreamTest, ResetOnFullReceiveBufferShutdown) {
-  fbl::unique_fd client, server;
-  {
+class NetStreamSocketsTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
     fbl::unique_fd listener;
     ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
     struct sockaddr_in addr = {};
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    ASSERT_EQ(bind(listener.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0)
+    ASSERT_EQ(bind(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
 
     socklen_t addrlen = sizeof(addr);
-    ASSERT_EQ(getsockname(listener.get(), (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+    ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0) << strerror(errno);
     ASSERT_EQ(addrlen, sizeof(addr));
 
     ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
 
     ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
-    ASSERT_EQ(connect(client.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0)
+    ASSERT_EQ(connect(client.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
 
     ASSERT_TRUE(server = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
@@ -1879,7 +1879,11 @@ TEST(NetStreamTest, ResetOnFullReceiveBufferShutdown) {
     // We're done with the listener.
     ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
   }
+  fbl::unique_fd client;
+  fbl::unique_fd server;
+};
 
+TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   // Fill the send buffer of the server socket to trigger write to wait.
   fill_stream_send_buf(server.get(), client.get());
 
@@ -1921,6 +1925,28 @@ TEST(NetStreamTest, ResetOnFullReceiveBufferShutdown) {
   // Create another socket to ensure that the networking stack hasn't panicked.
   fbl::unique_fd test_sock;
   ASSERT_TRUE(test_sock = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+}
+
+// ShutdownReset tests for the application to be notifed of a RST, when
+// it sends data after the remote has initiated SHUT_RDWR.
+TEST_F(NetStreamSocketsTest, ShutdownReset) {
+  // Shutdown RDWR on the server. SHUT_WR would initiate an active
+  // TCP close causing server to get into FIN_WAIT2 and client into
+  // CLOSE_WAIT. SHUT_RD would close the server's receive.
+  EXPECT_EQ(shutdown(server.get(), SHUT_RDWR), 0) << strerror(errno);
+
+  // Send data to the now shutdown server, SHUT_RD should trigger a RST
+  // from the server causing the client TCP state to transition from
+  // CLOSE_WAIT to CLOSE.
+  char c;
+  EXPECT_EQ(write(client.get(), &c, sizeof(c)), static_cast<ssize_t>(sizeof(c))) << strerror(errno);
+
+  // Expect the client application socket to be notified of the RST.
+  struct pollfd fds = {};
+  fds.fd = client.get();
+  fds.events = POLLHUP;
+  EXPECT_EQ(poll(&fds, 1, kTimeout), 1) << strerror(errno);
+  EXPECT_EQ(fds.revents, POLLHUP|POLLERR);
 }
 
 enum class sendMethod {

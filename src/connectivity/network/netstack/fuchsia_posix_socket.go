@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/zxsocket"
@@ -258,11 +259,16 @@ type endpointWithSocket struct {
 	//
 	//  - loop{Read,Write}Done are signaled iff loop{Read,Write} have
 	//    exited, respectively.
-	closing, loopReadDone, loopWriteDone chan struct{}
+	//
+	//  - loopPollDone is signaled when the poller goroutine exits.
+	closing, loopReadDone, loopWriteDone, loopPollDone chan struct{}
 
 	// This is used to make sure that endpoint.close only cleans up its
 	// resources once - the first time it was closed.
-	closeOnce sync.Once
+	closeOnce uint32
+
+	// entry is used to register callback for error and closing events.
+	entry waiter.Entry
 }
 
 func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ns *Netstack) (*endpointWithSocket, error) {
@@ -289,8 +295,54 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		peer:          peerS,
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
+		loopPollDone:  make(chan struct{}),
 		closing:       make(chan struct{}),
 	}
+
+	// Register a callback for error and closing events from gVisor to
+	// trigger a close of the endpoint.
+	eps.entry.Callback = callback(func(*waiter.Entry) {
+		// Run this in a separate goroutine to return sooner and
+		// avoid deadlock.
+		// The waiter.Queue lock is held by the caller of this callback.
+		// close() blocks on completions of loop{read,Write}, which
+		// depends on acquiring waiter.Queue lock to unregister events.
+		go eps.close(eps.loopReadDone, eps.loopWriteDone, eps.loopPollDone)
+	})
+	eps.wq.EventRegister(&eps.entry, waiter.EventErr|waiter.EventHUp)
+
+	go func() {
+		defer close(eps.loopPollDone)
+
+		sigs := zx.Signals(zx.SignalSocketWriteDisabled | zx.SignalSocketPeerWriteDisabled |
+			zx.SignalSocketPeerClosed | localSignalClosing)
+
+		for {
+			obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+			if err != nil {
+				panic(err)
+			}
+
+			if obs&sigs&zx.SignalSocketWriteDisabled != 0 {
+				sigs ^= zx.SignalSocketWriteDisabled
+				if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil && err != tcpip.ErrNotConnected {
+					panic(err)
+				}
+			}
+
+			if obs&sigs&zx.SignalSocketPeerWriteDisabled != 0 {
+				sigs ^= zx.SignalSocketPeerWriteDisabled
+				if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
+					panic(err)
+				}
+			}
+
+			if obs&zx.SignalSocketPeerClosed != 0 || obs&localSignalClosing != 0 {
+				// We're shutting down.
+				return
+			}
+		}
+	}()
 
 	{
 		// Synchronize with loopRead to ensure that:
@@ -386,41 +438,45 @@ const localSignalClosing = zx.SignalUser1
 // Note, calling close on an endpoint that has already been closed is safe as
 // the cleanup work will only be done once.
 func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) {
-	eps.closeOnce.Do(func() {
-		// Interrupt waits on notification channels. Notification reads
-		// are always combined with closing in a select statement.
-		close(eps.closing)
+	if !atomic.CompareAndSwapUint32(&eps.closeOnce, 0, 1) {
+		return
+	}
 
-		// Interrupt waits on endpoint.local. Handle waits always
-		// include localSignalClosing.
-		if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
-			panic(err)
-		}
+	// Interrupt waits on notification channels. Notification reads
+	// are always combined with closing in a select statement.
+	close(eps.closing)
 
-		// The interruptions above cause our loops to exit. Wait until
-		// they do before releasing resources they may be using.
-		for _, ch := range loopDone {
-			<-ch
-		}
+	// Interrupt waits on endpoint.local. Handle waits always
+	// include localSignalClosing.
+	if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
+		panic(err)
+	}
 
-		// Copy the handle before closing below; (*zx.Handle).Close sets the
-		// receiver to zx.HandleInvalid.
-		key := zx.Handle(eps.local)
+	// The interruptions above cause our loops to exit. Wait until
+	// they do before releasing resources they may be using.
+	for _, ch := range loopDone {
+		<-ch
+	}
 
-		if err := eps.local.Close(); err != nil {
-			panic(err)
-		}
+	// Copy the handle before closing below; (*zx.Handle).Close sets the
+	// receiver to zx.HandleInvalid.
+	key := zx.Handle(eps.local)
 
-		if err := eps.peer.Close(); err != nil {
-			panic(err)
-		}
+	if err := eps.local.Close(); err != nil {
+		panic(err)
+	}
 
-		eps.endpoint.ns.onRemoveEndpoint(key)
+	if err := eps.peer.Close(); err != nil {
+		panic(err)
+	}
 
-		eps.ep.Close()
+	eps.wq.EventUnregister(&eps.entry)
 
-		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
-	})
+	eps.endpoint.ns.onRemoveEndpoint(key)
+
+	eps.ep.Close()
+
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
 }
 
 func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.StreamSocketListenResult, error) {
@@ -490,7 +546,7 @@ func (eps *endpointWithSocket) Accept(fidl.Context) (int32, *endpointWithSocket,
 func (eps *endpointWithSocket) loopWrite() {
 	defer close(eps.loopWriteDone)
 
-	closeFn := func() { eps.close(eps.loopReadDone) }
+	closeFn := func() { eps.close(eps.loopReadDone, eps.loopPollDone) }
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
@@ -616,7 +672,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 		}
 	}
 
-	closeFn := func() { eps.close(eps.loopWriteDone) }
+	closeFn := func() { eps.close(eps.loopWriteDone, eps.loopPollDone) }
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
@@ -1003,7 +1059,7 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 	go func() {
 		s.wg.Wait()
 
-		s.close(s.loopReadDone, s.loopWriteDone)
+		s.close(s.loopReadDone, s.loopWriteDone, s.loopPollDone)
 	}()
 	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p", s.endpointWithSocket)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
