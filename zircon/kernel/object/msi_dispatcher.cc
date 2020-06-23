@@ -39,14 +39,17 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
                                   uint32_t options, zx_rights_t* out_rights,
                                   KernelHandle<InterruptDispatcher>* out_interrupt,
                                   RegisterIntFn register_int_fn) {
-  if (!out_rights || !out_interrupt || (vmo->is_paged() && !vmo->is_contiguous()) ||
+  if (!out_rights || !out_interrupt ||
+      (vmo->is_paged() && (vmo->is_resizable() || !vmo->is_contiguous())) ||
       cap_offset >= vmo->size() || options != 0 ||
       vmo->GetMappingCachePolicy() != ZX_CACHE_POLICY_UNCACHED_DEVICE) {
     LTRACEF(
-        "out_rights = %p, out_interrupt = %p\nis_paged = %d, is_contiguous = %d\nsize = %lu, "
-        "cap_offset = %lu, options = %#x\n",
-        out_rights, out_interrupt, vmo->is_paged(), vmo->is_contiguous(), vmo->size(), cap_offset,
-        options);
+        "out_rights = %p, out_interrupt = %p\nvmo: %s, %s, %s\nsize = %lu, "
+        "cap_offset = %lu, options = %#x, cache policy = %u\n",
+        out_rights, out_interrupt, vmo->is_paged() ? "paged" : "physical",
+        vmo->is_contiguous() ? "contiguous" : "not contiguous",
+        vmo->is_resizable() ? "resizable" : "not resizable", vmo->size(), cap_offset, options,
+        vmo->GetMappingCachePolicy());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -102,9 +105,13 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
   switch (cap->id) {
     case kMsiCapabilityId: {
       // MSI capabilities fit within a given device's configuration space which is either 256
-      // or 4096 bytes. But a VMO's smallest available size is a page, so we can only verify
-      // the page size and ensure the capability stays within bounds.
-      if (vmo->size() != ZX_PAGE_SIZE || cap_offset > vmo->size() - sizeof(MsiCapability)) {
+      // or 4096 bytes. But in most cases the VMO containing config space is going to be at
+      // least the size of a full PCI bus's worth of devices, and physical VMOs cannot be sliced
+      // into children. We can validate that the capability fits within the offset given, but
+      // otherwise cannot rely on the VMO's size for validation.
+      size_t add_result = 0;
+      if (add_overflow(cap_offset, sizeof(MsiCapability), &add_result) ||
+          add_result > vmo->size()) {
         return ZX_ERR_INVALID_ARGS;
       }
 
