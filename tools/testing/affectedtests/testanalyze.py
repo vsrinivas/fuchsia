@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 import argparse
+import collections
 import json
 import os
 import subprocess
@@ -25,7 +26,7 @@ def analyze(gn_path, tests_json, build_dir, changed_files):
     with open(tests_json) as f:
         tests_obj = json.load(f)
 
-    label_to_test_package = {}
+    label_to_test_packages = collections.defaultdict(list)
     test_labels = []
 
     for t in tests_obj:
@@ -37,7 +38,7 @@ def analyze(gn_path, tests_json, build_dir, changed_files):
         # TODO: ARM
         if toolchain == '//build/toolchain/fuchsia:x64':
             test_labels.append(tl)
-            label_to_test_package[tl] = t['test']['package_url']
+            label_to_test_packages[tl].append(t['test']['package_url'])
 
         # TODO: https://crbug.com/gn/161 means we can't find host tests yet
         # because they're in an alternate toolchain (I think?).
@@ -58,7 +59,10 @@ def analyze(gn_path, tests_json, build_dir, changed_files):
         if result['status'] == 'No dependency':
             return []
         else:
-            return [label_to_test_package[tl] for tl in result['test_targets']]
+            ret = []
+            for tl in result['test_targets']:
+                ret.extend(label_to_test_packages[tl])
+            return ret
 
 
 def main(args):
@@ -94,6 +98,15 @@ class Test(unittest.TestCase):
         self.assertIn(
             'fuchsia-pkg://fuchsia.com/fostr_unittests#meta/fostr_unittests.cmx',
             tests_for(['garnet/public/lib/fostr/hex_dump.h']))
+
+    def test_multiple_packages_single_label(self):
+        tests = tests_for(['sdk/lib/fidl/cpp/array_unittest.cc'])
+        self.assertIn(
+            'fuchsia-pkg://fuchsia.com/fidl_tests#meta/conformance_test.cmx',
+            tests)
+        self.assertIn(
+            'fuchsia-pkg://fuchsia.com/fidl_tests#meta/fidl_cpp_unittests.cmx',
+            tests)
 
     @unittest.skip('.rs files are not listed in sources yet.')
     def test_plain_rust(self):
