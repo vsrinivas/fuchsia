@@ -20,7 +20,8 @@ namespace wlan::brcmfmac {
 
 // This class represents an interface created on a simulated device, collecting all of the
 // attributes related to that interface.
-struct SimInterface {
+class SimInterface {
+ public:
   // Track state of association
   struct AssocContext {
     enum AssocState {
@@ -29,11 +30,11 @@ struct SimInterface {
       kAuthenticating,
       kAssociating,
       kAssociated,
-    } state_ = kNone;
+    } state = kNone;
 
-    common::MacAddr bssid_;
-    wlan_ssid_t ssid_;
-    wlan_channel_t channel_;
+    common::MacAddr bssid;
+    wlan_ssid_t ssid;
+    wlan_channel_t channel;
   };
 
   struct SoftApContext {
@@ -42,15 +43,15 @@ struct SimInterface {
 
   // Useful statistics about operations performed
   struct Stats {
-    size_t assoc_attempts_ = 0;
-    size_t assoc_successes_ = 0;
-    std::list<wlan_join_result_t> join_results_;
-    std::list<wlanif_auth_confirm_t> auth_results_;
-    std::list<wlanif_assoc_confirm_t> assoc_results_;
-    std::list<wlanif_deauth_indication_t> deauth_indications_;
-    std::list<wlanif_channel_switch_info_t> csa_indications_;
-    std::list<wlanif_start_confirm_t> start_confirmations_;
-    std::list<wlanif_stop_confirm_t> stop_confirmations_;
+    size_t assoc_attempts = 0;
+    size_t assoc_successes = 0;
+    std::list<wlan_join_result_t> join_results;
+    std::list<wlanif_auth_confirm_t> auth_results;
+    std::list<wlanif_assoc_confirm_t> assoc_results;
+    std::list<wlanif_deauth_indication_t> deauth_indications;
+    std::list<wlanif_channel_switch_info_t> csa_indications;
+    std::list<wlanif_start_confirm_t> start_confirmations;
+    std::list<wlanif_stop_confirm_t> stop_confirmations;
   };
 
   // SoftAP defaults

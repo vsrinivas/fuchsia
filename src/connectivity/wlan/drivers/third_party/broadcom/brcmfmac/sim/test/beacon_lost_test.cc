@@ -91,10 +91,10 @@ TEST_F(BeaconLostTest, NoBeaconDisassocTest) {
   env_->Run();
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes_, 1U);
+  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // A disassociation should have occured due a beacon timeout
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications_.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
 }
 
 // Verify that deauthorization occurs after moving away from associated AP
@@ -125,10 +125,10 @@ TEST_F(BeaconLostTest, BeaconTooFarDisassocTest) {
   env_->Run();
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes_, 1U);
+  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // A disassociation should have occured due to moving away from the AP
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications_.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
 }
 
 // Verify that losing a beacon from an unassociated ap does not cause any disassociation
@@ -165,10 +165,10 @@ TEST_F(BeaconLostTest, WrongBeaconLossTest) {
   env_->Run();
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes_, 1U);
+  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // No disassociation should occur
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 0U);
 }
 
 // Verify that moving out of range of the beacon for a small duration does not cause a deauth
@@ -208,10 +208,10 @@ TEST_F(BeaconLostTest, TempBeaconLossTest) {
   env_->Run();
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes_, 1U);
+  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // No disassociation should occur
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 0U);
 }
 
 }  // namespace wlan::brcmfmac

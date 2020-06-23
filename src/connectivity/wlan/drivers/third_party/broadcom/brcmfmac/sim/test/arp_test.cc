@@ -247,7 +247,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   env_->Run(kTestDuration);
 
   // Verify that we completed the association process
-  EXPECT_EQ(sim_ifc_.stats_.assoc_successes_, 1U);
+  EXPECT_EQ(sim_ifc_.stats_.assoc_successes, 1U);
 
   // Verify that all ARP frames were offloaded
   EXPECT_EQ(sim_ifc_.arp_frames_received_, 0U);

@@ -102,74 +102,74 @@ zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env,
 }
 
 void SimInterface::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
-  ZX_ASSERT(assoc_ctx_.state_ == AssocContext::kAssociating);
+  ZX_ASSERT(assoc_ctx_.state == AssocContext::kAssociating);
 
-  stats_.assoc_results_.push_back(*resp);
+  stats_.assoc_results.push_back(*resp);
 
   if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
-    assoc_ctx_.state_ = AssocContext::kAssociated;
-    stats_.assoc_successes_++;
+    assoc_ctx_.state = AssocContext::kAssociated;
+    stats_.assoc_successes++;
   } else {
-    assoc_ctx_.state_ = AssocContext::kNone;
+    assoc_ctx_.state = AssocContext::kNone;
   }
 }
 
 void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
-  ZX_ASSERT(assoc_ctx_.state_ == AssocContext::kAuthenticating);
-  ZX_ASSERT(!memcmp(assoc_ctx_.bssid_.byte, resp->peer_sta_address, ETH_ALEN));
+  ZX_ASSERT(assoc_ctx_.state == AssocContext::kAuthenticating);
+  ZX_ASSERT(!memcmp(assoc_ctx_.bssid.byte, resp->peer_sta_address, ETH_ALEN));
 
-  stats_.auth_results_.push_back(*resp);
+  stats_.auth_results.push_back(*resp);
 
   // We only support open authentication, for now
   ZX_ASSERT(resp->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM);
 
   if (resp->result_code != WLAN_AUTH_RESULT_SUCCESS) {
-    assoc_ctx_.state_ = AssocContext::kNone;
+    assoc_ctx_.state = AssocContext::kNone;
     return;
   }
 
-  assoc_ctx_.state_ = AssocContext::kAssociating;
+  assoc_ctx_.state = AssocContext::kAssociating;
 
   //  Send assoc request
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, assoc_ctx_.bssid_.byte, ETH_ALEN);
+  memcpy(assoc_req.peer_sta_address, assoc_ctx_.bssid.byte, ETH_ALEN);
   if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
 }
 
 void SimInterface::OnChannelSwitch(const wlanif_channel_switch_info_t* ind) {
-  stats_.csa_indications_.push_back(*ind);
+  stats_.csa_indications.push_back(*ind);
 }
 
 void SimInterface::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
-  stats_.deauth_indications_.push_back(*ind);
+  stats_.deauth_indications.push_back(*ind);
 }
 
 void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
-  ZX_ASSERT(assoc_ctx_.state_ == AssocContext::kJoining);
+  ZX_ASSERT(assoc_ctx_.state == AssocContext::kJoining);
 
-  stats_.join_results_.push_back(resp->result_code);
+  stats_.join_results.push_back(resp->result_code);
 
   if (resp->result_code != WLAN_JOIN_RESULT_SUCCESS) {
-    assoc_ctx_.state_ = AssocContext::kNone;
+    assoc_ctx_.state = AssocContext::kNone;
     return;
   }
 
-  assoc_ctx_.state_ = AssocContext::kAuthenticating;
+  assoc_ctx_.state = AssocContext::kAuthenticating;
 
   // Send auth request
   wlanif_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, assoc_ctx_.bssid_.byte, ETH_ALEN);
+  std::memcpy(auth_req.peer_sta_address, assoc_ctx_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
   if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
 }
 
 void SimInterface::OnStartConf(const wlanif_start_confirm_t* resp) {
-  stats_.start_confirmations_.push_back(*resp);
+  stats_.start_confirmations.push_back(*resp);
 }
 
 void SimInterface::OnStopConf(const wlanif_stop_confirm_t* resp) {
-  stats_.stop_confirmations_.push_back(*resp);
+  stats_.stop_confirmations.push_back(*resp);
 }
 
 void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
@@ -177,13 +177,13 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& s
   // This should only be performed on a Client interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
 
-  stats_.assoc_attempts_++;
+  stats_.assoc_attempts++;
 
   // Save off context
-  assoc_ctx_.state_ = AssocContext::kJoining;
-  assoc_ctx_.bssid_ = bssid;
-  assoc_ctx_.ssid_ = ssid;
-  assoc_ctx_.channel_ = channel;
+  assoc_ctx_.state = AssocContext::kJoining;
+  assoc_ctx_.bssid = bssid;
+  assoc_ctx_.ssid = ssid;
+  assoc_ctx_.channel = channel;
 
   // Send join request
   wlanif_join_req join_req = {};

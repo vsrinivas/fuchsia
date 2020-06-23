@@ -97,8 +97,8 @@ TEST_F(ChannelSwitchTest, ChannelSwitch) {
   env_->Run(kTestDuration);
 
   // Channel switch will only be triggered when assciated.
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 1U);
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSwitchedChannel.primary);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.front().new_channel, kSwitchedChannel.primary);
 }
 
 // This test case verifies that in a single CSA beacon interval, if AP want to switch back to old
@@ -116,7 +116,7 @@ TEST_F(ChannelSwitchTest, SwitchBackInSingleInterval) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 0U);
 }
 
 // This test verifies that in a single CSA beacon interval, if sim-fake-ap change destination
@@ -134,8 +134,8 @@ TEST_F(ChannelSwitchTest, ChangeDstAddressWhenSwitching) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 1U);
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSecondSwitchedChannel.primary);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.front().new_channel, kSecondSwitchedChannel.primary);
 }
 
 // This test case verifies that two continuous channel switches will work as long as they are in two
@@ -155,10 +155,10 @@ TEST_F(ChannelSwitchTest, SwitchBackInDiffInterval) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 2U);
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSwitchedChannel.primary);
-  client_ifc_.stats_.csa_indications_.pop_front();
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kDefaultChannel.primary);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 2U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.front().new_channel, kSwitchedChannel.primary);
+  client_ifc_.stats_.csa_indications.pop_front();
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.front().new_channel, kDefaultChannel.primary);
 }
 
 // This test verifies CSA beacons from APs which are not associated with client will not trigger
@@ -186,7 +186,7 @@ TEST_F(ChannelSwitchTest, NotSwitchForDifferentAP) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 0U);
 }
 
 // This test case verifies that when AP stop beaconing during CSA beacon interval, sim-fw will still
@@ -206,8 +206,8 @@ TEST_F(ChannelSwitchTest, StopStillSwitch) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 1U);
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.front().new_channel, kSwitchedChannel.primary);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.front().new_channel, kSwitchedChannel.primary);
 }
 
 // This test verifies that the CSA beacon will be ignored when its new channel is the same as
@@ -226,7 +226,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchToSameChannel) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 0U);
 }
 
 // This test verifies that the CSA beacon will be ignored when client is doing a passive scan while
@@ -246,7 +246,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.csa_indications_.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.csa_indications.size(), 0U);
 }
 
 }  // namespace wlan::brcmfmac
