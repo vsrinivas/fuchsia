@@ -127,6 +127,7 @@ struct A {         struct A {
 ![red x][rx] **ABI Compatibility**: NO
 
 **Transition Considerations**:
+
 * Depends on the language bindings.
 * Go positional initializers &amp; Rust and Dart struct literals will break.
 
@@ -142,6 +143,7 @@ struct A {         struct A {
 ![red x][rx] **ABI Compatibility**: NO
 
 ![green checkmark][gc] **Transition Consideration**:
+
 * So long as `b` is not referenced any more (including in positional initializers).
 
 ## tables
@@ -170,6 +172,7 @@ table T {          table T {
 ```
 
 ![green checkmark][gc] **ABI Compatibility**: YES
+
 * Just don't change the ordinal values.
 
 ![green checkmark][gc] **Transition Considerations**: YES
@@ -213,6 +216,7 @@ table T {          table T {
 ![green checkmark][gc] **ABI Compatibility**: YES
 
 ![green checkmark][gc] **Transition Considerations**: YES
+
 * So long as `b` is not referenced any more.
 
 #### Adding [NoHandles]
@@ -270,6 +274,7 @@ union A {          union A {
 ![green checkmark][gc] **ABI Compatibility**: YES
 
 **Transition Considerations**:
+
 * Depends on language bindings.
 * Exhaustive matching (i.e., C++ `switch{}` on union tag) will break, so source
   needs to be updated accordingly.
@@ -365,6 +370,7 @@ enum E {           enum E {
 ![green checkmark][gc] **ABI Compatibility**: YES
 
 **Transition Considerations**:
+
 * C++ `switch{}` without `default` will break
 * Rust `match` without `"_"` will break
 
@@ -380,6 +386,7 @@ enum E {           enum E {
 ![green checkmark][gc] **ABI Compatibility**: YES
 
 **Transition Considerations**:
+
 * Code which uses `E::B` will break
 
 ## protocol libraries & names
