@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/log_level.h>
 #include <lib/syslog/cpp/logging_backend.h>
 #include <unistd.h>
 
 #include <iostream>
+#include <sstream>
 
 namespace syslog_backend {
 
@@ -15,6 +17,31 @@ namespace {
 // It's OK to keep global state here even though this file is in a source_set because on host
 // we don't use shared libraries.
 syslog::LogSettings g_log_settings;
+
+const std::string GetNameForLogSeverity(syslog::LogSeverity severity) {
+  switch (severity) {
+    case syslog::LOG_TRACE:
+      return "TRACE";
+    case syslog::LOG_DEBUG:
+      return "DEBUG";
+    case syslog::LOG_INFO:
+      return "INFO";
+    case syslog::LOG_WARNING:
+      return "WARNING";
+    case syslog::LOG_ERROR:
+      return "ERROR";
+    case syslog::LOG_FATAL:
+      return "FATAL";
+  }
+
+  if (severity > syslog::LOG_DEBUG && severity < syslog::LOG_INFO) {
+    std::ostringstream stream;
+    stream << "VLOG(" << (syslog::LOG_INFO - severity) << ")";
+    return stream.str();
+  }
+
+  return "UNKNOWN";
+}
 
 }  // namespace
 
@@ -51,5 +78,19 @@ void SetLogTags(const std::initializer_list<std::string>& tags) {
 }
 
 syslog::LogSeverity GetMinLogLevel() { return g_log_settings.min_log_level; }
+
+void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+              const char* condition, const std::string& msg) {
+  if (tag)
+    std::cerr << "[" << tag << "] ";
+
+  std::cerr << "[" << GetNameForLogSeverity(severity) << ":" << file << "(" << line << ")]";
+
+  if (condition)
+    std::cerr << " Check failed: " << condition << ".";
+
+  std::cerr << std::endl << msg;
+  std::cerr.flush();
+}
 
 }  // namespace syslog_backend

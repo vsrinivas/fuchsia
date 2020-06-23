@@ -7,6 +7,9 @@
 #include <lib/syslog/global.h>
 #include <lib/zx/process.h>
 
+#include <iostream>
+#include <sstream>
+
 static_assert(syslog::LOG_TRACE == FX_LOG_TRACE);
 static_assert(syslog::LOG_DEBUG == FX_LOG_DEBUG);
 static_assert(syslog::LOG_INFO == FX_LOG_INFO);
@@ -50,5 +53,26 @@ void SetLogSettings(const syslog::LogSettings& settings,
 }
 
 syslog::LogSeverity GetMinLogLevel() { return fx_logger_get_min_severity(fx_log_get_logger()); }
+
+void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+              const char* condition, const std::string& msg) {
+  std::ostringstream stream;
+
+  stream << "[" << file << "(" << line << ")] ";
+
+  if (condition)
+    stream << "Check failed: " << condition << ". ";
+
+  stream << msg;
+
+  // Write fatal logs to stderr as well because death tests sometimes verify a certain
+  // log message was printed prior to the crash.
+  // TODO(samans): Convert tests to not depend on stderr. https://fxbug.dev/49593
+  if (severity == syslog::LOG_FATAL)
+    std::cerr << stream.str() << std::endl;
+
+  fx_logger_t* logger = fx_log_get_logger();
+  fx_logger_log(logger, severity, tag, stream.str().c_str());
+}
 
 }  // namespace syslog_backend

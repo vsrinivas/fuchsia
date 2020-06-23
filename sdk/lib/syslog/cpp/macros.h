@@ -110,6 +110,7 @@ class LogMessage {
   const LogSeverity severity_;
   const char* file_;
   const int line_;
+  const char* condition_;
   const char* tag_;
 #if defined(__Fuchsia__)
   const zx_status_t status_;

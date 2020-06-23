@@ -3,46 +3,18 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/logging_backend.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <iostream>
 
-#if defined(__Fuchsia__)
-#include <lib/syslog/global.h>
+#ifdef __Fuchsia__
 #include <zircon/status.h>
 #endif
 
 namespace syslog {
 namespace {
-
-#ifndef __Fuchsia__
-
-const std::string GetNameForLogSeverity(LogSeverity severity) {
-  switch (severity) {
-    case LOG_TRACE:
-      return "TRACE";
-    case LOG_DEBUG:
-      return "DEBUG";
-    case LOG_INFO:
-      return "INFO";
-    case LOG_WARNING:
-      return "WARNING";
-    case LOG_ERROR:
-      return "ERROR";
-    case LOG_FATAL:
-      return "FATAL";
-  }
-
-  if (severity > LOG_DEBUG && severity < LOG_INFO) {
-    std::ostringstream stream;
-    stream << "VLOG(" << (LOG_INFO - severity) << ")";
-    return stream.str();
-  }
-
-  return "UNKNOWN";
-}
-#endif
 
 const char* StripDots(const char* path) {
   while (strncmp(path, "../", 3) == 0)
@@ -113,28 +85,15 @@ LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const c
 #endif
                        )
     : severity_(severity),
-      file_(file),
+      file_(severity > LOG_INFO ? StripDots(file) : StripPath(file)),
       line_(line),
+      condition_(condition),
       tag_(tag)
 #if defined(__Fuchsia__)
       ,
       status_(status)
 #endif
 {
-#if !defined(__Fuchsia__)
-  if (tag)
-    stream_ << "[" << tag_ << "] ";
-#endif
-  stream_ << "[";
-  // With syslog the severity is included in the metadata so no need to add it
-  // to the log message itself.
-#ifndef __Fuchsia__
-  stream_ << GetNameForLogSeverity(severity) << ":";
-#endif
-  stream_ << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_)) << "(" << line_ << ")] ";
-
-  if (condition)
-    stream_ << "Check failed: " << condition << ". ";
 }
 
 LogMessage::~LogMessage() {
@@ -142,22 +101,9 @@ LogMessage::~LogMessage() {
   if (status_ != std::numeric_limits<zx_status_t>::max()) {
     stream_ << ": " << status_ << " (" << zx_status_get_string(status_) << ")";
   }
-#else
-  stream_ << std::endl;
 #endif
 
-#if defined(__Fuchsia__)
-  // Write fatal logs to stderr as well because death tests sometimes verify a certain
-  // log message was printed prior to the crash.
-  // TODO(samans): Convert tests to not depend on stderr. https://fxbug.dev/49593
-  if (severity_ == LOG_FATAL)
-    std::cerr << stream_.str() << std::endl;
-  fx_logger_t* logger = fx_log_get_logger();
-  fx_logger_log(logger, severity_, tag_, stream_.str().c_str());
-#else
-  std::cerr << stream_.str();
-  std::cerr.flush();
-#endif
+  syslog_backend::WriteLog(severity_, file_, line_, tag_, condition_, stream_.str());
 
   if (severity_ >= LOG_FATAL)
     __builtin_debugtrap();

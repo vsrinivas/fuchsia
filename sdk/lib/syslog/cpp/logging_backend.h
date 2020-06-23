@@ -16,6 +16,9 @@ void SetLogSettings(const syslog::LogSettings& settings,
 
 syslog::LogSeverity GetMinLogLevel();
 
+void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+              const char* condition, const std::string& msg);
+
 }  // namespace syslog_backend
 
 #endif  // LIB_SYSLOG_CPP_LOGGING_BACKEND_H_
