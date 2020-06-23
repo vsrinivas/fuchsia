@@ -9,11 +9,11 @@
 
 #include <string>
 
-namespace feedback {
+namespace forensics {
 
 // Format a log message as a string.
 std::string Format(const fuchsia::logger::LogMessage& message);
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_LOG_FORMAT_H_

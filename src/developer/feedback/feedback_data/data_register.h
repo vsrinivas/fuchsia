@@ -10,7 +10,8 @@
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/datastore.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Registers data useful to attach in feedback reports (crash, user feedback or bug reports).
 class DataRegister : public fuchsia::feedback::ComponentDataRegister {
@@ -31,6 +32,7 @@ class DataRegister : public fuchsia::feedback::ComponentDataRegister {
   std::map<std::string, Annotations> namespaced_annotations_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_DATA_REGISTER_H_

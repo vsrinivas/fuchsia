@@ -11,7 +11,8 @@
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 class ProcessLimboHandler;
 
@@ -117,6 +118,7 @@ class ProcessLimboHandler : public fuchsia::exception::ProcessLimbo {
   fxl::WeakPtrFactory<ProcessLimboHandler> weak_factory_;
 };
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_PROCESS_LIMBO_MANAGER_H_

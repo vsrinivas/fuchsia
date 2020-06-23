@@ -20,7 +20,8 @@
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Queues pending reports and processes them according to its internal State.
 class Queue {
@@ -31,7 +32,7 @@ class Queue {
                                           CrashServer* crash_server);
 
   // Allow the queue's functionality to change based on the upload policy.
-  void WatchSettings(feedback::Settings* settings);
+  void WatchSettings(Settings* settings);
 
   // Add a report to the queue.
   bool Add(const std::string& program_name,
@@ -76,7 +77,7 @@ class Queue {
   bool Upload(const crashpad::UUID& local_report_id);
 
   // Callback to update |state_| on upload policy changes.
-  void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
+  void OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy);
 
   // Schedules ProcessAll() to run every hour.
   void ProcessAllEveryHour();
@@ -102,6 +103,7 @@ class Queue {
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_QUEUE_H_

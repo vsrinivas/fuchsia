@@ -13,7 +13,7 @@
 
 #include "src/lib/timekeeper/system_clock.h"
 
-namespace feedback {
+namespace forensics {
 
 // Provides the UTC time only if the device's system clock is accurate.
 class UTCTimeProvider {
@@ -36,6 +36,6 @@ class UTCTimeProvider {
   bool is_utc_time_accurate_ = false;
 };
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_UTC_TIME_PROVIDER_H_

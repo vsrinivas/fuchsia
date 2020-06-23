@@ -12,7 +12,8 @@
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Crash reporter settings.
 //
@@ -54,6 +55,7 @@ class Settings {
 // Returns the string version of the enum.
 std::string ToString(Settings::UploadPolicy upload_policy);
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_SETTINGS_H_

@@ -14,7 +14,7 @@
 
 #include "src/lib/fsl/vmo/strings.h"
 
-namespace feedback {
+namespace forensics {
 namespace internal {
 
 // Compares two Attachment objects.
@@ -110,6 +110,6 @@ MATCHER(HasValue, negation ? "is error" : "has value") {
   return false;
 }
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_GMATCHERS_H_

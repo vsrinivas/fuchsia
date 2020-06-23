@@ -11,7 +11,7 @@
 #include <initializer_list>
 #include <optional>
 
-namespace feedback {
+namespace forensics {
 namespace fit {
 
 // Couples a timeout and an action to optionally take when the timeout occurs.
@@ -25,6 +25,6 @@ struct Timeout {
 };
 
 }  // namespace fit
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIT_TIMEOUT_H_

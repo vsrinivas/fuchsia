@@ -10,7 +10,7 @@
 
 #include <vector>
 
-namespace feedback {
+namespace forensics {
 
 // Bundles a vector of attachments into a single ZIP archive with DEFLATE compression.
 bool Archive(const std::vector<fuchsia::feedback::Attachment>& attachments,
@@ -20,6 +20,6 @@ bool Archive(const std::vector<fuchsia::feedback::Attachment>& attachments,
 bool Unpack(const fuchsia::mem::Buffer& archive,
             std::vector<fuchsia::feedback::Attachment>* attachments);
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_ARCHIVE_H_

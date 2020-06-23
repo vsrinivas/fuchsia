@@ -20,7 +20,8 @@
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::hwinfo::ProductInfo;
@@ -147,4 +148,5 @@ void ProductInfoProvider::GetInfo() {
   });
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

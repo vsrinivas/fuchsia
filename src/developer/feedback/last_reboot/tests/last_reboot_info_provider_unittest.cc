@@ -14,7 +14,8 @@
 #include "src/developer/feedback/last_reboot/reboot_reason.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 fuchsia::feedback::LastReboot GetLastReboot(
@@ -77,4 +78,5 @@ TEST(LastRebootInfoProviderTest, Succeed_NotParseable) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

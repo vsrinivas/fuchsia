@@ -7,7 +7,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <zircon/errors.h>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 using namespace fuchsia::feedback;
@@ -21,4 +21,4 @@ void CrashReporter::File(CrashReport report, FileCallback callback) {
 }
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics

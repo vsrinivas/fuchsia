@@ -8,7 +8,8 @@
 #include "fuchsia/exception/cpp/fidl.h"
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 namespace {
 
@@ -328,4 +329,5 @@ void ProcessLimboHandler::RemoveFilters(std::vector<std::string> filters,
   cb(fit::ok());
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

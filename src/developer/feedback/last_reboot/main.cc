@@ -54,6 +54,8 @@ void MoveGracefulRebootReason() {
 }  // namespace
 
 int main(int argc, char** argv) {
+  using namespace ::forensics::last_reboot;
+
   syslog::SetTags({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -63,12 +65,11 @@ int main(int argc, char** argv) {
 
   MoveGracefulRebootReason();
 
-  feedback::MainService main_service(feedback::MainService::Config{
+  MainService main_service(MainService::Config{
       .dispatcher = loop.dispatcher(),
       .services = context->svc(),
       .root_node = &(inspector->root()),
-      .reboot_log =
-          feedback::RebootLog::ParseRebootLog("/boot/log/last-panic.txt", kTmpGracefulRebootReason),
+      .reboot_log = RebootLog::ParseRebootLog("/boot/log/last-panic.txt", kTmpGracefulRebootReason),
       .graceful_reboot_reason_write_path = kCacheGracefulRebootReason,
   });
 

@@ -7,12 +7,14 @@
 
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Synchronously fetches the static attachments, i.e. the attachments that don't change during a
 // boot cycle.
 Attachments GetStaticAttachments(const AttachmentKeys& allowlist);
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ATTACHMENTS_STATIC_ATTACHMENTS_H_

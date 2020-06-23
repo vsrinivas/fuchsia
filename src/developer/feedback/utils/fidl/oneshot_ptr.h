@@ -17,7 +17,7 @@
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 
 // Wrapper around InterfacePtr<Interface> that provides 'one shot' to make a call to the interface.
@@ -101,6 +101,6 @@ class OneShotPtr {
 };
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_ONESHOT_PTR_H_

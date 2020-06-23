@@ -9,7 +9,8 @@
 
 #include "src/developer/feedback/last_reboot/reboot_log.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 class LastRebootInfoProvider : public fuchsia::feedback::LastRebootInfoProvider {
  public:
@@ -22,6 +23,7 @@ class LastRebootInfoProvider : public fuchsia::feedback::LastRebootInfoProvider 
   fuchsia::feedback::LastReboot last_reboot_;
 };
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_

@@ -28,7 +28,8 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/strings/split_string.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::hwinfo::BoardInfo;
@@ -190,4 +191,5 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

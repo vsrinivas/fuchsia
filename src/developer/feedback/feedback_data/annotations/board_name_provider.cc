@@ -18,7 +18,8 @@
 
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 AnnotationOr GetBoardName() {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
@@ -49,4 +50,5 @@ AnnotationOr GetBoardName() {
   return out_board_name.value();
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

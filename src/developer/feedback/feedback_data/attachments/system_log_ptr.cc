@@ -21,7 +21,8 @@
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/developer/feedback/utils/log_format.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 ::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
@@ -110,4 +111,5 @@ void LogListener::Done() {
   logger_.CompleteOk();
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

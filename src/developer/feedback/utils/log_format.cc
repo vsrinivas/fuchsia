@@ -12,7 +12,7 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 std::string SeverityToString(const int32_t severity) {
@@ -44,4 +44,4 @@ std::string Format(const fuchsia::logger::LogMessage& message) {
                            SeverityToString(message.severity).c_str(), message.msg.c_str());
 }
 
-}  // namespace feedback
+}  // namespace forensics

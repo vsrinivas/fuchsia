@@ -10,7 +10,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using BoardInfoProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::hwinfo, Board);
@@ -34,6 +34,6 @@ class BoardInfoProviderNeverReturns : public BoardInfoProviderBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_BOARD_INFO_PROVIDER_H_

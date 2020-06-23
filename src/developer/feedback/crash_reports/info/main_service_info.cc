@@ -6,14 +6,15 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 MainServiceInfo::MainServiceInfo(std::shared_ptr<InfoContext> context)
     : context_(std::move(context)) {
   FX_CHECK(context_);
 }
 
-void MainServiceInfo::ExposeConfig(const feedback::Config& config) {
+void MainServiceInfo::ExposeConfig(const Config& config) {
   context_->InspectManager().ExposeConfig(config);
 }
 
@@ -25,4 +26,5 @@ void MainServiceInfo::UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdat
   context_->InspectManager().UpdateCrashReporterProtocolStats(update);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

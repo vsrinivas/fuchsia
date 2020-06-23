@@ -8,7 +8,8 @@
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Wrapper around Crashpad's UploadReport that also stores the annotations.
 //
@@ -34,5 +35,6 @@ class UploadReport {
   FXL_DISALLOW_COPY_AND_ASSIGN(UploadReport);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_UPLOAD_REPORT_H_

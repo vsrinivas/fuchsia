@@ -17,7 +17,7 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
-namespace feedback {
+namespace forensics {
 namespace fit {
 namespace {
 
@@ -157,4 +157,4 @@ TEST_F(PromiseTest, Check_TwoPtrsStaysAlive) {
 
 }  // namespace
 }  // namespace fit
-}  // namespace feedback
+}  // namespace forensics

@@ -21,7 +21,8 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
-namespace feedback {
+namespace forensics {
+namespace bugreport {
 namespace {
 
 class BugReporterTest : public gtest::TestLoopFixture {
@@ -75,4 +76,5 @@ TEST_F(BugReporterTest, Basic) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace bugreport
+}  // namespace forensics

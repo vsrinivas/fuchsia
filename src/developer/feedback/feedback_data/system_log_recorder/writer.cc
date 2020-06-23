@@ -9,7 +9,8 @@
 #include <lib/trace/event.h>
 #include <unistd.h>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 SystemLogWriter::SystemLogWriter(const std::vector<const std::string>& file_paths,
                                  LogMessageStore* store)
@@ -59,4 +60,5 @@ void SystemLogWriter::RotateFilePaths() {
   }
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

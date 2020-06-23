@@ -11,7 +11,8 @@
 #include <optional>
 #include <string>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 class CrashReportBuilder {
  public:
@@ -32,6 +33,7 @@ class CrashReportBuilder {
   bool is_valid_{true};
 };
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_BUILDER_H_

@@ -20,7 +20,7 @@
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/backoff/exponential_backoff.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 
 // Wrapper around InterfacePtr<Interface> that can cache the results of calls made to the interface.
@@ -159,6 +159,6 @@ class CachingPtr {
 };
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_CACHING_PTR_H_

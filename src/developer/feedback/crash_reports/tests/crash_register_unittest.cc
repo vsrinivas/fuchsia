@@ -25,7 +25,8 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using fuchsia::feedback::CrashReportingProduct;
@@ -231,4 +232,5 @@ TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
 };
 
 }  // namespace
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

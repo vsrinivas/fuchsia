@@ -11,7 +11,7 @@
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 #include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using InspectArchiveBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics, ArchiveAccessor);
@@ -48,6 +48,6 @@ class InspectArchiveClosesIteratorConnection : public InspectArchiveBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_INSPECT_ARCHIVE_H_

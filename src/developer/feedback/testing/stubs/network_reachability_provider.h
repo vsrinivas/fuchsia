@@ -10,7 +10,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 class NetworkReachabilityProvider
@@ -21,6 +21,6 @@ class NetworkReachabilityProvider
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_NETWORK_REACHABILITY_PROVIDER_H_

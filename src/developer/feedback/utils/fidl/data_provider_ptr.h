@@ -17,7 +17,7 @@
 #include "src/developer/feedback/utils/fit/bridge_map.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 
 // Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the connection, losing the
@@ -42,6 +42,6 @@ class DataProviderPtr {
 };
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DATA_PROVIDER_PTR_H_

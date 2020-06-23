@@ -30,7 +30,8 @@
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using crashpad::CrashReportDatabase;
@@ -621,4 +622,5 @@ TEST_F(QueueTest, Check_InspectTree) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

@@ -22,7 +22,7 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 using fuchsia::feedback::Attachment;
@@ -106,4 +106,4 @@ TEST(ArchiveTest, UnpackArchive) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace forensics

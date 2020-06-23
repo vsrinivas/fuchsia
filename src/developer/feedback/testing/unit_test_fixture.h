@@ -16,7 +16,7 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
-namespace feedback {
+namespace forensics {
 
 // Augments the |TestLoopFixture| with a |ServiceDirectoryProvider| to easily inject service
 // providers in unit tests.
@@ -38,6 +38,6 @@ class UnitTestFixture : public gtest::TestLoopFixture {
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
 };
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_UNIT_TEST_FIXTURE_H_

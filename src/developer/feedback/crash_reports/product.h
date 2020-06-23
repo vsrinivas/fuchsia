@@ -9,7 +9,8 @@
 
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Crash server product associated with the crash report.
 struct Product {
@@ -20,6 +21,7 @@ struct Product {
 
 bool operator==(const Product& a, const Product& b);
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_PRODUCT_H_

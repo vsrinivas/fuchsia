@@ -16,7 +16,8 @@
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 class ChannelProvider : public AnnotationProvider {
  public:
@@ -35,6 +36,7 @@ class ChannelProvider : public AnnotationProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelProvider);
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_CHANNEL_PROVIDER_H_

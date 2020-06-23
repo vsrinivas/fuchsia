@@ -10,7 +10,8 @@
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // AnnotationProvider defines the interface all annotation providers must expose.
 //
@@ -27,6 +28,7 @@ class AnnotationProvider {
                                                      const AnnotationKeys& allowlist) = 0;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_ANNOTATION_PROVIDER_H_

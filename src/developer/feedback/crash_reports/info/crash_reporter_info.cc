@@ -6,14 +6,15 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 CrashReporterInfo::CrashReporterInfo(std::shared_ptr<InfoContext> context)
     : context_(std::move(context)) {
   FX_CHECK(context_);
 }
 
-void CrashReporterInfo::ExposeSettings(feedback::Settings* settings) {
+void CrashReporterInfo::ExposeSettings(Settings* settings) {
   context_->InspectManager().ExposeSettings(settings);
 }
 
@@ -21,4 +22,5 @@ void CrashReporterInfo::LogCrashState(cobalt::CrashState state) {
   context_->Cobalt().LogOccurrence(state);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

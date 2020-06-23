@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using UtcProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::time, Utc);
@@ -54,6 +54,6 @@ class UtcProvider : public UtcProviderBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_UTC_PROVIDER_H_

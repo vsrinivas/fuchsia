@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 // Returns an empty screenshot, still needed when Scenic::TakeScreenshot() returns false as the FIDL
@@ -73,6 +73,6 @@ class ScenicNeverReturns : public ScenicBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_SCENIC_H_

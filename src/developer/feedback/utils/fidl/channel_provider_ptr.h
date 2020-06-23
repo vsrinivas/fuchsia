@@ -17,7 +17,7 @@
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 
 // Fetches the current update channel.
@@ -46,6 +46,6 @@ class ChannelProviderPtr {
 };
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_CHANNEL_PROVIDER_PTR_H_

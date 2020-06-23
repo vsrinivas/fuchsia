@@ -11,7 +11,7 @@
 
 #include "src/lib/uuid/uuid.h"
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 using namespace fuchsia::feedback;
@@ -39,4 +39,4 @@ void DeviceIdProvider::GetId(GetIdCallback callback) {
 }
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics

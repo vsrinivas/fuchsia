@@ -8,12 +8,14 @@
 #include "src/developer/feedback/feedback_data/system_log_recorder/encoding/identity_decoder.h"
 #include "src/developer/feedback/feedback_data/system_log_recorder/encoding/identity_encoder.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Set the encoder - decoder pair for encoding log messages in production.
 using ProductionDecoder = IdentityDecoder;
 using ProductionEncoder = IdentityEncoder;
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_ENCODING_PRODUCTION_ENCODING_H_

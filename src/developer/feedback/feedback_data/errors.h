@@ -11,7 +11,8 @@
 
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Provide a reason why |error| occurred that is specific to feedback data collection.
 inline std::string ToReason(const Error error) {
@@ -40,6 +41,7 @@ inline std::string ToReason(const Error error) {
   }
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ERRORS_H_

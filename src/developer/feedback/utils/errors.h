@@ -10,7 +10,7 @@
 #include <string>
 #include <variant>
 
-namespace feedback {
+namespace forensics {
 
 // Defines common errors that occur throughout //src/developer/feedback.
 enum class Error {
@@ -78,6 +78,6 @@ inline std::string ToString(Error error) {
   }
 }
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_ERRORS_H_

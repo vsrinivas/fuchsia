@@ -11,7 +11,8 @@
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/file/file_reader.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Represents the HTTP crash server to which the agent uploads crash reports to.
 class CrashServer {
@@ -34,6 +35,7 @@ class CrashServer {
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashServer);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CRASH_SERVER_H_

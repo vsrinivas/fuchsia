@@ -21,7 +21,8 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 ::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
                                                    std::shared_ptr<sys::ServiceDirectory> services,
@@ -126,4 +127,5 @@ void Inspect::AppendNextInspectBatch() {
   });
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

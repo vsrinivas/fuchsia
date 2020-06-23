@@ -15,7 +15,7 @@
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 #include "src/developer/feedback/utils/cobalt/event.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 // Defines the interface all stub logger factories must implement and provides common functionality.
@@ -120,6 +120,6 @@ class CobaltLoggerFactoryDelaysCallback : public CobaltLoggerFactoryBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_FACTORY_H_

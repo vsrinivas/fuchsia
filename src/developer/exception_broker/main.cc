@@ -13,7 +13,7 @@
 
 namespace {
 
-void LogProcessLimboStatus(const exception::ProcessLimboManager& limbo) {
+void LogProcessLimboStatus(const ::forensics::exceptions::ProcessLimboManager& limbo) {
   if (!limbo.active()) {
     FX_LOGS(INFO) << "Process Limbo is not active at startup.";
     return;
@@ -26,12 +26,14 @@ void LogProcessLimboStatus(const exception::ProcessLimboManager& limbo) {
 }  // namespace
 
 int main() {
+  using namespace ::forensics::exceptions;
+
   syslog::SetTags({"exception-broker"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  auto broker = exception::ExceptionBroker::Create(loop.dispatcher(), context->svc());
+  auto broker = ExceptionBroker::Create(loop.dispatcher(), context->svc());
   if (!broker)
     return EXIT_FAILURE;
 
@@ -40,8 +42,7 @@ int main() {
   context->outgoing()->AddPublicService(handler_bindings.GetHandler(broker.get()));
 
   // Crete a new handler for each connection.
-  fidl::BindingSet<fuchsia::exception::ProcessLimbo,
-                   std::unique_ptr<exception::ProcessLimboHandler>>
+  fidl::BindingSet<fuchsia::exception::ProcessLimbo, std::unique_ptr<ProcessLimboHandler>>
       limbo_bindings;
   auto& limbo_manager = broker->limbo_manager();
 
@@ -52,8 +53,7 @@ int main() {
           [&limbo_manager,
            &limbo_bindings](fidl::InterfaceRequest<fuchsia::exception::ProcessLimbo> request) {
             // Create a new handler exclusive to this connection.
-            auto handler =
-                std::make_unique<exception::ProcessLimboHandler>(limbo_manager.GetWeakPtr());
+            auto handler = std::make_unique<ProcessLimboHandler>(limbo_manager.GetWeakPtr());
 
             // Track this handler in the limbo manager, so it can be notified about events.
             limbo_manager.AddHandler(handler->GetWeakPtr());

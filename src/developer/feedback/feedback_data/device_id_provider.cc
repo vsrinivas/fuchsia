@@ -14,7 +14,8 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/uuid/uuid.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using Response = fuchsia::feedback::DeviceIdProvider_GetId_Response;
@@ -84,4 +85,5 @@ void DeviceIdProvider::GetId(GetIdCallback callback) {
   callback(std::move(result));
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

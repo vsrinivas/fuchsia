@@ -10,7 +10,8 @@
 
 #include <string>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 // This struct represents all the state needed to keep correct track of an exception.
 // It has the owning job and process from the exception.
@@ -38,4 +39,5 @@ bool SpawnCrasher(ExceptionContext* pe);
 
 bool MarkExceptionAsHandled(ExceptionContext* pe);
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

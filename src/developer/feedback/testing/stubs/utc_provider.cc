@@ -9,7 +9,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using fuchsia::time::UtcSource;
@@ -53,4 +53,4 @@ void UtcProvider::WatchState(WatchStateCallback callback) {
 bool UtcProvider::Done() { return next_reponse_ == responses_.cend(); }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

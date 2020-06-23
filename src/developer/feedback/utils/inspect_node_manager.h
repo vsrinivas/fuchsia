@@ -13,7 +13,7 @@
 
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
 
 // Manage Inspect nodes, allowing access using paths relative to the inspect root. Nodes are
 // created lazily upon request to get a node or one of its children.
@@ -88,6 +88,6 @@ class InspectNodeManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectNodeManager);
 };
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_

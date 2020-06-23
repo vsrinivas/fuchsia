@@ -20,7 +20,7 @@
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 namespace {
 
@@ -86,4 +86,4 @@ TEST_F(ChannelProviderPtrTest, Succeed_EmptyChannel) {
 
 }  // namespace
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics

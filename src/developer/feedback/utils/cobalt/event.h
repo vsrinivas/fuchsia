@@ -12,7 +12,7 @@
 
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 
-namespace feedback {
+namespace forensics {
 namespace cobalt {
 
 struct Event {
@@ -67,6 +67,6 @@ bool operator==(const Event& lhs, const Event& rhs);
 std::ostream& operator<<(std::ostream& os, const Event& event);
 
 }  // namespace cobalt
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_EVENT_H_

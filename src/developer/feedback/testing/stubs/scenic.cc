@@ -10,7 +10,7 @@
 
 #include <cstdint>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 namespace {
 
@@ -94,4 +94,4 @@ void ScenicAlwaysReturnsFalse::TakeScreenshot(TakeScreenshotCallback callback) {
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

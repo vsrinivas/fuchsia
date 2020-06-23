@@ -15,7 +15,8 @@
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/timekeeper/clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using timekeeper::Clock;
@@ -69,4 +70,5 @@ TimeProvider::TimeProvider(std::unique_ptr<Clock> clock) : clock_(std::move(cloc
   return ::fit::make_ok_promise(annotations);
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

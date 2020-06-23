@@ -36,7 +36,8 @@
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/schema.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::Attachment;
@@ -446,4 +447,5 @@ TEST_F(FeedbackDataIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

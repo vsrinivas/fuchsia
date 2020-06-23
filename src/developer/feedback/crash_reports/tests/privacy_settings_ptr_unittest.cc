@@ -19,7 +19,8 @@
 #include "src/developer/feedback/testing/fakes/privacy_settings.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using fuchsia::settings::Error;
@@ -306,4 +307,5 @@ void PrintTo(const Settings::UploadPolicy& upload_policy, std::ostream* os) {
   *os << ToString(upload_policy);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

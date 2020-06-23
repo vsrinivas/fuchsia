@@ -12,7 +12,7 @@
 
 #include "src/lib/timekeeper/clock.h"
 
-namespace feedback {
+namespace forensics {
 
 // Formats the provided duration as WdXhYmZs e.g., 1d14h7m32s
 std::optional<std::string> FormatDuration(zx::duration duration);
@@ -23,6 +23,6 @@ std::optional<zx::time_utc> CurrentUTCTimeRaw(const timekeeper::Clock& clock);
 // Returns a non-localized human-readable timestamp of the current time according to |clock|.
 std::optional<std::string> CurrentUTCTime(const timekeeper::Clock& clock);
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_TIME_H_

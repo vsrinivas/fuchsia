@@ -17,7 +17,8 @@
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Retrieves the kernel log. fuchsia.boot.ReadOnlyLog is expected to be in
 // |services|.
@@ -42,6 +43,7 @@ class BootLog {
   FXL_DISALLOW_COPY_AND_ASSIGN(BootLog);
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ATTACHMENTS_KERNEL_LOG_PTR_H_

@@ -32,7 +32,9 @@ std::vector<const char*> ArgsToVec(int argc, const char* argv[]) {
 }  // namespace
 
 int main(int argc, const char* argv[]) {
-  exception::OptionFunction func = exception::ParseArgs(argc, argv, std::cout);
+  using namespace ::forensics::exceptions;
+
+  OptionFunction func = ParseArgs(argc, argv, std::cout);
   if (!func)
     return EXIT_FAILURE;
 
@@ -42,7 +44,7 @@ int main(int argc, const char* argv[]) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto& services = context->svc();
 
-  exception::LimboClient client(services);
+  LimboClient client(services);
   if (zx_status_t status = client.Init(); status != ZX_OK) {
     PrintError(status);
     return EXIT_FAILURE;

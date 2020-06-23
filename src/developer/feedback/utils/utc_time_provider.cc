@@ -8,7 +8,7 @@
 
 #include "src/developer/feedback/utils/time.h"
 
-namespace feedback {
+namespace forensics {
 
 UTCTimeProvider::UTCTimeProvider(std::shared_ptr<sys::ServiceDirectory> services,
                                  const timekeeper::Clock& clock)
@@ -45,4 +45,4 @@ void UTCTimeProvider::WatchForAccurateUtcTime() {
   });
 }
 
-}  // namespace feedback
+}  // namespace forensics

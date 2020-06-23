@@ -16,7 +16,8 @@
 #include "third_party/crashpad/client/prune_crash_reports.h"
 #include "third_party/crashpad/util/misc/metrics.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 using crashpad::FileReader;
 using crashpad::UUID;
@@ -229,4 +230,5 @@ size_t Database::GarbageCollect() {
   return num_cleaned + num_pruned;
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

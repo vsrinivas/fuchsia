@@ -18,7 +18,8 @@
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/file/file_writer.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Writes a VMO into a Crashpad writer.
 bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer);
@@ -45,6 +46,7 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump);
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_REPORT_UTIL_H_

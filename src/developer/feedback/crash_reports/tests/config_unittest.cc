@@ -8,7 +8,8 @@
 
 #include <gtest/gtest.h>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 constexpr CrashServerConfig::UploadPolicy kDisabled = CrashServerConfig::UploadPolicy::DISABLED;
@@ -104,4 +105,5 @@ void PrintTo(const CrashServerConfig::UploadPolicy& upload_policy, std::ostream*
   *os << ToString(upload_policy);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

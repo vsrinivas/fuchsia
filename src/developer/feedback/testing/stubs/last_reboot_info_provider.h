@@ -10,7 +10,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using LastRebootInfoProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback,
@@ -36,6 +36,6 @@ class LastRebootInfoProviderNeverReturns : public LastRebootInfoProviderBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_LAST_REBOOT_INFO_PROVIDER_H_

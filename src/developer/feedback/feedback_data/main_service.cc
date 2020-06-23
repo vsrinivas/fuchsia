@@ -13,7 +13,8 @@
 
 #include "src/developer/feedback/feedback_data/constants.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 const char kConfigPath[] = "/pkg/data/config.json";
@@ -87,4 +88,5 @@ void MainService::HandleDeviceIdProviderRequest(
   inspect_manager_.UpdateDeviceIdProviderProtocolStats(&InspectProtocolStats::NewConnection);
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

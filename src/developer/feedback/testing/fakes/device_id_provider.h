@@ -10,7 +10,7 @@
 #include <optional>
 #include <string>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 // Fake handler for fuchsia.feedback.DeviceIdProvider.
@@ -24,6 +24,6 @@ class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
 };
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_DEVICE_ID_PROVIDER_H_

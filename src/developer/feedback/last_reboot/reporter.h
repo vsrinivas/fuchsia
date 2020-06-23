@@ -19,7 +19,8 @@
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 // Logs the reboot reason with Cobalt and if the reboot was non-graceful, files a crash report.
 class Reporter {
@@ -44,6 +45,7 @@ class Reporter {
   fxl::CancelableClosure delayed_crash_reporting_;
 };
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REPORTER_H_

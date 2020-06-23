@@ -14,7 +14,8 @@
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 enum class ZirconRebootReason {
@@ -261,4 +262,5 @@ RebootLog::RebootLog(enum RebootReason reboot_reason, std::optional<std::string>
       reboot_log_str_(reboot_log_str),
       last_boot_uptime_(last_boot_uptime) {}
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

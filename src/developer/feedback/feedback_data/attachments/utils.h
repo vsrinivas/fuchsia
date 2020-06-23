@@ -11,7 +11,8 @@
 
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Each attachment in |attachments| that has a value will be converted into a
 // fuchshia::feedback::Attachment
@@ -26,6 +27,7 @@ void AddToAttachments(const std::string& key, const std::string& value,
 bool BundleAttachments(const std::vector<fuchsia::feedback::Attachment>& attachments,
                        fuchsia::feedback::Attachment* bundle);
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ATTACHMENTS_UTILS_H_

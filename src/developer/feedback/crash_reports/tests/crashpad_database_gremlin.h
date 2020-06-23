@@ -9,7 +9,8 @@
 
 #include "third_party/crashpad/util/misc/uuid.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Manipulates Crashpad's crash report database to cause failures.
 class CrashpadDatabaseGremlin {
@@ -32,6 +33,7 @@ class CrashpadDatabaseGremlin {
   const std::string path_;
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_TESTS_CRASHPAD_DATABASE_GREMLIN_H_

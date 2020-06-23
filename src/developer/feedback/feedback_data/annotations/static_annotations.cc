@@ -17,7 +17,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 const AnnotationKeys kSupportedAnnotations = {
@@ -77,4 +78,5 @@ Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
   return annotations;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

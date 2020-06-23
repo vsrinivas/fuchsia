@@ -15,7 +15,7 @@
 #include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
-namespace feedback {
+namespace forensics {
 namespace fit {
 
 // Manages access to multiple Bridge objects, allowing access through an id.
@@ -109,6 +109,6 @@ class BridgeMap {
 };
 
 }  // namespace fit
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIT_BRIDGE_MAP_H_

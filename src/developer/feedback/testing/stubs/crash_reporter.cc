@@ -14,7 +14,7 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 namespace {
 
@@ -78,4 +78,4 @@ void CrashReporterNoFileExpected::File(fuchsia::feedback::CrashReport report,
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

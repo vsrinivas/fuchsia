@@ -20,7 +20,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  feedback::fakes::LastRebootInfoProvider last_reboot_info_provider;
+  ::forensics::fakes::LastRebootInfoProvider last_reboot_info_provider;
 
   ::fidl::BindingSet<fuchsia::feedback::LastRebootInfoProvider> last_reboot_info_provider_bindings;
   context->outgoing()->AddPublicService(

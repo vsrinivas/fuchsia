@@ -5,12 +5,14 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CONSTANTS_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CONSTANTS_H_
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 constexpr char kCrashServerKey[] = "crash_server";
 constexpr char kCrashServerUploadPolicyKey[] = "upload_policy";
 constexpr char kCrashServerUrlKey[] = "url";
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CONSTANTS_H_

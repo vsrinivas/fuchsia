@@ -11,7 +11,8 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 const std::string kDroppedFormatStr = "!!! DROPPED %lu MESSAGES !!!\n";
@@ -128,4 +129,5 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
   return str;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

@@ -43,7 +43,8 @@
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/schema.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::Attachment;
@@ -450,4 +451,5 @@ TEST_F(DataProviderTest, GetBugreport_NoDataOnEmptyAllowlists) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

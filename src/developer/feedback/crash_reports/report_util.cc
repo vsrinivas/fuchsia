@@ -12,7 +12,8 @@
 
 #include "src/developer/feedback/crash_reports/errors.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer) {
   // TODO(frousseau): make crashpad::FileWriter VMO-aware.
@@ -263,4 +264,5 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   AddBugreport(std::move(bugreport), annotations, attachments);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

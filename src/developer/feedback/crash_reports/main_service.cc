@@ -15,7 +15,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
@@ -127,4 +128,5 @@ void MainService::HandleCrashReporterRequest(
   info_.UpdateCrashReporterProtocolStats(&InspectProtocolStats::NewConnection);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

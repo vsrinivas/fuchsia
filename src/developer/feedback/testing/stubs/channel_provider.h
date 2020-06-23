@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using ChannelProviderBase = MULTI_BINDING_STUB_FIDL_SERVER(fuchsia::update::channel, Provider);
@@ -72,6 +72,6 @@ class ChannelProviderExpectsOneCall : public ChannelProviderBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CHANNEL_PROVIDER_H_

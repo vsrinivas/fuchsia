@@ -19,6 +19,8 @@
 #include "src/developer/feedback/crash_reports/main_service.h"
 
 int main(int argc, const char** argv) {
+  using namespace ::forensics::crash_reports;
+
   syslog::SetTags({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -30,10 +32,10 @@ int main(int argc, const char** argv) {
   inspect::Node& root_node = inspector->root();
 
   auto info_context =
-      std::make_shared<feedback::InfoContext>(&root_node, clock, loop.dispatcher(), context->svc());
+      std::make_shared<InfoContext>(&root_node, clock, loop.dispatcher(), context->svc());
 
-  std::unique_ptr<feedback::MainService> main_service = feedback::MainService::TryCreate(
-      loop.dispatcher(), context->svc(), clock, std::move(info_context));
+  std::unique_ptr<MainService> main_service =
+      MainService::TryCreate(loop.dispatcher(), context->svc(), clock, std::move(info_context));
   if (!main_service) {
     return EXIT_FAILURE;
   }

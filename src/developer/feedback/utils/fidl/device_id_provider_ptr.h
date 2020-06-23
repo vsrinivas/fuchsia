@@ -17,7 +17,7 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fidl/caching_ptr.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 
 // Wraps around fuchsia::feedback::DeviceIdProviderPtr to handle establishing the connection, losing
@@ -37,6 +37,6 @@ class DeviceIdProviderPtr {
 };
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DEVICE_ID_PROVIDER_PTR_H_

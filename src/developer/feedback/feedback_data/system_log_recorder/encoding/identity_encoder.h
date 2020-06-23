@@ -9,7 +9,8 @@
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/encoding/encoder.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 class IdentityEncoder : public Encoder {
  public:
@@ -22,6 +23,7 @@ class IdentityEncoder : public Encoder {
   virtual void Reset(){};
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_ENCODING_IDENTITY_ENCODER_H_

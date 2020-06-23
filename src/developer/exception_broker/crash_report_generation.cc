@@ -14,7 +14,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 // GenerateVMOFromStringFile -----------------------------------------------------------------------
 
@@ -118,4 +119,5 @@ zx::vmo GenerateMinidumpVMO(const zx::exception& exception, std::string* process
   return minidump_vmo;
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

@@ -12,7 +12,8 @@
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Feedback data provider configuration.
 struct Config {
@@ -26,6 +27,7 @@ struct Config {
 // Parses the JSON config at |filepath| as |config|.
 zx_status_t ParseConfig(const std::string& filepath, Config* config);
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_CONFIG_H_

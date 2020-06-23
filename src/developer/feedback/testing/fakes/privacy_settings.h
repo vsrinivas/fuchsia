@@ -15,7 +15,7 @@
 #include <memory>
 #include <vector>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 // Fake server for fuchsia.settings.Privacy.
@@ -75,6 +75,6 @@ class PrivacySettingsClosesConnectionOnFirstWatch : public PrivacySettings {
 };
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_PRIVACY_SETTINGS_H_

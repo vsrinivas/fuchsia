@@ -12,7 +12,8 @@
 #include "src/lib/fsl/vmo/vector.h"
 #include "third_party/libpng/png.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 bool RawToPng(const png_structp png_ptr, const png_infop info_ptr,
@@ -91,4 +92,5 @@ bool RawToPng(const fuchsia::mem::Buffer& raw_image, const size_t height, const 
   return success;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

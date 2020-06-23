@@ -14,7 +14,8 @@
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/log_message_store.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Listens to incoming logs and immediately adds them to a store.
 class SystemLogListener : public fuchsia::logger::LogListenerSafe {
@@ -36,6 +37,7 @@ class SystemLogListener : public fuchsia::logger::LogListenerSafe {
   fuchsia::logger::LogPtr logger_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_LISTENER_H_

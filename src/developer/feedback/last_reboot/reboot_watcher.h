@@ -13,7 +13,8 @@
 
 #include "src/developer/feedback/utils/cobalt/logger.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 // Perists the graceful reason for a reboot so it can be recalled after the device has turned back
 // on.
@@ -36,6 +37,7 @@ class ImminentGracefulRebootWatcher
   ::fidl::Binding<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> connection_;
 };
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_WATCHER_H_

@@ -13,7 +13,8 @@
 #include "src/developer/feedback/feedback_data/system_log_recorder/log_message_store.h"
 #include "src/developer/feedback/feedback_data/system_log_recorder/writer.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 class SystemLogRecorder {
  public:
@@ -40,6 +41,7 @@ class SystemLogRecorder {
   SystemLogWriter writer_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_SYSTEM_LOG_RECORDER_H_

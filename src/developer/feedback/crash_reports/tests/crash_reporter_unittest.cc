@@ -50,7 +50,8 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using fuchsia::feedback::Annotation;
@@ -1007,4 +1008,5 @@ TEST_F(CrashReporterTest, Check_InspectTreeAfterSuccessfulUpload) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

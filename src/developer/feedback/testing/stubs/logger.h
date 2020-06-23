@@ -15,7 +15,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 // Returns a LogMessage with the given severity, message and optional tags.
@@ -164,6 +164,6 @@ class LoggerDelayedResponses : public LoggerBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_LOGGER_H_

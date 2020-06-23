@@ -22,7 +22,8 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Main class that handles incoming CrashReporter requests, manages the component's Inspect state,
 // etc.
@@ -71,6 +72,7 @@ class MainService {
   FXL_DISALLOW_COPY_AND_ASSIGN(MainService);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_MAIN_SERVICE_H_

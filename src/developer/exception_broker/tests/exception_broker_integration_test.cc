@@ -12,7 +12,8 @@
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 namespace {
 
 using fuchsia::exception::ExceptionInfo;
@@ -84,7 +85,8 @@ TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
 }
 
 }  // namespace
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 int main(int argc, char* argv[]) {
   if (!fxl::SetTestSettings(argc, argv))

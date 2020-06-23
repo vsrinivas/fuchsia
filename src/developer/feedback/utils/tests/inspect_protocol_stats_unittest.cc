@@ -11,7 +11,7 @@
 
 #include "src/developer/feedback/utils/inspect_node_manager.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 using inspect::testing::ChildrenMatch;
@@ -92,4 +92,4 @@ TEST_F(InspectProtocolStatsTest, Check_MakingAndClosingConnections) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace forensics

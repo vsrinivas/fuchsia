@@ -14,7 +14,8 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 std::vector<fuchsia::feedback::Attachment> ToFeedbackAttachmentVector(
     const Attachments& attachments) {
@@ -59,4 +60,5 @@ bool BundleAttachments(const std::vector<fuchsia::feedback::Attachment>& attachm
   return true;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

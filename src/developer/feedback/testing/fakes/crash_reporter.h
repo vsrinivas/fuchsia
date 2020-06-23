@@ -7,7 +7,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 // Fake handler for fuchsia.feedback.CrashReporter, returns an error if the filed crash report
@@ -19,6 +19,6 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
 };
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_CRASH_REPORTER_H_

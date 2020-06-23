@@ -15,7 +15,7 @@
 #include "third_party/zlib/contrib/minizip/unzip.h"
 #include "third_party/zlib/contrib/minizip/zip.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 using fuchsia::feedback::Attachment;
@@ -204,4 +204,4 @@ bool Unpack(const Buffer& archive, std::vector<Attachment>* attachments) {
   return success;
 }
 
-}  // namespace feedback
+}  // namespace forensics

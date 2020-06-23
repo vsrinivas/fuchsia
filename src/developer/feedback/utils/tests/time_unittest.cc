@@ -10,7 +10,7 @@
 
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 constexpr zx::duration kZero(zx::sec(0));
 
@@ -159,4 +159,4 @@ TEST(TimeTest, CurrentUTCTime) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace forensics

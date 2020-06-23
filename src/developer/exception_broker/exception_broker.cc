@@ -17,7 +17,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 namespace {
 
@@ -214,4 +215,5 @@ void ExceptionBroker::FileCrashReport(uint64_t id) {
       });
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

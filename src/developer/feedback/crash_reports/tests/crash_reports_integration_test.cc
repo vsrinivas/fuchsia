@@ -19,7 +19,8 @@
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using testing::UnorderedElementsAreArray;
@@ -78,4 +79,5 @@ TEST_F(CrashReportsIntegrationTest, CrashReporter_SmokeTest) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

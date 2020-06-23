@@ -8,7 +8,8 @@
 
 #include "src/developer/feedback/crash_reports/config.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 void Settings::set_upload_policy(const Settings::UploadPolicy upload_policy) {
   upload_policy_ = upload_policy;
@@ -60,4 +61,5 @@ std::string ToString(const Settings::UploadPolicy upload_policy) {
   }
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

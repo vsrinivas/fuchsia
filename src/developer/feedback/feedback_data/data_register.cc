@@ -10,7 +10,8 @@
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 const char kDefaultNamespace[] = "misc";
@@ -63,4 +64,5 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
   callback();
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

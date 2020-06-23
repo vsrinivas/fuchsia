@@ -10,7 +10,8 @@
 #include "src/developer/exception_broker/limbo_client/limbo_client.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 namespace {
 
@@ -165,4 +166,5 @@ OptionFunction ParseArgs(int argc, const char* argv[], std::ostream& os) {
   return nullptr;
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

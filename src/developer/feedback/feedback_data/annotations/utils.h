@@ -12,7 +12,8 @@
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
                                  const AnnotationKeys& restrict_to);
@@ -25,6 +26,7 @@ std::vector<fuchsia::feedback::Annotation> ToFeedbackAnnotationVector(
 std::optional<std::string> ToJsonString(
     const std::vector<fuchsia::feedback::Annotation>& annotations);
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_UTILS_H_

@@ -9,11 +9,13 @@
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Synchronously fetches the name of the device's board.
 AnnotationOr GetBoardName();
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_BOARD_NAME_PROVIDER_H_

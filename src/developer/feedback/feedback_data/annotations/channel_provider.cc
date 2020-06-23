@@ -10,7 +10,8 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 const AnnotationKeys kSupportedAnnotations = {
@@ -46,4 +47,5 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
       });
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

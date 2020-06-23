@@ -13,7 +13,8 @@
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 namespace {
 
@@ -72,7 +73,8 @@ TEST(ExceptionBrokerConfig, FilterArray) {
   }
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 int main(int argc, char* argv[]) {
   if (!fxl::SetTestSettings(argc, argv))

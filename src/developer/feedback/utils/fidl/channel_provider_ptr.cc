@@ -12,7 +12,7 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 
 ::fit::promise<std::string, Error> GetCurrentChannel(
@@ -44,4 +44,4 @@ ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
 }
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics

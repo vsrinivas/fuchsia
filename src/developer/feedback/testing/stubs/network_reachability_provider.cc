@@ -7,7 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 void NetworkReachabilityProvider::TriggerOnNetworkReachable(const bool reachable) {
@@ -16,4 +16,4 @@ void NetworkReachabilityProvider::TriggerOnNetworkReachable(const bool reachable
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

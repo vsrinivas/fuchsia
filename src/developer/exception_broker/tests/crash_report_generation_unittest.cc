@@ -8,7 +8,8 @@
 
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 namespace {
 
 constexpr char kData[] = "1234567489";
@@ -72,4 +73,5 @@ TEST(CrashReportGeneration, GenerateMinidump) {
 }
 
 }  // namespace
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

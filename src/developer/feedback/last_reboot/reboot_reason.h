@@ -12,7 +12,8 @@
 
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 // Feedback's internal representation of why a device rebooted.
 //
@@ -43,6 +44,7 @@ std::string ToCrashSignature(RebootReason reboot_reason);
 std::string ToCrashProgramName(RebootReason reboot_reason);
 std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason reboot_reason);
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_REASON_H_

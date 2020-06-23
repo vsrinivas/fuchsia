@@ -13,7 +13,8 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 
-namespace feedback {
+namespace forensics {
+namespace bugreport {
 namespace {
 
 class BugReporterIntegrationTest : public testing::Test {
@@ -39,8 +40,9 @@ TEST_F(BugReporterIntegrationTest, SmokeTest) {
   ASSERT_TRUE(fsl::VmoFromFilename(bugreport_path_, &vmo));
   fuchsia::mem::Buffer buffer = std::move(vmo).ToTransport();
   std::vector<::fuchsia::feedback::Attachment> unpacked_attachments;
-  ASSERT_TRUE(::feedback::Unpack(buffer, &unpacked_attachments));
+  ASSERT_TRUE(Unpack(buffer, &unpacked_attachments));
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace bugreport
+}  // namespace forensics

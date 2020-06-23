@@ -26,7 +26,8 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 inline void ToString(const fuchsia::exception::ExceptionType& value, std::ostream* os) {
   *os << value;
@@ -182,15 +183,14 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
 
   if (validate_minidump) {
     ASSERT_TRUE(report.has_annotations());
-    auto matchers = std::vector({feedback::MatchesAnnotation("crash.process.name", "crasher")});
+    auto matchers = std::vector({MatchesAnnotation("crash.process.name", "crasher")});
 
     if (realm_path.has_value()) {
-      matchers.push_back(
-          feedback::MatchesAnnotation("crash.realm-path", realm_path.value().c_str()));
+      matchers.push_back(MatchesAnnotation("crash.realm-path", realm_path.value().c_str()));
     }
 
     if (program_name == "crasher") {
-      matchers.push_back(feedback::MatchesAnnotation("debug.crash.component.url.set", "false"));
+      matchers.push_back(MatchesAnnotation("debug.crash.component.url.set", "false"));
     }
 
     EXPECT_THAT(report.annotations(), UnorderedElementsAreArray(matchers));
@@ -399,4 +399,5 @@ TEST(ExceptionBroker, GettingInvalidVMO) {
 }
 
 }  // namespace
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

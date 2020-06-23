@@ -21,7 +21,8 @@
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Main class that can spawn the system log recorder, handles incoming DataProvider requests,
 // manages the component's Inspect state, etc.
@@ -70,6 +71,7 @@ class MainService {
   FXL_DISALLOW_COPY_AND_ASSIGN(MainService);
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_MAIN_SERVICE_H_

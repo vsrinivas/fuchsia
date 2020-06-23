@@ -18,7 +18,8 @@
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/timekeeper/system_clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Get the annotation providers that will collect the annotations in |allowlist_|.
 std::vector<std::unique_ptr<AnnotationProvider>> GetReusableProviders(
@@ -44,4 +45,5 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetSingleUseProviders(
   return providers;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

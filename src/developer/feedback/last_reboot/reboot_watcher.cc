@@ -8,7 +8,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason reason) {
@@ -66,4 +67,5 @@ void ImminentGracefulRebootWatcher::OnReboot(
   connection_.Unbind();
 }
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

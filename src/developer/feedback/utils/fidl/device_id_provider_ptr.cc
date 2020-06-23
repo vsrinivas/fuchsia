@@ -8,7 +8,7 @@
 
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 
 DeviceIdProviderPtr::DeviceIdProviderPtr(async_dispatcher_t* dispatcher,
@@ -30,4 +30,4 @@ void DeviceIdProviderPtr::MakeCall() {
 }
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics

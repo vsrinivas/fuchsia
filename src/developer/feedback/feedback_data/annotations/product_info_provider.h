@@ -17,7 +17,8 @@
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Get the requested parts of fuchsia.hwinfo.ProductInfo as annotations.
 class ProductInfoProvider : public AnnotationProvider {
@@ -39,6 +40,7 @@ class ProductInfoProvider : public AnnotationProvider {
   fidl::CachingPtr<fuchsia::hwinfo::Product, std::map<AnnotationKey, std::string>> product_ptr_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_PRODUCT_INFO_PROVIDER_H_

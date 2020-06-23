@@ -41,7 +41,11 @@ void PrintTo(const fit::result_state& state, std::ostream* os) {
 
 }  // namespace fit
 
-namespace feedback {
+namespace forensics {
+
+void PrintTo(const Error error, std::ostream* os) { *os << ToString(error); }
+
+namespace feedback_data {
 
 void PrintTo(const AnnotationOr& value, std::ostream* os) {
   *os << fostr::Indent;
@@ -74,9 +78,8 @@ void PrintTo(const AttachmentValue& value, std::ostream* os) {
   *os << fostr::Outdent;
 }
 
-void PrintTo(const Error error, std::ostream* os) { *os << ToString(error); }
-
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 namespace fuchsia {
 namespace feedback {

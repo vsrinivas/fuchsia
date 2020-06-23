@@ -19,7 +19,8 @@
 #include "src/developer/feedback/utils/inspect_node_manager.h"
 #include "src/developer/feedback/utils/inspect_protocol_stats.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 class MainService {
  public:
@@ -56,6 +57,7 @@ class MainService {
   InspectProtocolStats last_reboot_info_provider_stats_;
 };
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_MAIN_SERVICE_H_

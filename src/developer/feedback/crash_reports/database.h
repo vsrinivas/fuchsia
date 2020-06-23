@@ -19,7 +19,8 @@
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 extern const uint64_t kCrashpadDatabaseMaxSizeInKb;
 
@@ -98,5 +99,6 @@ class Database {
   FXL_DISALLOW_COPY_AND_ASSIGN(Database);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_DATABASE_H_

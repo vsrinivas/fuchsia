@@ -41,7 +41,8 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using testing::Contains;
@@ -558,4 +559,5 @@ TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

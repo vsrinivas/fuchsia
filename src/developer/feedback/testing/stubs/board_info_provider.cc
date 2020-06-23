@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using fuchsia::hwinfo::Board;
@@ -18,4 +18,4 @@ void BoardInfoProvider::GetInfo(GetInfoCallback callback) {
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

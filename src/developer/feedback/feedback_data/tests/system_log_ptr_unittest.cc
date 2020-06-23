@@ -24,7 +24,8 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using testing::UnorderedElementsAreArray;
@@ -44,7 +45,7 @@ class CollectSystemLogTest : public UnitTestFixture {
   ::fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
-        feedback::CollectSystemLog(
+        feedback_data::CollectSystemLog(
             dispatcher(), services(),
             fit::Timeout(timeout, /*action=*/[this] { did_timeout_ = true; }))
             .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
@@ -230,4 +231,5 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

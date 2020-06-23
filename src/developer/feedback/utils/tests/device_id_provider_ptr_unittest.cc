@@ -16,7 +16,7 @@
 #include "src/developer/feedback/testing/stubs/device_id_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 namespace {
 
@@ -74,4 +74,4 @@ TEST_F(DeviceIdProviderPtrTest, Check_CachedDeviceIdReturned) {
 
 }  // namespace
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics

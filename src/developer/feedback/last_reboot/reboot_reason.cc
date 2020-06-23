@@ -6,7 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 std::string ToString(const RebootReason reboot_reason) {
@@ -205,4 +206,5 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(
   }
 }
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

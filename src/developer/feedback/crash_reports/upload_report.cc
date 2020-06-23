@@ -6,7 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 using crashpad::CrashReportDatabase;
 using crashpad::FileReader;
@@ -43,4 +44,5 @@ UUID UploadReport::GetUUID() const {
   return upload_report_->uuid;
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

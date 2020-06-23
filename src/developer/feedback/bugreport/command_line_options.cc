@@ -7,7 +7,8 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/substitute.h"
 
-namespace feedback {
+namespace forensics {
+namespace bugreport {
 namespace {
 
 constexpr char kUsage[] = R"($0
@@ -40,4 +41,5 @@ Mode ParseModeFromArgcArgv(int argc, const char* const* argv) {
   return Mode::DEFAULT;
 }
 
-}  // namespace feedback
+}  // namespace bugreport
+}  // namespace forensics

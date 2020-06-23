@@ -13,7 +13,8 @@
 #include "src/developer/feedback/utils/inspect_protocol_stats.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Encapsulates the global state exposed through Inspect.
 class InspectManager {
@@ -39,6 +40,7 @@ class InspectManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INSPECT_MANAGER_H_

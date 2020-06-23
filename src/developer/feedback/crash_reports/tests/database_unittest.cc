@@ -28,7 +28,8 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using cobalt_registry::kCrashMetricId;
@@ -726,4 +727,5 @@ TEST_F(DatabaseTest, Check_CobaltLogsSkipReportUploadFailure) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

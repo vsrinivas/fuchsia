@@ -19,7 +19,8 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/uuid/uuid.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 constexpr char kDefaultDeviceId[] = "00000000-0000-4000-a000-000000000001";
@@ -113,4 +114,5 @@ TEST_F(DeviceIdTest, Fail_IfPathIsADirectory) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

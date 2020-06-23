@@ -13,7 +13,7 @@
 
 #include <memory>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 // A stub FidlServer that allows a single connection to bind.
@@ -73,13 +73,13 @@ class MultiBindingFidlServer : public TestBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #define SINGLE_BINDING_STUB_FIDL_SERVER(_1, _2) \
-  feedback::stubs::SingleBindingFidlServer<_1::_2, _1::testing::_2##_TestBase>
+  forensics::stubs::SingleBindingFidlServer<_1::_2, _1::testing::_2##_TestBase>
 
 #define MULTI_BINDING_STUB_FIDL_SERVER(_1, _2) \
-  feedback::stubs::MultiBindingFidlServer<_1::_2, _1::testing::_2##_TestBase>
+  forensics::stubs::MultiBindingFidlServer<_1::_2, _1::testing::_2##_TestBase>
 
 #define STUB_METHOD_DOES_NOT_RETURN(METHOD, PARAM_TYPES...) \
   void METHOD(PARAM_TYPES) override {}

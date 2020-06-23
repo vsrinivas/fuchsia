@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/testing/stubs/cobalt_logger.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 namespace {
 
@@ -89,4 +89,4 @@ void CobaltLoggerIgnoresFirstEvents::LogEvent(uint32_t metric_id, uint32_t event
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

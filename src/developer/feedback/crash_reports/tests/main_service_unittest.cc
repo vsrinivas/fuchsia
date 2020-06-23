@@ -27,7 +27,8 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using inspect::testing::ChildrenMatch;
@@ -262,4 +263,5 @@ TEST_F(MainServiceTest, CrashRegister_CheckInspect) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

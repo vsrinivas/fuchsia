@@ -8,7 +8,8 @@
 #include <third_party/rapidjson/include/rapidjson/document.h>
 #include <third_party/rapidjson/include/rapidjson/error/en.h>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 std::set<std::string> ExtractFilters(const std::string& content) {
   rapidjson::Document document;
@@ -46,4 +47,5 @@ std::set<std::string> ExtractFilters(const std::string& content) {
   return result_filters;
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

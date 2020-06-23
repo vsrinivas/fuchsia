@@ -18,7 +18,8 @@
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Holds data useful to attach in feedback reports (crash, user feedback or bug reports).
 //
@@ -77,6 +78,7 @@ class Datastore {
   Annotations non_platform_annotations_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_DATASTORE_H_

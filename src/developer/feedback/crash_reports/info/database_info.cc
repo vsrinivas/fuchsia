@@ -6,7 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 DatabaseInfo::DatabaseInfo(std::shared_ptr<InfoContext> context) : context_(context) {
   FX_CHECK(context_);
@@ -61,4 +62,5 @@ void DatabaseInfo::MarkReportAsGarbageCollected(const std::string& local_report_
   }
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

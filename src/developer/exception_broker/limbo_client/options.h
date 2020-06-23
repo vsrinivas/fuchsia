@@ -9,7 +9,8 @@
 
 #include <string>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 class LimboClient;
 
@@ -18,6 +19,7 @@ using OptionFunction = zx_status_t (*)(LimboClient*, const std::vector<const cha
                                        std::ostream&);
 OptionFunction ParseArgs(int argc, const char* argv[], std::ostream&);
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_OPTIONS_H_

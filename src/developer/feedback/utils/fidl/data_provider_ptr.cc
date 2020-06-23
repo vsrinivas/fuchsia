@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 namespace {
 
@@ -77,4 +77,4 @@ void DataProviderPtr::Connect() {
 }
 
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics

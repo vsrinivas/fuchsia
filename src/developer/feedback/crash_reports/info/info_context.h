@@ -15,7 +15,8 @@
 #include "src/developer/feedback/crash_reports/info/inspect_manager.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Holds the objects needed to expose information for a component.
 class InfoContext {
@@ -32,6 +33,7 @@ class InfoContext {
   class cobalt::Logger cobalt_;
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_INFO_INFO_CONTEXT_H_

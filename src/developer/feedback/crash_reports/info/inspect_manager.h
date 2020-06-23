@@ -20,7 +20,8 @@
 #include "src/developer/feedback/utils/inspect_protocol_stats.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Encapsulates the global state exposed through Inspect.
 class InspectManager {
@@ -28,10 +29,10 @@ class InspectManager {
   InspectManager(inspect::Node* root_node, const timekeeper::Clock& clock);
 
   // Exposes the static configuration of the crash reporter.
-  void ExposeConfig(const feedback::Config& config);
+  void ExposeConfig(const crash_reports::Config& config);
 
   // Exposes the mutable settings of the crash reporter.
-  void ExposeSettings(feedback::Settings* settings);
+  void ExposeSettings(crash_reports::Settings* settings);
 
   // Exposes the static properties of the crash report database.
   void ExposeDatabase(uint64_t max_crashpad_database_size_in_kb);
@@ -85,7 +86,7 @@ class InspectManager {
   bool Contains(const std::string& local_report_id);
 
   // Callback to update |settings_| on upload policy changes.
-  void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
+  void OnUploadPolicyChange(const crash_reports::Settings::UploadPolicy& upload_policy);
 
   // Inspect node containing the static configuration.
   struct Config {
@@ -163,6 +164,7 @@ class InspectManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_INFO_INSPECT_MANAGER_H_

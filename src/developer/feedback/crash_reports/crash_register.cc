@@ -11,7 +11,8 @@
 #include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 CrashRegister::CrashRegister(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services,
@@ -64,4 +65,5 @@ void CrashRegister::Upsert(std::string component_url,
       });
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

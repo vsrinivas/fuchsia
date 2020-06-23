@@ -6,7 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 CrashReportBuilder& CrashReportBuilder::SetMinidump(zx::vmo minidump) {
   minidump_ = std::move(minidump);
@@ -70,4 +71,5 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   return crash_report;
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

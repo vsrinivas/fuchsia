@@ -7,7 +7,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 // Fake handler for fuchsia.feedback.LastReootInfoProvider. Returns that the last reboot was
@@ -19,6 +19,6 @@ class LastRebootInfoProvider : public fuchsia::feedback::LastRebootInfoProvider 
 };
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_LAST_REBOOT_INFO_PROVIDER_H_

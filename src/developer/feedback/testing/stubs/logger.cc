@@ -12,7 +12,7 @@
 
 #include <cstdint>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 namespace {
 
@@ -142,4 +142,4 @@ zx::duration LoggerDelayedResponses::TotalDelayBetweenMessages() {
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

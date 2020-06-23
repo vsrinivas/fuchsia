@@ -9,7 +9,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls/exception.h>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 class LimboClient {
  public:
@@ -45,6 +46,7 @@ class LimboClient {
   bool active_ = false;
 };
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_LIMBO_CLIENT_H_

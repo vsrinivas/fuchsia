@@ -14,7 +14,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 namespace {
 
@@ -139,4 +139,4 @@ TEST_F(CachingPtrTest, Check_ReturnErrorOnNoServer) {
 
 }  // namespace
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics

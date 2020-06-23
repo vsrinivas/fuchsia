@@ -6,7 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 QueueInfo::QueueInfo(std::shared_ptr<InfoContext> context) : context_(context) {
   FX_CHECK(context_);
@@ -18,4 +19,5 @@ void QueueInfo::LogReport(const std::string& program_name, const std::string& lo
 
 void QueueInfo::SetSize(const uint64_t size) { context_->InspectManager().SetQueueSize(size); }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

@@ -14,7 +14,8 @@
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Get the annotations providers that can  be used safely to collect annotations multiple times,
 // this includes providers that are caching asynchronous static annotations as well as providers
@@ -29,6 +30,7 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetSingleUseProviders(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     cobalt::Logger* cobalt);
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_ANNOTATION_PROVIDER_FACTORY_H_

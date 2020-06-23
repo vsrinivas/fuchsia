@@ -7,7 +7,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 // Fake handler for fuchsia.feedback.DataProvider, returns valid payloads for GetBugreport() and
@@ -23,6 +23,6 @@ class DataProvider : public fuchsia::feedback::DataProvider {
 };
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_DATA_PROVIDER_H_

@@ -11,7 +11,8 @@
 #include "src/developer/feedback/crash_reports/settings.h"
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Information about the crash reporter we want to export.
 struct CrashReporterInfo {
@@ -19,7 +20,7 @@ struct CrashReporterInfo {
   CrashReporterInfo(std::shared_ptr<InfoContext> context);
 
   // Exposes the mutable settings of the crash reporter.
-  void ExposeSettings(feedback::Settings* settings);
+  void ExposeSettings(Settings* settings);
 
   void LogCrashState(cobalt::CrashState state);
 
@@ -27,6 +28,7 @@ struct CrashReporterInfo {
   std::shared_ptr<InfoContext> context_;
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_INFO_CRASH_REPORTER_INFO_H_

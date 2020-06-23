@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using InspectBatchIteratorBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics,
@@ -69,6 +69,6 @@ class InspectBatchIteratorReturnsError : public InspectBatchIteratorBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_

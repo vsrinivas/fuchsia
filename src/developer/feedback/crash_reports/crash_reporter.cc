@@ -26,7 +26,8 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using fuchsia::feedback::Bugreport;
@@ -167,4 +168,5 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   executor_.schedule_task(std::move(promise));
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

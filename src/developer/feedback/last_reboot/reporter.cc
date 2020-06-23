@@ -19,7 +19,8 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
@@ -126,4 +127,5 @@ fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
   });
 }
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

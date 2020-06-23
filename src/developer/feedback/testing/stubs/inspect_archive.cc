@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/testing/stubs/inspect_archive.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 void InspectArchive::StreamDiagnostics(
@@ -21,4 +21,4 @@ void InspectArchiveClosesIteratorConnection::StreamDiagnostics(
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

@@ -15,7 +15,8 @@
 
 #include "src/developer/feedback/crash_reports/settings.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 PrivacySettingsWatcher::PrivacySettingsWatcher(async_dispatcher_t* dispatcher,
                                                std::shared_ptr<sys::ServiceDirectory> services,
@@ -70,4 +71,5 @@ void PrivacySettingsWatcher::Update() {
   }
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

@@ -7,7 +7,8 @@
 
 #include <string>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Encodes data, taking into account what it has already encoded so far until it gets reset.
 class Encoder {
@@ -20,6 +21,7 @@ class Encoder {
   virtual void Reset() = 0;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_ENCODING_ENCODER_H_

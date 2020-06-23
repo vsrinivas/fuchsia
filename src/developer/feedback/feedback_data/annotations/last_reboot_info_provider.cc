@@ -19,7 +19,8 @@
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::LastReboot;
@@ -133,4 +134,5 @@ void LastRebootInfoProvider::GetLastReboot() {
   });
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

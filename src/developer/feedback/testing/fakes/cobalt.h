@@ -14,7 +14,7 @@
 
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 // A wrapper for getting events from a mock_cobalt component in integration tests.
@@ -110,6 +110,6 @@ void Cobalt::GetNewEventsOfType(const fuchsia::cobalt::test::LoggerQuerier_Watch
 }
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_COBALT_H_

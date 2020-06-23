@@ -17,7 +17,8 @@
 
 #include "src/developer/exception_broker/limbo_client/options.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 namespace {
 
 class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
@@ -387,4 +388,5 @@ TEST(LimboClient, ReleaseOption) {
 }
 
 }  // namespace
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

@@ -16,7 +16,8 @@
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/fidl/caching_ptr.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Get the requested parts of fuchsia.feedback.LastReboot as annotations.
 class LastRebootInfoProvider : public AnnotationProvider {
@@ -39,6 +40,7 @@ class LastRebootInfoProvider : public AnnotationProvider {
       last_reboot_info_ptr_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_LAST_REBOOT_INFO_PROVIDER_H_

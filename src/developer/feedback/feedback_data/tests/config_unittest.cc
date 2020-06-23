@@ -9,7 +9,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 void CheckEmptyConfig(const Config& config) {
@@ -66,4 +67,5 @@ TEST(ConfigTest, ParseConfig_BadConfig_MissingRequiredField) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

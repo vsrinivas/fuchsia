@@ -20,7 +20,8 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
  public:
@@ -45,6 +46,7 @@ class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
   std::map<std::string, Product> component_to_products_;
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CRASH_REGISTER_H_

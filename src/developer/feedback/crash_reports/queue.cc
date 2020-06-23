@@ -11,13 +11,14 @@
 #include "src/developer/feedback/crash_reports/info/queue_info.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 using async::PostDelayedTask;
 using async::PostTask;
 using crashpad::FileReader;
 using crashpad::UUID;
-using UploadPolicy = feedback::Settings::UploadPolicy;
+using UploadPolicy = Settings::UploadPolicy;
 
 std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
                                         std::shared_ptr<sys::ServiceDirectory> services,
@@ -32,7 +33,7 @@ std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
       new Queue(dispatcher, services, std::move(info_context), std::move(database), crash_server));
 }
 
-void Queue::WatchSettings(feedback::Settings* settings) {
+void Queue::WatchSettings(Settings* settings) {
   settings->RegisterUploadPolicyWatcher(
       [this](const UploadPolicy& upload_policy) { OnUploadPolicyChange(upload_policy); });
 }
@@ -208,4 +209,5 @@ void Queue::ProcessAllOnNetworkReachable() {
   };
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

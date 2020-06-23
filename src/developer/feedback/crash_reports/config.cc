@@ -14,7 +14,8 @@
 #include "third_party/rapidjson/include/rapidjson/schema.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 const char kSchema[] = R"({
@@ -150,4 +151,5 @@ std::string ToString(const CrashServerConfig::UploadPolicy upload_policy) {
   }
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

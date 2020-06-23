@@ -20,7 +20,7 @@ constexpr zx::duration kWritePeriod = zx::sec(1);
 constexpr size_t kMaxWriteSizeInBytes = 16 * 1024;
 
 int main(int argc, const char** argv) {
-  using namespace feedback;
+  using namespace ::forensics::feedback_data;
 
   syslog::SetTags({"feedback"});
 

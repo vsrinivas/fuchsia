@@ -15,7 +15,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 
-namespace feedback {
+namespace forensics {
 
 class CobaltTestFixture {
  public:
@@ -44,6 +44,6 @@ class CobaltTestFixture {
   UnitTestFixture* unit_test_fixture_;
 };
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_COBALT_TEST_FIXTURE_H_

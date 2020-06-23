@@ -16,7 +16,8 @@
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 namespace {
 
 using fuchsia::exception::ExceptionInfo;
@@ -681,4 +682,5 @@ TEST(ProcessLimboManager, DisablingFrees) {
 }
 
 }  // namespace
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

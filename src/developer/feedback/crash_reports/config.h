@@ -10,7 +10,8 @@
 #include <memory>
 #include <string>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 struct CrashServerConfig {
   // Policy defining whether to upload pending and future crash reports to a remote crash server.
@@ -48,6 +49,7 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config);
 // Returns the string version of the enum.
 std::string ToString(CrashServerConfig::UploadPolicy upload_policy);
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CONFIG_H_

@@ -22,7 +22,8 @@
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 using fuchsia::hardware::power::statecontrol::RebootReason;
@@ -109,4 +110,5 @@ TEST_P(ImminentGracefulRebootWatcherTest, Succeed) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

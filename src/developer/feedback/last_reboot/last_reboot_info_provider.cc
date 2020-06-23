@@ -8,7 +8,8 @@
 
 #include "src/developer/feedback/last_reboot/reboot_reason.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 LastRebootInfoProvider::LastRebootInfoProvider(const RebootLog& reboot_log) {
   if (reboot_log.HasUptime()) {
@@ -35,4 +36,5 @@ void LastRebootInfoProvider::Get(GetCallback callback) {
   callback(std::move(last_reboot));
 }
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

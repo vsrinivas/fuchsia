@@ -11,7 +11,8 @@
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/utils/inspect_protocol_stats.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Information about the agent we want to export.
 struct MainServiceInfo {
@@ -19,7 +20,7 @@ struct MainServiceInfo {
   MainServiceInfo(std::shared_ptr<InfoContext> context);
 
   // Exposes the static configuration of the agent.
-  void ExposeConfig(const feedback::Config& config);
+  void ExposeConfig(const Config& config);
 
   // Updates stats related to fuchsia.feedback.CrashReportingProductRegister.
   void UpdateCrashRegisterProtocolStats(InspectProtocolStatsUpdateFn update);
@@ -31,6 +32,7 @@ struct MainServiceInfo {
   std::shared_ptr<InfoContext> context_;
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_INFO_MAIN_SERVICE_INFO_H_

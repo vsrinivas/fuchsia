@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 constexpr zx::duration kLogMessageBaseTimestamp = zx::sec(15604);
@@ -74,4 +74,4 @@ TEST(LogFormatTest, Check_CorrectTags) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace forensics

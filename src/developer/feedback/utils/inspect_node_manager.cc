@@ -10,7 +10,7 @@
 
 #include "src/lib/fxl/strings/split_string.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 // The ASCII bell character (0x07) will be used to replace all backslashes.
@@ -93,4 +93,4 @@ std::vector<std::string> InspectNodeManager::SplitAndDesanitize(const std::strin
   return split_path;
 }
 
-}  // namespace feedback
+}  // namespace forensics

@@ -20,7 +20,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  feedback::fakes::DeviceIdProvider device_id_provider;
+  ::forensics::fakes::DeviceIdProvider device_id_provider;
 
   ::fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_bindings;
   context->outgoing()->AddPublicService(

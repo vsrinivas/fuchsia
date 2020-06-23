@@ -28,7 +28,8 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 class CrashReporter : public fuchsia::feedback::CrashReporter {
  public:
@@ -79,6 +80,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CRASH_REPORTER_H_

@@ -6,7 +6,7 @@
 
 #include <zircon/errors.h>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 void ChannelProvider::GetCurrent(GetCurrentCallback callback) { callback(channel_); }
@@ -35,4 +35,4 @@ void ChannelProviderExpectsOneCall::GetCurrent(GetCurrentCallback callback) {
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

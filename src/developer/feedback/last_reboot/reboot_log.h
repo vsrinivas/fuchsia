@@ -12,7 +12,8 @@
 
 #include "src/developer/feedback/last_reboot/reboot_reason.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 // Wrapper around a device's reboot log.
 class RebootLog {
@@ -37,6 +38,7 @@ class RebootLog {
   std::optional<zx::duration> last_boot_uptime_;
 };
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_LOG_H_

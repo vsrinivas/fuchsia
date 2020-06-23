@@ -29,7 +29,8 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 using testing::IsEmpty;
@@ -372,4 +373,5 @@ TEST_P(GracefulReporterTest, Succeed) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

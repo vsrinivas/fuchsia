@@ -10,7 +10,8 @@
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/log_message_store.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Consumes the full content of a store on request, writing it to a rotating set of files.
 class SystemLogWriter {
@@ -33,6 +34,7 @@ class SystemLogWriter {
   LogMessageStore* store_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_WRITER_H_

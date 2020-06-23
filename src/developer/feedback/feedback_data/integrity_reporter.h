@@ -13,7 +13,8 @@
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Reports on the integrity of the provided Annotations and Attachments.
 class IntegrityReporter {
@@ -36,6 +37,7 @@ class IntegrityReporter {
   AttachmentKeys attachment_allowlist_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_INTEGRITY_REPORTER_H_

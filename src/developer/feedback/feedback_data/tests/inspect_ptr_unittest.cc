@@ -24,7 +24,8 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using testing::IsEmpty;
@@ -45,8 +46,8 @@ class CollectInspectDataTest : public UnitTestFixture {
   ::fit::result<AttachmentValue> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
     ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
-        feedback::CollectInspectData(dispatcher(), services(),
-                                     fit::Timeout(timeout, /*action=*/[] {}))
+        feedback_data::CollectInspectData(dispatcher(), services(),
+                                          fit::Timeout(timeout, /*action=*/[] {}))
             .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -132,4 +133,5 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

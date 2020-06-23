@@ -8,7 +8,8 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 const char kStubCrashServerUrl[] = "localhost:1234";
 
@@ -40,4 +41,5 @@ bool StubCrashServer::MakeRequest(const std::map<std::string, std::string>& anno
   }
   return *next_return_value_++;
 }
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

@@ -25,7 +25,8 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 using fuchsia::feedback::LastRebootInfoProviderSyncPtr;
@@ -189,4 +190,5 @@ TEST_F(MainServiceTest, LastRebootInfoProvider_CheckInspect) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

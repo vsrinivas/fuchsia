@@ -12,7 +12,8 @@
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/encoding/encoder.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Thread-safe store of log messages.
 //
@@ -80,6 +81,7 @@ class LogMessageStore {
   std::unique_ptr<Encoder> encoder_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_LOG_MESSAGE_STORE_H_

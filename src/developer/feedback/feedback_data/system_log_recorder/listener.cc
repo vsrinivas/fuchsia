@@ -7,7 +7,8 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 SystemLogListener::SystemLogListener(std::shared_ptr<sys::ServiceDirectory> services,
                                      LogMessageStore* store)
@@ -53,4 +54,5 @@ void SystemLogListener::Done() {
   logger_->ListenSafe(std::move(log_listener), /*options=*/nullptr);
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

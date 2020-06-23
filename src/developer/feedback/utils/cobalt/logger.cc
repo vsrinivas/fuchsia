@@ -13,7 +13,7 @@
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace cobalt {
 namespace {
 
@@ -196,4 +196,4 @@ uint64_t Logger::GetTimerDurationUSecs(uint64_t timer_id) const {
 }
 
 }  // namespace cobalt
-}  // namespace feedback
+}  // namespace forensics

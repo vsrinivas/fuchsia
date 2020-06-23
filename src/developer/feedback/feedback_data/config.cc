@@ -13,7 +13,8 @@
 #include "third_party/rapidjson/include/rapidjson/schema.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 const char kSchema[] = R"({
@@ -105,4 +106,5 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   return ZX_OK;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

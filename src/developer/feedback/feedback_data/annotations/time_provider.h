@@ -13,7 +13,8 @@
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/lib/timekeeper/clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Get the uptime of the device and the current UTC time.
 class TimeProvider : public AnnotationProvider {
@@ -27,6 +28,7 @@ class TimeProvider : public AnnotationProvider {
   std::unique_ptr<timekeeper::Clock> clock_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_TIME_PROVIDER_H_

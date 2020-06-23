@@ -4,10 +4,12 @@
 
 #include "src/developer/feedback/crash_reports/product.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 bool operator==(const Product& a, const Product& b) {
   return a.name == b.name && a.version == b.version && a.channel == b.channel;
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

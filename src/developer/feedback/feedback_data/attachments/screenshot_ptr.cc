@@ -10,7 +10,8 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::ui::scenic::ScreenshotData;
@@ -51,4 +52,5 @@ Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
   });
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

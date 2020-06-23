@@ -11,7 +11,8 @@
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Manages and provides the device id at the provided path.
 class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
@@ -27,6 +28,7 @@ class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
   AnnotationOr device_id_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_DEVICE_ID_PROVIDER_H_

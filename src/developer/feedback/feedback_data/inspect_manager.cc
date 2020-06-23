@@ -4,7 +4,8 @@
 
 #include "src/developer/feedback/feedback_data/inspect_manager.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 InspectManager::InspectManager(inspect::Node* root_node)
     : node_manager_(root_node),
@@ -25,4 +26,5 @@ void InspectManager::UpdateDeviceIdProviderProtocolStats(InspectProtocolStatsUpd
   std::invoke(update, device_id_provider_stats_);
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

@@ -17,7 +17,7 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 namespace {
 
@@ -101,4 +101,4 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
 }
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics

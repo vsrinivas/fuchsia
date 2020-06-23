@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using CrashReporterBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, CrashReporter);
@@ -60,6 +60,6 @@ class CrashReporterNoFileExpected : public CrashReporterBase {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CRASH_REPORTER_H_

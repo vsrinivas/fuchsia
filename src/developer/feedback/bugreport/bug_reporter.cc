@@ -11,7 +11,8 @@
 
 #include <cstdio>
 
-namespace feedback {
+namespace forensics {
+namespace bugreport {
 
 bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* out_filename) {
   fuchsia::feedback::DataProviderSyncPtr feedback_data_provider;
@@ -56,4 +57,5 @@ bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* 
   }
 }
 
-}  // namespace feedback
+}  // namespace bugreport
+}  // namespace forensics

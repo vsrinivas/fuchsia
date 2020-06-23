@@ -9,7 +9,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 LimboClient::LimboClient(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(std::move(services)) {}
@@ -96,4 +97,5 @@ zx_status_t LimboClient::AppendFilters(const std::vector<std::string>& filters) 
   return ZX_OK;
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

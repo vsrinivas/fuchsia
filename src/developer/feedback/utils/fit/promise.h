@@ -7,7 +7,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace feedback {
+namespace forensics {
 namespace fit {
 namespace internal {
 
@@ -62,6 +62,6 @@ Promise ExtendArgsLifetimeBeyondPromise(Promise promise, Arg&& head, Args&&... t
 }
 
 }  // namespace fit
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIT_PROMISE_H_

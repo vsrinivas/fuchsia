@@ -15,7 +15,7 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace fidl {
 namespace {
 
@@ -121,4 +121,4 @@ TEST_F(OneShotPtrTest, Crash_MultipleUses) {
 
 }  // namespace
 }  // namespace fidl
-}  // namespace feedback
+}  // namespace forensics

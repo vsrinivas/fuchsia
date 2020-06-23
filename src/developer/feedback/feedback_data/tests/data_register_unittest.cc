@@ -14,7 +14,8 @@
 #include "src/developer/feedback/feedback_data/datastore.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::ComponentData;
@@ -259,4 +260,5 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

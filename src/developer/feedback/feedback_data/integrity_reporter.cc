@@ -10,7 +10,8 @@
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 std::string ToString(const enum AttachmentValue::State state) {
@@ -187,4 +188,5 @@ std::optional<std::string> IntegrityReporter::MakeIntegrityReport(
   return buffer.GetString();
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

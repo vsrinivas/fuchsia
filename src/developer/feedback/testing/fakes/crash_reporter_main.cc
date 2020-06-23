@@ -20,7 +20,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  feedback::fakes::CrashReporter crash_reporter;
+  ::forensics::fakes::CrashReporter crash_reporter;
 
   ::fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_bindings;
   context->outgoing()->AddPublicService(crash_reporter_bindings.GetHandler(&crash_reporter));

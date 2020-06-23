@@ -7,7 +7,7 @@
 
 #include "src/developer/feedback/utils/cobalt/metrics_registry.cb.h"
 
-namespace feedback {
+namespace forensics {
 namespace cobalt {
 
 constexpr auto kProjectId = cobalt_registry::kProjectId;
@@ -200,6 +200,6 @@ inline constexpr EventType EventTypeForEventCode(const CrashpadFunctionError fun
 }
 
 }  // namespace cobalt
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_METRICS_H_

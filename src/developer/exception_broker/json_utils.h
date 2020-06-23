@@ -7,13 +7,15 @@
 #include <set>
 #include <string>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 // |content| is the string contents of the config file loaded for ExceptionBroker.
 // It is expected to be an object and this function will attempt to load the "filters" array
 // within it.
 std::set<std::string> ExtractFilters(const std::string& content);
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_JSON_UTILS_H_

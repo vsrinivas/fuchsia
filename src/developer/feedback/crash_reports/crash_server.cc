@@ -10,7 +10,8 @@
 #include "third_party/crashpad/util/net/http_transport.h"
 #include "third_party/crashpad/util/net/url.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 CrashServer::CrashServer(const std::string& url) : url_(url) {}
 
@@ -41,4 +42,5 @@ bool CrashServer::MakeRequest(const std::map<std::string, std::string>& annotati
   return http_transport->ExecuteSynchronously(server_report_id);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

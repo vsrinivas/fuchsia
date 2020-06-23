@@ -21,7 +21,7 @@
 #include "src/lib/timekeeper/clock.h"
 #include "src/lib/timekeeper/system_clock.h"
 
-namespace feedback {
+namespace forensics {
 namespace cobalt {
 
 // Log events to cobalt.
@@ -98,6 +98,6 @@ class Logger {
 };
 
 }  // namespace cobalt
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_LOGGER_H_

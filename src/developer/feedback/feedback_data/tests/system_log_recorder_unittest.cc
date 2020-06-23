@@ -28,7 +28,8 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using stubs::BuildLogMessage;
@@ -601,4 +602,5 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

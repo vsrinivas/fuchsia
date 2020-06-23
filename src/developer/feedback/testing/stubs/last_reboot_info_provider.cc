@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 void LastRebootInfoProvider::Get(GetCallback callback) {
@@ -16,4 +16,4 @@ void LastRebootInfoProvider::Get(GetCallback callback) {
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

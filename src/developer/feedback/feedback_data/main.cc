@@ -16,6 +16,8 @@
 #include "src/developer/feedback/feedback_data/main_service.h"
 
 int main(int argc, const char** argv) {
+  using namespace ::forensics::feedback_data;
+
   syslog::SetTags({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -24,8 +26,8 @@ int main(int argc, const char** argv) {
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
 
-  std::unique_ptr<feedback::MainService> main_service =
-      feedback::MainService::TryCreate(loop.dispatcher(), context->svc(), &root_node);
+  std::unique_ptr<MainService> main_service =
+      MainService::TryCreate(loop.dispatcher(), context->svc(), &root_node);
   if (!main_service) {
     return EXIT_FAILURE;
   }

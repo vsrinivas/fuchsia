@@ -12,7 +12,8 @@
 #include <string>
 #include <vector>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // TODO(frousseau): these should move to //src/lib/fsl with unit tests.
 
@@ -20,6 +21,7 @@ std::vector<zx::job> GetChildJobs(zx_handle_t job);
 
 std::vector<zx::process> GetChildProcesses(zx_handle_t job);
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_TESTS_ZX_OBJECT_UTIL_H_

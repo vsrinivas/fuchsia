@@ -6,7 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 CrashRegisterInfo::CrashRegisterInfo(std::shared_ptr<InfoContext> context)
     : context_(std::move(context)) {
@@ -18,4 +19,5 @@ void CrashRegisterInfo::UpsertComponentToProductMapping(const std::string& compo
   context_->InspectManager().UpsertComponentToProductMapping(component_url, product);
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

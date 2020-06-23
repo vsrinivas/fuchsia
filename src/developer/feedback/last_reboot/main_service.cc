@@ -4,7 +4,8 @@
 
 #include "src/developer/feedback/last_reboot/main_service.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 
 MainService::MainService(Config config)
     : config_(std::move(config)),
@@ -32,4 +33,5 @@ void MainService::HandleLastRebootInfoProviderRequest(
       [this](zx_status_t) { last_reboot_info_provider_stats_.CloseConnection(); });
 }
 
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

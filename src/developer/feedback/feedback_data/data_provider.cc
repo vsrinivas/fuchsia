@@ -25,7 +25,8 @@
 #include "src/developer/feedback/feedback_data/image_conversion.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::Bugreport;
@@ -171,4 +172,5 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
   executor_.schedule_task(std::move(promise));
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

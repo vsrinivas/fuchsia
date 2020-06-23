@@ -19,7 +19,8 @@
 #include "src/developer/feedback/testing/stubs/scenic.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::ui::scenic::ScreenshotData;
@@ -42,8 +43,9 @@ class TakeScreenshotTest : public UnitTestFixture {
   ::fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
     ::fit::result<ScreenshotData> result;
     executor_.schedule_task(
-        feedback::TakeScreenshot(dispatcher(), services(),
-                                 fit::Timeout(timeout, /*actions=*/[this] { did_timeout_ = true; }))
+        feedback_data::TakeScreenshot(
+            dispatcher(), services(),
+            fit::Timeout(timeout, /*actions=*/[this] { did_timeout_ = true; }))
             .then([&result](::fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -91,4 +93,5 @@ TEST_F(TakeScreenshotTest, Check_Timeout) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

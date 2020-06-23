@@ -16,7 +16,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 const std::set<AttachmentKey> kStaticAttachmentKeys = {
@@ -96,4 +97,5 @@ Attachments GetStaticAttachments(const AttachmentKeys& allowlist) {
   return attachments;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

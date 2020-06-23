@@ -12,7 +12,7 @@
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using DeviceIdProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DeviceIdProvider);
@@ -69,6 +69,6 @@ class DeviceIdProviderClosesFirstConnection : public DeviceIdProvider {
 };
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_DEVICE_ID_PROVIDER_H_

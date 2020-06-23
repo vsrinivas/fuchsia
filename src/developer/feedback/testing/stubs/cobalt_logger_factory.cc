@@ -13,7 +13,7 @@
 
 #include "src/lib/fsl/vmo/strings.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 using fuchsia::cobalt::Status;
@@ -65,4 +65,4 @@ void CobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectId(
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

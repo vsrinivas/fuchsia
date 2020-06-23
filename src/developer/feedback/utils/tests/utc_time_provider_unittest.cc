@@ -16,7 +16,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 using stubs::UtcProvider;
@@ -96,4 +96,4 @@ TEST_F(UTCTimeProviderTest, Check_MultipleCalls) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace forensics

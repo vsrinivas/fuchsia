@@ -13,7 +13,8 @@
 
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 using AttachmentKey = std::string;
 using AttachmentKeys = std::set<AttachmentKey>;
@@ -62,6 +63,7 @@ class AttachmentValue {
 using Attachment = std::pair<AttachmentKey, AttachmentValue>;
 using Attachments = std::map<AttachmentKey, AttachmentValue>;
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ATTACHMENTS_TYPES_H_

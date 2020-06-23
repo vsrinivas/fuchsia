@@ -8,7 +8,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 bool ReplaceDirectoryWithFile(const std::string& path) {
@@ -73,4 +74,5 @@ std::string CrashpadDatabaseGremlin::AttachmentsPath() const {
   return files::JoinPath(path_, "attachments");
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

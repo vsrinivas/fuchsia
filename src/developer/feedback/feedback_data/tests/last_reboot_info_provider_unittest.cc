@@ -24,7 +24,8 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/time.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::LastReboot;
@@ -203,4 +204,5 @@ TEST_F(LastRebootInfoProviderTest, Check_CobaltLogsTimeout) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

@@ -10,7 +10,8 @@
 
 #include "third_party/libpng/png.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Encodes |raw_image| in PNG.
 //
@@ -18,6 +19,7 @@ namespace feedback {
 bool RawToPng(const fuchsia::mem::Buffer& raw_image, size_t height, size_t width, size_t stride,
               fuchsia::images::PixelFormat pixel_format, fuchsia::mem::Buffer* png_image);
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_IMAGE_CONVERSION_H_

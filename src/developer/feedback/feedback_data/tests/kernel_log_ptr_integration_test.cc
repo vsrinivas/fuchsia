@@ -23,7 +23,8 @@
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using testing::UnorderedElementsAreArray;
@@ -100,4 +101,5 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

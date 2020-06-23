@@ -16,7 +16,8 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 using GracefulRebootReason = fuchsia::hardware::power::statecontrol::RebootReason;
@@ -304,4 +305,5 @@ TEST_P(RebootLogStrTest, Succeed) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

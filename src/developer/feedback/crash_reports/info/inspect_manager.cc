@@ -18,7 +18,8 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using files::JoinPath;
@@ -133,7 +134,7 @@ bool InspectManager::MarkReportAsGarbageCollected(const std::string& local_repor
   return true;
 }
 
-void InspectManager::ExposeConfig(const feedback::Config& config) {
+void InspectManager::ExposeConfig(const crash_reports::Config& config) {
   auto* crash_server = &config_.crash_server;
   inspect::Node& server = node_manager_.Get("/config/crash_server");
 
@@ -144,9 +145,9 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
   }
 }
 
-void InspectManager::ExposeSettings(feedback::Settings* settings) {
+void InspectManager::ExposeSettings(crash_reports::Settings* settings) {
   settings->RegisterUploadPolicyWatcher(
-      [this](const feedback::Settings::UploadPolicy& upload_policy) {
+      [this](const crash_reports::Settings::UploadPolicy& upload_policy) {
         OnUploadPolicyChange(upload_policy);
       });
 }
@@ -172,7 +173,8 @@ bool InspectManager::Contains(const std::string& local_report_id) {
   return reports_.find(local_report_id) != reports_.end();
 }
 
-void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy) {
+void InspectManager::OnUploadPolicyChange(
+    const crash_reports::Settings::UploadPolicy& upload_policy) {
   // |settings_.upload_policy| will change so we only create a StringProperty the first time it is
   // needed.
   if (!settings_.upload_policy) {
@@ -208,7 +210,7 @@ void InspectManager::ExposeDatabase(uint64_t max_crashpad_database_size_in_kb) {
 }
 
 void InspectManager::UpsertComponentToProductMapping(const std::string& component_url,
-                                                     const feedback::Product& product) {
+                                                     const crash_reports::Product& product) {
   const std::string path =
       JoinPath("/crash_register/mappings", InspectNodeManager::SanitizeString(component_url));
   inspect::Node& node = node_manager_.Get(path);
@@ -224,4 +226,5 @@ void InspectManager::UpsertComponentToProductMapping(const std::string& componen
   };
 }
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

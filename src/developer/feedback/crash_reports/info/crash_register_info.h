@@ -11,7 +11,8 @@
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/product.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Information about the crash register we want to export.
 struct CrashRegisterInfo {
@@ -24,6 +25,7 @@ struct CrashRegisterInfo {
   std::shared_ptr<InfoContext> context_;
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_INFO_CRASH_REGISTER_INFO_H_

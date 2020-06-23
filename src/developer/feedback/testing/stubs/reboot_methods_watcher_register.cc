@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/testing/stubs/reboot_methods_watcher_register.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 void RebootMethodsWatcherRegister::Register(
@@ -14,4 +14,4 @@ void RebootMethodsWatcherRegister::Register(
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

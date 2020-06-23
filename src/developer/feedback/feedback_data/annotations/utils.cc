@@ -9,7 +9,8 @@
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
                                  const AnnotationKeys& restrict_to) {
@@ -50,4 +51,5 @@ std::optional<std::string> ToJsonString(
   return std::string(buffer.GetString(), buffer.GetSize());
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

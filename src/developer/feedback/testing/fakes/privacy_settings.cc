@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 void PrivacySettings::CloseConnection() {
@@ -59,4 +59,4 @@ void PrivacySettingsClosesConnectionOnFirstWatch::Watch2(Watch2Callback callback
 }
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics

@@ -10,7 +10,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 bool SpawnCrasher(ExceptionContext* pe) {
   zx::unowned_job current_job(zx_job_default());
@@ -98,4 +99,5 @@ bool MarkExceptionAsHandled(ExceptionContext* pe) {
   return true;
 }
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics

@@ -11,7 +11,8 @@
 
 #include "src/developer/feedback/crash_reports/crash_server.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 extern const char kStubCrashServerUrl[];
 extern const char kStubServerReportId[];
@@ -46,6 +47,7 @@ class StubCrashServer : public CrashServer {
   std::vector<std::string> latest_attachment_keys_;
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_TESTS_STUB_CRASH_SERVER_H_

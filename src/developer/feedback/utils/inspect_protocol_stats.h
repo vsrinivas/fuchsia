@@ -10,7 +10,7 @@
 #include "src/developer/feedback/utils/inspect_node_manager.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
 
 // Inspect node containing stats for a given protocol.
 class InspectProtocolStats {
@@ -33,6 +33,6 @@ class InspectProtocolStats {
 // &InspectProtocolStats::CloseConnection.
 using InspectProtocolStatsUpdateFn = void (InspectProtocolStats::*)();
 
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_INSPECT_PROTOCOL_STATS_H_

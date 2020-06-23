@@ -8,7 +8,8 @@
 
 #include <functional>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 SystemLogRecorder::SystemLogRecorder(async_dispatcher_t* write_dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
@@ -32,4 +33,5 @@ void SystemLogRecorder::PeriodicWriteTask() {
       write_dispatcher_, [this] { PeriodicWriteTask(); }, write_period_);
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

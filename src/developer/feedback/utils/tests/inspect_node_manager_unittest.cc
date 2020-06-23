@@ -17,7 +17,7 @@
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 using inspect::testing::ChildrenMatch;
@@ -207,4 +207,4 @@ TEST_F(InspectNodeManagerTest, Check_SanitizedPath) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace forensics

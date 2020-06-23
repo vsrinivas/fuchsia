@@ -18,7 +18,8 @@
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Collects system log.
 //
@@ -56,6 +57,7 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
   std::string logs_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ATTACHMENTS_SYSTEM_LOG_PTR_H_

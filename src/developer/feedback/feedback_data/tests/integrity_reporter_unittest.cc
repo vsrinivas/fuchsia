@@ -64,7 +64,8 @@
   ASSERT_TRUE(json[name].HasMember("reason"));              \
   EXPECT_STREQ(json[name]["reason"].GetString(), reason);
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 constexpr char kIntegrityReportSchema[] = R"({
@@ -479,4 +480,5 @@ TEST_P(AnnotationsJsonStateTest, Succeed) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

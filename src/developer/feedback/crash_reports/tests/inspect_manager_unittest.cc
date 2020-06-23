@@ -26,7 +26,8 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 namespace {
 
 using inspect::testing::ChildrenMatch;
@@ -531,4 +532,5 @@ TEST_F(InspectManagerTest, UpsertComponentToProductMapping) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics

@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 
 void ProductInfoProvider::GetInfo(GetInfoCallback callback) {
@@ -16,4 +16,4 @@ void ProductInfoProvider::GetInfo(GetInfoCallback callback) {
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

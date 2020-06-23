@@ -6,7 +6,8 @@
 
 #include "src/lib/fsl/vmo/strings.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 std::string IdentityDecoder::Decode(const fsl::SizedVmo& vmo) {
   std::string output;
@@ -14,4 +15,5 @@ std::string IdentityDecoder::Decode(const fsl::SizedVmo& vmo) {
   return output;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

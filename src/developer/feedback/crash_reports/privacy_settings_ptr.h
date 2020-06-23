@@ -16,7 +16,8 @@
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
-namespace feedback {
+namespace forensics {
+namespace crash_reports {
 
 // Updates the upload policy in the crash reporter's settings on "user data sharing consent"
 // changes.
@@ -64,6 +65,7 @@ class PrivacySettingsWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(PrivacySettingsWatcher);
 };
 
-}  // namespace feedback
+}  // namespace crash_reports
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_PRIVACY_SETTINGS_PTR_H_

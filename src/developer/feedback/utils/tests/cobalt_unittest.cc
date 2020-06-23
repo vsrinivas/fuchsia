@@ -23,7 +23,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace feedback {
+namespace forensics {
 namespace cobalt {
 namespace {
 
@@ -237,4 +237,4 @@ TEST_F(CobaltTest, SmokeTest_NoLoggerFactoryServer) {
 
 }  // namespace
 }  // namespace cobalt
-}  // namespace feedback
+}  // namespace forensics

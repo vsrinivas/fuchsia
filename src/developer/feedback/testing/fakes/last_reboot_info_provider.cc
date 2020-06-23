@@ -6,7 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-namespace feedback {
+namespace forensics {
 namespace fakes {
 
 using namespace fuchsia::feedback;
@@ -20,4 +20,4 @@ void LastRebootInfoProvider::Get(GetCallback callback) {
 }
 
 }  // namespace fakes
-}  // namespace feedback
+}  // namespace forensics

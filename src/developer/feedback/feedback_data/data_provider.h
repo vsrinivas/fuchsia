@@ -16,7 +16,8 @@
 #include "src/developer/feedback/feedback_data/integrity_reporter.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Provides data useful to attach in feedback reports (crash, user feedback or bug reports).
 class DataProvider : public fuchsia::feedback::DataProvider {
@@ -41,6 +42,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   async::Executor executor_;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_DATA_PROVIDER_H_

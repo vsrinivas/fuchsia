@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/utils/inspect_protocol_stats.h"
 
-namespace feedback {
+namespace forensics {
 
 InspectProtocolStats::InspectProtocolStats(InspectNodeManager* node, const std::string& path) {
   current_num_connections_ = node->Get(path).CreateUint("current_num_connections", 0);
@@ -18,4 +18,4 @@ void InspectProtocolStats::NewConnection() {
 
 void InspectProtocolStats::CloseConnection() { current_num_connections_.Subtract(1); }
 
-}  // namespace feedback
+}  // namespace forensics

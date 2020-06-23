@@ -12,7 +12,8 @@
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 ::fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
@@ -69,4 +70,5 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
       });
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

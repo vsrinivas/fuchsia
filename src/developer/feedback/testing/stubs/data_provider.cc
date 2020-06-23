@@ -13,7 +13,7 @@
 
 #include "src/lib/fsl/vmo/strings.h"
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 namespace {
 
@@ -78,4 +78,4 @@ void DataProviderBugreportOnly::GetBugreport(fuchsia::feedback::GetBugreportPara
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

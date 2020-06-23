@@ -18,7 +18,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
 namespace {
 
 using fuchsia::feedback::Bugreport;
@@ -126,4 +126,4 @@ TEST_F(DataProviderPtrTest, Fail_OnServerTakingTooLong) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace forensics

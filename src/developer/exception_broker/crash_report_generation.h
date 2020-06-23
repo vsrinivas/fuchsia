@@ -9,7 +9,8 @@
 
 #include <third_party/crashpad/util/file/string_file.h>
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 // If |string_file| is empty, this function will error out.
 // The resulting vmo will not be valid on error.
@@ -18,6 +19,7 @@ zx::vmo GenerateVMOFromStringFile(const crashpad::StringFile& string_file);
 
 zx::vmo GenerateMinidumpVMO(const zx::exception& exception, std::string* process_name);
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_GENERATION_H_

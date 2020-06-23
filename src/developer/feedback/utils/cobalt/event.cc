@@ -6,7 +6,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 namespace cobalt {
 
 using fxl::StringPrintf;
@@ -72,4 +72,4 @@ std::string Event::ToString() const {
 }
 
 }  // namespace cobalt
-}  // namespace feedback
+}  // namespace forensics

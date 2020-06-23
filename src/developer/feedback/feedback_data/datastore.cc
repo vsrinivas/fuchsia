@@ -21,7 +21,8 @@
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
@@ -34,8 +35,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
       static_annotations_(
-          feedback::GetStaticAnnotations(annotation_allowlist_, device_id_provider)),
-      static_attachments_(feedback::GetStaticAttachments(attachment_allowlist_)),
+          feedback_data::GetStaticAnnotations(annotation_allowlist_, device_id_provider)),
+      static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "
@@ -188,4 +189,5 @@ fit::Timeout Datastore::MakeCobaltTimeout(cobalt::TimedOutData data, const zx::d
                       /*action=*/[cobalt = cobalt_, data] { cobalt->LogOccurrence(data); });
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

@@ -12,7 +12,8 @@
 #include <string>
 #include <vector>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Annotations
@@ -103,6 +104,7 @@ const std::vector<const std::string> kCurrentLogsFilePaths({
     "/cache/current_system_log_7.txt",
 });
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_CONSTANTS_H_

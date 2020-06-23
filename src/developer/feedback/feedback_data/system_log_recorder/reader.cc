@@ -13,7 +13,8 @@
 
 #include "src/lib/fsl/vmo/file.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 namespace {
 
@@ -55,4 +56,5 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
   return true;
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

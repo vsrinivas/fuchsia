@@ -11,7 +11,8 @@
 
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 
-namespace feedback {
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 TEST(RebootReasonTest, NotParseable) {
@@ -140,4 +141,5 @@ TEST(RebootReasonTest, SessionFailure) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace last_reboot
+}  // namespace forensics

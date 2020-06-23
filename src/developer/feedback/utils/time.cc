@@ -10,7 +10,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace feedback {
+namespace forensics {
 
 std::optional<std::string> FormatDuration(zx::duration duration) {
   if (duration == zx::duration::infinite()) {
@@ -56,4 +56,4 @@ std::optional<std::string> CurrentUTCTime(const timekeeper::Clock& clock) {
   return std::string(buffer);
 }
 
-}  // namespace feedback
+}  // namespace forensics

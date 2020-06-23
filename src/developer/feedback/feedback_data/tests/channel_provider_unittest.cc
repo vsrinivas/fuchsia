@@ -25,7 +25,8 @@
 #include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/developer/feedback/utils/errors.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 using testing::UnorderedElementsAreArray;
@@ -136,4 +137,5 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
 }
 
 }  // namespace
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

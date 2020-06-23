@@ -16,7 +16,8 @@
 #include "src/developer/exception_broker/process_limbo_manager.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace exception {
+namespace forensics {
+namespace exceptions {
 
 // ExceptionBroker is meant to distribute exceptions according to some configuration.
 // This enables the system to decides upon different exception handlers. In normal cases, standard
@@ -71,6 +72,7 @@ class ExceptionBroker : public fuchsia::exception::Handler {
   fxl::WeakPtrFactory<ExceptionBroker> weak_factory_;
 };
 
-}  // namespace exception
+}  // namespace exceptions
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_

@@ -6,7 +6,8 @@
 
 #include <gtest/gtest.h>
 
-namespace feedback {
+namespace forensics {
+namespace bugreport {
 namespace {
 
 TEST(CommandLineOptionsTest, Default) {
@@ -62,4 +63,5 @@ void PrintTo(const Mode& mode, std::ostream* os) {
   }
 }
 
-}  // namespace feedback
+}  // namespace bugreport
+}  // namespace forensics

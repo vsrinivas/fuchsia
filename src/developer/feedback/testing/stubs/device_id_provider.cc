@@ -7,7 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
-namespace feedback {
+namespace forensics {
 namespace stubs {
 namespace {
 
@@ -46,4 +46,4 @@ void DeviceIdProviderClosesFirstConnection::GetId(GetIdCallback callback) {
 }
 
 }  // namespace stubs
-}  // namespace feedback
+}  // namespace forensics

@@ -12,7 +12,8 @@
 #include <cstdint>
 #include <vector>
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 namespace {
 
 std::vector<zx_koid_t> GetChildKoids(const zx_handle_t parent, zx_object_info_topic_t child_kind) {
@@ -55,4 +56,5 @@ std::vector<zx::process> GetChildProcesses(const zx_handle_t job) {
   return GetChildObjects<zx::process>(job, ZX_INFO_JOB_PROCESSES);
 }
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics

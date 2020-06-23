@@ -18,7 +18,7 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
-namespace feedback {
+namespace forensics {
 namespace fit {
 
 // Wrapper around ::fit::bridge with the ability to post a task that that will complete the bridge
@@ -90,6 +90,6 @@ class Bridge {
 };
 
 }  // namespace fit
-}  // namespace feedback
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIT_BRIDGE_H_

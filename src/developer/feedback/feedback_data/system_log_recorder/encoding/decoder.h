@@ -9,7 +9,8 @@
 
 #include "src/lib/fsl/vmo/sized_vmo.h"
 
-namespace feedback {
+namespace forensics {
+namespace feedback_data {
 
 // Decodes data previously encoded via an Encoder.
 //
@@ -25,6 +26,7 @@ class Decoder {
   virtual void Reset() = 0;
 };
 
-}  // namespace feedback
+}  // namespace feedback_data
+}  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_ENCODING_DECODER_H_
