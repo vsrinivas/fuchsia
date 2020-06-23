@@ -58,7 +58,7 @@ def main(args):
     pkg_def = {
         'package': args.pkg_name,
         'description': args.description,
-        'root': '${outdir}/%s' % os.path.join(args.pkg_root),
+        'root': args.pkg_root,
         'install_mode': args.install_mode,
         'data': [],
     }

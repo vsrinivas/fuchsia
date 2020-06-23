@@ -25,7 +25,8 @@ import("config/config.gni")
 #     Type: string
 #
 #   package_root: [Optional]
-#     CIPD package root directory. Defaults to $target_gen_dir/$target_name
+#     CIPD package root directory. All file and directory paths specifed are
+#     relative to this path. Defaults to $target_gen_dir/$target_name
 #         if unspecified.
 #
 #     Type: file path

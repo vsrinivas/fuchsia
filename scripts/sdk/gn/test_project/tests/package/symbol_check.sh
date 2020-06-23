@@ -5,38 +5,45 @@
 
 set -eu -o pipefail # Error checking
 
-# Used to evaluate the cipd string
-# shellcheck disable=SC2034
 outdir="$1"
 yaml="$2"
 
 data_dir="$(grep root "${yaml}" |  cut -d\  -f2)"
 
-symbol_dir=""
-eval symbol_dir="${data_dir}"
+dirs=()
+while IFS='' read -r line; do dirs+=("$line"); done < <(grep dir: "${yaml}" |  cut -d\  -f3)
 
-if [[ ! -e "${symbol_dir}" ]]; then
-  echo "Cannot read $yaml to find far file: $symbol_dir"
-  exit 1
-fi
-
-debug_files=()
-while IFS='' read -r line; do debug_files+=("$line"); done < <(find $symbol_dir -type f)
-
-
-if (( ${#debug_files[@]} != 6 )); then
-  echo "Expected 6 files, but got ${#debug_files[@]}"
-  exit 2
-fi
-
-
-for f in "${debug_files[@]}"
+for d in "${dirs[@]}"
 do
-  description="$(file "$f")"
-  if [[ ! "$description" == *"not stripped"* ]]; then
-    echo "Expected not stripped binary for $f, got $description"
+  #if there is a variable, eval the string.
+  if [[ "${data_dir}" =~ \${}/.* ]]; then
+    eval symbol_dir="${data_dir}/${d}"
+  else
+    symbol_dir="${outdir}/${data_dir}/${d}"
+  fi
+
+  if [[ ! -d "${symbol_dir}" ]]; then
+    echo "Cannot read $yaml to find directory: $symbol_dir"
+    exit 1
+  fi
+
+  debug_files=()
+  while IFS='' read -r line; do debug_files+=("$line"); done < <(find "${symbol_dir}" -name "*.debug" -type f)
+
+  EXPECTED_NUM=6
+  if (( ${#debug_files[@]} != "${EXPECTED_NUM}" )); then
+    echo "Expected ${EXPECTED_NUM} files, but got ${#debug_files[@]}"
+    echo "${debug_files[*]}"
     exit 2
   fi
 
+  for f in "${debug_files[@]}"
+  do
+    description="$(file "$f")"
+    if [[ ! "$description" == *"not stripped"* ]]; then
+      echo "Expected not stripped binary for $f, got $description"
+      exit 2
+    fi
+  done
 done
 exit 0

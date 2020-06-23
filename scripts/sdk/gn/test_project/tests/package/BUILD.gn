@@ -151,6 +151,9 @@ build_id_dir(".build-id") {
 #
 # Package all the symbols for all Fuchsia packages into a single
 # CIPD package.
+# This is a little different since the package root is the
+# $_build_ids_path, and we want all the contents of it.
+# so we add the "." directory.
 fuchsia_cipd_package("debug_symbols") {
   package_definition_name = "debug_symbols.yaml"
   package_definition_dir = "${target_gen_dir}/${target_name}"
@@ -292,7 +295,7 @@ shellscript_test("verify_cipd") {
     symbols_script_path = rebase_path("${target_gen_dir}/symbol_check.sh")
     symbols_package = rebase_path(
             "${root_gen_dir}/tests/package/debug_symbols/debug_symbols.yaml")
-    out_dir = rebase_path(root_build_dir)
+    out_dir = rebase_path(root_out_dir)
   }
   data_deps = [
     ":cipd_package",

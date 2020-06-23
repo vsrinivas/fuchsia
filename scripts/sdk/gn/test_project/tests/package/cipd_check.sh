@@ -6,17 +6,26 @@
 set -eu -o pipefail # Error checking
 
 # Used to evaluate the cipd string
-# shellcheck disable=SC2034
 outdir="$1"
 yaml="$2"
 
-data_dir="$(grep root "${yaml}" |  cut -d\  -f2)"
+data_dir="$(grep root: "${yaml}" |  cut -d\  -f2)"
 
-far_file=""
-eval far_file="${data_dir}/package.far"
+files=()
+while IFS='' read -r line; do files+=("$line"); done < <(grep file: "${yaml}" |  cut -d\  -f3)
 
-if [[ ! -e "${far_file}" ]]; then
-  echo "Cannot read $yaml to find far file: $far_file"
-  exit 1
-fi
+for f in "${files[@]}"
+do
+  #if there is a variable, eval the string.
+  if [[ "${data_dir}" =~ \${}/.* ]]; then
+    eval far_file="${data_dir}/${f}"
+  else
+    far_file="${outdir}/${data_dir}/${f}"
+  fi
+
+  if [[ ! -e "${far_file}" ]]; then
+    echo "Cannot read $yaml to find far file: $far_file"
+    exit 1
+  fi
+done
 exit 0
