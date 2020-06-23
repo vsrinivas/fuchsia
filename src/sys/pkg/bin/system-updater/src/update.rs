@@ -245,9 +245,12 @@ where
 
 async fn sync_package_cache(pkg_cache: &PackageCacheProxy) -> Result<(), Error> {
     async move {
-        let status = pkg_cache.sync().await.context("while performing sync call")?;
-        fuchsia_zircon::Status::ok(status).context("sync responded with")?;
-        Result::<(), Error>::Ok(())
+        pkg_cache
+            .sync()
+            .await
+            .context("while performing sync call")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("sync responded with")
     }
     .await
     .context("while flushing packages to persistent storage")

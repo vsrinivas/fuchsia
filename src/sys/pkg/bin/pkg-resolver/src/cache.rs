@@ -74,10 +74,10 @@ impl PackageCache {
             &mut selectors.iter().map(|s| s.as_str()),
             dir_request,
         );
-        match Status::from_raw(fut.await?) {
-            Status::OK => Ok(()),
-            Status::NOT_FOUND => Err(PackageOpenError::NotFound),
-            status => Err(PackageOpenError::UnexpectedStatus(status)),
+        match fut.await?.map_err(Status::from_raw) {
+            Ok(()) => Ok(()),
+            Err(Status::NOT_FOUND) => Err(PackageOpenError::NotFound),
+            Err(status) => Err(PackageOpenError::UnexpectedStatus(status)),
         }
     }
 

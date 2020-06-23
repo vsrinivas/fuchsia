@@ -24,7 +24,6 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_zircon::Status,
     futures::prelude::*,
     http::Uri,
     parking_lot::Mutex,
@@ -321,7 +320,7 @@ impl MockPackageCacheService {
         while let Some(req) = stream.try_next().await? {
             match req {
                 PackageCacheRequest::Open { responder, .. } => {
-                    responder.send(Status::OK.into_raw())?;
+                    responder.send(&mut Ok(()))?;
                 }
                 PackageCacheRequest::Get { .. } => {
                     panic!("PackageCacheRequest::Get should not be called");

@@ -265,7 +265,7 @@ impl MockCache {
         while let Some(event) = stream.try_next().await.unwrap() {
             match event {
                 fidl_fuchsia_pkg::PackageCacheRequest::Sync { responder } => {
-                    responder.send(Status::OK.into_raw()).unwrap();
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unsupported PackageCache request: {:?}", other),
             }

@@ -310,7 +310,7 @@ struct SystemUpdaterArgs<'a> {
 }
 
 struct MockCacheService {
-    sync_response: Mutex<Option<i32>>,
+    sync_response: Mutex<Option<Result<(), Status>>>,
     interactions: SystemUpdaterInteractions,
 }
 impl MockCacheService {
@@ -318,7 +318,7 @@ impl MockCacheService {
         Self { sync_response: Mutex::new(None), interactions }
     }
 
-    fn set_sync_response(&self, response: i32) {
+    fn set_sync_response(&self, response: Result<(), Status>) {
         self.sync_response.lock().replace(response);
     }
 
@@ -330,7 +330,9 @@ impl MockCacheService {
             match event {
                 fidl_fuchsia_pkg::PackageCacheRequest::Sync { responder } => {
                     self.interactions.lock().push(BlobfsSync);
-                    responder.send(self.sync_response.lock().unwrap_or(Status::OK.into_raw()))?;
+                    responder.send(
+                        &mut self.sync_response.lock().unwrap_or(Ok(())).map_err(|s| s.into_raw()),
+                    )?;
                 }
                 other => panic!("unsupported PackageCache request: {:?}", other),
             }
@@ -1003,7 +1005,7 @@ async fn test_failing_package_fetch() {
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update_fails_when_sync_fails() {
     let env = TestEnv::new();
-    env.cache_service.set_sync_response(Status::INTERNAL.into_raw());
+    env.cache_service.set_sync_response(Err(Status::INTERNAL));
     env.resolver.register_package("update", "upd4t3").add_file(
         "packages",
         "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",

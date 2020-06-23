@@ -46,7 +46,7 @@ pub async fn serve(
                     let meta_far_blob: BlobInfo = meta_far_blob.into();
                     trace::duration_begin!("app", "cache_get",
                     "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str());
-                    let status = get(
+                    let response = get(
                         &pkgfs_versions,
                         meta_far_blob,
                         selectors,
@@ -56,33 +56,29 @@ pub async fn serve(
                     )
                     .await;
                     trace::duration_end!("app", "cache_get",
-                    "status" => Status::from(status).to_string().as_str());
-                    responder.send(Status::from(status).into_raw())?;
+                    "status" => Status::from(response).to_string().as_str());
+                    responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
                 PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
                     let meta_far_blob_id: BlobId = meta_far_blob_id.into();
                     trace::duration_begin!("app", "cache_open",
                     "meta_far_blob_id" => meta_far_blob_id.to_string().as_str());
-                    let status =
+                    let response =
                         open(&pkgfs_versions, meta_far_blob_id, selectors, dir, cobalt_sender)
                             .await;
                     trace::duration_end!("app", "cache_open",
-                    "status" => Status::from(status).to_string().as_str());
-                    responder.send(Status::from(status).into_raw())?;
+                    "status" => Status::from(response).to_string().as_str());
+                    responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
                 PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;
                     base_package_index(Arc::clone(&static_packages), stream).await;
                 }
                 PackageCacheRequest::Sync { responder } => {
-                    let status = match pkgfs_ctl.sync().await {
-                        Ok(()) => Status::OK,
-                        Err(e) => {
-                            fx_log_err!("error syncing /pkgfs/ctl: {:#}", anyhow!(e));
-                            Status::INTERNAL
-                        }
-                    };
-                    responder.send(status.into_raw())?;
+                    responder.send(&mut pkgfs_ctl.sync().await.map_err(|e| {
+                        fx_log_err!("error syncing /pkgfs/ctl: {:#}", anyhow!(e));
+                        Status::INTERNAL.into_raw()
+                    }))?;
                 }
             }
 

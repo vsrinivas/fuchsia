@@ -91,6 +91,6 @@ pub mod tests {
             .connect_to_service::<fidl_fuchsia_pkg::PackageCacheMarker>()
             .expect("connecting to pkg cache");
 
-        assert_eq!(proxy.sync().await.unwrap(), fuchsia_zircon::Status::OK.into_raw());
+        assert_eq!(proxy.sync().await.unwrap(), Ok(()));
     }
 }

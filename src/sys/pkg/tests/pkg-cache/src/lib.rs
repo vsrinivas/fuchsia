@@ -209,14 +209,15 @@ impl<P: PkgFs> TestEnv<P> {
             server_end,
         );
 
-        let status = status_fut.await.expect("package cache open fidl call");
-        zx::Status::ok(status)?;
+        let () = status_fut.await.unwrap().map_err(zx::Status::from_raw)?;
         Ok(package)
     }
 
     async fn block_until_started(&self) {
         let (_, server_end) = fidl::endpoints::create_endpoints().unwrap();
-        self.proxies
+        // The fidl call should succeed, but the result of open doesn't matter.
+        let _ = self
+            .proxies
             .package_cache
             .open(
                 &mut "0000000000000000000000000000000000000000000000000000000000000000"
@@ -227,6 +228,6 @@ impl<P: PkgFs> TestEnv<P> {
                 server_end,
             )
             .await
-            .expect("fidl should succeed, but result of open doesn't matter");
+            .unwrap();
     }
 }

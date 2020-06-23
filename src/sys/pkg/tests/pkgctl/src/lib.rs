@@ -24,7 +24,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
-    fuchsia_zircon::{self as zx, Status},
+    fuchsia_zircon::Status,
     futures::prelude::*,
     http::Uri,
     parking_lot::Mutex,
@@ -318,7 +318,7 @@ enum CapturedPackageResolverRequest {
 
 struct MockPackageResolverService {
     captured_args: Mutex<Vec<CapturedPackageResolverRequest>>,
-    get_hash_response: Mutex<Option<Result<fidl_fuchsia_pkg::BlobId, i32>>>,
+    get_hash_response: Mutex<Option<Result<fidl_fuchsia_pkg::BlobId, Status>>>,
 }
 
 impl MockPackageResolverService {
@@ -338,7 +338,9 @@ impl MockPackageResolverService {
                     self.captured_args.lock().push(CapturedPackageResolverRequest::GetHash {
                         package_url: package_url.url,
                     });
-                    responder.send(&mut self.get_hash_response.lock().unwrap()).unwrap()
+                    responder
+                        .send(&mut self.get_hash_response.lock().unwrap().map_err(|s| s.into_raw()))
+                        .unwrap()
                 }
             }
         }
@@ -396,12 +398,12 @@ enum CapturedPackageCacheRequest {
 
 struct MockPackageCacheService {
     captured_args: Mutex<Vec<CapturedPackageCacheRequest>>,
-    open_response: Mutex<Option<Status>>,
+    open_response: Mutex<Option<Result<(), Status>>>,
 }
 
 impl MockPackageCacheService {
     fn new() -> Self {
-        Self { captured_args: Mutex::new(vec![]), open_response: Mutex::new(Some(Status::OK)) }
+        Self { captured_args: Mutex::new(vec![]), open_response: Mutex::new(Some(Ok(()))) }
     }
     async fn run_service(
         self: Arc<Self>,
@@ -413,7 +415,9 @@ impl MockPackageCacheService {
                     self.captured_args
                         .lock()
                         .push(CapturedPackageCacheRequest::Open { meta_far_blob_id });
-                    responder.send(self.open_response.lock().unwrap().into_raw()).expect("send ok");
+                    responder
+                        .send(&mut self.open_response.lock().unwrap().map_err(|s| s.into_raw()))
+                        .expect("send ok");
                 }
                 PackageCacheRequest::Get { .. } => panic!("should only support Open requests"),
                 PackageCacheRequest::BasePackageIndex { .. } => {
@@ -691,7 +695,7 @@ async fn test_get_hash_success() {
 #[fasync::run_singlethreaded(test)]
 async fn test_get_hash_failure() {
     let env = TestEnv::new();
-    env.package_resolver.get_hash_response.lock().replace(Err(zx::Status::UNAVAILABLE.into_raw()));
+    env.package_resolver.get_hash_response.lock().replace(Err(Status::UNAVAILABLE));
 
     let output = env.run_pkgctl(vec!["get-hash", "the-url"]).await;
 
@@ -731,7 +735,7 @@ async fn test_pkg_status_fail_pkg_in_tuf_repo_but_not_on_disk() {
             .into();
     let env = TestEnv::new();
     env.package_resolver.get_hash_response.lock().replace(Ok(hash));
-    env.package_cache.open_response.lock().replace(Status::NOT_FOUND);
+    env.package_cache.open_response.lock().replace(Err(Status::NOT_FOUND));
 
     let output = env.run_pkgctl(vec!["pkg-status", "the-url"]).await;
 
@@ -748,7 +752,7 @@ async fn test_pkg_status_fail_pkg_in_tuf_repo_but_not_on_disk() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkg_status_fail_pkg_not_in_tuf_repo() {
     let env = TestEnv::new();
-    env.package_resolver.get_hash_response.lock().replace(Err(Status::NOT_FOUND.into_raw()));
+    env.package_resolver.get_hash_response.lock().replace(Err(Status::NOT_FOUND));
 
     let output = env.run_pkgctl(vec!["pkg-status", "the-url"]).await;
 

@@ -118,7 +118,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 .context("Failed to connect to cache service")?;
             let (_, dir_server_end) = fidl::endpoints::create_proxy()?;
             let res = cache.open(&mut blob_id, &mut vec![].into_iter(), dir_server_end).await?;
-            match zx::Status::ok(res) {
+            match res.map_err(zx::Status::from_raw) {
                 Ok(_) => {}
                 Err(zx::Status::NOT_FOUND) => {
                     println!("Package on disk: no");
@@ -143,14 +143,14 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
 
             let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
-            let res = cache
+            let () = cache
                 .open(
                     &mut meta_far_blob_id.into(),
                     &mut selectors.iter().map(|s| s.as_str()),
                     dir_server_end,
                 )
-                .await?;
-            zx::Status::ok(res)?;
+                .await?
+                .map_err(zx::Status::from_raw)?;
 
             let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None)
                 .try_collect::<Vec<_>>()

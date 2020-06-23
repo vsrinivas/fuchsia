@@ -662,12 +662,11 @@ impl<P: PkgFs> TestEnv<P> {
     pub async fn open_cached_package(&self, hash: BlobId) -> Result<DirectoryProxy, zx::Status> {
         let cache_service = self.apps.pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap();
         let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
-        zx::Status::ok(
-            cache_service
-                .open(&mut hash.into(), &mut std::iter::empty(), server_end)
-                .await
-                .unwrap(),
-        )?;
+        let () = cache_service
+            .open(&mut hash.into(), &mut std::iter::empty(), server_end)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)?;
         Ok(proxy)
     }
 
