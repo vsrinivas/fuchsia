@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/bti.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/interrupt.h>
-#include <lib/zx/msi.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vcpu.h>
 #include <lib/zx/vmar.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/object.h>
@@ -21,31 +20,14 @@
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
-namespace {
+#include "fixture.h"
 
-extern "C" zx_handle_t get_root_resource(void);
+namespace {
 
 constexpr zx::time kSignaledTimeStamp1(12345);
 constexpr zx::time kSignaledTimeStamp2(67890);
 constexpr uint32_t kKey = 789;
 constexpr uint32_t kUnboundInterruptNumber = 29;
-
-class RootResourceFixture : public zxtest::Test {
- public:
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  void SetUp() override {
-    zx_iommu_desc_dummy_t desc = {};
-    root_resource_ = zx::unowned_resource(get_root_resource());
-    ASSERT_OK(
-        zx::iommu::create(*root_resource_, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu_));
-    ASSERT_OK(zx::bti::create(iommu_, 0, 0xdeadbeef, &bti_));
-  }
-
- protected:
-  zx::unowned_resource root_resource_;
-  zx::iommu iommu_;
-  zx::bti bti_;
-};
 
 // Use an alias so we use a different test case name.
 using InterruptTest = RootResourceFixture;
@@ -365,78 +347,6 @@ TEST_F(InterruptTest, NullOutputTimestamp) {
   ASSERT_OK(interrupt.trigger(0, kSignaledTimeStamp1));
 
   ASSERT_OK(interrupt.wait(nullptr));
-}
-
-// Differentiate the two test categories while still allowing the use of the helper
-// functions in this file.
-using MsiTest = InterruptTest;
-TEST_F(MsiTest, AllocationAndCreation) {
-  zx::bti bti;
-  zx::msi msi;
-  zx::vmo vmo;
-  zx::interrupt interrupt, interrupt_dup;
-  uint8_t* ptr = nullptr;
-  uint32_t msi_cnt = 8;
-
-  // MSI syscalls are expected to use physical VMOs, but can use contiguous, uncached, commit
-  zx_info_msi_t msi_info;
-  zx_status_t status = zx::msi::allocate(*root_resource_, msi_cnt, &msi);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    printf("Skipping MSI test due to lack of platform support\n");
-    return;
-  }
-  ASSERT_OK(status);
-  ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
-  const size_t vmo_size = 4096;
-  ASSERT_OK(zx::vmo::create_contiguous(bti_, vmo_size, 0, &vmo));
-  ASSERT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
-  ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                       reinterpret_cast<zx_vaddr_t*>(&ptr)));
-  // Ensure the check for the capability ID for base MSI is valid
-  ASSERT_STATUS(
-      zx::msi::create(msi, /*options=*/0, /*msi_id=*/0, vmo, /*vmo_offset=*/0, &interrupt),
-      ZX_ERR_NOT_SUPPORTED);
-  // |options| must be zero.
-  ASSERT_STATUS(zx::msi::create(msi, ZX_INTERRUPT_VIRTUAL, 0, vmo, /*vmo_offset=*/0, &interrupt),
-                ZX_ERR_INVALID_ARGS);
-  // All of these values are sourced from the PCI Local Bus Specification rev 3.0 figure 6-9
-  // and the header msi_dispatcher.h which cannot be included due to being kernel-side. The
-  // intent is to mock the bare minimum functionality of an MSI capability so that the dispatcher
-  // behavior can be controlled and observed.
-  const uint8_t msi_cap_id = 0x5;
-  const uint16_t mock_ctrl_val = (1u << 8);
-  auto* mock_capid_reg = reinterpret_cast<uint8_t*>(ptr);
-  auto* mock_ctrl_reg = reinterpret_cast<uint16_t*>(ptr + 0x2);
-  auto* mock_mask_reg = reinterpret_cast<uint32_t*>(ptr + 0xC);
-  *mock_capid_reg = msi_cap_id;
-  *mock_ctrl_reg = mock_ctrl_val;
-  // Bad handle.
-  ASSERT_STATUS(zx::msi::create(*zx::unowned_msi(123456), /*options=*/0, /*msi_id=*/0, vmo,
-                                /*vmo_offset=*/0, &interrupt),
-                ZX_ERR_BAD_HANDLE);
-  // Wrong handle type.
-  ASSERT_STATUS(zx::msi::create(*zx::unowned_msi(vmo.get()), /*options=*/0, /*msi_id=*/0, vmo,
-                                /*vmo_offset=*/0, &interrupt),
-                ZX_ERR_WRONG_TYPE);
-  // Invalid MSI id.
-  ASSERT_STATUS(
-      zx::msi::create(msi, /*options=*/0, /*msi_id=*/msi_cnt, vmo, /*vmo_offset=*/0, &interrupt),
-      ZX_ERR_INVALID_ARGS);
-  ASSERT_OK(zx::msi::create(msi, /*options=*/0, /*msi_id=*/0, vmo, /*vmo_offset=*/0, &interrupt));
-  ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
-  ASSERT_EQ(msi_info.interrupt_count, 1);
-  ASSERT_EQ(*mock_mask_reg, 1);
-  ASSERT_STATUS(
-      zx::msi::create(msi, /*options=*/0, /*msi_id=*/0, vmo, /*vmo_offset=*/0, &interrupt_dup),
-      ZX_ERR_ALREADY_BOUND);
-  ASSERT_OK(
-      zx::msi::create(msi, /*options=*/0, /*msi_id=*/1, vmo, /*vmo_offset=*/0, &interrupt_dup));
-  ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
-  ASSERT_EQ(msi_info.interrupt_count, 2);
-  interrupt.reset();
-  interrupt_dup.reset();
-  ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
-  ASSERT_EQ(msi_info.interrupt_count, 0);
 }
 
 }  // namespace

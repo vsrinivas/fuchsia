@@ -18,10 +18,14 @@ source_set("interrupt") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
-  sources = [ "interrupt-test.cc" ]
+  sources = [
+    "interrupt-test.cc",
+    "msi-test.cc",
+  ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
   ]
 }
