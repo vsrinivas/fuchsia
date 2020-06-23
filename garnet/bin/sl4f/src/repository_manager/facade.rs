@@ -74,8 +74,8 @@ impl RepositoryManagerFacade {
         fx_log_info!("Add Repo request received {:?}", add_request);
 
         let res = self.proxy()?.add(add_request.into()).await?;
-        match zx::Status::from_raw(res) {
-            zx::Status::OK => Ok(to_value(RepositoryOutput::Success)?),
+        match res.map_err(zx::Status::from_raw) {
+            Ok(()) => Ok(to_value(RepositoryOutput::Success)?),
             _ => Err(format_err!("Add repo errored with code {:?}", res)),
         }
     }
@@ -110,7 +110,6 @@ mod tests {
     };
     use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
     use fuchsia_url::pkg_url::{PkgUrl, RepoUrl};
-    use fuchsia_zircon::Status;
     use futures::{future::Future, join, StreamExt, TryFutureExt, TryStreamExt};
     use http::Uri;
     use matches::assert_matches;
@@ -184,7 +183,7 @@ mod tests {
                 RepositoryManagerRequest::Add { repo, responder } => {
                     let new_repo = RepositoryConfig::try_from(repo).expect("valid repo config");
                     assert_eq!(new_repo, repo_add);
-                    responder.send(Status::OK.into_raw()).expect("send ok");
+                    responder.send(&mut Ok(())).expect("send ok");
                 }
                 req => panic!("unexpected request: {:?}", req),
             })

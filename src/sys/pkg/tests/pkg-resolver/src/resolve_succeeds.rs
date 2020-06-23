@@ -54,7 +54,7 @@ async fn package_resolution() {
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
 
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let package = env
         .resolve_package(format!("fuchsia-pkg://test/{}", s).as_str())
@@ -103,7 +103,7 @@ async fn separate_blobs_url() {
         .unwrap()
         .build();
     repo_config.insert_mirror(mirror).unwrap();
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     // Verify package installation from the split repo succeeds.
     let package = env
@@ -135,7 +135,7 @@ async fn verify_resolve_with_altered_env(
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
 
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     alter_env(&env, &pkg);
 
@@ -885,7 +885,7 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let pinned_url = format!(
         "fuchsia-pkg://test/merkle-pin-size?hash={}",

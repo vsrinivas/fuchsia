@@ -6,76 +6,63 @@ library fuchsia.pkg;
 
 using zx;
 
-/// Manages package repositories.
+/// This manages package repositories.
 ///
-/// This interface is intended to be implemented by package resolver components, and used by
+/// This is intended to be implemented by package resolver components, and used by
 /// repository administration tools.
 [Discoverable]
 protocol RepositoryManager {
-    /// Add a repository. This will overwrite the repository if it already exists.
+    /// Adds a repository. This will overwrite the repository if it already exists.
     ///
-    /// Arguments:
-    /// * `repo` is repository to add to the resolver.
-    ///
-    /// Return Values:
-    /// * `ZX_OK` if the repository was added.
-    /// * `ZX_ERR_ACCESS_DENIED` if editing repositories is permanently disabled.
-    /// * `ZX_ERR_ALREADY_EXISTS` if the repository already exists.
-    /// * `ZX_ERR_INVALID_ARGS` if the repository is malformed.
-    Add(RepositoryConfig repo) -> (zx.status status);
+    /// + request `repo` a repository to add to the resolver.
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_ACCESS_DENIED` if editing repositories is permanently disabled.
+    ///     * `ZX_ERR_ALREADY_EXISTS` if the repository already exists.
+    ///     * `ZX_ERR_INVALID_ARGS` if the repository is malformed.
+    Add(RepositoryConfig repo) -> () error zx.status;
 
-    /// Remove a repository.
+    /// Removes a repository.
     ///
     /// Removing a repository will prevent future packages from being cached from this repository,
     /// but in-flight downloads may not be interrupted.
     ///
-    /// Arguments:
-    /// * `repo_url` is the URL of the repository we want to remove.
-    ///
-    /// Return Values:
-    /// * `ZX_OK` if the repository was removed.
-    /// * `ZX_ERR_ACCESS_DENIED` if editing repositories is permanently disabled or the
-    ///   `repo_url` matches a static repository.
-    /// * `ZX_ERR_INVALID_ARGS` if the `repo_url` is malformed.
-    /// * `ZX_ERR_NOT_FOUND` if the repository does not exist.
-    Remove(string repo_url) -> (zx.status status);
+    /// + request `repo_url` the URL of the repository we want to remove.
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_ACCESS_DENIED` if editing repositories is permanently disabled or the
+    ///       `repo_url` matches a static repository.
+    ///     * `ZX_ERR_INVALID_ARGS` if the `repo_url` is malformed.
+    ///     * `ZX_ERR_NOT_FOUND` if the repository does not exist.
+    Remove(string repo_url) -> () error zx.status;
 
-    /// Add a mirror to a repository. This will overwrite the mirror if it already exists.
+    /// Adds a mirror to a repository. This will overwrite the mirror if it already exists.
     ///
-    /// Arguments:
-    /// * `repo_url` is repository that corresponds with this mirror.
-    /// * `mirror_url` is mirror URL to add to the resolver.
-    ///
-    /// Return Values:
-    /// * `ZX_OK` if the mirror was removed.
-    /// * `ZX_ERR_ALREADY_EXISTS` if the mirror for this repository already exists.
-    /// * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror` is malformed.
-    /// * `ZX_ERR_NOT_FOUND` if the repository does not exist.
-    AddMirror(string repo_url, MirrorConfig mirror) -> (zx.status status);
+    /// + request `repo_url` the URL of the repository to add the mirror to.
+    /// + request `mirror` the mirror config used to add the mirror.
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_ALREADY_EXISTS` if the mirror for this repository already exists.
+    ///     * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror` is malformed.
+    ///     * `ZX_ERR_NOT_FOUND` if the repository does not exist.
+    AddMirror(string repo_url, MirrorConfig mirror) -> () error zx.status;
 
-    /// Remove a mirror from a repository.
+    /// Removes a mirror from a repository.
     ///
     /// Removing a mirror will prevent future packages from being cached from that mirror, but
     /// in-flight downloads may not be interrupted.
     ///
-    /// Arguments:
-    /// * `repo_url` the URL of the mirror's repository.
-    /// * `mirror_url` the URL of the mirror we want to remove.
-    ///
-    /// Return Values:
-    /// * `ZX_OK` if the mirror was removed.
-    /// * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror_url` is malformed.
-    /// * `ZX_ERR_NOT_FOUND` if the repository or mirror does not exist.
-    RemoveMirror(string repo_url, string mirror_url) -> (zx.status status);
+    /// + request `repo_url` the URL of the mirror's repository.
+    /// + request `mirror_url` the URL of the mirror we want to remove.
+    /// * error a zx_status value indicating failure. One of the following:
+    ///     * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror_url` is malformed.
+    ///     * `ZX_ERR_NOT_FOUND` if the repository or mirror does not exist.
+    RemoveMirror(string repo_url, string mirror_url) -> () error zx.status;
 
-    /// Return an iterator over all repositories.
+    /// Returns an iterator over all repositories.
     ///
-    /// Arguments:
-    /// `iterator` is a request for an iterator.
+    /// + request `iterator` a request for an iterator.
     List(request<RepositoryIterator> iterator);
 };
 
-/// Describes the configuration necessary to connect to a repository and it's mirrors.
+/// The configuration necessary to connect to a repository and its mirrors.
 table RepositoryConfig {
     /// A fuchsia-pkg URL identifying the repository. Required.
     ///
@@ -115,7 +102,7 @@ table RepositoryConfig {
     6: uint32 root_threshold;
 };
 
-/// Describes the keys used by the repository to authenticate it's packages.
+/// The keys used by the repository to authenticate its packages.
 ///
 /// The only supported algorithm at the moment is ed25519.
 flexible union RepositoryKeyConfig {
@@ -123,7 +110,7 @@ flexible union RepositoryKeyConfig {
     1: bytes ed25519_key;
 };
 
-/// Describes a key used to decrypt blobs.
+/// A key used to decrypt blobs.
 ///
 /// The only supported algorithm at the moment is aes.
 flexible union RepositoryBlobKey {
@@ -131,7 +118,7 @@ flexible union RepositoryBlobKey {
     1: bytes aes_key;
 };
 
-/// Describes the configuration necessary to connect to a mirror.
+/// The configuration necessary to connect to a mirror.
 table MirrorConfig {
     /// The base URL of the TUF metadata on this mirror. Required.
     1: string mirror_url;
@@ -149,10 +136,9 @@ table MirrorConfig {
 
 /// The iterator over all the repositories defined in a `PackageResolver`.
 protocol RepositoryIterator {
-    /// Advance the iterator and return the next batch of repositories.
+    /// Advances the iterator and returns the next batch of repositories.
     ///
-    /// Return Values:
-    /// * a vector of `RepositoryConfig` repositories. Will return an empty vector when there are
-    ///   no more repositories.
+    /// - response `repos` a vector of `RepositoryConfig` repositories.
+    ///   Will return an empty vector when there are no more repositories.
     Next() -> (vector<RepositoryConfig> repos);
 };

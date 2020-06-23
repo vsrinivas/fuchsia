@@ -270,26 +270,26 @@ impl MockRepositoryManagerService {
                     self.captured_args.lock().push(CapturedRepositoryManagerRequest::Add {
                         repo: RepositoryConfig::try_from(repo).expect("valid repo config"),
                     });
-                    responder.send(Status::OK.into_raw()).expect("send ok");
+                    responder.send(&mut Ok(())).expect("send ok");
                 }
                 RepositoryManagerRequest::Remove { repo_url, responder } => {
                     self.captured_args
                         .lock()
                         .push(CapturedRepositoryManagerRequest::Remove { repo_url });
-                    responder.send(Status::OK.into_raw()).expect("send ok");
+                    responder.send(&mut Ok(())).expect("send ok");
                 }
                 RepositoryManagerRequest::AddMirror { repo_url, mirror, responder } => {
                     self.captured_args.lock().push(CapturedRepositoryManagerRequest::AddMirror {
                         repo_url,
                         mirror: MirrorConfig::try_from(mirror).expect("valid mirror config"),
                     });
-                    responder.send(Status::OK.into_raw()).expect("send ok");
+                    responder.send(&mut Ok(())).expect("send ok");
                 }
                 RepositoryManagerRequest::RemoveMirror { repo_url, mirror_url, responder } => {
                     self.captured_args.lock().push(
                         CapturedRepositoryManagerRequest::RemoveMirror { repo_url, mirror_url },
                     );
-                    responder.send(Status::OK.into_raw()).expect("send ok");
+                    responder.send(&mut Ok(())).expect("send ok");
                 }
                 RepositoryManagerRequest::List { iterator, control_handle: _control_handle } => {
                     self.captured_args.lock().push(CapturedRepositoryManagerRequest::List);

@@ -411,13 +411,15 @@ func addSource(services Services, repoOnly bool) error {
 
 	repoCfg := upgradeSourceConfig(cfg)
 	logIfVerbose("making fuchsia.pkg.RepositoryManager.Add FIDL request")
-	s, err := services.repoMgr.Add(context.Background(), repoCfg)
+	response, err := services.repoMgr.Add(context.Background(), repoCfg)
 	if err != nil {
 		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
 	}
-	status := zx.Status(s)
-	if !(status == zx.ErrOk || status == zx.ErrAlreadyExists) {
-		return fmt.Errorf("unable to register source with RepositoryManager: %s", status)
+
+	if response.Which() == pkg.PackageResolverResolveResultErr {
+		if status := zx.Status(response.Err); status != zx.ErrAlreadyExists {
+			return fmt.Errorf("unable to register source with RepositoryManager: %s", status)
+		}
 	}
 
 	// Nothing currently registers sources in a disabled state, but make a best effort attempt
@@ -450,13 +452,14 @@ func rmSource(services Services) error {
 		return err
 	}
 
-	s, err := services.repoMgr.Remove(context.Background(), repoUrlForId(name))
+	response, err := services.repoMgr.Remove(context.Background(), repoUrlForId(name))
 	if err != nil {
 		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
 	}
-	zxStatus := zx.Status(s)
-	if !(zxStatus == zx.ErrOk || zxStatus == zx.ErrNotFound) {
-		return fmt.Errorf("unable to remove source from RepositoryManager: %s", zxStatus)
+	if response.Which() == pkg.PackageResolverResolveResultErr {
+		if status := zx.Status(response.Err); status != zx.ErrNotFound {
+			return fmt.Errorf("unable to remove source from RepositoryManager: %s", status)
+		}
 	}
 
 	return nil

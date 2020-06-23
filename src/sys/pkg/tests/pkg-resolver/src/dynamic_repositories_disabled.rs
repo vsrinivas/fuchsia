@@ -36,7 +36,7 @@ async fn add_succeeds() {
         .build();
     let repo = make_repo();
 
-    Status::ok(env.proxies.repo_manager.add(repo.clone().into()).await.unwrap()).unwrap();
+    let () = env.proxies.repo_manager.add(repo.clone().into()).await.unwrap().unwrap();
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![repo]);
 
     env.stop().await;
@@ -50,7 +50,7 @@ async fn add_fails_if_disabled() {
     let repo = make_repo();
 
     assert_eq!(
-        env.proxies.repo_manager.add(repo.clone().into()).await.unwrap(),
+        env.proxies.repo_manager.add(repo.clone().into()).await.unwrap().unwrap_err(),
         Status::ACCESS_DENIED.into_raw()
     );
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);
@@ -65,7 +65,7 @@ async fn remove_fails_with_not_found() {
         .build();
 
     assert_eq!(
-        env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap(),
+        env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap().unwrap_err(),
         Status::NOT_FOUND.into_raw()
     );
 
@@ -79,7 +79,7 @@ async fn remove_fails_with_access_denied_if_disabled() {
         .build();
 
     assert_eq!(
-        env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap(),
+        env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap().unwrap_err(),
         Status::ACCESS_DENIED.into_raw()
     );
 
@@ -132,7 +132,7 @@ async fn dynamic_repositories_disabled_if_missing_config() {
     let repo = make_repo();
 
     assert_eq!(
-        env.proxies.repo_manager.add(repo.clone().into()).await.unwrap(),
+        env.proxies.repo_manager.add(repo.clone().into()).await.unwrap().unwrap_err(),
         Status::ACCESS_DENIED.into_raw()
     );
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);

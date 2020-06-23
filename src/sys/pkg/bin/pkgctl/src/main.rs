@@ -189,14 +189,14 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                         serde_json::from_reader(io::BufReader::new(File::open(file)?))?;
 
                     let res = repo_manager.add(repo.into()).await?;
-                    zx::Status::ok(res)?;
+                    let () = res.map_err(zx::Status::from_raw)?;
 
                     Ok(0)
                 }
 
                 Some(RepoSubCommand::Remove(RepoRemoveCommand { repo_url })) => {
                     let res = repo_manager.remove(&repo_url).await?;
-                    zx::Status::ok(res)?;
+                    let () = res.map_err(zx::Status::from_raw)?;
 
                     Ok(0)
                 }

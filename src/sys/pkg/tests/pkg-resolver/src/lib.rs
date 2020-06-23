@@ -606,7 +606,7 @@ impl<P: PkgFs> TestEnv<P> {
         R::Error: std::fmt::Debug,
     {
         let repo_config = repo.make_repo_config(url.try_into().unwrap());
-        self.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+        let () = self.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
     }
 
     pub async fn restart_pkg_resolver(&mut self) {

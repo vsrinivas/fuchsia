@@ -109,7 +109,7 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
     let served_repository = served_repository.start().unwrap();
     let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
     let config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
 
     assert_eq!(
         env.resolve_package(&format!("fuchsia-pkg://example.com/{}", pkg.name())).await.map(|_| ()),
@@ -231,7 +231,7 @@ async fn resolve_success_regular() {
     let served_repository = served_repository.start().unwrap();
     let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
     let config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
 
     assert_eq!(
         env.resolve_package(&format!("fuchsia-pkg://example.com/{}", pkg.name())).await.map(|_| ()),
@@ -286,7 +286,7 @@ async fn resolve_duration_success() {
     let served_repository = served_repository.start().unwrap();
     let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
     let config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
 
     assert_eq!(
         env.resolve_package(&format!("fuchsia-pkg://example.com/{}", pkg.name())).await.map(|_| ()),
@@ -479,12 +479,14 @@ async fn font_resolver_is_font_package_check_not_font() {
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
     let served_repository = repo.server().start().unwrap();
-    env.proxies
+    let () = env
+        .proxies
         .repo_manager
         .add(
             served_repository.make_repo_config("fuchsia-pkg://example.com".parse().unwrap()).into(),
         )
         .await
+        .unwrap()
         .unwrap();
 
     // No font packages have been registered with the font resolver, so resolves of any packages

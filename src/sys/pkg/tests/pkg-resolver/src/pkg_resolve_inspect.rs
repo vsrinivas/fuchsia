@@ -12,7 +12,6 @@ use {
         testing::{AnyProperty, PropertyAssertion},
     },
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder},
-    fuchsia_zircon::Status,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     std::sync::Arc,
@@ -62,10 +61,7 @@ async fn test_initial_inspect_state() {
 async fn test_adding_repo_updates_inspect_state() {
     let env = TestEnvBuilder::new().build();
     let config = RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build();
-    Status::ok(
-        env.proxies.repo_manager.add(config.clone().into()).await.expect("fidl call succeeds"),
-    )
-    .expect("repo successfully added");
+    let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
 
     // Obtain inspect service and convert into a node hierarchy.
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
@@ -122,7 +118,7 @@ async fn test_resolving_package_updates_inspect_state() {
     let served_repository = repo.server().start().unwrap();
     let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
     let config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
 
     env.resolve_package("fuchsia-pkg://example.com/just_meta_far")
         .await

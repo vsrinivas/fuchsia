@@ -37,20 +37,22 @@ impl RepositoryService {
         while let Some(event) = stream.try_next().await? {
             match event {
                 RepositoryManagerRequest::Add { repo, responder } => {
-                    let status = self.serve_insert(repo);
-                    responder.send(Status::from(status).into_raw())?;
+                    let mut response = self.serve_insert(repo).map_err(|s| s.into_raw());
+                    responder.send(&mut response)?;
                 }
                 RepositoryManagerRequest::Remove { repo_url, responder } => {
-                    let status = self.serve_remove(repo_url);
-                    responder.send(Status::from(status).into_raw())?;
+                    let mut response = self.serve_remove(repo_url).map_err(|s| s.into_raw());
+                    responder.send(&mut response)?;
                 }
                 RepositoryManagerRequest::AddMirror { repo_url, mirror, responder } => {
-                    let status = self.serve_insert_mirror(repo_url, mirror);
-                    responder.send(Status::from(status).into_raw())?;
+                    let mut response =
+                        self.serve_insert_mirror(repo_url, mirror).map_err(|s| s.into_raw());
+                    responder.send(&mut response)?;
                 }
                 RepositoryManagerRequest::RemoveMirror { repo_url, mirror_url, responder } => {
-                    let status = self.serve_remove_mirror(repo_url, mirror_url);
-                    responder.send(Status::from(status).into_raw())?;
+                    let mut response =
+                        self.serve_remove_mirror(repo_url, mirror_url).map_err(|s| s.into_raw());
+                    responder.send(&mut response)?;
                 }
                 RepositoryManagerRequest::List { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;

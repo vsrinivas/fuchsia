@@ -27,7 +27,7 @@ async fn succeeds_if_package_present() {
     let served_repository = Arc::clone(&repo).server().start().unwrap();
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let package = env.get_hash("fuchsia-pkg://test/a-fake-pkg-name").await;
 
@@ -44,7 +44,7 @@ async fn fails_if_package_absent() {
     let served_repository = Arc::clone(&repo).server().start().unwrap();
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let package = env.get_hash("fuchsia-pkg://test/b-fake-pkg-name").await;
 
