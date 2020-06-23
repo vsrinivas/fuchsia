@@ -8,3 +8,4 @@
 
 ## USAGE:
 ##     check-licenses
+** Check //tools/check-licenses/README.md for more information

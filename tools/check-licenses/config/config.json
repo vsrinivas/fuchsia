@@ -1,38 +1,38 @@
 {
   "filesRegex": [],
-  "skipFilesRegex": [
+  "skipFiles": [
     ".gitignore"
   ],
-  "skipDirsRegex": [
+  "skipDirs": [
     ".git"
   ],
-  "textExtensions": {
-    "ac": true,
-    "am": true,
-    "asm": true,
-    "bat": true,
-    "c": true,
-    "cc": true,
-    "cpp": true,
-    "dart": true,
-    "gn": true,
-    "gni": true,
-    "go": true,
-    "gyp": true,
-    "gypi": true,
-    "h": true,
-    "hh": true,
-    "html": true,
-    "in": true,
-    "inc": true,
-    "java": true,
-    "m": true,
-    "md": true,
-    "py": true,
-    "rs": true,
-    "sh": true,
-    "txt": true
-  },
+  "textExtensionList": [
+    "ac",
+    "am",
+    "asm",
+    "bat",
+    "c",
+    "cc",
+    "cpp",
+    "dart",
+    "gn",
+    "gni",
+    "go",
+    "gyp",
+    "gypi",
+    "h",
+    "hh",
+    "html",
+    "in",
+    "inc",
+    "java",
+    "m",
+    "md",
+    "py",
+    "rs",
+    "sh",
+    "txt"
+  ],
   "maxReadSize": 6144,
   "separatorWidth": 80,
   "outputFilePrefix": "NOTICE",
@@ -45,7 +45,7 @@
   ],
   "goldenLicenses": "golden",
   "licensePatternDir": "tools/check-licenses/golden/",
-  "baseDir": "tools/check-licenses/test",
+  "baseDir": ".",
   "target": "all",
   "logLevel": "verbose"
 }
