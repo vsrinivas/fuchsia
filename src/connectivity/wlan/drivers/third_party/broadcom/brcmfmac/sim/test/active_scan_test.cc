@@ -51,7 +51,7 @@ class ActiveScanTest : public SimTest {
 
   bool all_aps_seen_ = false;
 
-  void GetFirwarePfnMac();
+  void GetFirmwarePfnMac();
 
  protected:
   // This is the interface we will use for our single client interface
@@ -109,7 +109,7 @@ void ActiveScanTest::EndSimulation() {
   }
 }
 
-void ActiveScanTest::GetFirwarePfnMac() {
+void ActiveScanTest::GetFirmwarePfnMac() {
   brcmf_simdev* sim = device_->GetSim();
   if (!sim_fw_pfn_mac_)
     sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
@@ -159,7 +159,7 @@ void ActiveScanTest::VerifyScanResults() {
   last_pfn_mac_ = *sim_fw_pfn_mac_;
 
   // pfn mac will be set back to firmware mac after active scan.
-  GetFirwarePfnMac();
+  GetFirmwarePfnMac();
   EXPECT_EQ(sim_fw_mac_, *sim_fw_pfn_mac_);
 
   sim_fw_pfn_mac_.reset();
@@ -170,7 +170,7 @@ void ActiveScanTest::VerifyScanResults() {
 
 void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
                         std::shared_ptr<const simulation::WlanRxInfo> info) {
-  GetFirwarePfnMac();
+  GetFirmwarePfnMac();
 
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
