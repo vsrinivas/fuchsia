@@ -41,7 +41,6 @@ void main(List<String> args) {
   runFidlBenchmark('rust_fidl_microbenchmarks',
       tmpPerfResultsJson('rust_fidl_microbenchmarks'));
   runFidlBenchmark('walker_fidl_microbenchmarks');
-  runFidlBenchmark('cpp_allocation_strategy_fidl_microbenchmarks');
 
   _tests.add(() {
     test('dart_fidl_microbenchmarks', () async {
