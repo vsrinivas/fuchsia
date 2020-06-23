@@ -9,7 +9,7 @@
 *Defined in [test.name/service.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/service.test.fidl#7)*
 
 
-### MethodOnFirst {#MethodOnFirst}
+### MethodOnFirst {#test.name/FirstProtocol.MethodOnFirst}
 
 
 #### Request
@@ -23,7 +23,7 @@
 *Defined in [test.name/service.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/service.test.fidl#15)*
 
 
-### MethodOnSecond {#MethodOnSecond}
+### MethodOnSecond {#test.name/SecondProtocol.MethodOnSecond}
 
 
 #### Request

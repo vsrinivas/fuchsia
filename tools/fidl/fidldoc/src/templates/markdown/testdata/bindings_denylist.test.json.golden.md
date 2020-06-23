@@ -9,7 +9,7 @@
 *Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#36)*
 
 
-### LibfuzzerNeedsNonemptyProtocol {#LibfuzzerNeedsNonemptyProtocol}
+### LibfuzzerNeedsNonemptyProtocol {#test.name/OnlyLibfuzzer.LibfuzzerNeedsNonemptyProtocol}
 
 
 #### Request

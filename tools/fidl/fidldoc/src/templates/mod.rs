@@ -270,6 +270,30 @@ fn pd(text: &str) -> String {
     html_text
 }
 
+pub fn method_id(
+    h: &Helper<'_, '_>,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext<'_>,
+    out: &mut dyn Output,
+) -> Result<(), RenderError> {
+    let method_name =
+        h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for method_id helper"))?;
+    let protocol_name =
+        h.param(1).ok_or_else(|| RenderError::new("Param 1 is required for method_id helper"))?;
+    debug!(
+        "method_id called on {} and {}",
+        method_name.value().to_string(),
+        protocol_name.value().to_string()
+    );
+    out.write(&mi(&method_name.value().render(), &protocol_name.value().render()))?;
+    Ok(())
+}
+
+fn mi(method: &str, protocol: &str) -> String {
+    format!("{protocol}.{method}", protocol = protocol, method = method)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -409,5 +433,13 @@ file, the error is <code>ZX_ERR_NOT_FILE</code>.</li>
 </ul>
 "#;
         assert_eq!(pd(description), expected);
+    }
+
+    #[test]
+    fn mi_test() {
+        let method = "Clone";
+        let protocol = "Directory";
+        let expected = "Directory.Clone";
+        assert_eq!(mi(method, protocol), expected.to_string());
     }
 }

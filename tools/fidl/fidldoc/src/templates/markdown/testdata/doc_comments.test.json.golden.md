@@ -13,7 +13,7 @@
 <p>interface comment #1</p>
 <p>interface comment #3</p>
 
-### Method {#Method}
+### Method {#test.name/Interface.Method}
 
 <p>method comment #1</p>
 <p>method comment #3</p>
@@ -25,7 +25,7 @@
 
 
 
-### OnEvent {#OnEvent}
+### OnEvent {#test.name/Interface.OnEvent}
 
 <p>event comment #1</p>
 <p>event comment #3</p>

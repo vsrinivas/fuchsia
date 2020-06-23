@@ -9,7 +9,7 @@
 *Defined in [top/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/top.test.fidl#5)*
 
 
-### GetFoo {#GetFoo}
+### GetFoo {#top/Top.GetFoo}
 
 
 #### Request

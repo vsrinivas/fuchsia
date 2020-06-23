@@ -9,7 +9,7 @@
 *Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#17)*
 
 
-### NoRequestNoResponse {#NoRequestNoResponse}
+### NoRequestNoResponse {#test.name/WithAndWithoutRequestResponse.NoRequestNoResponse}
 
 
 #### Request
@@ -19,21 +19,7 @@
 
 
 
-### NoRequestEmptyResponse {#NoRequestEmptyResponse}
-
-
-#### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
-
-
-#### Response
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
-
-### NoRequestWithResponse {#NoRequestWithResponse}
+### NoRequestEmptyResponse {#test.name/WithAndWithoutRequestResponse.NoRequestEmptyResponse}
 
 
 #### Request
@@ -45,59 +31,15 @@
 #### Response
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>ret</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
+    </table>
 
-### WithRequestNoResponse {#WithRequestNoResponse}
+### NoRequestWithResponse {#test.name/WithAndWithoutRequestResponse.NoRequestWithResponse}
 
 
 #### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>arg</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
-
-
-
-### WithRequestEmptyResponse {#WithRequestEmptyResponse}
-
-
-#### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>arg</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
-
-
-#### Response
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
-
-### WithRequestWithResponse {#WithRequestWithResponse}
-
-
-#### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>arg</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
 
 
 #### Response
@@ -110,7 +52,65 @@
             </td>
         </tr></table>
 
-### OnEmptyResponse {#OnEmptyResponse}
+### WithRequestNoResponse {#test.name/WithAndWithoutRequestResponse.WithRequestNoResponse}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+
+### WithRequestEmptyResponse {#test.name/WithAndWithoutRequestResponse.WithRequestEmptyResponse}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    </table>
+
+### WithRequestWithResponse {#test.name/WithAndWithoutRequestResponse.WithRequestWithResponse}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>ret</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+### OnEmptyResponse {#test.name/WithAndWithoutRequestResponse.OnEmptyResponse}
 
 
 
@@ -120,7 +120,7 @@
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
-### OnWithResponse {#OnWithResponse}
+### OnWithResponse {#test.name/WithAndWithoutRequestResponse.OnWithResponse}
 
 
 
@@ -139,7 +139,7 @@
 *Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#33)*
 
 
-### ResponseAsStruct {#ResponseAsStruct}
+### ResponseAsStruct {#test.name/WithErrorSyntax.ResponseAsStruct}
 
 
 #### Request
@@ -158,7 +158,7 @@
             </td>
         </tr></table>
 
-### ErrorAsPrimitive {#ErrorAsPrimitive}
+### ErrorAsPrimitive {#test.name/WithErrorSyntax.ErrorAsPrimitive}
 
 
 #### Request
@@ -177,7 +177,7 @@
             </td>
         </tr></table>
 
-### ErrorAsEnum {#ErrorAsEnum}
+### ErrorAsEnum {#test.name/WithErrorSyntax.ErrorAsEnum}
 
 
 #### Request
@@ -200,7 +200,7 @@
 *Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#40)*
 
 
-### MethodA {#MethodA}
+### MethodA {#test.name/ChannelProtocol.MethodA}
 
 
 #### Request
@@ -220,7 +220,7 @@
 
 
 
-### EventA {#EventA}
+### EventA {#test.name/ChannelProtocol.EventA}
 
 
 
@@ -240,7 +240,7 @@
             </td>
         </tr></table>
 
-### MethodB {#MethodB}
+### MethodB {#test.name/ChannelProtocol.MethodB}
 
 
 #### Request
@@ -269,7 +269,7 @@
             </td>
         </tr></table>
 
-### MutateSocket {#MutateSocket}
+### MutateSocket {#test.name/ChannelProtocol.MutateSocket}
 
 
 #### Request
@@ -297,7 +297,7 @@
 *Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#47)*
 
 
-### Request {#Request}
+### Request {#test.name/Transitional.Request}
 
 
 #### Request
@@ -321,7 +321,7 @@
             </td>
         </tr></table>
 
-### OneWay {#OneWay}
+### OneWay {#test.name/Transitional.OneWay}
 
 
 #### Request
@@ -336,7 +336,7 @@
 
 
 
-### Event {#Event}
+### Event {#test.name/Transitional.Event}
 
 
 

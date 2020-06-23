@@ -9,7 +9,7 @@
 *Defined in [fidl.test.json/request_flexible_envelope.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/request_flexible_envelope.test.fidl#13)*
 
 
-### RequestStrictResponseFlexible {#RequestStrictResponseFlexible}
+### RequestStrictResponseFlexible {#fidl.test.json/Protocol.RequestStrictResponseFlexible}
 
 
 #### Request
@@ -33,7 +33,7 @@
             </td>
         </tr></table>
 
-### RequestFlexibleResponseStrict {#RequestFlexibleResponseStrict}
+### RequestFlexibleResponseStrict {#fidl.test.json/Protocol.RequestFlexibleResponseStrict}
 
 
 #### Request

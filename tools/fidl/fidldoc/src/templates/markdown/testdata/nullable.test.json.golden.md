@@ -9,7 +9,7 @@
 *Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#17)*
 
 
-### Add {#Add}
+### Add {#fidl.test.nullable/SimpleProtocol.Add}
 
 
 #### Request

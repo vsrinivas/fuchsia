@@ -9,7 +9,7 @@
 *Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#22)*
 
 
-### Method {#Method}
+### Method {#example/ExampleProtocol.Method}
 
 
 #### Request

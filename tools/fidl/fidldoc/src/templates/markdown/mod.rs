@@ -100,6 +100,7 @@ impl MarkdownTemplate {
             ("docLink", crate::templates::doc_link),
             ("oneline", crate::templates::one_line),
             ("pulldown", crate::templates::pulldown),
+            ("methodId", crate::templates::method_id),
         ];
         for &(name, helper) in helpers {
             handlebars.register_helper(name, Box::new(helper));
