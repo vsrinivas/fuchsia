@@ -215,8 +215,10 @@ class TestMsdArmDevice {
     device->EnqueueDeviceRequest(std::move(request));
     while (!*processing_complete)
       ;
-    device.reset();
+    device->device_thread_quit_flag_ = true;
+    device->device_request_semaphore_->Signal();
     device_thread.join();
+    device.reset();
 
     EXPECT_TRUE(processing_complete);
   }
