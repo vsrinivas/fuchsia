@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <fbl/ref_ptr.h>
+#include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -24,6 +25,11 @@ class FakeMsiTests : public zxtest::Test {};
 TEST_F(FakeMsiTests, CleanupTest) {
   zx::interrupt interrupt;
   ASSERT_DEATH([&interrupt]() {
+#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
+    // Suppress the leaks that come from the fact that the MSI dtor doesn't
+    // finish.
+    __lsan::ScopedDisabler suppress;
+#endif
     zx::msi msi;
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, /*options=*/0, &vmo));
