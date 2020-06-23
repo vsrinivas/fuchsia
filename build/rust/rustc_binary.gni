@@ -8,10 +8,19 @@ import("//build/rust/rustc_test.gni")
 #
 # Parameters
 #
-#   name
+#   output_name (optional)
+#   name (optional, deprecated)
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name.  All dashes will be replaced
 #     with underscores in the binary name: <name_underscored>
+#
+#   output_dir (optional)
+#     Directory that the resulting binary should be placed in.
+#     See: `gn help output_dir`
+#
+#   output_extension (optional)
+#     The file extension for the binary.
+#     See: `gn help output_extension`
 #
 #   version (optional)
 #     Semver version of the crate as seen on crates.io.
@@ -118,6 +127,17 @@ template("rustc_binary") {
   # TODO soft-migration
   not_needed(invoker, [ "with_lto" ])
 
+  # use the target name unless another name is specified
+  package_name = target_name
+  if (defined(invoker.output_name)) {
+    package_name = invoker.output_name
+  }
+  if (defined(invoker.name)) {
+    package_name = invoker.name
+  }
+  assert(!(defined(invoker.output_name) && defined(invoker.name)),
+         "Only one of output_name and name may be specified.")
+
   # if "with_unit_tests" is set to true, generate an additional rust test target
   # TODO(bwb) deprecate this. All tests should be declared independently
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
@@ -158,12 +178,6 @@ template("rustc_binary") {
   source_root = "src/main.rs"
   if (defined(invoker.source_root)) {
     source_root = invoker.source_root
-  }
-
-  # use the target name unless another name is specified
-  package_name = target_name
-  if (defined(invoker.name)) {
-    package_name = invoker.name
   }
 
   # built-in gn rules do not support dashes
@@ -214,6 +228,8 @@ template("rustc_binary") {
                            [
                              "testonly",
                              "visibility",
+                             "output_dir",
+                             "output_extension",
                            ])
   }
 }

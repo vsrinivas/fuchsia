@@ -16,13 +16,13 @@ template("ffx") {
     ffx_deps += invoker.plugin_deps
   }
 
-  output_name = target_name
+  ffx_name = target_name
 
   if (defined(invoker.name)) {
-    output_name = invoker.name
+    ffx_name = invoker.name
   }
 
-  suite_name = output_name + "_lib"
+  suite_name = ffx_name + "_lib"
 
   ffx_plugin_suite(suite_name) {
     template = "command.md"
@@ -31,8 +31,8 @@ template("ffx") {
     args_deps = [ "core:lib" ]
   }
 
-  rustc_binary(output_name + "_bin") {
-    name = output_name
+  rustc_binary(ffx_name + "_bin") {
+    output_name = ffx_name
     deps = ffx_deps + [
              ":" + suite_name + "_args",
              ":" + suite_name + "_sub_command",
@@ -59,11 +59,11 @@ template("ffx") {
     }
   }
 
-  group(output_name + "_tests") {
+  group(ffx_name + "_tests") {
     testonly = true
 
     deps = tests_deps + [
-             ":" + output_name + "_bin_test($host_toolchain)",
+             ":" + ffx_name + "_bin_test($host_toolchain)",
              ":" + suite_name + "_tests($host_toolchain)",
              "config:tests($host_toolchain)",
              "core:tests($host_toolchain)",
