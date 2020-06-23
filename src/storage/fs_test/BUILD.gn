@@ -52,7 +52,7 @@ shared_library("fs_test") {
   ]
 }
 
-executable("access") {
+executable("access_tests") {
   testonly = true
   sources = [ "access.cc" ]
   deps = [
@@ -65,14 +65,14 @@ executable("access") {
 
 fuchsia_component("access-tests") {
   testonly = true
-  manifest = "$target_gen_dir/access.cml"
+  manifest = "$target_gen_dir/access-tests.cml"
   deps = [
-    ":access",
+    ":access_tests",
     ":manifests",
   ]
 }
 
-executable("append") {
+executable("append_tests") {
   testonly = true
   sources = [ "append.cc" ]
   deps = [
@@ -84,14 +84,14 @@ executable("append") {
 
 fuchsia_component("append-tests") {
   testonly = true
-  manifest = "$target_gen_dir/append.cml"
+  manifest = "$target_gen_dir/append-tests.cml"
   deps = [
-    ":append",
+    ":append_tests",
     ":manifests",
   ]
 }
 
-executable("attr") {
+executable("attr_tests") {
   testonly = true
   sources = [ "attr.cc" ]
   deps = [
@@ -103,14 +103,14 @@ executable("attr") {
 
 fuchsia_component("attr-tests") {
   testonly = true
-  manifest = "$target_gen_dir/attr.cml"
+  manifest = "$target_gen_dir/attr-tests.cml"
   deps = [
-    ":attr",
+    ":attr_tests",
     ":manifests",
   ]
 }
 
-executable("clone") {
+executable("clone_tests") {
   testonly = true
   sources = [ "clone.cc" ]
   deps = [
@@ -122,14 +122,14 @@ executable("clone") {
 
 fuchsia_component("clone-tests") {
   testonly = true
-  manifest = "$target_gen_dir/clone.cml"
+  manifest = "$target_gen_dir/clone-tests.cml"
   deps = [
-    ":clone",
+    ":clone_tests",
     ":manifests",
   ]
 }
 
-executable("directory") {
+executable("directory_tests") {
   testonly = true
   sources = [ "directory.cc" ]
   deps = [
@@ -141,14 +141,14 @@ executable("directory") {
 
 fuchsia_component("directory-tests") {
   testonly = true
-  manifest = "$target_gen_dir/directory.cml"
+  manifest = "$target_gen_dir/directory-tests.cml"
   deps = [
-    ":directory",
+    ":directory_tests",
     ":manifests",
   ]
 }
 
-executable("dot_dot") {
+executable("dot_dot_tests") {
   testonly = true
   sources = [ "dot_dot.cc" ]
   deps = [
@@ -159,14 +159,14 @@ executable("dot_dot") {
 
 fuchsia_component("dot-dot-tests") {
   testonly = true
-  manifest = "$target_gen_dir/dot-dot.cml"
+  manifest = "$target_gen_dir/dot-dot-tests.cml"
   deps = [
-    ":dot_dot",
+    ":dot_dot_tests",
     ":manifests",
   ]
 }
 
-executable("fcntl") {
+executable("fcntl_tests") {
   testonly = true
   sources = [ "fcntl.cc" ]
   deps = [
@@ -178,14 +178,33 @@ executable("fcntl") {
 
 fuchsia_component("fcntl-tests") {
   testonly = true
-  manifest = "$target_gen_dir/fcntl.cml"
+  manifest = "$target_gen_dir/fcntl-tests.cml"
   deps = [
-    ":fcntl",
+    ":fcntl_tests",
     ":manifests",
   ]
 }
 
-executable("overflow") {
+executable("link_tests") {
+  testonly = true
+  sources = [ "link.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("link-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/link-tests.cml"
+  deps = [
+    ":link_tests",
+    ":manifests",
+  ]
+}
+
+executable("overflow_tests") {
   testonly = true
   sources = [ "overflow.cc" ]
   deps = [
@@ -196,14 +215,14 @@ executable("overflow") {
 
 fuchsia_component("overflow-tests") {
   testonly = true
-  manifest = "$target_gen_dir/overflow.cml"
+  manifest = "$target_gen_dir/overflow-tests.cml"
   deps = [
     ":manifests",
-    ":overflow",
+    ":overflow_tests",
   ]
 }
 
-executable("read_write") {
+executable("read_write_tests") {
   testonly = true
   sources = [ "read_write.cc" ]
   deps = [
@@ -215,10 +234,10 @@ executable("read_write") {
 
 fuchsia_component("read-write-tests") {
   testonly = true
-  manifest = "$target_gen_dir/read-write.cml"
+  manifest = "$target_gen_dir/read-write-tests.cml"
   deps = [
     ":manifests",
-    ":read_write",
+    ":read_write_tests",
   ]
 }
 
@@ -231,12 +250,13 @@ fuchsia_test_package("fs-tests") {
     ":directory-tests",
     ":dot-dot-tests",
     ":fcntl-tests",
+    ":link-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
 }
 
-executable("max_file") {
+executable("max_file_tests") {
   testonly = true
   sources = [ "max_file.cc" ]
   deps = [
@@ -249,10 +269,10 @@ executable("max_file") {
 
 fuchsia_component("max-file-tests") {
   testonly = true
-  manifest = "$target_gen_dir/max-file.cml"
+  manifest = "$target_gen_dir/max-file-tests.cml"
   deps = [
     ":manifests",
-    ":max_file",
+    ":max_file_tests",
   ]
 }
 
@@ -264,16 +284,17 @@ action("manifests") {
   script = "generate_manifests.py"
   sources = [ "meta/fs_tests.cml" ]
   outputs = [
-    "$target_gen_dir/access.cml",
-    "$target_gen_dir/append.cml",
-    "$target_gen_dir/attr.cml",
-    "$target_gen_dir/clone.cml",
-    "$target_gen_dir/directory.cml",
-    "$target_gen_dir/dot-dot.cml",
-    "$target_gen_dir/fcntl.cml",
-    "$target_gen_dir/max-file.cml",
-    "$target_gen_dir/overflow.cml",
-    "$target_gen_dir/read-write.cml",
+    "$target_gen_dir/access-tests.cml",
+    "$target_gen_dir/append-tests.cml",
+    "$target_gen_dir/attr-tests.cml",
+    "$target_gen_dir/clone-tests.cml",
+    "$target_gen_dir/directory-tests.cml",
+    "$target_gen_dir/dot-dot-tests.cml",
+    "$target_gen_dir/fcntl-tests.cml",
+    "$target_gen_dir/link-tests.cml",
+    "$target_gen_dir/max-file-tests.cml",
+    "$target_gen_dir/overflow-tests.cml",
+    "$target_gen_dir/read-write-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
          rebase_path(outputs, root_build_dir)

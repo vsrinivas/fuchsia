@@ -57,6 +57,7 @@ class FileSystem {
   struct Traits {
     bool can_unmount = false;
     zx::duration timestamp_granularity = zx::nsec(1);
+    bool supports_hard_links = true;
   };
 
   virtual zx::status<std::unique_ptr<FileSystemInstance>> Make(
@@ -84,7 +85,11 @@ class MinfsFileSystem : public FileSystemImpl<MinfsFileSystem> {
   zx::status<std::unique_ptr<FileSystemInstance>> Make(
       const TestFileSystemOptions& options) const override;
   const Traits& GetTraits() const override {
-    static Traits traits{.can_unmount = true};
+    static Traits traits{
+        .can_unmount = true,
+        .timestamp_granularity = zx::nsec(1),
+        .supports_hard_links = true,
+    };
     return traits;
   }
 };
@@ -95,7 +100,11 @@ class MemfsFileSystem : public FileSystemImpl<MemfsFileSystem> {
   zx::status<std::unique_ptr<FileSystemInstance>> Make(
       const TestFileSystemOptions& options) const override;
   const Traits& GetTraits() const override {
-    static Traits traits{.can_unmount = false};
+    static Traits traits{
+        .can_unmount = false,
+        .timestamp_granularity = zx::nsec(1),
+        .supports_hard_links = true,
+    };
     return traits;
   }
 };
