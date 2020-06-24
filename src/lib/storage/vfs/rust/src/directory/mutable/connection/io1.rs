@@ -13,7 +13,7 @@ use crate::{
             DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
         },
         entry::DirectoryEntry,
-        entry_container,
+        entry_container::MutableDirectory,
         mutable::entry_constructor::NewEntryType,
     },
     execution_scope::ExecutionScope,
@@ -35,24 +35,24 @@ use {
 
 /// This is an API a mutable directory needs to implement, in order for a `MutableConnection` to be
 /// able to interact with this it.
-pub trait MutableConnectionClient: BaseConnectionClient + entry_container::DirectlyMutable {
+pub trait MutableConnectionClient: BaseConnectionClient + MutableDirectory {
     fn into_base_connection_client(self: Arc<Self>) -> Arc<dyn BaseConnectionClient>;
 
-    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn entry_container::DirectlyMutable>;
+    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory>;
 
     fn into_token_registry_client(self: Arc<Self>) -> Arc<dyn TokenRegistryClient>;
 }
 
 impl<T> MutableConnectionClient for T
 where
-    T: BaseConnectionClient + entry_container::DirectlyMutable + 'static,
+    T: BaseConnectionClient + MutableDirectory + 'static,
 {
     fn into_base_connection_client(self: Arc<Self>) -> Arc<dyn BaseConnectionClient> {
         self as Arc<dyn BaseConnectionClient>
     }
 
-    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn entry_container::DirectlyMutable> {
-        self as Arc<dyn entry_container::DirectlyMutable>
+    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory> {
+        self as Arc<dyn MutableDirectory>
     }
 
     fn into_token_registry_client(self: Arc<Self>) -> Arc<dyn TokenRegistryClient> {
@@ -209,9 +209,8 @@ impl MutableConnection {
             return responder(Status::BAD_PATH);
         }
 
-        match self.base.directory.clone().remove_entry_impl(entry_name) {
-            Ok(None) => responder(Status::NOT_FOUND),
-            Ok(Some(_entry)) => responder(Status::OK),
+        match self.base.directory.clone().unlink(entry_name) {
+            Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
     }
@@ -265,14 +264,252 @@ impl MutableConnection {
             Ok(Some(entry)) => entry,
         };
 
-        match entry_container::rename_helper(
-            self.base.directory.clone().into_directly_mutable(),
+        match self.base.directory.clone().into_mutable_directory().get_filesystem().rename(
+            self.base.directory.clone().into_mutable_directory().into_any(),
             src,
-            dst_parent.into_directly_mutable(),
+            dst_parent.into_mutable_directory().into_any(),
             dst,
         ) {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::{
+            directory::{
+                dirents_sink,
+                entry::{DirectoryEntry, EntryInfo},
+                entry_container::*,
+                traversal_position::AlphabeticalTraversal,
+            },
+            filesystem::{Filesystem, FilesystemRename},
+            registry::token_registry,
+        },
+        fidl::Channel,
+        fidl_fuchsia_io::{DirectoryProxy, DIRENT_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
+        fuchsia_async as fasync,
+        std::{any::Any, sync::Mutex},
+    };
+
+    #[derive(Debug, PartialEq)]
+    enum MutableDirectoryAction {
+        Link { id: u32, path: String },
+        Unlink { id: u32, path: String },
+        Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
+    }
+
+    #[derive(Debug)]
+    struct MockDirectory {
+        id: u32,
+        env: Arc<TestEnv>,
+    }
+
+    impl MockDirectory {
+        pub fn new(id: u32, env: Arc<TestEnv>) -> Arc<Self> {
+            Arc::new(MockDirectory { id, env })
+        }
+    }
+
+    impl PartialEq for MockDirectory {
+        fn eq(&self, other: &Self) -> bool {
+            self.id == other.id
+        }
+    }
+
+    impl DirectoryEntry for MockDirectory {
+        fn open(
+            self: Arc<Self>,
+            _scope: ExecutionScope,
+            _flags: u32,
+            _mode: u32,
+            _path: Path,
+            _server_end: ServerEnd<NodeMarker>,
+        ) {
+            panic!("Not implemented!");
+        }
+
+        fn entry_info(&self) -> EntryInfo {
+            EntryInfo::new(0, DIRENT_TYPE_DIRECTORY)
+        }
+
+        fn can_hardlink(&self) -> bool {
+            // So we can use "self" in Directory::get_entry()
+            // and expect link() to succeed.
+            true
+        }
+    }
+
+    impl Directory for MockDirectory {
+        fn get_entry(self: Arc<Self>, _name: String) -> AsyncGetEntry {
+            AsyncGetEntry::Immediate(Ok(self))
+        }
+
+        fn read_dirents(
+            self: Arc<Self>,
+            _pos: AlphabeticalTraversal,
+            _sink: Box<dyn dirents_sink::Sink>,
+        ) -> AsyncReadDirents {
+            panic!("Not implemented");
+        }
+
+        fn register_watcher(
+            self: Arc<Self>,
+            _scope: ExecutionScope,
+            _mask: u32,
+            _channel: fasync::Channel,
+        ) -> Status {
+            panic!("Not implemented");
+        }
+
+        fn unregister_watcher(self: Arc<Self>, _key: usize) {
+            panic!("Not implemented");
+        }
+    }
+
+    impl MutableDirectory for MockDirectory {
+        fn link(&self, path: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+            self.env.handle_event(MutableDirectoryAction::Link { id: self.id, path })
+        }
+
+        fn unlink(&self, path: String) -> Result<(), Status> {
+            self.env.handle_event(MutableDirectoryAction::Unlink { id: self.id, path })
+        }
+
+        fn get_filesystem(&self) -> Arc<dyn Filesystem> {
+            Arc::new(MockFilesystem { env: self.env.clone() })
+        }
+
+        fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
+            self as Arc<dyn Any + Send + Sync>
+        }
+    }
+
+    struct MockFilesystem {
+        env: Arc<TestEnv>,
+    }
+
+    impl FilesystemRename for MockFilesystem {
+        fn rename(
+            &self,
+            src_dir: Arc<Any + Sync + Send + 'static>,
+            src_name: String,
+            dst_dir: Arc<Any + Sync + Send + 'static>,
+            dst_name: String,
+        ) -> Result<(), Status> {
+            let src_dir = src_dir.downcast::<MockDirectory>().unwrap();
+            let dst_dir = dst_dir.downcast::<MockDirectory>().unwrap();
+            self.env.handle_event(MutableDirectoryAction::Rename {
+                id: src_dir.id,
+                src_name,
+                dst_dir,
+                dst_name,
+            })
+        }
+    }
+
+    impl Filesystem for MockFilesystem {}
+
+    struct TestEnv {
+        cur_id: Mutex<u32>,
+        token_registry: Arc<token_registry::Simple>,
+        events: Mutex<Vec<MutableDirectoryAction>>,
+    }
+
+    impl std::fmt::Debug for TestEnv {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("TestEnv").field("cur_id", &self.cur_id).finish()
+        }
+    }
+
+    impl TestEnv {
+        pub fn new() -> Arc<Self> {
+            let token_registry = token_registry::Simple::new();
+            Arc::new(TestEnv { cur_id: Mutex::new(0), token_registry, events: Mutex::new(vec![]) })
+        }
+
+        pub fn handle_event(&self, event: MutableDirectoryAction) -> Result<(), Status> {
+            self.events.lock().unwrap().push(event);
+            Ok(())
+        }
+
+        pub fn make_connection(
+            self: Arc<Self>,
+            flags: u32,
+        ) -> (Arc<MockDirectory>, DirectoryProxy) {
+            let scope = ExecutionScope::build(Box::new(fasync::EHandle::local()))
+                .token_registry(self.token_registry.clone())
+                .new();
+            let mut cur_id = self.cur_id.lock().unwrap();
+            let dir = MockDirectory::new(*cur_id, self.clone());
+            *cur_id += 1;
+            let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            MutableConnection::create_connection(
+                scope,
+                dir.clone(),
+                flags,
+                0,
+                server_end.into_channel().into(),
+            );
+            (dir, proxy)
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_rename() {
+        let env = TestEnv::new();
+
+        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (dir2, proxy2) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+
+        let (status, token) = proxy2.get_token().await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        let status = proxy.rename("src", token.unwrap(), "dest").await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        let events = env.events.lock().unwrap();
+        assert_eq!(
+            *events,
+            vec![MutableDirectoryAction::Rename {
+                id: 0,
+                src_name: "src".to_owned(),
+                dst_dir: dir2,
+                dst_name: "dest".to_owned(),
+            },]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_link() {
+        let env = TestEnv::new();
+        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir2, proxy2) =
+            env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+
+        let (status, token) = proxy2.get_token().await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        let status = proxy.link("src", token.unwrap(), "dest").await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let events = env.events.lock().unwrap();
+        assert_eq!(*events, vec![MutableDirectoryAction::Link { id: 1, path: "dest".to_owned() },]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unlink() {
+        let env = TestEnv::new();
+        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let status = proxy.unlink("test").await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let events = env.events.lock().unwrap();
+        assert_eq!(
+            *events,
+            vec![MutableDirectoryAction::Unlink { id: 0, path: "test".to_owned() },]
+        );
     }
 }

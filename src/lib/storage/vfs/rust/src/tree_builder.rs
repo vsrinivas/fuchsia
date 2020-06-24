@@ -8,7 +8,7 @@
 //! tree structure to be defined at compile time, while this helper allows the tree structure to be
 //! dynamic.
 
-use crate::directory::{entry::DirectoryEntry, entry_container::DirectlyMutable, immutable};
+use crate::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable};
 
 use {
     fidl_fuchsia_io::MAX_FILENAME,

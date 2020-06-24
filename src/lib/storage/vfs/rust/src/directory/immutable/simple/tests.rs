@@ -18,7 +18,7 @@ use crate::{
 use crate::{
     directory::{
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::DirectlyMutable,
+        helper::DirectlyMutable,
         test_utils::{run_server_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,

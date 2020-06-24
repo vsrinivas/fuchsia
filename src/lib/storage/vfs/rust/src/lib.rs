@@ -21,6 +21,7 @@ pub mod registry;
 
 pub mod directory;
 pub mod file;
+pub mod filesystem;
 pub mod service;
 
 pub mod tree_builder;

@@ -28,7 +28,7 @@ use {
     std::{path::Path, sync::Arc},
     thiserror::Error,
     vfs::{
-        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
+        directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
         directory::immutable::simple as pfs, execution_scope::ExecutionScope,
         file::pcb::asynchronous::read_only_static, path::Path as fvfsPath, pseudo_directory,
         tree_builder::TreeBuilder,

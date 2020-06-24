@@ -11,7 +11,8 @@ use crate::{
         connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{self, AsyncGetEntry, AsyncReadDirents, Directory},
+        entry_container::{AsyncGetEntry, AsyncReadDirents, Directory},
+        helper::DirectlyMutable,
         immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
         mutable::connection::io1::{MutableConnection, MutableConnectionClient},
         traversal_position::AlphabeticalTraversal,
@@ -21,6 +22,7 @@ use crate::{
         },
     },
     execution_scope::ExecutionScope,
+    filesystem::{simple::SimpleFilesystem, Filesystem},
     path::Path,
     MAX_NAME_LENGTH,
 };
@@ -33,6 +35,7 @@ use {
     parking_lot::Mutex,
     static_assertions::assert_eq_size,
     std::{
+        any::Any,
         clone::Clone,
         collections::{btree_map, BTreeMap},
         iter,
@@ -291,15 +294,11 @@ where
     }
 }
 
-impl<Connection> entry_container::DirectlyMutable for Simple<Connection>
+impl<Connection> DirectlyMutable for Simple<Connection>
 where
     Connection: DerivedConnection + 'static,
 {
-    fn add_entry_impl(
-        self: Arc<Self>,
-        name: String,
-        entry: Arc<dyn DirectoryEntry>,
-    ) -> Result<(), Status> {
+    fn add_entry_impl(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
         assert_eq_size!(u64, usize);
         if name.len() as u64 > MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
@@ -317,10 +316,7 @@ where
         Ok(())
     }
 
-    fn remove_entry_impl(
-        self: Arc<Self>,
-        name: String,
-    ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
+    fn remove_entry_impl(&self, name: String) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
         assert_eq_size!(u64, usize);
         if name.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
@@ -333,7 +329,7 @@ where
         Ok(this.entries.remove(&name))
     }
 
-    fn link(self: Arc<Self>, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+    fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
         if name.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
@@ -347,7 +343,7 @@ where
     }
 
     unsafe fn rename_from(
-        self: Arc<Self>,
+        &self,
         src: String,
         to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
     ) -> Result<(), Status> {
@@ -373,7 +369,7 @@ where
     }
 
     unsafe fn rename_to(
-        self: Arc<Self>,
+        &self,
         dst: String,
         from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,
     ) -> Result<(), Status> {
@@ -391,7 +387,7 @@ where
         Ok(())
     }
 
-    fn rename_within(self: Arc<Self>, src: String, dst: String) -> Result<(), Status> {
+    fn rename_within(&self, src: String, dst: String) -> Result<(), Status> {
         if src.len() as u64 >= MAX_NAME_LENGTH || dst.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
@@ -427,5 +423,13 @@ where
 
         let _ = this.entries.insert(dst, entry);
         Ok(())
+    }
+
+    fn get_filesystem(&self) -> Arc<dyn Filesystem> {
+        Arc::new(SimpleFilesystem::<Self>::new())
+    }
+
+    fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
+        self as Arc<Any + Send + Sync>
     }
 }

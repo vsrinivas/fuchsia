@@ -20,7 +20,7 @@ use {
     log::*,
     std::{collections::HashMap, sync::Arc},
     vfs::{
-        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
+        directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
         directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
     },
 };

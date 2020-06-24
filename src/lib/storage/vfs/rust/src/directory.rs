@@ -10,7 +10,6 @@ pub mod test_utils;
 #[macro_use]
 mod common;
 mod connection;
-mod traversal_position;
 mod watchers;
 
 pub mod immutable;
@@ -21,4 +20,6 @@ pub mod simple;
 pub mod dirents_sink;
 pub mod entry;
 pub mod entry_container;
+pub mod helper;
 pub mod read_dirents;
+pub mod traversal_position;

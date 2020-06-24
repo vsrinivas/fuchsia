@@ -271,18 +271,22 @@ mod tests {
     mod mocks {
         use crate::{
             directory::{
+                dirents_sink,
                 entry::{DirectoryEntry, EntryInfo},
-                entry_container::DirectlyMutable,
+                entry_container::{AsyncGetEntry, AsyncReadDirents, Directory, MutableDirectory},
+                traversal_position::AlphabeticalTraversal,
             },
             execution_scope::ExecutionScope,
+            filesystem::Filesystem,
             path::Path,
         };
 
         use {
             fidl::endpoints::ServerEnd,
             fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
+            fuchsia_async::Channel,
             fuchsia_zircon::Status,
-            std::sync::Arc,
+            std::{any::Any, sync::Arc},
         };
 
         pub(super) struct MockDirectory {}
@@ -313,48 +317,48 @@ mod tests {
             }
         }
 
-        impl DirectlyMutable for MockDirectory {
-            fn add_entry_impl(
-                self: Arc<Self>,
-                _name: String,
-                _entry: Arc<dyn DirectoryEntry>,
-            ) -> Result<(), Status> {
-                panic!("Not implemented")
+        impl Directory for MockDirectory {
+            fn get_entry(self: Arc<Self>, _name: String) -> AsyncGetEntry {
+                panic!("Not implemented!")
             }
 
-            fn remove_entry_impl(
+            fn read_dirents(
                 self: Arc<Self>,
-                _name: String,
-            ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
-                panic!("Not implemented")
+                _pos: AlphabeticalTraversal,
+                _sink: Box<dyn dirents_sink::Sink>,
+            ) -> AsyncReadDirents {
+                panic!("Not implemented!")
             }
 
-            fn link(
+            fn register_watcher(
                 self: Arc<Self>,
-                _name: String,
-                _entry: Arc<dyn DirectoryEntry>,
-            ) -> Result<(), Status> {
-                panic!("Not implemented")
+                _scope: ExecutionScope,
+                _mask: u32,
+                _channel: Channel,
+            ) -> Status {
+                panic!("Not implemented!")
             }
 
-            unsafe fn rename_from(
-                self: Arc<Self>,
-                _src: String,
-                _to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
-            ) -> Result<(), Status> {
-                panic!("Not implemented")
+            fn unregister_watcher(self: Arc<Self>, _key: usize) {
+                panic!("Not implemented!")
+            }
+        }
+
+        impl MutableDirectory for MockDirectory {
+            fn link(&self, _name: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+                panic!("Not implemented!")
             }
 
-            unsafe fn rename_to(
-                self: Arc<Self>,
-                _dst: String,
-                _from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,
-            ) -> Result<(), Status> {
-                panic!("Not implemented")
+            fn unlink(&self, _name: String) -> Result<(), Status> {
+                panic!("Not implemented!")
             }
 
-            fn rename_within(self: Arc<Self>, _src: String, _dst: String) -> Result<(), Status> {
-                panic!("Not implemented")
+            fn get_filesystem(&self) -> Arc<dyn Filesystem> {
+                panic!("Not implemented!")
+            }
+
+            fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
+                panic!("Not implemented!");
             }
         }
     }

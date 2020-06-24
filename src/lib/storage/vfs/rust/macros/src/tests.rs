@@ -46,7 +46,7 @@ fn empty() {
     check_pseudo_directory_impl(
         "",
         "{ \
-             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             use :: vfs :: directory :: helper :: DirectlyMutable ; \
              let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
              __dir \
          }"
@@ -63,7 +63,7 @@ fn one_entry() {
         "#
         ),
         "{ \
-             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             use :: vfs :: directory :: helper :: DirectlyMutable ; \
              let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
              :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"name\" , \"Span\" , \
@@ -84,7 +84,7 @@ fn two_entries() {
         "#
         ),
         "{ \
-             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             use :: vfs :: directory :: helper :: DirectlyMutable ; \
              let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
              :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
@@ -109,7 +109,7 @@ fn assign_to() {
         "#
         ),
         "{ \
-             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             use :: vfs :: directory :: helper :: DirectlyMutable ; \
              my_dir = :: vfs :: directory :: immutable :: simple ( ) ; \
              :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
@@ -132,7 +132,7 @@ fn entry_has_name_from_ref() {
         "#
         ),
         "{ \
-             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             use :: vfs :: directory :: helper :: DirectlyMutable ; \
              let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
              :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  test_name , \"Span\" , \

@@ -7,7 +7,7 @@
 pub mod inode_registry;
 pub mod token_registry;
 
-use crate::directory::{entry::DirectoryEntry, entry_container::DirectlyMutable};
+use crate::directory::{entry::DirectoryEntry, entry_container::MutableDirectory};
 
 use {
     fidl::Handle,
@@ -15,16 +15,16 @@ use {
     std::sync::Arc,
 };
 
-pub trait TokenRegistryClient: DirectoryEntry + DirectlyMutable + Send + Sync {
-    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn DirectlyMutable>;
+pub trait TokenRegistryClient: DirectoryEntry + MutableDirectory + Send + Sync {
+    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory>;
 }
 
 impl<T> TokenRegistryClient for T
 where
-    T: DirectoryEntry + DirectlyMutable + Send + Sync + 'static,
+    T: DirectoryEntry + MutableDirectory + Send + Sync + 'static,
 {
-    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn DirectlyMutable> {
-        self as Arc<dyn DirectlyMutable>
+    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory> {
+        self as Arc<dyn MutableDirectory>
     }
 }
 

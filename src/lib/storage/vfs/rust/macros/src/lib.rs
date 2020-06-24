@@ -131,7 +131,7 @@ fn pseudo_directory_impl(mutable: bool, input: TokenStream) -> TokenStream {
     // `use ...::DirectlyMutable` is needed to allow for the `add_entry` call.
     TokenStream::from(quote! {
         {
-            use #directory_mod::entry_container::DirectlyMutable;
+            use #directory_mod::helper::DirectlyMutable;
 
             #constructor
 

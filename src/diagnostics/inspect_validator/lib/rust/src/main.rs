@@ -29,7 +29,7 @@ use {
     vfs::{
         directory::{
             entry::DirectoryEntry,
-            entry_container::DirectlyMutable,
+            helper::DirectlyMutable,
             mutable::simple::{simple, Simple},
         },
         execution_scope::ExecutionScope,
