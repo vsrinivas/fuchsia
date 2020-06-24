@@ -19,21 +19,23 @@ void PDev::ShowInfo() {
   }
 }
 
-__WEAK zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio) {
+__WEAK zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio,
+                                 uint32_t cache_policy) {
   pdev_mmio_t pdev_mmio;
 
   zx_status_t status = GetMmio(index, &pdev_mmio);
   if (status != ZX_OK) {
     return status;
   }
-  return PDevMakeMmioBufferWeak(pdev_mmio, mmio);
+  return PDevMakeMmioBufferWeak(pdev_mmio, mmio, cache_policy);
 }
 
 // Regular implementation for drivers. Tests might override this.
 [[gnu::weak]] zx_status_t PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
-                                                 std::optional<MmioBuffer>* mmio) {
-  return MmioBuffer::Create(pdev_mmio.offset, pdev_mmio.size, zx::vmo(pdev_mmio.vmo),
-                            ZX_CACHE_POLICY_UNCACHED_DEVICE, mmio);
+                                                 std::optional<MmioBuffer>* mmio,
+                                                 uint32_t cache_policy) {
+  return MmioBuffer::Create(pdev_mmio.offset, pdev_mmio.size, zx::vmo(pdev_mmio.vmo), cache_policy,
+                            mmio);
 }
 
 }  // namespace ddk

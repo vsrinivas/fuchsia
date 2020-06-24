@@ -271,7 +271,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
 // with the driver unmodified. The real implementation tries to map a VMO that
 // we can't properly fake at the moment.
 zx_status_t ddk::PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
-                                        std::optional<MmioBuffer>* mmio) {
+                                        std::optional<MmioBuffer>* mmio, uint32_t cache_policy) {
   auto* src = reinterpret_cast<amlogic_ram::FakePDev*>(pdev_mmio.offset);
   mmio->emplace(src->mmio());
   return ZX_OK;
