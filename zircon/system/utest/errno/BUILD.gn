@@ -21,7 +21,7 @@ test("errno") {
   sources = [ "errno.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
 
   libs = [ "zircon" ]
