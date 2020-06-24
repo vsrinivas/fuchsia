@@ -72,7 +72,7 @@ class AgentContextImpl::FinishInitializeCall : public Operation<> {
     agent_context_impl_->agent_.set_error_handler(
         [agent_url = agent_context_impl_->url_](zx_status_t status) {
           FX_PLOGS(INFO, status) << "Agent " << agent_url
-                                 << "closed its fuchsia.modular.Agent channel. "
+                                 << " closed its fuchsia.modular.Agent channel. "
                                  << "This is expected for agents that don't expose it.";
         });
 
