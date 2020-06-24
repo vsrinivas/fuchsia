@@ -67,12 +67,13 @@ class SessionStorage {
   // removed, but existing annotations with the same key as a given annotation will be updated
   // with the value of the given annotation.
   //
-  // Returns a FuturePtr that resolves to one of:
-  //  * optional<AnnotationError> has no value - successful merge
+  // Returns an optional AnnotationError that is either:
+  //  * std::nullopt - successful merge
   //  * AnnotationError::TOO_MANY_ANNOTATIONS - the merge operation would result in too many
   //    annotations
-  //  * AnnotationError::NOT_FOUND - the story was deleted, or could not be found or updated for
-  //    some other reason
+  //  * AnnotationError::NOT_FOUND - the story does not exist
+  //  * AnnotationError::VALUE_TOO_BIG - one of the annotations had a buffer value that
+  //    exceeded the size limit
   std::optional<fuchsia::modular::AnnotationError> MergeStoryAnnotations(
       fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations);
 

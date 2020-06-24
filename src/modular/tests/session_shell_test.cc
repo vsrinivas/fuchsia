@@ -721,8 +721,8 @@ TEST_F(SessionShellTest, StoryControllerAnnotateMerge) {
   RunLoopUntil([&] { return done; });
 }
 
-// Verifies that Annotate returns an error when one of the annotations has a buffer value that
-// exceeds MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES.
+// Verifies that StoryController.Annotate returns an error when one of the annotations
+// has a buffer value that exceeds MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES.
 TEST_F(SessionShellTest, StoryControllerAnnotateBufferValueTooBig) {
   const auto story_name = TEST_NAME(story);
 
@@ -750,6 +750,46 @@ TEST_F(SessionShellTest, StoryControllerAnnotateBufferValueTooBig) {
   bool done{false};
   story_controller->Annotate(
       std::move(annotations), [&](fuchsia::modular::StoryController_Annotate_Result result) {
+        EXPECT_TRUE(result.is_err());
+        EXPECT_EQ(fuchsia::modular::AnnotationError::VALUE_TOO_BIG, result.err());
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that StoryPuppetMaster.Annotate returns an error when one of the annotations
+// has a buffer value that exceeds MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES.
+TEST_F(SessionShellTest, StoryPuppetMasterAnnotateBufferValueTooBig) {
+  const auto story_name = TEST_NAME(story);
+
+  RunHarnessAndInterceptSessionShellAndFakeModule(story_name);
+
+  // Connect to StoryPuppetMaster.
+  fuchsia::modular::testing::ModularService svc;
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+  svc.set_puppet_master(puppet_master.NewRequest());
+  test_harness()->ConnectToModularService(std::move(svc));
+
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+  puppet_master->ControlStory(story_name, story_puppet_master.NewRequest());
+
+  // Create an annotation with a large buffer value.
+  fuchsia::mem::Buffer buffer{};
+  std::string buffer_value(fuchsia::modular::MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES + 1, 'x');
+  ASSERT_TRUE(fsl::VmoFromString(buffer_value, &buffer));
+
+  auto annotation_value = fuchsia::modular::AnnotationValue{};
+  annotation_value.set_buffer(std::move(buffer));
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "buffer_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(std::move(annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story_puppet_master->Annotate(
+      std::move(annotations), [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
         EXPECT_TRUE(result.is_err());
         EXPECT_EQ(fuchsia::modular::AnnotationError::VALUE_TOO_BIG, result.err());
         done = true;

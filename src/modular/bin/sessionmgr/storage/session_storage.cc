@@ -95,43 +95,47 @@ std::vector<fuchsia::modular::internal::StoryData> SessionStorage::GetAllStoryDa
 
 std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnotations(
     fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
-  // On success, this optional AnnotationError response will have no value (!has_value()).
-  // Otherwise, the error will be set explicitly, or it is assumed the story is no longer viable
-  // (default NOT_FOUND).
-
-  std::optional<fuchsia::modular::AnnotationError> error = std::nullopt;
-  // Get story data for this story, if it exists.  If not, then return
-  // NOT_FOUND.
+  // Ensure the story exists.
   auto it = story_data_backing_store_.find(story_name);
   if (it == story_data_backing_store_.end()) {
-    // If the story doesn't exist, it was deleted.
-    error = fuchsia::modular::AnnotationError::NOT_FOUND;
-  } else {
-    auto& story_data = it->second;
+    return fuchsia::modular::AnnotationError::NOT_FOUND;
+  }
 
-    // Merge annotations.
-    auto new_annotations =
-        story_data.story_info().has_annotations()
-            ? annotations::Merge(std::move(*story_data.mutable_story_info()->mutable_annotations()),
-                                 std::move(annotations))
-            : std::move(annotations);
+  auto& story_data = it->second;
 
-    // Mutate story in-place.
-    // No need to write story data back to map because we modify it in place.
-    if (new_annotations.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_STORY) {
-      error = fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS;
-    } else {
-      story_data.mutable_story_info()->set_annotations(std::move(new_annotations));
-    }
-
-    if (on_story_updated_) {
-      fuchsia::modular::internal::StoryData story_data_copy;
-      story_data.Clone(&story_data_copy);
-      on_story_updated_(std::move(story_name), std::move(story_data_copy));
+  // Ensure that none of the annotations are too big.
+  for (auto const& annotation : annotations) {
+    if (annotation.value && annotation.value->is_buffer() &&
+        annotation.value->buffer().size >
+            fuchsia::modular::MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES) {
+      return fuchsia::modular::AnnotationError::VALUE_TOO_BIG;
     }
   }
 
-  return error;
+  // Merge annotations.
+  auto new_annotations =
+      story_data.story_info().has_annotations()
+          ? annotations::Merge(std::move(*story_data.mutable_story_info()->mutable_annotations()),
+                               std::move(annotations))
+          : std::move(annotations);
+
+  // Ensure that the number of annotations does not exceed the limit per story.
+  if (new_annotations.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_STORY) {
+    return fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS;
+  }
+
+  // Mutate story in-place.
+  // No need to write story data back to map because we modify it in place.
+  story_data.mutable_story_info()->set_annotations(std::move(new_annotations));
+
+  if (on_story_updated_) {
+    fuchsia::modular::internal::StoryData story_data_copy;
+    story_data.Clone(&story_data_copy);
+    on_story_updated_(std::move(story_name), std::move(story_data_copy));
+  }
+
+  // The merge was successful.
+  return std::nullopt;
 }
 
 std::shared_ptr<StoryStorage> SessionStorage::GetStoryStorage(fidl::StringPtr story_name) {

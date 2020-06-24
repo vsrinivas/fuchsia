@@ -1128,16 +1128,6 @@ void StoryControllerImpl::Annotate(std::vector<fuchsia::modular::Annotation> ann
       callback(std::move(result));
       return;
     }
-    for (auto const& annotation : annotations) {
-      if (annotation.value && annotation.value->is_buffer() &&
-          annotation.value->buffer().size >
-              fuchsia::modular::MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES) {
-        fuchsia::modular::StoryController_Annotate_Result result{};
-        result.set_err(fuchsia::modular::AnnotationError::VALUE_TOO_BIG);
-        callback(std::move(result));
-        return;
-      }
-    }
     auto error = weak_this->session_storage_->MergeStoryAnnotations(weak_this->story_id_,
                                                                     std::move(annotations));
     fuchsia::modular::StoryController_Annotate_Result result{};

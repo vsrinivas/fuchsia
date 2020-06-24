@@ -68,6 +68,16 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
 
  private:
   void Run() override {
+    auto data = session_storage_->GetStoryData(story_name_);
+    if (data) {
+      MergeAnnotations(std::move(data));
+    } else {
+      CreateStory();
+    }
+  }
+
+  void CreateStory() {
+    // Ensure that none of the annotations are too big.
     for (auto const& annotation : annotations_) {
       if (annotation.value && annotation.value->is_buffer() &&
           annotation.value->buffer().size >
@@ -79,15 +89,7 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
       }
     }
 
-    auto data = session_storage_->GetStoryData(story_name_);
-    if (data) {
-      Annotate(std::move(data));
-    } else {
-      CreateStory();
-    }
-  }
-
-  void CreateStory() {
+    // Ensure that the number of annotations does not exceed the limit per story.
     if (annotations_.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_STORY) {
       fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
       result.set_err(fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS);
@@ -101,7 +103,7 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
     Done(std::move(result));
   }
 
-  void Annotate(fuchsia::modular::internal::StoryDataPtr story_data) {
+  void MergeAnnotations(fuchsia::modular::internal::StoryDataPtr story_data) {
     fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
 
     auto merge_error =
