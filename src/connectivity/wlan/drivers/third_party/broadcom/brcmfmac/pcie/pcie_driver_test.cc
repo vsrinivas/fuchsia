@@ -25,9 +25,9 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_provider.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_regs.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_master.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_provider.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
 
 namespace wlan {
@@ -67,23 +67,23 @@ zx_status_t StubDdkDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t bu
 }
 
 // An implementation of InterruptHandler which logs to error.
-class ConsoleLogger : public PcieInterruptMaster::InterruptHandler {
+class ConsoleLogger : public PcieInterruptProvider::InterruptHandler {
  public:
-  explicit ConsoleLogger(PcieInterruptMaster* interrupt_master, PcieFirmware* firmware);
+  explicit ConsoleLogger(PcieInterruptProvider* interrupt_provider, PcieFirmware* firmware);
   ~ConsoleLogger() override;
   uint32_t HandleInterrupt(uint32_t mailboxint) override;
 
  private:
-  PcieInterruptMaster* const interrupt_master_;
+  PcieInterruptProvider* const interrupt_provider_;
   PcieFirmware* const firmware_;
 };
 
-ConsoleLogger::ConsoleLogger(PcieInterruptMaster* interrupt_master, PcieFirmware* firmware)
-    : interrupt_master_(interrupt_master), firmware_(firmware) {
-  interrupt_master_->AddInterruptHandler(this);
+ConsoleLogger::ConsoleLogger(PcieInterruptProvider* interrupt_provider, PcieFirmware* firmware)
+    : interrupt_provider_(interrupt_provider), firmware_(firmware) {
+  interrupt_provider_->AddInterruptHandler(this);
 }
 
-ConsoleLogger::~ConsoleLogger() { interrupt_master_->RemoveInterruptHandler(this); }
+ConsoleLogger::~ConsoleLogger() { interrupt_provider_->RemoveInterruptHandler(this); }
 
 uint32_t ConsoleLogger::HandleInterrupt(uint32_t mailboxint) {
   std::string console;
@@ -229,23 +229,23 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
     BRCMF_INFO("%s", console.c_str());
   }
 
-  std::unique_ptr<PcieRingMaster> pcie_ring_master;
-  if ((status = PcieRingMaster::Create(pcie_buscore.get(), pcie_firmware.get(),
-                                       &pcie_ring_master)) != ZX_OK) {
-    BRCMF_ERR("PcieRingMaster creation failed: %s", zx_status_get_string(status));
+  std::unique_ptr<PcieRingProvider> pcie_ring_provider;
+  if ((status = PcieRingProvider::Create(pcie_buscore.get(), pcie_firmware.get(),
+                                         &pcie_ring_provider)) != ZX_OK) {
+    BRCMF_ERR("PcieRingProvider creation failed: %s", zx_status_get_string(status));
     return status;
   }
 
-  std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master;
-  if ((status = PcieInterruptMaster::Create(device.parent(), pcie_buscore.get(),
-                                            &pcie_interrupt_master)) != ZX_OK) {
-    BRCMF_ERR("PcieInterruptMaster creation failed: %s", zx_status_get_string(status));
+  std::unique_ptr<PcieInterruptProvider> pcie_interrupt_provider;
+  if ((status = PcieInterruptProvider::Create(device.parent(), pcie_buscore.get(),
+                                              &pcie_interrupt_provider)) != ZX_OK) {
+    BRCMF_ERR("PcieInterruptProvider creation failed: %s", zx_status_get_string(status));
     return status;
   }
 
   // Check that we can create the interrupt-driven logger.
   auto console_logger =
-      std::make_unique<ConsoleLogger>(pcie_interrupt_master.get(), pcie_firmware.get());
+      std::make_unique<ConsoleLogger>(pcie_interrupt_provider.get(), pcie_firmware.get());
 
   return ZX_OK;
 }

@@ -9,16 +9,16 @@
 namespace wlan {
 namespace brcmfmac {
 
-PcieSleepInterruptHandler::PcieSleepInterruptHandler(PcieInterruptMaster* interrupt_master,
+PcieSleepInterruptHandler::PcieSleepInterruptHandler(PcieInterruptProvider* interrupt_provider,
                                                      PcieBuscore* buscore, PcieFirmware* firmware)
-    : interrupt_master_(interrupt_master),
+    : interrupt_provider_(interrupt_provider),
       buscore_(buscore),
       d2h_mb_data_address_(firmware->GetDeviceToHostMailboxDataAddress()) {
-  interrupt_master->AddInterruptHandler(this);
+  interrupt_provider->AddInterruptHandler(this);
 }
 
 PcieSleepInterruptHandler::~PcieSleepInterruptHandler() {
-  interrupt_master_->RemoveInterruptHandler(this);
+  interrupt_provider_->RemoveInterruptHandler(this);
 }
 
 uint32_t PcieSleepInterruptHandler::HandleInterrupt(uint32_t mailboxint) {
@@ -36,14 +36,14 @@ uint32_t PcieSleepInterruptHandler::HandleInterrupt(uint32_t mailboxint) {
   return kInterruptMask;
 }
 
-PcieConsoleInterruptHandler::PcieConsoleInterruptHandler(PcieInterruptMaster* interrupt_master,
+PcieConsoleInterruptHandler::PcieConsoleInterruptHandler(PcieInterruptProvider* interrupt_provider,
                                                          PcieFirmware* firmware)
-    : interrupt_master_(interrupt_master), firmware_(firmware) {
-  interrupt_master_->AddInterruptHandler(this);
+    : interrupt_provider_(interrupt_provider), firmware_(firmware) {
+  interrupt_provider_->AddInterruptHandler(this);
 }
 
 PcieConsoleInterruptHandler::~PcieConsoleInterruptHandler() {
-  interrupt_master_->RemoveInterruptHandler(this);
+  interrupt_provider_->RemoveInterruptHandler(this);
 }
 
 uint32_t PcieConsoleInterruptHandler::HandleInterrupt(uint32_t mailboxint) {

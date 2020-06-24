@@ -8,29 +8,29 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_provider.h"
 
 namespace wlan {
 namespace brcmfmac {
 
 // An InterruptHandler implemenation that handles PCIE bus sleep notifications.
-class PcieSleepInterruptHandler : public PcieInterruptMaster::InterruptHandler {
+class PcieSleepInterruptHandler : public PcieInterruptProvider::InterruptHandler {
  public:
-  explicit PcieSleepInterruptHandler(PcieInterruptMaster* interrupt_master, PcieBuscore* buscore,
-                                     PcieFirmware* firmware);
+  explicit PcieSleepInterruptHandler(PcieInterruptProvider* interrupt_provider,
+                                     PcieBuscore* buscore, PcieFirmware* firmware);
   ~PcieSleepInterruptHandler() override;
   uint32_t HandleInterrupt(uint32_t mailboxint) override;
 
  private:
-  PcieInterruptMaster* const interrupt_master_ = nullptr;
+  PcieInterruptProvider* const interrupt_provider_ = nullptr;
   PcieBuscore* const buscore_ = nullptr;
   const uint32_t d2h_mb_data_address_ = 0;
 };
 
 // An InterruptHandler implementation that logs firmware console output.
-class PcieConsoleInterruptHandler : public PcieInterruptMaster::InterruptHandler {
+class PcieConsoleInterruptHandler : public PcieInterruptProvider::InterruptHandler {
  public:
-  explicit PcieConsoleInterruptHandler(PcieInterruptMaster* interrupt_master,
+  explicit PcieConsoleInterruptHandler(PcieInterruptProvider* interrupt_provider,
                                        PcieFirmware* firmware);
   ~PcieConsoleInterruptHandler() override;
   uint32_t HandleInterrupt(uint32_t mailboxint) override;
@@ -38,7 +38,7 @@ class PcieConsoleInterruptHandler : public PcieInterruptMaster::InterruptHandler
  private:
   void Log();
 
-  PcieInterruptMaster* const interrupt_master_;
+  PcieInterruptProvider* const interrupt_provider_;
   PcieFirmware* const firmware_;
 };
 

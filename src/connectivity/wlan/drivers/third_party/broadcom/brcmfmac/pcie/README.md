@@ -55,21 +55,21 @@ with the MSGBUF layer.
 The [`PcieFirmware`](pcie_firmware.h) class handles firmware loading and interpretation of firmware
 settings.  It also contains logic for reading the firmware debug console log.
 
-##### `PcieRingMaster`
+##### `PcieRingProvider`
 
-The [`PcieRingMaster`](pcie_ring_master.h) class manages the DMA rings which are used to send
+The [`PcieRingProvider`](pcie_ring_provider.h) class manages the DMA rings which are used to send
 commands and TX packets to the device, and receive completions and RX packets from the device.  The
-command, configuration, and completion rings are fixed and owned by the `PcieRingMaster` instance;
+command, configuration, and completion rings are fixed and owned by the `PcieRingProvider` instance;
 TX flow rings are allocated dynamically and ownership is returned with the ring.
 
 This class also implements the [`DmaRingProviderInterface`](../msgbuf/msgbuf_interfaces.h), for use
 with the MSGBUF layer.
 
-##### `PcieInterruptMaster`
+##### `PcieInterruptProvider`
 
-The [`PcieInterruptMaster`](pcie_interrupt_master.h) class maintains the interrupt thread which
+The [`PcieInterruptProvider`](pcie_interrupt_provider.h) class maintains the interrupt thread which
 receives interrupts from the PCIE bus and dispatches them onward to the driver.  Driver components
-can register a handler with the `PcieInterruptMaster`, to be notified when an interrupt occurs.
+can register a handler with the `PcieInterruptProvider`, to be notified when an interrupt occurs.
 
 This class also implements the [`DmaInterruptProviderInterface`](../msgbuf/msgbuf_interfaces.h), for
 use with the MSGBUF layer.

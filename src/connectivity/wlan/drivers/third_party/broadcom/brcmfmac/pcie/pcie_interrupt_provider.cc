@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_provider.h"
 
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
@@ -28,9 +28,9 @@ constexpr int kUserPacketRemoveHandler = 3;
 
 }  // namespace
 
-PcieInterruptMaster::PcieInterruptMaster() = default;
+PcieInterruptProvider::PcieInterruptProvider() = default;
 
-PcieInterruptMaster::~PcieInterruptMaster() {
+PcieInterruptProvider::~PcieInterruptProvider() {
   if (!pci_interrupt_handlers_.empty()) {
     BRCMF_ERR("%zu interrupt handlers registered at shutdown", pci_interrupt_handlers_.size());
   }
@@ -43,9 +43,9 @@ PcieInterruptMaster::~PcieInterruptMaster() {
 }
 
 // static
-zx_status_t PcieInterruptMaster::Create(
+zx_status_t PcieInterruptProvider::Create(
     zx_device_t* device, PcieBuscore* buscore,
-    std::unique_ptr<PcieInterruptMaster>* out_interrupt_master) {
+    std::unique_ptr<PcieInterruptProvider>* out_interrupt_provider) {
   zx_status_t status = ZX_OK;
 
   PcieBuscore::CoreRegs pci_core_regs;
@@ -85,26 +85,26 @@ zx_status_t PcieInterruptMaster::Create(
     return status;
   }
 
-  auto interrupt_master = std::make_unique<PcieInterruptMaster>();
-  interrupt_master->pci_core_regs_ = std::move(pci_core_regs);
-  interrupt_master->pci_interrupt_ = std::move(pci_interrupt);
-  interrupt_master->pci_interrupt_port_ = std::move(pci_interrupt_port);
-  interrupt_master->pci_interrupt_thread_ =
-      std::thread(&PcieInterruptMaster::InterruptServiceFunction, interrupt_master.get());
+  auto interrupt_provider = std::make_unique<PcieInterruptProvider>();
+  interrupt_provider->pci_core_regs_ = std::move(pci_core_regs);
+  interrupt_provider->pci_interrupt_ = std::move(pci_interrupt);
+  interrupt_provider->pci_interrupt_port_ = std::move(pci_interrupt_port);
+  interrupt_provider->pci_interrupt_thread_ =
+      std::thread(&PcieInterruptProvider::InterruptServiceFunction, interrupt_provider.get());
 
-  *out_interrupt_master = std::move(interrupt_master);
+  *out_interrupt_provider = std::move(interrupt_provider);
   return ZX_OK;
 }
 
-zx_status_t PcieInterruptMaster::AddInterruptHandler(InterruptHandler* handler) {
+zx_status_t PcieInterruptProvider::AddInterruptHandler(InterruptHandler* handler) {
   return ModifyInterruptHandler(kUserPacketAddHandler, handler);
 }
 
-zx_status_t PcieInterruptMaster::RemoveInterruptHandler(InterruptHandler* handler) {
+zx_status_t PcieInterruptProvider::RemoveInterruptHandler(InterruptHandler* handler) {
   return ModifyInterruptHandler(kUserPacketRemoveHandler, handler);
 }
 
-zx_status_t PcieInterruptMaster::ModifyInterruptHandler(int command, InterruptHandler* handler) {
+zx_status_t PcieInterruptProvider::ModifyInterruptHandler(int command, InterruptHandler* handler) {
   zx_status_t status = ZX_OK;
   sync_completion_t completion;
 
@@ -118,7 +118,7 @@ zx_status_t PcieInterruptMaster::ModifyInterruptHandler(int command, InterruptHa
   return status;
 }
 
-void PcieInterruptMaster::InterruptServiceFunction() {
+void PcieInterruptProvider::InterruptServiceFunction() {
   zx_status_t status = ZX_OK;
 
   // Enable interrupts to wait for them.

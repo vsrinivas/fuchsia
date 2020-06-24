@@ -21,16 +21,16 @@
 namespace wlan {
 namespace brcmfmac {
 
-// This class implements interrupt master functionality for the PCIE bus.  It receives hardware
+// This class implements interrupt provider functionality for the PCIE bus.  It receives hardware
 // interrupts over the bus, and distributes them to the driver appropriately.
-class PcieInterruptMaster : public InterruptProviderInterface {
+class PcieInterruptProvider : public InterruptProviderInterface {
  public:
-  PcieInterruptMaster();
-  ~PcieInterruptMaster() override;
+  PcieInterruptProvider();
+  ~PcieInterruptProvider() override;
 
-  // Static factory function for PcieInterruptMaster instances.
+  // Static factory function for PcieInterruptProvider instances.
   static zx_status_t Create(zx_device_t* device, PcieBuscore* buscore,
-                            std::unique_ptr<PcieInterruptMaster>* out_interrupt_master);
+                            std::unique_ptr<PcieInterruptProvider>* out_interrupt_provider);
 
   // InterruptProviderInterface implementation.
   zx_status_t AddInterruptHandler(InterruptHandler* handler) override;

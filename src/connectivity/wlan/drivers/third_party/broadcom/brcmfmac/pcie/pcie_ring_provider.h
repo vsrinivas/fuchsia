@@ -23,17 +23,17 @@ class WriteDmaRing;
 // This class manages the DMA rings used to submit to and receive completions from the brcmfmac
 // chipset.  It also provides some DMA-related configuration information to users, through the
 // DmaConfig informational struct.
-class PcieRingMaster : public DmaRingProviderInterface {
+class PcieRingProvider : public DmaRingProviderInterface {
  public:
   // DMA ring configuration information.
   struct DmaRingConfig;
 
-  PcieRingMaster();
-  ~PcieRingMaster() override;
+  PcieRingProvider();
+  ~PcieRingProvider() override;
 
-  // Static factory function for PcieRingMaster instances.
+  // Static factory function for PcieRingProvider instances.
   static zx_status_t Create(PcieBuscore* buscore, PcieFirmware* firmware,
-                            std::unique_ptr<PcieRingMaster>* out_ring_master);
+                            std::unique_ptr<PcieRingProvider>* out_ring_provider);
 
   // DmaRingProviderInterface implementation.
   const DmaConfig& GetDmaConfig() const override;

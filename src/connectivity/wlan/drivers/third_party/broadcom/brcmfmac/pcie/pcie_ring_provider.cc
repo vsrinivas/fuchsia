@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_master.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_provider.h"
 
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -17,7 +17,7 @@ namespace wlan {
 namespace brcmfmac {
 
 // DMA ring configuration information.
-struct PcieRingMaster::DmaRingConfig {
+struct PcieRingProvider::DmaRingConfig {
   int ring_index = -1;   // Sequential index of the ring.  D2H and H2D rings are indexed separately.
   size_t item_size = 0;  // Size of items on the ring.
   uint16_t item_capacity = 0;  // Count of items in the ring.
@@ -58,37 +58,37 @@ struct [[gnu::packed]] RingState {
 };
 
 // Configuration values for our rings.
-constexpr PcieRingMaster::DmaRingConfig kControlSubmitRingConfig = {
+constexpr PcieRingProvider::DmaRingConfig kControlSubmitRingConfig = {
     .ring_index = 0,
     .item_size = 40,
     .item_capacity = 64,
 };
 
-constexpr PcieRingMaster::DmaRingConfig kRxBufferSubmitRingConfig = {
+constexpr PcieRingProvider::DmaRingConfig kRxBufferSubmitRingConfig = {
     .ring_index = 1,
     .item_size = 32,
     .item_capacity = 512,
 };
 
-constexpr PcieRingMaster::DmaRingConfig kTxFlowRingConfig = {
+constexpr PcieRingProvider::DmaRingConfig kTxFlowRingConfig = {
     .ring_index = 2,  // This the offset of flow ring 0; subsequent rings increment this index.
     .item_size = 48,
     .item_capacity = 512,
 };
 
-constexpr PcieRingMaster::DmaRingConfig kControlCompleteRingConfig = {
+constexpr PcieRingProvider::DmaRingConfig kControlCompleteRingConfig = {
     .ring_index = 0,
     .item_size = 24,
     .item_capacity = 64,
 };
 
-constexpr PcieRingMaster::DmaRingConfig kTxCompleteRingConfig = {
+constexpr PcieRingProvider::DmaRingConfig kTxCompleteRingConfig = {
     .ring_index = 1,
     .item_size = 16,
     .item_capacity = 1024,
 };
 
-constexpr PcieRingMaster::DmaRingConfig kRxCompleteRingConfig = {
+constexpr PcieRingProvider::DmaRingConfig kRxCompleteRingConfig = {
     .ring_index = 2,
     .item_size = 32,
     .item_capacity = 512,
@@ -109,13 +109,13 @@ void UpdateRingState(PcieBuscore* buscore, uint32_t ring_state_offset,
 
 }  // namespace
 
-PcieRingMaster::PcieRingMaster() = default;
+PcieRingProvider::PcieRingProvider() = default;
 
-PcieRingMaster::~PcieRingMaster() = default;
+PcieRingProvider::~PcieRingProvider() = default;
 
 // static
-zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
-                                   std::unique_ptr<PcieRingMaster>* out_ring_master) {
+zx_status_t PcieRingProvider::Create(PcieBuscore* buscore, PcieFirmware* firmware,
+                                     std::unique_ptr<PcieRingProvider>* out_ring_provider) {
   zx_status_t status = ZX_OK;
 
   // Read from shared memory for the ring configuration.
@@ -207,38 +207,38 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   volatile void* const h2d_write_signal =
       pci_core_regs.GetRegPointer(BRCMF_PCIE_PCIE2REG_H2D_MAILBOX);
 
-  // Set up enough state on a PcieRingMaster to begin to forge rings.
-  auto ring_master = std::make_unique<PcieRingMaster>();
-  ring_master->buscore_ = buscore;
-  ring_master->dma_config_ = dma_config;
-  ring_master->index_buffer_ = std::move(index_buffer);
-  ring_master->pci_core_regs_ = std::move(pci_core_regs);
-  ring_master->ring_index_size_ = ring_index_size;
-  ring_master->d2h_read_indices_ =
+  // Set up enough state on a PcieRingProvider to begin to forge rings.
+  auto ring_provider = std::make_unique<PcieRingProvider>();
+  ring_provider->buscore_ = buscore;
+  ring_provider->dma_config_ = dma_config;
+  ring_provider->index_buffer_ = std::move(index_buffer);
+  ring_provider->pci_core_regs_ = std::move(pci_core_regs);
+  ring_provider->ring_index_size_ = ring_index_size;
+  ring_provider->d2h_read_indices_ =
       reinterpret_cast<volatile std::atomic<uint16_t>*>(d2h_read_indices);
-  ring_master->d2h_write_indices_ =
+  ring_provider->d2h_write_indices_ =
       reinterpret_cast<volatile std::atomic<uint16_t>*>(d2h_write_indices);
-  ring_master->h2d_read_indices_ =
+  ring_provider->h2d_read_indices_ =
       reinterpret_cast<volatile std::atomic<uint16_t>*>(h2d_read_indices);
-  ring_master->h2d_write_indices_ =
+  ring_provider->h2d_write_indices_ =
       reinterpret_cast<volatile std::atomic<uint16_t>*>(h2d_write_indices);
-  ring_master->h2d_write_signal_ =
+  ring_provider->h2d_write_signal_ =
       reinterpret_cast<volatile std::atomic<uint32_t>*>(h2d_write_signal);
 
   uint32_t ring_state_offset = ringinfo->ringmem;
 
   // Three [two] rings for the Elven-kings [host to device] under the sky,
   std::unique_ptr<WriteDmaRing> control_submit_ring;
-  if ((status = ring_master->CreateWriteDmaRing(kControlSubmitRingConfig, &control_submit_ring)) !=
-      ZX_OK) {
+  if ((status = ring_provider->CreateWriteDmaRing(kControlSubmitRingConfig,
+                                                  &control_submit_ring)) != ZX_OK) {
     BRCMF_ERR("Failed to create control submit ring: %s", zx_status_get_string(status));
     return status;
   }
   UpdateRingState(buscore, ring_state_offset, *control_submit_ring);
   ring_state_offset += sizeof(RingState);
   std::unique_ptr<WriteDmaRing> rx_buffer_submit_ring;
-  if ((status = ring_master->CreateWriteDmaRing(kRxBufferSubmitRingConfig,
-                                                &rx_buffer_submit_ring)) != ZX_OK) {
+  if ((status = ring_provider->CreateWriteDmaRing(kRxBufferSubmitRingConfig,
+                                                  &rx_buffer_submit_ring)) != ZX_OK) {
     BRCMF_ERR("Failed to create rx buffer submit ring: %s", zx_status_get_string(status));
     return status;
   }
@@ -247,15 +247,15 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
 
   // Seven [three] for the Dwarf-lords [device to host] in their halls of stone,
   std::unique_ptr<ReadDmaRing> control_complete_ring;
-  if ((status = ring_master->CreateReadDmaRing(kControlCompleteRingConfig,
-                                               &control_complete_ring)) != ZX_OK) {
+  if ((status = ring_provider->CreateReadDmaRing(kControlCompleteRingConfig,
+                                                 &control_complete_ring)) != ZX_OK) {
     BRCMF_ERR("Failed to create control complete ring: %s", zx_status_get_string(status));
     return status;
   }
   UpdateRingState(buscore, ring_state_offset, *control_complete_ring);
   ring_state_offset += sizeof(RingState);
   std::unique_ptr<ReadDmaRing> tx_complete_ring;
-  if ((status = ring_master->CreateReadDmaRing(kTxCompleteRingConfig, &tx_complete_ring)) !=
+  if ((status = ring_provider->CreateReadDmaRing(kTxCompleteRingConfig, &tx_complete_ring)) !=
       ZX_OK) {
     BRCMF_ERR("Failed to create tx complete ring: %s", zx_status_get_string(status));
     return status;
@@ -263,7 +263,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   UpdateRingState(buscore, ring_state_offset, *tx_complete_ring);
   ring_state_offset += sizeof(RingState);
   std::unique_ptr<ReadDmaRing> rx_complete_ring;
-  if ((status = ring_master->CreateReadDmaRing(kRxCompleteRingConfig, &rx_complete_ring)) !=
+  if ((status = ring_provider->CreateReadDmaRing(kRxCompleteRingConfig, &rx_complete_ring)) !=
       ZX_OK) {
     BRCMF_ERR("Failed to create rx complete ring: %s", zx_status_get_string(status));
     return status;
@@ -274,34 +274,34 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   // Nine [max_flow_rings] for mortal men [host to device flow rings] doomed to die,
   // Note: these rings are forged on demand.
 
-  // One for the Dark Lord [PcieRingMaster] on his dark throne
-  ring_master->control_submit_ring_ = std::move(control_submit_ring);
-  ring_master->rx_buffer_submit_ring_ = std::move(rx_buffer_submit_ring);
-  ring_master->control_complete_ring_ = std::move(control_complete_ring);
-  ring_master->tx_complete_ring_ = std::move(tx_complete_ring);
-  ring_master->rx_complete_ring_ = std::move(rx_complete_ring);
-  *out_ring_master = std::move(ring_master);
+  // One for the Dark Lord [PcieRingProvider] on his dark throne
+  ring_provider->control_submit_ring_ = std::move(control_submit_ring);
+  ring_provider->rx_buffer_submit_ring_ = std::move(rx_buffer_submit_ring);
+  ring_provider->control_complete_ring_ = std::move(control_complete_ring);
+  ring_provider->tx_complete_ring_ = std::move(tx_complete_ring);
+  ring_provider->rx_complete_ring_ = std::move(rx_complete_ring);
+  *out_ring_provider = std::move(ring_provider);
 
   // In the Land of Mordor where the shadows lie.
   return ZX_OK;
 }
 
-const DmaRingProviderInterface::DmaConfig& PcieRingMaster::GetDmaConfig() const {
+const DmaRingProviderInterface::DmaConfig& PcieRingProvider::GetDmaConfig() const {
   return dma_config_;
 }
 
-WriteDmaRing* PcieRingMaster::GetControlSubmitRing() { return control_submit_ring_.get(); }
+WriteDmaRing* PcieRingProvider::GetControlSubmitRing() { return control_submit_ring_.get(); }
 
-WriteDmaRing* PcieRingMaster::GetRxBufferSubmitRing() { return rx_buffer_submit_ring_.get(); }
+WriteDmaRing* PcieRingProvider::GetRxBufferSubmitRing() { return rx_buffer_submit_ring_.get(); }
 
-ReadDmaRing* PcieRingMaster::GetControlCompleteRing() { return control_complete_ring_.get(); }
+ReadDmaRing* PcieRingProvider::GetControlCompleteRing() { return control_complete_ring_.get(); }
 
-ReadDmaRing* PcieRingMaster::GetTxCompleteRing() { return tx_complete_ring_.get(); }
+ReadDmaRing* PcieRingProvider::GetTxCompleteRing() { return tx_complete_ring_.get(); }
 
-ReadDmaRing* PcieRingMaster::GetRxCompleteRing() { return rx_complete_ring_.get(); }
+ReadDmaRing* PcieRingProvider::GetRxCompleteRing() { return rx_complete_ring_.get(); }
 
-zx_status_t PcieRingMaster::CreateFlowRing(int flow_ring_index,
-                                           std::unique_ptr<WriteDmaRing>* out_flow_ring) {
+zx_status_t PcieRingProvider::CreateFlowRing(int flow_ring_index,
+                                             std::unique_ptr<WriteDmaRing>* out_flow_ring) {
   zx_status_t status = ZX_OK;
 
   if (static_cast<size_t>(flow_ring_index) >= static_cast<size_t>(dma_config_.max_flow_rings)) {
@@ -321,8 +321,8 @@ zx_status_t PcieRingMaster::CreateFlowRing(int flow_ring_index,
   return ZX_OK;
 }
 
-zx_status_t PcieRingMaster::CreateReadDmaRing(const DmaRingConfig& config,
-                                              std::unique_ptr<ReadDmaRing>* out_ring) {
+zx_status_t PcieRingProvider::CreateReadDmaRing(const DmaRingConfig& config,
+                                                std::unique_ptr<ReadDmaRing>* out_ring) {
   zx_status_t status = ZX_OK;
   std::unique_ptr<DmaBuffer> ring_buffer;
   const size_t ring_buffer_size = config.item_size * config.item_capacity;
@@ -346,8 +346,8 @@ zx_status_t PcieRingMaster::CreateReadDmaRing(const DmaRingConfig& config,
   return ZX_OK;
 }
 
-zx_status_t PcieRingMaster::CreateWriteDmaRing(const DmaRingConfig& config,
-                                               std::unique_ptr<WriteDmaRing>* out_ring) {
+zx_status_t PcieRingProvider::CreateWriteDmaRing(const DmaRingConfig& config,
+                                                 std::unique_ptr<WriteDmaRing>* out_ring) {
   zx_status_t status = ZX_OK;
   std::unique_ptr<DmaBuffer> ring_buffer;
   const size_t ring_buffer_size = config.item_size * config.item_capacity;

@@ -17,8 +17,8 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_handlers.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_master.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_provider.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_provider.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -56,23 +56,23 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
     return status;
   }
 
-  std::unique_ptr<PcieRingMaster> pcie_ring_master;
-  if ((status = PcieRingMaster::Create(pcie_buscore.get(), pcie_firmware.get(),
-                                       &pcie_ring_master)) != ZX_OK) {
+  std::unique_ptr<PcieRingProvider> pcie_ring_provider;
+  if ((status = PcieRingProvider::Create(pcie_buscore.get(), pcie_firmware.get(),
+                                         &pcie_ring_provider)) != ZX_OK) {
     return status;
   }
 
-  std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master;
-  if ((status = PcieInterruptMaster::Create(device->parent(), pcie_buscore.get(),
-                                            &pcie_interrupt_master)) != ZX_OK) {
+  std::unique_ptr<PcieInterruptProvider> pcie_interrupt_provider;
+  if ((status = PcieInterruptProvider::Create(device->parent(), pcie_buscore.get(),
+                                              &pcie_interrupt_provider)) != ZX_OK) {
     return status;
   }
 
   std::list<std::unique_ptr<InterruptProviderInterface::InterruptHandler>> pcie_interrupt_handlers;
   pcie_interrupt_handlers.emplace_back(new PcieSleepInterruptHandler(
-      pcie_interrupt_master.get(), pcie_buscore.get(), pcie_firmware.get()));
+      pcie_interrupt_provider.get(), pcie_buscore.get(), pcie_firmware.get()));
   pcie_interrupt_handlers.emplace_back(
-      new PcieConsoleInterruptHandler(pcie_interrupt_master.get(), pcie_firmware.get()));
+      new PcieConsoleInterruptHandler(pcie_interrupt_provider.get(), pcie_firmware.get()));
 
   auto bus = std::make_unique<brcmf_bus>();
   bus->bus_priv.pcie = pcie_bus.get();
@@ -88,8 +88,8 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
   pcie_bus->device_ = device;
   pcie_bus->pcie_buscore_ = std::move(pcie_buscore);
   pcie_bus->pcie_firmware_ = std::move(pcie_firmware);
-  pcie_bus->pcie_ring_master_ = std::move(pcie_ring_master);
-  pcie_bus->pcie_interrupt_master_ = std::move(pcie_interrupt_master);
+  pcie_bus->pcie_ring_provider_ = std::move(pcie_ring_provider);
+  pcie_bus->pcie_interrupt_provider_ = std::move(pcie_interrupt_provider);
   pcie_bus->pcie_interrupt_handlers_ = std::move(pcie_interrupt_handlers);
   pcie_bus->brcmf_bus_ = std::move(bus);
   pcie_bus->brcmf_mp_device_ = std::move(mp_device);
@@ -133,9 +133,11 @@ const brcmf_bus_ops* PcieBus::GetBusOps() {
 
 DmaBufferProviderInterface* PcieBus::GetDmaBufferProvider() { return pcie_buscore_.get(); }
 
-DmaRingProviderInterface* PcieBus::GetDmaRingProvider() { return pcie_ring_master_.get(); }
+DmaRingProviderInterface* PcieBus::GetDmaRingProvider() { return pcie_ring_provider_.get(); }
 
-InterruptProviderInterface* PcieBus::GetInterruptProvider() { return pcie_interrupt_master_.get(); }
+InterruptProviderInterface* PcieBus::GetInterruptProvider() {
+  return pcie_interrupt_provider_.get();
+}
 
 // static
 brcmf_bus_type PcieBus::GetBusType() { return BRCMF_BUS_TYPE_PCIE; }

@@ -183,7 +183,7 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
     return status;
   }
   if ((status = pci_proto->EnableBusMaster(true)) != ZX_OK) {
-    BRCMF_ERR("Failed to enable PCIE bus master: %s", zx_status_get_string(status));
+    BRCMF_ERR("Failed to enable PCIE bus provider: %s", zx_status_get_string(status));
     return status;
   }
   zx_pci_bar_t bar0_info = {};
