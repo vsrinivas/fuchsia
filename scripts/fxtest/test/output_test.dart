@@ -26,7 +26,6 @@ void main() {
       }
     },
     buildDir: '/whatever',
-    fx: '/whatever/fx',
   );
 
   setUp(() async {

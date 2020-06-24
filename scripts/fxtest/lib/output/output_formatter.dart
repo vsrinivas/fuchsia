@@ -385,8 +385,9 @@ class InfoFormatter extends OutputFormatter {
 }
 
 List<String> infoPrint(TestDefinition testDefinition) {
-  var command =
-      testDefinition.executionHandle.getInvocationTokens(const []).toString();
+  var command = testDefinition
+      .createExecutionHandle()
+      .getInvocationTokens(const []).toString();
   return <String>[
     _isTruthy(command) ? 'command: $command' : null,
     _isTruthy(testDefinition.cpu) ? 'cpu: ${testDefinition.cpu}' : null,

@@ -4,21 +4,6 @@ import 'fake_fx_env.dart';
 
 void main() {
   group('tests.json entries are correctly parsed', () {
-    test('with respect to custom fuchsia locations', () {
-      final fxEnv = FakeFxEnv(fuchsiaDir: '/custom');
-      var testDef = TestDefinition(
-        buildDir: fxEnv.outputDir,
-        fx: fxEnv.fx, // <-- this one is all that matters for this test
-        os: 'linux',
-        path: 'random-letters',
-        name: 'host test',
-      );
-      expect(
-        testDef.executionHandle.fx,
-        '/custom/.jiri_root/bin/fx',
-      );
-    });
-
     test('for host tests', () {
       TestsManifestReader tr = TestsManifestReader();
       List<dynamic> testJson = [
@@ -46,7 +31,7 @@ void main() {
       expect(tds[0].name, testJson[0]['test']['name']);
       expect(tds[0].cpu, testJson[0]['test']['cpu']);
       expect(tds[0].os, testJson[0]['test']['os']);
-      expect(tds[0].executionHandle.testType, TestType.host);
+      expect(tds[0].testType, TestType.host);
     });
     test('for device tests', () {
       TestsManifestReader tr = TestsManifestReader();
@@ -77,7 +62,7 @@ void main() {
       expect(tds[0].name, testJson[0]['test']['name']);
       expect(tds[0].cpu, testJson[0]['test']['cpu']);
       expect(tds[0].os, testJson[0]['test']['os']);
-      expect(tds[0].executionHandle.testType, TestType.component);
+      expect(tds[0].testType, TestType.component);
     });
     test('for unsupported tests', () {
       TestsManifestReader tr = TestsManifestReader();
@@ -99,7 +84,7 @@ void main() {
       );
       expect(tds, hasLength(1));
       expect(tds[0].path, '');
-      expect(tds[0].executionHandle.testType, TestType.unsupported);
+      expect(tds[0].testType, TestType.unsupported);
     });
 
     test('for unsupported device tests', () {
@@ -121,7 +106,7 @@ void main() {
         fxLocation: FakeFxEnv.shared.fx,
       );
       expect(tds, hasLength(1));
-      expect(tds[0].executionHandle.testType, TestType.unsupportedDeviceTest);
+      expect(tds[0].testType, TestType.unsupportedDeviceTest);
     });
   });
 
@@ -134,14 +119,12 @@ void main() {
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: FakeFxEnv.shared.fx,
         packageUrl: PackageUrl.fromString(
             'fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx'),
         name: 'device test',
       ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
-        fx: FakeFxEnv.shared.fx,
         os: 'linux',
         path: 'host_x64/path',
         // In practice, host tests have identical paths and names, but we
@@ -246,23 +229,21 @@ void main() {
       expect(
         () => TestDefinition(
           buildDir: FakeFxEnv.shared.outputDir,
-          fx: FakeFxEnv.shared.fx,
           os: 'fuchsia',
           packageUrl: PackageUrl.fromString(
               'fuchsia-pkg://fuchsia.com/fancy#meta/not-component'),
           name: 'asdf-one',
-        ),
+        ).createExecutionHandle(),
         throwsA(TypeMatcher<MalformedFuchsiaUrlException>()),
       );
       expect(
         () => TestDefinition(
           buildDir: FakeFxEnv.shared.outputDir,
-          fx: FakeFxEnv.shared.fx,
           os: 'fuchsia',
           packageUrl: PackageUrl.fromString(
               'fuchsia-pkg://fuchsia.com/fancy#bin/def-not-comp.so'),
           name: 'asdf-two',
-        ),
+        ).createExecutionHandle(),
         throwsA(TypeMatcher<MalformedFuchsiaUrlException>()),
       );
     });
@@ -316,7 +297,6 @@ void main() {
         ..addAll([
           TestDefinition(
             buildDir: FakeFxEnv.shared.outputDir,
-            fx: FakeFxEnv.shared.fx,
             name: 'awesome host test',
             os: 'linux',
             path: 'host_x64/test',
@@ -354,7 +334,6 @@ void main() {
         ..addAll([
           TestDefinition(
             buildDir: FakeFxEnv.shared.outputDir,
-            fx: FakeFxEnv.shared.fx,
             name: 'awesome device test',
             os: 'fuchsia',
             path: '/pkgfs/stuff',
@@ -395,7 +374,6 @@ void main() {
         }
       },
       buildDir: '/whatever',
-      fx: 'fx',
     );
     var randomDef = TestDefinition.fromJson(
       {
@@ -411,7 +389,6 @@ void main() {
         }
       },
       buildDir: '/whatever',
-      fx: 'fx',
     );
     test('with a typo inside a path', () {
       var reader = TestsManifestReader();
@@ -475,7 +452,6 @@ void main() {
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: FakeFxEnv.shared.fx,
         packageUrl: PackageUrl.fromString(
             'fuchsia-pkg://fuchsia.com/pkg1#meta/test1.cmx'),
         name: 'pkg 1 test 1',
@@ -483,7 +459,6 @@ void main() {
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: FakeFxEnv.shared.fx,
         packageUrl:
             PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg1#test2.cmx'),
         name: 'pkg 1 test 2',
@@ -491,7 +466,6 @@ void main() {
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: FakeFxEnv.shared.fx,
         packageUrl:
             PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg2#test1.cmx'),
         name: 'pkg 2 test 1',
@@ -499,7 +473,6 @@ void main() {
       ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
-        fx: FakeFxEnv.shared.fx,
         os: 'linux',
         path: '/asdf',
         name: '//host/test',
@@ -662,11 +635,11 @@ void main() {
         buildDir: '/whatever',
         fxLocation: '/whatever/fx',
       );
-      expect(testDefinitions[0].executionHandle.testType, TestType.e2e);
+      expect(testDefinitions[0].testType, TestType.e2e);
 
       var commandTokens =
-          testDefinitions[0].executionHandle.getInvocationTokens([]);
-      var fullCommand = commandTokens.fullCommandDisplay('', []);
+          testDefinitions[0].createExecutionHandle().getInvocationTokens([]);
+      var fullCommand = commandTokens.fullCommandDisplay([]);
       expect(fullCommand, contains('--special'));
       expect(fullCommand, contains('--flags'));
     });
@@ -692,7 +665,6 @@ void main() {
           Map<String, dynamic>.from(testJson)
             ..update('environments', (current) => environments),
           buildDir: 'whatever',
-          fx: 'whatever',
         );
 
     test('when the values are empty', () {

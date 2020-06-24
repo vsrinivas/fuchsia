@@ -245,7 +245,7 @@ class FuchsiaTestCommand {
       TestBundle.build(
         confidence: confidence ?? 1,
         directoryBuilder: directoryBuilder,
-        fxSuffix: testsConfig.fxEnv.fx,
+        fxPath: testsConfig.fxEnv.fx,
         realtimeOutputSink: (String val) => emitEvent(TestOutputEvent(val)),
         timeElapsedSink: (Duration duration, String cmd, String output) =>
             emitEvent(TimeElapsedEvent(duration, cmd, output)),
@@ -267,7 +267,23 @@ class FuchsiaTestCommand {
       return;
     }
 
+    // set merkle root hash on component tests
+    // TODO: This should not require checking if `buildDir != null`, as that is
+    // a temporary workaround to get tests passing on CQ. The correct
+    // implementation is to abstract file-reading just as we have process-launching.
+    PackageRepository packageRepository;
+    if (testsConfig.flags.shouldUsePackageHash &&
+        testsConfig.fxEnv.outputDir != null) {
+      packageRepository = await PackageRepository.fromManifest(
+          buildDir: testsConfig.fxEnv.outputDir);
+    }
+
     for (TestBundle testBundle in _testBundles) {
+      if (packageRepository != null &&
+          testBundle.testDefinition.packageUrl != null) {
+        String packageName = testBundle.testDefinition.packageUrl.packageName;
+        testBundle.testDefinition.hash = packageRepository[packageName].merkle;
+      }
       await testBundle.run().forEach((TestEvent event) {
         emitEvent(event);
         if (event is FatalError) {

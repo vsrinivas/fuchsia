@@ -25,16 +25,10 @@ class CommandTokens {
 
   /// Same as [fullCommand], minus the absolute path to fx, and with any
   /// last-second flags added in.
-  String fullCommandDisplay(String fxSuffix, [List<String> extraArgs]) {
+  String fullCommandDisplay([List<String> extraArgs]) {
     var _tokens = List<String>.from(tokens);
     if (extraArgs != null) {
       _tokens.addAll(extraArgs);
-    }
-
-    if (fxSuffix != null && fxSuffix.isNotEmpty) {
-      _tokens = _tokens
-          .map((String token) => token.endsWith(fxSuffix) ? 'fx' : token)
-          .toList();
     }
     return _tokens.join(' ');
   }

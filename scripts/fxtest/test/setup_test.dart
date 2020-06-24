@@ -131,7 +131,6 @@ void main() {
               }
             },
             buildDir: '/whatever',
-            fx: '/whatever/fx',
           ),
         ),
       ];
@@ -166,7 +165,6 @@ void main() {
               }
             },
             buildDir: '/whatever',
-            fx: '/whatever/fx',
           ),
         ),
       ];
@@ -202,7 +200,6 @@ void main() {
               }
             },
             buildDir: '/whatever',
-            fx: '/whatever/fx',
           ),
         ),
       ];
@@ -249,7 +246,6 @@ void main() {
           TestDefinition(
             buildDir: '/',
             command: ['asdf'],
-            fx: testsConfig.fxEnv.fx,
             name: 'Big Test',
             os: 'linux',
           ),
@@ -287,7 +283,6 @@ void main() {
           TestDefinition(
             buildDir: '/',
             command: ['asdf'],
-            fx: testsConfig.fxEnv.fx,
             name: 'Big Test',
             os: 'linux',
           ),
@@ -351,7 +346,6 @@ void main() {
               }
             },
             buildDir: '/whatever',
-            fx: '/whatever/fx',
           ),
         ),
         cmd.testBundleBuilder(
@@ -369,7 +363,6 @@ void main() {
               }
             },
             buildDir: '/whatever',
-            fx: '/whatever/fx',
           ),
         ),
       ];
@@ -411,11 +404,8 @@ void main() {
       );
 
       return json
-          .map((e) => cmd.testBundleBuilder(TestDefinition.fromJson(
-                e,
-                buildDir: FakeFxEnv.shared.outputDir,
-                fx: FakeFxEnv.shared.fx,
-              )))
+          .map((e) => cmd.testBundleBuilder(
+              TestDefinition.fromJson(e, buildDir: FakeFxEnv.shared.outputDir)))
           .toList();
     }
 

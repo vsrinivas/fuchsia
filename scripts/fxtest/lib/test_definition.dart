@@ -21,16 +21,14 @@ class TestDefinition {
   final String name;
   final String os;
   final PackageUrl packageUrl;
+  String hash;
 
   final List<TestEnvironment> testEnvironments;
-
-  ExecutionHandle executionHandle;
 
   TestDefinition({
     @required this.buildDir,
     @required this.name,
     @required this.os,
-    @required String fx,
     this.packageUrl,
     this.cpu,
     this.command,
@@ -38,15 +36,11 @@ class TestDefinition {
     this.label,
     this.path,
     this.testEnvironments = const [],
-  }) {
-    executionHandle = _createExecutionHandle(fx);
-  }
+  });
 
   factory TestDefinition.fromJson(
     Map<String, dynamic> data, {
     @required String buildDir,
-    @required String fx,
-    PackageRepository packageRepository,
   }) {
     Map<String, dynamic> testDetails = data['test'] ?? {};
     List<TestEnvironment> testEnvironments = (data['environments'] ?? [])
@@ -59,12 +53,12 @@ class TestDefinition {
       command: List<String>.from(testDetails['command'] ?? []),
       cpu: testDetails['cpu'] ?? '',
       runtimeDeps: testDetails['runtime_deps'] ?? '',
-      fx: fx,
       label: testDetails['label'] ?? '',
       name: testDetails['name'] ?? '',
       os: testDetails['os'] ?? '',
-      packageUrl: PackageRepository.decoratePackageUrlWithHash(
-          packageRepository, testDetails['package_url']),
+      packageUrl: testDetails['package_url'] == null
+          ? null
+          : PackageUrl.fromString(testDetails['package_url']),
       path: testDetails['path'] ?? '',
       testEnvironments: testEnvironments,
     );
@@ -82,42 +76,66 @@ class TestDefinition {
   os: $os
 />''';
 
-  ExecutionHandle _createExecutionHandle(String fxPath) {
+  TestType get testType {
     if (isE2E) {
-      return ExecutionHandle.e2e(fxPath, [path, ...command].join(' '), os);
-    }
-
-    // `command` must be checked before `host`, because `command` is a subset
-    // of all `host` tests
-    if (command != null && command.isNotEmpty) {
-      return ExecutionHandle.command(fxPath, command.join(' '), os);
-
-      // The order of `component` / `suite` does not currently matter
+      return TestType.e2e;
+    } else if (command != null && command.isNotEmpty) {
+      // `command` must be checked before `host`, because `command` is a subset
+      // of all `host` tests
+      return TestType.command;
     } else if (packageUrl != null) {
+      // The order of `component` / `suite` does not currently matter
+
       // .cmx tests are considered components
       if (packageUrl.fullComponentName.endsWith('.cmx')) {
-        return ExecutionHandle.component(fxPath, packageUrl.toString(), os);
-
+        return TestType.component;
         // .cm tests are considered suites
       } else if (packageUrl.fullComponentName.endsWith('.cm')) {
-        return ExecutionHandle.suite(fxPath, packageUrl.toString(), os);
+        return TestType.suite;
       }
-
       // Package Urls must end with either ".cmx" or ".cm"
       throw MalformedFuchsiaUrlException(packageUrl.toString());
-
-      // As per above, `host` must be checked after `command`
     } else if (path != null && path.isNotEmpty) {
+      // As per above, `host` must be checked after `command`
+
       // Tests with a path must be host tests. All Fuchsia tests *must* be
       // component tests, which means these are a legacy configuration which is
       // unsupported by `fx test`.
       if (os == 'fuchsia') {
-        return ExecutionHandle.unsupportedDeviceTest(path);
+        return TestType.unsupportedDeviceTest;
+      } else {
+        return TestType.host;
       }
-
-      return ExecutionHandle.host(fxPath, fullPath, os);
     }
-    return ExecutionHandle.unsupported();
+    return TestType.unsupported;
+  }
+
+  bool get isUnsupported => unsupportedTestTypes.contains(testType);
+
+  PackageUrl get decoratedPackageUrl {
+    if (packageUrl == null || hash == null) {
+      return packageUrl;
+    }
+    return PackageUrl.copyWithHash(other: packageUrl, hash: hash);
+  }
+
+  ExecutionHandle createExecutionHandle() {
+    switch (testType) {
+      case TestType.component:
+        return ExecutionHandle.component(decoratedPackageUrl.toString(), os);
+      case TestType.suite:
+        return ExecutionHandle.suite(decoratedPackageUrl.toString(), os);
+      case TestType.command:
+        return ExecutionHandle.command(command.join(' '), os);
+      case TestType.host:
+        return ExecutionHandle.host(fullPath, os);
+      case TestType.e2e:
+        return ExecutionHandle.e2e([path, ...command].join(' '), os);
+      case TestType.unsupported:
+        return ExecutionHandle.unsupported();
+      default:
+        return ExecutionHandle.unsupportedDeviceTest(path);
+    }
   }
 
   /// End-to-end tests start on the host machine (designated by an [os] value

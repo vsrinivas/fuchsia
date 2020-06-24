@@ -60,13 +60,12 @@ class TestBundle {
   /// behavior.
   final bool raiseOnFailure;
 
-  /// Optional. Trailing substring of the path to fx. If provided, used to detect
-  /// and condense full fx paths in output.
-  final String fxSuffix;
+  /// Optional. Path to fx. If provided, it replaces any 'fx' command.
+  final String fxPath;
 
   static bool hasDeviceTests(List<TestBundle> testBundles) {
-    return testBundles.any((e) =>
-        !hostTestTypes.contains(e.testDefinition.executionHandle.testType));
+    return testBundles
+        .any((e) => !hostTestTypes.contains(e.testDefinition.testType));
   }
 
   /// Calculate the minimal set of build targets based on tests in [testBundles]
@@ -75,7 +74,7 @@ class TestBundle {
       List<TestBundle> testBundles) {
     Set<String> targets = {};
     for (var e in testBundles) {
-      switch (e.testDefinition.executionHandle.testType) {
+      switch (e.testDefinition.testType) {
         case TestType.component:
         case TestType.suite:
           targets.add('updates');
@@ -103,7 +102,7 @@ class TestBundle {
     @required this.directoryBuilder,
     this.environment = const <String, String>{},
     this.extraFlags = const [],
-    this.fxSuffix,
+    this.fxPath,
     this.isDryRun = false,
     this.raiseOnFailure = false,
     this.runnerFlags = const [],
@@ -133,7 +132,7 @@ class TestBundle {
     @required String workingDirectory,
     double confidence,
     Function(String) realtimeOutputSink,
-    String fxSuffix,
+    String fxPath,
   }) =>
       TestBundle(
         testDefinition,
@@ -142,7 +141,7 @@ class TestBundle {
         environment: testsConfig.environment,
         extraFlags: testsConfig.testArguments.passThroughArgs,
         isDryRun: testsConfig.flags.dryRun,
-        fxSuffix: fxSuffix,
+        fxPath: fxPath,
         raiseOnFailure: testsConfig.flags.shouldFailFast,
         runnerFlags: testsConfig.runnerTokens,
         realtimeOutputSink: realtimeOutputSink ?? (String val) => null,
@@ -162,10 +161,10 @@ class TestBundle {
   ///
   /// Returns a stream of test events that send feedback to the user.
   Stream<TestEvent> run() async* {
-    var testType = testDefinition.executionHandle.testType;
+    var testType = testDefinition.testType;
+    var executionHandle = testDefinition.createExecutionHandle();
     if (testType == TestType.unsupportedDeviceTest) {
-      var greyTestName =
-          wrapWith(testDefinition.executionHandle.handle, [styleBold]);
+      var greyTestName = wrapWith(executionHandle.handle, [styleBold]);
       yield TestInfo(
         'Skipping unrunnable legacy test: "$greyTestName". '
         'All device tests must be component-tests, but this is a binary',
@@ -174,7 +173,7 @@ class TestBundle {
     }
 
     CommandTokens commandTokens =
-        testDefinition.executionHandle.getInvocationTokens(runnerFlags);
+        executionHandle.getInvocationTokens(runnerFlags);
 
     // Unparsed tests imply a major problem with `fx test`, so we
     // definitely want to throw an exception
@@ -190,8 +189,7 @@ class TestBundle {
       yield TestInfo(commandTokens.warning);
     }
 
-    String fullCommandDisplay =
-        commandTokens.fullCommandDisplay(fxSuffix, extraFlags);
+    String fullCommandDisplay = commandTokens.fullCommandDisplay(extraFlags);
 
     yield TestStarted(
       testDefinition: testDefinition,
@@ -247,7 +245,7 @@ class TestBundle {
     var start = DateTime.now();
     testRunner.output.listen(realtimeOutputSink);
     ProcessResult result = await testRunner.run(
-      commandTokens.command,
+      _addFxPath(commandTokens.command),
       commandTokens.args..addAll(extraFlags),
       environment: environment,
       workingDirectory: workingDirectory,
@@ -263,6 +261,10 @@ class TestBundle {
               result,
             ),
     );
+  }
+
+  String _addFxPath(String cmd) {
+    return cmd == 'fx' && fxPath != null ? fxPath : cmd;
   }
 
   String _formatError(String cmd, ProcessResult result) {
@@ -298,7 +300,7 @@ class TestBundle {
   String toString() => [
         '<TestBundle',
         '  testName: ${testDefinition.name}',
-        '  testType: ${testDefinition.executionHandle.testType}',
+        '  testType: ${testDefinition.testType}',
         '  extraFlags: $extraFlags',
         '  runnerFlags: $runnerFlags',
         '/>',

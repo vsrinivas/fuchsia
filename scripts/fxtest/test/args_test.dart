@@ -155,7 +155,6 @@ void main() {
     List<TestDefinition> testDefinitions = [
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
-        fx: FakeFxEnv.shared.fx,
         name: 'device test',
         os: 'fuchsia',
         packageUrl:
@@ -163,7 +162,6 @@ void main() {
       ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
-        fx: FakeFxEnv.shared.fx,
         name: 'example-test',
         os: 'linux',
         path: '/asdf',

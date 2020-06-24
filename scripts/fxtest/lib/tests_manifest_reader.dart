@@ -61,9 +61,6 @@ class TestsManifestReader {
       testJson: testJson,
       buildDir: buildDir,
       fxLocation: fxLocation,
-      packageRepository: usePackageHash
-          ? await PackageRepository.fromManifest(buildDir: buildDir)
-          : null,
     );
   }
 
@@ -72,15 +69,12 @@ class TestsManifestReader {
     @required List<dynamic> testJson,
     @required String buildDir,
     @required String fxLocation,
-    PackageRepository packageRepository,
   }) {
     List<TestDefinition> testDefinitions = [];
     for (var data in testJson) {
       TestDefinition testDefinition = TestDefinition.fromJson(
         Map<String, dynamic>.from(data),
         buildDir: buildDir,
-        fx: fxLocation,
-        packageRepository: packageRepository,
       );
       testDefinitions.add(testDefinition);
     }
@@ -150,9 +144,9 @@ class TestsManifestReader {
       // This implies that we encountered a test definition with no code
       // to support its parsing and execution. It definitely implies a critical
       // failure that we should immediately correct.
-      if (testDefinition.executionHandle.isUnsupported) {
+      if (testDefinition.isUnsupported) {
         numUnparsedTests += 1;
-        var testType = testDefinition.executionHandle.testType;
+        var testType = testDefinition.testType;
         if (testType == TestType.unsupported) {
           _handleUnsupportedTest(testDefinition, testsConfig, eventEmitter);
           continue;
@@ -164,7 +158,7 @@ class TestsManifestReader {
       }
 
       // TODO: Move this to after an optional `--limit` flag is applied.
-      bool isE2E = testDefinition.executionHandle.testType == TestType.e2e;
+      bool isE2E = testDefinition.testType == TestType.e2e;
       if (!isE2E && testsConfig.flags.onlyE2e) {
         continue;
       } else if (isE2E && !testsConfig.flags.e2e) {
@@ -199,12 +193,13 @@ class TestsManifestReader {
           // but invoking the test runner on their shared package name already
           // captures all tests. Therefore, any such sibling entry further down
           // `tests.json` will only result in duplicate work.
-          if (seenPackages.contains(testDefinition.executionHandle.handle)) {
+          var handle = testDefinition.createExecutionHandle().handle;
+          if (seenPackages.contains(handle)) {
             numDuplicateTests += 1;
             testIsClaimed = true;
             break;
           } else {
-            seenPackages.add(testDefinition.executionHandle.handle);
+            seenPackages.add(handle);
           }
 
           // Now that we know we're seeing this `packageName` for the first

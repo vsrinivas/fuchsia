@@ -36,7 +36,7 @@ declare fx DATA_DIR
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
-  btf::make_installed_hosttools_mock "device-finder"  > /dev/null
+  btf::make_installed_hosttools_mock "device-finder" > /dev/null
   DATA_DIR="${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_test_test"
 }
 
@@ -103,6 +103,27 @@ TEST_fxtest_hashpinnning() {
   BT_EXPECT ${fx} test --no-build ${testname2} >> "${out}"
   local packageUrl2="fuchsia-pkg://fuchsia.com/hello_world_cpp_tests?hash=${hash2}#meta/hello_world_cpp_unittests.cmx"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell.mock_state.2" "run-test-component" "_ANY_" "${packageUrl2}"
+}
+
+# Test that when the merkle root of a package is changed as a result of the
+# 'fx build' executed by fx test, the new hash is used when pinning the
+# package in fx shell run-test-component
+TEST_fxtest_updated_hash() {
+  cp -R "${DATA_DIR}/tests_hashfile/out" "${BT_TEMP_DIR}"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local testname1="overflow_fuzzer_test"
+  local hash_old="913cdd63ab4aa794694448450505efaa2a8fe27fb33888e5156da9db60ac0a29"
+  local hash_new="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+  # create a build script that, when called, changes hash_old to hash_new in the
+  # package repository
+  cat > "${BT_TEMP_DIR}/tools/devshell/build.mock_side_effects" <<EOF
+  sed -i 's/${hash_old}/${hash_new}/g' ${BT_TEMP_DIR}/out/default/amber-files/repository/targets.json
+EOF
+  # expect that "fx shell run-test-component URL-WITH-HASH" executes with the new hash, not the old one
+  BT_EXPECT ${fx} test ${testname1} >> "${out}"
+  local packageUrl="fuchsia-pkg://fuchsia.com/example-fuzzers?hash=${hash_new}#meta/overflow_fuzzer_test.cmx"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "_ANY_" "${packageUrl}"
 }
 
 # Test that "fx test" doesn't fail if a component test doesn't have a hashfile

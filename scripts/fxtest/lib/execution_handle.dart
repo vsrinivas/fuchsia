@@ -38,12 +38,9 @@ const Set<TestType> unsupportedTestTypes = {
 
 /// Container for all the string primitives required to execute a test.
 ///
-/// Includes a filesystem path to the fx script itself, for re-entry, and every
-/// relevant command line argument, flag, and environment variable.
+/// Includes every relevant command line argument, flag, and environment
+/// variable.
 class ExecutionHandle {
-  /// Absolute path to the fx entry point.
-  final String fx;
-
   /// Complete string passed to `fx` to execute the test.
   final String handle;
 
@@ -58,36 +55,26 @@ class ExecutionHandle {
   /// execute the test.
   final Map<String, String> environment;
 
-  ExecutionHandle(this.fx, this.handle, this.os,
-      {this.testType, this.environment});
-  ExecutionHandle.command(this.fx, this.handle, this.os,
-      {this.environment = const {}})
+  ExecutionHandle(this.handle, this.os, {this.testType, this.environment});
+  ExecutionHandle.command(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.command;
-  ExecutionHandle.component(this.fx, this.handle, this.os,
-      {this.environment = const {}})
+  ExecutionHandle.component(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.component;
-  ExecutionHandle.e2e(this.fx, this.handle, this.os,
-      {this.environment = const {}})
+  ExecutionHandle.e2e(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.e2e;
-  ExecutionHandle.suite(this.fx, this.handle, this.os,
-      {this.environment = const {}})
+  ExecutionHandle.suite(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.suite;
-  ExecutionHandle.host(this.fx, this.handle, this.os,
-      {this.environment = const {}})
+  ExecutionHandle.host(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.host;
   ExecutionHandle.unsupportedDeviceTest(this.handle,
       {this.environment = const {}})
-      : fx = '',
-        os = 'fuchsia',
+      : os = 'fuchsia',
         testType = TestType.unsupportedDeviceTest;
   const ExecutionHandle.unsupported()
-      : fx = '',
-        handle = '',
+      : handle = '',
         os = '',
         environment = const {},
         testType = TestType.unsupported;
-
-  bool get isUnsupported => unsupportedTestTypes.contains(testType);
 
   /// Produces the complete list of tokens required to invoke this test.
   ///
@@ -123,7 +110,7 @@ class ExecutionHandle {
     // correct syntax, but with a helpful warning.
     if (commandTokens.first == 'run') {
       return CommandTokens(
-        [fx, 'shell', ...commandTokens.sublist(1)],
+        ['fx', 'shell', ...commandTokens.sublist(1)],
         warning:
             'Warning! Only host tests are expected to use the "command" syntax. '
             'The test [$commandTokens] did not comply with this expectation.',
@@ -136,14 +123,14 @@ class ExecutionHandle {
   /// in ".cmx".
   CommandTokens _getComponentTokens(List<String> runnerFlags) {
     List<String> subCommand = ['shell', 'run-test-component'] + runnerFlags;
-    return CommandTokens([fx, ...subCommand, handle]);
+    return CommandTokens(['fx', ...subCommand, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cm".
   CommandTokens _getSuiteTokens() {
     List<String> subCommand = ['shell', 'run-test-suite'];
-    return CommandTokens([fx, ...subCommand, handle]);
+    return CommandTokens(['fx', ...subCommand, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `path` key.

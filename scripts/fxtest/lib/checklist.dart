@@ -32,8 +32,8 @@ class PreChecker implements Checklist {
   }
 
   bool hasDeviceTests(List<TestBundle> testBundles) {
-    return testBundles.any((e) =>
-        !hostTestTypes.contains(e.testDefinition.executionHandle.testType));
+    return testBundles
+        .any((e) => !hostTestTypes.contains(e.testDefinition.testType));
   }
 
   @override
@@ -53,8 +53,7 @@ class PreChecker implements Checklist {
     if (testsConfig.flags.shouldUpdateIfInBase) {
       // if any test is on base, perform an OTA first
       Iterable<String> allTestNames = testBundles
-          .where(
-              (e) => e.testDefinition.executionHandle.testType != TestType.host)
+          .where((e) => e.testDefinition.testType != TestType.host)
           .map((e) => e.testDefinition.name);
       // TODO: update-if-in-base can't handle large numbers of command-line
       // arguments. The code below paginates and calls it with batches of

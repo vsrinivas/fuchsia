@@ -23,24 +23,20 @@ void main() {
           }
         },
         buildDir: '/whatever',
-        fx: '/whatever/fx',
       );
-      final commandTokens = testDef.executionHandle.getInvocationTokens([]);
+      final commandTokens =
+          testDef.createExecutionHandle().getInvocationTokens([]);
       expect(
         commandTokens.fullCommand,
-        ['/whatever/fx', 'shell', 'run-test-component', componentUrl].join(' '),
+        ['fx', 'shell', 'run-test-component', componentUrl].join(' '),
       );
-      final commandTokens2 =
-          testDef.executionHandle.getInvocationTokens(['--restrict-logs']);
+      final commandTokens2 = testDef
+          .createExecutionHandle()
+          .getInvocationTokens(['--restrict-logs']);
       expect(
         commandTokens2.fullCommand,
-        [
-          '/whatever/fx',
-          'shell',
-          'run-test-component',
-          '--restrict-logs',
-          componentUrl
-        ].join(' '),
+        ['fx', 'shell', 'run-test-component', '--restrict-logs', componentUrl]
+            .join(' '),
       );
     });
   });
