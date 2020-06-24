@@ -57,7 +57,7 @@ common_image_contents = [
   "//src/connectivity/network/bin/ping",
   "//src/connectivity/network/drivers/network-device",
   "//src/developer/cmd:bin",
-  "//src/developer/feedback/crasher:crasher_exe",
+  "//src/developer/forensics/crasher:crasher_exe",
   "//src/devices/bin/driverctl",
   "//src/devices/bin/lsdev",
   "//src/devices/bin/tee-test",

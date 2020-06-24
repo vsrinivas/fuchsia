@@ -5,12 +5,6 @@
 ###############################################################################
 # GROUPS
 ###############################################################################
-group("feedback") {
-  testonly = true
-
-  public_deps = [ "crasher" ]
-}
-
 # TODO(54226): remove once dependents are updated.
 group("infra_configs") {
   deps = [ "//src/developer/forensics:infra_configs" ]
