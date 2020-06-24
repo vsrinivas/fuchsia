@@ -1,2 +1,1 @@
-fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx
 fuchsia-pkg://fuchsia.com/has_global_data#meta/has_global_data.cmx

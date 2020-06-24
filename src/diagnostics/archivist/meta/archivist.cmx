@@ -9,7 +9,6 @@
     "sandbox": {
         "features": [
             "config-data",
-            "global-data",
             "isolated-persistent-storage"
         ],
         "services": [
