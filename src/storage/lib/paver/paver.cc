@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "paver.h"
+#include "src/storage/lib/paver/paver.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -34,10 +34,10 @@
 #include <fs-management/mount.h>
 #include <zxcrypt/fdio-volume.h>
 
-#include "fvm.h"
-#include "pave-logging.h"
-#include "stream-reader.h"
-#include "vmo-reader.h"
+#include "src/storage/lib/paver/fvm.h"
+#include "src/storage/lib/paver/pave-logging.h"
+#include "src/storage/lib/paver/stream-reader.h"
+#include "src/storage/lib/paver/vmo-reader.h"
 
 #define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
 
@@ -749,8 +749,8 @@ zx::status<zx::channel> DataSinkImpl::WipeVolume() {
 
 void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
                     zx::channel server, std::shared_ptr<Context> context) {
-  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root),
-                                               GetCurrentArch(), context);
+  auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
+                                                      GetCurrentArch(), context);
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
@@ -763,8 +763,9 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, z
 void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                            zx::channel svc_root, zx::channel block_device, zx::channel server,
                            std::shared_ptr<Context> context) {
-  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root),
-                                               GetCurrentArch(), context, std::move(block_device));
+  auto partitioner =
+      DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
+                                       GetCurrentArch(), context, std::move(block_device));
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
@@ -811,7 +812,7 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                        zx::channel svc_root, std::shared_ptr<Context> context, zx::channel server) {
-  auto status = abr::Client::Create(std::move(devfs_root), std::move(svc_root), context);
+  auto status = abr::ClientFactory::Create(std::move(devfs_root), std::move(svc_root), context);
   if (status.is_error()) {
     ERROR("Failed to get ABR client: %s\n", status.status_string());
     fidl_epitaph_write(server.get(), status.error_value());

@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_
+#ifndef SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_
+#define SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
 
@@ -14,7 +14,7 @@
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
 
-#include "device-partitioner.h"
+#include "src/storage/lib/paver/device-partitioner.h"
 
 constexpr uint64_t kBlockSize = 0x1000;
 constexpr uint32_t kBlockCount = 0x100;
@@ -136,4 +136,4 @@ class FakePartitionClient : public paver::PartitionClient {
   size_t partition_size_;
 };
 
-#endif  // ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_
+#endif  // SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_

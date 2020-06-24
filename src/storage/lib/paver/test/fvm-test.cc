@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm.h"
+#include "src/storage/lib/paver/fvm.h"
 
 #include <lib/devmgr-integration-test/fixture.h>
 
 #include <fs-management/fvm.h>
+#include <fvm/format.h>
+#include <fvm/fvm-sparse.h>
 #include <zxtest/zxtest.h>
 
-#include "fvm/format.h"
-#include "fvm/fvm-sparse.h"
-#include "test/test-utils.h"
+#include "src/storage/lib/paver/test/test-utils.h"
 
 namespace {
 

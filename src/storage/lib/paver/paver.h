@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_PAVER_PAVER_H_
-#define ZIRCON_SYSTEM_ULIB_PAVER_PAVER_H_
+#ifndef SRC_STORAGE_LIB_PAVER_PAVER_H_
+#define SRC_STORAGE_LIB_PAVER_PAVER_H_
 
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -212,4 +212,4 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
 
 }  // namespace paver
 
-#endif  // ZIRCON_SYSTEM_ULIB_PAVER_PAVER_H_
+#endif  // SRC_STORAGE_LIB_PAVER_PAVER_H_

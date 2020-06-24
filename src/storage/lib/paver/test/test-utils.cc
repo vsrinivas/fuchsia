@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test/test-utils.h"
+#include "src/storage/lib/paver/test/test-utils.h"
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
@@ -19,7 +19,7 @@
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
-#include "device-partitioner.h"
+#include "src/storage/lib/paver/device-partitioner.h"
 
 namespace {
 
@@ -119,13 +119,9 @@ FakePartitionClient::FakePartitionClient(size_t block_count, size_t block_size)
   }
 }
 
-zx::status<size_t> FakePartitionClient::GetBlockSize() {
-  return zx::ok(block_size_);
-}
+zx::status<size_t> FakePartitionClient::GetBlockSize() { return zx::ok(block_size_); }
 
-zx::status<size_t> FakePartitionClient::GetPartitionSize() {
-  return zx::ok(partition_size_);
-}
+zx::status<size_t> FakePartitionClient::GetPartitionSize() { return zx::ok(partition_size_); }
 
 zx::status<> FakePartitionClient::Read(const zx::vmo& vmo, size_t size) {
   if (partition_size_ == 0) {

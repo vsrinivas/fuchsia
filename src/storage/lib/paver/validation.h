@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_PAVER_VALIDATION_H_
-#define ZIRCON_SYSTEM_ULIB_PAVER_VALIDATION_H_
+#ifndef SRC_STORAGE_LIB_PAVER_VALIDATION_H_
+#define SRC_STORAGE_LIB_PAVER_VALIDATION_H_
 
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <fbl/span.h>
 
-#include "device-partitioner.h"
+#include "src/storage/lib/paver/device-partitioner.h"
 
 namespace paver {
 
@@ -24,4 +24,4 @@ bool IsValidChromeOSKernel(fbl::Span<const uint8_t> data);
 
 }  // namespace paver
 
-#endif  // ZIRCON_SYSTEM_ULIB_PAVER_VALIDATION_H_
+#endif  // SRC_STORAGE_LIB_PAVER_VALIDATION_H_

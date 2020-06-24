@@ -10,11 +10,12 @@
 #include <lib/zx/status.h>
 
 #include <memory>
+#include <vector>
 
 #include <fbl/unique_fd.h>
 
-#include "partition-client.h"
-#include "paver-context.h"
+#include "src/storage/lib/paver/partition-client.h"
+#include "src/storage/lib/paver/paver-context.h"
 
 namespace abr {
 
@@ -83,17 +84,23 @@ class Client {
   virtual zx::status<> Write(const uint8_t* buffer, size_t size) = 0;
 };
 
-class AstroClient {
+class ClientFactory {
  public:
+  // Factory create method.
   static zx::status<std::unique_ptr<abr::Client>> Create(fbl::unique_fd devfs_root,
                                                          const zx::channel& svc_root,
                                                          std::shared_ptr<paver::Context> context);
-};
 
-class SherlockClient {
- public:
-  static zx::status<std::unique_ptr<abr::Client>> Create(fbl::unique_fd devfs_root,
-                                                         const zx::channel& svc_root);
+  static void Register(std::unique_ptr<ClientFactory> factory);
+
+  virtual ~ClientFactory() = default;
+
+ private:
+  virtual zx::status<std::unique_ptr<abr::Client>> New(fbl::unique_fd devfs_root,
+                                                       const zx::channel& svc_root,
+                                                       std::shared_ptr<paver::Context> context) = 0;
+
+  static std::vector<std::unique_ptr<ClientFactory>>* registered_factory_list();
 };
 
 // Implementation of abr::Client which works with a contiguous partition storing AbrData.

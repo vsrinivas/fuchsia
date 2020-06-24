@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "partition-client.h"
+#include "src/storage/lib/paver/partition-client.h"
 
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 
 #include <memory>
@@ -16,8 +17,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "test-utils.h"
-#include "zircon/errors.h"
+#include "src/storage/lib/paver/sherlock.h"
+#include "src/storage/lib/paver/test/test-utils.h"
 
 namespace {
 

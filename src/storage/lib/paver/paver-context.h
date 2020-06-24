@@ -1,7 +1,6 @@
-#ifndef ZIRCON_SYSTEM_ULIB_PAVER_PAVER_CONTEXT_H_
-#define ZIRCON_SYSTEM_ULIB_PAVER_PAVER_CONTEXT_H_
+#ifndef SRC_STORAGE_LIB_PAVER_PAVER_CONTEXT_H_
+#define SRC_STORAGE_LIB_PAVER_PAVER_CONTEXT_H_
 
-#include <lib/sysconfig/sync-client.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
@@ -21,16 +20,6 @@ namespace paver {
 class ContextBase {
  public:
   virtual ~ContextBase() = default;
-};
-
-// Following are device-specific context
-
-class AstroPartitionerContext : public ContextBase {
- public:
-  std::unique_ptr<::sysconfig::SyncClientBuffered> client_;
-
-  AstroPartitionerContext(std::unique_ptr<::sysconfig::SyncClientBuffered> client)
-      : client_{std::move(client)} {}
 };
 
 // The context wrapper
@@ -80,4 +69,4 @@ class Context {
 
 }  // namespace paver
 
-#endif  // ZIRCON_SYSTEM_ULIB_PAVER_PAVER_CONTEXT_H_
+#endif  // SRC_STORAGE_LIB_PAVER_PAVER_CONTEXT_H_

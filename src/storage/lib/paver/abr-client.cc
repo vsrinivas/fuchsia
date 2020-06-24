@@ -2,23 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "abr-client.h"
+#include "src/storage/lib/paver/abr-client.h"
 
 #include <endian.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/abr/abr.h>
 #include <lib/cksum.h>
 #include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <string_view>
 
-#include "device-partitioner.h"
-#include "partition-client.h"
-#include "pave-logging.h"
-#include "zircon/errors.h"
+#include "src/storage/lib/paver/device-partitioner.h"
+#include "src/storage/lib/paver/partition-client.h"
+#include "src/storage/lib/paver/pave-logging.h"
 
 namespace abr {
 
@@ -111,22 +112,32 @@ zx::status<> AbrPartitionClient::Write(const uint8_t* buffer, size_t size) {
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<abr::Client>> Client::Create(fbl::unique_fd devfs_root,
-                                                        const zx::channel& svc_root,
-                                                        std::shared_ptr<paver::Context> context) {
+std::vector<std::unique_ptr<ClientFactory>>* ClientFactory::registered_factory_list() {
+  static std::vector<std::unique_ptr<ClientFactory>>* registered_factory_list = nullptr;
+  if (registered_factory_list == nullptr) {
+    registered_factory_list = new std::vector<std::unique_ptr<ClientFactory>>();
+  }
+  return registered_factory_list;
+}
+
+zx::status<std::unique_ptr<abr::Client>> ClientFactory::Create(
+    fbl::unique_fd devfs_root, const zx::channel& svc_root,
+    std::shared_ptr<paver::Context> context) {
   if (auto status = SupportsVerifiedBoot(svc_root); status.is_error()) {
     return status.take_error();
   }
 
-  if (auto status = AstroClient::Create(devfs_root.duplicate(), svc_root, context);
-      status.is_ok()) {
-    return status.take_value();
-  }
-  if (auto status = SherlockClient::Create(std::move(devfs_root), svc_root); status.is_ok()) {
-    return status.take_value();
+  for (auto& factory : *registered_factory_list()) {
+    if (auto status = factory->New(devfs_root.duplicate(), svc_root, context); status.is_ok()) {
+      return status.take_value();
+    }
   }
 
   return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+void ClientFactory::Register(std::unique_ptr<ClientFactory> factory) {
+  registered_factory_list()->push_back(std::move(factory));
 }
 
 bool Client::ReadAbrMetaData(void* context, size_t size, uint8_t* buffer) {
@@ -158,44 +169,6 @@ zx::status<> Client::AbrResultToZxStatus(AbrResult status) {
   }
   ERROR("Unknown Abr result code %d!\n", status);
   return zx::error(ZX_ERR_INTERNAL);
-}
-
-zx::status<std::unique_ptr<abr::Client>> AstroClient::Create(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root,
-    std::shared_ptr<paver::Context> context) {
-  auto status = paver::AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context);
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
-
-  // ABR metadata has no need of a content type since it's always local rather
-  // than provided in an update package, so just use the default content type.
-  auto status_or_part =
-      partitioner->FindPartition(paver::PartitionSpec(paver::Partition::kAbrMeta));
-  if (status_or_part.is_error()) {
-    return status_or_part.take_error();
-  }
-
-  return AbrPartitionClient::Create(std::move(status_or_part.value()));
-}
-
-zx::status<std::unique_ptr<abr::Client>> SherlockClient::Create(fbl::unique_fd devfs_root,
-                                                                const zx::channel& svc_root) {
-  auto partitioner = paver::SherlockPartitioner::Initialize(std::move(devfs_root),
-                                                            std::move(svc_root), std::nullopt);
-  if (partitioner.is_error()) {
-    return partitioner.take_error();
-  }
-
-  // ABR metadata has no need of a content type since it's always local rather
-  // than provided in an update package, so just use the default content type.
-  auto partition = partitioner->FindPartition(paver::PartitionSpec(paver::Partition::kAbrMeta));
-  if (partition.is_error()) {
-    return partition.take_error();
-  }
-
-  return AbrPartitionClient::Create(std::move(partition.value()));
 }
 
 extern "C" uint32_t AbrCrc32(const void* buf, size_t buf_size) {

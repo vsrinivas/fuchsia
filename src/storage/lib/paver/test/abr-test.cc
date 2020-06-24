@@ -11,7 +11,9 @@
 
 #include <zxtest/zxtest.h>
 
-#include "abr-client.h"
+#include "src/storage/lib/paver/abr-client.h"
+#include "src/storage/lib/paver/astro.h"
+#include "src/storage/lib/paver/sherlock.h"
 
 namespace {
 
@@ -29,7 +31,8 @@ TEST(AstroAbrTests, CreateFails) {
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
   zx::channel svc_root;
-  ASSERT_NOT_OK(abr::AstroClient::Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
+  ASSERT_NOT_OK(
+      paver::AstroAbrClientFactory().New(devmgr.devfs_root().duplicate(), svc_root, nullptr));
 }
 
 TEST(SherlockAbrTests, CreateFails) {
@@ -46,7 +49,8 @@ TEST(SherlockAbrTests, CreateFails) {
   ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
   fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release());
 
-  ASSERT_NOT_OK(abr::SherlockClient::Create(devmgr.devfs_root().duplicate(), std::move(svc_root)));
+  ASSERT_NOT_OK(
+      paver::SherlockAbrClientFactory().Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
 }
 
 }  // namespace

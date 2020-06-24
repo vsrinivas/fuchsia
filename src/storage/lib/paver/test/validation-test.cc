@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "validation.h"
+#include "src/storage/lib/paver/validation.h"
 
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
@@ -14,8 +14,8 @@
 #include <fbl/span.h>
 #include <zxtest/zxtest.h>
 
-#include "device-partitioner.h"
-#include "test-utils.h"
+#include "src/storage/lib/paver/device-partitioner.h"
+#include "src/storage/lib/paver/test/test-utils.h"
 
 namespace paver {
 namespace {

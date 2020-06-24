@@ -4,8 +4,8 @@
 
 #include <fbl/span.h>
 
-#include "device-partitioner.h"
-#include "validation.h"
+#include "src/storage/lib/paver/device-partitioner.h"
+#include "src/storage/lib/paver/validation.h"
 
 // Simple fuzzer to detect invalid memory accesses of validation.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {

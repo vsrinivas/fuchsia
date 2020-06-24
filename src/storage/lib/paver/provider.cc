@@ -2,14 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/paver/provider.h>
-
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/paver/provider.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include "paver.h"
+#include "src/storage/lib/paver/abr-client.h"
+#include "src/storage/lib/paver/as370.h"
+#include "src/storage/lib/paver/astro.h"
+#include "src/storage/lib/paver/chromebook-x64.h"
+#include "src/storage/lib/paver/device-partitioner.h"
+#include "src/storage/lib/paver/paver.h"
+#include "src/storage/lib/paver/sherlock.h"
+#include "src/storage/lib/paver/x64.h"
 
 namespace {
 
@@ -27,6 +33,16 @@ zx_status_t Connect(void* ctx, async_dispatcher_t* dispatcher, const char* servi
 
 zx_status_t Init(void** out_ctx) {
   *out_ctx = new paver::Paver;
+  // NOTE: Ordering matters!
+  paver::DevicePartitionerFactory::Register(std::make_unique<paver::AstroPartitionerFactory>());
+  paver::DevicePartitionerFactory::Register(std::make_unique<paver::As370PartitionerFactory>());
+  paver::DevicePartitionerFactory::Register(std::make_unique<paver::SherlockPartitionerFactory>());
+  paver::DevicePartitionerFactory::Register(
+      std::make_unique<paver::ChromebookX64PartitionerFactory>());
+  paver::DevicePartitionerFactory::Register(std::make_unique<paver::X64PartitionerFactory>());
+  paver::DevicePartitionerFactory::Register(std::make_unique<paver::DefaultPartitionerFactory>());
+  abr::ClientFactory::Register(std::make_unique<paver::AstroAbrClientFactory>());
+  abr::ClientFactory::Register(std::make_unique<paver::SherlockAbrClientFactory>());
   return ZX_OK;
 }
 

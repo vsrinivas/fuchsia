@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "paver-context.h"
+#include "src/storage/lib/paver/paver-context.h"
 
 #include <zxtest/zxtest.h>
+
+#include "src/storage/lib/paver/astro.h"
 
 namespace {
 TEST(PaverContextTest, Initialize) {

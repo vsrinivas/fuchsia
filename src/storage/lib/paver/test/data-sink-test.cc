@@ -12,8 +12,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "../paver.h"
-#include "test-utils.h"
+#include "src/storage/lib/paver/paver.h"
+#include "src/storage/lib/paver/test/test-utils.h"
 
 namespace {
 

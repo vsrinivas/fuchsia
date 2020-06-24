@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_PAVER_VMO_READER_H_
-#define ZIRCON_SYSTEM_ULIB_PAVER_VMO_READER_H_
+#ifndef SRC_STORAGE_LIB_PAVER_VMO_READER_H_
+#define SRC_STORAGE_LIB_PAVER_VMO_READER_H_
 
 #include <fuchsia/mem/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
@@ -38,4 +38,4 @@ class VmoReader {
 
 }  // namespace paver
 
-#endif  // ZIRCON_SYSTEM_ULIB_PAVER_VMO_READER_H_
+#endif  // SRC_STORAGE_LIB_PAVER_VMO_READER_H_

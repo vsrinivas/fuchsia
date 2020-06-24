@@ -5,6 +5,7 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
@@ -18,6 +19,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
+#include <lib/sysconfig/sync-client.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/gpt.h>
 
@@ -33,9 +35,9 @@
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
-#include "device-partitioner.h"
-#include "paver.h"
-#include "test/test-utils.h"
+#include "src/storage/lib/paver/device-partitioner.h"
+#include "src/storage/lib/paver/paver.h"
+#include "src/storage/lib/paver/test/test-utils.h"
 
 namespace {
 
@@ -959,12 +961,13 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
     // Validate that it is correct.
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result->result.response().configuration, paver::Configuration::B);
+    ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::B);
   }
 
   {
     // Mark the old slot A as unbootable.
-    auto set_unbootable_result = boot_manager_->SetConfigurationUnbootable(paver::Configuration::A);
+    auto set_unbootable_result =
+        boot_manager_->SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration::A);
     ASSERT_OK(set_unbootable_result.status());
   }
 
@@ -1022,7 +1025,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
   }
 
   {
-    auto result = boot_manager_->SetConfigurationActive(paver::Configuration::A);
+    auto result = boot_manager_->SetConfigurationActive(::llcpp::fuchsia::paver::Configuration::A);
     ASSERT_OK(result.status());
   }
 
@@ -1031,7 +1034,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
     // Validate that it is correct.
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result->result.response().configuration, paver::Configuration::A);
+    ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::A);
   }
 
   // Haven't flushed yet. abr data in storage should stayed the same.
