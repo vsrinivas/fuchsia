@@ -23,12 +23,21 @@ class Metrics {
           sys::ComponentInspector* inspector, fuchsia::cobalt::Logger_Sync* logger,
           memory::CaptureFn capture_cb);
 
+  // Allow monitor to update the memory bandwidth readings
+  // once a second to metrics
+  void NextMemoryBandwidthReading(uint64_t reading, zx_time_t ts);
+
   // Reader side must use the exact name to read from Inspect.
   // Design doc in go/fuchsia-metrics-to-inspect-design.
   static constexpr const char* kInspectPlatformNodeName = "platform_metrics";
   // Details about config file are in b/151984065#comment16
   static constexpr const char* kMemoryNodeName = "memory_usages";
   static constexpr const char* kReadingMemoryTimestamp = "timestamp";
+  static constexpr const char* kMemoryBandwidthNodeName = "memory_bandwidth";
+  static constexpr const char* kReadings = "readings";
+
+  // Size of the circular buffer for readings within a minute
+  static constexpr size_t kMemoryBandwidthArraySize = 60;
 
  private:
   void CollectMetrics();
@@ -48,7 +57,6 @@ class Metrics {
   std::unordered_map<std::string, cobalt_registry::MemoryMetricDimensionBucket>
       bucket_name_to_code_;
   memory::Digester digester_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(Metrics);
 
   // The component inspector to publish data to.
   // Not owned.
@@ -57,6 +65,14 @@ class Metrics {
   inspect::Node metric_memory_node_;
   std::map<std::string, inspect::UintProperty> inspect_memory_usages_;
   inspect::IntProperty inspect_memory_timestamp_;
+
+  inspect::Node metric_memory_bandwidth_node_;
+  inspect::UintArray inspect_memory_bandwidth_;
+  inspect::IntProperty inspect_memory_bandwidth_timestamp_;
+
+  size_t memory_bandwidth_index_ = 0;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 
 }  // namespace monitor

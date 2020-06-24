@@ -9,9 +9,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -23,7 +20,6 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <filesystem>
 #include <iostream>
 #include <iterator>
 
@@ -47,7 +43,6 @@ namespace {
 const zx::duration kHighWaterPollFrequency = zx::sec(10);
 const uint64_t kHighWaterThreshold = 10 * 1024 * 1024;
 const zx::duration kMetricsPollFrequency = zx::min(5);
-const char kRamDeviceClassPath[] = "/dev/class/aml-ram";
 const char kTraceNameHighPrecisionBandwidth[] = "memory_monitor:high_precision_bandwidth";
 constexpr uint64_t kMaxPendingBandwidthMeasurements = 4;
 constexpr uint64_t kMemCyclesToMeasure = 792000000 / 20;                 // 50 ms on sherlock
@@ -68,6 +63,21 @@ uint64_t CounterToBandwidth(uint64_t counter, uint64_t frequency, uint64_t cycle
 zx_ticks_t TimestampToTicks(zx_time_t timestamp) {
   __uint128_t temp = static_cast<__uint128_t>(timestamp) * zx_ticks_per_second() / ZX_SEC(1);
   return static_cast<zx_ticks_t>(temp);
+}
+fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig BuildConfig(uint64_t cycles_to_measure){
+  fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig config = {};
+  config.cycles_to_measure = cycles_to_measure;
+  for (size_t i = 0; i < std::size(kRamDefaultChannels); i++) {
+    config.channels[i] = kRamDefaultChannels[i].mask;
+  }
+  return config;
+}
+uint64_t TotalReadWriteCycles(const fuchsia::hardware::ram::metrics::BandwidthInfo& info) {
+  uint64_t total_readwrite_cycles = 0;
+  for (auto& channel : info.channels) {
+    total_readwrite_cycles += channel.readwrite_cycles;
+  }
+  return total_readwrite_cycles;
 }
 }  // namespace
 
@@ -152,43 +162,8 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                   << " Total Heap: " << kmem.total_heap_bytes;
   }
 
-  if (send_metrics) {
-    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-    // Connect to the cobalt fidl service provided by the environment.
-    fuchsia::cobalt::LoggerFactorySyncPtr factory;
-
-    component_context_->svc()->Connect(factory.NewRequest());
-    if (!factory) {
-      FX_LOGS(ERROR) << "Unable to get LoggerFactory.";
-      return;
-    }
-
-    // Create a Cobalt Logger. The ID name is the one we specified in the
-    // Cobalt metrics registry.
-    factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, logger_.NewRequest(), &status);
-    if (status != fuchsia::cobalt::Status::OK) {
-      FX_LOGS(ERROR) << "Unable to get Logger from factory";
-      return;
-    }
-    metrics_ = std::make_unique<Metrics>(
-        kMetricsPollFrequency, dispatcher, &inspector_, logger_.get(),
-        [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
-  }
-
-  // Look for optional RAM device that provides bandwidth measurement interface.
-  if (std::filesystem::exists(kRamDeviceClassPath)) {
-    for (const auto& entry : std::filesystem::directory_iterator(kRamDeviceClassPath)) {
-      int fd = open(entry.path().c_str(), O_RDWR);
-      if (fd > -1) {
-        zx::channel handle;
-        zx_status_t status = fdio_get_service_handle(fd, handle.reset_and_get_address());
-        if (status == ZX_OK) {
-          ram_device_.Bind(std::move(handle));
-        }
-        break;
-      }
-    }
-  }
+  if (send_metrics)
+    CreateMetrics();
 
   pressure_notifier_ = std::make_unique<PressureNotifier>(watch_memory_pressure,
                                                           component_context_.get(), dispatcher);
@@ -197,6 +172,34 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 }
 
 Monitor::~Monitor() {}
+
+void Monitor::SetRamDevice(fuchsia::hardware::ram::metrics::DevicePtr ptr) {
+  ram_device_ =  std::move(ptr);
+  if (ram_device_.is_bound())
+    PeriodicMeasureBandwidth();
+}
+
+void Monitor::CreateMetrics() {
+  // Connect to the cobalt fidl service provided by the environment.
+  fuchsia::cobalt::LoggerFactorySyncPtr factory;
+  component_context_->svc()->Connect(factory.NewRequest());
+  if (!factory) {
+    FX_LOGS(ERROR) << "Unable to get LoggerFactory.";
+    return;
+  }
+  // Create a Cobalt Logger. The ID name is the one we specified in the
+  // Cobalt metrics registry.
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, logger_.NewRequest(), &status);
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "Unable to get Logger from factory";
+    return;
+  }
+
+  metrics_ = std::make_unique<Metrics>(
+      kMetricsPollFrequency, dispatcher_, &inspector_, logger_.get(),
+      [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
+}
 
 void Monitor::Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
   fuchsia::memory::WatcherPtr watcher_proxy = watcher.Bind();
@@ -320,24 +323,16 @@ void Monitor::MeasureBandwidthAndPost() {
     if (trace_is_category_enabled(kTraceNameHighPrecisionBandwidth)) {
       cycles_to_measure = kMemCyclesToMeasureHighPrecision;
     }
-    fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig config = {};
-    config.cycles_to_measure = cycles_to_measure;
-    for (size_t i = 0; i < std::size(kRamDefaultChannels); i++) {
-      config.channels[i] = kRamDefaultChannels[i].mask;
-    }
     ++pending_bandwidth_measurements_;
     ram_device_->MeasureBandwidth(
-        config, [this, cycles_to_measure](
+        BuildConfig(cycles_to_measure), [this, cycles_to_measure](
                     fuchsia::hardware::ram::metrics::Device_MeasureBandwidth_Result result) {
           --pending_bandwidth_measurements_;
           if (result.is_err()) {
             FX_LOGS(ERROR) << "Bad bandwidth measurement result: " << result.err();
           } else {
             const auto& info = result.response().info;
-            uint64_t total_readwrite_cycles = 0;
-            for (auto& channel : info.channels) {
-              total_readwrite_cycles += channel.readwrite_cycles;
-            }
+            uint64_t total_readwrite_cycles = TotalReadWriteCycles(info);
             uint64_t other_readwrite_cycles =
                 (info.total.readwrite_cycles > total_readwrite_cycles)
                     ? info.total.readwrite_cycles - total_readwrite_cycles
@@ -374,6 +369,37 @@ void Monitor::MeasureBandwidthAndPost() {
           async::PostTask(dispatcher_, [this] { MeasureBandwidthAndPost(); });
         });
   }
+}
+
+void Monitor::PeriodicMeasureBandwidth() {
+  std::chrono::seconds seconds_to_sleep = std::chrono::seconds(1);
+  async::PostDelayedTask(
+      dispatcher_, [this]() { PeriodicMeasureBandwidth(); }, zx::sec(seconds_to_sleep.count()));
+
+  // Will not do measurement when tracing
+  if (tracing_)
+    return;
+
+  uint64_t cycles_to_measure = kMemCyclesToMeasure;
+  ram_device_->MeasureBandwidth(
+      BuildConfig(cycles_to_measure), [this, cycles_to_measure](
+                  fuchsia::hardware::ram::metrics::Device_MeasureBandwidth_Result result) {
+        if (result.is_err()) {
+          FX_LOGS(ERROR) << "Bad bandwidth measurement result: " << result.err();
+        } else {
+          const auto& info = result.response().info;
+          uint64_t total_readwrite_cycles = TotalReadWriteCycles(info);
+          total_readwrite_cycles = std::max(total_readwrite_cycles,
+                                            info.total.readwrite_cycles);
+
+          uint64_t memory_bandwidth_reading = CounterToBandwidth(total_readwrite_cycles,
+                                                                 info.frequency,
+                                                                 cycles_to_measure)
+                                              * info.bytes_per_cycle;
+          if (metrics_)
+            metrics_->NextMemoryBandwidthReading(memory_bandwidth_reading, info.timestamp);
+        }
+      });
 }
 
 void Monitor::UpdateState() {

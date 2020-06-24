@@ -27,6 +27,7 @@ namespace monitor {
 
 namespace test {
 class MonitorUnitTest;
+class MemoryBandwidthInspectTest;
 }
 
 class Monitor : public fuchsia::memory::Monitor {
@@ -34,10 +35,16 @@ class Monitor : public fuchsia::memory::Monitor {
   Monitor(std::unique_ptr<sys::ComponentContext> context, const fxl::CommandLine& command_line,
           async_dispatcher_t* dispatcher, bool send_metrics, bool watch_memory_pressure);
   ~Monitor();
+
+  // For memory bandwidth measurement, SetRamDevice should be called once
+  void SetRamDevice(fuchsia::hardware::ram::metrics::DevicePtr ptr);
+
   void Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) override;
   static const char kTraceName[];
 
  private:
+  void CreateMetrics();
+
   void UpdateState();
 
   void StartTracing();
@@ -45,6 +52,7 @@ class Monitor : public fuchsia::memory::Monitor {
 
   void SampleAndPost();
   void MeasureBandwidthAndPost();
+  void PeriodicMeasureBandwidth();
   void PrintHelp();
   inspect::Inspector Inspect();
 
@@ -74,6 +82,7 @@ class Monitor : public fuchsia::memory::Monitor {
   uint64_t pending_bandwidth_measurements_ = 0;
 
   friend class test::MonitorUnitTest;
+  friend class test::MemoryBandwidthInspectTest;
   FXL_DISALLOW_COPY_AND_ASSIGN(Monitor);
 };
 

@@ -7,10 +7,38 @@
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
+#include <lib/fdio/directory.h>
+
+#include <filesystem>
 
 #include "src/developer/memory/monitor/monitor.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+
+namespace {
+const char kRamDeviceClassPath[] = "/dev/class/aml-ram";
+void SetRamDevice(monitor::Monitor* app) {
+  // Look for optional RAM device that provides bandwidth measurement interface.
+  fuchsia::hardware::ram::metrics::DevicePtr ram_device;
+  if (std::filesystem::exists(kRamDeviceClassPath)) {
+    for (const auto& entry : std::filesystem::directory_iterator(kRamDeviceClassPath)) {
+      int fd = open(entry.path().c_str(), O_RDWR);
+      if (fd > -1) {
+        zx::channel handle;
+        zx_status_t status = fdio_get_service_handle(fd, handle.reset_and_get_address());
+        if (status == ZX_OK) {
+          ram_device.Bind(std::move(handle));
+          app->SetRamDevice(std::move(ram_device));
+          FX_LOGS(INFO) <<"Will collect memory bandwidth measurements.";
+          return;
+        }
+        break;
+      }
+    }
+  }
+  FX_LOGS(INFO) <<"CANNOT collect memory bandwidth measurements.";
+}
+}
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -39,6 +67,7 @@ int main(int argc, const char** argv) {
 
   monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher(),
                        true /* send_metrics */, true /* watch_memory_pressure */);
+  SetRamDevice(&app);
   loop.Run();
 
   FX_VLOGS(2) << argv[0] << ": exiting";

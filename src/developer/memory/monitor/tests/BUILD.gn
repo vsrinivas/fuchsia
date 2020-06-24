@@ -28,6 +28,7 @@ executable("memory_monitor_unittests") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/cobalt/bin/testing:fake_logger_lib",

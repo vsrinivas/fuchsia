@@ -80,8 +80,15 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
       //     - Amlogic
       //     - ...
       //     - timestamp
+      //   - memory_bandwidth
+      //     - readings
       metric_memory_node_(platform_metric_node_.CreateChild(kMemoryNodeName)),
-      inspect_memory_timestamp_(metric_memory_node_.CreateInt(kReadingMemoryTimestamp, 0)) {
+      inspect_memory_timestamp_(metric_memory_node_.CreateInt(kReadingMemoryTimestamp, 0)),
+      metric_memory_bandwidth_node_(platform_metric_node_.CreateChild(kMemoryBandwidthNodeName)),
+      inspect_memory_bandwidth_(metric_memory_bandwidth_node_.
+          CreateUintArray(kReadings, kMemoryBandwidthArraySize)),
+      inspect_memory_bandwidth_timestamp_(
+          metric_memory_bandwidth_node_.CreateInt(kReadingMemoryTimestamp, 0)) {
   for (auto& element : bucket_name_to_code_) {
     inspect_memory_usages_.insert(std::pair<std::string, inspect::UintProperty>(
         element.first, metric_memory_node_.CreateUint(element.first, 0)));
@@ -224,6 +231,13 @@ TimeSinceBoot Metrics::GetUpTimeEventCode(const zx_time_t capture_time) {
     }
   }
   return TimeSinceBoot::UpSixDays;
+}
+
+void Metrics::NextMemoryBandwidthReading(uint64_t reading, zx_time_t ts) {
+  inspect_memory_bandwidth_.Set(memory_bandwidth_index_, reading);
+  inspect_memory_bandwidth_timestamp_.Set(ts);
+  if (++memory_bandwidth_index_ >= kMemoryBandwidthArraySize)
+    memory_bandwidth_index_ = 0;
 }
 
 }  // namespace monitor
