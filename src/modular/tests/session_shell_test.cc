@@ -831,4 +831,102 @@ TEST_F(SessionShellTest, StoryControllerAnnotateTooMany) {
   RunLoopUntil([&] { return done; });
 }
 
+// Verifies that a call to StoryController.Annotate results in a StoryProviderWatcher.OnChange2
+// being called with the updated annotations.
+TEST_F(SessionShellTest, StoryControllerAnnotateNotifiesWatcher) {
+  const auto story_name = TEST_NAME(story);
+
+  RunHarnessAndInterceptSessionShellAndFakeModule(story_name);
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_->story_provider();
+
+  fuchsia::modular::StoryControllerPtr story_controller;
+  story_provider->GetController(story_name, story_controller.NewRequest());
+
+  // Watch the story for new annotations.
+  auto num_on_change_2_calls = 0;
+  auto num_annotations = 0;
+  modular_testing::SimpleStoryProviderWatcher watcher;
+  watcher.set_on_change_2(
+      [&num_on_change_2_calls, &num_annotations](StoryInfo2 story_info, StoryState /*unused*/,
+                                                 StoryVisibilityState /*unused*/) {
+        num_on_change_2_calls++;
+        num_annotations = story_info.mutable_annotations()->size();
+      });
+  watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
+
+  // Create a set of annotations, containing a single annotation.
+  auto first_annotation_value = fuchsia::modular::AnnotationValue{};
+  first_annotation_value.set_text("first_value");
+  auto first_annotation = fuchsia::modular::Annotation{
+      .key = "first_key", .value = fidl::MakeOptional(fidl::Clone(first_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(fidl::Clone(first_annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story_controller->Annotate(std::move(annotations),
+                             [&](fuchsia::modular::StoryController_Annotate_Result result) {
+                               EXPECT_FALSE(result.is_err());
+                               done = true;
+                             });
+  RunLoopUntil([&] { return done; });
+
+  RunLoopUntil([&] { return num_on_change_2_calls > 0; });
+  EXPECT_EQ(1, num_annotations);
+}
+
+// Verifies that a call to StoryPuppetMaster.Annotate results in a StoryProviderWatcher.OnChange2
+// being called with the updated annotations.
+TEST_F(SessionShellTest, StoryPuppetMasterAnnotateNotifiesWatcher) {
+  const auto story_name = TEST_NAME(story);
+
+  RunHarnessAndInterceptSessionShellAndFakeModule(story_name);
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_->story_provider();
+
+  // Connect to StoryPuppetMaster.
+  fuchsia::modular::testing::ModularService svc;
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+  svc.set_puppet_master(puppet_master.NewRequest());
+  test_harness()->ConnectToModularService(std::move(svc));
+
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+  puppet_master->ControlStory(story_name, story_puppet_master.NewRequest());
+
+  // Watch the story for new annotations.
+  auto num_on_change_2_calls = 0;
+  auto num_annotations = 0;
+  modular_testing::SimpleStoryProviderWatcher watcher;
+  watcher.set_on_change_2(
+      [&num_on_change_2_calls, &num_annotations](StoryInfo2 story_info, StoryState /*unused*/,
+                                                 StoryVisibilityState /*unused*/) {
+        num_on_change_2_calls++;
+        num_annotations = story_info.mutable_annotations()->size();
+      });
+  watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
+
+  // Create a set of annotations, containing a single annotation.
+  auto first_annotation_value = fuchsia::modular::AnnotationValue{};
+  first_annotation_value.set_text("first_value");
+  auto first_annotation = fuchsia::modular::Annotation{
+      .key = "first_key", .value = fidl::MakeOptional(fidl::Clone(first_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(fidl::Clone(first_annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story_puppet_master->Annotate(std::move(annotations),
+                                [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                                  EXPECT_FALSE(result.is_err());
+                                  done = true;
+                                });
+  RunLoopUntil([&] { return done; });
+
+  RunLoopUntil([&] { return num_on_change_2_calls > 0; });
+  EXPECT_EQ(1, num_annotations);
+}
+
 }  // namespace

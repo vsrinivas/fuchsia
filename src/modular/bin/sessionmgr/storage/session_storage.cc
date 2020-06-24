@@ -57,8 +57,7 @@ void SessionStorage::DeleteStory(fidl::StringPtr story_name) {
   return;
 }
 
-void SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name,
-                                                       const int64_t ts) {
+void SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name, const int64_t ts) {
   auto it = story_data_backing_store_.find(story_name);
   FX_DCHECK(it != story_data_backing_store_.end())
       << "SessionStorage::UpdateLastFocusedTimestamp was called on story " << story_name
@@ -73,8 +72,7 @@ void SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name,
   }
 }
 
-fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(
-    fidl::StringPtr story_name) {
+fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(fidl::StringPtr story_name) {
   fuchsia::modular::internal::StoryDataPtr value{};
   auto it = story_data_backing_store_.find(story_name);
   if (it != story_data_backing_store_.end()) {
@@ -134,13 +132,18 @@ std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnot
             : std::move(annotations);
 
     // Mutate story in-place.
+    // No need to write story data back to map because we modify it in place.
     if (new_annotations.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_STORY) {
       error = fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS;
     } else {
       story_data.mutable_story_info()->set_annotations(std::move(new_annotations));
     }
 
-    // No need to write story data back to map because we modified it in place.
+    if (on_story_updated_) {
+      fuchsia::modular::internal::StoryData story_data_copy;
+      story_data.Clone(&story_data_copy);
+      on_story_updated_(std::move(story_name), std::move(story_data_copy));
+    }
   }
 
   return error;
