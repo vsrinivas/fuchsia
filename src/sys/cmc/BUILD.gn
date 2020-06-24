@@ -3,17 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/rust/rustc_binary_sdk.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_macro.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("//build/test/test_package.gni")
 
 if (host_toolchain == current_toolchain) {
-  rustc_binary_sdk("cmc") {
+  rustc_binary("cmc") {
     name = "cmc"
     with_unit_tests = true
     edition = "2018"
-
-    category = "partner"
 
     deps = [
       ":cmc_macro",
@@ -37,6 +36,12 @@ if (host_toolchain == current_toolchain) {
     non_rust_deps = [ ":cmc_test_schemas" ]
 
     test_deps = [ "//third_party/rust_crates:matches" ]
+  }
+
+  sdk_host_tool("cmc_sdk") {
+    category = "partner"
+    output_name = "cmc"
+    deps = [ ":cmc" ]
   }
 
   rustc_macro("cmc_macro") {

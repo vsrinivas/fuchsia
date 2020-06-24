@@ -3,21 +3,26 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/rust/rustc_binary_sdk.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("//build/test/test_package.gni")
 
-rustc_binary_sdk("formatjson5") {
+rustc_binary("formatjson5") {
   name = "formatjson5"
   with_unit_tests = true
   edition = "2018"
-
-  category = "partner"
 
   deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:json5format",
     "//third_party/rust_crates:structopt",
   ]
+}
+
+sdk_host_tool("formatjson5_sdk") {
+  category = "partner"
+  output_name = "formatjson5"
+  deps = [ ":formatjson5" ]
 }
 
 install_host_tools("install") {
