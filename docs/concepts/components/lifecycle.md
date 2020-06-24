@@ -49,6 +49,9 @@ of its impending termination and other events on a best effort basis. Note
 that a component can be terminated involuntarily and without notice in
 circumstances such as resource exhaustion, crashes, or power failure.
 
+Components can stop themselves by exiting. The means by which a component exits
+depend on the runner that runs the component.
+
 Once stopped, a component instance can then be restarted or destroyed.
 
 ### Destroying a component instance

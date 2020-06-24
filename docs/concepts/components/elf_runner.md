@@ -41,9 +41,40 @@ component under the name `elf`:
 }
 ```
 
+### Lifecycle
+
+Components have a [lifecycle][lifecycle]. Components run by the ELF runner can
+integrate with the lifecycle if you add a `lifecycle` attribute to your component
+manifest. Currently `stop` is the only method in the Lifecycle protocol.
+
+```cml
+{
+    "program": {
+        "binary": "bin/echo",
+        "lifecycle": { stop_event: "notify" },
+    }
+    "use": [
+        { "runner": "elf" },
+    ],
+}
+
+```
+
+The program should take the handle to the Lifecycle channel and serve the
+[Lifecycle protocol][lc-proto] on that channel. The component should exit after
+receiving and processing the `stop` call. For an example see this
+[sample code][lc-example].
+
+The ELF Runner monitors the process it started for the program binary of the
+component. If this process exits, the ELF runner will terminate the component's
+execution context, which includes the component's job and all subprocesses.
+
 [use]: /docs/glossary.md#use
 [capability-routing]: component_manifests.md#capability-routing
 [glossary-components]: /docs/glossary.md#component
+[lc-example]: /examples/components/basic/src/lifecycle_full.rs
+[lc-proto]: /sdk/fidl/fuchsia.process.lifecycle/lifecycle.fidl
+[lifecycle]: lifecycle.md
 [program-loading]: /docs/concepts/booting/program_loading.md
 
 <!-- TODO: the component manifest link describes v1 manifests -->

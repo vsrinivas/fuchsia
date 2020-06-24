@@ -129,13 +129,14 @@ table ComponentStartInfo {
 ///       runner;
 ///     * `start_info` contains missing or invalid arguments.
 /// - `INSTANCE_CANNOT_START`: The runner could not start the component.
-///    For example, a critical part of the program could not be found or
-///    loaded, or the referenced binary was invalid for this runner.
+///   For example, a critical part of the program could not be found or
+///   loaded, or the referenced binary was invalid for this runner.
 /// - `RESOURCE_UNAVAILABLE`: The component could not be launched due to
-///    lack of resources.
+///   lack of resources.
 /// - `INTERNAL`: An unexpected internal runner error was encountered.
 /// - `INSTANCE_DIED`: The component instance was started but
-///   subsequently terminated unexpectedly.
+///   subsequently terminated, possibly because it crashed or possibly
+///   because it exited voluntarily.
 /// - `ZX_OK`: The component instance was successfully terminated without
 ///   error.
 /// - Other status codes (e.g. `ZX_ERR_PEER_CLOSED`) may indicate a failure
