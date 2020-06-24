@@ -70,19 +70,19 @@ llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(const zx_dev
 }
 
 static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
-  if (!strcmp(flag, "error")) {
+  if (!strcasecmp(flag, "error")) {
     return FX_LOG_ERROR;
   }
-  if (!strcmp(flag, "warn")) {
+  if (!strcasecmp(flag, "warn")) {
     return FX_LOG_WARNING;
   }
-  if (!strcmp(flag, "info")) {
+  if (!strcasecmp(flag, "info")) {
     return FX_LOG_INFO;
   }
-  if (!strcmp(flag, "debug")) {
+  if (!strcasecmp(flag, "debug")) {
     return FX_LOG_DEBUG;
   }
-  if (!strcmp(flag, "trace")) {
+  if (!strcasecmp(flag, "trace")) {
     return FX_LOG_TRACE;
   }
   LOGF(WARNING, "Invalid minimum log severity '%s' for driver '%s', will log all", flag, name);
