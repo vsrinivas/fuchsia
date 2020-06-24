@@ -74,11 +74,10 @@ group("criterion") {
   deps = [ ":criterion-v0_2_11" ]
 }
 
-if (is_fuchsia) {
-  group("crossbeam") {
-    deps = [ ":crossbeam-v0_7_3" ]
-  }
+group("crossbeam") {
+  deps = [ ":crossbeam-v0_7_3" ]
 }
+
 group("csv") {
   deps = [ ":csv-v1_1_3" ]
 }
@@ -326,11 +325,10 @@ if (is_fuchsia) {
     deps = [ ":pin-project-v0_4_17" ]
   }
 }
-if (is_fuchsia) {
-  group("pin-utils") {
-    deps = [ ":pin-utils-v0_1_0" ]
-  }
+group("pin-utils") {
+  deps = [ ":pin-utils-v0_1_0" ]
 }
+
 group("png") {
   deps = [ ":png-v0_14_0" ]
 }
