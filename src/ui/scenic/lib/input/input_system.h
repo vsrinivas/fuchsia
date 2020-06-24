@@ -14,7 +14,6 @@
 #include <map>
 #include <optional>
 
-#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
 #include "src/ui/scenic/lib/scenic/system.h"
@@ -142,32 +141,13 @@ class InputSystem : public System,
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(48150): Delete when we delete the PointerCapture functionality.
-  void ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event) const;
+  void ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event,
+                                                  const gfx::ViewTree& view_tree) const;
 
   // Enqueue the pointer event into the EventReporter of a View.
   void ReportPointerEventToView(const InternalPointerEvent& event, zx_koid_t view_ref_koid,
-                                fuchsia::ui::input::PointerEventType type) const;
-
-  // Gets the transform matrix from the Local Space of the |view_ref|'s View to World Space.
-  // Return std::nullopt for exceptional cases (e.g., invalid, unknown or disconnected view ref).
-  // Precondition: scene_graph_ must be set.
-  std::optional<glm::mat4> GetViewToWorldTransform(zx_koid_t view_ref_koid) const;
-
-  // Gets the transform matrix from World Space to the Local Space of the |view_ref|'s View.
-  // Return std::nullopt for exceptional cases (e.g., invalid or unknown view ref).
-  // Precondition: scene_graph_ must be set.
-  std::optional<glm::mat4> GetWorldToViewTransform(zx_koid_t view_ref_koid) const;
-
-  // Gets the transform from the Local Space of |source|'s View to the Local Space of the
-  // |destination|'s View.
-  std::optional<glm::mat4> GetViewToViewTransform(zx_koid_t source, zx_koid_t destination) const;
-
-  std::optional<escher::ray4> CreateWorldSpaceRay(const InternalPointerEvent& event) const;
-
-  // Takes an InternalPointerEvent and returns a point in (Vulkan) Normalized Device Coordinates,
-  // in relation to the viewport.
-  // TODO(50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y code.
-  glm::vec2 GetViewportNDCPoint(const InternalPointerEvent& event) const;
+                                fuchsia::ui::input::PointerEventType type,
+                                const gfx::ViewTree& view_tree) const;
 
   using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;

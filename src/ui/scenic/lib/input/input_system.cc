@@ -10,7 +10,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
@@ -65,6 +64,63 @@ bool IsDescendantAndConnected(const gfx::ViewTree& view_tree, zx_koid_t descenda
 
   return view_tree.IsDescendant(descendant_koid, ancestor_koid) &&
          view_tree.IsConnectedToScene(ancestor_koid);
+}
+
+std::optional<glm::mat4> GetWorldFromViewTransform(zx_koid_t view_ref_koid,
+                                                   const gfx::ViewTree& view_tree) {
+  return view_tree.GlobalTransformOf(view_ref_koid);
+}
+
+std::optional<glm::mat4> GetViewFromWorldTransform(zx_koid_t view_ref_koid,
+                                                   const gfx::ViewTree& view_tree) {
+  const auto world_from_view_transform = GetWorldFromViewTransform(view_ref_koid, view_tree);
+  if (!world_from_view_transform)
+    return std::nullopt;
+
+  const glm::mat4 view_from_world_transform = glm::inverse(world_from_view_transform.value());
+  return view_from_world_transform;
+}
+
+std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
+                                                                   zx_koid_t destination,
+                                                                   const gfx::ViewTree& view_tree) {
+  std::optional<glm::mat4> world_from_source_transform =
+      GetWorldFromViewTransform(source, view_tree);
+  if (!world_from_source_transform)
+    return std::nullopt;
+
+  std::optional<glm::mat4> destination_from_world_transform =
+      GetViewFromWorldTransform(destination, view_tree);
+  if (!destination_from_world_transform)
+    return std::nullopt;
+
+  return destination_from_world_transform.value() * world_from_source_transform.value();
+}
+
+std::optional<escher::ray4> CreateWorldSpaceRay(const InternalPointerEvent& event,
+                                                const gfx::ViewTree& view_tree) {
+  const std::optional<glm::mat4> world_from_context_transform =
+      GetWorldFromViewTransform(event.context, view_tree);
+  if (!world_from_context_transform)
+    return std::nullopt;
+
+  const glm::mat4 world_from_viewport_transform =
+      world_from_context_transform.value() * event.viewport.context_from_viewport_transform;
+  const escher::ray4 viewport_space_ray = CreateZRay(event.position_in_viewport);
+  return world_from_viewport_transform * viewport_space_ray;
+}
+
+// Takes an InternalPointerEvent and returns a point in (Vulkan) Normalized Device Coordinates,
+// in relation to the viewport. Intended for magnification
+// TODO(50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y code.
+glm::vec2 GetViewportNDCPoint(const InternalPointerEvent& internal_event) {
+  const float width = internal_event.viewport.extents.max.x - internal_event.viewport.extents.min.x;
+  const float height =
+      internal_event.viewport.extents.max.y - internal_event.viewport.extents.min.y;
+  return {
+      width > 0 ? 2.f * internal_event.position_in_viewport.x / width - 1 : 0,
+      height > 0 ? 2.f * internal_event.position_in_viewport.y / height - 1 : 0,
+  };
 }
 
 }  // namespace
@@ -257,18 +313,6 @@ void InputSystem::RegisterListener(
   success_callback(true);
 }
 
-// Finds (Vulkan) normalized device coordinates with respect to the viewport. This is intended
-// for magnification gestures.
-glm::vec2 InputSystem::GetViewportNDCPoint(const InternalPointerEvent& internal_event) const {
-  const float width = internal_event.viewport.extents.max.x - internal_event.viewport.extents.min.x;
-  const float height =
-      internal_event.viewport.extents.max.y - internal_event.viewport.extents.min.y;
-  return {
-      width > 0 ? 2.f * internal_event.position_in_viewport.x / width - 1 : 0,
-      height > 0 ? 2.f * internal_event.position_in_viewport.y / height - 1 : 0,
-  };
-}
-
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
                                          scheduling::SessionId session_id, bool parallel_dispatch) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
@@ -302,6 +346,8 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
     return;
   }
 
+  const gfx::ViewTree& view_tree = scene_graph_->view_tree();
+
   // Assume we only have one layer.
   const gfx::LayerPtr first_layer = *layers.begin();
   const std::optional<glm::mat4> world_from_screen_transform =
@@ -314,8 +360,9 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
 
   const zx_koid_t scene_koid = first_layer->scene()->view_ref_koid();
 
-  FX_DCHECK(GetWorldToViewTransform(scene_koid));
-  const glm::mat4 context_from_world_transform = GetWorldToViewTransform(scene_koid).value();
+  const std::optional<glm::mat4> context_from_world_transform =
+      GetViewFromWorldTransform(scene_koid, view_tree);
+  FX_DCHECK(context_from_world_transform);
 
   const uint32_t screen_width = first_layer->width();
   const uint32_t screen_height = first_layer->height();
@@ -324,7 +371,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
     return;
   }
   const glm::mat4 context_from_screen_transform =
-      context_from_world_transform * world_from_screen_transform.value();
+      context_from_world_transform.value() * world_from_screen_transform.value();
 
   InternalPointerEvent internal_event =
       GfxPointerEventToInternalEvent(command.pointer_event, scene_koid, screen_width, screen_height,
@@ -357,7 +404,8 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event) {
   if (!scene_graph_)
     return;
 
-  ReportPointerEventToView(event, event.target, fuchsia::ui::input::PointerEventType::TOUCH);
+  ReportPointerEventToView(event, event.target, fuchsia::ui::input::PointerEventType::TOUCH,
+                           scene_graph_->view_tree());
 }
 
 // The touch state machine comprises ADD/DOWN/MOVE*/UP/REMOVE. Some notes:
@@ -380,7 +428,8 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
   const bool a11y_enabled =
       IsA11yListenerEnabled() && IsOwnedByRootSession(view_tree, event.context);
 
-  const std::optional<escher::ray4> world_space_ray_optional = CreateWorldSpaceRay(event);
+  const std::optional<escher::ray4> world_space_ray_optional =
+      CreateWorldSpaceRay(event, view_tree);
   if (!world_space_ray_optional) {
     FX_LOGS(WARNING) << "Failed to create ray from InternalPointerEvent";
     return;
@@ -433,7 +482,8 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
     if (a11y_enabled) {
       deferred_event_receivers.emplace_back(view_ref_koid);
     } else {
-      ReportPointerEventToView(event, view_ref_koid, fuchsia::ui::input::PointerEventType::TOUCH);
+      ReportPointerEventToView(event, view_ref_koid, fuchsia::ui::input::PointerEventType::TOUCH,
+                               view_tree);
     }
     if (!parallel_dispatch) {
       break;  // TODO(SCN-1047): Remove when gesture disambiguation is ready.
@@ -473,8 +523,8 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
 
     glm::vec2 top_hit_view_local;
     if (view_ref_koid != ZX_KOID_INVALID) {
-      top_hit_view_local = TransformPointerCoords(world_space_ray.origin,
-                                                  GetWorldToViewTransform(view_ref_koid).value());
+      top_hit_view_local = TransformPointerCoords(
+          world_space_ray.origin, GetViewFromWorldTransform(view_ref_koid, view_tree).value());
     }
     const glm::vec2 ndc = GetViewportNDCPoint(event);
 
@@ -487,7 +537,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
         std::move(packet));
   } else {
     // TODO(48150): Delete when we delete the PointerCapture functionality.
-    ReportPointerEventToPointerCaptureListener(event);
+    ReportPointerEventToPointerCaptureListener(event, view_tree);
   }
 
   if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
@@ -517,7 +567,8 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
   const uint32_t device_id = event.device_id;
   const Phase pointer_phase = event.phase;
 
-  const std::optional<escher::ray4> world_space_ray_optional = CreateWorldSpaceRay(event);
+  const std::optional<escher::ray4> world_space_ray_optional =
+      CreateWorldSpaceRay(event, view_tree);
   if (!world_space_ray_optional) {
     FX_LOGS(WARNING) << "Failed to create ray from InternalPointerEvent";
     return;
@@ -558,7 +609,8 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
   if (mouse_targets_.count(device_id) > 0 &&   // Tracking this device, and
       mouse_targets_[device_id].size() > 0) {  // target view exists.
     const zx_koid_t top_view_koid = mouse_targets_[device_id].front();
-    ReportPointerEventToView(event, top_view_koid, fuchsia::ui::input::PointerEventType::MOUSE);
+    ReportPointerEventToView(event, top_view_koid, fuchsia::ui::input::PointerEventType::MOUSE,
+                             view_tree);
   }
 
   if (pointer_phase == Phase::UP || pointer_phase == Phase::CANCEL) {
@@ -575,13 +627,17 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
 
     if (top_hit.hit()) {
       const zx_koid_t top_view_koid = top_hit.hit()->view_ref_koid;
-      ReportPointerEventToView(event, top_view_koid, fuchsia::ui::input::PointerEventType::MOUSE);
+      ReportPointerEventToView(event, top_view_koid, fuchsia::ui::input::PointerEventType::MOUSE,
+                               view_tree);
     }
   }
 }
 
 void InputSystem::DispatchDeferredPointerEvent(
     PointerEventBuffer::DeferredPointerEvent views_and_event) {
+  if (!scene_graph_)
+    return;
+
   // If this parallel dispatch of events corresponds to a DOWN event, this
   // triggers a possible deferred focus change event.
   if (views_and_event.event.phase == Phase::DOWN) {
@@ -598,13 +654,14 @@ void InputSystem::DispatchDeferredPointerEvent(
     }
   }
 
+  const gfx::ViewTree& view_tree = scene_graph_->view_tree();
   for (zx_koid_t view_ref_koid : views_and_event.parallel_event_receivers) {
     ReportPointerEventToView(views_and_event.event, view_ref_koid,
-                             fuchsia::ui::input::PointerEventType::TOUCH);
+                             fuchsia::ui::input::PointerEventType::TOUCH, view_tree);
   }
 
   {  // TODO(48150): Delete when we delete the PointerCapture functionality.
-    ReportPointerEventToPointerCaptureListener(views_and_event.event);
+    ReportPointerEventToPointerCaptureListener(views_and_event.event, view_tree);
   }
 }
 
@@ -664,15 +721,15 @@ bool InputSystem::IsOwnedByRootSession(const gfx::ViewTree& view_tree, zx_koid_t
 }
 
 // TODO(48150): Delete when we delete the PointerCapture functionality.
-void InputSystem::ReportPointerEventToPointerCaptureListener(
-    const InternalPointerEvent& event) const {
+void InputSystem::ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event,
+                                                             const gfx::ViewTree& view_tree) const {
   if (!pointer_capture_listener_)
     return;
 
   const PointerCaptureListener& listener = pointer_capture_listener_.value();
   const zx_koid_t view_ref_koid = utils::ExtractKoid(listener.view_ref);
-  std::optional<glm::mat4> view_from_context_transform =
-      GetViewToViewTransform(/*source*/ event.context, /*destination*/ view_ref_koid);
+  std::optional<glm::mat4> view_from_context_transform = GetDestinationViewFromSourceViewTransform(
+      /*source*/ event.context, /*destination*/ view_ref_koid, view_tree);
   if (!view_from_context_transform)
     return;
 
@@ -685,15 +742,16 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(
 
 void InputSystem::ReportPointerEventToView(const InternalPointerEvent& event,
                                            zx_koid_t view_ref_koid,
-                                           fuchsia::ui::input::PointerEventType type) const {
+                                           fuchsia::ui::input::PointerEventType type,
+                                           const gfx::ViewTree& view_tree) const {
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
 
-  EventReporterWeakPtr event_reporter = scene_graph_->view_tree().EventReporterOf(view_ref_koid);
+  EventReporterWeakPtr event_reporter = view_tree.EventReporterOf(view_ref_koid);
   if (!event_reporter)
     return;
 
-  std::optional<glm::mat4> view_from_context_transform =
-      GetViewToViewTransform(/*source*/ event.context, /*destination*/ view_ref_koid);
+  std::optional<glm::mat4> view_from_context_transform = GetDestinationViewFromSourceViewTransform(
+      /*source*/ event.context, /*destination*/ view_ref_koid, view_tree);
   if (!view_from_context_transform)
     return;
 
@@ -702,50 +760,6 @@ void InputSystem::ReportPointerEventToView(const InternalPointerEvent& event,
   input_event.set_pointer(
       InternalPointerEventToGfxPointerEvent(event, view_from_context_transform.value(), type));
   event_reporter->EnqueueEvent(std::move(input_event));
-}
-
-std::optional<glm::mat4> InputSystem::GetViewToWorldTransform(zx_koid_t view_ref_koid) const {
-  FX_DCHECK(scene_graph_) << "precondition";
-  return scene_graph_->view_tree().GlobalTransformOf(view_ref_koid);
-}
-
-std::optional<glm::mat4> InputSystem::GetWorldToViewTransform(zx_koid_t view_ref_koid) const {
-  FX_DCHECK(scene_graph_) << "precondition";
-  const auto world_from_view_transform = GetViewToWorldTransform(view_ref_koid);
-  if (!world_from_view_transform)
-    return std::nullopt;
-
-  const glm::mat4 view_from_world_transform = glm::inverse(world_from_view_transform.value());
-  return view_from_world_transform;
-}
-
-std::optional<glm::mat4> InputSystem::GetViewToViewTransform(zx_koid_t source,
-                                                             zx_koid_t destination) const {
-  FX_DCHECK(scene_graph_) << "precondition";
-
-  std::optional<glm::mat4> world_from_source_transform = GetViewToWorldTransform(source);
-  if (!world_from_source_transform)
-    return std::nullopt;
-
-  std::optional<glm::mat4> destination_from_world_transform = GetWorldToViewTransform(destination);
-  if (!destination_from_world_transform)
-    return std::nullopt;
-
-  return destination_from_world_transform.value() * world_from_source_transform.value();
-}
-
-std::optional<escher::ray4> InputSystem::CreateWorldSpaceRay(
-    const InternalPointerEvent& event) const {
-  FX_DCHECK(scene_graph_) << "precondition";
-  const std::optional<glm::mat4> world_from_context_transform =
-      GetViewToWorldTransform(event.context);
-  if (!world_from_context_transform)
-    return std::nullopt;
-
-  const glm::mat4 world_from_viewport_transform =
-      world_from_context_transform.value() * event.viewport.context_from_viewport_transform;
-  const escher::ray4 viewport_space_ray = CreateZRay(event.position_in_viewport);
-  return world_from_viewport_transform * viewport_space_ray;
 }
 
 }  // namespace input
