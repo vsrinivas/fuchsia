@@ -166,6 +166,43 @@ pub fn instant(category: &'static CStr, name: &'static CStr, scope: Scope, args:
     }
 }
 
+/// Convenience macro for the `alert` function.
+///
+/// Example:
+///
+/// ```rust
+/// alert!("foo", "bar");
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// alert(cstr!("foo"), cstr!("bar"));
+/// ```
+#[macro_export]
+macro_rules! alert {
+    ($category:expr, $name:expr) => {
+        $crate::alert($crate::cstr!($category), $crate::cstr!($name))
+    };
+}
+
+/// Sends an alert, which can be mapped to an action.
+pub fn alert(category: &'static CStr, name: &'static CStr) {
+    // trace_context_write_xxx functions require that:
+    // - category and name are static null-terminated strings (`&'static CStr).
+    // - the refs must be valid for the given call
+    unsafe {
+        let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+        let context =
+            sys::trace_acquire_context_for_category(category.as_ptr(), category_ref.as_mut_ptr());
+        if context != ptr::null() {
+            let helper = EventHelper::new(context, name);
+            sys::trace_context_send_alert(context, &helper.name_ref);
+            sys::trace_release_context(context);
+        }
+    }
+}
+
 /// Convenience macro for the `counter` function.
 ///
 /// Example:
@@ -867,6 +904,11 @@ mod sys {
             num_args: libc::size_t,
         );
 
+        pub fn trace_context_send_alert(
+            context: *const trace_context_t,
+            name_ref: *const trace_string_ref_t,
+        );
+
         pub fn trace_context_write_counter_event_record(
             context: *const trace_context_t,
             event_time: trace_ticks_t,
@@ -1056,6 +1098,11 @@ mod test {
     #[test]
     fn instant() {
         instant!("foo", "bar", Scope::Process, "x" => 5, "y" => "boo");
+    }
+
+    #[test]
+    fn alert() {
+        alert!("foo", "bar");
     }
 
     #[test]
