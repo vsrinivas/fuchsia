@@ -11,8 +11,8 @@ use {
     },
     cm_rust::{
         ComponentDecl, DependencyType, OfferDecl, OfferDirectorySource, OfferResolverSource,
-        OfferRunnerSource, OfferServiceSource, OfferStorageSource, OfferTarget, StorageDecl,
-        StorageDirectorySource,
+        OfferRunnerSource, OfferServiceSource, OfferStorageSource, OfferTarget, RegistrationSource,
+        StorageDecl, StorageDirectorySource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -295,6 +295,9 @@ fn get_child_monikers(
     deps
 }
 
+/// Maps a dependency node (child or collection) to the nodes that depend on it.
+pub type DependencyMap = HashMap<DependencyNode, HashSet<DependencyNode>>;
+
 /// For a given ComponentDecl, parse it, identify capability dependencies
 /// between children and collections in the ComponentDecl. A map is returned
 /// which maps from a child to a set of other children to which that child
@@ -303,23 +306,26 @@ fn get_child_monikers(
 /// capability routing where either the source or target is not present in this
 /// ComponentDecl. Panics are not expected because ComponentDecls should be
 /// validated before this function is called.
-// TODO(52727): Account for environments in shutdown order.
-pub fn process_component_dependencies(
-    decl: &ComponentDecl,
-) -> HashMap<DependencyNode, HashSet<DependencyNode>> {
-    let mut children: HashMap<DependencyNode, HashSet<DependencyNode>> = decl
+pub fn process_component_dependencies(decl: &ComponentDecl) -> DependencyMap {
+    let mut dependency_map: DependencyMap = decl
         .children
         .iter()
         .map(|c| (DependencyNode::Child(c.name.clone()), HashSet::new()))
         .collect();
-    children.extend(
+    dependency_map.extend(
         decl.collections
             .iter()
             .map(|c| (DependencyNode::Collection(c.name.clone()), HashSet::new())),
     );
 
-    // Loop through all the offer declarations to determine which siblings
-    // provide capabilities to other siblings.
+    get_dependencies_from_offers(decl, &mut dependency_map);
+    get_dependencies_from_environments(decl, &mut dependency_map);
+    dependency_map
+}
+
+/// Loops through all the offer declarations to determine which siblings
+/// provide capabilities to other siblings.
+fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
     for dep in &decl.offers {
         // Identify the source and target of the offer. We only care about
         // dependencies where the provider of the dependency is another child,
@@ -470,7 +476,7 @@ pub fn process_component_dependencies(
         };
 
         for (capability_provider, capability_target) in source_target_pairs {
-            if !children.contains_key(&capability_target) {
+            if !dependency_map.contains_key(&capability_target) {
                 panic!(
                     "This capability routing seems invalid, the target \
                      does not exist in this realm. Source: {:?} Target: {:?}",
@@ -478,7 +484,7 @@ pub fn process_component_dependencies(
                 );
             }
 
-            let sibling_deps = children.get_mut(&capability_provider).expect(&format!(
+            let sibling_deps = dependency_map.get_mut(&capability_provider).expect(&format!(
                 "This capability routing seems invalid, the source \
                  does not exist in this realm. Source: {:?} Target: {:?}",
                 capability_provider, capability_target,
@@ -486,8 +492,47 @@ pub fn process_component_dependencies(
             sibling_deps.insert(capability_target);
         }
     }
+}
 
-    children
+/// Loops through all the child and collection declarations to determine what siblings provide
+/// capabilities to other siblings through an environment.
+fn get_dependencies_from_environments(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
+    let mut env_source_children = HashMap::new();
+    for env in &decl.environments {
+        env_source_children.insert(&env.name, vec![]);
+        for runner in &env.runners {
+            if let RegistrationSource::Child(source_child) = &runner.source {
+                env_source_children.get_mut(&env.name).unwrap().push(source_child);
+            }
+        }
+    }
+
+    for dest_child in &decl.children {
+        if let Some(env_name) = dest_child.environment.as_ref() {
+            for source_child in env_source_children.get(env_name).expect(&format!(
+                "environment `{}` from child `{}` is not a valid environment",
+                env_name, dest_child.name,
+            )) {
+                dependency_map
+                    .entry(DependencyNode::Child((*source_child).clone()))
+                    .or_insert(HashSet::new())
+                    .insert(DependencyNode::Child(dest_child.name.clone()));
+            }
+        }
+    }
+    for dest_collection in &decl.collections {
+        if let Some(env_name) = dest_collection.environment.as_ref() {
+            for source_child in env_source_children.get(env_name).expect(&format!(
+                "environment `{}` from collection `{}` is not a valid environment",
+                env_name, dest_collection.name,
+            )) {
+                dependency_map
+                    .entry(DependencyNode::Child((*source_child).clone()))
+                    .or_insert(HashSet::new())
+                    .insert(DependencyNode::Collection(dest_collection.name.clone()));
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -496,7 +541,9 @@ mod tests {
     // various component topologies.
     use {
         super::*,
-        crate::model::testing::test_helpers::default_component_decl,
+        crate::model::testing::test_helpers::{
+            default_component_decl, ChildDeclBuilder, CollectionDeclBuilder, EnvironmentDeclBuilder,
+        },
         anyhow::Error,
         cm_rust::{
             CapabilityName, CapabilityPath, ChildDecl, DependencyType, ExposeDecl,
@@ -517,10 +564,6 @@ mod tests {
         expected: Vec<(DependencyNode, Vec<DependencyNode>)>,
         mut actual: HashMap<DependencyNode, HashSet<DependencyNode>>,
     ) {
-        // TOOD(jmatt) convert this function into a macro for improved
-        // debugging in panics
-        assert_eq!(expected.len(), actual.len());
-
         let mut actual_sorted: Vec<(DependencyNode, Vec<DependencyNode>)> = actual
             .drain()
             .map(|(k, v)| {
@@ -650,6 +693,167 @@ mod tests {
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
         expected.sort_unstable();
 
+        validate_results(expected, process_component_dependencies(&decl));
+        Ok(())
+    }
+
+    #[test]
+    fn test_environment_with_runner_from_parent() -> Result<(), Error> {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("env")
+                .add_runner(cm_rust::RunnerRegistration {
+                    source: RegistrationSource::Realm,
+                    source_name: "foo".into(),
+                    target_name: "foo".into(),
+                })
+                .build()],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("env").build(),
+            ],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
+        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+        Ok(())
+    }
+
+    #[test]
+    fn test_environment_with_runner_from_child() -> Result<(), Error> {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("env")
+                .add_runner(cm_rust::RunnerRegistration {
+                    source: RegistrationSource::Child("childA".into()),
+                    source_name: "foo".into(),
+                    target_name: "foo".into(),
+                })
+                .build()],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("env").build(),
+            ],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Child("childB".to_string())],
+        ));
+        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+        Ok(())
+    }
+
+    #[test]
+    fn test_environment_with_runner_from_child_to_collection() -> Result<(), Error> {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("env")
+                .add_runner(cm_rust::RunnerRegistration {
+                    source: RegistrationSource::Child("childA".into()),
+                    source_name: "foo".into(),
+                    target_name: "foo".into(),
+                })
+                .build()],
+            collections: vec![CollectionDeclBuilder::new().name("coll").environment("env").build()],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Collection("coll".to_string())],
+        ));
+        expected.push((DependencyNode::Collection("coll".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+        Ok(())
+    }
+
+    #[test]
+    fn test_chained_environments() -> Result<(), Error> {
+        let decl = ComponentDecl {
+            environments: vec![
+                EnvironmentDeclBuilder::new()
+                    .name("env")
+                    .add_runner(cm_rust::RunnerRegistration {
+                        source: RegistrationSource::Child("childA".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                    })
+                    .build(),
+                EnvironmentDeclBuilder::new()
+                    .name("env2")
+                    .add_runner(cm_rust::RunnerRegistration {
+                        source: RegistrationSource::Child("childB".into()),
+                        source_name: "bar".into(),
+                        target_name: "bar".into(),
+                    })
+                    .build(),
+            ],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("env").build(),
+                ChildDeclBuilder::new_lazy_child("childC").environment("env2").build(),
+            ],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Child("childB".to_string())],
+        ));
+        expected.push((
+            DependencyNode::Child("childB".to_string()),
+            vec![DependencyNode::Child("childC".to_string())],
+        ));
+        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+        Ok(())
+    }
+
+    #[test]
+    fn test_environment_and_offer() -> Result<(), Error> {
+        let decl = ComponentDecl {
+            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferServiceSource::Child("childB".to_string()),
+                source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
+                target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
+                target: OfferTarget::Child("childC".to_string()),
+                dependency_type: DependencyType::Strong,
+            })],
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("env")
+                .add_runner(cm_rust::RunnerRegistration {
+                    source: RegistrationSource::Child("childA".into()),
+                    source_name: "foo".into(),
+                    target_name: "foo".into(),
+                })
+                .build()],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("env").build(),
+                ChildDeclBuilder::new_lazy_child("childC").build(),
+            ],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Child("childB".to_string())],
+        ));
+        expected.push((
+            DependencyNode::Child("childB".to_string()),
+            vec![DependencyNode::Child("childC".to_string())],
+        ));
+        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
         Ok(())
     }
