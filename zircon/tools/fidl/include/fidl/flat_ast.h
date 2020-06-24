@@ -323,16 +323,16 @@ struct TableMemberUsed : public Object {
 struct TableMember : public Object {
   using Used = TableMemberUsed;
 
-  TableMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type,
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
               SourceSpan name, std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<raw::AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
                                           std::move(maybe_default_value), std::move(attributes))) {}
-  TableMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceSpan span)
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
       : ordinal(std::move(ordinal)), span(span) {}
 
-  std::unique_ptr<raw::Ordinal32> ordinal;
+  std::unique_ptr<raw::Ordinal64> ordinal;
 
   // The span for reserved table members.
   std::optional<SourceSpan> span;
@@ -381,14 +381,14 @@ struct UnionMemberUsed : public Object {
 struct UnionMember : public Object {
   using Used = UnionMemberUsed;
 
-  UnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
               SourceSpan name, std::unique_ptr<raw::AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
-  UnionMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceSpan span)
+  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
       : ordinal(std::move(ordinal)), span(span) {}
 
-  std::unique_ptr<raw::Ordinal32> ordinal;
+  std::unique_ptr<raw::Ordinal64> ordinal;
 
   // The span for reserved members.
   std::optional<SourceSpan> span;

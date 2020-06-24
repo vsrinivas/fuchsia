@@ -71,14 +71,13 @@ class Scope {
   std::map<T, SourceSpan> scope_;
 };
 
-using Ordinal32Scope = Scope<uint32_t>;
 using Ordinal64Scope = Scope<uint64_t>;
 
-std::optional<std::pair<uint32_t, SourceSpan>> FindFirstNonDenseOrdinal(
-    const Ordinal32Scope& scope) {
-  uint32_t last_ordinal_seen = 0;
+std::optional<std::pair<uint64_t, SourceSpan>> FindFirstNonDenseOrdinal(
+    const Ordinal64Scope& scope) {
+  uint64_t last_ordinal_seen = 0;
   for (const auto& ordinal_and_loc : scope) {
-    uint32_t next_expected_ordinal = last_ordinal_seen + 1;
+    uint64_t next_expected_ordinal = last_ordinal_seen + 1;
     if (ordinal_and_loc.first != next_expected_ordinal) {
       return std::optional{std::make_pair(next_expected_ordinal, ordinal_and_loc.second)};
     }
@@ -1595,11 +1594,11 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
 
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
   Union::Member response_member{
-      std::make_unique<raw::Ordinal32>(sourceElement, 1),  // success case explicitly has ordinal 1
+      std::make_unique<raw::Ordinal64>(sourceElement, 1),  // success case explicitly has ordinal 1
       IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
       GeneratedSimpleName("response"), nullptr};
   Union::Member error_member{
-      std::make_unique<raw::Ordinal32>(sourceElement, 2),  // error case explicitly has ordinal 2
+      std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
       std::move(error_type_ctor), GeneratedSimpleName("err"), nullptr};
   std::vector<Union::Member> result_members;
   result_members.push_back(std::move(response_member));
@@ -3196,7 +3195,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
 
 bool Library::CompileTable(Table* table_declaration) {
   Scope<std::string> name_scope;
-  Ordinal32Scope ordinal_scope;
+  Ordinal64Scope ordinal_scope;
 
   for (const auto& member : table_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
@@ -3231,7 +3230,7 @@ bool Library::CompileTable(Table* table_declaration) {
 
 bool Library::CompileUnion(Union* union_declaration) {
   Scope<std::string> scope;
-  Ordinal32Scope ordinal_scope;
+  Ordinal64Scope ordinal_scope;
 
   for (const auto& member : union_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());

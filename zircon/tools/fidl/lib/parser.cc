@@ -240,7 +240,7 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
   return std::make_unique<raw::NumericLiteral>(scope.GetSourceElement());
 }
 
-std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
+std::unique_ptr<raw::Ordinal64> Parser::ParseOrdinal64() {
   ASTScope scope(this);
 
   if (!MaybeConsumeToken(OfKind(Token::Kind::kNumericLiteral)))
@@ -262,7 +262,7 @@ std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::Ordinal32>(scope.GetSourceElement(), ordinal);
+  return std::make_unique<raw::Ordinal64>(scope.GetSourceElement(), ordinal);
 }
 
 std::unique_ptr<raw::TrueLiteral> Parser::ParseTrueLiteral() {
@@ -1202,7 +1202,7 @@ std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
   if (!Ok())
     return Fail();
 
-  auto ordinal = ParseOrdinal32();
+  auto ordinal = ParseOrdinal64();
   if (!Ok())
     return Fail();
 
@@ -1292,7 +1292,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
-  auto ordinal = ParseOrdinal32();
+  auto ordinal = ParseOrdinal64();
   if (!Ok())
     return Fail();
 

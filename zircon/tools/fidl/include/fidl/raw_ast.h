@@ -145,17 +145,6 @@ class NumericLiteral final : public Literal {
   void Accept(TreeVisitor* visitor) const;
 };
 
-// TODO(fxb/7848): Remove. This is also used for table and union ordinals, which
-// should move to Ordinal64 given FTP-048: Explicit Union Ordinals.
-class Ordinal32 final : public SourceElement {
- public:
-  Ordinal32(SourceElement const& element, uint32_t value) : SourceElement(element), value(value) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  const uint32_t value;
-};
-
 class Ordinal64 final : public SourceElement {
  public:
   Ordinal64(SourceElement const& element, uint64_t value) : SourceElement(element), value(value) {}
@@ -596,7 +585,7 @@ class StructDeclaration final : public SourceElement {
 };
 
 struct TableMember final : public SourceElement {
-  TableMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
+  TableMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
               std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
               std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
@@ -605,12 +594,12 @@ struct TableMember final : public SourceElement {
         maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
                                           std::move(maybe_default_value), std::move(attributes))) {}
 
-  TableMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
+  TableMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal)
       : SourceElement(element), ordinal(std::move(ordinal)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<Ordinal32> ordinal;
+  std::unique_ptr<Ordinal64> ordinal;
   // A used member is not 'reserved'
   struct Used {
     Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
@@ -649,7 +638,7 @@ struct TableDeclaration final : public SourceElement {
 
 class UnionMember final : public SourceElement {
  public:
-  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
+  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
               std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
               std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
@@ -658,12 +647,12 @@ class UnionMember final : public SourceElement {
         maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
                                           std::move(maybe_default_value), std::move(attributes))) {}
 
-  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
+  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal)
       : SourceElement(element), ordinal(std::move(ordinal)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<Ordinal32> ordinal;
+  std::unique_ptr<Ordinal64> ordinal;
 
   // A used member is not 'reserved'
   struct Used {

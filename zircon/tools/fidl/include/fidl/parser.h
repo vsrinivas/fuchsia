@@ -241,7 +241,7 @@ class Parser {
   std::unique_ptr<raw::TrueLiteral> ParseTrueLiteral();
   std::unique_ptr<raw::FalseLiteral> ParseFalseLiteral();
   std::unique_ptr<raw::Literal> ParseLiteral();
-  std::unique_ptr<raw::Ordinal32> ParseOrdinal32();
+  std::unique_ptr<raw::Ordinal64> ParseOrdinal64();
 
   std::unique_ptr<raw::Constant> ParseConstant();
 

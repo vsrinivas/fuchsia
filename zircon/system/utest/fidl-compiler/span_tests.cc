@@ -41,7 +41,6 @@ namespace {
   DO(NumericLiteral)          \
   DO(TrueLiteral)             \
   DO(FalseLiteral)            \
-  DO(Ordinal32)               \
   DO(Ordinal64)               \
   DO(IdentifierConstant)      \
   DO(LiteralConstant)         \
@@ -113,10 +112,6 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   void OnFalseLiteral(fidl::raw::FalseLiteral& element) override {
     CheckSpanOfType(ElementType::FalseLiteral, element);
     TreeVisitor::OnFalseLiteral(element);
-  }
-  void OnOrdinal32(fidl::raw::Ordinal32& element) override {
-    CheckSpanOfType(ElementType::Ordinal32, element);
-    TreeVisitor::OnOrdinal32(element);
   }
   void OnOrdinal64(fidl::raw::Ordinal64& element) override {
     CheckSpanOfType(ElementType::Ordinal64, element);
@@ -351,7 +346,7 @@ const std::vector<TestCase> test_cases = {
      {
          R"FIDL(library x; const bool x = «false»;)FIDL",
      }},
-    {ElementType::Ordinal32,
+    {ElementType::Ordinal64,
      {
          R"FIDL(library x; union U { «1:» uint8 one; };)FIDL",
      }},

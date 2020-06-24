@@ -56,8 +56,6 @@ void BinaryOperatorConstant::Accept(TreeVisitor* visitor) const {
   visitor->OnConstant(right_operand);
 }
 
-void Ordinal32::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
-
 void Ordinal64::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
 
 void Attribute::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
@@ -279,7 +277,7 @@ void TableMember::Accept(TreeVisitor* visitor) const {
       visitor->OnAttributeList(maybe_used->attributes);
     }
   }
-  visitor->OnOrdinal32(*ordinal);
+  visitor->OnOrdinal64(*ordinal);
   if (maybe_used != nullptr) {
     visitor->OnTypeConstructor(maybe_used->type_ctor);
     visitor->OnIdentifier(maybe_used->identifier);
@@ -307,7 +305,7 @@ void UnionMember::Accept(TreeVisitor* visitor) const {
       visitor->OnAttributeList(maybe_used->attributes);
     }
   }
-  visitor->OnOrdinal32(*ordinal);
+  visitor->OnOrdinal64(*ordinal);
   if (maybe_used != nullptr) {
     visitor->OnTypeConstructor(maybe_used->type_ctor);
     visitor->OnIdentifier(maybe_used->identifier);

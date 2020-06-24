@@ -189,7 +189,7 @@ constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
     ErrDuplicateUnionMemberNameCanonical(
         "union member '{}' conflicts with member '{}' from {}; both are represented "
         "by the canonical form '{}'");
-constexpr ErrorDef<uint32_t> ErrNonDenseOrdinal(
+constexpr ErrorDef<uint64_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr ErrorDef ErrCouldNotResolveHandleRights("unable to resolve handle rights");
 constexpr ErrorDef<flat::Name> ErrCouldNotResolveHandleSubtype(
