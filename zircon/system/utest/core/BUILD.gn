@@ -23,7 +23,6 @@ core_tests = [
   "channel",
   "channel-write-etc",
   "clock",
-  "debug",
   "elf-tls",
   "event-pair",
   "fifo",
@@ -65,7 +64,7 @@ unified_only = [
   "bad-syscall",
   "bti",
   "default-exception-handler",  # needs job tree w/o exception handler.
-  "debug:unified-only",
+  "debuglog:unified-only",
   "interrupt",
   "profile",
   "resource",

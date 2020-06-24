@@ -139,7 +139,6 @@ common_test_contents = [
   "//zircon/system/utest/core:channel",
   "//zircon/system/utest/core:channel-write-etc",
   "//zircon/system/utest/core:clock",
-  "//zircon/system/utest/core:debug",
   "//zircon/system/utest/core:elf-tls",
   "//zircon/system/utest/core:event-pair",
   "//zircon/system/utest/core:fifo",

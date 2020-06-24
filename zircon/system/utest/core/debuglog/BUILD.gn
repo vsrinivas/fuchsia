@@ -12,22 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-source_set("debug") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
-  sources = [ "process.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
 # These tests only run in the unified core-test.
 source_set("unified-only") {
   configs += [ "//build/unification/config:zircon-migrated" ]
