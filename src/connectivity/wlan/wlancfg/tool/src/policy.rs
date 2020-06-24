@@ -498,7 +498,10 @@ pub async fn handle_stop_all_aps(
 pub async fn handle_ap_listen(
     mut server_stream: wlan_policy::AccessPointStateUpdatesRequestStream,
 ) -> Result<(), Error> {
-    println!("{:8} | {:12} | {:6} | {:4} | {:7}", "State", "Mode", "Band", "Freq", "#Clients");
+    println!(
+        "{:32} | {:4} | {:8} | {:12} | {:6} | {:4} | {:7}",
+        "SSID", "Type", "State", "Mode", "Band", "Freq", "#Clients"
+    );
 
     while let Some(update_request) = server_stream.try_next().await? {
         let updates = update_request.into_on_access_point_state_update();
@@ -509,6 +512,21 @@ pub async fn handle_ap_listen(
         let _ = responder.send();
 
         for update in updates {
+            let (ssid, security_type) = match update.id {
+                Some(network_id) => {
+                    let ssid = network_id.ssid.clone();
+                    let ssid = String::from_utf8(ssid)?;
+                    let security_type = match network_id.type_ {
+                        wlan_policy::SecurityType::None => "none",
+                        wlan_policy::SecurityType::Wep => "wep",
+                        wlan_policy::SecurityType::Wpa => "wpa",
+                        wlan_policy::SecurityType::Wpa2 => "wpa2",
+                        wlan_policy::SecurityType::Wpa3 => "wpa3",
+                    };
+                    (ssid, security_type.to_string())
+                }
+                None => ("".to_string(), "".to_string()),
+            };
             let state = match update.state {
                 Some(state) => match state {
                     wlan_policy::OperatingState::Failed => "failed",
@@ -545,8 +563,8 @@ pub async fn handle_ap_listen(
             };
 
             println!(
-                "{:8} | {:12} | {:6} | {:4} | {:7}",
-                state, mode, band, frequency, client_count
+                "{:32} | {:4} | {:8} | {:12} | {:6} | {:4} | {:7}",
+                ssid, security_type, state, mode, band, frequency, client_count
             );
         }
     }
