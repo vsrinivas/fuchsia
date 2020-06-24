@@ -165,6 +165,7 @@ class VmObjectPaged final : public VmObject {
   uint32_t ScanForZeroPages(bool reclaim) override;
 
   bool EvictPage(vm_page_t* page, uint64_t offset) override;
+  void HarvestAccessedBits() override;
 
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that

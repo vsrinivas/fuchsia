@@ -588,6 +588,13 @@ zx_status_t VmAspace::SoftFault(vaddr_t va, uint flags) {
   return PageFault(va, flags | VMM_PF_FLAG_SW_FAULT);
 }
 
+zx_status_t VmAspace::AccessedFault(vaddr_t va) {
+  // There are no permissions etc associated with accessed bits so we can skip any vmar walking and
+  // just let the hardware aspace walk for the virtual address.
+  va = ROUNDDOWN(va, PAGE_SIZE);
+  return arch_aspace_.MarkAccessed(va, 1);
+}
+
 void VmAspace::Dump(bool verbose) const {
   canary_.Assert();
   printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s'\n", this, base_,

@@ -31,6 +31,7 @@ namespace testing {
 class UserMemory {
  public:
   static ktl::unique_ptr<UserMemory> Create(size_t size);
+  static ktl::unique_ptr<UserMemory> Create(fbl::RefPtr<VmObject> vmo);
   virtual ~UserMemory();
 
   vaddr_t base() const { return mapping_->base(); }

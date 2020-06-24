@@ -393,6 +393,53 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
   return aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, nullptr);
 }
 
+zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
+    uint64_t offset, uint64_t len,
+    const fbl::Function<bool(vm_page*, uint64_t)>& accessed_callback) const {
+  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
+          this, object_offset_, size_, offset, len);
+
+  canary_.Assert();
+
+  // NOTE: must be acquired with the vmo lock held, but doesn't need to take
+  // the address space lock, since it will not manipulate its location in the
+  // vmar tree. However, it must be held in the ALIVE state across this call.
+  //
+  // Avoids a race with DestroyLocked() since it removes ourself from the VMO's
+  // mapping list with the VMO lock held before dropping this state to DEAD. The
+  // VMO cant call back to us once we're out of their list.
+  DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
+
+  DEBUG_ASSERT(object_);
+  DEBUG_ASSERT(object_->lock()->lock().IsHeld());
+
+  // See if there's an intersect.
+  vaddr_t base;
+  uint64_t new_len;
+  if (!ObjectRangeToVaddrRange(offset, len, &base, &new_len)) {
+    return ZX_OK;
+  }
+
+  ArchVmAspace::HarvestCallback callback = [&accessed_callback, this](paddr_t paddr, vaddr_t vaddr,
+                                                                      uint) {
+    // Any pages mapped in from a vmo must have originated as a vm_page_t.
+    vm_page_t* page = paddr_to_vm_page(paddr);
+    DEBUG_ASSERT(page);
+
+    // Turn the virtual address into an object offset. We know this will work as our virtual address
+    // range we are operating on was already determined from the object earlier in
+    // |ObjectRangeToVaddrRange|
+    uint64_t offset;
+    bool overflow = sub_overflow(vaddr, base_, &offset);
+    DEBUG_ASSERT(!overflow);
+    overflow = add_overflow(offset, object_offset_, &offset);
+    DEBUG_ASSERT(!overflow);
+    return accessed_callback(page, offset);
+  };
+
+  return aspace_->arch_aspace().HarvestAccessed(base, new_len / PAGE_SIZE, callback);
+}
+
 zx_status_t VmMapping::RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const {
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_, size_, offset, len);
@@ -715,12 +762,19 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
   if (err >= 0) {
     LTRACEF("queried va, page at pa %#" PRIxPTR ", flags %#x is already there\n", pa, page_flags);
     if (pa == new_pa) {
-      // page was already mapped, are the permissions compatible?
-      // test that the page is already mapped with either the region's mmu flags
-      // or the flags that we're about to try to switch it to, which may be read-only
-      if (page_flags == arch_mmu_flags_ || page_flags == mmu_flags) {
-        return ZX_OK;
-      }
+      // Faulting on a mapping that is the correct page could happen for a few reasons
+      //  1. Permission are incorrect and this fault is a write fault for a read only mapping.
+      //  2. Fault was caused by (1), but we were racing with another fault and the mapping is
+      //     already fixed.
+      //  3. Some other error, such as an access flag missing on arm, caused this fault
+      // Of these three scenarios (1) is overwhelmingly the most common, and requires us to protect
+      // the page with the new permissions. In the scenario of (2) we could fast return and not
+      // perform the potentially expensive protect, but this scenario is quite rare and requires a
+      // multi-thread race on causing and handling the fault. (3) should also be highly uncommon as
+      // access faults would normally be handled by a separate fault handler, nevertheless we should
+      // still resolve such faults here, which requires calling protect.
+      // Given that (2) is rare and hard to distinguish from (3) we simply always call protect to
+      // ensure the fault is resolved.
 
       // assert that we're not accidentally marking the zero page writable
       DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));

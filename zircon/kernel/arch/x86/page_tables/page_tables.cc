@@ -250,14 +250,16 @@ struct MappingCursor {
 
 void X86PageTableBase::UpdateEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
                                    volatile pt_entry_t* pte, paddr_t paddr, PtFlags flags,
-                                   bool was_terminal) {
+                                   bool was_terminal, bool exact_flags) {
   DEBUG_ASSERT(pte);
   DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
 
   pt_entry_t olde = *pte;
   pt_entry_t newe = paddr | flags | X86_MMU_PG_P;
-  // If we ignore accessed and dirty bits, are we actually changing anything?
-  if ((olde & ~(X86_MMU_PG_A | X86_MMU_PG_D)) == newe) {
+
+  // Check if we are actually changing anything, ignoring the accessed and dirty bits unless
+  // exact_flags has been requested to allow for those bits to be explicitly unset.
+  if ((olde & ~(exact_flags ? 0 : (X86_MMU_PG_A | X86_MMU_PG_D))) == newe) {
     return;
   }
 
@@ -809,6 +811,107 @@ zx_status_t X86PageTableBase::UpdateMappingL0(volatile pt_entry_t* table, uint m
   return ZX_OK;
 }
 
+/**
+ * @brief Calls the provided callback on any present accessed mappings and optionally removes the
+ * accessed bit.
+ *
+ * Level must be top_level() when invoked.  The caller must, even on failure,
+ * free all pages in the |to_free| list and adjust the |pages_| count.
+ *
+ * @param table The top-level paging structure's virtual address.
+ * @param start_cursor A cursor describing the range of address space to
+ * act on within table
+ * @param new_cursor A returned cursor describing how much work was not
+ * completed.  Must be non-null.
+ */
+zx_status_t X86PageTableBase::HarvestMapping(volatile pt_entry_t* table, PageTableLevel level,
+                                             const MappingCursor& start_cursor,
+                                             MappingCursor* new_cursor, ConsistencyManager* cm,
+                                             const HarvestCallback& accessed_callback) {
+  DEBUG_ASSERT(table);
+  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr, start_cursor.size);
+  DEBUG_ASSERT(check_vaddr(start_cursor.vaddr));
+
+  if (level == PT_L) {
+    return HarvestMappingL0(table, start_cursor, new_cursor, cm, accessed_callback);
+  }
+
+  *new_cursor = start_cursor;
+
+  size_t ps = page_size(level);
+  uint index = vaddr_to_index(level, new_cursor->vaddr);
+  for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
+    volatile pt_entry_t* e = table + index;
+    pt_entry_t pt_val = *e;
+    // Skip unmapped pages (we may encounter these due to demand paging)
+    if (!IS_PAGE_PRESENT(pt_val)) {
+      new_cursor->SkipEntry(level);
+      continue;
+    }
+
+    if (IS_LARGE_PAGE(pt_val)) {
+      bool vaddr_level_aligned = page_aligned(level, new_cursor->vaddr);
+      // If the request covers the entire large page then harvest the accessed bit, otherewise we
+      // just skip it.
+      if (vaddr_level_aligned && new_cursor->size >= ps && (pt_val & X86_MMU_PG_A)) {
+        const paddr_t paddr = paddr_from_pte(level, pt_val);
+        const uint mmu_flags = pt_flags_to_mmu_flags(pt_val, level);
+        const PtFlags term_flags = terminal_flags(level, mmu_flags);
+        if (accessed_callback(paddr, new_cursor->vaddr, mmu_flags)) {
+          UpdateEntry(cm, level, new_cursor->vaddr, e, paddr_from_pte(level, pt_val),
+                      term_flags | X86_MMU_PG_PS, true /* was_terminal */, true /* exact_flags */);
+        }
+      }
+      new_cursor->vaddr += ps;
+      new_cursor->size -= ps;
+      DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
+    }
+
+    MappingCursor cursor;
+    volatile pt_entry_t* next_table = get_next_table_from_entry(pt_val);
+    zx_status_t result =
+        HarvestMapping(next_table, lower_level(level), *new_cursor, &cursor, cm, accessed_callback);
+    // Currently has no failure paths.
+    DEBUG_ASSERT(result == ZX_OK);
+    *new_cursor = cursor;
+    DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
+    DEBUG_ASSERT(new_cursor->size == 0 || page_aligned(level, new_cursor->vaddr));
+  }
+  return ZX_OK;
+}
+
+// Base case of HarvestMapping for smallest page size.
+zx_status_t X86PageTableBase::HarvestMappingL0(volatile pt_entry_t* table,
+                                               const MappingCursor& start_cursor,
+                                               MappingCursor* new_cursor, ConsistencyManager* cm,
+                                               const HarvestCallback& accessed_callback) {
+  LTRACEF("%016" PRIxPTR " %016zx\n", start_cursor.vaddr, start_cursor.size);
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(start_cursor.size));
+
+  *new_cursor = start_cursor;
+
+  uint index = vaddr_to_index(PT_L, new_cursor->vaddr);
+  for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
+    volatile pt_entry_t* e = table + index;
+    pt_entry_t pt_val = *e;
+    if (IS_PAGE_PRESENT(pt_val) && (pt_val & X86_MMU_PG_A)) {
+      const paddr_t paddr = paddr_from_pte(PT_L, pt_val);
+      const uint mmu_flags = pt_flags_to_mmu_flags(pt_val, PT_L);
+      const PtFlags term_flags = terminal_flags(PT_L, mmu_flags);
+      if (accessed_callback(paddr, new_cursor->vaddr, mmu_flags)) {
+        UpdateEntry(cm, PT_L, new_cursor->vaddr, e, paddr_from_pte(PT_L, pt_val), term_flags,
+                    true /* was_terminal */, true /* exact_flags */);
+      }
+    }
+
+    new_cursor->vaddr += PAGE_SIZE;
+    new_cursor->size -= PAGE_SIZE;
+    DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
+  }
+  DEBUG_ASSERT(new_cursor->size == 0 || page_aligned(PT_L, new_cursor->vaddr));
+  return ZX_OK;
+}
+
 zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped) {
   LTRACEF("aspace %p, vaddr %#" PRIxPTR ", count %#zx\n", this, vaddr, count);
 
@@ -1034,6 +1137,35 @@ zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mm
     *mmu_flags = pt_flags_to_mmu_flags(*last_valid_entry, ret_level);
   }
 
+  return ZX_OK;
+}
+
+zx_status_t X86PageTableBase::HarvestAccessed(vaddr_t vaddr, size_t count,
+                                              const HarvestCallback& accessed_callback) {
+  canary_.Assert();
+
+  LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx\n", this, vaddr, count);
+
+  if (!check_vaddr(vaddr)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (count == 0) {
+    return ZX_OK;
+  }
+
+  MappingCursor start = {
+      .paddr = 0,
+      .vaddr = vaddr,
+      .size = count * PAGE_SIZE,
+  };
+  MappingCursor result;
+  ConsistencyManager cm(this);
+  {
+    Guard<Mutex> a{&lock_};
+    HarvestMapping(virt_, top_level(), start, &result, &cm, accessed_callback);
+    cm.Finish();
+  }
+  DEBUG_ASSERT(result.size == 0);
   return ZX_OK;
 }
 

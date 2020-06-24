@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include <arch/mmu.h>
+#include <fbl/function.h>
 #include <fbl/macros.h>
 #include <vm/page.h>
 
@@ -79,6 +80,23 @@ class ArchVmAspaceInterface {
   virtual vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
                            uint next_region_mmu_flags, vaddr_t align, size_t size,
                            uint mmu_flags) = 0;
+
+  // Walks the given range of pages and for any pages that are mapped and have their access bit set
+  //  * Calls the provided callback with the page information
+  //  * If callback returns true, clears the accessed bit
+  // The callback may be invoked whilst the aspace is holding arbitrary mutexes and spinlocks and
+  // the callback there must not
+  //  * Acquire additional mutexes
+  //  * Call any aspace functions
+  // TODO: It is possible that HarvestAccessed only gets called from a single code path, at which
+  // point we could consider removing the dynamic callback function pointer with a static global
+  // callback routine.
+  using HarvestCallback = fbl::Function<bool(paddr_t paddr, vaddr_t vaddr, uint mmu_flags)>;
+  virtual zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
+                                      const HarvestCallback& accessed_callback) = 0;
+
+  // Marks any pages in the given virtual address range as being accessed.
+  virtual zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) = 0;
 
   // Physical address of the backing data structure used for translation.
   //

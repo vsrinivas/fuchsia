@@ -35,4 +35,8 @@ static const char* vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
 // page fault handler, called during page fault context, with interrupts enabled
 zx_status_t vmm_page_fault_handler(vaddr_t addr, uint pf_flags);
 
+// specialized page fault handler for accessed flag faults. Called during page fault context with
+// interrupts enabled.
+zx_status_t vmm_accessed_fault_handler(vaddr_t addr);
+
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_FAULT_H_

@@ -136,6 +136,10 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   //    real PageFault from occurring.
   zx_status_t SoftFault(vaddr_t va, uint flags);
 
+  // Generates an accessed flag fault against this aspace. This is a specialized version of
+  // SoftFault that will only resolve a potential missing access flag and nothing else.
+  zx_status_t AccessedFault(vaddr_t va);
+
   // Convenience method for traversing the tree of VMARs to find the deepest
   // VMAR in the tree that includes *va*.
   fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);

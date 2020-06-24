@@ -36,10 +36,10 @@ class X86PageTableMmu final : public X86PageTableBase {
   zx_status_t AliasKernelMappings();
 
  private:
-  using X86PageTableBase::phys_;
-  using X86PageTableBase::virt_;
   using X86PageTableBase::ctx_;
   using X86PageTableBase::pages_;
+  using X86PageTableBase::phys_;
+  using X86PageTableBase::virt_;
 
   PageTableLevel top_level() final { return PML4_L; }
   bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
@@ -100,6 +100,13 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
 
   vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
                    uint next_region_mmu_flags, vaddr_t align, size_t size, uint mmu_flags) override;
+
+  // On x86 the hardware can always set the accessed bit so we do not need to support the software
+  // fault method.
+  zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) override { return ZX_ERR_NOT_SUPPORTED; }
+
+  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
+                              const HarvestCallback& accessed_callback) override;
 
   paddr_t arch_table_phys() const override { return pt_->phys(); }
   paddr_t pt_phys() const { return pt_->phys(); }

@@ -43,6 +43,16 @@ void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace) {
   vmm_context_switch(reinterpret_cast<VmAspace*>(oldspace), reinterpret_cast<VmAspace*>(newaspace));
 }
 
+zx_status_t vmm_accessed_fault_handler(vaddr_t addr) {
+  // Forward fault to the current aspace.
+  VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
+  if (!aspace) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  return aspace->AccessedFault(addr);
+}
+
 zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   // hardware fault, mark it as such
   flags |= VMM_PF_FLAG_HW_FAULT;

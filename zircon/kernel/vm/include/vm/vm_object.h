@@ -324,12 +324,22 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   // extended period of time.
   static uint32_t ScanAllForZeroPages(bool reclaim);
 
+  // Calls |HarvestAccessedBits| for every VMO in the system. Each individual call to
+  // |HarvestAccessedBits| occurs without the all vmos lock being held, so VMOs may be added/removed
+  // over the course of this operation.
+  static void HarvestAllAccessedBits();
+
   // Scans for pages that could validly be de-duped/decommitted back to the zero page. If `reclaim`
   // is true the pages will actually be de-duped. In either case the number of found pages is
   // returned. It is expected that this would hold the VMOs lock for an extended period of time
   // and should only be called when it is suitable for block all VMO operations for an extended
   // period of time.
   virtual uint32_t ScanForZeroPages(bool reclaim) { return 0; }
+
+  // Instructs the VMO to harvest any accessed bits in its mappings and update any meta data for
+  // page age etc. This is allowed to be a no-op, and doesn't promise to generate any observable
+  // results.
+  virtual void HarvestAccessedBits() {}
 
   // Asks the VMO to attempt to evict the specified page. This returns true if the page was
   // actually from this VMO and was successfully evicted, at which point the caller now has
@@ -427,6 +437,37 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
 
   DECLARE_SINGLETON_MUTEX(AllVmosLock);
   static GlobalList all_vmos_ TA_GUARDED(AllVmosLock::Get());
+
+  // Cursor to allow for walking the all vmos list without needing to hold the AllVmosLock all the
+  // time. In practice at most one cursor is expected to exist, but as the cursor list is global
+  // the overhead of being generic to support multiple cursors is negligible.
+  class VmoCursor : public fbl::DoublyLinkedListable<VmoCursor*> {
+   public:
+    VmoCursor() TA_REQ(AllVmosLock::Get());
+    ~VmoCursor() TA_REQ(AllVmosLock::Get());
+
+    // Advance the cursor and return the next VmObject or nullptr if at the end of the list.
+    //
+    // Once |Next| has returned nullptr, all subsequent calls will return nullptr.
+    //
+    // The caller must hold the |AllVmosLock|.
+    VmObject* Next() TA_REQ(AllVmosLock::Get());
+
+    // If the next element is |h|, advance the cursor past it.
+    //
+    // The caller must hold the |AllVmosLock|.
+    void AdvanceIf(const VmObject* h) TA_REQ(AllVmosLock::Get());
+
+   private:
+    VmoCursor(const VmoCursor&) = delete;
+    VmoCursor& operator=(const VmoCursor&) = delete;
+    VmoCursor(VmoCursor&&) = delete;
+    VmoCursor& operator=(VmoCursor&&) = delete;
+
+    GlobalList::iterator iter_ TA_GUARDED(AllVmosLock::Get());
+  };
+
+  static fbl::DoublyLinkedList<VmoCursor*> all_vmos_cursors_ TA_GUARDED(AllVmosLock::Get());
 
   bool InGlobalList() { return fbl::InContainer<internal::GlobalListTag>(*this); }
 };

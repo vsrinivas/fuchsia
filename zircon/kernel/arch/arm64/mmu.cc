@@ -287,6 +287,16 @@ static void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
   }
 }
 
+uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
+  uint mmu_flags = 0;
+  if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+    s2_pte_attr_to_mmu_flags(pte, &mmu_flags);
+  } else {
+    s1_pte_attr_to_mmu_flags(pte, &mmu_flags);
+  }
+  return mmu_flags;
+}
+
 zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
   Guard<Mutex> al{&lock_};
   return QueryLocked(vaddr, paddr, mmu_flags);
@@ -371,12 +381,7 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
     *paddr = pte_addr + vaddr_rem;
   }
   if (mmu_flags) {
-    *mmu_flags = 0;
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-      s2_pte_attr_to_mmu_flags(pte, mmu_flags);
-    } else {
-      s1_pte_attr_to_mmu_flags(pte, mmu_flags);
-    }
+    *mmu_flags = MmuFlagsFromPte(pte);
   }
   LTRACEF("va 0x%lx, paddr 0x%lx, flags 0x%x\n", vaddr, paddr ? *paddr : ~0UL,
           mmu_flags ? *mmu_flags : ~0U);
@@ -779,6 +784,121 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
   return ZX_OK;
 }
 
+// NOTE: if this returns true, caller must DSB afterwards to ensure TLB entries are flushed
+bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
+                                               const uint index_shift, const uint page_size_shift,
+                                               volatile pte_t* page_table,
+                                               const HarvestCallback& accessed_callback) {
+  const vaddr_t block_size = 1UL << index_shift;
+  const vaddr_t block_mask = block_size - 1;
+
+  vaddr_t vaddr_rel = vaddr_rel_in;
+
+  // vaddr_rel and size must be page aligned
+  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
+
+  bool flushed_tlb = false;
+
+  while (size) {
+    const vaddr_t vaddr_rem = vaddr_rel & block_mask;
+    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
+    const vaddr_t index = vaddr_rel >> index_shift;
+
+    pte_t pte = page_table[index];
+
+    if (index_shift > page_size_shift &&
+        (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
+        chunk_size != block_size) {
+      // Ignore large pages, we do not support harvesting accessed bits from them. Having this empty
+      // if block simplifies the overall logic.
+    } else if (index_shift > page_size_shift &&
+               (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
+      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+      volatile pte_t* next_page_table =
+          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+      if (HarvestAccessedPageTable(vaddr, vaddr_rem, chunk_size,
+                                   index_shift - (page_size_shift - 3), page_size_shift,
+                                   next_page_table, accessed_callback)) {
+        flushed_tlb = true;
+      }
+    } else if (pte) {
+      if (pte & MMU_PTE_ATTR_AF) {
+        const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+        const paddr_t paddr = pte_addr + vaddr_rem;
+        const uint mmu_flags = MmuFlagsFromPte(pte);
+        // Invoke the callback to see if the accessed flag should be removed.
+        if (accessed_callback(paddr, vaddr, mmu_flags)) {
+          // Modifying the access flag does not require break-before-make for correctness and as we
+          // do not support hardware access flag setting at the moment we do not have to deal with
+          // potential concurrent modifications.
+          pte = (pte & ~MMU_PTE_ATTR_AF);
+          LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
+          page_table[index] = pte;
+
+          // ensure that the update is observable from hardware page table walkers before TLB
+          // operations can occur.
+          __dsb(ARM_MB_ISHST);
+
+          // flush the terminal TLB entry
+          FlushTLBEntry(vaddr, true);
+
+          // propagate back up to the caller that a tlb flush happened so they can synchronize.
+          flushed_tlb = true;
+        }
+      }
+    }
+    vaddr += chunk_size;
+    vaddr_rel += chunk_size;
+    size -= chunk_size;
+  }
+  return flushed_tlb;
+}
+
+void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
+                                            uint index_shift, uint page_size_shift,
+                                            volatile pte_t* page_table) {
+  const vaddr_t block_size = 1UL << index_shift;
+  const vaddr_t block_mask = block_size - 1;
+
+  vaddr_t vaddr_rel = vaddr_rel_in;
+
+  // vaddr_rel and size must be page aligned
+  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
+
+  while (size) {
+    const vaddr_t vaddr_rem = vaddr_rel & block_mask;
+    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
+    const vaddr_t index = vaddr_rel >> index_shift;
+
+    pte_t pte = page_table[index];
+
+    if (index_shift > page_size_shift &&
+        (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
+        chunk_size != block_size) {
+      // Ignore large pages as we don't support modifying their access flags. Having this empty if
+      // block simplifies the overall logic.
+    } else if (index_shift > page_size_shift &&
+               (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
+      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+      volatile pte_t* next_page_table =
+          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+      MarkAccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
+                            page_size_shift, next_page_table);
+    } else if (pte) {
+      pte |= MMU_PTE_ATTR_AF;
+      page_table[index] = pte;
+      // If the access bit wasn't set then we know this entry isn't cached in any TLBs and so we do
+      // not need to do any TLB maintenance and can just issue a dmb to ensure the hardware walker
+      // sees the new entry. If the access bit was already set then this operation is a no-op and
+      // we can leave any TLB entries alone.
+      __dmb(ARM_MB_ISHST);
+    }
+    vaddr += chunk_size;
+    vaddr_rel += chunk_size;
+    size -= chunk_size;
+  }
+}
+
 // internal routine to map a run of pages
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                                   vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
@@ -1070,6 +1190,75 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
   }
 
   return ret;
+}
+
+zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
+                                             const HarvestCallback& accessed_callback) {
+  canary_.Assert();
+
+  if (!IS_PAGE_ALIGNED(vaddr) || !IsValidVaddr(vaddr)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  Guard<Mutex> a{&lock_};
+  vaddr_t vaddr_base;
+  uint top_size_shift, top_index_shift, page_size_shift;
+  MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift, &page_size_shift);
+
+  const vaddr_t vaddr_rel = vaddr - vaddr_base;
+  const vaddr_t vaddr_rel_max = 1UL << top_size_shift;
+  const size_t size = count * PAGE_SIZE;
+
+  if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
+    TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#" PRIxPTR
+           ", size %#" PRIxPTR "\n",
+           vaddr, size, vaddr_base, vaddr_rel_max);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  LOCAL_KTRACE("mmu harvest accessed",
+               (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
+
+  // It's fairly reasonable for there to be nothing to harvest, and dsb is expensive, so
+  // HarvestAccessedPageTable will return true if it performed a TLB invalidation that we need to
+  // synchronize with.
+  if (HarvestAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_,
+                               accessed_callback)) {
+    __dsb(ARM_MB_SY);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
+  canary_.Assert();
+
+  if (!IS_PAGE_ALIGNED(vaddr) || !IsValidVaddr(vaddr)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  Guard<Mutex> a{&lock_};
+  vaddr_t vaddr_base;
+  uint top_size_shift, top_index_shift, page_size_shift;
+  MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift, &page_size_shift);
+
+  const vaddr_t vaddr_rel = vaddr - vaddr_base;
+  const vaddr_t vaddr_rel_max = 1UL << top_size_shift;
+  const size_t size = count * PAGE_SIZE;
+
+  if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
+    TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#" PRIxPTR
+           ", size %#" PRIxPTR "\n",
+           vaddr, size, vaddr_base, vaddr_rel_max);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  LOCAL_KTRACE("mmu mark accessed", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
+
+  MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_);
+  // MarkAccessedPageTable does not perform any TLB operations, so unlike most other top level mmu
+  // functions we do not need to perform a dsb to synchronize.
+  return ZX_OK;
 }
 
 zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags, page_alloc_fn_t paf) {

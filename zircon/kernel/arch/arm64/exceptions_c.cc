@@ -101,6 +101,7 @@ KCOUNTER(exceptions_irq, "exceptions.irq")
 KCOUNTER(exceptions_unhandled, "exceptions.unhandled")
 KCOUNTER(exceptions_user, "exceptions.user")
 KCOUNTER(exceptions_unknown, "exceptions.unknown")
+KCOUNTER(exceptions_access, "exceptions.access_fault")
 
 static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type,
                                                           arm64_iframe_t* iframe, uint32_t esr,
@@ -249,9 +250,16 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
           iframe->elr, is_user, far, esr, iss);
 
   arch_enable_ints();
-  kcounter_add(exceptions_page, 1);
-  CPU_STATS_INC(page_faults);
-  zx_status_t err = vmm_page_fault_handler(far, pf_flags);
+  zx_status_t err;
+  // Check for accessed fault separately and use the dedicated handler.
+  if ((iss & 0b111100) == 0b001000) {
+    exceptions_access.Add(1);
+    err = vmm_accessed_fault_handler(far);
+  } else {
+    kcounter_add(exceptions_page, 1);
+    CPU_STATS_INC(page_faults);
+    err = vmm_page_fault_handler(far, pf_flags);
+  }
   arch_disable_ints();
   if (err >= 0) {
     return;
@@ -313,8 +321,15 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   // 0b0011XX is permission faults
   if (likely((dfsc & 0b001100) != 0 && (dfsc & 0b110000) == 0)) {
     arch_enable_ints();
-    kcounter_add(exceptions_page, 1);
-    zx_status_t err = vmm_page_fault_handler(far, pf_flags);
+    zx_status_t err;
+    // Send accessed faults to the separate dedicated handler.
+    if ((dfsc & 0b001100) == 0b001000) {
+      exceptions_access.Add(1);
+      err = vmm_accessed_fault_handler(far);
+    } else {
+      kcounter_add(exceptions_page, 1);
+      err = vmm_page_fault_handler(far, pf_flags);
+    }
     arch_disable_ints();
     if (err >= 0) {
       return;

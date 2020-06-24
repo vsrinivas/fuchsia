@@ -29,6 +29,7 @@ constexpr uint32_t kScannerOpDump = 1u << 3;
 constexpr uint32_t kScannerOpReclaimAll = 1u << 4;
 constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
 constexpr uint32_t kScannerOpReclaim = 1u << 6;
+constexpr uint32_t kScannerOpHarvestAccessed = 1u << 7;
 
 // Amount of time between pager queue rotations.
 constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
@@ -167,6 +168,11 @@ int scanner_request_thread(void *) {
       op &= ~kScannerOpRotateQueues;
       pmm_page_queues()->RotatePagerBackedQueues();
       next_rotate_deadline = zx_time_add_duration(current, kQueueRotateTime);
+      // Accessed information currently only impacts page eviction, so only harvest when page
+      // eviction is enabled.
+      if (eviction_enabled) {
+        op |= kScannerOpHarvestAccessed;
+      }
     }
 
     bool print = false;
@@ -190,6 +196,10 @@ int scanner_request_thread(void *) {
     if (op & kScannerOpDump) {
       op &= ~kScannerOpDump;
       scanner_print_stats(zx_time_sub_time(next_rotate_deadline, current));
+    }
+    if (op & kScannerOpHarvestAccessed) {
+      op &= ~kScannerOpHarvestAccessed;
+      VmObject::HarvestAllAccessedBits();
     }
     if (current >= next_zero_scan_deadline || reclaim_all) {
       const uint64_t scan_limit = reclaim_all ? UINT64_MAX : zero_page_scans_per_second;
@@ -326,12 +336,13 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
   usage:
     printf("not enough arguments\n");
     printf("usage:\n");
-    printf("%s dump         : dump scanner info\n", argv[0].str);
-    printf("%s push_disable : increase scanner disable count\n", argv[0].str);
-    printf("%s pop_disable  : decrease scanner disable count\n", argv[0].str);
-    printf("%s reclaim_all  : attempt to reclaim all possible memory\n", argv[0].str);
-    printf("%s rotate_queue : immediately rotate the page queues\n", argv[0].str);
-    printf("%s reclaim <MB> : attempt to reclaim requested MB of memory.\n", argv[0].str);
+    printf("%s dump             : dump scanner info\n", argv[0].str);
+    printf("%s push_disable     : increase scanner disable count\n", argv[0].str);
+    printf("%s pop_disable      : decrease scanner disable count\n", argv[0].str);
+    printf("%s reclaim_all      : attempt to reclaim all possible memory\n", argv[0].str);
+    printf("%s rotate_queue     : immediately rotate the page queues\n", argv[0].str);
+    printf("%s reclaim <MB>     : attempt to reclaim requested MB of memory.\n", argv[0].str);
+    printf("%s harvest_accessed : harvest all page accessed information\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
   if (!strcmp(argv[1].str, "dump")) {
@@ -345,6 +356,9 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     scanner_request_event.Signal();
   } else if (!strcmp(argv[1].str, "rotate_queue")) {
     scanner_operation.fetch_or(kScannerOpRotateQueues);
+    scanner_request_event.Signal();
+  } else if (!strcmp(argv[1].str, "harvest_accessed")) {
+    scanner_operation.fetch_or(kScannerOpHarvestAccessed | kScannerFlagPrint);
     scanner_request_event.Signal();
   } else if (!strcmp(argv[1].str, "reclaim")) {
     if (argc < 3) {

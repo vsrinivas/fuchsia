@@ -177,7 +177,60 @@ class TestPageRequest {
   static void drop_ref_cb(void* ctx) { static_cast<TestPageRequest*>(ctx)->OnDropRef(); }
 };
 
+// Stubbed page source that is intended to be allowed to create a vmo that believes it is backed by
+// a user pager, but is incapable of actually providing pages.
+class StubPageSource : public PageSource {
+ public:
+  StubPageSource() {}
+  ~StubPageSource() {}
+  bool GetPage(uint64_t offset, vm_page_t** const page_out, paddr_t* const pa_out) { return false; }
+  void GetPageAsync(page_request_t* request) { panic("Not implemented\n"); }
+  void ClearAsyncRequest(page_request_t* request) { panic("Not implemented\n"); }
+  void SwapRequest(page_request_t* old, page_request_t* new_req) { panic("Not implemented\n"); }
+  void OnDetach() {}
+  void OnClose() {}
+  zx_status_t WaitOnEvent(Event* event) { panic("Not implemented\n"); }
+};
+
 }  // namespace
+
+static zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObject>* out_vmo) {
+  // Create a pager backed VMO and jump through some hoops to pre-fill a page for it so we do not
+  // actually take any page faults.
+  fbl::AllocChecker ac;
+  fbl::RefPtr<StubPageSource> pager = fbl::MakeRefCountedChecked<StubPageSource>(&ac);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, PAGE_SIZE, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  VmPageList pl;
+  pl.InitializeSkew(0, 0);
+  vm_page_t* page;
+  status = pmm_alloc_page(0, &page);
+  if (status != ZX_OK) {
+    return status;
+  }
+  page->set_state(VM_PAGE_STATE_OBJECT);
+  VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(0);
+  if (!page_or_marker) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  *page_or_marker = VmPageOrMarker::Page(page);
+  VmPageSpliceList splice_list = pl.TakePages(0, PAGE_SIZE);
+  status = vmo->SupplyPages(0, PAGE_SIZE, &splice_list);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_page = page;
+  *out_vmo = ktl::move(vmo);
+  return ZX_OK;
+}
 
 // Allocates a single page, translates it to a vm_page_t and frees it.
 static bool pmm_smoke_test() {
@@ -964,6 +1017,108 @@ static bool vmaspace_alloc_smoke_test() {
 
   // drop the ref held by this pointer
   aspace.reset();
+  END_TEST;
+}
+
+// Touch mappings in an aspace and ensure we can correctly harvest the accessed bits.
+static bool vmaspace_accessed_test() {
+  BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
+  // Create some memory we can map touch to test accessed tracking on. Needs to be created from
+  // user pager backed memory as harvesting is allowed to be limited to just that.
+  vm_page_t* page;
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  auto mem = testing::UserMemory::Create(vmo);
+
+  ASSERT_EQ(ZX_OK, mem->CommitAndMap(PAGE_SIZE));
+
+  // Helpers for query the arch aspace.
+  auto harvest_take = [&mem, &page]() {
+    int found = 0;
+    ArchVmAspace::HarvestCallback harvest = [&found, &mem, &page](paddr_t paddr, vaddr_t vaddr,
+                                                                  uint mmu_flags) {
+      found++;
+      DEBUG_ASSERT(vaddr == mem->base());
+      DEBUG_ASSERT(paddr == page->paddr());
+      return true;
+    };
+    mem->aspace()->arch_aspace().HarvestAccessed(mem->base(), 1, harvest);
+    return found;
+  };
+  auto harvest_leave = [&mem, &page]() {
+    int found = 0;
+    ArchVmAspace::HarvestCallback harvest = [&found, &mem, &page](paddr_t paddr, vaddr_t vaddr,
+                                                                  uint mmu_flags) {
+      found++;
+      DEBUG_ASSERT(vaddr == mem->base());
+      DEBUG_ASSERT(paddr == page->paddr());
+      return false;
+    };
+    mem->aspace()->arch_aspace().HarvestAccessed(mem->base(), 1, harvest);
+    return found;
+  };
+
+  // Initial accessed state is undefined, so harvest it away.
+  mem->vmo()->HarvestAccessedBits();
+
+  // Reach into the arch aspace and check that the accessed bit is really gone.
+  EXPECT_EQ(0, harvest_take());
+
+  // Read from the mapping to (hopefully) set the accessed bit.
+  asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
+
+  // Query the arch aspace and make sure we can leave and take the accessed bit.
+  EXPECT_EQ(1, harvest_leave());
+  EXPECT_EQ(1, harvest_leave());
+  EXPECT_EQ(1, harvest_take());
+  EXPECT_EQ(0, harvest_take());
+
+  // Set the accessed bit again and see if the VMO can harvest it.
+  asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
+  EXPECT_EQ(1, harvest_leave());
+  mem->vmo()->HarvestAccessedBits();
+  EXPECT_EQ(0, harvest_take());
+
+  END_TEST;
+}
+
+// Ensure that if a user requested VMO read/write operation would hit a page that has had its
+// accessed bits harvested that any resulting fault (on ARM) can be handled.
+static bool vmaspace_usercopy_accessed_fault_test() {
+  BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
+  // Create some memory we can map touch to test accessed tracking on. Needs to be created from
+  // user pager backed memory as harvesting is allowed to be limited to just that.
+  vm_page_t* page;
+  fbl::RefPtr<VmObject> mapping_vmo;
+  zx_status_t status = make_committed_pager_vmo(&page, &mapping_vmo);
+  ASSERT_EQ(ZX_OK, status);
+  auto mem = testing::UserMemory::Create(mapping_vmo);
+
+  ASSERT_EQ(ZX_OK, mem->CommitAndMap(PAGE_SIZE));
+
+  // Need a separate VMO to read/write from.
+  fbl::RefPtr<VmObject> vmo;
+  status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE, &vmo);
+  ASSERT_EQ(status, ZX_OK);
+
+  // Touch the mapping to make sure it is committed and mapped.
+  mem->put<char>(42);
+
+  // Harvest any accessed bits.
+  mem->vmo()->HarvestAccessedBits();
+
+  // Read from the VMO into the mapping that has been harvested.
+  status = vmo->ReadUser(vmm_aspace_to_obj(Thread::Current::Get()->aspace_), mem->user_out<char>(),
+                         0, sizeof(char));
+  ASSERT_EQ(status, ZX_OK);
+
   END_TEST;
 }
 
@@ -1815,59 +1970,6 @@ static bool vmo_zero_scan_test() {
   EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
 
   END_TEST;
-}
-
-// Stubbed page source that is intended to be allowed to create a vmo that believes it is backed by
-// a user pager, but is incapable of actually providing pages.
-class StubPageSource : public PageSource {
- public:
-  StubPageSource() {}
-  ~StubPageSource() {}
-  bool GetPage(uint64_t offset, vm_page_t** const page_out, paddr_t* const pa_out) { return false; }
-  void GetPageAsync(page_request_t* request) { panic("Not implemented\n"); }
-  void ClearAsyncRequest(page_request_t* request) { panic("Not implemented\n"); }
-  void SwapRequest(page_request_t* old, page_request_t* new_req) { panic("Not implemented\n"); }
-  void OnDetach() {}
-  void OnClose() {}
-  zx_status_t WaitOnEvent(Event* event) { panic("Not implemented\n"); }
-};
-
-static zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObject>* out_vmo) {
-  // Create a pager backed VMO and jump through some hoops to pre-fill a page for it so we do not
-  // actually take any page faults.
-  fbl::AllocChecker ac;
-  fbl::RefPtr<StubPageSource> pager = fbl::MakeRefCountedChecked<StubPageSource>(&ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  fbl::RefPtr<VmObject> vmo;
-  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, PAGE_SIZE, &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  VmPageList pl;
-  pl.InitializeSkew(0, 0);
-  vm_page_t* page;
-  status = pmm_alloc_page(0, &page);
-  if (status != ZX_OK) {
-    return status;
-  }
-  page->set_state(VM_PAGE_STATE_OBJECT);
-  VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(0);
-  if (!page_or_marker) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  *page_or_marker = VmPageOrMarker::Page(page);
-  VmPageSpliceList splice_list = pl.TakePages(0, PAGE_SIZE);
-  status = vmo->SupplyPages(0, PAGE_SIZE, &splice_list);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out_page = page;
-  *out_vmo = ktl::move(vmo);
-  return ZX_OK;
 }
 
 static bool vmo_move_pages_on_access_test() {
@@ -3191,6 +3293,8 @@ VM_UNITTEST(vmm_alloc_contiguous_missing_flag_commit_fails)
 VM_UNITTEST(vmm_alloc_contiguous_zero_size_fails)
 VM_UNITTEST(vmaspace_create_smoke_test)
 VM_UNITTEST(vmaspace_alloc_smoke_test)
+VM_UNITTEST(vmaspace_accessed_test)
+VM_UNITTEST(vmaspace_usercopy_accessed_fault_test)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
 VM_UNITTEST(vmo_pin_test)

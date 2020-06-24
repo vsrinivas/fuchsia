@@ -30,6 +30,7 @@
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmObject::GlobalList VmObject::all_vmos_ = {};
+fbl::DoublyLinkedList<VmObject::VmoCursor*> VmObject::all_vmos_cursors_ = {};
 
 VmObject::VmObject(fbl::RefPtr<vm_lock_t> lock_ptr)
     : lock_(lock_ptr->lock), lock_ptr_(ktl::move(lock_ptr)) {
@@ -56,6 +57,30 @@ uint32_t VmObject::ScanAllForZeroPages(bool reclaim) {
   return count;
 }
 
+void VmObject::HarvestAllAccessedBits() {
+  Guard<Mutex> guard{AllVmosLock::Get()};
+  {
+    VmoCursor cursor;
+    VmObject* vmo;
+    while ((vmo = cursor.Next())) {
+      fbl::RefPtr<VmObject> vmo_ref = fbl::MakeRefPtrUpgradeFromRaw(vmo, guard);
+      if (vmo_ref) {
+        // Call each harvest without the all vmos lock so we aren't monopolizing the lock. This is
+        // safe as we already acquired a refptr so we know the object will remain valid at least
+        // for calling HarvestAccessedBits, and our VmoCursor allows us to call .Next after having
+        // reacquired the lock. Additionally this provides us the chance to safely drop the refptr
+        // and potentially run the VMO destructor.
+        guard.CallUnlocked([vmo_ref = ktl::move(vmo_ref)]() mutable {
+          vmo_ref->HarvestAccessedBits();
+          // Explicitly reset the vmo_ref to force any destructor to run right now and not in the
+          // cleanup of the lambda, which might happen after the lock has been re-acquired.
+          vmo_ref.reset();
+        });
+      }
+    }
+  }
+}
+
 void VmObject::AddToGlobalList() {
   Guard<Mutex> guard{AllVmosLock::Get()};
   all_vmos_.push_back(this);
@@ -64,6 +89,9 @@ void VmObject::AddToGlobalList() {
 void VmObject::RemoveFromGlobalList() {
   Guard<Mutex> guard{AllVmosLock::Get()};
   DEBUG_ASSERT(InGlobalList());
+  for (auto& cursor : all_vmos_cursors_) {
+    cursor.AdvanceIf(this);
+  }
   all_vmos_.erase(*this);
 }
 
@@ -452,6 +480,36 @@ zx_status_t VmObject::RoundSize(uint64_t size, uint64_t* out_size) {
   }
 
   return ZX_OK;
+}
+
+VmObject::VmoCursor::VmoCursor() {
+  if (!VmObject::all_vmos_.is_empty()) {
+    iter_ = VmObject::all_vmos_.begin();
+  } else {
+    iter_ = VmObject::all_vmos_.end();
+  }
+
+  VmObject::all_vmos_cursors_.push_front(this);
+}
+
+VmObject::VmoCursor::~VmoCursor() { VmObject::all_vmos_cursors_.erase(*this); }
+
+VmObject* VmObject::VmoCursor::Next() {
+  if (iter_ == VmObject::all_vmos_.end()) {
+    return nullptr;
+  }
+
+  VmObject* result = &*iter_;
+  iter_++;
+  return result;
+}
+
+void VmObject::VmoCursor::AdvanceIf(const VmObject* h) {
+  if (iter_ != VmObject::all_vmos_.end()) {
+    if (&*iter_ == h) {
+      iter_++;
+    }
+  }
 }
 
 static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {

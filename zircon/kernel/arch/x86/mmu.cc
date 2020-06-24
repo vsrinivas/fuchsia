@@ -8,6 +8,7 @@
 #include <align.h>
 #include <assert.h>
 #include <err.h>
+#include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <string.h>
 #include <trace.h>
@@ -22,7 +23,6 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
-#include <lib/cmdline.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -208,8 +208,7 @@ static void TlbInvalidatePage_task(void* raw_context) {
  * @param pt The page table we're invalidating for (if nullptr, assume for current one)
  * @param pending The planned invalidation
  */
-static void x86_tlb_invalidate_page(const X86PageTableBase* pt,
-                                    PendingTlbInvalidation* pending) {
+static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvalidation* pending) {
   if (pending->count == 0) {
     return;
   }
@@ -251,13 +250,9 @@ bool x86_enable_pcid() {
   return true;
 }
 
-bool X86PageTableMmu::check_paddr(paddr_t paddr) {
-  return x86_mmu_check_paddr(paddr);
-}
+bool X86PageTableMmu::check_paddr(paddr_t paddr) { return x86_mmu_check_paddr(paddr); }
 
-bool X86PageTableMmu::check_vaddr(vaddr_t vaddr) {
-  return x86_mmu_check_vaddr(vaddr);
-}
+bool X86PageTableMmu::check_vaddr(vaddr_t vaddr) { return x86_mmu_check_vaddr(vaddr); }
 
 bool X86PageTableMmu::supports_page_size(PageTableLevel level) {
   DEBUG_ASSERT(level != PT_L);
@@ -273,9 +268,7 @@ bool X86PageTableMmu::supports_page_size(PageTableLevel level) {
   }
 }
 
-IntermediatePtFlags X86PageTableMmu::intermediate_flags() {
-  return X86_MMU_PG_RW | X86_MMU_PG_U;
-}
+IntermediatePtFlags X86PageTableMmu::intermediate_flags() { return X86_MMU_PG_RW | X86_MMU_PG_U; }
 
 PtFlags X86PageTableMmu::terminal_flags(PageTableLevel level, uint flags) {
   PtFlags terminal_flags = 0;
@@ -402,13 +395,9 @@ bool X86PageTableEpt::allowed_flags(uint flags) {
   return true;
 }
 
-bool X86PageTableEpt::check_paddr(paddr_t paddr) {
-  return x86_mmu_check_paddr(paddr);
-}
+bool X86PageTableEpt::check_paddr(paddr_t paddr) { return x86_mmu_check_paddr(paddr); }
 
-bool X86PageTableEpt::check_vaddr(vaddr_t vaddr) {
-  return x86_mmu_check_vaddr(vaddr);
-}
+bool X86PageTableEpt::check_vaddr(vaddr_t vaddr) { return x86_mmu_check_vaddr(vaddr); }
 
 bool X86PageTableEpt::supports_page_size(PageTableLevel level) {
   DEBUG_ASSERT(level != PT_L);
@@ -424,9 +413,7 @@ bool X86PageTableEpt::supports_page_size(PageTableLevel level) {
   }
 }
 
-PtFlags X86PageTableEpt::intermediate_flags() {
-  return X86_EPT_R | X86_EPT_W | X86_EPT_X;
-}
+PtFlags X86PageTableEpt::intermediate_flags() { return X86_EPT_R | X86_EPT_W | X86_EPT_X; }
 
 PtFlags X86PageTableEpt::terminal_flags(PageTableLevel level, uint flags) {
   PtFlags terminal_flags = 0;
@@ -500,9 +487,7 @@ uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level)
   return mmu_flags;
 }
 
-static void disable_global_pages() {
-  x86_set_cr4(x86_get_cr4() & ~X86_CR4_PGE);
-}
+static void disable_global_pages() { x86_set_cr4(x86_get_cr4() & ~X86_CR4_PGE); }
 
 void x86_mmu_early_init() {
   x86_mmu_percpu_init();
@@ -536,8 +521,7 @@ void x86_mmu_init(void) {
   extern bool g_has_meltdown;
   auto pti_enable = gCmdline.GetUInt32("kernel.x86.pti.enable", /*default_value=*/2);
   g_enable_isolation = (x86_get_disable_spec_mitigations() == false) &&
-                       ((pti_enable == 1) ||
-                       ((pti_enable == 2) && g_has_meltdown));
+                       ((pti_enable == 1) || ((pti_enable == 2) && g_has_meltdown));
   printf("Kernel PTI %s\n", g_enable_isolation ? "enabled" : "disabled");
 
   // TODO(crbug.com/fuchsia/31415): Currently KPTI disables Global pages; we might be able to do
@@ -546,7 +530,7 @@ void x86_mmu_init(void) {
   //
   // All other CPUs will do this in x86_mmu_percpu_init
   if (g_enable_isolation) {
-      disable_global_pages();
+    disable_global_pages();
   }
 }
 
@@ -558,7 +542,8 @@ X86PageTableBase::~X86PageTableBase() {
 
 // We disable analysis due to the write to |pages_| tripping it up.  It is safe
 // to write to |pages_| since this is part of object construction.
-zx_status_t X86PageTableBase::Init(void* ctx, page_alloc_fn_t test_paf) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t X86PageTableBase::Init(void* ctx,
+                                   page_alloc_fn_t test_paf) TA_NO_THREAD_SAFETY_ANALYSIS {
   test_page_alloc_func_ = test_paf;
 
   /* allocate a top level page table for the new address space */
@@ -672,7 +657,7 @@ zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
 }
 
 zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
-                                                uint mmu_flags, size_t* mapped) {
+                                           uint mmu_flags, size_t* mapped) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
@@ -680,7 +665,7 @@ zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
 }
 
 zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
-                                      size_t* mapped) {
+                                 size_t* mapped) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
@@ -730,6 +715,14 @@ zx_status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flag
   return pt_->QueryVaddr(vaddr, paddr, mmu_flags);
 }
 
+zx_status_t X86ArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
+                                             const HarvestCallback& accessed_callback) {
+  if (!IsValidVaddr(vaddr)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return pt_->HarvestAccessed(vaddr, count, accessed_callback);
+}
+
 void x86_mmu_percpu_init(void) {
   ulong cr0 = x86_get_cr0();
   /* Set write protect bit in CR0*/
@@ -766,8 +759,8 @@ X86ArchVmAspace::~X86ArchVmAspace() {
 }
 
 vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
-                                       uint next_region_mmu_flags, vaddr_t align, size_t size,
-                                       uint mmu_flags) {
+                                  uint next_region_mmu_flags, vaddr_t align, size_t size,
+                                  uint mmu_flags) {
   canary_.Assert();
   return PAGE_ALIGN(base);
 }

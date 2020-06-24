@@ -238,6 +238,42 @@ VmObjectPaged::~VmObjectPaged() {
   pmm_free(&list);
 }
 
+void VmObjectPaged::HarvestAccessedBits() {
+  Guard<Mutex> guard{lock()};
+  // If there is no root page source, then we have nothing worth harvesting bits from.
+  if (GetRootPageSourceLocked() == nullptr) {
+    return;
+  }
+
+  fbl::Function<bool(vm_page_t*, uint64_t)> f = [this](vm_page_t* p, uint64_t offset) {
+    AssertHeld(*lock());
+    // Skip the zero page as we are never going to evict it and initial zero pages will not be
+    // returned by GetPageLocked down below.
+    if (p == vm_get_zero_page()) {
+      return false;
+    }
+    // Use GetPageLocked to perform page lookup. Pass neither software fault, hardware fault or
+    // write to prevent any committing or copy-on-write behavior. This will just cause the page to
+    // be looked up, and its location in any pager_backed queues updated.
+    __UNUSED vm_page_t* out;
+    __UNUSED zx_status_t result = GetPageLocked(offset, 0, nullptr, nullptr, &out, nullptr);
+    // We are in this callback because there is a physical page mapped into the hardware page table
+    // attributed to this vmo. If we cannot find it, or it isn't the page we expect, then something
+    // has gone horribly wrong.
+    DEBUG_ASSERT(result == ZX_OK);
+    DEBUG_ASSERT(out = p);
+    return true;
+  };
+  for (auto& m : mapping_list_) {
+    if (m.aspace()->is_user()) {
+      AssertHeld(*m.object_lock());
+      __UNUSED zx_status_t result = m.HarvestAccessVmoRangeLocked(0, size(), f);
+      // There's no way we should be harvesting an invalid range as that would imply that this
+      // mapping is invalid.
+      DEBUG_ASSERT(result == ZX_OK);
+    }
+  }
+}
 bool VmObjectPaged::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   Guard<Mutex> guard{&lock_};
 

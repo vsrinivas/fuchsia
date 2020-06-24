@@ -501,6 +501,13 @@ class VmMapping final : public VmAddressRegionOrMapping,
   zx_status_t RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const
       TA_REQ(object_->lock());
 
+  // Harvests accessed bits for any pages in the passed in vmo range and calls the provided callback
+  // for any pages with a bit to harvest.
+  zx_status_t HarvestAccessVmoRangeLocked(
+      uint64_t offset, uint64_t len,
+      const fbl::Function<bool(vm_page*, uint64_t vmo_offset)>& accessed_callback) const
+      TA_REQ(object_->lock());
+
  protected:
   ~VmMapping() override;
   friend fbl::RefPtr<VmMapping>;

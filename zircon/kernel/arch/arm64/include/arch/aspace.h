@@ -43,6 +43,11 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
                    uint next_region_mmu_flags, vaddr_t align, size_t size, uint mmu_flags) override;
 
+  zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) override;
+
+  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
+                              const HarvestCallback& accessed_callback) override;
+
   paddr_t arch_table_phys() const override { return tt_phys_; }
   uint16_t arch_asid() const { return asid_; }
   void arch_set_asid(uint16_t asid) { asid_ = asid; }
@@ -71,6 +76,13 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
                                uint index_shift, uint page_size_shift, volatile pte_t* page_table)
       TA_REQ(lock_);
 
+  bool HarvestAccessedPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in,
+                                uint index_shift, uint page_size_shift, volatile pte_t* page_table,
+                                const HarvestCallback& accessed_callback) TA_REQ(lock_);
+
+  void MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size, uint index_shift,
+                             uint page_size_shift, volatile pte_t* page_table) TA_REQ(lock_);
+
   // Splits a descriptor block into a set of next-level-down page blocks/pages.
   //
   // |vaddr| is the virtual address of the start of the block being split. |index_shift| is
@@ -95,6 +107,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) TA_REQ(lock_);
 
   void FlushTLBEntry(vaddr_t vaddr, bool terminal) TA_REQ(lock_);
+
+  uint MmuFlagsFromPte(pte_t pte);
 
   // data fields
   fbl::Canary<fbl::magic("VAAS")> canary_;

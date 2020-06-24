@@ -92,6 +92,10 @@ class X86PageTableBase {
 
   zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags);
 
+  using HarvestCallback = ArchVmAspaceInterface::HarvestCallback;
+  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
+                              const HarvestCallback& accessed_callback);
+
  protected:
   using page_alloc_fn_t = ArchVmAspaceInterface::page_alloc_fn_t;
 
@@ -166,6 +170,13 @@ class X86PageTableBase {
   zx_status_t UpdateMappingL0(volatile pt_entry_t* table, uint mmu_flags,
                               const MappingCursor& start_cursor, MappingCursor* new_cursor,
                               ConsistencyManager* cm) TA_REQ(lock_);
+  zx_status_t HarvestMapping(volatile pt_entry_t* table, PageTableLevel level,
+                             const MappingCursor& start_cursor, MappingCursor* new_cursor,
+                             ConsistencyManager* cm, const HarvestCallback& accessed_callback)
+      TA_REQ(lock_);
+  zx_status_t HarvestMappingL0(volatile pt_entry_t* table, const MappingCursor& start_cursor,
+                               MappingCursor* new_cursor, ConsistencyManager* cm,
+                               const HarvestCallback& accessed_callback) TA_REQ(lock_);
 
   zx_status_t GetMapping(volatile pt_entry_t* table, vaddr_t vaddr, PageTableLevel level,
                          PageTableLevel* ret_level, volatile pt_entry_t** mapping) TA_REQ(lock_);
@@ -177,8 +188,8 @@ class X86PageTableBase {
                              ConsistencyManager* cm) TA_REQ(lock_);
 
   void UpdateEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
-                   volatile pt_entry_t* pte, paddr_t paddr, PtFlags flags, bool was_terminal)
-      TA_REQ(lock_);
+                   volatile pt_entry_t* pte, paddr_t paddr, PtFlags flags, bool was_terminal,
+                   bool exact_flags = false) TA_REQ(lock_);
   void UnmapEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
                   volatile pt_entry_t* pte, bool was_terminal) TA_REQ(lock_);
 
