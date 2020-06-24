@@ -124,13 +124,18 @@ The file may contain (non-standard JSON) C-style comments
     - `args`: A list of arguments to be passed to the component specified by
       `uri`. Arguments must be prefixed with --.
 - `agent_service_index`: **array** _(optional)_
-  - A list of key/value pairs to construct a map from service name to the
-    serving agent's URL. Service names must be unique, so only one agent can
-    provide a given named service.
-    - `service_name`: The name of a service offered by a session agent.
-    - `agent_url`: A fuchsia component url that specifies which agent will
+  - A list of key/value pairs mapping from service name to the serving component's
+    URL. Agents and the session shell are both valid components to specify
+    here.  Service names must be unique: only one component can provide any
+    given service. These services are provided to modules, the session shell,
+    and agents, in their incoming namespace (i.e. at the path
+    "/svc/fully.qualified.ServiceName").
+    - `service_name`: The name of a service offered by `agent_url`.
+    - `agent_url`: A fuchsia component url that specifies which agent/shell will
       provide the named service.
 - `restart_session_on_agent_crash`: array (optional)
   - A list of agent URLs that will cause the session to be restarted
     when they terminate unexpectedly. If an agent is not in this list,
     sessionmgr will restart it individually, preserving the session.
+
+    The session shell is automatically added to this list.
