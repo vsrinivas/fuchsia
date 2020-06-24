@@ -420,33 +420,9 @@ Available benchmarks:
 | lib/fidl Benchmarks | `fx shell /bin/lib_fidl_microbenchmarks` | |
 | Roundtrip Benchmarks | `fx shell /bin/roundtrip_fidl_benchmarks` | |
 
-#### Running with fuchsia_benchmarks
+#### Running all benchmarks with SL4F benchmark runner
 
-Ensure that the benchmarks are included in your build:
-
-```
-fx set core.x64 --with //src/tests/benchmarks
-```
-
-You will need to `fx build` and restart `qemu` for the packages to be
-available.
-
-First, a directory needs to be created for the test results:
-
-```
-fx shell mkdir /tmp/results
-```
-
-Then you can run the benchmarks:
-
-```
-fx shell /bin/fuchsia_benchmarks /tmp/results
-```
-
-In addition to FIDL benchmarks, many other fuchsia benchmarks will run.
-
-#### Running with SL4F (new runner)
-
+This runs benchmarks the same way they are run on CQ.
 SL4F requires the `terminal.x64` product. Use `fx set` to switch products:
 
 ```
@@ -456,7 +432,7 @@ fx set terminal.x64
 To run all FIDL tests, use:
 
 ```
-fx run-e2e-tests fidl_microbenchmarks_test
+fx test --e2e fidl_microbenchmarks_test
 ```
 
 ### All Regen Commands
