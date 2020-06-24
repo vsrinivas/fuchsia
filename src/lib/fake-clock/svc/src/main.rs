@@ -514,7 +514,7 @@ mod tests {
 
         // after free running has ended, timer must not be updating anymore:
         let bef = clock_handle.lock().unwrap().time;
-        fasync::Timer::new(zx::Time::after(30.millis()).into()).await;
+        fasync::Timer::new(zx::Time::after(30.millis())).await;
         assert_eq!(clock_handle.lock().unwrap().time, bef);
     }
 

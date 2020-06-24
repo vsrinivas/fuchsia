@@ -223,12 +223,12 @@ mod fuchsia_runtime {
     impl Timer {
         /// Create a new timer that expires at `t`
         pub fn at(t: Instant) -> Timer {
-            Timer::after(t.saturating_duration_since(Instant::now()))
+            Timer(fuchsia_async::Timer::new(t))
         }
 
         /// Create a new timer that expires after `t`
         pub fn after(t: Duration) -> Timer {
-            Timer(fuchsia_async::Timer::new(fuchsia_zircon::Time::after(t.into()).into()))
+            Timer(fuchsia_async::Timer::new(fuchsia_async::Time::after(t.into())))
         }
     }
 

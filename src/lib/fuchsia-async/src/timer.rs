@@ -28,12 +28,41 @@ use {
     },
 };
 
+/// The time when a Timer should wakeup.
+pub trait WakeupTime {
+    /// Convert this time into a fuchsia_async::Time.
+    /// This is allowed to be innacurate, but the innacuracy must make the wakeup time later,
+    /// never earlier.
+    fn into_time(self) -> Time;
+}
+
+impl WakeupTime for Time {
+    fn into_time(self) -> Time {
+        self
+    }
+}
+
+impl WakeupTime for zx::Time {
+    fn into_time(self) -> Time {
+        self.into()
+    }
+}
+
+impl WakeupTime for std::time::Instant {
+    fn into_time(self) -> Time {
+        let now_as_instant = std::time::Instant::now();
+        let now_as_time = Time::now();
+        now_as_time + self.saturating_duration_since(now_as_instant).into()
+    }
+}
+
 /// A trait which allows futures to be easily wrapped in a timeout.
 pub trait TimeoutExt: Future + Sized {
     /// Wraps the future in a timeout, calling `on_timeout` to produce a result
     /// when the timeout occurs.
-    fn on_timeout<OT>(self, time: Time, on_timeout: OT) -> OnTimeout<Self, OT>
+    fn on_timeout<WT, OT>(self, time: WT, on_timeout: OT) -> OnTimeout<Self, OT>
     where
+        WT: WakeupTime,
         OT: FnOnce() -> Self::Output,
     {
         OnTimeout { timer: Timer::new(time), future: self, on_timeout: Some(on_timeout) }
@@ -94,9 +123,12 @@ impl Unpin for Timer {}
 
 impl Timer {
     /// Create a new timer scheduled to fire at `time`.
-    pub fn new(time: Time) -> Self {
+    pub fn new<WT>(time: WT) -> Self
+    where
+        WT: WakeupTime,
+    {
         let waker_and_bool = Arc::new((AtomicWaker::new(), AtomicBool::new(false)));
-        EHandle::local().register_timer(time, &waker_and_bool);
+        EHandle::local().register_timer(time.into_time(), &waker_and_bool);
         Timer { waker_and_bool }
     }
 
@@ -202,6 +234,19 @@ mod test {
         let shorter = Timer::new(Time::after(100.millis()));
         let longer = Timer::new(Time::after(1.second()));
         match exec.run(shorter.select(longer), 4) {
+            Either::Left(()) => {}
+            Either::Right(()) => panic!("wrong timer fired"),
+        }
+    }
+
+    #[test]
+    fn shorter_fires_first_instant() {
+        use std::time::{Duration, Instant};
+        let mut exec = Executor::new().unwrap();
+        let now = Instant::now();
+        let shorter = Timer::new(now + Duration::from_millis(100));
+        let longer = Timer::new(now + Duration::from_secs(1));
+        match exec.run_singlethreaded(shorter.select(longer)) {
             Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
         }

@@ -18,7 +18,7 @@ pub use self::rwhandle::RWHandle;
 mod socket;
 pub use self::socket::Socket;
 mod timer;
-pub use self::timer::{Interval, OnTimeout, TimeoutExt, Timer};
+pub use self::timer::{Interval, OnTimeout, TimeoutExt, Timer, WakeupTime};
 mod executor;
 pub use self::executor::{
     spawn, spawn_local, DurationExt, EHandle, Executor, PacketReceiver, ReceiverRegistration, Time,

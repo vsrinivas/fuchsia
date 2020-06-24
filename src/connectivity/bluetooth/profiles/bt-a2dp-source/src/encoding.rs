@@ -230,7 +230,7 @@ impl futures::Stream for SilenceStream {
         let last_time = self.last_frame_time.as_ref().unwrap().clone();
         let repeats = (now - last_time).into_seconds();
         if repeats == 0 {
-            self.next_frame_timer = fasync::Timer::new((last_time + 1.second()).into());
+            self.next_frame_timer = fasync::Timer::new(last_time + 1.second());
             let poll = self.next_frame_timer.poll_unpin(cx);
             assert_eq!(Poll::Pending, poll);
             return Poll::Pending;
