@@ -4,6 +4,8 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPP_REGS_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPP_REGS_H_
+#include <hwreg/bitfields.h>
+#include <hwreg/mmio.h>
 
 // VPP register is part of VPU register space
 #define DOLBY_PATH_CTRL (0x1a0c << 2)
@@ -112,5 +114,42 @@
 #define VPP_POST_FG_OSD2 (1 << 4)
 
 #define VPP_DUMMY_DATA (0x1d00 << 2)
+
+// Gamma Registers
+#define VPP_GAMMA_CNTL_PORT (0x1400 << 2)
+#define VPP_GAMMA_DATA_PORT (0x1401 << 2)
+#define VPP_GAMMA_ADDR_PORT (0x1402 << 2)
+
+namespace amlogic_display {
+
+class VppGammaCntlPortReg : public hwreg::RegisterBase<VppGammaCntlPortReg, uint32_t> {
+ public:
+  DEF_BIT(7, vcom_pol);
+  DEF_BIT(6, rvs_out);
+  DEF_BIT(5, adr_rdy);
+  DEF_BIT(4, wr_rdy);
+  DEF_BIT(3, rd_rdy);
+  DEF_BIT(2, tr);
+  DEF_BIT(1, set);
+  DEF_BIT(0, en);
+  static auto Get() { return hwreg::RegisterAddr<VppGammaCntlPortReg>(VPP_GAMMA_CNTL_PORT); }
+};
+class VppGammaDataPortReg : public hwreg::RegisterBase<VppGammaDataPortReg, uint32_t> {
+ public:
+  DEF_FIELD(31, 0, data);
+  static auto Get() { return hwreg::RegisterAddr<VppGammaDataPortReg>(VPP_GAMMA_DATA_PORT); }
+};
+class VppGammaAddrPortReg : public hwreg::RegisterBase<VppGammaAddrPortReg, uint32_t> {
+ public:
+  DEF_BIT(12, rd);
+  DEF_BIT(11, auto_inc);
+  DEF_BIT(10, sel_r);
+  DEF_BIT(9, sel_g);
+  DEF_BIT(8, sel_b);
+  DEF_FIELD(7, 0, adr);
+  static auto Get() { return hwreg::RegisterAddr<VppGammaAddrPortReg>(VPP_GAMMA_ADDR_PORT); }
+};
+
+}  // namespace amlogic_display
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPP_REGS_H_

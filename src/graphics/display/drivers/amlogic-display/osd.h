@@ -11,6 +11,7 @@
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <optional>
 
@@ -41,7 +42,14 @@ enum {
   IDX_MATRIX_PRE_OFFSET0_1,
   IDX_MATRIX_PRE_OFFSET2,
   IDX_MATRIX_EN_CTRL,
+  IDX_GAMMA_EN,
   IDX_MAX,
+};
+
+enum class GammaChannel {
+  kRed,
+  kGreen,
+  kBlue,
 };
 
 struct RdmaChannelContainer {
@@ -80,6 +88,7 @@ class Osd {
   // This function converts a float into Signed fixed point 2.10 format
   // [11][10][9:0] = [sign][integer][fraction]
   static uint32_t FloatToFixed2_10(float f);
+  static constexpr size_t kGammaTableSize = 256;
 
  private:
   void DefaultSetup();
@@ -93,6 +102,11 @@ class Osd {
   void FlushRdmaTable(uint32_t channel);
   int GetNextAvailableRdmaChannel();
   int RdmaThread();
+  void EnableGamma();
+  void DisableGamma();
+  zx_status_t SetGamma(GammaChannel channel, const float* data);
+  zx_status_t WaitForGammaAddressReady();
+  zx_status_t WaitForGammaWriteReady();
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   pdev_protocol_t pdev_ = {nullptr, nullptr};
   zx::bti bti_;

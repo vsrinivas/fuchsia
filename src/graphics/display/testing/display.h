@@ -5,10 +5,11 @@
 #ifndef SRC_GRAPHICS_DISPLAY_TESTING_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_TESTING_DISPLAY_H_
 
-#include <cmath>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/pixelformat.h>
+
+#include <cmath>
 
 #include <fbl/string.h>
 #include <fbl/vector.h>

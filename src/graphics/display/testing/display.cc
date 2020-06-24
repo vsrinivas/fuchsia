@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
+#include <array>
+
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 
 namespace testing {

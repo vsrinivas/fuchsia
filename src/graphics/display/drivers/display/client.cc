@@ -1004,7 +1004,7 @@ bool Client::CheckConfig(fhd::ConfigResult* res, std::vector<fhd::ClientComposit
   }
   *res = fhd::ConfigResult::UNSUPPORTED_CONFIG;
 
-  constexpr uint32_t kAllErrors = (CLIENT_ALPHA << 1) - 1;
+  constexpr uint32_t kAllErrors = (CLIENT_GAMMA << 1) - 1;
 
   layer_idx = 0;
   for (auto& display_config : configs_) {
@@ -1777,7 +1777,7 @@ constexpr auto banjo_CLIENT_SRC_FRAME = CLIENT_SRC_FRAME;
 constexpr auto banjo_CLIENT_TRANSFORM = CLIENT_TRANSFORM;
 constexpr auto banjo_CLIENT_COLOR_CONVERSION = CLIENT_COLOR_CONVERSION;
 constexpr auto banjo_CLIENT_ALPHA = CLIENT_ALPHA;
-
+constexpr auto banjo_CLIENT_GAMMA = CLIENT_GAMMA;
 #undef CLIENT_USE_PRIMARY
 #undef CLIENT_MERGE_BASE
 #undef CLIENT_MERGE_SRC
@@ -1786,6 +1786,7 @@ constexpr auto banjo_CLIENT_ALPHA = CLIENT_ALPHA;
 #undef CLIENT_TRANSFORM
 #undef CLIENT_COLOR_CONVERSION
 #undef CLIENT_ALPHA
+#undef CLIENT_GAMMA
 
 static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_USE_PRIMARY)) ==
                   banjo_CLIENT_USE_PRIMARY,
@@ -1810,6 +1811,9 @@ static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_COLOR_
               "Const mismatch");
 static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_ALPHA)) ==
                   banjo_CLIENT_ALPHA,
+              "Const mismatch");
+static_assert((1 << static_cast<int>(fhd::ClientCompositionOpcode::CLIENT_GAMMA)) ==
+                  banjo_CLIENT_GAMMA,
               "Const mismatch");
 
 }  // namespace

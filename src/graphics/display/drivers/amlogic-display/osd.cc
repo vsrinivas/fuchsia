@@ -7,17 +7,23 @@
 #include <float.h>
 #include <math.h>
 #include <stdint.h>
+#include <zircon/errors.h>
 #include <zircon/pixelformat.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include <ddk/debug.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 
+#include "lib/zx/time.h"
 #include "rdma-regs.h"
 #include "src/graphics/display/drivers/amlogic-display/common.h"
+#include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
 #include "vpp-regs.h"
 #include "vpu-regs.h"
 
@@ -186,6 +192,20 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   }
 
   DISP_SPEW("Channel used is %d\n", rdma_channel);
+
+  if (config->gamma_table_present) {
+    if (config->apply_gamma_table) {
+      // Gamma Table needs to be programmed manually. Cannot use RDMA
+      SetGamma(GammaChannel::kRed, config->gamma_red_list);
+      SetGamma(GammaChannel::kGreen, config->gamma_green_list);
+      SetGamma(GammaChannel::kBlue, config->gamma_blue_list);
+    }
+    // Enable Gamma at vsync using RDMA
+    SetRdmaTableValue(rdma_channel, IDX_GAMMA_EN, 1);
+  } else {
+    // Disable Gamma at vsync using RDMA
+    SetRdmaTableValue(rdma_channel, IDX_GAMMA_EN, 0);
+  }
 
   // Update CFG_W0 with correct Canvas Index
   uint32_t cfg_w0 = (idx << VpuViuOsd1BlkCfgTblAddrShift) | VpuViuOsd1BlkCfgLittleEndian |
@@ -475,6 +495,7 @@ void Osd::ResetRdmaTable() {
     rdma_table[IDX_MATRIX_OFFSET2].reg = (VPU_VPP_POST_MATRIX_OFFSET2 >> 2);
     rdma_table[IDX_MATRIX_PRE_OFFSET0_1].reg = (VPU_VPP_POST_MATRIX_PRE_OFFSET0_1 >> 2);
     rdma_table[IDX_MATRIX_PRE_OFFSET2].reg = (VPU_VPP_POST_MATRIX_PRE_OFFSET2 >> 2);
+    rdma_table[IDX_GAMMA_EN].reg = (VPP_GAMMA_CNTL_PORT >> 2);
   }
 }
 
@@ -557,6 +578,94 @@ zx_status_t Osd::SetupRdma() {
   ResetRdmaTable();
 
   return status;
+}
+
+void Osd::EnableGamma() {
+  VppGammaCntlPortReg::Get().ReadFrom(&(*vpu_mmio_)).set_en(1).WriteTo(&(*vpu_mmio_));
+}
+void Osd::DisableGamma() {
+  VppGammaCntlPortReg::Get().ReadFrom(&(*vpu_mmio_)).set_en(0).WriteTo(&(*vpu_mmio_));
+}
+
+zx_status_t Osd::WaitForGammaAddressReady() {
+  // The following delay and retry count is from hardware vendor
+  constexpr int32_t kGammaRetry = 100;
+  constexpr zx::duration kGammaDelay = zx::usec(10);
+  auto retry = kGammaRetry;
+  while (!(VppGammaCntlPortReg::Get().ReadFrom(&(*vpu_mmio_)).adr_rdy()) && retry--) {
+    zx::nanosleep(zx::deadline_after(kGammaDelay));
+  }
+  if (retry <= 0) {
+    return ZX_ERR_TIMED_OUT;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Osd::WaitForGammaWriteReady() {
+  // The following delay and retry count is from hardware vendor
+  constexpr int32_t kGammaRetry = 100;
+  constexpr zx::duration kGammaDelay = zx::usec(10);
+  auto retry = kGammaRetry;
+  while (!(VppGammaCntlPortReg::Get().ReadFrom(&(*vpu_mmio_)).wr_rdy()) && retry--) {
+    zx::nanosleep(zx::deadline_after(kGammaDelay));
+  }
+  if (retry <= 0) {
+    return ZX_ERR_TIMED_OUT;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Osd::SetGamma(GammaChannel channel, const float* data) {
+  // Make sure Video Encoder is enabled
+  // WRITE32_REG(VPU, ENCL_VIDEO_EN, 0);
+  if (!(vpu_mmio_->Read32(ENCL_VIDEO_EN) & 0x1)) {
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  // Wait for ADDR port to be ready
+  zx_status_t status;
+  if ((status = WaitForGammaAddressReady()) != ZX_OK) {
+    return status;
+  }
+
+  // Select channel and enable auto-increment.
+  // auto-increment: increments the gamma table address as we write into the
+  // data register
+  auto gamma_addrport_reg = VppGammaAddrPortReg::Get().FromValue(0);
+  gamma_addrport_reg.set_auto_inc(1);
+  gamma_addrport_reg.set_adr(0);
+  switch (channel) {
+    case GammaChannel::kRed:
+      gamma_addrport_reg.set_sel_r(1);
+      break;
+    case GammaChannel::kGreen:
+      gamma_addrport_reg.set_sel_g(1);
+      break;
+    case GammaChannel::kBlue:
+      gamma_addrport_reg.set_sel_b(1);
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+  gamma_addrport_reg.WriteTo(&(*vpu_mmio_));
+
+  // Write Gamma Table
+  for (size_t i = 0; i < kGammaTableSize; i++) {
+    // Only write if ready. The delay seems very excessive but this comes from vendor.
+    status = WaitForGammaWriteReady();
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto val = std::clamp(static_cast<uint16_t>(std::round(data[i] * 1023.0)),
+                          static_cast<uint16_t>(0), static_cast<uint16_t>(1023));
+    VppGammaDataPortReg::Get().FromValue(0).set_reg_value(val).WriteTo(&(*vpu_mmio_));
+  }
+
+  // Wait for ADDR port to be ready
+  if ((status = WaitForGammaAddressReady()) != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
 }
 
 void Osd::HwInit() {
