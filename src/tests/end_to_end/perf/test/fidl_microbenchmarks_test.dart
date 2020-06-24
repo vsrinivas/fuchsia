@@ -36,8 +36,6 @@ void main(List<String> args) {
   runFidlBenchmark('hlcpp_fidl_microbenchmarks');
   runFidlBenchmark('lib_fidl_microbenchmarks');
   runFidlBenchmark('llcpp_fidl_microbenchmarks');
-  runFidlBenchmark('roundtrip_fidl_benchmarks',
-      tmpPerfResultsJson('roundtrip_fidl_benchmarks'));
   runFidlBenchmark('rust_fidl_microbenchmarks',
       tmpPerfResultsJson('rust_fidl_microbenchmarks'));
   runFidlBenchmark('walker_fidl_microbenchmarks');

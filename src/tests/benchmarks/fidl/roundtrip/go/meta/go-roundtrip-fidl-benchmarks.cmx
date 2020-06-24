@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "bin/go-roundtrip-fidl-benchmarks"
-    },
-    "sandbox": {
-        "services": []
-    }
-}

@@ -119,9 +119,6 @@ group("package_deps") {
     "//src/ui/examples:yuv_to_image_pipe",
     "//src/ui/tools:present_view",
 
-    # These are used by the FIDL round trip benchmarks
-    "//src/tests/benchmarks/fidl/roundtrip",
-
     # These are used by the test runner in src/tests/benchmarks/,
     # used by the peridot-perf and fuchsia-perfcompare builders.
     "//garnet/bin/catapult_converter",
