@@ -1,0 +1,64 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("info") {
+  sources = [
+    "crash_register_info.cc",
+    "crash_register_info.h",
+    "crash_reporter_info.cc",
+    "crash_reporter_info.h",
+    "database_info.cc",
+    "database_info.h",
+    "info_context.h",
+    "main_service_info.cc",
+    "main_service_info.h",
+    "queue_info.cc",
+    "queue_info.h",
+  ]
+
+  public_deps = [
+    ":inspect_manager",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/forensics/crash_reports:config",
+    "//src/developer/forensics/crash_reports:product",
+    "//src/developer/forensics/crash_reports:settings",
+    "//src/developer/forensics/utils:inspect_protocol_stats",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/timekeeper",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("inspect_manager") {
+  public = [ "inspect_manager.h" ]
+
+  sources = [
+    "inspect_manager.cc",
+    "inspect_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/forensics/crash_reports:config",
+    "//src/developer/forensics/crash_reports:errors",
+    "//src/developer/forensics/crash_reports:product",
+    "//src/developer/forensics/crash_reports:settings",
+    "//src/developer/forensics/utils:inspect_node_manager",
+    "//src/lib/fxl",
+    "//src/lib/timekeeper",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/crash_reports:constants",
+    "//src/developer/forensics/utils:inspect_protocol_stats",
+    "//src/developer/forensics/utils:time",
+    "//src/lib/files:files",
+  ]
+}

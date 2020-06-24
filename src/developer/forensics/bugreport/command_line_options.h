@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_BUGREPORT_COMMAND_LINE_OPTIONS_H_
-#define SRC_DEVELOPER_FEEDBACK_BUGREPORT_COMMAND_LINE_OPTIONS_H_
+#ifndef SRC_DEVELOPER_FORENSICS_BUGREPORT_COMMAND_LINE_OPTIONS_H_
+#define SRC_DEVELOPER_FORENSICS_BUGREPORT_COMMAND_LINE_OPTIONS_H_
 
 namespace forensics {
 namespace bugreport {
@@ -19,4 +19,4 @@ Mode ParseModeFromArgcArgv(int argc, const char* const* argv);
 }  // namespace bugreport
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FEEDBACK_BUGREPORT_COMMAND_LINE_OPTIONS_H_
+#endif  // SRC_DEVELOPER_FORENSICS_BUGREPORT_COMMAND_LINE_OPTIONS_H_

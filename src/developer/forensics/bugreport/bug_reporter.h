@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_BUGREPORT_BUG_REPORTER_H_
-#define SRC_DEVELOPER_FEEDBACK_BUGREPORT_BUG_REPORTER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_BUGREPORT_BUG_REPORTER_H_
+#define SRC_DEVELOPER_FORENSICS_BUGREPORT_BUG_REPORTER_H_
 
 #include <lib/sys/cpp/service_directory.h>
 
@@ -22,4 +22,4 @@ bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services,
 }  // namespace bugreport
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FEEDBACK_BUGREPORT_BUG_REPORTER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_BUGREPORT_BUG_REPORTER_H_

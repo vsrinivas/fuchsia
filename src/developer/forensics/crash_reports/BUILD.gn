@@ -1,0 +1,354 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//src/sys/build/components.gni")
+
+###############################################################################
+# PACKAGES
+###############################################################################
+# We use a template to keep the real and fake packages in sync.
+template("crash_reports_package") {
+  fuchsia_package(target_name) {
+    deps = [ ":crash_reports" ]
+  }
+
+  # Suppress unused variable warnings as the invoker is expected to be empty.
+  not_needed(invoker, "*")
+}
+
+# The real package.
+crash_reports_package("crash-reports") {
+}
+
+# A fake package for integration test purposes to make sure any config_data() for the real
+# package does not impact the component used in the integration test.
+crash_reports_package("fake-crash-reports") {
+}
+
+# A fake package for integration test purposes where we want a valid override config_data() that
+# only affects the fake package.
+crash_reports_package("fake-crash-reports-valid-override-config") {
+}
+
+# A fake package for integration test purposes where we want an invalid override config_data() that
+# only affects the fake package.
+crash_reports_package("fake-crash-reports-invalid-override-config") {
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("crash_reports") {
+  manifest = "meta/crash_reports.cmx"
+
+  deps = [
+    ":default_config",
+    ":main",
+  ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("main") {
+  output_name = "crash_reports"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":main_service",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/lib/timekeeper:system",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("main_service") {
+  sources = [
+    "main_service.cc",
+    "main_service.h",
+  ]
+
+  public_deps = [
+    ":config",
+    ":crash_register",
+    ":crash_reporter",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/lib/fxl",
+    "//src/lib/timekeeper",
+    "//zircon/public/lib/async",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("config") {
+  public = [ "config.h" ]
+
+  sources = [
+    "config.cc",
+    "config.h",
+  ]
+
+  deps = [
+    ":constants",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("constants") {
+  sources = [ "constants.h" ]
+
+  visibility = [ "//src/developer/forensics/crash_reports/*" ]
+}
+
+source_set("crash_register") {
+  sources = [
+    "crash_register.cc",
+    "crash_register.h",
+  ]
+
+  public_deps = [
+    ":product",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fit",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils/fidl:channel_provider_ptr",
+  ]
+}
+
+source_set("crash_reporter") {
+  sources = [
+    "crash_reporter.cc",
+    "crash_reporter.h",
+  ]
+
+  public_deps = [
+    ":crash_register",
+    ":crash_server",
+    ":privacy_settings_ptr",
+    ":product",
+    ":queue",
+    ":settings",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:utc_time_provider",
+    "//src/developer/forensics/utils/fidl:data_provider_ptr",
+    "//src/developer/forensics/utils/fidl:device_id_provider_ptr",
+    "//src/developer/forensics/utils/fit",
+    "//src/lib/timekeeper",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+  ]
+
+  deps = [
+    ":report_util",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils/cobalt",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("crash_server") {
+  sources = [
+    "crash_server.cc",
+    "crash_server.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/crashpad/util",
+  ]
+}
+
+source_set("database") {
+  public = [ "database.h" ]
+
+  sources = [
+    "database.cc",
+    "database.h",
+    "upload_report.cc",
+    "upload_report.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fxl",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/util",
+  ]
+
+  deps = [
+    ":constants",
+    ":report_util",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+  ]
+}
+
+source_set("errors") {
+  sources = [ "errors.h" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:errors",
+  ]
+}
+
+source_set("privacy_settings_ptr") {
+  sources = [
+    "privacy_settings_ptr.cc",
+    "privacy_settings_ptr.h",
+  ]
+
+  public_deps = [
+    ":settings",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("product") {
+  sources = [
+    "product.cc",
+    "product.h",
+  ]
+
+  public_deps = [ "//src/developer/forensics/utils:errors" ]
+}
+
+source_set("queue") {
+  sources = [
+    "queue.cc",
+    "queue.h",
+  ]
+
+  public_deps = [
+    ":crash_server",
+    ":database",
+    ":settings",
+    "//sdk/fidl/fuchsia.net",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//third_party/crashpad/util",
+    "//zircon/public/lib/async",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+source_set("report_util") {
+  sources = [
+    "report_util.cc",
+    "report_util.h",
+  ]
+
+  public_deps = [
+    ":product",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
+    "//src/developer/forensics/utils:errors",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/util",
+  ]
+
+  deps = [
+    ":errors",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("settings") {
+  public = [ "settings.h" ]
+
+  sources = [
+    "settings.cc",
+    "settings.h",
+  ]
+
+  public_deps = [
+    ":config",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+###############################################################################
+# RESOURCES
+###############################################################################
+resource("default_config") {
+  sources = [ "configs/default.json" ]
+
+  outputs = [ "data/default_config.json" ]
+}
+
+###############################################################################
+# CONFIGS
+###############################################################################
+config_data("production_config") {
+  for_pkg = "crash-reports"
+
+  sources = [ "configs/production.json" ]
+
+  outputs = [ "override_config.json" ]
+}
+
+config_data("upload_to_prod_server_config") {
+  for_pkg = "crash-reports"
+
+  sources = [ "configs/upload_to_prod_server.json" ]
+
+  outputs = [ "override_config.json" ]
+}

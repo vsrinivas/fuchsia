@@ -10,7 +10,6 @@ group("feedback") {
 
   public_deps = [
     ":tests",
-    "crash_reports:crash-reports",
     "crasher",
     "feedback_data:feedback_agent",
     "last_reboot:last-reboot",
@@ -21,16 +20,17 @@ group("tests") {
   testonly = true
 
   public_deps = [
-    "crash_reports/tests",
     "feedback_data/tests",
     "last_reboot/tests",
   ]
 }
 
+# TODO(54226): remove once dependents are updated.
 group("infra_configs") {
-  deps = [ "crash_reports:upload_to_prod_server_config" ]
+  deps = [ "//src/developer/forensics:infra_configs" ]
 }
 
+# TODO(54226): remove once dependents are updated.
 group("production_configs") {
-  deps = [ "crash_reports:production_config" ]
+  deps = [ "//src/developer/forensics:production_configs" ]
 }

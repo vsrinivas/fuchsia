@@ -8,6 +8,7 @@ group("forensics") {
   deps = [
     ":tests",
     "bugreport",
+    "crash_reports:crash-reports",
     "//src/developer/exception_broker",
     "//src/developer/feedback",
   ]
@@ -18,8 +19,17 @@ group("tests") {
 
   deps = [
     "bugreport/tests",
+    "crash_reports/tests",
     "utils/tests",
     "//src/developer/exception_broker/tests",
     "//src/developer/feedback:tests",
   ]
+}
+
+group("infra_configs") {
+  deps = [ "crash_reports:upload_to_prod_server_config" ]
+}
+
+group("production_configs") {
+  deps = [ "crash_reports:production_config" ]
 }
