@@ -469,6 +469,10 @@ if (is_fuchsia) {
     deps = [ ":rust_icu_utext-v0_2_3" ]
   }
 }
+group("rustc-demangle") {
+  deps = [ ":rustc-demangle-v0_1_16" ]
+}
+
 group("rustc-hash") {
   deps = [ ":rustc-hash-v1_0_1" ]
 }
@@ -1192,7 +1196,7 @@ rust_library("backtrace-v0_3_42") {
   deps += [ ":backtrace-sys-v0_1_32" ]
   deps += [ ":cfg-if-v0_1_10" ]
   deps += [ ":libc-v0_2_71" ]
-  deps += [ ":rustc-demangle-v0_1_13" ]
+  deps += [ ":rustc-demangle-v0_1_16" ]
 
   rustenv = []
 
@@ -6520,10 +6524,10 @@ rust_library("rust_icu_utext-v0_2_3") {
   ]
 }
 
-rust_library("rustc-demangle-v0_1_13") {
+rust_library("rustc-demangle-v0_1_16") {
   crate_name = "rustc_demangle"
   crate_root = "//third_party/rust_crates/vendor/rustc-demangle/src/lib.rs"
-  output_name = "rustc_demangle-15077281ef0a6d3f"
+  output_name = "rustc_demangle-79f810e86b22e50c"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6536,8 +6540,8 @@ rust_library("rustc-demangle-v0_1_13") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=15077281ef0a6d3f",
-    "-Cextra-filename=-15077281ef0a6d3f",
+    "-Cmetadata=79f810e86b22e50c",
+    "-Cextra-filename=-79f810e86b22e50c",
   ]
 }
 

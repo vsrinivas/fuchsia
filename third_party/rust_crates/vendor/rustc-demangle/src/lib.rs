@@ -30,24 +30,24 @@
 #[macro_use]
 extern crate std;
 
+mod legacy;
+mod v0;
+
 use core::fmt;
 
 /// Representation of a demangled symbol name.
 pub struct Demangle<'a> {
+    style: Option<DemangleStyle<'a>>,
     original: &'a str,
-    inner: &'a str,
     suffix: &'a str,
-    valid: bool,
-    /// The number of ::-separated elements in the original name.
-    elements: usize,
+}
+
+enum DemangleStyle<'a> {
+    Legacy(legacy::Demangle<'a>),
+    V0(v0::Demangle<'a>),
 }
 
 /// De-mangles a Rust symbol into a more readable version
-///
-/// All Rust symbols by default are mangled as they contain characters that
-/// cannot be represented in all object files. The mangling mechanism is similar
-/// to C++'s, but Rust has a few specifics to handle items like lifetimes in
-/// symbols.
 ///
 /// This function will take a **mangled** symbol and return a value. When printed,
 /// the de-mangled version will be written. If the symbol does not look like
@@ -62,24 +62,6 @@ pub struct Demangle<'a> {
 /// assert_eq!(demangle("_ZN3foo3barE").to_string(), "foo::bar");
 /// assert_eq!(demangle("foo").to_string(), "foo");
 /// ```
-
-// All Rust symbols are in theory lists of "::"-separated identifiers. Some
-// assemblers, however, can't handle these characters in symbol names. To get
-// around this, we use C++-style mangling. The mangling method is:
-//
-// 1. Prefix the symbol with "_ZN"
-// 2. For each element of the path, emit the length plus the element
-// 3. End the path with "E"
-//
-// For example, "_ZN4testE" => "test" and "_ZN3foo3barE" => "foo::bar".
-//
-// We're the ones printing our backtraces, so we can't rely on anything else to
-// demangle our symbols. It's *much* nicer to look at demangled symbols, so
-// this function is implemented to give us nice pretty output.
-//
-// Note that this demangler isn't quite as fancy as it could be. We have lots
-// of other information in our symbols like hashes, version, type information,
-// etc. Additionally, this doesn't handle glue symbols at all.
 pub fn demangle(mut s: &str) -> Demangle {
     // During ThinLTO LLVM may import and rename internal symbols, so strip out
     // those endings first as they're one of the last manglings applied to symbol
@@ -99,79 +81,37 @@ pub fn demangle(mut s: &str) -> Demangle {
         }
     }
 
+    let mut suffix = "";
+    let mut style = match legacy::demangle(s) {
+        Ok((d, s)) => {
+            suffix = s;
+            Some(DemangleStyle::Legacy(d))
+        }
+        Err(()) => match v0::demangle(s) {
+            Ok((d, s)) => {
+                suffix = s;
+                Some(DemangleStyle::V0(d))
+            }
+            Err(v0::Invalid) => None,
+        },
+    };
+
     // Output like LLVM IR adds extra period-delimited words. See if
     // we are in that case and save the trailing words if so.
-    let mut suffix = "";
-    if let Some(i) = s.rfind("E.") {
-        let (head, tail) = s.split_at(i + 1); // After the E, before the period
-
-        if is_symbol_like(tail) {
-            s = head;
-            suffix = tail;
-        }
-    }
-
-    // First validate the symbol. If it doesn't look like anything we're
-    // expecting, we just print it literally. Note that we must handle non-Rust
-    // symbols because we could have any function in the backtrace.
-    let mut valid = true;
-    let mut inner = s;
-    if s.len() > 4 && s.starts_with("_ZN") && s.ends_with('E') {
-        inner = &s[3..s.len() - 1];
-    } else if s.len() > 3 && s.starts_with("ZN") && s.ends_with('E') {
-        // On Windows, dbghelp strips leading underscores, so we accept "ZN...E"
-        // form too.
-        inner = &s[2..s.len() - 1];
-    } else if s.len() > 5 && s.starts_with("__ZN") && s.ends_with('E') {
-        // On OSX, symbols are prefixed with an extra _
-        inner = &s[4..s.len() - 1];
-    } else {
-        valid = false;
-    }
-
-    // only work with ascii text
-    if inner.bytes().any(|c| c & 0x80 != 0) {
-        valid = false;
-    }
-
-    let mut elements = 0;
-    if valid {
-        let mut chars = inner.chars().peekable();
-        while valid {
-            let mut i = 0usize;
-            while let Some(&c) = chars.peek() {
-                if !c.is_digit(10) {
-                    break
-                }
-                chars.next();
-                let next = i.checked_mul(10)
-                    .and_then(|i| i.checked_add(c as usize - '0' as usize));
-                i = match next {
-                    Some(i) => i,
-                    None => {
-                        valid = false;
-                        break
-                    }
-                };
-            }
-
-            if i == 0 {
-                valid = chars.next().is_none();
-                break;
-            } else if chars.by_ref().take(i).count() != i {
-                valid = false;
-            } else {
-                elements += 1;
-            }
+    if !suffix.is_empty() {
+        if suffix.starts_with(".") && is_symbol_like(suffix) {
+            // Keep the suffix.
+        } else {
+            // Reset the suffix and invalidate the demangling.
+            suffix = "";
+            style = None;
         }
     }
 
     Demangle {
-        inner: inner,
-        suffix: suffix,
-        valid: valid,
-        elements: elements,
+        style: style,
         original: s,
+        suffix: suffix,
     }
 }
 
@@ -197,7 +137,7 @@ pub struct TryDemangleError {
 /// ```
 pub fn try_demangle(s: &str) -> Result<Demangle, TryDemangleError> {
     let sym = demangle(s);
-    if sym.valid {
+    if sym.style.is_some() {
         Ok(sym)
     } else {
         Err(TryDemangleError { _priv: () })
@@ -209,11 +149,6 @@ impl<'a> Demangle<'a> {
     pub fn as_str(&self) -> &'a str {
         self.original
     }
-}
-
-// Rust hashes are hex digits with an `h` prepended.
-fn is_rust_hash(s: &str) -> bool {
-    s.starts_with('h') && s[1..].chars().all(|c| c.is_digit(16))
 }
 
 fn is_symbol_like(s: &str) -> bool {
@@ -247,95 +182,16 @@ fn is_ascii_punctuation(c: char) -> bool {
 
 impl<'a> fmt::Display for Demangle<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Alright, let's do this.
-        if !self.valid {
-            return f.write_str(self.original);
-        }
-
-        let mut inner = self.inner;
-        for element in 0..self.elements {
-            let mut rest = inner;
-            while rest.chars().next().unwrap().is_digit(10) {
-                rest = &rest[1..];
+        match self.style {
+            None => try!(f.write_str(self.original)),
+            Some(DemangleStyle::Legacy(ref d)) => {
+                try!(fmt::Display::fmt(d, f))
             }
-            let i: usize = inner[..(inner.len() - rest.len())].parse().unwrap();
-            inner = &rest[i..];
-            rest = &rest[..i];
-            // Skip printing the hash if alternate formatting
-            // was requested.
-            if f.alternate() && element+1 == self.elements && is_rust_hash(&rest) {
-                break;
-            }
-            if element != 0 {
-                try!(f.write_str("::"));
-            }
-            if rest.starts_with("_$") {
-                rest = &rest[1..];
-            }
-            while !rest.is_empty() {
-                if rest.starts_with('.') {
-                    if let Some('.') = rest[1..].chars().next() {
-                        try!(f.write_str("::"));
-                        rest = &rest[2..];
-                    } else {
-                        try!(f.write_str("."));
-                        rest = &rest[1..];
-                    }
-                } else if rest.starts_with('$') {
-                    macro_rules! demangle {
-                        ($($pat:expr => $demangled:expr,)*) => ({
-                            $(if rest.starts_with($pat) {
-                                try!(f.write_str($demangled));
-                                rest = &rest[$pat.len()..];
-                              } else)*
-                            {
-                                try!(f.write_str(rest));
-                                break;
-                            }
-
-                        })
-                    }
-
-                    // see src/librustc/back/link.rs for these mappings
-                    demangle! {
-                        "$SP$" => "@",
-                        "$BP$" => "*",
-                        "$RF$" => "&",
-                        "$LT$" => "<",
-                        "$GT$" => ">",
-                        "$LP$" => "(",
-                        "$RP$" => ")",
-                        "$C$" => ",",
-
-                        // in theory we can demangle any Unicode code point, but
-                        // for simplicity we just catch the common ones.
-                        "$u7e$" => "~",
-                        "$u20$" => " ",
-                        "$u27$" => "'",
-                        "$u3d$" => "=",
-                        "$u5b$" => "[",
-                        "$u5d$" => "]",
-                        "$u7b$" => "{",
-                        "$u7d$" => "}",
-                        "$u3b$" => ";",
-                        "$u2b$" => "+",
-                        "$u21$" => "!",
-                        "$u22$" => "\"",
-                    }
-                } else {
-                    let idx = match rest.char_indices().find(|&(_, c)| c == '$' || c == '.') {
-                        None => rest.len(),
-                        Some((i, _)) => i,
-                    };
-                    try!(f.write_str(&rest[..idx]));
-                    rest = &rest[idx..];
-                }
+            Some(DemangleStyle::V0(ref d)) => {
+                try!(fmt::Display::fmt(d, f))
             }
         }
-
-        try!(f.write_str(self.suffix));
-
-        Ok(())
+        f.write_str(self.suffix)
     }
 }
 
