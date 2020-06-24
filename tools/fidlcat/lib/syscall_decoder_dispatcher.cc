@@ -18,37 +18,8 @@
 
 namespace fidlcat {
 
-void DisplayString(const char* string, size_t size, fidl_codec::PrettyPrinter& printer) {
-  if (string == nullptr) {
-    printer << "nullptr\n";
-  } else {
-    if (size == 0) {
-      printer << "empty\n";
-    } else {
-      printer << fidl_codec::Red << '"';
-      for (size_t i = 0; i < size; ++i) {
-        char value = string[i];
-        switch (value) {
-          case 0:
-            break;
-          case '\\':
-            printer << "\\\\";
-            break;
-          case '\n':
-            printer << "\\n";
-            break;
-          default:
-            printer << value;
-            break;
-        }
-      }
-      printer << '"' << fidl_codec::ResetColor;
-    }
-  }
-}
-
-std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
-  switch (GetSyscallType()) {
+std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallType syscall_type) {
+  switch (syscall_type) {
     case SyscallType::kBool:
       return std::make_unique<fidl_codec::BoolType>();
     case SyscallType::kInt32:
@@ -71,12 +42,21 @@ std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
       return std::make_unique<fidl_codec::Uint64Type>();
     case SyscallType::kUint64Hexa:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kHexaDecimal);
+    case SyscallType::kVaddr:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kVaddr);
+    case SyscallType::kSize:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kSize);
     case SyscallType::kHandle:
       return std::make_unique<fidl_codec::HandleType>();
     case SyscallType::kBtiPerm:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kBtiPerm);
     case SyscallType::kRights:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kRights);
+    case SyscallType::kExceptionState:
+      return std::make_unique<fidl_codec::Uint32Type>(
+          fidl_codec::Uint32Type::Kind::kExceptionState);
+    case SyscallType::kPropType:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kPropType);
     case SyscallType::kCachePolicy:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kCachePolicy);
     case SyscallType::kClock:
@@ -88,6 +68,10 @@ std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
     default:
       return nullptr;
   }
+}
+
+std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
+  return SyscallTypeToFidlCodecType(GetSyscallType());
 }
 
 std::unique_ptr<fidl_codec::Type> SyscallInputOutputBase::ComputeType() const { return nullptr; }
@@ -117,7 +101,7 @@ void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDecoder* decoder, Sta
         const char* string = reinterpret_cast<const char*>(
             decoder->BufferContent(stage, reinterpret_cast<uint64_t>(buffer[i])));
         size_t string_size = (string == nullptr) ? 0 : strnlen(string, max_size_);
-        DisplayString(string, string_size, printer);
+        printer.DisplayString(std::string_view(string, string_size));
         separator = ", ";
       }
     }
@@ -132,7 +116,7 @@ const char* SyscallInputOutputFixedSizeString::DisplayInline(
   printer << name() << ':' << fidl_codec::Green << "string" << fidl_codec::ResetColor << ": ";
   const char* string = string_->Content(decoder, stage);
   size_t string_size = (string == nullptr) ? 0 : strnlen(string, string_size_);
-  DisplayString(string, string_size, printer);
+  printer.DisplayString(std::string_view(string, string_size));
   return ", ";
 }
 

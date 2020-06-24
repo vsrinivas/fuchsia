@@ -38,13 +38,13 @@
 
 namespace fidlcat {
 
+std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallType);
+
 template <typename ClassType, typename Type>
 class ClassField;
 
 template <typename ClassType>
 class Class;
-
-void DisplayString(const char* string, size_t size, fidl_codec::PrettyPrinter& printer);
 
 // Base class for all conditions on fields.
 template <typename ClassType>
@@ -835,10 +835,17 @@ class SyscallInputOutputIndirect : public SyscallInputOutputBase {
         syscall_type_(syscall_type),
         buffer_(std::move(buffer)) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    return SyscallTypeToFidlCodecType(syscall_type_);
+  }
+
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     buffer_->LoadArray(decoder, stage, sizeof(Type));
   }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override;
 
   const char* DisplayInline(SyscallDecoder* decoder, Stage stage, const char* separator,
                             fidl_codec::PrettyPrinter& printer) const override;
@@ -959,6 +966,22 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
       : SyscallInputOutputBase(error_code, name),
         string_(std::move(string)),
         string_size_(std::move(string_size)) {}
+
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    return std::make_unique<fidl_codec::StringType>();
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override {
+    const char* string = reinterpret_cast<const char*>(string_->Content(decoder, stage));
+    size_t string_size = string_size_->Value(decoder, stage);
+    if (string == nullptr) {
+      return std::make_unique<fidl_codec::NullValue>();
+    } else {
+      return std::make_unique<fidl_codec::StringValue>(
+          fidl_codec::StringValue(std::string_view(string, string_size)));
+    }
+  }
 
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
@@ -1881,6 +1904,13 @@ inline std::unique_ptr<fidl_codec::Value> GenerateValue(uint64_t value) {
   return std::make_unique<fidl_codec::IntegerValue>(value, false);
 }
 
+#ifdef __MACH__
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(uintptr_t value) {
+  return std::make_unique<fidl_codec::IntegerValue>(value, false);
+}
+#endif
+
 // Display a value on a stream.
 template <typename ValueType>
 void DisplayValue(SyscallType type, ValueType /*value*/, fidl_codec::PrettyPrinter& printer) {
@@ -2086,9 +2116,7 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kExceptionState:
-      printer << fidl_codec::Blue;
-      ExceptionStateName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayExceptionState(value);
       break;
     case SyscallType::kFeatureKind:
       printer << fidl_codec::Red;
@@ -2174,9 +2202,7 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kPropType:
-      printer << fidl_codec::Blue;
-      PropTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPropType(value);
       break;
     case SyscallType::kRights:
       printer.DisplayRights(value);
@@ -2590,6 +2616,13 @@ const char* SyscallInputOutputIndirect<Type, FromType>::DisplayInline(
   return ", ";
 }
 
+template <typename Type, typename FromType>
+std::unique_ptr<fidl_codec::Value> SyscallInputOutputIndirect<Type, FromType>::GenerateValue(
+    SyscallDecoder* decoder, Stage stage) const {
+  const FromType* buffer = buffer_->Content(decoder, stage);
+  return fidlcat::GenerateValue<Type>(*reinterpret_cast<const Type*>(buffer));
+}
+
 template <typename Type, typename FromType, typename SizeType>
 void SyscallInputOutputBuffer<Type, FromType, SizeType>::DisplayOutline(
     SyscallDecoder* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
@@ -2683,7 +2716,7 @@ const char* SyscallInputOutputString<FromType>::DisplayInline(
   printer << name() << ':' << fidl_codec::Green << "string" << fidl_codec::ResetColor << ": ";
   const char* string = reinterpret_cast<const char*>(string_->Content(decoder, stage));
   size_t string_size = string_size_->Value(decoder, stage);
-  DisplayString(string, string_size, printer);
+  printer.DisplayString(std::string_view(string, string_size));
   return ", ";
 }
 

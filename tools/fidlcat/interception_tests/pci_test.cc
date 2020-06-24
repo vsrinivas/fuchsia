@@ -158,7 +158,7 @@ PCI_CONFIG_READ_DISPLAY_TEST(
     "zx_pci_config_read("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
     "offset:\x1B[32muint16\x1B[0m: \x1B[34m1000\x1B[0m, "
-    "width:\x1B[32msize_t\x1B[0m: \x1B[34m4\x1B[0m)\n"
+    "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out_val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m)\n");
 
 // zx_pci_config_write tests.
@@ -192,7 +192,7 @@ PCI_CONFIG_WRITE_DISPLAY_TEST(ZxPciConfigWrite, ZX_OK,
                               "zx_pci_config_write("
                               "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                               "offset:\x1B[32muint16\x1B[0m: \x1B[34m1000\x1B[0m, "
-                              "width:\x1B[32msize_t\x1B[0m: \x1B[34m4\x1B[0m, "
+                              "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m, "
                               "val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m)\n"
                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -238,7 +238,7 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(
     "dev:\x1B[32muint8\x1B[0m: \x1B[34m2\x1B[0m, "
     "func:\x1B[32muint8\x1B[0m: \x1B[34m3\x1B[0m, "
     "offset:\x1B[32muint8\x1B[0m: \x1B[34m100\x1B[0m, "
-    "width:\x1B[32msize_t\x1B[0m: \x1B[34m4\x1B[0m, "
+    "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m, "
     "write:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m)\n");
 
@@ -251,7 +251,7 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
                             "dev:\x1B[32muint8\x1B[0m: \x1B[34m2\x1B[0m, "
                             "func:\x1B[32muint8\x1B[0m: \x1B[34m3\x1B[0m, "
                             "offset:\x1B[32muint8\x1B[0m: \x1B[34m100\x1B[0m, "
-                            "width:\x1B[32msize_t\x1B[0m: \x1B[34m4\x1B[0m, "
+                            "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m, "
                             "val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m, "
                             "write:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m)\n"
                             "  -> \x1B[32mZX_OK\x1B[0m\n");

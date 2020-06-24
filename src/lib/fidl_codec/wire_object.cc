@@ -112,7 +112,7 @@ int StringValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) c
 }
 
 void StringValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
-  printer << Red << '"' << string_ << '"' << ResetColor;
+  printer.DisplayString(string_);
 }
 
 void StringValue::Visit(Visitor* visitor, const Type* for_type) const {

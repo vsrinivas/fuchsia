@@ -44,21 +44,6 @@ void ExceptionChannelTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer)
   }
 }
 
-#define ExceptionStateNameCase(name) \
-  case name:                         \
-    printer << #name;                \
-    return
-
-void ExceptionStateName(uint32_t state, fidl_codec::PrettyPrinter& printer) {
-  switch (state) {
-    ExceptionStateNameCase(ZX_EXCEPTION_STATE_TRY_NEXT);
-    ExceptionStateNameCase(ZX_EXCEPTION_STATE_HANDLED);
-    default:
-      printer << static_cast<uint32_t>(state);
-      return;
-  }
-}
-
 #define FeatureKindNameCase(name) \
   case name:                      \
     printer << #name;             \
@@ -317,28 +302,6 @@ void ProfileInfoFlagsName(uint32_t flags, fidl_codec::PrettyPrinter& printer) {
   const char* separator = "";
   ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_PRIORITY);
   ProfileInfoFlagsNameCase(ZX_PROFILE_INFO_FLAG_CPU_MASK);
-}
-
-#define PropTypeNameCase(name) \
-  case name:                   \
-    printer << #name;          \
-    return
-
-void PropTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    PropTypeNameCase(ZX_PROP_NAME);
-    PropTypeNameCase(ZX_PROP_REGISTER_FS);
-    PropTypeNameCase(ZX_PROP_REGISTER_GS);
-    PropTypeNameCase(ZX_PROP_PROCESS_DEBUG_ADDR);
-    PropTypeNameCase(ZX_PROP_PROCESS_VDSO_BASE_ADDRESS);
-    PropTypeNameCase(ZX_PROP_SOCKET_RX_THRESHOLD);
-    PropTypeNameCase(ZX_PROP_SOCKET_TX_THRESHOLD);
-    PropTypeNameCase(ZX_PROP_JOB_KILL_ON_OOM);
-    PropTypeNameCase(ZX_PROP_EXCEPTION_STATE);
-    default:
-      printer << type;
-      return;
-  }
 }
 
 #define RsrcKindNameCase(name) \

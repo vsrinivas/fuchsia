@@ -18,6 +18,8 @@
 namespace fidl_codec {
 namespace {
 
+constexpr int kCharactersPerByte = 2;
+
 class ToStringVisitor : public TypeVisitor {
  public:
   enum ExpandLevels {
@@ -358,7 +360,11 @@ std::string Uint32Type::Name() const {
     case Kind::kClock:
       return "zx.clock";
     case Kind::kRights:
-      return "zx_rights_t";
+      return "zx.rights";
+    case Kind::kPropType:
+      return "zx.prop_type";
+    case Kind::kExceptionState:
+      return "zx.exception_state";
   }
 }
 
@@ -385,8 +391,14 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kClock:
         printer.DisplayClock(absolute);
         break;
+      case Kind::kExceptionState:
+        printer.DisplayExceptionState(absolute);
+        break;
       case Kind::kRights:
         printer.DisplayRights(absolute);
+        break;
+      case Kind::kPropType:
+        printer.DisplayPropType(absolute);
         break;
     }
   }
@@ -399,6 +411,10 @@ std::string Uint64Type::Name() const {
     case Kind::kDecimal:
     case Kind::kHexaDecimal:
       return "uint64";
+    case Kind::kVaddr:
+      return "zx.vaddr";
+    case Kind::kSize:
+      return "size";
   }
 }
 
@@ -416,6 +432,15 @@ void Uint64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kHexaDecimal:
         printer << Blue << std::hex << absolute << std::dec << ResetColor;
         break;
+      case Kind::kSize:
+        printer << Blue << absolute << ResetColor;
+        break;
+      case Kind::kVaddr: {
+        std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%016" PRIx64, absolute);
+        printer << Blue << buffer.data() << ResetColor;
+        break;
+      }
     }
   }
 }

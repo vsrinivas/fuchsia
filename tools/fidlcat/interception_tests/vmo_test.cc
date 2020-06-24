@@ -351,7 +351,7 @@ VMO_CREATE_CONTIGUOUS_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create_contiguous("
     "bti:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "size:\x1B[32msize_t\x1B[0m: \x1B[34m20\x1B[0m, "
+    "size:\x1B[32msize\x1B[0m: \x1B[34m20\x1B[0m, "
     "alignment_log2:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
 

@@ -39,7 +39,7 @@ VCPU_CREATE_DISPLAY_TEST(
     "zx_vcpu_create("
     "guest:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
     "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-    "entry:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000123456\x1B[0m)\n"
+    "entry:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000123456\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_vcpu_resume tests.

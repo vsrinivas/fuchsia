@@ -149,6 +149,58 @@ void PrettyPrinter::DisplayDuration(zx_duration_t duration_ns) {
   *this << ResetColor;
 }
 
+#define ExceptionStateNameCase(name) \
+  case name:                         \
+    *this << #name << ResetColor;    \
+    return
+
+void PrettyPrinter::DisplayExceptionState(uint32_t state) {
+  *this << Blue;
+  switch (state) {
+    ExceptionStateNameCase(ZX_EXCEPTION_STATE_TRY_NEXT);
+    ExceptionStateNameCase(ZX_EXCEPTION_STATE_HANDLED);
+    default:
+      *this << static_cast<uint32_t>(state) << ResetColor;
+      return;
+  }
+}
+
+// ZX_PROP_REGISTER_GS and ZX_PROP_REGISTER_FS are defined in
+// <zircon/system/public/zircon/syscalls/object.h>
+// but only available for amd64.
+// We need these values in all the environments.
+#ifndef ZX_PROP_REGISTER_GS
+#define ZX_PROP_REGISTER_GS ((uint32_t)2u)
+#endif
+
+#ifndef ZX_PROP_REGISTER_FS
+#define ZX_PROP_REGISTER_FS ((uint32_t)4u)
+#endif
+
+#define PropTypeNameCase(name) \
+  case name:                   \
+    *this << #name;            \
+    *this << ResetColor;       \
+    return
+
+void PrettyPrinter::DisplayPropType(uint32_t type) {
+  *this << Blue;
+  switch (type) {
+    PropTypeNameCase(ZX_PROP_NAME);
+    PropTypeNameCase(ZX_PROP_REGISTER_FS);
+    PropTypeNameCase(ZX_PROP_REGISTER_GS);
+    PropTypeNameCase(ZX_PROP_PROCESS_DEBUG_ADDR);
+    PropTypeNameCase(ZX_PROP_PROCESS_VDSO_BASE_ADDRESS);
+    PropTypeNameCase(ZX_PROP_SOCKET_RX_THRESHOLD);
+    PropTypeNameCase(ZX_PROP_SOCKET_TX_THRESHOLD);
+    PropTypeNameCase(ZX_PROP_JOB_KILL_ON_OOM);
+    PropTypeNameCase(ZX_PROP_EXCEPTION_STATE);
+    default:
+      *this << type << ResetColor;
+      return;
+  }
+}
+
 #define RightsNameCase(name)     \
   if ((rights & (name)) != 0) {  \
     *this << separator << #name; \
@@ -184,6 +236,30 @@ void PrettyPrinter::DisplayRights(uint32_t rights) {
   RightsNameCase(ZX_RIGHT_APPLY_PROFILE);
   RightsNameCase(ZX_RIGHT_SAME_RIGHTS);
   *this << ResetColor;
+}
+
+void PrettyPrinter::DisplayString(std::string_view string) {
+  if (string.data() == nullptr) {
+    *this << "nullptr\n";
+  } else {
+    *this << Red << '"';
+    for (char value : string) {
+      switch (value) {
+        case 0:
+          break;
+        case '\\':
+          *this << "\\\\";
+          break;
+        case '\n':
+          *this << "\\n";
+          break;
+        default:
+          *this << value;
+          break;
+      }
+    }
+    *this << '"' << ResetColor;
+  }
 }
 
 void PrettyPrinter::DisplayTime(zx_time_t time_ns) {

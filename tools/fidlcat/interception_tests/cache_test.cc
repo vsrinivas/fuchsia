@@ -32,8 +32,8 @@ std::unique_ptr<SystemCallTest> ZxCacheFlush(int64_t result, std::string_view re
 CACHE_FLUSH_DISPLAY_TEST(ZxCacheFlush, ZX_OK,
                          "\n"
                          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_cache_flush("
-                         "addr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000001234567890\x1B[0m, "
-                         "size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m, "
+                         "addr:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000001234567890\x1B[0m, "
+                         "size:\x1B[32msize\x1B[0m: \x1B[34m4096\x1B[0m, "
                          "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                          "  -> \x1B[32mZX_OK\x1B[0m\n");
 

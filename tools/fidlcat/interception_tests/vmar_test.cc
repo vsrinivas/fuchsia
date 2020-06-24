@@ -142,7 +142,7 @@ VMAR_UNMAP_DISPLAY_TEST(ZxVmarUnmap, ZX_OK,
                         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                         "zx_vmar_unmap("
                         "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                        "addr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000012345\x1B[0m, "
+                        "addr:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000012345\x1B[0m, "
                         "len:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m)\n"
                         "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -217,8 +217,8 @@ VMAR_UNMAP_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_unmap_handle_close_thread_exit("
     "vmar_handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "addr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000012345\x1B[0m, "
-    "size:\x1B[32msize_t\x1B[0m: \x1B[34m1024\x1B[0m, "
+    "addr:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000012345\x1B[0m, "
+    "size:\x1B[32msize\x1B[0m: \x1B[34m1024\x1B[0m, "
     "close_handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 

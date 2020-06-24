@@ -331,7 +331,7 @@ OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_NAME\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_NAME\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mstring\x1B[0m: \x1B[31m\"My_name\"\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -355,8 +355,8 @@ OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mzx_vaddr_t\x1B[0m: "
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mzx.vaddr\x1B[0m: "
     "\x1B[34m0000000000045678\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST_CONTENT(result, expected)   \
@@ -381,8 +381,8 @@ OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_PROCESS_VDSO_BASE_ADDRESS\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mzx_vaddr_t\x1B[0m: "
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_PROCESS_VDSO_BASE_ADDRESS\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32mzx.vaddr\x1B[0m: "
     "\x1B[34m0000000000045678\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -406,8 +406,8 @@ OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n");
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32msize\x1B[0m: \x1B[34m1000\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
   size_t value = 1000;                                                                          \
@@ -430,8 +430,8 @@ OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n");
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (value:\x1B[32msize\x1B[0m: \x1B[34m1000\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
   uint32_t value = ZX_EXCEPTION_STATE_HANDLED;                                              \
@@ -454,9 +454,9 @@ OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "value:\x1B[32mzx_exception_state_t\x1B[0m: \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n");
+    "value:\x1B[32mzx.exception_state\x1B[0m: \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n");
 
 // zx_object_set_property tests.
 
@@ -494,7 +494,7 @@ OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_NAME\x1B[0m, "
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_NAME\x1B[0m, "
     "value:\x1B[32mstring\x1B[0m: \x1B[31m\"My_name\"\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -519,8 +519,8 @@ OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_REGISTER_FS\x1B[0m, "
-    "value:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_REGISTER_FS\x1B[0m, "
+    "value:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST_CONTENT(result, expected)                   \
@@ -544,8 +544,8 @@ OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_REGISTER_GS\x1B[0m, "
-    "value:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_REGISTER_GS\x1B[0m, "
+    "value:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -569,8 +569,8 @@ OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m, "
-    "value:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m, "
+    "value:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000045678\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -594,8 +594,8 @@ OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m, "
-    "value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m, "
+    "value:\x1B[32msize\x1B[0m: \x1B[34m1000\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -619,8 +619,8 @@ OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m, "
-    "value:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m, "
+    "value:\x1B[32msize\x1B[0m: \x1B[34m1000\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -644,8 +644,8 @@ OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_JOB_KILL_ON_OOM\x1B[0m, "
-    "value:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_JOB_KILL_ON_OOM\x1B[0m, "
+    "value:\x1B[32msize\x1B[0m: \x1B[34m1\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -669,8 +669,8 @@ OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "property:\x1B[32mzx_prop_type_t\x1B[0m: \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m, "
-    "value:\x1B[32mzx_exception_state_t\x1B[0m: \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n"
+    "property:\x1B[32mzx.prop_type\x1B[0m: \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m, "
+    "value:\x1B[32mzx.exception_state\x1B[0m: \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_object_get_info tests.
@@ -1654,7 +1654,7 @@ OBJECT_GET_CHILD_DISPLAY_TEST(
     "zx_object_get_child("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
     "koid:\x1B[32muint64\x1B[0m: \x1B[34m4252\x1B[0m, "
-    "rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
+    "rights:\x1B[32mzx.rights\x1B[0m: \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_object_set_profile tests.

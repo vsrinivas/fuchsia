@@ -83,8 +83,17 @@ class PrettyPrinter {
   // Displays a duration.
   void DisplayDuration(zx_duration_t duration_ns);
 
+  // Displays an exception state.
+  void DisplayExceptionState(uint32_t state);
+
+  // Displays prop type.
+  void DisplayPropType(uint32_t type);
+
   // Displays rights.
   void DisplayRights(uint32_t rights);
+
+  // Displays string.
+  void DisplayString(std::string_view string);
 
   // Displays a time.
   void DisplayTime(zx_time_t time_ns);
