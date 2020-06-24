@@ -28,6 +28,7 @@ source_set("user_pci") {
     "config.cc",
     "device.cc",
     "device_caps.cc",
+    "device_irqs.cc",
     "device_protocol.cc",
     "upstream_node.cc",
   ]

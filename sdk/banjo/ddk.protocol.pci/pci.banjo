@@ -90,6 +90,14 @@ enum PciExtCapId : uint16 {
     SYSTEM_FIRMWARE_INTERMEDIARY = 0x2c;
 };
 
+enum PciIrqMode : uint8 {
+    DISABLED = 0;
+    LEGACY = 1;
+    MSI = 2;
+    MSI_X = 3;
+    COUNT = 4;
+};
+
 
 /// ZX-3927: Remove the zx_pcie types and implement them here
 [Layout = "ddk-protocol"]

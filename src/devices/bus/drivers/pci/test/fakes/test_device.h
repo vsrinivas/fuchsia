@@ -10,6 +10,7 @@
 #include <fbl/auto_call.h>
 
 #include "../../common.h"
+#include "src/devices/bus/drivers/pci/capabilities/msi.h"
 
 // clang-format off
 
@@ -21,6 +22,25 @@
 //
 // If this configuration is changed then it's likely that some of the tests in
 // protocol_test_driver.cpp will need to be updated.
+//
+// A basic lspci dump of this device:
+// 	Subsystem: 103c:1097
+// 	Physical Slot: 2
+// 	Flags: bus master, fast devsel, latency 0, IRQ 62
+// 	Memory at f2000000 (32-bit, non-prefetchable) [size=16M]
+// 	Memory at e0000000 (64-bit, prefetchable) [size=256M]
+// 	Memory at f0000000 (64-bit, prefetchable) [size=32M]
+// 	I/O ports at 2000 [size=128]
+// 	Expansion ROM at f3080000 [disabled] [size=512K]
+// 	Capabilities: [60] Power Management version 3
+// 	Capabilities: [68] MSI: Enable+ Count=1/1 Maskable- 64bit+
+// 	Capabilities: [78] Express Legacy Endpoint, MSI 00
+// 	Capabilities: [100] Virtual Channel
+// 	Capabilities: [250] Latency Tolerance Reporting
+// 	Capabilities: [258] L1 PM Substates
+// 	Capabilities: [128] Power Budgeting <?>
+// 	Capabilities: [600] Vendor Specific Information: ID=0001 Rev=1 Len=024 <?>
+constexpr size_t kFakeQuadroMsiCapabilityOffset = 0x68;
 std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
     0xde, 0x10, // Vendor Id
     0xba, 0x13, // Device Id

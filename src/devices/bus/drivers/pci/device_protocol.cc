@@ -291,12 +291,22 @@ zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
   return RpcReply(ch, st);
 }
 
+zx_status_t Device::RpcQueryIrqMode(const zx::unowned_channel& ch) {
+  response_.irq.max_irqs = 0;
+  zx_status_t st = QueryIrqMode(request_.irq.mode, &response_.irq.max_irqs);
+  zxlogf(TRACE, "[%s] QueryIrqMode { mode = %u, max_irqs = %u, status = %u }", cfg_->addr(),
+         request_.irq.mode, response_.irq.max_irqs, st);
+  return RpcReply(ch, st);
+}
+
+zx_status_t Device::RpcSetIrqMode(const zx::unowned_channel& ch) {
+  zx_status_t st = SetIrqMode(request_.irq.mode, request_.irq.requested_irqs);
+  zxlogf(TRACE, "[%s] SetIrqMode { mode = %u, requested_irqs = %u, status = %u }", cfg_->addr(),
+         request_.irq.mode, request_.irq.requested_irqs, st);
+  return RpcReply(ch, st);
+}
+
 zx_status_t Device::RpcMapInterrupt(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
-
-zx_status_t Device::RpcQueryIrqMode(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
-
 zx_status_t Device::RpcResetDevice(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
-
-zx_status_t Device::RpcSetIrqMode(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
 
 }  // namespace pci

@@ -235,8 +235,8 @@ class FakeEcam {
     zx::vmo vmo;
     std::optional<ddk::MmioBuffer> mmio;
     ZX_ASSERT(zx::vmo::create(bytes, 0, &vmo) == ZX_OK);
-    ZX_ASSERT(ddk::MmioBuffer::Create(0, bytes, std::move(vmo), ZX_CACHE_POLICY_UNCACHED, &mmio) ==
-              ZX_OK);
+    ZX_ASSERT(ddk::MmioBuffer::Create(0, bytes, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                      &mmio) == ZX_OK);
     mmio_ = std::move(*mmio);
     configs_ = static_cast<FakeDeviceConfig*>(mmio_->get());
     reset();

@@ -5,6 +5,7 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_BUS_H_
 
 #include <lib/zx/msi.h>
+#include <lib/zx/resource.h>
 #include <zircon/hw/pci.h>
 
 #include <ddk/mmio-buffer.h>
@@ -30,9 +31,10 @@ class FakeBus : public BusDeviceInterface {
     devices_.erase(*device);
   }
 
-  zx_status_t AllocateMsi(uint32_t /*count*/, zx::msi* /*msi*/) final {
+  zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) final {
     fbl::AutoLock devices_lock(&devices_lock_);
-    return ZX_ERR_NOT_SUPPORTED;
+    // Using fake MSIs supplied by lib/fake-msi
+    return zx::msi::allocate(*zx::unowned_resource(ZX_HANDLE_INVALID), count, msi);
   }
 
   pci::Device& get_device(pci_bdf_t bdf) { return *devices_.find(bdf); }

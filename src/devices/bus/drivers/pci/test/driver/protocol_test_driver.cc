@@ -12,7 +12,9 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/pci.h>
+#include <zxtest/zxtest.h>
 
+#include "../../capabilities/msi.h"
 #include "../../common.h"
 #include "../../config.h"
 #include "../fakes/test_device.h"
@@ -420,9 +422,24 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
   ASSERT_EQ(func_id, info.func_id);
 }
 
+// The Quadro card supports 4 MSI interrupts.
+TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
+  pci::MsiControlReg msi_ctrl = {
+      .value = *reinterpret_cast<uint16_t*>(
+          &kFakeQuadroDeviceConfig[kFakeQuadroMsiCapabilityOffset + 2]),
+  };
+
+  uint32_t max_irqs;
+  ASSERT_STATUS(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &max_irqs), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &max_irqs), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
+  ASSERT_EQ(max_irqs, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
+}
+
 zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
-  auto driver = ProtocolTestDriver::GetInstance();
-  auto zxt = zxtest::Runner::GetInstance();
+  auto* driver = ProtocolTestDriver::GetInstance();
+  auto* zxt = zxtest::Runner::GetInstance();
   zxt->AddObserver(driver);
   RUN_ALL_TESTS(0, nullptr);
   return fuchsia_device_test_DeviceRunTests_reply(txn, ZX_OK, &driver->report());

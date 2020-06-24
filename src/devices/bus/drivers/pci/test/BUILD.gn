@@ -102,6 +102,7 @@ driver_module("pci_fake") {
   public_deps = [
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/lib/driver",
+    "//src/devices/testing/fake-msi",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/pretty",

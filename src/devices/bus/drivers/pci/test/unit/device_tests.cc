@@ -235,7 +235,7 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
 }
 
 // Ensure we parse MSI capabilities properly in the Quadro device.
-// lspci output: Capabilities: [68] MSI: Enable+ Count=1/1 Maskable- 64bit+
+// lspci output: Capabilities: [68] MSI: Enable+ Count=1/4 Maskable- 64bit+
 TEST_F(PciDeviceTests, MsiCapabilityTest) {
   auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
   ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());

@@ -72,6 +72,12 @@ class Device : public PciDeviceType,
     }
   };
 
+  struct Irqs {
+    pci_irq_mode_t mode;
+    zx::msi msi_allocation;
+    zx_info_msi_t msi_info;
+  };
+
   struct Capabilities {
     CapabilityList list;
     ExtCapabilityList ext_list;
@@ -173,6 +179,15 @@ class Device : public PciDeviceType,
   // Dump some information about the device
   virtual void Dump() const __TA_EXCLUDES(dev_lock_);
 
+  zx_status_t QueryIrqMode(pci_irq_mode_t mode, uint32_t* max_irqs) __TA_EXCLUDES(dev_lock_)
+      __TA_EXCLUDES(dev_lock_);
+  zx_status_t SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
+  zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);
+  zx_status_t EnableMsi(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
+  zx_status_t EnableMsix(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
+  zx_status_t DisableMsi() __TA_REQUIRES(dev_lock_);
+  zx_status_t DisableMsix() __TA_REQUIRES(dev_lock_);
+
   // Devices need to exist in both the top level bus driver class, as well
   // as in a list for roots/bridges to track their downstream children. These
   // traits facilitate that for us.
@@ -267,6 +282,7 @@ class Device : public PciDeviceType,
   bool quirks_done_ __TA_GUARDED(dev_lock_) = false;
 
   Capabilities caps_ __TA_GUARDED(dev_lock_){};
+  Irqs irqs_ __TA_GUARDED(dev_lock_){.mode = PCI_IRQ_MODE_DISABLED};
 
   // Used for Rxrpc / RpcReply for protocol buffers.
   PciRpcMsg request_;
