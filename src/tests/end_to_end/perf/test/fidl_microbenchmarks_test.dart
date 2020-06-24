@@ -42,24 +42,18 @@ void main(List<String> args) {
       tmpPerfResultsJson('rust_fidl_microbenchmarks'));
   runFidlBenchmark('walker_fidl_microbenchmarks');
 
-  // TODO(bprosnitz) Re-enable.
-  // This is temporarily disabled to let fxr/400853 go in.
-  // The output file is not specified in the new version but is in the current version.
-/*
   _tests.add(() {
     test('dart_fidl_microbenchmarks', () async {
       final helper = await PerfTestHelper.make();
       const resultsFile =
           '/data/r/sys/r/fidl_benchmarks/fuchsia.com:dart_fidl_benchmarks:0#meta:dart_fidl_benchmarks.cmx/results.json';
       const command = 'run-test-component --realm-label=fidl_benchmarks '
-          'fuchsia-pkg://fuchsia.com/dart_fidl_benchmarks#meta/dart_fidl_benchmarks.cmx '
-          '--out_file /data/results.json';
+          'fuchsia-pkg://fuchsia.com/dart_fidl_benchmarks#meta/dart_fidl_benchmarks.cmx';
       final result = await helper.sl4fDriver.ssh.run(command);
       expect(result.exitCode, equals(0));
       await helper.processResults(resultsFile);
     }, timeout: Timeout.none);
   });
-  */
 
   // The Dart test library is supposed to support sharding, but its
   // sharding options do not seem to be accessible when running Dart tests
