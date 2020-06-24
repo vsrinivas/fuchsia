@@ -7,6 +7,7 @@
 
 #include <lib/fit/string_view.h>
 
+#include <atomic>
 #include <cstdio>
 
 #include <fbl/string.h>
@@ -47,7 +48,8 @@ class TestDriverImpl final : public TestDriver, public LifecycleObserver {
   // Reports before every test starts.
   void OnTestStart(const TestCase& test_case, const TestInfo& test) final;
 
-  // Reports when current test assert condition fails.
+  // Reports when current test assert condition fails. May be called
+  // concurrently from multiple threads.
   void OnAssertion(const Assertion& assertion) final;
 
   // Reports after a test execution was skipped.
@@ -62,7 +64,8 @@ class TestDriverImpl final : public TestDriver, public LifecycleObserver {
   // Resets the states for running new tests.
   void Reset();
 
-  // Returns whether the current test has any failures so far.
+  // Returns whether the current test has any failures so far. May be
+  // called concurrently from multiple threads.
   bool CurrentTestHasAnyFailures() const { return current_test_has_any_failures_; }
 
   // Returns whether any test driven by this instance had any test failure.
@@ -74,12 +77,12 @@ class TestDriverImpl final : public TestDriver, public LifecycleObserver {
   void DisableAsserts() { asserts_enabled_ = false; }
 
  private:
-  TestStatus status_ = TestStatus::kFailed;
+  std::atomic<TestStatus> status_ = TestStatus::kFailed;
 
-  bool current_test_has_any_failures_ = false;
-  bool current_test_has_fatal_failures_ = false;
+  std::atomic<bool> current_test_has_any_failures_ = false;
+  std::atomic<bool> current_test_has_fatal_failures_ = false;
 
-  bool had_any_failures_ = false;
+  std::atomic<bool> had_any_failures_ = false;
 
   bool asserts_enabled_ = true;
 };
