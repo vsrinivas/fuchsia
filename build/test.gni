@@ -25,7 +25,7 @@ template("test") {
       _output_dir = invoker.output_dir
     }
     test_spec("${target_name}_spec") {
-      target = invoker.target_name
+      target = ":${invoker.target_name}"
       path = "$_output_dir/$_output_name"
       deps = []
       if (defined(invoker.deps)) {
