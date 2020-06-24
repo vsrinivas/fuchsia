@@ -58,32 +58,36 @@ template("test") {
       deps += [ ":${target_name}_spec" ]
     }
 
-    if (!defined(output_dir)) {
-      output_dir = root_out_dir
-    }
-    if (!defined(output_name)) {
-      output_name = target_name
-    }
-    if (!defined(output_extension)) {
-      output_extension = ""
-    }
+    if (is_fuchsia) {
+      if (!defined(output_dir)) {
+        output_dir = root_out_dir
+      }
+      if (!defined(output_name)) {
+        output_name = target_name
+      }
+      if (!defined(output_extension)) {
+        output_extension = ""
+      }
 
-    _output_name = output_name
-    if (output_extension != "") {
-      _output_name += ".$output_extension"
-    }
-    _output_file = rebase_path("$output_dir/$_output_name", root_build_dir)
+      _output_name = output_name
+      if (output_extension != "") {
+        _output_name += ".$output_extension"
+      }
+      _output_file = rebase_path("$output_dir/$_output_name", root_build_dir)
 
-    metadata = {
-      # Used by the distribution_manifest template.
-      distribution_entries = [
-        {
-          source = _output_file
-          destination = "test/$_output_name"
-          label =
-              get_label_info(":$original_target_name", "label_with_toolchain")
-        },
-      ]
+      metadata = {
+        # Used by the distribution_manifest template.
+        distribution_entries = [
+          {
+            source = _output_file
+            destination = "test/$_output_name"
+            label =
+                get_label_info(":$original_target_name", "label_with_toolchain")
+          },
+        ]
+      }
+    } else {
+      not_needed([ "original_target_name" ])
     }
   }
 }
