@@ -80,18 +80,37 @@ class FactoryResetManagerTest : public gtest::TestLoopFixture {
   FakeFactoryReset factory_reset_;
 };
 
+TEST_F(FactoryResetManagerTest, ProcessingMediaButtons) {
+  fuchsia::ui::input::MediaButtonsReport report;
+  report.volume_up = true;
+  EXPECT_FALSE(factory_reset_manager_.OnMediaButtonReport(report));
+
+  fuchsia::ui::input::MediaButtonsReport report2;
+  report2.volume_down = true;
+  EXPECT_FALSE(factory_reset_manager_.OnMediaButtonReport(report2));
+
+  fuchsia::ui::input::MediaButtonsReport report3;
+  report3.volume_up = true;
+  report3.volume_down = true;
+  EXPECT_FALSE(factory_reset_manager_.OnMediaButtonReport(report3));
+
+  fuchsia::ui::input::MediaButtonsReport report4;
+  report4.reset = true;
+  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report4));
+}
+
 TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringDelayCountdown) {
   EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
 
   EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
 
   // Factory reset should cancel if the button is released.
   report.reset = false;
-  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
   EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
@@ -104,7 +123,7 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringResetC
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
 
   EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
 
@@ -113,7 +132,7 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringResetC
 
   // Factory reset should cancel if the button is released.
   report.reset = false;
-  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
   EXPECT_EQ(FactoryResetState::NONE, factory_reset_manager_.factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
@@ -127,7 +146,7 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonHeldAndTrigger) {
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
 
-  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
 
   EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
 
@@ -256,7 +275,7 @@ class FactoryResetManagerSoundTest : public gtest::TestLoopFixture {
     // Send a media buttons report with the FDR button set to true.
     fuchsia::ui::input::MediaButtonsReport report;
     report.reset = true;
-    factory_reset_manager_.OnMediaButtonReport(report);
+    EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
 
     // Run a loop for the duration of the countdown delay.
     EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());

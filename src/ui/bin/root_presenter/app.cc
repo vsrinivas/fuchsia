@@ -160,8 +160,11 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   report.Clone(&cloned_report);
 
   if (report.media_buttons) {
+    if (fdr_manager_->OnMediaButtonReport(*(report.media_buttons.get()))) {
+      return;
+    }
+
     media_buttons_handler_.OnReport(input_device->id(), std::move(cloned_report));
-    fdr_manager_->OnMediaButtonReport(*(report.media_buttons.get()));
     return;
   }
 
