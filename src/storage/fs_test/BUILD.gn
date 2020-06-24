@@ -110,6 +110,24 @@ fuchsia_component("attr-tests") {
   ]
 }
 
+executable("basic_tests") {
+  testonly = true
+  sources = [ "basic.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("basic-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/basic-tests.cml"
+  deps = [
+    ":basic_tests",
+    ":manifests",
+  ]
+}
+
 executable("clone_tests") {
   testonly = true
   sources = [ "clone.cc" ]
@@ -246,6 +264,7 @@ fuchsia_test_package("fs-tests") {
     ":access-tests",
     ":append-tests",
     ":attr-tests",
+    ":basic-tests",
     ":clone-tests",
     ":directory-tests",
     ":dot-dot-tests",
@@ -287,6 +306,7 @@ action("manifests") {
     "$target_gen_dir/access-tests.cml",
     "$target_gen_dir/append-tests.cml",
     "$target_gen_dir/attr-tests.cml",
+    "$target_gen_dir/basic-tests.cml",
     "$target_gen_dir/clone-tests.cml",
     "$target_gen_dir/directory-tests.cml",
     "$target_gen_dir/dot-dot-tests.cml",

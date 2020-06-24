@@ -14,55 +14,52 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include "src/storage/fs_test/fs_test_fixture.h"
 
-#include "filesystems.h"
+namespace fs_test {
+namespace {
 
-bool test_basic(void) {
-  BEGIN_TEST;
+using BasicTest = FileSystemTest;
 
-  ASSERT_EQ(mkdir("::alpha", 0755), 0, "");
-  ASSERT_EQ(mkdir("::alpha/bravo", 0755), 0, "");
-  ASSERT_EQ(mkdir("::alpha/bravo/charlie", 0755), 0, "");
-  ASSERT_EQ(mkdir("::alpha/bravo/charlie/delta", 0755), 0, "");
-  ASSERT_EQ(mkdir("::alpha/bravo/charlie/delta/echo", 0755), 0, "");
-  int fd1 = open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR | O_CREAT, 0644);
-  ASSERT_GT(fd1, 0, "");
-  int fd2 = open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR, 0644);
-  ASSERT_GT(fd2, 0, "");
-  ASSERT_EQ(write(fd1, "Hello, World!\n", 14), 14, "");
-  ASSERT_EQ(close(fd1), 0, "");
-  ASSERT_EQ(close(fd2), 0, "");
+TEST_P(BasicTest, Basic) {
+  ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie/delta").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie/delta/echo").c_str(), 0755), 0);
+  int fd1 = open(GetPath("alpha/bravo/charlie/delta/echo/foxtrot").c_str(), O_RDWR | O_CREAT, 0644);
+  ASSERT_GT(fd1, 0);
+  int fd2 = open(GetPath("alpha/bravo/charlie/delta/echo/foxtrot").c_str(), O_RDWR, 0644);
+  ASSERT_GT(fd2, 0);
+  ASSERT_EQ(write(fd1, "Hello, World!\n", 14), 14);
+  ASSERT_EQ(close(fd1), 0);
+  ASSERT_EQ(close(fd2), 0);
 
-  fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
-  ASSERT_GT(fd1, 0, "");
-  ASSERT_EQ(close(fd1), 0, "");
+  fd1 = open(GetPath("file.txt").c_str(), O_CREAT | O_RDWR, 0644);
+  ASSERT_GT(fd1, 0);
+  ASSERT_EQ(close(fd1), 0);
 
-  ASSERT_EQ(unlink("::file.txt"), 0, "");
-  ASSERT_EQ(mkdir("::emptydir", 0755), 0, "");
-  fd1 = open("::emptydir", O_RDONLY, 0644);
-  ASSERT_GT(fd1, 0, "");
+  ASSERT_EQ(unlink(GetPath("file.txt").c_str()), 0);
+  ASSERT_EQ(mkdir(GetPath("emptydir").c_str(), 0755), 0);
+  fd1 = open(GetPath("emptydir").c_str(), O_RDONLY, 0644);
+  ASSERT_GT(fd1, 0);
 
   // Zero-sized reads should always succeed
-  ASSERT_EQ(read(fd1, NULL, 0), 0, "");
+  ASSERT_EQ(read(fd1, NULL, 0), 0);
   // But nonzero reads to directories should always fail
   char buf;
-  ASSERT_EQ(read(fd1, &buf, 1), -1, "");
-  ASSERT_EQ(write(fd1, "Don't write to directories", 26), -1, "");
-  ASSERT_EQ(ftruncate(fd1, 0), -1, "");
-  ASSERT_EQ(rmdir("::emptydir"), 0, "");
-  ASSERT_EQ(rmdir("::emptydir"), -1, "");
-  ASSERT_EQ(close(fd1), 0, "");
-  ASSERT_EQ(rmdir("::emptydir"), -1, "");
-
-  END_TEST;
+  ASSERT_EQ(read(fd1, &buf, 1), -1);
+  ASSERT_EQ(write(fd1, "Don't write to directories", 26), -1);
+  ASSERT_EQ(ftruncate(fd1, 0), -1);
+  ASSERT_EQ(rmdir(GetPath("emptydir").c_str()), 0);
+  ASSERT_EQ(rmdir(GetPath("emptydir").c_str()), -1);
+  ASSERT_EQ(close(fd1), 0);
+  ASSERT_EQ(rmdir(GetPath("emptydir").c_str()), -1);
 }
 
-bool test_unclean_close(void) {
-  BEGIN_TEST;
-
-  int fd = open("::foobar", O_CREAT | O_RDWR);
-  ASSERT_GT(fd, 0, "");
+TEST_P(BasicTest, UncleanClose) {
+  int fd = open(GetPath("foobar").c_str(), O_CREAT | O_RDWR);
+  ASSERT_GT(fd, 0);
 
   // Try closing a connection to a file with an "unclean" shutdown,
   // noticed by the filesystem server as a closed handle rather than
@@ -70,15 +67,16 @@ bool test_unclean_close(void) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   fdio_fd_transfer(fd, &handle);
   // TODO: Should we check the status returned by fdio_fd_transfer?
-  ASSERT_GE(fd, 0, "");
+  ASSERT_GE(fd, 0);
   if (handle != ZX_HANDLE_INVALID) {
-    ASSERT_EQ(zx_handle_close(handle), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(handle), ZX_OK);
   }
 
-  ASSERT_EQ(unlink("::foobar"), 0, "");
-
-  END_TEST;
+  ASSERT_EQ(unlink(GetPath("foobar").c_str()), 0);
 }
 
-RUN_FOR_ALL_FILESYSTEMS(basic_tests,
-                        RUN_TEST_MEDIUM(test_basic) RUN_TEST_MEDIUM(test_unclean_close))
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BasicTest, testing::ValuesIn(AllTestFileSystems()),
+                         testing::PrintToStringParamName());
+
+}  // namespace
+}  // namespace fs_test
