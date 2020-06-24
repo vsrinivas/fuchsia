@@ -22,6 +22,7 @@ if (host_toolchain == current_toolchain) {
 
     plugin_deps = [
       "//src/developer/development-bridge/device:ffx_powerctl",
+      "//src/developer/development-bridge/discovery:ffx_knock",
       "//src/developer/development-bridge/discovery:ffx_select",
       "//src/developer/development-bridge/plugins/config:ffx_config_plugin",
       "//src/developer/development-bridge/plugins/echo:ffx_echo",

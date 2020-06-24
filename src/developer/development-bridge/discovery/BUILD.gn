@@ -4,9 +4,24 @@
 
 import("../build/ffx_plugin.gni")
 
+ffx_plugin("ffx_knock") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+  args_source_root = "./src/args_knock.rs"
+  source_root = "./src/lib_knock.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+    "//src/diagnostics/lib/selectors",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+  ]
+}
+
 ffx_plugin("ffx_select") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
+  args_source_root = "./src/args_select.rs"
+  source_root = "./src/lib_select.rs"
   deps = [ "//src/diagnostics/lib/selectors" ]
 }

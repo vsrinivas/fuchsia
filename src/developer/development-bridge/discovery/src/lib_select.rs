@@ -128,7 +128,7 @@ core/test
                             }]))
                             .unwrap();
                     }
-                    _ => assert!(false, format!("got unexpected {:?}", req)),
+                    _ => assert!(false, format!("got unexpected request: {:?}", req)),
                 }
             }
         });

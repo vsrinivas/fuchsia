@@ -95,7 +95,7 @@ impl RemoteControlService {
         selector: &Selector,
         service_chan: zx::Channel,
         matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
-    ) -> Result<(), rcs::ConnectError> {
+    ) -> Result<rcs::ServiceMatch, rcs::ConnectError> {
         let paths = matcher_fut.await.map_err(|e| {
             log::warn!("error looking for matching services for selector {:?}: {}", selector, e);
             rcs::ConnectError::ServiceDiscoveryFailed
@@ -109,19 +109,24 @@ impl RemoteControlService {
                 paths);
             return Err(rcs::ConnectError::MultipleMatchingServices);
         }
-        let path = paths.get(0).unwrap().hub_path.to_str().unwrap();
-        log::info!("attempting to connect to '{}'", path);
-        io_util::connect_in_namespace(path, service_chan, io::OPEN_RIGHT_READABLE).map_err(|e| {
-            log::error!("error connecting to selector {:?}: {}", selector, e);
-            rcs::ConnectError::ServiceConnectFailed
-        })
+        let svc_match = paths.get(0).unwrap();
+        let hub_path = svc_match.hub_path.to_str().unwrap();
+        log::info!("attempting to connect to '{}'", hub_path);
+        io_util::connect_in_namespace(hub_path, service_chan, io::OPEN_RIGHT_READABLE).map_err(
+            |e| {
+                log::error!("error connecting to selector {:?}: {}", selector, e);
+                rcs::ConnectError::ServiceConnectFailed
+            },
+        )?;
+
+        Ok(svc_match.into())
     }
 
     pub async fn connect_to_service(
         self: &Rc<Self>,
         selector: Selector,
         service_chan: zx::Channel,
-    ) -> Result<(), rcs::ConnectError> {
+    ) -> Result<rcs::ServiceMatch, rcs::ConnectError> {
         self.connect_with_matcher(
             &selector,
             service_chan,
