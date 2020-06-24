@@ -741,10 +741,10 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       return HandleRpcCommandGetTime(&get_time_result.value());
     }
     case RpcMessage::Command::kWaitQueue:
-      LOG(ERROR, "RPC command wait queue recognized but not implemented");
+      LOG(DEBUG, "RPC command wait queue recognized but not implemented");
       return ZX_ERR_NOT_SUPPORTED;
     case RpcMessage::Command::kSuspend:
-      LOG(ERROR, "RPC command to suspend recognized but not implemented");
+      LOG(DEBUG, "RPC command to suspend recognized but not implemented");
       return ZX_ERR_NOT_SUPPORTED;
     case RpcMessage::Command::kAllocateMemory: {
       auto alloc_mem_result = AllocateMemoryRpcMessage::CreateFromRpcMessage(std::move(message));
@@ -761,16 +761,16 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       return HandleRpcCommandFreeMemory(&free_mem_result.value());
     }
     case RpcMessage::Command::kPerformSocketIo:
-      LOG(ERROR, "RPC command to perform socket IO recognized but not implemented");
+      LOG(DEBUG, "RPC command to perform socket IO recognized but not implemented");
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_OK;
     case RpcMessage::Command::kAccessReplayProtectedMemoryBlock:
-      LOG(INFO, "RPMB is not yet supported.");
+      LOG(DEBUG, "RPMB is not yet supported.");
       message.set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
       return ZX_OK;
     case RpcMessage::Command::kAccessSqlFileSystem:
     case RpcMessage::Command::kLoadGprof:
-      LOG(INFO, "optee: received unsupported RPC command");
+      LOG(DEBUG, "optee: received unsupported RPC command");
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_OK;
     default:
@@ -809,10 +809,10 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
 
   if (status != ZX_OK) {
     if (status == ZX_ERR_NOT_FOUND) {
-      LOG(ERROR, "could not find trusted app %s!", ta_path.data());
+      LOG(DEBUG, "could not find trusted app %s!", ta_path.data());
       message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     } else {
-      LOG(ERROR, "error loading trusted app %s!", ta_path.data());
+      LOG(DEBUG, "error loading trusted app %s!", ta_path.data());
       message->set_return_code(TEEC_ERROR_GENERIC);
     }
 
@@ -883,7 +883,7 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage
   ZX_DEBUG_ASSERT(message != nullptr);
 
   if (message->memory_type() == SharedMemoryType::kGlobal) {
-    LOG(ERROR, "implementation currently does not support global shared memory!");
+    LOG(DEBUG, "implementation currently does not support global shared memory!");
     message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -915,7 +915,7 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* messag
   ZX_DEBUG_ASSERT(message != nullptr);
 
   if (message->memory_type() == SharedMemoryType::kGlobal) {
-    LOG(ERROR, "implementation currently does not support global shared memory!");
+    LOG(DEBUG, "implementation currently does not support global shared memory!");
     message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -1004,13 +1004,13 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
       return HandleRpcCommandFileSystemRenameFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kOpenDirectory:
-      LOG(ERROR, "RPC command to open directory recognized but not implemented");
+      LOG(DEBUG, "RPC command to open directory recognized but not implemented");
       break;
     case FileSystemRpcMessage::FileSystemCommand::kCloseDirectory:
-      LOG(ERROR, "RPC command to close directory recognized but not implemented");
+      LOG(DEBUG, "RPC command to close directory recognized but not implemented");
       break;
     case FileSystemRpcMessage::FileSystemCommand::kGetNextFileInDirectory:
-      LOG(ERROR, "RPC command to get next file in directory recognized but not implemented");
+      LOG(DEBUG, "RPC command to get next file in directory recognized but not implemented");
       break;
   }
 
@@ -1039,11 +1039,11 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   constexpr bool kNoCreate = false;
   zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
   if (status == ZX_ERR_NOT_FOUND) {
-    LOG(ERROR, "parent path not found (status: %d)", status);
+    LOG(DEBUG, "parent path not found (status: %d)", status);
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return status;
   } else if (status != ZX_OK) {
-    LOG(ERROR, "unable to get parent directory (status: %d)", status);
+    LOG(DEBUG, "unable to get parent directory (status: %d)", status);
     message->set_return_code(TEEC_ERROR_BAD_STATE);
     return status;
   }
@@ -1056,11 +1056,11 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kOpenFlags, kOpenMode,
                                  path.filename().string(), &file_channel);
   if (status == ZX_ERR_NOT_FOUND) {
-    LOG(ERROR, "file not found (status: %d)", status);
+    LOG(DEBUG, "file not found (status: %d)", status);
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return status;
   } else if (status != ZX_OK) {
-    LOG(ERROR, "unable to open file (status: %d)", status);
+    LOG(DEBUG, "unable to open file (status: %d)", status);
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
@@ -1105,7 +1105,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kCreateFlags, kCreateMode,
                                  path.filename().string(), &file_channel);
   if (status != ZX_OK) {
-    LOG(ERROR, "unable to create file (status: %d)", status);
+    LOG(DEBUG, "unable to create file (status: %d)", status);
     message->set_return_code(status == ZX_ERR_ALREADY_EXISTS ? TEEC_ERROR_ACCESS_CONFLICT
                                                              : TEEC_ERROR_GENERIC);
     return status;
