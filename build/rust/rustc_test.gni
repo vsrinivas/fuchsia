@@ -91,8 +91,9 @@ template("rustc_test") {
   if (!is_fuchsia) {
     test_output_file = "${root_out_dir}/${crate_name}"
     test_spec_target_name = "${target_name}_spec"
+    target_from_invoker = target_name
     test_spec(test_spec_target_name) {
-      target = ":${invoker.target_name}"
+      target = ":$target_from_invoker"
       path = test_output_file
 
       command = [ rebase_path(test_output_file, root_build_dir) ]
