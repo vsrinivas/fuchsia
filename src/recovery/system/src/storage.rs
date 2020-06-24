@@ -4,6 +4,8 @@
 
 use anyhow::{format_err, Context, Error};
 use fdio::{create_fd, device_get_topo_path};
+use fidl::endpoints::ClientEnd;
+use fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
 use fs_management as fs;
 use fuchsia_component::client::connect_to_service;
@@ -23,6 +25,7 @@ async fn format_disk(paver: PaverProxy) -> Result<(String, String), Error> {
     let file = create_fd(server_end.into_channel().into())?;
 
     let base_path = device_get_topo_path(&file)?;
+
     Ok((format!("{}/blobfs-p-1/block", base_path), format!("{}/minfs-p-2/block", base_path)))
 }
 
@@ -49,6 +52,7 @@ impl Filesystem for fs::Filesystem<fs::Blobfs> {
 /// as long as this object is alive.
 pub struct Storage {
     _blobfs: fs::Filesystem<fs::Blobfs>,
+    minfs: fs::Filesystem<fs::Minfs>,
 }
 
 impl Storage {
@@ -60,10 +64,21 @@ impl Storage {
         let (blobfs_path, minfs_path) = format_disk(paver.clone()).await?;
 
         let blobfs = create_blobfs(blobfs_path)?;
-        create_minfs(minfs_path)?;
+        let minfs = create_minfs(minfs_path)?;
 
         println!("Storage initialized");
-        Ok(Storage { _blobfs: blobfs })
+        Ok(Storage { _blobfs: blobfs, minfs })
+    }
+
+    /// Mounts the encapsulated minfs at "/m".
+    pub fn mount_minfs(&mut self) -> Result<(), Error> {
+        self.minfs.mount("/m")
+    }
+
+    pub fn get_blobfs(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+        let (blobfs_root, remote) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;
+        fdio::open("/b", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, remote.into_channel())?;
+        Ok(blobfs_root)
     }
 }
 
@@ -85,9 +100,9 @@ fn create_blobfs(block_device_path: String) -> Result<fs::Filesystem<fs::Blobfs>
 /// Uses the provide block device path to format a new minfs partition.
 /// Does not mount the partition, but leaves it blank.
 fn create_minfs(block_device_path: String) -> Result<fs::Filesystem<fs::Minfs>, Error> {
-    let (block_device_channel, server) = zx::Channel::create()?;
-    fdio::service_connect(&block_device_path, server).context("Connecting to block device")?;
-    create_minfs_from_channel(block_device_channel)
+    let (block_device, server_chan) = zx::Channel::create()?;
+    fdio::service_connect(&block_device_path, server_chan).context("connecting to block device")?;
+    create_minfs_from_channel(block_device)
 }
 
 fn create_minfs_from_channel(

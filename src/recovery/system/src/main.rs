@@ -18,8 +18,13 @@ use fuchsia_zircon::{AsHandleRef, Event, Signals};
 #[cfg(feature = "http_setup_server")]
 mod setup;
 
-// TODO(33662): Remove this when storage reinitialization is used.
-#[allow(dead_code)]
+#[cfg(feature = "http_setup_server")]
+mod ota;
+
+#[cfg(feature = "http_setup_server")]
+use crate::setup::SetupEvent;
+
+#[cfg(feature = "http_setup_server")]
 mod storage;
 
 static FONT_DATA: &'static [u8] =
@@ -28,6 +33,8 @@ static FONT_DATA: &'static [u8] =
 #[cfg(feature = "http_setup_server")]
 enum RecoveryMessages {
     EventReceived,
+    StartingOta,
+    OtaFinished { result: Result<(), Error> },
 }
 
 struct RecoveryAppAssistant {
@@ -105,10 +112,21 @@ impl<'a> RecoveryViewAssistant<'a> {
         let mut receiver = setup::start_server()?;
         let local_app_context = app_context.clone();
         let f = async move {
-            while let Some(_event) = receiver.next().await {
+            while let Some(event) = receiver.next().await {
                 println!("recovery: received request");
-                local_app_context
-                    .queue_message(view_key, make_message(RecoveryMessages::EventReceived));
+                match event {
+                    SetupEvent::Root => local_app_context
+                        .queue_message(view_key, make_message(RecoveryMessages::EventReceived)),
+                    SetupEvent::DevhostOta { cfg } => {
+                        local_app_context
+                            .queue_message(view_key, make_message(RecoveryMessages::StartingOta));
+                        let result = ota::run_devhost_ota(cfg).await;
+                        local_app_context.queue_message(
+                            view_key,
+                            make_message(RecoveryMessages::OtaFinished { result }),
+                        );
+                    }
+                }
             }
         };
 
@@ -206,6 +224,16 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
             match message {
                 RecoveryMessages::EventReceived => {
                     self.body = "Got event".to_string();
+                }
+                RecoveryMessages::StartingOta => {
+                    self.body = "Starting OTA update".to_string();
+                }
+                RecoveryMessages::OtaFinished { result } => {
+                    if let Err(e) = result {
+                        self.body = format!("OTA failed: {:?}", e);
+                    } else {
+                        self.body = "OTA succeeded".to_string();
+                    }
                 }
             }
         }

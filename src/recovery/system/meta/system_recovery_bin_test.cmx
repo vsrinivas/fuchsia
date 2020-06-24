@@ -5,6 +5,7 @@
                 "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
             },
             "system-services": [
+                "fuchsia.net.NameLookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator"
             ]
@@ -18,11 +19,17 @@
             "class/block",
             "class/display-controller"
         ],
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",
             "fuchsia.test.IsolatedDevmgr"
         ]

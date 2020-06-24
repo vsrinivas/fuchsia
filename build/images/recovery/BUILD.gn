@@ -54,6 +54,13 @@ recovery_eng_packages =
       # Device side of zxdb & fidlcat, including required policies:
       "//src/developer/debug/debug_agent",
       "//src/security/policy:appmgr_root_job_allowlist_eng",
+
+      # The SWD stack for OTAs.
+      "//src/sys/pkg/lib/isolated-ota:isolated-swd",
+
+      # Eng allowlists for SWD (for OTAs):
+      "//src/security/policy:appmgr_package_cache_allowlist_eng",
+      "//src/security/policy:appmgr_package_resolver_allowlist_eng",
     ]
 
 assemble_system("recovery-eng") {
