@@ -2045,6 +2045,10 @@ const uint32_t kImageArchUndefined = ZBI_TYPE_DISCARD;
 
 // Returns nullptr if complete, else an explanatory string.
 const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
+  if (items.empty()) {
+    return "empty ZBI";
+  }
+
   if (!ZBI_IS_KERNEL_BOOTITEM(items.front()->type())) {
     return "first item not KERNEL";
   }
@@ -2275,7 +2279,7 @@ duplicate target path (directory vs file) without --replace: %s\n",
 
 bool ImportFile(const FileContents* file, const char* filename, ItemList* items,
                 DirectoryTreeBuilder* bootfs, std::optional<Compressor::Config> recompress) {
-  if (file->exact_size() <= (sizeof(zbi_header_t) * 2)) {
+  if (file->exact_size() < sizeof(zbi_header_t)) {
     return false;
   }
   const zbi_header_t* header =
@@ -2294,7 +2298,7 @@ bool ImportFile(const FileContents* file, const char* filename, ItemList* items,
     exit(1);
   }
   uint32_t pos = sizeof(zbi_header_t);
-  do {
+  while (pos < file->exact_size()) {
     auto item = Item::CreateFromItem(file, pos);
     pos += item->TotalSize();
     if (recompress) {
@@ -2304,7 +2308,7 @@ bool ImportFile(const FileContents* file, const char* filename, ItemList* items,
     if (items->back()->type() == ZBI_TYPE_STORAGE_BOOTFS) {
       bootfs->push_back(&items->back());
     }
-  } while (pos < file->exact_size());
+  }
   return true;
 }
 
@@ -2709,12 +2713,9 @@ int main(int argc, char** argv) {
     items.push_back(Item::CreateBootFS(bootfs.tree(), compressed));
   }
 
-  if (items.empty()) {
-    fprintf(stderr, "no inputs\n");
-    exit(1);
+  if (!items.empty()) {
+    items.back()->TakeOwned(std::move(keepalive));
   }
-
-  items.back()->TakeOwned(std::move(keepalive));
 
   if (!list_contents && complete_arch != kImageArchUndefined) {
     // The only hard requirement is that the kernel be first.
