@@ -4,7 +4,7 @@
 
 use crate::message::action_fuse::{ActionFuseBuilder, ActionFuseHandle};
 use crate::message::base::{
-    Address, DeliveryStatus, Message, MessageClientId, MessageEvent, MessengerId, Payload,
+    Address, Message, MessageClientId, MessageEvent, MessengerId, Payload, Status,
 };
 use crate::message::message_client::MessageClient;
 use crate::message::messenger::Messenger;
@@ -86,9 +86,9 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
         (beacon, receptor)
     }
 
-    /// Sends the DeliveryStatus associated with the original message that spawned
+    /// Sends the Status associated with the original message that spawned
     /// this beacon.
-    pub async fn status(&self, status: DeliveryStatus) -> Result<(), Error> {
+    pub async fn status(&self, status: Status) -> Result<(), Error> {
         if self.event_sender.unbounded_send(MessageEvent::Status(status)).is_err() {
             return Err(format_err!("failed to deliver status"));
         }

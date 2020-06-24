@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::internal::handler::{message, Payload};
-use crate::message::base::{Audience, DeliveryStatus, MessageEvent, MessengerType};
+use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::registry::base::{
     Command, Context, Environment, GenerateHandler, SettingHandlerFactory, State,
 };
@@ -69,7 +69,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
                     .send();
 
                 // Wait for the startup phase to be over before continuing.
-                if let Some(MessageEvent::Status(DeliveryStatus::Received)) =
+                if let Some(MessageEvent::Status(Status::Received)) =
                     controller_receptor.next().await
                 {
                     // Startup phase is complete and had no errors. The registry can assume it

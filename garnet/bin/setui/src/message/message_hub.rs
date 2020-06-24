@@ -4,9 +4,9 @@
 
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
-    ActionSender, Address, Audience, DeliveryStatus, Fingerprint, Message, MessageAction,
-    MessageClientId, MessageError, MessageType, MessengerAction, MessengerActionSender,
-    MessengerId, MessengerType, Payload, Signature,
+    ActionSender, Address, Audience, Fingerprint, Message, MessageAction, MessageClientId,
+    MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType,
+    Payload, Signature, Status,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
@@ -132,7 +132,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 // original intended audience, this will be a no-op. However, if the
                 // reply comes beforehand, this will ensure the message is properly
                 // acknowledged.
-                source.report_status(DeliveryStatus::Received).await;
+                source.report_status(Status::Received).await;
             } else {
                 for index in 0..last_index {
                     if source_return_path[index].get_messenger_id() == sender_id {
@@ -146,7 +146,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
                 if index == last_index {
                     // Ack current message if being sent to intended recipient.
-                    message.report_status(DeliveryStatus::Received).await;
+                    message.report_status(Status::Received).await;
                 }
             }
         } else if let Some(beacon) = self.beacons.get(&sender_id) {
@@ -186,7 +186,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                             } else {
                                 // This error will occur if the sender specifies a non-existent
                                 // address.
-                                message.report_status(DeliveryStatus::Undeliverable).await;
+                                message.report_status(Status::Undeliverable).await;
                             }
                         }
                         Audience::Messenger(signature) => {
@@ -198,7 +198,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                                     } else {
                                         // This error will occur if the sender specifies a non-existent
                                         // address.
-                                        message.report_status(DeliveryStatus::Undeliverable).await;
+                                        message.report_status(Status::Undeliverable).await;
                                     }
                                 }
                                 Signature::Anonymous(id) => {
@@ -208,7 +208,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                         }
                         Audience::Broadcast => {
                             // Broadcasts don't require any audience.
-                            message.report_status(DeliveryStatus::Broadcasted).await;
+                            message.report_status(Status::Broadcasted).await;
 
                             // Gather all messengers
                             for id in self.beacons.keys() {
@@ -245,9 +245,9 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
         if require_delivery {
             message
                 .report_status(if let Some(true) = successful_delivery {
-                    DeliveryStatus::Received
+                    Status::Received
                 } else {
-                    DeliveryStatus::Undeliverable
+                    Status::Undeliverable
                 })
                 .await;
         }
@@ -368,15 +368,13 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                                 }
                             } else {
                                 // Every reply should have a return path.
-                                forwarded_message
-                                    .report_status(DeliveryStatus::Undeliverable)
-                                    .await;
+                                forwarded_message.report_status(Status::Undeliverable).await;
                                 return;
                             }
                         }
                     }
                 } else {
-                    forwarded_message.report_status(DeliveryStatus::Undeliverable).await;
+                    forwarded_message.report_status(Status::Undeliverable).await;
                     return;
                 }
             }

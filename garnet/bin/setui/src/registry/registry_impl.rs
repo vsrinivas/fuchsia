@@ -4,7 +4,7 @@
 
 use crate::internal::core;
 use crate::internal::handler;
-use crate::message::base::{Audience, DeliveryStatus, MessageEvent, MessengerType};
+use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::registry::base::{Command, SettingHandlerFactory, State};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType, SwitchboardError,
@@ -337,7 +337,7 @@ impl RegistryImpl {
                                     .send();
                                 return;
                             }
-                            MessageEvent::Status(DeliveryStatus::Undeliverable) => {
+                            MessageEvent::Status(Status::Undeliverable) => {
                                 client
                                     .reply(core::Payload::Event(SettingEvent::Response(
                                         id,
@@ -418,9 +418,7 @@ impl RegistryImpl {
             .send();
 
         // Wait for the teardown phase to be over before continuing.
-        if let Some(MessageEvent::Status(DeliveryStatus::Received)) =
-            controller_receptor.next().await
-        {
+        if let Some(MessageEvent::Status(Status::Received)) = controller_receptor.next().await {
             if self.active_controllers.contains_key(&setting_type) {
                 fx_log_err!(
                     "active_controllers still unexpectedly contains {:?}, removing.",

@@ -34,7 +34,7 @@ pub enum MessageEvent<P: Payload + 'static, A: Address + 'static> {
     Message(P, MessageClient<P, A>),
     /// A status update for the message that spawned the receptor delivering this
     /// update.
-    Status(DeliveryStatus),
+    Status(Status),
 }
 
 #[derive(Error, Debug, Clone)]
@@ -47,7 +47,7 @@ pub enum MessageError<A: Address + 'static> {
 
 /// The types of results possible from sending or replying.
 #[derive(Clone, PartialEq, Debug)]
-pub enum DeliveryStatus {
+pub enum Status {
     // Sent to some audience, potentially no one.
     Broadcasted,
     // Received by the intended address.
@@ -179,7 +179,7 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
     }
 
     /// Delivers the supplied status to all participants in the return path.
-    pub(super) async fn report_status(&mut self, status: DeliveryStatus) {
+    pub(super) async fn report_status(&mut self, status: Status) {
         for beacon in self.return_path.clone() {
             beacon.status(status.clone()).await.ok();
         }

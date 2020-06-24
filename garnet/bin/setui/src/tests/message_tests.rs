@@ -4,9 +4,7 @@
 
 use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
-use crate::message::base::{
-    Address, Audience, DeliveryStatus, MessageEvent, MessengerType, Payload,
-};
+use crate::message::base::{Address, Audience, MessageEvent, MessengerType, Payload, Status};
 use crate::message::message_client::MessageClient;
 use crate::message::message_hub::MessageHub;
 use crate::message::receptor::Receptor;
@@ -51,7 +49,7 @@ async fn verify_payload<P: Payload + PartialEq + 'static, A: Address + PartialEq
 
 /// Ensures the delivery result matches expected value.
 async fn verify_result<P: Payload + PartialEq + 'static, A: Address + PartialEq + 'static>(
-    expected: DeliveryStatus,
+    expected: Status,
     receptor: &mut Receptor<P, A>,
 ) {
     while let Some(message_event) = receptor.next().await {
@@ -280,14 +278,14 @@ async fn test_delivery_status() {
         // Ensure observer gets payload and then do nothing with message.
         verify_payload(ORIGINAL, &mut receptor_2, None).await;
 
-        verify_result(DeliveryStatus::Received, &mut receptor).await;
+        verify_result(Status::Received, &mut receptor).await;
     }
 
     {
         let mut receptor =
             messenger_client_1.message(ORIGINAL, Audience::Address(unknown_address)).send();
 
-        verify_result(DeliveryStatus::Undeliverable, &mut receptor).await;
+        verify_result(Status::Undeliverable, &mut receptor).await;
     }
 }
 
@@ -305,7 +303,7 @@ async fn test_beacon_error() {
             .unwrap();
 
         verify_result(
-            DeliveryStatus::Received,
+            Status::Received,
             &mut messenger_client.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
         )
         .await;
@@ -313,7 +311,7 @@ async fn test_beacon_error() {
     }
 
     verify_result(
-        DeliveryStatus::Undeliverable,
+        Status::Undeliverable,
         &mut messenger_client.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
     )
     .await;

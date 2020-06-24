@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::message::action_fuse::ActionFuseHandle;
-use crate::message::base::{Address, DeliveryStatus, MessageEvent, Payload};
+use crate::message::base::{Address, MessageEvent, Payload, Status};
 use crate::message::message_client::MessageClient;
 use anyhow::{format_err, Error};
 use futures::channel::mpsc::UnboundedReceiver;
@@ -48,7 +48,7 @@ impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
                 MessageEvent::Message(payload, client) => {
                     return Ok((payload, client));
                 }
-                MessageEvent::Status(DeliveryStatus::Undeliverable) => {
+                MessageEvent::Status(Status::Undeliverable) => {
                     return Err(format_err!("origin message not delivered"));
                 }
                 _ => {}
