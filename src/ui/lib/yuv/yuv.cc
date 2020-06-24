@@ -9,6 +9,16 @@
 
 namespace {
 
+// Convert linear RGB values to sRGB. |in| is a float
+// value between 0 and 1.
+float LinearRgbToSrgb(float in) {
+  if (in <= 0.0031308f) {
+    return in * 12.92f;
+  } else {
+    return 1.055f * pow(in, 1.f / 2.4f) - 0.055f;
+  }
+}
+
 uint8_t NormalizedFloatToUnsignedByte(float in) {
   int32_t out = std::roundf(in * 255.0f);
   return static_cast<uint8_t>(std::clamp(out, 0, 255));
@@ -36,10 +46,11 @@ void YuvToBgra(uint8_t y_raw, uint8_t u_raw, uint8_t v_raw, uint8_t* bgra) {
   float g = fy - (0.13397432f / 0.7152f) * fu - (0.33480248f / 0.7152) * fv;
   float b = fy + 1.8556f * fu;
 
-  bgra[0] = NormalizedFloatToUnsignedByte(b);  // blue
-  bgra[1] = NormalizedFloatToUnsignedByte(g);  // green
-  bgra[2] = NormalizedFloatToUnsignedByte(r);  // red
-  bgra[3] = 0xff;                              // alpha
+  // Convert to sRGB, then store the value as unsigned bytes.
+  bgra[0] = NormalizedFloatToUnsignedByte(LinearRgbToSrgb(b));  // blue
+  bgra[1] = NormalizedFloatToUnsignedByte(LinearRgbToSrgb(g));  // green
+  bgra[2] = NormalizedFloatToUnsignedByte(LinearRgbToSrgb(r));  // red
+  bgra[3] = 0xff;                                               // alpha
 }
 
 }  // namespace yuv

@@ -8,5 +8,6 @@ group("tests") {
   deps = [
     "input_report_reader/tests",
     "key_util:test",
+    "yuv:test",
   ]
 }

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 source_set("yuv") {
   sources = [
     "yuv.cc",
@@ -12,4 +14,21 @@ source_set("yuv") {
     # Always optimize regardless of --release or debug.
     "-O3",
   ]
+}
+
+test("yuv_unittests") {
+  sources = [ "test/yuv_unittests.cc" ]
+
+  deps = [
+    ":yuv",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+group("test") {
+  deps = [ ":yuv_unittests($host_toolchain)" ]
+
+  testonly = true
 }
