@@ -5,6 +5,7 @@
 group("tools") {
   testonly = true
   public_deps = [
+    "//build/tools/formatjson5:install($host_toolchain)",
     "//garnet/go/src/fidlmerge:host",
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:debug_agent",
