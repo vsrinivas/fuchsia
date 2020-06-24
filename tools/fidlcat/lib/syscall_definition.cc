@@ -2737,6 +2737,9 @@ void SyscallDecoderDispatcher::Populate() {
     auto resource = zx_system_powerctl->Argument<zx_handle_t>(SyscallType::kHandle);
     auto cmd = zx_system_powerctl->Argument<uint32_t>(SyscallType::kSystemPowerctl);
     auto arg = zx_system_powerctl->PointerArgument<uint8_t>(SyscallType::kUint8);
+    // Conditional field Ids
+    const uint8_t kZxSystemPowerctl_ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE = 1;
+    const uint8_t kZxSystemPowerctl_ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1 = 2;
     // Inputs
     zx_system_powerctl->Input<uint32_t>("resource",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
@@ -2746,13 +2749,15 @@ void SyscallDecoderDispatcher::Populate() {
                                                 std::make_unique<ArgumentAccess<uint8_t>>(arg),
                                                 ZxSystemPowerctlArgAcpi::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(cmd),
-                                   ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE);
+                                   ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE)
+        ->SetId(kZxSystemPowerctl_ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE);
     zx_system_powerctl
         ->InputObject<zx_system_powerctl_arg_t>("arg",
                                                 std::make_unique<ArgumentAccess<uint8_t>>(arg),
                                                 ZxSystemPowerctlArgX86PowerLimit::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(cmd),
-                                   ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1);
+                                   ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1)
+        ->SetId(kZxSystemPowerctl_ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1);
   }
 
   {
@@ -2916,6 +2921,13 @@ void SyscallDecoderDispatcher::Populate() {
     auto property = zx_object_get_property->Argument<uint32_t>(SyscallType::kPropType);
     auto value = zx_object_get_property->PointerArgument<uint8_t>(SyscallType::kUint8);
     auto value_size = zx_object_get_property->Argument<size_t>(SyscallType::kSize);
+    // Conditional field Ids
+    const uint8_t kZxObjectGetProperty_ZX_PROP_NAME = 1;
+    const uint8_t kZxObjectGetProperty_ZX_PROP_PROCESS_DEBUG_ADDR = 2;
+    const uint8_t kZxObjectGetProperty_ZX_PROP_PROCESS_VDSO_BASE_ADDRESS = 3;
+    const uint8_t kZxObjectGetProperty_ZX_PROP_SOCKET_RX_THRESHOLD = 4;
+    const uint8_t kZxObjectGetProperty_ZX_PROP_SOCKET_TX_THRESHOLD = 5;
+    const uint8_t kZxObjectGetProperty_ZX_PROP_EXCEPTION_STATE = 6;
     // Inputs
     zx_object_get_property->Input<zx_handle_t>(
         "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -2926,32 +2938,38 @@ void SyscallDecoderDispatcher::Populate() {
         ->OutputString<uint8_t>(ZX_OK, "value", std::make_unique<ArgumentAccess<uint8_t>>(value),
                                 std::make_unique<ArgumentAccess<size_t>>(value_size))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_NAME);
+                                   ZX_PROP_NAME)
+        ->SetId(kZxObjectGetProperty_ZX_PROP_NAME);
     zx_object_get_property
         ->OutputIndirect<uintptr_t, uint8_t>(ZX_OK, "value", SyscallType::kVaddr,
                                              std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_PROCESS_DEBUG_ADDR);
+                                   ZX_PROP_PROCESS_DEBUG_ADDR)
+        ->SetId(kZxObjectGetProperty_ZX_PROP_PROCESS_DEBUG_ADDR);
     zx_object_get_property
         ->OutputIndirect<uintptr_t, uint8_t>(ZX_OK, "value", SyscallType::kVaddr,
                                              std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_PROCESS_VDSO_BASE_ADDRESS);
+                                   ZX_PROP_PROCESS_VDSO_BASE_ADDRESS)
+        ->SetId(kZxObjectGetProperty_ZX_PROP_PROCESS_VDSO_BASE_ADDRESS);
     zx_object_get_property
         ->OutputIndirect<size_t, uint8_t>(ZX_OK, "value", SyscallType::kSize,
                                           std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_SOCKET_RX_THRESHOLD);
+                                   ZX_PROP_SOCKET_RX_THRESHOLD)
+        ->SetId(kZxObjectGetProperty_ZX_PROP_SOCKET_RX_THRESHOLD);
     zx_object_get_property
         ->OutputIndirect<size_t, uint8_t>(ZX_OK, "value", SyscallType::kSize,
                                           std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_SOCKET_TX_THRESHOLD);
+                                   ZX_PROP_SOCKET_TX_THRESHOLD)
+        ->SetId(kZxObjectGetProperty_ZX_PROP_SOCKET_TX_THRESHOLD);
     zx_object_get_property
         ->OutputIndirect<uint32_t, uint8_t>(ZX_OK, "value", SyscallType::kExceptionState,
                                             std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_EXCEPTION_STATE);
+                                   ZX_PROP_EXCEPTION_STATE)
+        ->SetId(kZxObjectGetProperty_ZX_PROP_EXCEPTION_STATE);
   }
 
   {
@@ -2961,6 +2979,15 @@ void SyscallDecoderDispatcher::Populate() {
     auto property = zx_object_set_property->Argument<uint32_t>(SyscallType::kPropType);
     auto value = zx_object_set_property->PointerArgument<uint8_t>(SyscallType::kUint8);
     auto value_size = zx_object_set_property->Argument<size_t>(SyscallType::kSize);
+    // Conditional field Ids
+    const uint8_t kZxObjectSetProperty_ZX_PROP_NAME = 1;
+    const uint8_t kZxObjectSetProperty_ZX_PROP_REGISTER_FS = 2;
+    const uint8_t kZxObjectSetProperty_ZX_PROP_REGISTER_GS = 3;
+    const uint8_t kZxObjectSetProperty_ZX_PROP_PROCESS_DEBUG_ADDR = 4;
+    const uint8_t kZxObjectSetProperty_ZX_PROP_SOCKET_RX_THRESHOLD = 5;
+    const uint8_t kZxObjectSetProperty_ZX_PROP_SOCKET_TX_THRESHOLD = 6;
+    const uint8_t kZxObjectSetProperty_ZX_PROP_JOB_KILL_ON_OOM = 7;
+    const uint8_t kZxObjectSetProperty_ZX_PROP_EXCEPTION_STATE = 8;
     // Inputs
     zx_object_set_property->Input<zx_handle_t>(
         "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -2970,42 +2997,50 @@ void SyscallDecoderDispatcher::Populate() {
         ->InputString<uint8_t>("value", std::make_unique<ArgumentAccess<uint8_t>>(value),
                                std::make_unique<ArgumentAccess<size_t>>(value_size))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_NAME);
+                                   ZX_PROP_NAME)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_NAME);
     zx_object_set_property
         ->InputIndirect<uintptr_t, uint8_t>("value", SyscallType::kVaddr,
                                             std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_REGISTER_FS);
+                                   ZX_PROP_REGISTER_FS)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_REGISTER_FS);
     zx_object_set_property
         ->InputIndirect<uintptr_t, uint8_t>("value", SyscallType::kVaddr,
                                             std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_REGISTER_GS);
+                                   ZX_PROP_REGISTER_GS)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_REGISTER_GS);
     zx_object_set_property
         ->InputIndirect<uintptr_t, uint8_t>("value", SyscallType::kVaddr,
                                             std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_PROCESS_DEBUG_ADDR);
+                                   ZX_PROP_PROCESS_DEBUG_ADDR)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_PROCESS_DEBUG_ADDR);
     zx_object_set_property
         ->InputIndirect<size_t, uint8_t>("value", SyscallType::kSize,
                                          std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_SOCKET_RX_THRESHOLD);
+                                   ZX_PROP_SOCKET_RX_THRESHOLD)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_SOCKET_RX_THRESHOLD);
     zx_object_set_property
         ->InputIndirect<size_t, uint8_t>("value", SyscallType::kSize,
                                          std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_SOCKET_TX_THRESHOLD);
+                                   ZX_PROP_SOCKET_TX_THRESHOLD)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_SOCKET_TX_THRESHOLD);
     zx_object_set_property
         ->InputIndirect<size_t, uint8_t>("value", SyscallType::kSize,
                                          std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_JOB_KILL_ON_OOM);
+                                   ZX_PROP_JOB_KILL_ON_OOM)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_JOB_KILL_ON_OOM);
     zx_object_set_property
         ->InputIndirect<uint32_t, uint8_t>("value", SyscallType::kExceptionState,
                                            std::make_unique<ArgumentAccess<uint8_t>>(value))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(property),
-                                   ZX_PROP_EXCEPTION_STATE);
+                                   ZX_PROP_EXCEPTION_STATE)
+        ->SetId(kZxObjectSetProperty_ZX_PROP_EXCEPTION_STATE);
   }
 
   {
@@ -3018,6 +3053,34 @@ void SyscallDecoderDispatcher::Populate() {
     auto buffer_size = zx_object_get_info->Argument<size_t>(SyscallType::kSize);
     auto actual = zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
     auto avail = zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
+    // Conditional field Ids
+    const uint8_t kZxObjectGetInfo_ZX_INFO_HANDLE_BASIC = 1;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_HANDLE_COUNT = 2;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS_HANDLE_STATS = 3;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_JOB = 4;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS = 5;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS_THREADS_actual = 6;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS_THREADS_info = 7;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_THREAD = 8;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_THREAD_EXCEPTION_REPORT = 9;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_THREAD_STATS = 10;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_CPU_STATS = 11;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_VMAR = 12;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_VMO = 13;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_SOCKET = 14;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_TIMER = 15;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_JOB_CHILDREN_actual = 16;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_JOB_CHILDREN_info = 17;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_JOB_PROCESSES_actual = 18;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_JOB_PROCESSES_info = 19;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_TASK_STATS = 20;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS_MAPS_actual = 21;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS_MAPS_info = 22;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS_VMOS_actual = 23;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_PROCESS_VMOS_info = 24;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_KMEM_STATS = 25;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_RESOURCE = 26;
+    const uint8_t kZxObjectGetInfo_ZX_INFO_BTI = 27;
     // Inputs
     zx_object_get_info->Input<zx_handle_t>("handle",
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -3030,156 +3093,182 @@ void SyscallDecoderDispatcher::Populate() {
                                                std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                                ZxInfoHandleBasic::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_HANDLE_BASIC);
+                                   ZX_INFO_HANDLE_BASIC)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_HANDLE_BASIC);
     zx_object_get_info
         ->OutputObject<zx_info_handle_count_t>(ZX_OK, "info",
                                                std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                                ZxInfoHandleCount::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_HANDLE_COUNT);
+                                   ZX_INFO_HANDLE_COUNT)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_HANDLE_COUNT);
     zx_object_get_info
         ->OutputObject<zx_info_process_handle_stats_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxInfoProcessHandleStats::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS_HANDLE_STATS);
+                                   ZX_INFO_PROCESS_HANDLE_STATS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS_HANDLE_STATS);
     zx_object_get_info
         ->OutputObject<zx_info_job_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxInfoJob::GetClass())
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_JOB);
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_JOB)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_JOB);
     zx_object_get_info
         ->OutputObject<zx_info_process_t>(ZX_OK, "info",
                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                           ZxInfoProcess::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS);
+                                   ZX_INFO_PROCESS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS);
     zx_object_get_info
         ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
                                            std::make_unique<ArgumentAccess<size_t>>(actual),
                                            std::make_unique<ArgumentAccess<size_t>>(avail))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS_THREADS);
+                                   ZX_INFO_PROCESS_THREADS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS_THREADS_actual);
     zx_object_get_info
         ->OutputBuffer<zx_koid_t, uint8_t, size_t>(
             ZX_OK, "info", SyscallType::kKoid, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             std::make_unique<ArgumentAccess<size_t>>(actual))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS_THREADS);
+                                   ZX_INFO_PROCESS_THREADS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS_THREADS_info);
     zx_object_get_info
         ->OutputObject<zx_info_thread_t>(ZX_OK, "info",
                                          std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                          ZxInfoThread::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_THREAD);
+                                   ZX_INFO_THREAD)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_THREAD);
     zx_object_get_info
         ->OutputObject<zx_exception_report_t>(ZX_OK, "info",
                                               std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                               ZxExceptionReport::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_THREAD_EXCEPTION_REPORT);
+                                   ZX_INFO_THREAD_EXCEPTION_REPORT)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_THREAD_EXCEPTION_REPORT);
     zx_object_get_info
         ->OutputObject<zx_info_thread_stats_t>(ZX_OK, "info",
                                                std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                                ZxInfoThreadStats::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_THREAD_STATS);
+                                   ZX_INFO_THREAD_STATS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_THREAD_STATS);
     zx_object_get_info
         ->OutputObject<zx_info_cpu_stats_t>(ZX_OK, "info",
                                             std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                             ZxInfoCpuStats::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_CPU_STATS);
+                                   ZX_INFO_CPU_STATS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_CPU_STATS);
     zx_object_get_info
         ->OutputObject<zx_info_vmar_t>(ZX_OK, "info",
                                        std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                        ZxInfoVmar::GetClass())
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_VMAR);
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_VMAR)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_VMAR);
     zx_object_get_info
         ->OutputObject<zx_info_vmo_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxInfoVmo::GetClass())
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_VMO);
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_VMO)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_VMO);
     zx_object_get_info
         ->OutputObject<zx_info_socket_t>(ZX_OK, "info",
                                          std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                          ZxInfoSocket::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_SOCKET);
+                                   ZX_INFO_SOCKET)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_SOCKET);
     zx_object_get_info
         ->OutputObject<zx_info_timer_t>(ZX_OK, "info",
                                         std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                         ZxInfoTimer::GetClass())
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_TIMER);
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_TIMER)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_TIMER);
     zx_object_get_info
         ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
                                            std::make_unique<ArgumentAccess<size_t>>(actual),
                                            std::make_unique<ArgumentAccess<size_t>>(avail))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_JOB_CHILDREN);
+                                   ZX_INFO_JOB_CHILDREN)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_JOB_CHILDREN_actual);
     zx_object_get_info
         ->OutputBuffer<zx_koid_t, uint8_t, size_t>(
             ZX_OK, "info", SyscallType::kKoid, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             std::make_unique<ArgumentAccess<size_t>>(actual))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_JOB_CHILDREN);
+                                   ZX_INFO_JOB_CHILDREN)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_JOB_CHILDREN_info);
     zx_object_get_info
         ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
                                            std::make_unique<ArgumentAccess<size_t>>(actual),
                                            std::make_unique<ArgumentAccess<size_t>>(avail))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_JOB_PROCESSES);
+                                   ZX_INFO_JOB_PROCESSES)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_JOB_PROCESSES_actual);
     zx_object_get_info
         ->OutputBuffer<zx_koid_t, uint8_t, size_t>(
             ZX_OK, "info", SyscallType::kKoid, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             std::make_unique<ArgumentAccess<size_t>>(actual))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_JOB_PROCESSES);
+                                   ZX_INFO_JOB_PROCESSES)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_JOB_PROCESSES_info);
     zx_object_get_info
         ->OutputObject<zx_info_task_stats_t>(ZX_OK, "info",
                                              std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                              ZxInfoTaskStats::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_TASK_STATS);
+                                   ZX_INFO_TASK_STATS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_TASK_STATS);
     zx_object_get_info
         ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
                                            std::make_unique<ArgumentAccess<size_t>>(actual),
                                            std::make_unique<ArgumentAccess<size_t>>(avail))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS_MAPS);
+                                   ZX_INFO_PROCESS_MAPS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS_MAPS_actual);
     zx_object_get_info
         ->OutputObjectArray<zx_info_maps_t, size_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             std::make_unique<ArgumentAccess<size_t>>(actual), ZxInfoMaps::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS_MAPS);
+                                   ZX_INFO_PROCESS_MAPS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS_MAPS_info);
     zx_object_get_info
         ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
                                            std::make_unique<ArgumentAccess<size_t>>(actual),
                                            std::make_unique<ArgumentAccess<size_t>>(avail))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS_VMOS);
+                                   ZX_INFO_PROCESS_VMOS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS_VMOS_actual);
     zx_object_get_info
         ->OutputObjectArray<zx_info_vmo_t, size_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             std::make_unique<ArgumentAccess<size_t>>(actual), ZxInfoVmo::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS_VMOS);
+                                   ZX_INFO_PROCESS_VMOS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS_VMOS_info);
     zx_object_get_info
         ->OutputObject<zx_info_kmem_stats_t>(ZX_OK, "info",
                                              std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                              ZxInfoKmemStats::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_KMEM_STATS);
+                                   ZX_INFO_KMEM_STATS)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_KMEM_STATS);
     zx_object_get_info
         ->OutputObject<zx_info_resource_t>(ZX_OK, "info",
                                            std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                            ZxInfoResource::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_RESOURCE);
+                                   ZX_INFO_RESOURCE)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_RESOURCE);
     zx_object_get_info
         ->OutputObject<zx_info_bti_t>(
             ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxInfoBti::GetClass())
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_BTI);
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_BTI)
+        ->SetId(kZxObjectGetInfo_ZX_INFO_BTI);
   }
 
   {
@@ -3500,6 +3589,16 @@ void SyscallDecoderDispatcher::Populate() {
     auto kind = zx_thread_read_state->Argument<uint32_t>(SyscallType::kThreadStateTopic);
     auto buffer = zx_thread_read_state->PointerArgument<uint8_t>(SyscallType::kUint8);
     auto buffer_size = zx_thread_read_state->Argument<size_t>(SyscallType::kSize);
+    // Conditional field Ids
+    const uint8_t kZxThreadReadState_ZX_THREAD_STATE_GENERAL_REGS_Arm64 = 1;
+    const uint8_t kZxThreadReadState_ZX_THREAD_STATE_GENERAL_REGS_X64 = 2;
+    const uint8_t kZxThreadReadState_ZX_THREAD_STATE_FP_REGS_X64 = 3;
+    const uint8_t kZxThreadReadState_ZX_THREAD_STATE_VECTOR_REGS_Arm64 = 4;
+    const uint8_t kZxThreadReadState_ZX_THREAD_STATE_VECTOR_REGS_X64 = 5;
+    const uint8_t kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_Arm64 = 6;
+    const uint8_t kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_X64 = 7;
+    const uint8_t kZxThreadReadState_ZX_THREAD_X86_REGISTER_FS_X64 = 8;
+    const uint8_t kZxThreadReadState_ZX_THREAD_X86_REGISTER_GS_X64 = 9;
     // Inputs
     zx_thread_read_state->Input<zx_handle_t>("handle",
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -3513,49 +3612,56 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateGeneralRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_STATE_GENERAL_REGS_Arm64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_general_regs_x86_t>(
             ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateGeneralRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_STATE_GENERAL_REGS_X64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_fp_regs_x86_t>(
             ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateFpRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_FP_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_STATE_FP_REGS_X64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_vector_regs_aarch64_t>(
             ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateVectorRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_STATE_VECTOR_REGS_Arm64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_vector_regs_x86_t>(
             ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateVectorRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_STATE_VECTOR_REGS_X64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_debug_regs_aarch64_t>(
             ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateDebugRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_Arm64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_debug_regs_x86_t>(
             ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateDebugRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_X64);
     zx_thread_read_state
         ->OutputIndirect<zx_thread_state_single_step_t, uint8_t>(
             ZX_OK, "single_step", SyscallType::kUint32,
@@ -3568,14 +3674,16 @@ void SyscallDecoderDispatcher::Populate() {
             std::make_unique<ArgumentAccess<uint8_t>>(buffer))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_X86_REGISTER_FS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_X86_REGISTER_FS_X64);
     zx_thread_read_state
         ->OutputIndirect<zx_thread_x86_register_gs_t, uint8_t>(
             ZX_OK, "reg", SyscallType::kUint64Hexa,
             std::make_unique<ArgumentAccess<uint8_t>>(buffer))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_X86_REGISTER_GS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadReadState_ZX_THREAD_X86_REGISTER_GS_X64);
   }
 
   {
@@ -3585,6 +3693,16 @@ void SyscallDecoderDispatcher::Populate() {
     auto kind = zx_thread_write_state->Argument<uint32_t>(SyscallType::kThreadStateTopic);
     auto buffer = zx_thread_write_state->PointerArgument<uint8_t>(SyscallType::kUint8);
     auto buffer_size = zx_thread_write_state->Argument<size_t>(SyscallType::kSize);
+    // Conditional field Ids
+    const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_GENERAL_REGS_Arm64 = 1;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_GENERAL_REGS_X64 = 2;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_FP_REGS_X64 = 3;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_VECTOR_REGS_Arm64 = 4;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_VECTOR_REGS_X64 = 5;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_Arm64 = 6;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_X64 = 7;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_X86_REGISTER_FS_X64 = 8;
+    const uint8_t kZxThreadWriteState_ZX_THREAD_X86_REGISTER_GS_X64 = 9;
     // Inputs
     zx_thread_write_state->Input<zx_handle_t>(
         "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -3598,49 +3716,56 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateGeneralRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_GENERAL_REGS_Arm64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_general_regs_x86_t>(
             "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateGeneralRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_GENERAL_REGS_X64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_fp_regs_x86_t>(
             "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateFpRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_FP_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_FP_REGS_X64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_vector_regs_aarch64_t>(
             "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateVectorRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_VECTOR_REGS_Arm64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_vector_regs_x86_t>(
             "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateVectorRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_VECTOR_REGS_X64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_debug_regs_aarch64_t>(
             "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateDebugRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_Arm64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_debug_regs_x86_t>(
             "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
             ZxThreadStateDebugRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_X64);
     zx_thread_write_state
         ->InputIndirect<zx_thread_state_single_step_t, uint8_t>(
             "single_step", SyscallType::kUint32, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
@@ -3651,13 +3776,15 @@ void SyscallDecoderDispatcher::Populate() {
             "reg", SyscallType::kUint64Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_X86_REGISTER_FS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_X86_REGISTER_FS_X64);
     zx_thread_write_state
         ->InputIndirect<zx_thread_x86_register_gs_t, uint8_t>(
             "reg", SyscallType::kUint64Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_X86_REGISTER_GS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxThreadWriteState_ZX_THREAD_X86_REGISTER_GS_X64);
   }
 
   {
@@ -3779,6 +3906,9 @@ void SyscallDecoderDispatcher::Populate() {
     auto topic = zx_job_set_policy->Argument<uint32_t>(SyscallType::kPolicyTopic);
     auto policy = zx_job_set_policy->PointerArgument<uint8_t>(SyscallType::kUint8);
     auto count = zx_job_set_policy->Argument<uint32_t>(SyscallType::kUint32);
+    // Conditional field Ids
+    const uint8_t kZxJobSetPolicy_ZX_JOB_POL_BASIC = 1;
+    const uint8_t kZxJobSetPolicy_ZX_JOB_POL_TIMER_SLACK = 2;
     // Inputs
     zx_job_set_policy->Input<zx_handle_t>("handle",
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -3790,13 +3920,15 @@ void SyscallDecoderDispatcher::Populate() {
             "policy", std::make_unique<ArgumentAccess<uint8_t>>(policy),
             std::make_unique<ArgumentAccess<uint32_t>>(count), ZxPolicyBasic::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_JOB_POL_BASIC);
+                                   ZX_JOB_POL_BASIC)
+        ->SetId(kZxJobSetPolicy_ZX_JOB_POL_BASIC);
     zx_job_set_policy
         ->InputObject<zx_policy_timer_slack_t>("policy",
                                                std::make_unique<ArgumentAccess<uint8_t>>(policy),
                                                ZxPolicyTimerSlack::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_JOB_POL_TIMER_SLACK);
+                                   ZX_JOB_POL_TIMER_SLACK)
+        ->SetId(kZxJobSetPolicy_ZX_JOB_POL_TIMER_SLACK);
   }
 
   {
@@ -4597,6 +4729,8 @@ void SyscallDecoderDispatcher::Populate() {
     auto action = zx_ktrace_control->Argument<uint32_t>(SyscallType::kKtraceControlAction);
     auto options = zx_ktrace_control->Argument<uint32_t>(SyscallType::kUint32);
     auto ptr = zx_ktrace_control->PointerArgument<char>(SyscallType::kChar);
+    // Conditional field Ids
+    const uint8_t kZxKtraceControl_KTRACE_ACTION_NEW_PROBE = 1;
     // Inputs
     zx_ktrace_control->Input<zx_handle_t>("handle",
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -4608,7 +4742,8 @@ void SyscallDecoderDispatcher::Populate() {
     zx_ktrace_control
         ->InputFixedSizeString("ptr", std::make_unique<ArgumentAccess<char>>(ptr), ZX_MAX_NAME_LEN)
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(action),
-                                   KTRACE_ACTION_NEW_PROBE);
+                                   KTRACE_ACTION_NEW_PROBE)
+        ->SetId(kZxKtraceControl_KTRACE_ACTION_NEW_PROBE);
   }
 
   {
@@ -4824,6 +4959,8 @@ void SyscallDecoderDispatcher::Populate() {
     auto desc = zx_iommu_create->PointerArgument<uint8_t>(SyscallType::kUint8);
     zx_iommu_create->Argument<size_t>(SyscallType::kSize);
     auto out = zx_iommu_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Conditional field Ids
+    const uint8_t kZxIommuCreate_ZX_IOMMU_TYPE_INTEL = 1;
     // Inputs
     zx_iommu_create->Input<zx_handle_t>("resource",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
@@ -4832,7 +4969,8 @@ void SyscallDecoderDispatcher::Populate() {
         ->InputObject<zx_iommu_desc_intel_t>(
             "desc", std::make_unique<ArgumentAccess<uint8_t>>(desc), ZxIommuDescIntel::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(type),
-                                   ZX_IOMMU_TYPE_INTEL);
+                                   ZX_IOMMU_TYPE_INTEL)
+        ->SetId(kZxIommuCreate_ZX_IOMMU_TYPE_INTEL);
     // Outputs
     zx_iommu_create->Output<zx_handle_t>(ZX_OK, "out",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
@@ -5034,6 +5172,9 @@ void SyscallDecoderDispatcher::Populate() {
     auto val = zx_pci_cfg_pio_rw->PointerArgument<uint32_t>(SyscallType::kUint32);
     auto width = zx_pci_cfg_pio_rw->Argument<size_t>(SyscallType::kSize);
     auto write = zx_pci_cfg_pio_rw->Argument<bool>(SyscallType::kBool);
+    // Conditional field Ids
+    const uint8_t kZxPciCfgPioRw_true = 1;
+    const uint8_t kZxPciCfgPioRw_false = 2;
     // Inputs
     zx_pci_cfg_pio_rw->Input<zx_handle_t>("handle",
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -5043,12 +5184,14 @@ void SyscallDecoderDispatcher::Populate() {
     zx_pci_cfg_pio_rw->Input<uint8_t>("offset", std::make_unique<ArgumentAccess<uint8_t>>(offset));
     zx_pci_cfg_pio_rw->Input<size_t>("width", std::make_unique<ArgumentAccess<size_t>>(width));
     zx_pci_cfg_pio_rw->Input<uint32_t>("val", std::make_unique<ArgumentAccess<uint32_t>>(val))
-        ->DisplayIfEqual<bool>(std::make_unique<ArgumentAccess<bool>>(write), true);
+        ->DisplayIfEqual<bool>(std::make_unique<ArgumentAccess<bool>>(write), true)
+        ->SetId(kZxPciCfgPioRw_true);
     zx_pci_cfg_pio_rw->Input<bool>("write", std::make_unique<ArgumentAccess<bool>>(write));
     // Outputs
     zx_pci_cfg_pio_rw
         ->Output<uint32_t>(ZX_OK, "val", std::make_unique<ArgumentAccess<uint32_t>>(val))
-        ->DisplayIfEqual<bool>(std::make_unique<ArgumentAccess<bool>>(write), false);
+        ->DisplayIfEqual<bool>(std::make_unique<ArgumentAccess<bool>>(write), false)
+        ->SetId(kZxPciCfgPioRw_false);
   }
 
   {
@@ -5299,6 +5442,9 @@ void SyscallDecoderDispatcher::Populate() {
     auto kind = zx_vcpu_read_state->Argument<uint32_t>(SyscallType::kVcpu);
     auto buffer = zx_vcpu_read_state->PointerArgument<uint8_t>(SyscallType::kUint8);
     zx_vcpu_read_state->Argument<size_t>(SyscallType::kSize);
+    // Conditional field Ids
+    const uint8_t kZxVcpuReadState_ZX_VCPU_STATE_Arm64 = 1;
+    const uint8_t kZxVcpuReadState_ZX_VCPU_STATE_X64 = 2;
     // Inputs
     zx_vcpu_read_state->Input<zx_handle_t>("handle",
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -5309,13 +5455,15 @@ void SyscallDecoderDispatcher::Populate() {
                                                 std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                                 ZxVcpuStateAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxVcpuReadState_ZX_VCPU_STATE_Arm64);
     zx_vcpu_read_state
         ->OutputObject<zx_vcpu_state_x86_t>(ZX_OK, "buffer",
                                             std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                             ZxVcpuStateX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxVcpuReadState_ZX_VCPU_STATE_X64);
   }
 
   {
@@ -5325,6 +5473,10 @@ void SyscallDecoderDispatcher::Populate() {
     auto kind = zx_vcpu_write_state->Argument<uint32_t>(SyscallType::kVcpu);
     auto buffer = zx_vcpu_write_state->PointerArgument<uint8_t>(SyscallType::kUint8);
     zx_vcpu_write_state->Argument<size_t>(SyscallType::kSize);
+    // Conditional field Ids
+    const uint8_t kZxVcpuWriteState_ZX_VCPU_STATE_Arm64 = 1;
+    const uint8_t kZxVcpuWriteState_ZX_VCPU_STATE_X64 = 2;
+    const uint8_t kZxVcpuWriteState_ZX_VCPU_IO = 3;
     // Inputs
     zx_vcpu_write_state->Input<zx_handle_t>("handle",
                                             std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -5334,16 +5486,19 @@ void SyscallDecoderDispatcher::Populate() {
                                                std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                                ZxVcpuStateAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->SetId(kZxVcpuWriteState_ZX_VCPU_STATE_Arm64);
     zx_vcpu_write_state
         ->InputObject<zx_vcpu_state_x86_t>(
             "buffer", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxVcpuStateX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->SetId(kZxVcpuWriteState_ZX_VCPU_STATE_X64);
     zx_vcpu_write_state
         ->InputObject<zx_vcpu_io_t>("buffer", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                     ZxVcpuIo::GetClass())
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_IO);
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_IO)
+        ->SetId(kZxVcpuWriteState_ZX_VCPU_IO);
   }
 
   {

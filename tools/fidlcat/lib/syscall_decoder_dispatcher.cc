@@ -222,10 +222,10 @@ bool ComputeTypes(const std::vector<std::unique_ptr<SyscallInputOutputBase>>& fi
     }
     if (field->InlineValue()) {
       inline_members->emplace_back(
-          std::make_unique<fidl_codec::StructMember>(field->name(), std::move(type)));
+          std::make_unique<fidl_codec::StructMember>(field->name(), std::move(type), field->id()));
     } else {
       outline_members->emplace_back(
-          std::make_unique<fidl_codec::StructMember>(field->name(), std::move(type)));
+          std::make_unique<fidl_codec::StructMember>(field->name(), std::move(type), field->id()));
     }
   }
   return true;

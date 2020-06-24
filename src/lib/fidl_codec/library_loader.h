@@ -207,16 +207,19 @@ class StructMember {
  public:
   StructMember(Library* enclosing_library, const rapidjson::Value* json_definition);
   StructMember(std::string_view name, std::unique_ptr<Type> type);
+  StructMember(std::string_view name, std::unique_ptr<Type> type, uint8_t id);
   ~StructMember();
 
   const std::string& name() const { return name_; }
   uint64_t offset() const { return offset_; }
   const Type* type() const { return type_.get(); }
+  uint8_t id() const { return id_; }
 
  private:
   const std::string name_;
   uint64_t offset_ = 0;
   std::unique_ptr<Type> type_;
+  uint8_t id_ = 0;
 };
 
 class Struct {

@@ -692,6 +692,9 @@ class SyscallInputOutputBase {
   // Name of the input/output.
   const std::string& name() const { return name_; }
 
+  // Id of the input/output
+  uint8_t id() const { return id_; }
+
   // Returns true if this value is displayed inline.
   virtual bool InlineValue() const { return true; }
 
@@ -703,6 +706,13 @@ class SyscallInputOutputBase {
   SyscallInputOutputBase* DisplayIfEqual(std::unique_ptr<Access<Type>> access, Type value) {
     conditions_.push_back(
         std::make_unique<SyscallInputOutputCondition<Type>>(std::move(access), value));
+    return this;
+  }
+
+  // Sets a unique id to distinguish the input/output from other conditional input/outputs with the
+  // same name
+  SyscallInputOutputBase* SetId(uint8_t id) {
+    id_ = id;
     return this;
   }
 
@@ -751,6 +761,8 @@ class SyscallInputOutputBase {
   const std::string name_;
   // Conditions which must be met to display this input/output.
   std::vector<std::unique_ptr<SyscallInputOutputConditionBase>> conditions_;
+  // A unique id to distinguish input/output from other conditional intput/output with the same name
+  uint8_t id_ = 0;
 };
 
 // An input/output which only displays an expression (for example, the value of
