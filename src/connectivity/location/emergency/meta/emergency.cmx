@@ -3,6 +3,9 @@
         "binary": "bin/emergency"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.http.Loader"

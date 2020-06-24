@@ -21,6 +21,7 @@ use {
 };
 
 const CONCURRENCY_LIMIT: Option<usize> = None;
+const API_KEY_FILE: &str = "/config/data/google_maps_api_key.txt";
 
 /// Wraps all hosted protocols into a single type that can be matched against
 /// and dispatched.
@@ -36,7 +37,8 @@ async fn main() -> Result<(), anyhow::Error> {
     let bss_cache = Mutex::new(RealBssCache::new());
     let bss_resolver = RealBssResolver::new(
         connect_to_service::<HttpLoaderMarker>().context("failed to connect to http loader")?,
-        read_google_maps_api_key(),
+        std::fs::read_to_string(API_KEY_FILE)
+            .with_context(|| format!("failed to read {}", API_KEY_FILE))?,
     );
     let mut service_fs = ServiceFs::new_local();
     service_fs
@@ -53,11 +55,6 @@ async fn main() -> Result<(), anyhow::Error> {
         .await;
 
     Ok(())
-}
-
-fn read_google_maps_api_key() -> String {
-    // TODO(51520): Read API key using config-data.
-    "FAKE API KEY".to_owned()
 }
 
 async fn handle_client_requests<C: BssCache, R: BssResolver>(
