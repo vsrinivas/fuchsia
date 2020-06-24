@@ -183,5 +183,5 @@ TEST_F(TestMsdVslContext, SubmitBatchesNoResources) {
 }
 
 TEST_F(TestMsdVslContext, SubmitBatchesWithResources) {
-  ASSERT_NO_FATAL_FAILURE(TestSubmitBatches(5 /* num_batches */, 3 /* num_resources_per_batch */));
+  ASSERT_NO_FATAL_FAILURE(TestSubmitBatches(5 /* num_batches */, 2 /* num_resources_per_batch */));
 }

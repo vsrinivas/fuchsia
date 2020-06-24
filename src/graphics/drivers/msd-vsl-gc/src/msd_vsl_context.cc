@@ -32,13 +32,8 @@ std::unique_ptr<MappedBatch> MsdVslContext::CreateBatch(std::shared_ptr<MsdVslCo
                                                        exec_resources[i].offset,
                                                        exec_resources[i].length});
   }
-
+  // Currently wait semaphores are not used.
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
-  wait_semaphores.reserve(cmd_buf->wait_semaphore_count);
-  for (uint32_t i = 0; i < cmd_buf->wait_semaphore_count; i++) {
-    wait_semaphores.emplace_back(MsdVslAbiSemaphore::cast(msd_wait_semaphores[i])->ptr());
-  }
-
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
   signal_semaphores.reserve(cmd_buf->signal_semaphore_count);
   for (uint32_t i = 0; i < cmd_buf->signal_semaphore_count; i++) {
@@ -54,12 +49,11 @@ std::unique_ptr<MappedBatch> MsdVslContext::CreateBatch(std::shared_ptr<MsdVslCo
 
   // The CommandBuffer does not support batches with zero resources.
   if (resources.size() > 0) {
-    auto command_buffer = std::make_unique<CommandBuffer>(
-        context, connection->client_id(), std::make_unique<magma_system_command_buffer>(*cmd_buf));
-
-    if (!command_buffer->InitializeResources(std::move(resources), std::move(wait_semaphores),
-                                             std::move(signal_semaphores))) {
-      return DRETP(nullptr, "Failed to initialize resources");
+    auto command_buffer = CommandBuffer::Create(
+        context, connection->client_id(), std::make_unique<magma_system_command_buffer>(*cmd_buf),
+        std::move(resources), std::move(signal_semaphores));
+    if (!command_buffer) {
+      return DRETP(nullptr, "Failed to create command buffer");
     }
     batch = std::move(command_buffer);
   } else {
@@ -135,6 +129,9 @@ magma_status_t msd_context_execute_command_buffer_with_resources(
     if (!command_buffer->PrepareForExecution()) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
                       "Failed to prepare command buffer for execution");
+    }
+    if (!command_buffer->IsValidBatch()) {
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Command buffer is not a valid batch");
     }
   }
   magma::Status status = context->SubmitBatch(std::move(batch));

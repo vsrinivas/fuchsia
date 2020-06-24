@@ -29,6 +29,10 @@ class MsdVslContext {
 
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch);
 
+  // |exec_resources| may contain up to 2 resources. If resources are provided,
+  // one of the resources must be the batch buffer. The other resource may be an optional
+  // context state buffer, which will be executed before the batch buffer if |context|
+  // differs from the context of the last executed command buffer.
   static std::unique_ptr<MappedBatch> CreateBatch(std::shared_ptr<MsdVslContext> context,
                                                   magma_system_command_buffer* cmd_buf,
                                                   magma_system_exec_resource* exec_resources,

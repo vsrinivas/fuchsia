@@ -30,6 +30,48 @@ class TestCommandBuffer : public ::testing::Test {
   }
 
  protected:
+  // This holds the buffer that can be passed as the context state buffer for a batch.
+  class FakeContextStateBuffer {
+   public:
+    // Returns a fake context state buffer in |out_buffer|, which has an EVENT command written
+    // to the underlying platform buffer. After submitting the batch, the caller can verify the
+    // buffer was executed by calling |WaitForCompletion|, which will wait for the EVENT
+    // to be executed.
+    static void CreateWithEvent(std::unique_ptr<MsdVslDevice>& device,
+                                std::shared_ptr<MsdVslContext> context, uint32_t gpu_addr,
+                                std::unique_ptr<FakeContextStateBuffer>* out_buffer) {
+      constexpr uint32_t kBufferSize = 4096;
+      constexpr uint32_t kMapPageCount = 1;
+      constexpr uint32_t kDataSize = 8;  // EVENT command.
+
+      std::shared_ptr<MsdVslBuffer> buf;
+      std::unique_ptr<magma::PlatformSemaphore> semaphore;
+      ASSERT_NO_FATAL_FAILURE(
+          CreateAndMapBuffer(context, kBufferSize, kMapPageCount, gpu_addr, &buf));
+      ASSERT_NO_FATAL_FAILURE(WriteEventCommand(device, context, buf, 0 /* offset */, &semaphore));
+      *out_buffer =
+          std::make_unique<FakeContextStateBuffer>(std::move(buf), kDataSize, std::move(semaphore));
+    }
+
+    FakeContextStateBuffer(std::shared_ptr<MsdVslBuffer> buf, uint32_t data_size,
+                           std::unique_ptr<magma::PlatformSemaphore> semaphore)
+        : buf_(buf), data_size_(data_size), semaphore_(std::move(semaphore)) {}
+
+    CommandBuffer::ExecResource ExecResource() {
+      return CommandBuffer::ExecResource{.buffer = buf_, .offset = 0, .length = data_size_};
+    }
+
+    void WaitForCompletion() {
+      constexpr uint64_t kTimeoutMs = 1000;
+      ASSERT_EQ(MAGMA_STATUS_OK, semaphore_->Wait(kTimeoutMs).get());
+    }
+
+   private:
+    std::shared_ptr<MsdVslBuffer> buf_;
+    uint32_t data_size_;
+    std::unique_ptr<magma::PlatformSemaphore> semaphore_;
+  };
+
   class AddressSpaceOwner : public AddressSpace::Owner {
    public:
     AddressSpaceOwner(magma::PlatformBusMapper* bus_mapper) : bus_mapper_(bus_mapper) {}
@@ -69,13 +111,13 @@ class TestCommandBuffer : public ::testing::Test {
   }
 
   // Creates a buffer of |buffer_size| and stores it in |out_buffer|.
-  void CreateMsdBuffer(uint32_t buffer_size, std::shared_ptr<MsdVslBuffer>* out_buffer);
+  static void CreateMsdBuffer(uint32_t buffer_size, std::shared_ptr<MsdVslBuffer>* out_buffer);
 
   // Creates a buffer of |buffer_size| bytes, and maps the buffer to |gpu_addr|.
   // |map_page_count| may be less bytes than buffer size.
-  void CreateAndMapBuffer(std::shared_ptr<MsdVslContext> context, uint32_t buffer_size,
-                          uint32_t map_page_count, uint32_t gpu_addr,
-                          std::shared_ptr<MsdVslBuffer>* out_buffer);
+  static void CreateAndMapBuffer(std::shared_ptr<MsdVslContext> context, uint32_t buffer_size,
+                                 uint32_t map_page_count, uint32_t gpu_addr,
+                                 std::shared_ptr<MsdVslBuffer>* out_buffer);
 
   // Creates a new command buffer.
   // |data_size| is the actual length of the user provided data and may be smaller than
@@ -86,6 +128,7 @@ class TestCommandBuffer : public ::testing::Test {
                              std::shared_ptr<MsdVslBuffer> buffer, uint32_t data_size,
                              uint32_t batch_offset,
                              std::shared_ptr<magma::PlatformSemaphore> signal,
+                             std::optional<CommandBuffer::ExecResource> context_state_buffer,
                              std::unique_ptr<CommandBuffer>* out_batch);
 
   // Creates a buffer from |buffer_desc|, writes a test instruction to it and
@@ -93,16 +136,19 @@ class TestCommandBuffer : public ::testing::Test {
   // |signal| is an optional semaphore that will be passed as a signal semaphore for the batch.
   // If |fault_addr| is populated, the submitted buffer will contain faulting instructions.
   // If |out_buffer| is non-null, it will be populated with the created buffer.
-  void CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context, const BufferDesc& buffer_desc,
-                             std::shared_ptr<magma::PlatformSemaphore> signal,
-                             std::optional<uint32_t> fault_addr,
-                             std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
+  void CreateAndSubmitBuffer(
+      std::shared_ptr<MsdVslContext> context, const BufferDesc& buffer_desc,
+      std::shared_ptr<magma::PlatformSemaphore> signal, std::optional<uint32_t> fault_addr,
+      std::optional<CommandBuffer::ExecResource> context_state_buffer = std::nullopt,
+      std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
 
   // Creates a buffer from |buffer_desc|, writes a test instruction to it and
   // submits it as a command buffer. This will wait for execution to complete.
   // If |out_buffer| is non-null, it will be populated with the created buffer.
-  void CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context, const BufferDesc& buffer_desc,
-                             std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
+  void CreateAndSubmitBuffer(
+      std::shared_ptr<MsdVslContext> context, const BufferDesc& buffer_desc,
+      std::optional<CommandBuffer::ExecResource> context_state_buffer = std::nullopt,
+      std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
 
   // Writes a single WAIT command in |buf| at |offset|.
   void WriteWaitCommand(std::shared_ptr<MsdVslBuffer> buf, uint32_t offset);
@@ -110,6 +156,13 @@ class TestCommandBuffer : public ::testing::Test {
   // Writes a single LINK command in |buf| at |offset|.
   void WriteLinkCommand(std::shared_ptr<MsdVslBuffer> buffer, uint32_t offset, uint32_t prefetch,
                         uint32_t gpu_addr);
+
+  // Writes an EVENT command in |buf| at |offset|. |out_semaphore| will be populated with the
+  // semaphore that will be signalled once the interrupt associated with the event occurs.
+  static void WriteEventCommand(std::unique_ptr<MsdVslDevice>& device,
+                                std::shared_ptr<MsdVslContext> context,
+                                std::shared_ptr<MsdVslBuffer> buffer, uint32_t offset,
+                                std::unique_ptr<magma::PlatformSemaphore>* out_semaphore);
 
   void DropDefaultClient() { client_ = nullptr; }
 

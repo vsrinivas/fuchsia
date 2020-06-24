@@ -142,7 +142,7 @@ class TestMsdVslDevice : public drm_test_info {
     if (!batch->PrepareForExecution()) {
       return DRETF(false, "failed to prepare command buffer for execution");
     }
-    if (!batch->IsValidBatchBuffer()) {
+    if (!batch->IsValidBatch()) {
       return DRETF(false, "failed to validate batch buffer");
     }
     if (!device_.msd_vsl_device->SubmitBatch(std::move(batch), false /* do_flush */).ok()) {

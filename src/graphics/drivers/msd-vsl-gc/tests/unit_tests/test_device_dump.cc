@@ -67,8 +67,8 @@ void TestDeviceDump::CreateCommandBuffer(std::shared_ptr<MsdVslContext> context,
   std::unique_ptr<CommandBuffer> batch;
   ASSERT_NO_FATAL_FAILURE(CreateAndPrepareBatch(context, buffer, buffer_desc.data_size,
                                                 buffer_desc.batch_offset, nullptr /* signal */,
-                                                &batch));
-  ASSERT_TRUE(batch->IsValidBatchBuffer());
+                                                std::nullopt /* csb */, &batch));
+  ASSERT_TRUE(batch->IsValidBatch());
   batch->SetSequenceNumber(sequence_number);
 
   *out_buffer = buffer;

@@ -547,6 +547,8 @@ bool MsdVslDevice::CompleteInterruptEvent(uint32_t event_id) {
     return DRETF(false, "Cannot complete event %u, allocated %u submitted %u", event_id,
                  events_[event_id].allocated, events_[event_id].submitted);
   }
+  num_events_completed_++;
+
   bool free_on_complete = events_[event_id].free_on_complete;
   events_[event_id] = {};
   events_[event_id].allocated = !free_on_complete;
@@ -744,7 +746,7 @@ bool MsdVslDevice::AddRingbufferWaitLink() {
   return true;
 }
 
-bool MsdVslDevice::LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr,
+void MsdVslDevice::LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr,
                                   uint32_t dest_prefetch) {
   DASSERT(ringbuffer_->IsOffsetPopulated(wait_link_offset));
   // We can assume the instruction was written as 8 contiguous bytes.
@@ -757,11 +759,10 @@ bool MsdVslDevice::LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr,
   magma::barriers::Barrier();
   ringbuffer_->Overwrite32(wait_link_offset, MiLink::kCommandType | dest_prefetch);
   magma::barriers::Barrier();
-  return true;
 }
 
 bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t write_offset,
-                                    uint32_t length, uint16_t link_prefetch, uint32_t link_addr) {
+                                    uint16_t link_prefetch, uint32_t link_addr) {
   // Check if we have enough space for the LINK command.
   uint32_t link_instr_size = kInstructionDwords * sizeof(uint32_t);
 
@@ -846,9 +847,7 @@ bool MsdVslDevice::SubmitFlushTlb(std::shared_ptr<MsdVslContext> context) {
 
   DLOG("Submitting flush TLB command");
 
-  if (!LinkRingbuffer(prev_wait_link, gpu_addr, prefetch)) {
-    return DRETF(false, "Failed to link ringbuffer");
-  }
+  LinkRingbuffer(prev_wait_link, gpu_addr, prefetch);
 
   return true;
 }
@@ -865,7 +864,8 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
     return DRETF(false, "Context killed");
   }
   // Check if we have loaded an address space and enabled the MMU.
-  if (!page_table_arrays_->IsEnabled(register_io())) {
+  bool initial_address_space_loaded = page_table_arrays_->IsEnabled(register_io());
+  if (!initial_address_space_loaded) {
     if (!LoadInitialAddressSpace(context, address_space_index)) {
       return DRETF(false, "Failed to load initial address space");
     }
@@ -909,17 +909,45 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
   // This will point to EVENT WAIT LINK.
   uint32_t rb_complete_addr = rb_gpu_addr + ringbuffer_->tail();
 
-  if (mapped_batch->IsCommandBuffer()) {
+  bool is_cmd_buf = mapped_batch->IsCommandBuffer();
+  if (is_cmd_buf) {
     auto* command_buf = reinterpret_cast<CommandBuffer*>(mapped_batch.get());
     magma::PlatformBuffer* buf = command_buf->GetBatchBuffer();
     uint32_t write_offset = command_buf->GetBatchBufferWriteOffset();
 
     // Write a LINK at the end of the command buffer that links back to the ringbuffer.
-    if (!WriteLinkCommand(buf, write_offset, length, kRbPrefetch, rb_complete_addr)) {
+    if (!WriteLinkCommand(buf, write_offset, kRbPrefetch, rb_complete_addr)) {
       return DRETF(false, "Failed to write LINK from command buffer to ringbuffer");
     }
     // Increment the command buffer length to account for the LINK command size.
     length += (kInstructionDwords * sizeof(uint32_t));
+
+    auto prev_executed_context = prev_executed_context_.lock();
+    if (!prev_executed_context || (prev_executed_context != context)) {
+      auto csb = command_buf->GetContextStateBufferResource();
+      if (csb) {
+        auto csb_mapping = command_buf->GetContextStateBufferMapping();
+        DASSERT(csb_mapping);
+        // |gpu_addr| and |length| currently point to the command buffer which the ringbuffer
+        // will be linking to at the end of this function. We want the ringbuffer to link
+        // to the CSB instead, and the CSB to link to the command buffer.
+        uint32_t cmd_buf_prefetch = magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t);
+        if (cmd_buf_prefetch & 0xFFFF0000) {
+          return DRETF(false, "Can't submit length %u (prefetch 0x%x)", length, cmd_buf_prefetch);
+        }
+        // Write a LINK at the end of the context state buffer that links to the command buffer.
+        uint32_t csb_length = magma::round_up(csb->length, sizeof(uint64_t));
+        bool res = WriteLinkCommand(csb->buffer->platform_buffer(),
+                                    csb_length + csb->offset /* write_offset */, cmd_buf_prefetch,
+                                    gpu_addr);
+        if (!res) {
+          return DRETF(false, "Failed to write LINK from context state buffer to command buffer");
+        }
+        // Update the address the ringbuffer will link to.
+        gpu_addr = csb_mapping->gpu_addr();
+        length = csb_length + (kInstructionDwords * sizeof(uint32_t));  // Additional LINK size.
+      }
+    }
   } else {
     // If there is no command buffer, we link directly to the new ringbuffer commands.
     gpu_addr = rb_complete_addr;
@@ -948,9 +976,14 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
 
   DLOG("Submitting buffer at gpu addr 0x%x", gpu_addr);
 
-  if (!LinkRingbuffer(prev_wait_link, gpu_addr, prefetch)) {
-    return DRETF(false, "Failed to link ringbuffer");
+  LinkRingbuffer(prev_wait_link, gpu_addr, prefetch);
+
+  // Save the context of the last executed command buffer. Since any command buffer may modify
+  // hardware state, we should update this even if no command state buffer was provided.
+  if (is_cmd_buf) {
+    prev_executed_context_ = context;
   }
+
   return true;
 }
 

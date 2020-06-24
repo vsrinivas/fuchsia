@@ -18,10 +18,35 @@ class CommandBuffer : public magma::CommandBuffer<MsdVslContext, GpuMapping> {
   // and mapped, which the driver will write a LINK instruction in.
   static constexpr uint32_t kAdditionalBytes = kInstructionDwords * sizeof(uint32_t);
 
+  // Only up to 2 resources are supported, the batch buffer and optional context state buffer.
+  static constexpr uint32_t kMaxAllowedResources = 2;
+
+  static std::unique_ptr<CommandBuffer> Create(
+      std::shared_ptr<MsdVslContext> context, msd_client_id_t client_id,
+      std::unique_ptr<magma_system_command_buffer> cmd_buf, std::vector<ExecResource> resources,
+      std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores) {
+    if (cmd_buf->num_resources > kMaxAllowedResources) {
+      return DRETP(nullptr, "Invalid num_resources, only 1 additional context state is supported");
+    }
+    std::optional<uint32_t> context_state_buffer_resource_index;
+    if (cmd_buf->num_resources == 2) {
+      context_state_buffer_resource_index = cmd_buf->batch_buffer_resource_index == 0 ? 1 : 0;
+    }
+    auto command_buffer = std::make_unique<CommandBuffer>(context, client_id, std::move(cmd_buf),
+                                                          context_state_buffer_resource_index);
+    if (!command_buffer->InitializeResources(std::move(resources), {} /* wait_semaphores */,
+                                             std::move(signal_semaphores))) {
+      return DRETP(nullptr, "Failed to initialize resources");
+    }
+    return command_buffer;
+  }
+
   CommandBuffer(std::weak_ptr<MsdVslContext> context, uint64_t connection_id,
-                std::unique_ptr<magma_system_command_buffer> command_buffer)
+                std::unique_ptr<magma_system_command_buffer> command_buffer,
+                std::optional<uint32_t> csb_resource_index = std::nullopt)
       : magma::CommandBuffer<MsdVslContext, GpuMapping>(context, connection_id,
-                                                        std::move(command_buffer)) {}
+                                                        std::move(command_buffer)),
+        csb_index_(csb_resource_index) {}
 
   // Returns a pointer to the batch buffer.
   magma::PlatformBuffer* GetBatchBuffer() {
@@ -38,10 +63,32 @@ class CommandBuffer : public magma::CommandBuffer<MsdVslContext, GpuMapping> {
     return batch_start_offset() + length;
   }
 
-  // Returns whether the batch buffer is correctly aligned and provides the required
-  // |kAdditionalBytes|.
+  // Returns a pointer to the resource for the context state buffer.
+  // May be null if no context state buffer is present.
+  const ExecResource* GetContextStateBufferResource() const {
+    if (!csb_index_.has_value()) {
+      return nullptr;
+    }
+    auto index = csb_index_.value();
+    DASSERT(index < exec_resources_.size());
+    return &exec_resources_[index];
+  }
+
+  // Returns a read only view of the context state buffer's GPU mapping.
+  // May be null if no context state buffer is present.
+  const GpuMappingView* GetContextStateBufferMapping() const {
+    DASSERT(prepared_to_execute_);
+    if (!csb_index_.has_value()) {
+      return nullptr;
+    }
+    auto index = csb_index_.value();
+    DASSERT(index < exec_resource_mappings_.size());
+    return exec_resource_mappings_[index].get();
+  }
+
+  // Returns whether the batch buffer and context state buffer (if present) are valid.
   // This should only be called after |PrepareForExecution|.
-  bool IsValidBatchBuffer() {
+  bool IsValidBatch() {
     DASSERT(prepared_to_execute_);
 
     if ((batch_start_offset() & (sizeof(uint64_t) - 1)) != 0) {
@@ -53,8 +100,23 @@ class CommandBuffer : public magma::CommandBuffer<MsdVslContext, GpuMapping> {
       return DRETF(false, "insufficient space for LINK command, mapped %lu used %lu need %u\n",
                    mapping->length(), GetLength(), kAdditionalBytes);
     }
+
+    auto csb = GetContextStateBufferResource();
+    if (csb) {
+      // Check that the mapped length can fit the user data and also an additional LINK command.
+      auto csb_mapping = GetContextStateBufferMapping();
+      DASSERT(csb_mapping);
+      if (csb_mapping->length() < csb->length + kAdditionalBytes) {
+        return DRETF(false,
+                     "CSB: insufficient space for LINK command, mapped %lu used %lu need %u\n",
+                     csb_mapping->length(), csb->length, kAdditionalBytes);
+      }
+    }
     return true;
   }
+
+ private:
+  std::optional<uint32_t> csb_index_;
 };
 
 #endif  // COMMAND_BUFFER_H

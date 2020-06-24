@@ -170,11 +170,11 @@ class MsdVslDevice : public msd_device_t,
   // Modifies the last WAIT in the ringbuffer to link to |gpu_addr|.
   // |wait_link_offset| is the offset into the ringbuffer of the WAIT-LINK to replace.
   // |dest_prefetch| is the prefetch of the buffer we are linking to.
-  bool LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr, uint32_t dest_prefetch);
+  void LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr, uint32_t dest_prefetch);
 
   // Writes a LINK command at the end of the given buffer.
-  bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t write_offset, uint32_t length,
-                        uint16_t prefetch, uint32_t link_addr);
+  bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t write_offset, uint16_t prefetch,
+                        uint32_t link_addr);
 
   // Returns whether the device became idle before |timeout_ms| elapsed.
   bool WaitUntilIdle(uint32_t timeout_ms);
@@ -232,6 +232,8 @@ class MsdVslDevice : public msd_device_t,
   // |SubmitFlushTlb| will write the commands for loading the client's address space and flushing
   // the TLB prior to linking to the new command buffer.
   std::shared_ptr<AddressSpace> configured_address_space_;
+  // The context of the last command buffer that was linked to the ringbuffer to be executed.
+  std::weak_ptr<MsdVslContext> prev_executed_context_;
 
   std::thread interrupt_thread_;
   std::unique_ptr<magma::PlatformInterrupt> interrupt_;
@@ -264,6 +266,9 @@ class MsdVslDevice : public msd_device_t,
 
   Event events_[kNumEvents] = {};
 
+  // For testing and debugging purposes.
+  uint32_t num_events_completed_ = 0;
+
   friend class TestMsdVslDevice;
   friend class TestCommandBuffer;
   friend class TestDeviceDump_DumpBasic_Test;
@@ -277,8 +282,12 @@ class MsdVslDevice : public msd_device_t,
   friend class TestExec_Backlog_Test;
   friend class TestExec_BacklogWithInvalidBatch_Test;
   friend class TestExec_ReuseGpuAddress_Test;
+  friend class TestExec_SubmitContextStateBufferMultipleAddressSpaces_Test;
+  friend class TestExec_SubmitContextStateBufferMultipleContexts_Test;
+  friend class TestExec_SubmitContextStateBufferSameContext_Test;
   friend class TestExec_SubmitBatchWithOffset_Test;
   friend class TestExec_SubmitBatchesMultipleContexts_Test;
+  friend class TestExec_SubmitEventBeforeContextStateBuffer_Test;
   friend class TestExec_SwitchAddressSpace_Test;
   friend class TestExec_SwitchMultipleAddressSpaces_Test;
   friend class TestEvents;

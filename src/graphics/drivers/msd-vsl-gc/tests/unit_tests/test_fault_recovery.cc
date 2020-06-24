@@ -84,7 +84,7 @@ TEST_F(TestFaultRecovery, MultipleContexts) {
     buffer_desc.gpu_addr += magma::page_size();
     ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(client->context, buffer_desc, semaphore->Clone(),
                                                   std::optional<uint32_t>{} /* fault_addr */,
-                                                  &buffer));
+                                                  std::nullopt /* csb */, &buffer));
     semaphores.push_back(std::move(semaphore));
 
     clients.emplace_back(std::move(client));
