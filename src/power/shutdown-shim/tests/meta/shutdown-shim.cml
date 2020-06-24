@@ -1,7 +1,6 @@
 {
     program: {
         binary: "bin/shutdown-shim",
-        main_process_critical: "true",
     },
     use: [
         { runner: "elf" },

@@ -1,6 +1,7 @@
 {
     program: {
         binary: "bin/power_manager",
+        main_process_critical: "true",
     },
     use: [
         { runner: "elf" },

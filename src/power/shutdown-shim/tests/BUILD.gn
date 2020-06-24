@@ -64,7 +64,7 @@ test_package("shutdown-shim-integration-test") {
 
   meta = [
     {
-      path = rebase_path("../meta/shutdown-shim.cml")
+      path = rebase_path("meta/shutdown-shim.cml")
       dest = "shutdown-shim.cm"
     },
     {
