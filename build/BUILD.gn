@@ -262,7 +262,7 @@ group("deprecated_package_underscore") {
     "//src/developer/debug/debug_agent:debug_agent_tests",
     "//src/developer/exception_broker/limbo_client:limbo_client",
     "//src/developer/exception_broker:exception_broker",
-    "//src/developer/feedback/feedback_data:feedback_agent",
+    "//src/developer/forensics/feedback_data:feedback_agent",
     "//src/developer/kcounter_inspect/tests:kcounter_inspect_tests",
     "//src/developer/kcounter_inspect:kcounter_inspect",
     "//src/developer/memory/metrics/tests:memory_metrics_tests",

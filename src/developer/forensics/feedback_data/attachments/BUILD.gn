@@ -1,0 +1,93 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("attachment_providers") {
+  sources = [
+    "inspect_ptr.cc",
+    "inspect_ptr.h",
+    "kernel_log_ptr.cc",
+    "kernel_log_ptr.h",
+    "screenshot_ptr.cc",
+    "screenshot_ptr.h",
+    "system_log_ptr.cc",
+    "system_log_ptr.h",
+  ]
+
+  public_deps = [
+    ":types",
+    "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fidl:oneshot_ptr",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:logs",
+    "//src/developer/forensics/utils/fit",
+    "//src/lib/fsl",
+  ]
+}
+
+source_set("static_attachments") {
+  sources = [
+    "static_attachments.cc",
+    "static_attachments.h",
+  ]
+
+  public_deps = [ ":types" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
+    "//src/developer/forensics/utils:errors",
+    "//src/lib/files",
+  ]
+}
+
+source_set("types") {
+  sources = [ "types.h" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:errors",
+  ]
+}
+
+source_set("utils") {
+  sources = [
+    "utils.cc",
+    "utils.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback_data/attachments:types",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/utils:archive",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+  ]
+}

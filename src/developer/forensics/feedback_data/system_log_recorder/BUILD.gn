@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("system_log_recorder") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":src",
+    "encoding:production",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("src") {
+  public = [ "system_log_recorder.h" ]
+
+  sources = [
+    "listener.cc",
+    "listener.h",
+    "log_message_store.cc",
+    "log_message_store.h",
+    "system_log_recorder.cc",
+    "system_log_recorder.h",
+    "writer.cc",
+    "writer.h",
+  ]
+
+  public_deps = [
+    "encoding:encoder",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils:logs",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/trace",
+  ]
+}
+
+# This file is not needed in system_log_recorder per se, but should be kept in sync
+# with the writer.
+source_set("reader") {
+  sources = [
+    "reader.cc",
+    "reader.h",
+  ]
+
+  public_deps = [ "encoding:decoder" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/trace",
+  ]
+}

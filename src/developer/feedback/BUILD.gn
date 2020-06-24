@@ -8,17 +8,7 @@
 group("feedback") {
   testonly = true
 
-  public_deps = [
-    ":tests",
-    "crasher",
-    "feedback_data:feedback_agent",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  public_deps = [ "feedback_data/tests" ]
+  public_deps = [ "crasher" ]
 }
 
 # TODO(54226): remove once dependents are updated.
