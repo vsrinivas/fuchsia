@@ -32,9 +32,7 @@ table BasemgrConfig {
     /// Launch configurations specific to story shell.
     6: StoryShellConfig story_shell;
 
-    /// Temporary placeholder to pass configurations to sessionmgr. Will be
-    /// removed with the completion of MF-10.
-    7: AppConfig sessionmgr;
+    7: reserved;
 };
 
 table BaseShellConfig {

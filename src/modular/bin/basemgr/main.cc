@@ -101,10 +101,6 @@ int main(int argc, const char** argv) {
     auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
     modular_config.set_basemgr_config(config_reader.GetBasemgrConfig());
     modular_config.set_sessionmgr_config(config_reader.GetSessionmgrConfig());
-
-    modular_config.mutable_basemgr_config()->mutable_sessionmgr()->set_url(
-        modular_config::kSessionmgrUrl);
-    modular_config.mutable_basemgr_config()->mutable_sessionmgr()->set_args({});
   } else {
     std::cerr << "basemgr does not support arguments. Please use basemgr_launcher to "
               << "launch basemgr with custom configurations." << std::endl;

@@ -16,6 +16,7 @@
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace fidl {
 template <>
@@ -118,7 +119,7 @@ void BasemgrImpl::Start() {
   }
 
   auto sessionmgr_config =
-      fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().sessionmgr());
+      fuchsia::modular::AppConfig{.url = modular_config::kSessionmgrUrl, .args = {}};
   auto story_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().story_shell().app_config());
   auto intl_property_provider = IntlPropertyProviderImpl::Create(component_context_services_);
@@ -185,7 +186,7 @@ void BasemgrImpl::StartSession(bool use_random_id) {
   if (presenter_) {
     presentation_container_ =
         std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token));
-    presenter_.set_error_handler([this] (zx_status_t) { presentation_container_.reset(); });
+    presenter_.set_error_handler([this](zx_status_t) { presentation_container_.reset(); });
   }
 }
 
