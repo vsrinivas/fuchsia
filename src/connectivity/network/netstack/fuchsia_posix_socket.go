@@ -314,8 +314,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	go func() {
 		defer close(eps.loopPollDone)
 
-		sigs := zx.Signals(zx.SignalSocketWriteDisabled | zx.SignalSocketPeerWriteDisabled |
-			zx.SignalSocketPeerClosed | localSignalClosing)
+		sigs := zx.Signals(zx.SignalSocketWriteDisabled | zx.SignalSocketPeerWriteDisabled | localSignalClosing)
 
 		for {
 			obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
@@ -337,7 +336,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 				}
 			}
 
-			if obs&zx.SignalSocketPeerClosed != 0 || obs&localSignalClosing != 0 {
+			if obs&localSignalClosing != 0 {
 				// We're shutting down.
 				return
 			}
@@ -548,8 +547,7 @@ func (eps *endpointWithSocket) loopWrite() {
 
 	closeFn := func() { eps.close(eps.loopReadDone, eps.loopPollDone) }
 
-	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
-		zx.SignalSocketPeerClosed | localSignalClosing
+	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	eps.wq.EventRegister(&waitEntry, waiter.EventOut)
@@ -564,11 +562,6 @@ func (eps *endpointWithSocket) loopWrite() {
 		if err != nil {
 			if err, ok := err.(*zx.Error); ok {
 				switch err.Status {
-				case zx.ErrPeerClosed:
-					// The client has unexpectedly disappeared. We normally expect the
-					// client to close gracefully via FIDL, but it didn't.
-					closeFn()
-					return
 				case zx.ErrBadState:
 					// Reading has been disabled for this socket endpoint.
 					if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
@@ -588,9 +581,6 @@ func (eps *endpointWithSocket) loopWrite() {
 						// The client might have written some data into the socket. Always
 						// continue to the loop below and try to read even if the signals
 						// show the client has closed the socket.
-						continue
-					case obs&zx.SignalSocketPeerClosed != 0:
-						// The next Read will return zx.ErrPeerClosed.
 						continue
 					case obs&localSignalClosing != 0:
 						// We're shutting down.
@@ -674,8 +664,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 
 	closeFn := func() { eps.close(eps.loopWriteDone, eps.loopPollDone) }
 
-	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
-		zx.SignalSocketPeerClosed | localSignalClosing
+	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
 
 	outEntry, outCh := waiter.NewChannelEntry(nil)
 	connected := eps.transProto != tcp.ProtocolNumber
@@ -721,15 +710,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 					}
 					eps.incoming.mu.Unlock()
 					if err != nil {
-						if err, ok := err.(*zx.Error); ok {
-							switch err.Status {
-							case zx.ErrPeerClosed:
-								// The client has unexpectedly disappeared. We normally expect
-								// the client to close gracefully via FIDL, but it didn't.
-								closeFn()
-								return
-							}
-						}
 						panic(err)
 					}
 					continue
@@ -748,15 +728,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 				}
 
 				if err := eps.local.Handle().SignalPeer(0, signals); err != nil {
-					if err, ok := err.(*zx.Error); ok {
-						switch err.Status {
-						case zx.ErrPeerClosed:
-							// The client has unexpectedly disappeared. We normally expect
-							// the client to close gracefully via FIDL, but it didn't.
-							closeFn()
-							return
-						}
-					}
 					panic(err)
 				}
 			}
@@ -838,11 +809,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			if err != nil {
 				if err, ok := err.(*zx.Error); ok {
 					switch err.Status {
-					case zx.ErrPeerClosed:
-						// The client has unexpectedly disappeared. We normally expect the
-						// client to close gracefully via FIDL, but it didn't.
-						closeFn()
-						return
 					case zx.ErrBadState:
 						// Writing has been disabled for this socket endpoint.
 						if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
@@ -868,9 +834,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 							// The next Write will return zx.ErrBadState.
 							continue
 						case obs&zx.SignalSocketWritable != 0:
-							continue
-						case obs&zx.SignalSocketPeerClosed != 0:
-							// The next Write will return zx.ErrPeerClosed.
 							continue
 						case obs&localSignalClosing != 0:
 							// We're shutting down.
