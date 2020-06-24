@@ -168,50 +168,6 @@ hs_transpose_slabs(uint32_t const hs_words,
 //
 //
 
-#ifndef NDEBUG
-
-static VkBool32 VKAPI_PTR
-vk_debug_report_cb(VkDebugReportFlagsEXT      flags,
-                   VkDebugReportObjectTypeEXT objectType,
-                   uint64_t                   object,
-                   size_t                     location,
-                   int32_t                    messageCode,
-                   const char *               pLayerPrefix,
-                   const char *               pMessage,
-                   void *                     pUserData)
-{
-  char const * flag_str = "";
-  bool         is_error = false;
-
-#define VK_FLAG_CASE_TO_STRING(c)                                                                  \
-  case c:                                                                                          \
-    flag_str = #c;                                                                                 \
-    is_error = true;                                                                               \
-    break
-
-  switch (flags)
-    {
-      // VK_FLAG_CASE_TO_STRING(VK_DEBUG_REPORT_INFORMATION_BIT_EXT);
-      VK_FLAG_CASE_TO_STRING(VK_DEBUG_REPORT_WARNING_BIT_EXT);
-      VK_FLAG_CASE_TO_STRING(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT);
-      VK_FLAG_CASE_TO_STRING(VK_DEBUG_REPORT_ERROR_BIT_EXT);
-      VK_FLAG_CASE_TO_STRING(VK_DEBUG_REPORT_DEBUG_BIT_EXT);
-    }
-
-  if (is_error)
-    {
-      fprintf(stderr, "%-43s - %-12s - %s\n", flag_str, pLayerPrefix, pMessage);
-    }
-
-  return VK_FALSE;
-}
-
-#endif
-
-//
-//
-//
-
 #if 1
 
 static uint32_t
@@ -264,7 +220,7 @@ hs_fill_rand(uint32_t * vin_h, uint32_t const count, uint32_t const words, uint3
   memset(vin_h, 0, count * words * sizeof(uint32_t));
   for (uint32_t ii = 0; ii < count; ii++)
     vin_h[ii * words] = ii;
-#else    // reverse order
+#else  // reverse order
   memset(vin_h, 0, count * words * sizeof(uint32_t));
   for (uint32_t ii = 0; ii < count; ii++)
     vin_h[ii * words] = count - 1 - ii;
@@ -449,31 +405,15 @@ main(int argc, char const * argv[])
 
     .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     .pNext              = NULL,
-    .pApplicationName   = "HotSort Bench",
+    .pApplicationName   = "Fuchsia HotSort/VK Bench",
     .applicationVersion = 0,
-    .pEngineName        = "HotSort",
+    .pEngineName        = "Fuchsia HotSort/VK",
     .engineVersion      = 0,
     .apiVersion         = VK_API_VERSION_1_1
   };
 
-  char const * const instance_enabled_layers[]     = { vk_find_validation_layer() };
-  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
-
-  uint32_t const instance_enabled_layer_count =
-#ifndef NDEBUG
-    ARRAY_LENGTH_MACRO(instance_enabled_layers)
-#else
-    0
-#endif
-    ;
-
-  uint32_t const instance_enabled_extension_count =
-#ifndef NDEBUG
-    ARRAY_LENGTH_MACRO(instance_enabled_extensions)
-#else
-    0
-#endif
-    ;
+  char const * const instance_enabled_layers[]     = { "VK_LAYER_KHRONOS_validation" };
+  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
 
   VkInstanceCreateInfo const instance_info = {
 
@@ -481,44 +421,15 @@ main(int argc, char const * argv[])
     .pNext                   = NULL,
     .flags                   = 0,
     .pApplicationInfo        = &app_info,
-    .enabledLayerCount       = instance_enabled_layer_count,
+    .enabledLayerCount       = ARRAY_LENGTH_MACRO(instance_enabled_layers),
     .ppEnabledLayerNames     = instance_enabled_layers,
-    .enabledExtensionCount   = instance_enabled_extension_count,
+    .enabledExtensionCount   = ARRAY_LENGTH_MACRO(instance_enabled_extensions),
     .ppEnabledExtensionNames = instance_enabled_extensions
   };
 
   VkInstance instance;
 
   vk(CreateInstance(&instance_info, NULL, &instance));
-
-  //
-  //
-  //
-#ifndef NDEBUG
-  PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
-    (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance,
-                                                              "vkCreateDebugReportCallbackEXT");
-
-  PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
-    (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance,
-                                                               "vkDestroyDebugReportCallbackEXT");
-
-  struct VkDebugReportCallbackCreateInfoEXT const drcci = {
-    .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-    .pNext = NULL,
-    .flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT |          //
-             VK_DEBUG_REPORT_WARNING_BIT_EXT |              //
-             VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |  //
-             VK_DEBUG_REPORT_ERROR_BIT_EXT |                //
-             VK_DEBUG_REPORT_DEBUG_BIT_EXT,                 //
-    .pfnCallback = vk_debug_report_cb,
-    .pUserData   = NULL
-  };
-
-  VkDebugReportCallbackEXT drc;
-
-  vk(CreateDebugReportCallbackEXT(instance, &drcci, NULL, &drc));
-#endif
 
   //
   // acquire all physical devices and select a match
@@ -561,7 +472,7 @@ main(int argc, char const * argv[])
 
   if (phy_device == VK_NULL_HANDLE)
     {
-      fprintf(stderr, "Device %4X:%4X not found.\n", vendor_id & 0xFFFF, device_id & 0xFFFF);
+      fprintf(stderr, "Device %04X:%08X not found.\n", vendor_id, device_id);
 
       return EXIT_FAILURE;
     }
@@ -848,18 +759,22 @@ main(int argc, char const * argv[])
 
   VkBuffer vin, vout, sorted, rand;
 
-  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    // SRC in case buffer size is 1
+              VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
   vk(CreateBuffer(device, &bci, NULL, &vin));
 
   vk(CreateBuffer(device, &bci, NULL, &sorted));
 
-  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    //
               VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
   vk(CreateBuffer(device, &bci, NULL, &vout));
 
-  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+              VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
   vk(CreateBuffer(device, &bci, NULL, &rand));
 
@@ -1235,8 +1150,7 @@ main(int argc, char const * argv[])
               memset((uint8_t *)sorted_h + size_sorted_h, -1, size_padded_in - size_sorted_h);
               // sort
               cpu_algo = hs_cpu_sort(sorted_h, key_val_words, count_padded_in, &cpu_ns);
-            }
-          while (--cpu_loops > 0);
+          } while (--cpu_loops > 0);
 
           void * sorted_map;
 
@@ -1369,10 +1283,6 @@ main(int argc, char const * argv[])
   vk_pipeline_cache_destroy(device, NULL, VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache", pc);
 
   vkDestroyDevice(device, NULL);
-
-#ifndef NDEBUG
-  vkDestroyDebugReportCallbackEXT(instance, drc, NULL);
-#endif
 
   vkDestroyInstance(instance, NULL);
 
