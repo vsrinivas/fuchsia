@@ -236,9 +236,6 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   // ElementType we are looking for as we traverse the tree, and store them in a
   // multiset.
   void CheckSpanOfType(const ElementType type, const fidl::raw::SourceElement& element) {
-    if (type == ElementType::Ordinal64) {
-      std::cerr << "we found an ordinal64 boyzzz\n\n";
-    }
     if (type != test_case_type_) {
       return;
     }
