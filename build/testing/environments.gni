@@ -14,7 +14,7 @@ declare_args() {
   basic_env_names = [ "emu" ]
 
   # Whether to use AEMU instead of QEMU as the default emulator environment.
-  use_aemu_as_default = false
+  use_aemu_as_default = true
 }
 
 _all_named_envs = []
