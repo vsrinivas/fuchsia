@@ -78,6 +78,8 @@ KCOUNTER(thread_resume_count, "thread.resume")
 // thread_init_early.
 static lazy_init::LazyInit<Thread::List> thread_list;
 
+Thread::MigrateList Thread::migrate_list_;
+
 // master thread spinlock
 SpinLock thread_lock __CPU_ALIGN_EXCLUSIVE;
 
@@ -140,8 +142,10 @@ bool WaitQueueState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) 
 Thread::Thread() {}
 
 Thread::~Thread() {
-  // At this point, the thread must not be on the global thread list.
+  // At this point, the thread must not be on the global thread list or migrate
+  // list.
   DEBUG_ASSERT(!thread_list_node_.InContainer());
+  DEBUG_ASSERT(!migrate_list_node_.InContainer());
 
   DEBUG_ASSERT(wait_queue_state_.blocking_wait_queue_ == nullptr);
 
@@ -405,6 +409,13 @@ void Thread::Current::SignalPolicyException() {
   t->signals_ |= THREAD_SIGNAL_POLICY_EXCEPTION;
 }
 
+void Thread::EraseFromListsLocked() {
+  thread_list->erase(*this);
+  if (migrate_list_node_.InContainer()) {
+    migrate_list_.erase(*this);
+  }
+}
+
 zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
   DEBUG_ASSERT(magic_ == THREAD_MAGIC);
 
@@ -434,8 +445,8 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
       *out_retcode = retcode_;
     }
 
-    // remove it from the master thread list
-    thread_list->erase(*this);
+    // remove it from global lists
+    EraseFromListsLocked();
 
     // clear the structure's magic
     magic_ = 0;
@@ -513,8 +524,8 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
   if (current_thread->flags_ & THREAD_FLAG_DETACHED) {
     kcounter_add(thread_detached_exit_count, 1);
 
-    // remove it from the master thread list
-    thread_list->erase(*current_thread);
+    // remove it from global lists
+    current_thread->EraseFromListsLocked();
 
     // queue a dpc to free the stack and, optionally, the thread structure
     if (current_thread->stack_.base() || (current_thread->flags_ & THREAD_FLAG_FREE_STRUCT)) {
@@ -549,7 +560,7 @@ void Thread::Forget() {
     __UNUSED Thread* current_thread = Thread::Current::Get();
     DEBUG_ASSERT(current_thread != this);
 
-    thread_list->erase(*this);
+    EraseFromListsLocked();
   }
 
   DEBUG_ASSERT(!wait_queue_state_.InWaitQueue());
@@ -695,7 +706,25 @@ void Thread::SetMigrateFn(MigrateFn migrate_fn) {
 
 void Thread::SetMigrateFnLocked(MigrateFn migrate_fn) {
   DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  // If |migrate_fn_| was previously set, remove |this| from |migrate_list_|.
+  if (migrate_fn_) {
+    migrate_list_.erase(*this);
+  }
   migrate_fn_ = ktl::move(migrate_fn);
+  // If |migrate_fn_| is valid, add |this| to |migrate_list_|.
+  if (migrate_fn_) {
+    migrate_list_.push_front(this);
+  }
+}
+
+void Thread::CallMigrateFnForCpuLocked(cpu_num_t cpu) {
+  while (!migrate_list_.is_empty()) {
+    Thread* const thread = migrate_list_.pop_front();
+
+    if (thread->state_ != THREAD_READY && thread->scheduler_state().last_cpu_ == cpu) {
+      thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
+    }
+  }
 }
 
 // Returns true if it decides to kill the thread. The thread_lock must be held

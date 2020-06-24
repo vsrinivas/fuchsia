@@ -277,8 +277,7 @@ bool set_migrate_fn_test() {
   }
 
   // The worker thread will attempt to migrate to another CPU.
-  // NOTE: We force a conversion to a function pointer for the lambda below.
-  auto worker_body = +[](void* arg) -> int {
+  auto worker_body = [](void* arg) -> int {
     cpu_num_t current_cpu = arch_curr_cpu_num();
     Thread* self = Thread::Current::Get();
     self->SetCpuAffinity(mp_get_active_mask() ^ cpu_num_to_mask(current_cpu));
@@ -437,6 +436,59 @@ bool set_migrate_ready_threads_test() {
   END_TEST;
 }
 
+bool migrate_unpinned_threads_test() {
+  BEGIN_TEST;
+
+  cpu_mask_t active_cpus = mp_get_active_mask();
+  if (active_cpus == 0 || ispow2(active_cpus)) {
+    printf("Expected multiple CPUs to be active.\n");
+    return true;
+  }
+
+  const cpu_num_t kStartingCpu = 1;
+  AutounsignalEvent event;
+
+  // Setup the thread that will be migrated.
+  auto worker_body = [](void* arg) -> int {
+    auto event = static_cast<AutounsignalEvent*>(arg);
+    event->Signal();
+    event->Wait();
+    return 0;
+  };
+  auto fn = [&event](Thread* thread, Thread::MigrateStage stage)
+                TA_NO_THREAD_SAFETY_ANALYSIS { event.SignalThreadLocked(); };
+  Thread* worker = Thread::Create("worker", worker_body, &event, DEFAULT_PRIORITY);
+  worker->SetSoftCpuAffinity(cpu_num_to_mask(kStartingCpu));
+  worker->SetMigrateFn(fn);
+  worker->Resume();
+
+  event.Wait();
+
+  // Setup the thread that will perform the migration.
+  auto migrate_body = []() TA_REQ(thread_lock) __NO_RETURN {
+    Scheduler::MigrateUnpinnedThreads();
+    mp_set_curr_cpu_active(true);
+    thread_lock.Release();
+    Thread::Current::Exit(0);
+  };
+  Thread* migrate =
+      Thread::CreateEtc(nullptr, "migrate", nullptr, nullptr, DEFAULT_PRIORITY, migrate_body);
+  migrate->SetCpuAffinity(cpu_num_to_mask(kStartingCpu));
+  migrate->Resume();
+
+  // If the thread was migrated by Scheduler::MigrateUnpinnedThreads(), the
+  // event will be signalled and the test will continue.
+  event.Wait();
+
+  int retcode;
+  ASSERT_EQ(migrate->Join(&retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join migrate thread.");
+  EXPECT_EQ(retcode, ZX_OK, "Migrate thread failed.");
+  ASSERT_EQ(worker->Join(&retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join worker thread.");
+  EXPECT_EQ(retcode, ZX_OK, "Worker thread failed.");
+
+  END_TEST;
+}
+
 bool runtime_test() {
   BEGIN_TEST;
   const zx_duration_t kCpuTime = 10, kQueueTime = 20;
@@ -496,5 +548,6 @@ UNITTEST("thread_empty_soft_affinity_mask", thread_empty_soft_affinity_mask)
 UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_and_hard_affinity)
 UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
+UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
 UNITTEST("runtime_test", runtime_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

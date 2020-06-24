@@ -419,6 +419,9 @@ struct Thread {
   // Deliver a kill signal to a thread.
   void Kill();
 
+  // Erase this thread from all global lists, where applicable.
+  void EraseFromListsLocked() TA_REQ(thread_lock);
+
   void SetPriority(int priority);
   void SetDeadline(const zx_sched_deadline_params_t& params);
 
@@ -466,6 +469,9 @@ struct Thread {
       migrate_fn_(this, stage);
     }
   }
+
+  // Call |migrate_fn| for each thread that was last run on the current CPU.
+  static void CallMigrateFnForCpuLocked(cpu_num_t cpu) TA_REQ(thread_lock);
 
   static Thread* IdToThreadSlow(uint64_t tid);
 
@@ -847,6 +853,20 @@ struct Thread {
 
   // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
   MigrateFn migrate_fn_;
+
+  // Used to track threads that have set |migrate_fn_|. This is used to migrate threads before a CPU
+  // is taken offline.
+  fbl::DoublyLinkedListNodeState<Thread*> migrate_list_node_ TA_GUARDED(thread_lock);
+
+  struct MigrateListTrait {
+    static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
+      return thread.migrate_list_node_;
+    }
+  };
+  using MigrateList = fbl::DoublyLinkedListCustomTraits<Thread*, MigrateListTrait>;
+
+  // The global list of threads with migrate functions.
+  static MigrateList migrate_list_ TA_GUARDED(thread_lock);
 };
 
 // For the moment, the arch-specific current thread implementations need to come here, after the

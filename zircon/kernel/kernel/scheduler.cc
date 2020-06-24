@@ -1435,6 +1435,9 @@ void Scheduler::MigrateUnpinnedThreads() {
   // Return the pinned threads to the deadline run queue.
   current->deadline_run_queue_ = ktl::move(pinned_threads);
 
+  // Call all migrate functions for threads last run on the current CPU.
+  Thread::CallMigrateFnForCpuLocked(current_cpu);
+
   if (cpus_to_reschedule_mask) {
     mp_reschedule(cpus_to_reschedule_mask, 0);
   }
