@@ -830,9 +830,11 @@ struct Thread {
   //    while preempt_pending_ is being checked.
   volatile bool preempt_pending_;
 
+private:
   // This is used by dispatcher.cc:SafeDeleter.
   void* recursive_object_deletion_list_ = nullptr;
 
+public:
   char name_[THREAD_NAME_LENGTH];
 
   // TODO(54383) More of Thread should be private than this.
