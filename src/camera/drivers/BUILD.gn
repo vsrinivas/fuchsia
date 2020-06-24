@@ -15,20 +15,6 @@ group("drivers") {
   ]
 }
 
-# Use this target to include actual drivers and tests,
-# but not supporting libraries.
-group("all") {
-  testonly = true
-  deps = [
-    "bus",
-    "controller",
-    "hw_accel",
-    "sensors",
-    "usb_video",
-    "usb_video:tests",
-  ]
-}
-
 group("sherlock") {
   testonly = true
   deps = [
