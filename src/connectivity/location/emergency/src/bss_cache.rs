@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    async_trait::async_trait,
     fidl::Error as FidlError,
     fidl_fuchsia_wlan_policy::{
         Bss as WlanPolicyBss, ScanErrorCode, ScanResult, ScanResultIteratorProxyInterface,
@@ -15,9 +16,21 @@ use {
     std::{collections::BTreeMap, pin::Pin},
 };
 
+#[async_trait(?Send)]
+pub trait BssCache {
+    /// Updates the cache with BSSes from `new_bsses`.
+    async fn update<I: ScanResultIteratorProxyInterface>(
+        &mut self,
+        new_bsses: I,
+    ) -> Result<(), UpdateError>;
+
+    /// Returns an iterator over the known BSSes.
+    fn iter(&self) -> Box<dyn Iterator<Item = (&'_ BssId, &'_ Bss)> + '_>;
+}
+
 /// A cache for WLAN Basic Service Sets, also known as WLAN base-stations.
 #[derive(Default)]
-pub struct BssCache {
+pub struct RealBssCache {
     bss_map: BTreeMap<BssId, Bss>,
 }
 
@@ -54,15 +67,23 @@ const MAX_BSSES: usize = 20;
 // equal the limit on BSSes.
 const MAX_IPCS: usize = MAX_BSSES;
 
-impl BssCache {
+impl RealBssCache {
     pub fn new() -> Self {
         Default::default()
     }
 
-    /// Updates the cache with BSSes from `new_bsses`.
-    pub async fn update(
+    fn prune_to_size(&mut self) {
+        if let Some(first_overflowed_bssid) = self.bss_map.keys().cloned().nth(MAX_BSSES) {
+            self.bss_map.split_off(&first_overflowed_bssid);
+        }
+    }
+}
+
+#[async_trait(?Send)]
+impl BssCache for RealBssCache {
+    async fn update<I: ScanResultIteratorProxyInterface>(
         &mut self,
-        new_bsses: impl ScanResultIteratorProxyInterface,
+        new_bsses: I,
     ) -> Result<(), UpdateError> {
         let mut iterator_service_result = ScanResultStream::new(new_bsses)
             .take(MAX_IPCS)
@@ -102,15 +123,8 @@ impl BssCache {
         Ok(())
     }
 
-    /// Returns an iterator over the known BSSes.
-    pub fn iter(&self) -> impl Iterator<Item = (&'_ BssId, &'_ Bss)> {
-        self.bss_map.iter()
-    }
-
-    fn prune_to_size(&mut self) {
-        if let Some(first_overflowed_bssid) = self.bss_map.keys().cloned().nth(MAX_BSSES) {
-            self.bss_map.split_off(&first_overflowed_bssid);
-        }
+    fn iter(&self) -> Box<dyn Iterator<Item = (&'_ BssId, &'_ Bss)> + '_> {
+        Box::new(self.bss_map.iter())
     }
 }
 
@@ -222,7 +236,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn caches_single_bss_with_just_bss_data() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                     id: None,
@@ -244,7 +258,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn caches_single_bss_with_all_data() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                     id: Some(NetworkIdentifier { ssid: vec![b'a'], type_: Wpa2 }),
@@ -266,7 +280,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn caches_multiple_bsses_from_single_network() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                     id: None,
@@ -296,7 +310,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn deduplicates_bsses_from_single_network() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                     id: None,
@@ -326,7 +340,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn caches_multiple_bsses_from_multiple_networks() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_single_step(vec![
                     ScanResult {
@@ -360,7 +374,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn deduplicates_bsses_from_multiple_networks() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_single_step(vec![
                     ScanResult {
@@ -394,7 +408,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn honors_max_bss_limit() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let bsses: Vec<_> = (0..MAX_BSSES + 1)
                 .map(|i| WlanPolicyBss {
                     bssid: Some(
@@ -414,7 +428,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn does_not_count_bad_bsses_toward_max_bss_limit() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let bad_bss = std::iter::once(WlanPolicyBss {
                 bssid: None,
                 rssi: None,
@@ -439,7 +453,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn does_not_count_duplicate_bsses_toward_max_bss_limit() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let duplicate_bsses = vec![
                 WlanPolicyBss {
                     bssid: Some([0, 0, 0, 0, 0, 0]),
@@ -481,7 +495,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn returns_ipc_error_on_fidl_error() {
             assert_eq!(
-                BssCache::new()
+                RealBssCache::new()
                     .update(StubScanResultIterator::new(|| Err(fidl::Error::InvalidHeader)))
                     .await,
                 Err(UpdateError::Ipc)
@@ -491,7 +505,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn returns_service_error_on_general_scan_error() {
             assert_eq!(
-                BssCache::new()
+                RealBssCache::new()
                     .update(StubScanResultIterator::new(|| Ok(Err(ScanErrorCode::GeneralError))))
                     .await,
                 Err(UpdateError::Service)
@@ -501,7 +515,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn returns_no_bsses_error_on_empty_scan_results() {
             assert_eq!(
-                BssCache::new().update(FakeScanResultIterator::new_single_step(vec![])).await,
+                RealBssCache::new().update(FakeScanResultIterator::new_single_step(vec![])).await,
                 Err(UpdateError::NoBsses)
             );
         }
@@ -509,7 +523,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn returns_no_bsses_error_on_network_without_entries_vector() {
             assert_eq!(
-                BssCache::new()
+                RealBssCache::new()
                     .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                         id: None,
                         entries: None,
@@ -523,7 +537,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn returns_no_bsses_error_on_network_with_empty_entries_vector() {
             assert_eq!(
-                BssCache::new()
+                RealBssCache::new()
                     .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                         id: None,
                         entries: Some(Vec::new()),
@@ -537,7 +551,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn returns_no_bss_ids_error_on_bss_without_bssid() {
             assert_eq!(
-                BssCache::new()
+                RealBssCache::new()
                     .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                         id: None,
                         entries: Some(vec![WlanPolicyBss {
@@ -566,7 +580,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn is_non_empty_after_new_non_empty_data() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let _ = cache
                 .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                     id: None,
@@ -607,7 +621,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn is_non_empty_after_new_empty_data() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let _ = cache
                 .update(FakeScanResultIterator::new_single_step(vec![ScanResult {
                     id: None,
@@ -650,7 +664,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn reads_all_scan_results() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_multi_step(vec![
                     vec![ScanResult {
@@ -681,7 +695,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn finds_later_bsses_even_if_first_iteration_yields_no_bsses() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_multi_step(vec![
                     vec![ScanResult { id: None, entries: None, compatibility: None }],
@@ -703,7 +717,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn finds_later_bss_ids_even_if_first_iteration_yields_no_bss_ids() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let result = cache
                 .update(FakeScanResultIterator::new_multi_step(vec![
                     vec![ScanResult {
@@ -745,7 +759,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn stops_sending_ipcs_when_get_next_yields_fidl_error() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let mut scan_results = vec![Err(fidl::Error::InvalidHeader)].into_iter();
             let _ = cache
                 .update(StubScanResultIterator::new(|| {
@@ -756,7 +770,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn stops_sending_ipcs_when_get_next_yields_scan_error() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let mut scan_results = vec![Ok(Err(ScanErrorCode::GeneralError))].into_iter();
             let _ = cache
                 .update(StubScanResultIterator::new(|| {
@@ -767,7 +781,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn stops_sending_ipcs_when_get_next_yields_empty_vec() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let mut scan_results = vec![Ok(Ok(vec![]))].into_iter();
             let _ = cache
                 .update(StubScanResultIterator::new(|| {
@@ -778,7 +792,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn drives_pending_ipc_to_completion() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let mut poll_results = vec![Poll::Pending, Poll::Ready(Ok(Ok(vec![])))].into_iter();
             let mut futures = vec![futures::future::poll_fn(|cx| {
                 let res = poll_results.next().expect("already consumed all `poll_results`");
@@ -795,7 +809,7 @@ mod tests {
 
         #[fasync::run_until_stalled(test)]
         async fn honors_max_ipc_limit() {
-            let mut cache = BssCache::new();
+            let mut cache = RealBssCache::new();
             let mut scan_results = (0..MAX_IPCS)
                 .map(|i| {
                     Ok(Ok(vec![ScanResult {
