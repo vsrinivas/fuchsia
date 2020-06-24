@@ -1,0 +1,18 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/packages/prebuilt_package.gni")
+
+group("wl") {
+  deps = [ ":wl_pkg" ]
+}
+
+prebuilt_archive_base_path =
+    "//prebuilt/connectivity/wlan/tools/third_party/broadcom/wl"
+
+prebuilt_package("wl_pkg") {
+  visibility = [ ":wl" ]
+  package_name = "wl"
+  archive = prebuilt_archive_base_path + "/" + target_cpu + "/wl.far"
+}
