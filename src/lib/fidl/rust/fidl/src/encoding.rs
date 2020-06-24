@@ -48,6 +48,28 @@ pub fn with_tls_encoded<T, E: From<Error>>(
     })
 }
 
+/// Resize a vector without zeroing added bytes.
+///
+/// # Safety
+///
+/// This is unsafe when `new_len > old_len` because it leaves new elements at
+/// indices `old_len..new_len` unintialized. The caller must overwrite all the
+/// new elements before reading them.
+/// 
+/// FIDL conformance tests are used to validate that there are no
+/// uninitialized bytes in the output across a range types and values.
+unsafe fn resize_vec_no_zeroing<T>(buf: &mut Vec<T>, new_len: usize) {
+    if new_len > buf.capacity() {
+        buf.reserve(new_len - buf.len());
+    }
+    // Safety:
+    // - `new_len` must be less than or equal to `capacity()`:
+    //   The if-statement above guarantees this.
+    // - The elements at `old_len..new_len` must be initialized:
+    //   They are purposely left uninitialized, making this function unsafe.
+    buf.set_len(new_len);
+}
+
 /// Rounds `x` up if necessary so that it is a multiple of `align`.
 ///
 /// Requires `align` to be a (nonzero) power of two.
@@ -175,13 +197,17 @@ impl<'a> Encoder<'a> {
             handles: &'a mut Vec<Handle>,
             ty_inline_size: usize,
         ) -> Encoder<'a> {
-            let inline_size = round_up_to_align(ty_inline_size, 8);
-            buf.truncate(0);
-            buf.resize(inline_size, 0);
+            let aligned_inline_size = round_up_to_align(ty_inline_size, 8);
+            // Safety: The uninitialized elements are assigned in prepare_for_encoding and
+            // x.encode.
+            unsafe {
+                resize_vec_no_zeroing(buf, aligned_inline_size);
+            }
             handles.truncate(0);
-            Encoder { buf, handles, context }
+            let mut encoder = Encoder { buf, handles, context };
+            encoder.padding(ty_inline_size, aligned_inline_size - ty_inline_size);
+            encoder
         }
-
         let mut encoder = prepare_for_encoding(context, buf, handles, x.inline_size(context));
         x.encode(&mut encoder, 0, 0)
     }
@@ -205,42 +231,13 @@ impl<'a> Encoder<'a> {
         let new_offset = self.buf.len();
         let new_depth = recursion_depth + 1;
         Self::check_recursion_depth(new_depth)?;
-        self.buf_reserve(len);
-        f(self, new_offset, new_depth)
-    }
-
-    fn buf_reserve(&mut self, len: usize) {
-        let old_len = self.buf.len();
-        let new_len = old_len + round_up_to_align(len, 8);
-        // Special case to ensure we use memset when extending length within capacity.
-        if new_len <= self.buf.capacity() {
-            let ptr = self.buf.as_mut_ptr();
-            // Safety:
-            // - The `set_len` call is safe because new_len <= capacity.
-            // - The old_len..new_len bytes left uninitialized after `set_len`
-            //   are zeroed by `write_bytes`.
-            unsafe {
-                self.buf.set_len(new_len);
-                // At this point, we could consider leaving the remaining bytes
-                // unintialized, since the wire format accounts for every byte
-                // and they will all be overwritten. For now, we set them all to
-                // zero because:
-                //
-                // 1. The rest of the encoding logic still relies on it, e.g.,
-                //    Encoder::padding simply increases the offset.
-                // 2. It's not clear which costs more: zeroing the entire region
-                //    first, or leaving it uninitialized and writing zeros for
-                //    each area of padding separately.
-                // 3. Uninitialized memory means UB if it is read, and a
-                //    security leak if it is sent in a message without being
-                //    completely overwritten. Before doing this, we would need
-                //    to audit the code carefully and write tests designed to
-                //    discover these sorts of bugs.
-                std::ptr::write_bytes(ptr.offset(old_len as isize), 0, new_len - old_len);
-            }
-        } else {
-            self.buf.resize(new_len, 0);
+        let padded_len = round_up_to_align(len, 8);
+        // Safety: The uninitialized elements are assigned in self.padding and f.
+        unsafe {
+            resize_vec_no_zeroing(self.buf, self.buf.len() + padded_len);
         }
+        self.padding(new_offset + len, padded_len - len);
+        f(self, new_offset, new_depth)
     }
 
     /// Validate that the recursion depth is within the limit.
@@ -271,6 +268,24 @@ impl<'a> Encoder<'a> {
     /// This is needed for accessing the context in macros during migrations.
     pub fn context(&self) -> &Context {
         self.context
+    }
+
+    /// Write padding at the specified offset.
+    #[inline(always)]
+    pub fn padding(&mut self, offset: usize, len: usize) {
+        if len == 0 {
+            return;
+        }
+        // In practice, this assertion should never fail because we ensure that
+        // padding is within an already allocated block outside of this
+        // function.
+        assert!(offset + len <= self.buf.len());
+        // Safety:
+        // - The pointer is valid for this range, as tested by the assertion above.
+        // - All u8 pointers are properly aligned.
+        unsafe {
+            std::ptr::write_bytes(self.buf.as_mut_ptr().offset(offset as isize), 0, len);
+        }
     }
 }
 
@@ -1682,7 +1697,11 @@ impl<T: Autonull> Encodable for Option<&mut T> {
         if T::naturally_nullable(encoder.context) {
             match self {
                 Some(x) => x.encode(encoder, offset, recursion_depth),
-                None => Ok(()),
+                None => {
+                    // This is an empty xunion.
+                    encoder.padding(offset, 24);
+                    Ok(())
+                }
             }
         } else {
             match self {
@@ -1718,6 +1737,7 @@ impl<T: Autonull> Encodable for Option<Box<T>> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        // Call Option<&mut T>'s encode method.
         self.as_deref_mut().encode(encoder, offset, recursion_depth)
     }
 }
@@ -1790,9 +1810,13 @@ macro_rules! fidl_struct {
 
         impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+                let mut padding_start = 0;
                 $(
+                    encoder.padding(offset + padding_start, $member_offset_v1 - padding_start);
                     $crate::fidl_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
+                    padding_start = $member_offset_v1 + encoder.inline_size_of::<$member_ty>();
                 )*
+                encoder.padding(offset + padding_start, encoder.inline_size_of::<Self>() - padding_start);
                 Ok(())
             }
         }
@@ -1987,10 +2011,18 @@ macro_rules! fidl_table {
                 $crate::encoding::ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
                 let bytes_len = (max_ordinal as usize) * 16;
                 encoder.write_out_of_line(bytes_len, recursion_depth, |encoder, offset, recursion_depth| {
-                    // Write at offset+(ordinal-1)*16, since ordinals are one-based and envelopes are 16 bytes.
-                    // An empty envelope is all zeros, so we don't need to write anything for empty/reserved
-                    for (ordinal, encodable) in members.iter_mut() {
-                        $crate::encoding::encode_in_envelope(encodable, encoder, offset + (*ordinal as usize - 1) * 16, recursion_depth)?;
+                    let mut prev_end_offset: usize = 0;
+                    for (ref ordinal, encodable) in members.iter_mut() {
+                        // Write at offset+(ordinal-1)*16, since ordinals are one-based and envelopes are 16 bytes.
+                        let cur_offset = (*ordinal as usize - 1) * 16;
+
+                        // Zero reserved fields.
+                        encoder.padding(offset + prev_end_offset, cur_offset - prev_end_offset);
+
+                        // Encode present field.
+                        $crate::encoding::encode_in_envelope(encodable, encoder, offset + cur_offset, recursion_depth)?;
+
+                        prev_end_offset = cur_offset + 16;
                     }
                     Ok(())
                 })
@@ -2761,10 +2793,11 @@ macro_rules! tuple_impls {
                     // Skip to the start of the next field
                     let member_offset =
                         round_up_to_align(cur_offset, encoder.inline_align_of::<$ntyp>());
+                    encoder.padding(offset + cur_offset, member_offset - cur_offset);
                     self.$nidx.encode(encoder, offset + member_offset, recursion_depth)?;
                     cur_offset = member_offset + encoder.inline_size_of::<$ntyp>();
                 )*
-                let _unused = cur_offset; // avoid unused warnings.
+                encoder.padding(offset + cur_offset, encoder.inline_size_of::<Self>() - cur_offset);
                 Ok(())
             }
         }
