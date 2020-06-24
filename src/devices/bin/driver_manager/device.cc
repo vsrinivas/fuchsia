@@ -791,7 +791,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
                        ::fidl::StringView name_view, uint32_t protocol_id,
                        ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
                        llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
-                       bool has_init, ::zx::channel client_remote,
+                       bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
                        AddDeviceCompleter::Sync completer) {
   auto parent = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
@@ -845,7 +845,7 @@ void Device::AddDeviceInvisible(
     ::zx::channel coordinator, ::zx::channel device_controller_client,
     ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
     ::fidl::StringView name_view, uint32_t protocol_id, ::fidl::StringView driver_path_view,
-    ::fidl::StringView args_view, bool has_init, ::zx::channel client_remote,
+    ::fidl::StringView args_view, bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
     AddDeviceInvisibleCompleter::Sync completer) {
   auto parent = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());

@@ -243,7 +243,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
         ::fidl::unowned_str(child->name(), strlen(child->name())), child->protocol_id(),
         ::fidl::unowned_str(child->driver->libname()),
         ::fidl::unowned_str(proxy_args, proxy_args_len), child->ops()->init /* has_init */,
-        std::move(client_remote));
+        zx::vmo(), std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {
@@ -261,7 +261,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
         ::fidl::unowned_str(child->name(), strlen(child->name())), child->protocol_id(),
         ::fidl::unowned_str(child->driver->libname()),
         ::fidl::unowned_str(proxy_args, proxy_args_len), add_device_config,
-        child->ops()->init /* has_init */, std::move(client_remote));
+        child->ops()->init /* has_init */, zx::vmo(), std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {

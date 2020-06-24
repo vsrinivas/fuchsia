@@ -107,7 +107,8 @@ class Device
                  ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
                  ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init,
-                 ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) override;
+                 ::zx::vmo inspect, ::zx::channel client_remote,
+                 AddDeviceCompleter::Sync _completer) override;
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
   void AddCompositeDevice(::fidl::StringView name,
                           llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
@@ -119,7 +120,7 @@ class Device
                           ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
                           ::fidl::StringView name, uint32_t protocol_id,
                           ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init,
-                          ::zx::channel client_remote,
+                          ::zx::vmo inspect, ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync _completer) override;
   void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
   void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;
