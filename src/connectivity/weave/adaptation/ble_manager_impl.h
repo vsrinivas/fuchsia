@@ -114,13 +114,13 @@ class BLEManagerImpl final : public BLEManager,
   // ===== Private members reserved for use by this class only.
 
   struct WoBLEConState {
-    PacketBuffer *PendingIndBuf;
-    uint16_t ConId;
-    uint16_t MTU : 10;
-    uint16_t Allocated : 1;
-    uint16_t Subscribed : 1;
-    uint16_t Unused : 4;
+    WoBLEConState(BLEManagerImpl *connection_instance) : instance(connection_instance) {}
+    BLEManagerImpl *instance;
+    PacketBuffer *pending_ind_buf;
+    std::string peer_id;
   };
+
+  WoBLEConState woble_connection_;
 
   char device_name_[kMaxDeviceNameLength + 1];
   uint16_t flags_;
@@ -133,9 +133,6 @@ class BLEManagerImpl final : public BLEManager,
   // Proxy to the le.Peripheral service which we use for advertising to solicit connections.
   fuchsia::bluetooth::le::PeripheralSyncPtr peripheral_;
   fidl::InterfacePtr<fuchsia::bluetooth::le::AdvertisingHandle> adv_handle_;
-
-  // Connection from a peer that connected to our advertisement.
-  fidl::InterfacePtr<fuchsia::bluetooth::le::Connection> connection_;
 
  public:
   BLEManagerImpl();
