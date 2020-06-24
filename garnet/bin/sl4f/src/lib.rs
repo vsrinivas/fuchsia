@@ -14,6 +14,7 @@ pub mod battery_simulator;
 pub mod bluetooth;
 pub mod camera;
 pub mod common_utils;
+pub mod component;
 pub mod component_search;
 pub mod device;
 pub mod diagnostics;

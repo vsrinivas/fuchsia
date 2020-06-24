@@ -15,6 +15,7 @@ dart_library("client") {
   sources = [
     "sl4f.dart",
     "src/audio.dart",
+    "src/component.dart",
     "src/component_search.dart",
     "src/device.dart",
     "src/device_log.dart",
@@ -70,6 +71,7 @@ dart_library("client") {
 dart_test("sl4f_client_tests") {
   sources = [
     "component_search_test.dart",
+    "component_test.dart",
     "device_log_test.dart",
     "device_test.dart",
     "dump_test.dart",
