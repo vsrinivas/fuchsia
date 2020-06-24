@@ -2101,7 +2101,7 @@ TEST(Pager, WritingZeroFork) {
   // are incompatible with a user pager backed vmo. To try and detect this we need to wait for the
   // zero scanner to run, since the zero fork queue looks close enough to the pager backed queue
   // that most things will 'just work'.
-  constexpr char k_command[] = "k scanner reclaim_all";
+  constexpr char k_command[] = "scanner reclaim_all";
   if (!&get_root_resource ||
       zx_debug_send_command(get_root_resource(), k_command, strlen(k_command)) != ZX_OK) {
     // Failed to manually force the zero scanner to run, fall back to sleeping for a moment and hope
