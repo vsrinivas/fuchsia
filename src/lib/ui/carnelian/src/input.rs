@@ -9,13 +9,14 @@ use crate::{
 };
 use anyhow::Error;
 use euclid::default::Vector2D;
+use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync};
 use fuchsia_zircon::{self as zx};
 use input_synthesis::{keymaps::QWERTY_MAP, usages::key_to_hid_usage};
 use std::{
     collections::{HashMap, HashSet},
-    fs,
+    fs::{self, DirEntry},
     hash::{Hash, Hasher},
     iter::FromIterator,
 };
@@ -364,6 +365,53 @@ fn device_id_for_keyboard_event(event: &fidl_fuchsia_ui_input::KeyboardEvent) ->
     DeviceId(format!("keyboard-{}", event.device_id))
 }
 
+async fn listen_to_entry(
+    entry: &DirEntry,
+    view_key: ViewKey,
+    internal_sender: &InternalSender,
+) -> Result<(), Error> {
+    let (client, server) = zx::Channel::create()?;
+    fdio::service_connect(entry.path().to_str().expect("bad path"), server)?;
+    let client = fasync::Channel::from_channel(client)?;
+    let device = hid_input_report::InputDeviceProxy::new(client);
+    let descriptor = device.get_descriptor().await?;
+    let device_id = entry.file_name().to_string_lossy().to_string();
+    internal_sender
+        .unbounded_send(MessageInternal::RegisterDevice(DeviceId(device_id.clone()), descriptor))
+        .expect("unbounded_send");
+    let input_report_sender = internal_sender.clone();
+    let (input_reports_reader_proxy, input_reports_reader_request) = create_proxy()?;
+    device.get_input_reports_reader(input_reports_reader_request)?;
+    fasync::spawn_local(async move {
+        let _device = device;
+        loop {
+            let reports_res = input_reports_reader_proxy.read_input_reports().await;
+            match reports_res {
+                Ok(r) => match r {
+                    Ok(reports) => {
+                        for report in reports {
+                            input_report_sender
+                                .unbounded_send(MessageInternal::InputReport(
+                                    DeviceId(device_id.clone()),
+                                    view_key,
+                                    report,
+                                ))
+                                .expect("unbounded_send");
+                        }
+                    }
+                    Err(err) => {
+                        eprintln!("Error report from read_input_reports: {}: {}", device_id, err);
+                    }
+                },
+                Err(err) => {
+                    eprintln!("Error report from read_input_reports: {}: {}", device_id, err);
+                }
+            }
+        }
+    });
+    Ok(())
+}
+
 pub(crate) async fn listen_for_user_input(
     view_key: ViewKey,
     internal_sender: InternalSender,
@@ -373,35 +421,12 @@ pub(crate) async fn listen_for_user_input(
     let entries = fs::read_dir(path)?;
     for entry in entries {
         let entry = entry?;
-        let (client, server) = zx::Channel::create()?;
-        fdio::service_connect(entry.path().to_str().expect("bad path"), server)?;
-        let client = fasync::Channel::from_channel(client)?;
-        let device = hid_input_report::InputDeviceProxy::new(client);
-        let descriptor = device.get_descriptor().await?;
-        let device_id = entry.file_name().to_string_lossy().to_string();
-        internal_sender
-            .unbounded_send(MessageInternal::RegisterDevice(
-                DeviceId(device_id.clone()),
-                descriptor,
-            ))
-            .expect("unbounded_send");
-        let input_report_sender = internal_sender.clone();
-        fasync::spawn_local(async move {
-            let (_result, event) = device.get_reports_event().await.expect("get_reports_event");
-            while let Ok(_) = fasync::OnSignals::new(&event, zx::Signals::USER_0).await {
-                if let Ok(reports) = device.get_reports().await {
-                    for report in reports {
-                        input_report_sender
-                            .unbounded_send(MessageInternal::InputReport(
-                                DeviceId(device_id.clone()),
-                                view_key,
-                                report,
-                            ))
-                            .expect("unbounded_send");
-                    }
-                }
+        match listen_to_entry(&entry, view_key, &internal_sender).await {
+            Err(err) => {
+                eprintln!("Error: {}: {}", entry.file_name().to_string_lossy().to_string(), err)
             }
-        })
+            _ => (),
+        }
     }
     Ok(())
 }
