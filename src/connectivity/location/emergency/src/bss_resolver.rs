@@ -4,6 +4,7 @@
 
 use {
     crate::bss_cache::{Bss, BssId},
+    async_trait::async_trait,
     fidl::{Error as FidlError, Socket as FidlSocket},
     fidl_fuchsia_location_position::{Position, PositionExtras},
     fidl_fuchsia_mem::Buffer as MemBuffer,
@@ -36,8 +37,19 @@ const ACCURACY_KEY: &'static str = "accuracy";
 // HTTP constants.
 const HTTP_METHOD_POST: &'static str = "POST";
 
+#[async_trait(?Send)]
+pub trait BssResolver {
+    /// Resolves WLAN BSS (base-station) meta-data to a `Position`.
+    async fn resolve<'a, I, T, U>(&self, bsses: I) -> Result<Position, ResolverError>
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(T, U)>,
+        T: Borrow<BssId>,
+        U: Borrow<Bss>;
+}
+
 /// A service for resolving WLAN BSS (base-station) meta-data to `Position`s.
-pub struct BssResolver<L: LoaderProxyInterface> {
+pub struct RealBssResolver<L: LoaderProxyInterface> {
     http_loader: L,
     api_key: String,
 }
@@ -49,13 +61,15 @@ pub enum ResolverError {
     Lookup,
 }
 
-impl<L: LoaderProxyInterface> BssResolver<L> {
+impl<L: LoaderProxyInterface> RealBssResolver<L> {
     pub fn new(http_loader: L, api_key: impl Into<String>) -> Self {
         Self { http_loader, api_key: api_key.into() }
     }
+}
 
-    /// Resolves WLAN BSS (base-station) meta-data to a `Position`.
-    pub async fn resolve<'a, I, T, U>(&self, bsses: I) -> Result<Position, ResolverError>
+#[async_trait(?Send)]
+impl<L: LoaderProxyInterface> BssResolver for RealBssResolver<L> {
+    async fn resolve<'a, I, T, U>(&self, bsses: I) -> Result<Position, ResolverError>
     where
         I: IntoIterator,
         I::Item: Borrow<(T, U)>,
@@ -178,7 +192,7 @@ mod tests {
             let http_loader = HttpRequestValidator::new(|request| {
                 request_method = Some(request.method.expect("request had no method"));
             });
-            let _ = BssResolver::new(http_loader, "fake_key").resolve(bsses).await;
+            let _ = RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await;
             assert_eq!(request_method.expect("request was never issued"), "POST".to_owned());
         }
 
@@ -189,7 +203,7 @@ mod tests {
             let http_loader = HttpRequestValidator::new(|request| {
                 request_url = Some(request.url.expect("request had no url"));
             });
-            let _ = BssResolver::new(http_loader, "fake_key").resolve(bsses).await;
+            let _ = RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await;
             assert_eq!(
                 request_url.expect("request was never issued"),
                 "https://www.googleapis.com/geolocation/v1/geolocate?key=fake_key".to_owned()
@@ -206,7 +220,7 @@ mod tests {
             let http_loader = HttpRequestValidator::new(|request| {
                 request_body = Some(request.body.expect("request had no body"));
             });
-            let _ = BssResolver::new(http_loader, "fake_key").resolve(bsses).await;
+            let _ = RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await;
             assert_eq!(
                 strip_whitespace(read_request_body(
                     request_body.expect("request was never issued")
@@ -229,7 +243,7 @@ mod tests {
             let http_loader = HttpRequestValidator::new(|request| {
                 request_body = Some(request.body.expect("request had no body"));
             });
-            let _ = BssResolver::new(http_loader, "fake_key").resolve(bsses).await;
+            let _ = RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await;
             assert_eq!(
                 strip_whitespace(read_request_body(
                     request_body.expect("request was never issued")
@@ -249,7 +263,7 @@ mod tests {
         async fn skips_api_query_when_bsses_is_empty() {
             let http_loader =
                 HttpRequestValidator::new(|_request| panic!("should not issue API query"));
-            let _ = BssResolver::new(http_loader, "fake_key")
+            let _ = RealBssResolver::new(http_loader, "fake_key")
                 .resolve(std::iter::empty::<(BssId, Bss)>())
                 .await;
         }
@@ -258,7 +272,7 @@ mod tests {
         async fn returns_no_bsses_error_when_bsses_is_empty() {
             let http_loader = HttpRequestValidator::new(|_| ());
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key")
+                RealBssResolver::new(http_loader, "fake_key")
                     .resolve(std::iter::empty::<(BssId, Bss)>())
                     .await,
                 Err(ResolverError::NoBsses)
@@ -304,7 +318,7 @@ mod tests {
             let bsses = vec![([0, 0, 0, 0, 0, 0], Bss { rssi: None, frequency: None })];
             let http_loader = HttpFidlResponder::new(|| Err(FidlError::InvalidHeader));
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Internal)
             );
         }
@@ -324,7 +338,7 @@ mod tests {
                 })
             });
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -344,7 +358,7 @@ mod tests {
                 })
             });
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -354,7 +368,7 @@ mod tests {
             let bsses = vec![([0, 0, 0, 0, 0, 0], Bss { rssi: None, frequency: None })];
             let http_loader = HttpByteResponder::new(b"hello world".to_vec());
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -364,7 +378,7 @@ mod tests {
             let bsses = vec![([0, 0, 0, 0, 0, 0], Bss { rssi: None, frequency: None })];
             let http_loader = HttpByteResponder::new(b"42".to_vec());
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -374,7 +388,7 @@ mod tests {
             let bsses = vec![([0, 0, 0, 0, 0, 0], Bss { rssi: None, frequency: None })];
             let http_loader = HttpByteResponder::new(b"{}".to_vec());
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -392,7 +406,7 @@ mod tests {
                 .to_vec(),
             );
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -410,7 +424,7 @@ mod tests {
                 .to_vec(),
             );
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -428,7 +442,7 @@ mod tests {
                 .to_vec(),
             );
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -446,7 +460,7 @@ mod tests {
                 .to_vec(),
             );
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -464,7 +478,7 @@ mod tests {
                 .to_vec(),
             );
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -482,7 +496,7 @@ mod tests {
                 .to_vec(),
             );
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
                 Err(ResolverError::Lookup)
             );
         }
@@ -508,7 +522,10 @@ mod tests {
                 }"#
                 .to_vec(),
             );
-            assert_matches!(BssResolver::new(http_loader, "fake_key").resolve(bsses).await, Ok(_));
+            assert_matches!(
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                Ok(_)
+            );
         }
 
         #[fasync::run_until_stalled(test)]
@@ -523,7 +540,10 @@ mod tests {
                 }"#
                 .to_vec(),
             );
-            assert_matches!(BssResolver::new(http_loader, "fake_key").resolve(bsses).await, Ok(_));
+            assert_matches!(
+                RealBssResolver::new(http_loader, "fake_key").resolve(bsses).await,
+                Ok(_)
+            );
         }
     }
 
@@ -547,7 +567,7 @@ mod tests {
                 .to_vec(),
             );
             assert_matches!(
-                BssResolver::new(http_loader, "fake_key")
+                RealBssResolver::new(http_loader, "fake_key")
                     .resolve(bsses)
                     .await.expect("position is none").latitude,
                 // One degree of latitude is approximately 111 kilometers. By limiting rounding
@@ -570,7 +590,7 @@ mod tests {
                 .to_vec(),
             );
             assert_matches!(
-                BssResolver::new(http_loader, "fake_key")
+                RealBssResolver::new(http_loader, "fake_key")
                     .resolve(bsses)
                     .await.expect("no position").longitude,
                 // At the equator, one degree of longitude is approximately 111 kilometers.
@@ -594,7 +614,7 @@ mod tests {
                 .to_vec(),
             );
             assert_matches!(
-                BssResolver::new(http_loader, "fake_key")
+                RealBssResolver::new(http_loader, "fake_key")
                     .resolve(bsses)
                     .await.expect("no position").extras.accuracy_meters.expect("accuracy is none"),
                 accuracy if (1200.39..1200.41).contains(&accuracy)
@@ -614,7 +634,7 @@ mod tests {
                 .to_vec(),
             );
             assert_eq!(
-                BssResolver::new(http_loader, "fake_key")
+                RealBssResolver::new(http_loader, "fake_key")
                     .resolve(bsses)
                     .await
                     .expect("no position")
