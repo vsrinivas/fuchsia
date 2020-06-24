@@ -57,15 +57,15 @@ configuration data to anything finer than a package.
 
 ### Supplying Configuration
 
-For things wishing to add configuration into another package the should create a
-`config_data` rule. The rule has a `for_pkg` attribute which should be the
-package for which this configuration is intended. The outputs and sources are an
-order-matched set of inputs and outputs. If no outputs set is specified the
-file(s) will be given the same name as appears in sources. If the outputs list is
-supplied it must contain exactly one item. Multiple build rules may not supply
-the same output file for the same package, doing so will result in a build
-failure. For this reason it makes sense to consider namespacing the output either
-by file name or directory conventions for each component.
+If you want your package to insert configuration data into another package,
+you should create a `config_data` rule. The rule has a `for_pkg` attribute
+which should be the package for which this configuration is intended. The
+outputs and sources are an order-matched set of inputs and outputs. If no outputs
+set is specified the file(s) will be given the same name as appears in sources.
+If the outputs list is supplied it must contain exactly one item. Multiple build
+rules may not supply the same output file for the same package, doing so will
+result in a build failure. For this reason it makes sense to consider namespacing
+the output either by file name or directory conventions for each component.
 
 ```
 config_data("tennis_sysmgr_config") {
