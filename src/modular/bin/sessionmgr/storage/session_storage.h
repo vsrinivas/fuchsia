@@ -63,11 +63,6 @@ class SessionStorage {
   // Returns a vector of StoryData for all stories in this session.
   std::vector<fuchsia::modular::internal::StoryData> GetAllStoryData();
 
-  // DEPRECATED: Use MergeStoryAnnotations.
-  // Sets the annotations for |story_id| to |annotations|. This overwrites all existing annotations.
-  void UpdateStoryAnnotations(fidl::StringPtr story_name,
-                              std::vector<fuchsia::modular::Annotation> annotations);
-
   // Adds the given annotations for |story_id| to |annotations|. Existing annotations are not
   // removed, but existing annotations with the same key as a given annotation will be updated
   // with the value of the given annotation.

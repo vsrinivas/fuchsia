@@ -102,28 +102,21 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
   }
 
   void Annotate(fuchsia::modular::internal::StoryDataPtr story_data) {
-    // Merge the annotations provided to the operation into any existing ones in `story_data`.
-    auto new_annotations =
-        story_data->story_info().has_annotations()
-            ? annotations::Merge(
-                  std::move(*story_data->mutable_story_info()->mutable_annotations()),
-                  std::move(annotations_))
-            : std::move(annotations_);
-
-    if (new_annotations.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_STORY) {
-      fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
-      result.set_err(fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS);
-      Done(std::move(result));
-      return;
-    }
-
-    session_storage_->UpdateStoryAnnotations(story_name_, std::move(new_annotations));
     fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
-    result.set_response({});
+
+    auto merge_error =
+        session_storage_->MergeStoryAnnotations(story_name_, std::move(annotations_));
+    if (merge_error) {
+      result.set_err(merge_error.value());
+    } else {
+      result.set_response({});
+    }
     Done(std::move(result));
   }
 
+  // Not owned.
   SessionStorage* const session_storage_;
+
   std::string story_name_;
   std::vector<fuchsia::modular::Annotation> annotations_;
 };

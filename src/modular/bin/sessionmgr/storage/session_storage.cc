@@ -93,21 +93,6 @@ std::vector<fuchsia::modular::internal::StoryData> SessionStorage::GetAllStoryDa
   return vec;
 }
 
-void SessionStorage::UpdateStoryAnnotations(fidl::StringPtr story_name,
-                                            std::vector<fuchsia::modular::Annotation> annotations) {
-  auto it = story_data_backing_store_.find(story_name);
-  if (it != story_data_backing_store_.end()) {
-    fuchsia::modular::internal::StoryData& val = it->second;
-    val.mutable_story_info()->set_annotations(std::move(annotations));
-    fuchsia::modular::internal::StoryData val_copy;
-    val.Clone(&val_copy);
-
-    if (on_story_updated_) {
-      on_story_updated_(std::move(story_name), std::move(val_copy));
-    }
-  }
-}
-
 std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnotations(
     fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
   // On success, this optional AnnotationError response will have no value (!has_value()).
