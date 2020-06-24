@@ -12,6 +12,7 @@ import (
 	"fidl/fuchsia/net/stack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
 func toNet(addr netfidl.IpAddress) net.IP {
@@ -57,10 +58,19 @@ func ToNetSocketAddress(addr tcpip.FullAddress) netfidl.SocketAddress {
 	case net.IPv6len:
 		var ipv6 netfidl.Ipv6Address
 		copy(ipv6.Addr[:], addr.Addr)
+
+		// Zone information should only be included for non-global addresses as the same
+		// address may be used across different zones. Note, there is only a single globally
+		// scoped zone where global addresses may only be used once so zone information is not
+		// needed for global addresses. See RFC 4007 section 6 for more details.
+		var zoneIdx uint64
+		if header.IsV6LinkLocalAddress(addr.Addr) || header.IsV6LinkLocalMulticastAddress(addr.Addr) {
+			zoneIdx = uint64(addr.NIC)
+		}
 		out.SetIpv6(netfidl.Ipv6SocketAddress{
 			Address:   ipv6,
 			Port:      addr.Port,
-			ZoneIndex: uint64(addr.NIC),
+			ZoneIndex: zoneIdx,
 		})
 	default:
 		panic(fmt.Sprintf("invalid IP address length = %d: %x", l, addr.Addr))

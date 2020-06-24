@@ -183,7 +183,7 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
                 fidl_fuchsia_net::Ipv6SocketAddress {
                     address: NDP_DNS_SERVER,
                     port: DEFAULT_DNS_PORT,
-                    zone_index: client_iface.id(),
+                    zone_index: 0,
                 },
             )),
             source: Some(fidl_fuchsia_net_name::DnsServerSource::Ndp(

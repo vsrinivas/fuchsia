@@ -167,37 +167,108 @@ func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
 }
 
 func TestToNetSocketAddress(t *testing.T) {
-	var expectIpv4 fidlnet.SocketAddress
-	expectIpv4.SetIpv4(fidlnet.Ipv4SocketAddress{
-		Address: fidlnet.Ipv4Address{
-			Addr: [4]uint8{192, 168, 0, 1},
+	tests := []struct {
+		name     string
+		fullAddr tcpip.FullAddress
+		sockAddr fidlnet.SocketAddress
+	}{
+		{
+			name: "IPv4",
+			fullAddr: tcpip.FullAddress{
+				Addr: "\xC0\xA8\x00\x01",
+				Port: 8080,
+			},
+			sockAddr: func() fidlnet.SocketAddress {
+				var a fidlnet.SocketAddress
+				a.SetIpv4(fidlnet.Ipv4SocketAddress{
+					Address: fidlnet.Ipv4Address{
+						Addr: [4]uint8{192, 168, 0, 1},
+					},
+					Port: 8080,
+				})
+				return a
+			}(),
 		},
-		Port: 8080,
-	})
-	converted := ToNetSocketAddress(tcpip.FullAddress{
-		NIC:  0,
-		Addr: "\xC0\xA8\x00\x01",
-		Port: 8080,
-	})
-	if converted != expectIpv4 {
-		t.Errorf("bad IPv4 conversion.\nExpected: %+v\nGot: %+v", expectIpv4, converted)
+		{
+			name: "IPv6 Global without NIC",
+			fullAddr: tcpip.FullAddress{
+				Addr: "\x20\x01\x48\x60\x48\x60\x00\x00\x00\x00\x00\x00\x00\x00\x88\x88",
+				Port: 8080,
+			},
+			sockAddr: func() fidlnet.SocketAddress {
+				var a fidlnet.SocketAddress
+				a.SetIpv6(fidlnet.Ipv6SocketAddress{
+					Address: fidlnet.Ipv6Address{
+						Addr: [16]uint8{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88},
+					},
+					Port: 8080,
+				})
+				return a
+			}(),
+		},
+		{
+			name: "IPv6 Global with NIC",
+			fullAddr: tcpip.FullAddress{
+				Addr: "\x20\x01\x48\x60\x48\x60\x00\x00\x00\x00\x00\x00\x00\x00\x88\x88",
+				Port: 8080,
+				NIC:  2,
+			},
+			sockAddr: func() fidlnet.SocketAddress {
+				var a fidlnet.SocketAddress
+				a.SetIpv6(fidlnet.Ipv6SocketAddress{
+					Address: fidlnet.Ipv6Address{
+						Addr: [16]uint8{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88},
+					},
+					Port: 8080,
+				})
+				return a
+			}(),
+		},
+		{
+			name: "IPv6 LinkLocal Unicast with NIC",
+			fullAddr: tcpip.FullAddress{
+				Addr: "\xfe\x80\x48\x60\x48\x60\x00\x00\x00\x00\x00\x00\x00\x00\x88\x88",
+				Port: 8080,
+				NIC:  2,
+			},
+			sockAddr: func() fidlnet.SocketAddress {
+				var a fidlnet.SocketAddress
+				a.SetIpv6(fidlnet.Ipv6SocketAddress{
+					Address: fidlnet.Ipv6Address{
+						Addr: [16]uint8{0xfe, 0x80, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88},
+					},
+					Port:      8080,
+					ZoneIndex: 2,
+				})
+				return a
+			}(),
+		},
+		{
+			name: "IPv6 LinkLocal Multicast with NIC",
+			fullAddr: tcpip.FullAddress{
+				Addr: "\xff\x02\x48\x60\x48\x60\x00\x00\x00\x00\x00\x00\x00\x00\x88\x88",
+				Port: 8080,
+				NIC:  2,
+			},
+			sockAddr: func() fidlnet.SocketAddress {
+				var a fidlnet.SocketAddress
+				a.SetIpv6(fidlnet.Ipv6SocketAddress{
+					Address: fidlnet.Ipv6Address{
+						Addr: [16]uint8{0xff, 0x02, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88},
+					},
+					Port:      8080,
+					ZoneIndex: 2,
+				})
+				return a
+			}(),
+		},
 	}
 
-	var expectIpv6 fidlnet.SocketAddress
-	expectIpv6.SetIpv6(fidlnet.Ipv6SocketAddress{
-		Address: fidlnet.Ipv6Address{
-			Addr: [16]uint8{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88},
-		},
-		Port:      8080,
-		ZoneIndex: 2,
-	})
-	converted = ToNetSocketAddress(tcpip.FullAddress{
-		NIC:  2,
-		Addr: "\x20\x01\x48\x60\x48\x60\x00\x00\x00\x00\x00\x00\x00\x00\x88\x88",
-		Port: 8080,
-	})
-
-	if converted != expectIpv6 {
-		t.Errorf("bad IPv6 conversion.\nExpected: %+v\nGot: %+v", expectIpv6, converted)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if converted := ToNetSocketAddress(test.fullAddr); test.sockAddr != converted {
+				t.Errorf("got ToNetSocketAddress(%+v) = %+v, want = %+v", test.fullAddr, converted, test.sockAddr)
+			}
+		})
 	}
 }
