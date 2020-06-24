@@ -13,7 +13,7 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser(
-        "Finds and runs tests affected by current change")
+        description="Finds and runs tests affected by current change")
     parser.add_argument(
         "--verbose", action="store_true", help="Print verbose messages")
     parser.add_argument(
