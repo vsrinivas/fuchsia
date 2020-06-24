@@ -8,7 +8,7 @@
         }
     },
     "program": {
-        "binary": "test/dhcpv6_client_bin_test"
+        "binary": "bin/dhcpv6_client_bin_test"
     },
     "sandbox": {
         "services": [

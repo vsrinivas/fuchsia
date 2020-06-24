@@ -145,7 +145,7 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/dhcpv6-client-tests#meta/dhcpv6_client_bin_test.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/dhcpv6-client-test#meta/dhcpv6-client-test.cmx",
          "max_severity": "ERROR"
       },
       {

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/dhcpv6_lib_test"
+    }
+}
