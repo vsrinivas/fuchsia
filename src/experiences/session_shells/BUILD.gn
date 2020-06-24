@@ -4,9 +4,7 @@
 
 group("session_shells") {
   testonly = true
-  public_deps = [
-    "ermine",
-  ]
+  public_deps = [ "ermine" ]
 }
 
 group("dart_unittests") {
@@ -17,7 +15,9 @@ group("dart_unittests") {
   if (host_os != "mac") {
     _flutter_tester_tests += [
       "ermine/settings:ermine_settings_unittests($host_toolchain)",
-      "ermine/shell:ermine_unittests($host_toolchain)",
+
+      #TODO(fxb/54945) Temporarily disable test
+      #"ermine/shell:ermine_unittests($host_toolchain)",
       "ermine/tiler:tiler_unittests($host_toolchain)",
       "ermine/keyboard_shortcuts:keyboard_shortcuts_unittests($host_toolchain)",
     ]
