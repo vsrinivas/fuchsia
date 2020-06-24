@@ -21,33 +21,39 @@ def analyze(gn_path, tests_json, build_dir, changed_files):
     build_dir: Fuchsia build dir (e.g. out/default)
     changed_files: List of files to check against, relative to source root.
 
-    Return: List of test packages that should be run.
+    Returns: List of test URLs and host test paths that should be run.
     """
     with open(tests_json) as f:
         tests_obj = json.load(f)
 
     label_to_test_packages = collections.defaultdict(list)
+    label_to_host_tests = collections.defaultdict(list)
     test_labels = []
 
     for t in tests_obj:
-        tl = t['test']['label']
-        # TODO: Understand toolchains.
-        lparen = tl.rindex('(')
-        toolchain = tl[lparen + 1:-1]
-        tl = tl[:lparen]
-        # TODO: ARM
+        full_label = t['test']['label']
+        label_no_toolchain, _, toolchain = full_label.partition('(')
+        toolchain = toolchain[:-1]
+        # TODO: ARM, ASAN, etc.
         if toolchain == '//build/toolchain/fuchsia:x64':
-            test_labels.append(tl)
-            label_to_test_packages[tl].append(t['test']['package_url'])
+            test_labels.append(full_label)
+            # This is the default toolchain, so when emitting these, GN drops
+            # the (//toolchain), so we need store these by toolchain-less-name,
+            # even though the tests.json name includes fully-qualified names.
+            label_to_test_packages[label_no_toolchain].append(
+                t['test']['package_url'])
+        elif toolchain == '//build/toolchain:host_x64':
+            test_labels.append(full_label)
+            label_to_host_tests[full_label].append(t['test']['path'])
 
-        # TODO: https://crbug.com/gn/161 means we can't find host tests yet
-        # because they're in an alternate toolchain (I think?).
+        # TODO: Handle other toolchain's tests, or otherwise signal failure
+        # cleanly and indicate that "everything" should be tested.
 
     with tempfile.NamedTemporaryFile(suffix='.json', mode='wt') as tmp:
         analyze_input = {
             'files': ['//' + x for x in changed_files],
-            'test_targets': test_labels,
-            'additional_compile_targets': ['all'],
+            'test_targets': sorted(set(test_labels)),
+            'additional_compile_targets': ["all"],
         }
         tmp.write(json.dumps(analyze_input))
         result = json.loads(
@@ -55,6 +61,7 @@ def analyze(gn_path, tests_json, build_dir, changed_files):
                 [gn_path, 'analyze', build_dir, tmp.name, '-']))
         if 'error' in result:
             print(result['error'], file=sys.stderr)
+            print(result, file=sys.stderr)
             return None
         if result['status'] == 'No dependency':
             return []
@@ -62,6 +69,7 @@ def analyze(gn_path, tests_json, build_dir, changed_files):
             ret = []
             for tl in result['test_targets']:
                 ret.extend(label_to_test_packages[tl])
+                ret.extend(label_to_host_tests[tl])
             return ret
 
 
@@ -107,6 +115,16 @@ class Test(unittest.TestCase):
         self.assertIn(
             'fuchsia-pkg://fuchsia.com/fidl_tests#meta/fidl_cpp_unittests.cmx',
             tests)
+
+    def test_host_tests(self):
+        tests = tests_for(['sdk/lib/fidl/cpp/array_unittest.cc'])
+        self.assertIn(
+            'fuchsia-pkg://fuchsia.com/fidl_tests#meta/conformance_test.cmx',
+            tests)
+        self.assertIn(
+            'fuchsia-pkg://fuchsia.com/fidl_tests#meta/fidl_cpp_unittests.cmx',
+            tests)
+        self.assertIn('host_x64/fidl_cpp_host_unittests', tests)
 
     @unittest.skip('.rs files are not listed in sources yet.')
     def test_plain_rust(self):
