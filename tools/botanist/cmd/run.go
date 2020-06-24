@@ -397,6 +397,8 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	for _, arg := range args {
 		subcmdArgs = append(subcmdArgs, os.ExpandEnv(arg))
 	}
+	r.blobURL = os.ExpandEnv(r.blobURL)
+	r.repoURL = os.ExpandEnv(r.repoURL)
 	if err := r.execute(ctx, subcmdArgs); err != nil {
 		logger.Errorf(ctx, "%v\n", err)
 		return subcommands.ExitFailure
