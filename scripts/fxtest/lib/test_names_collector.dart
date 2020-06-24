@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:meta/meta.dart';
 
 /// Helper which pairs positional arguments with any trailing `-a` arguments,
@@ -61,15 +62,10 @@ class TestNamesCollector {
 
     /// The extracted test names from all arguments passed to `fx test`.
     @required List<String> rawTestNames,
-    FuchsiaLocator fuchsiaLocator,
-  })  : testNames = TestNamesCollector._processTestList(
-          rawTestNames,
-          fuchsiaLocator ?? FuchsiaLocator.shared,
-        ),
-        rawArgs = TestNamesCollector._processRawArgs(
-          rawArgs,
-          fuchsiaLocator ?? FuchsiaLocator.shared,
-        );
+    @required String relativeCwd,
+  })  : testNames =
+            TestNamesCollector._processTestList(rawTestNames, relativeCwd),
+        rawArgs = TestNamesCollector._processRawArgs(rawArgs, relativeCwd);
 
   /// Loops over a combination of the original, raw list of arguments, and the
   /// parsed arguments, to determine which positional arguments are modified by
@@ -188,26 +184,23 @@ class TestNamesCollector {
 
   static List<String> _processTestList(
     List<String> testList,
-    FuchsiaLocator fuchsiaLocator,
+    String relativeCwd,
   ) {
     // Replace a test name that is merely "." with the actual current directory
     // Use a set-to-list maneuver to remove duplicates
     return {
       for (var testName in testList)
-        testName == cwdToken ? fuchsiaLocator.relativeCwd : testName
+        testName == cwdToken ? relativeCwd : testName
     }.toList();
   }
 
   static List<String> _processRawArgs(
     List<String> rawArgs,
-    FuchsiaLocator fuchsiaLocator,
+    String relativeCwd,
   ) {
     // Replace a test name that is merely "." with the actual current directory
     // Use a set-to-list maneuver to remove duplicates
-    return [
-      for (var arg in rawArgs)
-        arg == cwdToken ? fuchsiaLocator.relativeCwd : arg
-    ];
+    return [for (var arg in rawArgs) arg == cwdToken ? relativeCwd : arg];
   }
 }
 

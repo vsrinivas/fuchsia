@@ -4,14 +4,13 @@
 
 import 'package:test/test.dart';
 import 'package:fxutils/fxutils.dart';
-import './mock_process.dart';
 
 void main() {
   group('ProcessLauncher', () {
     test('returns raw specific output', () async {
       final pl = ProcessLauncher(
         processStarter:
-            returnGivenProcess(MockProcess(stdout: 'specific output\n')),
+            returnGivenProcess(MockProcess.raw(stdout: 'specific output\n')),
       );
       var processResult = await pl.run('whatever', [], outputEncoding: null);
       expect(processResult.stdout, [
@@ -37,7 +36,7 @@ void main() {
     test('returns utf8 specific output', () async {
       final pl = ProcessLauncher(
         processStarter: returnGivenProcess(
-          MockProcess(stdout: 'specific\noutput'),
+          MockProcess.raw(stdout: 'specific\noutput'),
         ),
       );
       // pl.stdout.listen(output.writeln);
@@ -48,34 +47,24 @@ void main() {
   group('fx wrapper', () {
     test('successfully returns process output', () async {
       var fx = Fx.mock(
-        MockProcess(stdout: 'specific output\n'),
-        FxEnv(
-          envReader: EnvReader(
-            overrides: {'FUCHSIA_DIR': '/whatever'},
-          ),
+        MockProcess.raw(stdout: 'specific output\n'),
+        FxEnv.env(
+          {'FUCHSIA_DIR': '/whatever'},
         ),
       );
       expect(await fx.getSubCommandOutput('whatever'), 'specific output');
     });
     test('successfully returns special characters', () async {
       var fx = Fx.mock(
-        MockProcess(stdout: '❌'),
-        FxEnv(
-          envReader: EnvReader(
-            overrides: {'FUCHSIA_DIR': '/whatever'},
-          ),
-        ),
+        MockProcess.raw(stdout: '❌'),
+        FxEnv.env({'FUCHSIA_DIR': '/whatever'}),
       );
       expect(await fx.getSubCommandOutput('whatever'), '❌');
     });
     test('leaves trailing newlines', () async {
       var fx = Fx.mock(
-        MockProcess(stdout: 'with newline\n'),
-        FxEnv(
-          envReader: EnvReader(
-            overrides: {'FUCHSIA_DIR': '/whatever'},
-          ),
-        ),
+        MockProcess.raw(stdout: 'with newline\n'),
+        FxEnv.env({'FUCHSIA_DIR': '/whatever'}),
       );
       expect(
           await fx.getSubCommandOutput('whatever', shouldTrimTrailing: false),
@@ -83,12 +72,8 @@ void main() {
     });
     test('raises exp on failed command', () {
       var fx = Fx.mock(
-        MockProcess(exitCode: 1),
-        FxEnv(
-          envReader: EnvReader(
-            overrides: {'FUCHSIA_DIR': '/whatever'},
-          ),
-        ),
+        MockProcess.raw(exitCode: 1),
+        FxEnv.env({'FUCHSIA_DIR': '/whatever'}),
       );
       expect(() => fx.getDeviceName(),
           throwsA(TypeMatcher<FailedProcessException>()));

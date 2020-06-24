@@ -44,7 +44,7 @@ class PreChecker implements Checklist {
     bool isPackageServerRunning = await fxCommandRunWithIO(
       eventSink,
       testsConfig.wrapWith,
-      testsConfig.fuchsiaLocator.fx,
+      testsConfig.fxEnv.fx,
       'is-package-server-running',
     ).then((process) => process.exitCode).then((exitCode) => exitCode == 0);
     if (!isPackageServerRunning) {
@@ -66,7 +66,7 @@ class PreChecker implements Checklist {
         bool result = await fxCommandRunWithIO(
           eventSink,
           testsConfig.wrapWith,
-          testsConfig.fuchsiaLocator.fx,
+          testsConfig.fxEnv.fx,
           'update-if-in-base',
           batch.toList(),
         ).then((process) => process.exitCode).then((exitCode) => exitCode == 0);

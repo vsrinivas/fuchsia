@@ -1,29 +1,21 @@
 import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
-import 'package:mockito/mockito.dart';
-
-// Mock this because it checks environment variables
-class MockEnvReader extends Mock implements EnvReader {}
+import 'fake_fx_env.dart';
 
 void main() {
   group('tests.json entries are correctly parsed', () {
-    var envReader = MockEnvReader();
-    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-    when(envReader.getEnv('FUCHSIA_BUILD_DIR')).thenReturn(
-      '/root/path/fuchsia/out/default',
-    );
-    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
     test('with respect to custom fuchsia locations', () {
+      final fxEnv = FakeFxEnv(fuchsiaDir: '/custom');
       var testDef = TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
-        fx: fuchsiaLocator.fx, // <-- this one is all that matters for this test
+        buildDir: fxEnv.outputDir,
+        fx: fxEnv.fx, // <-- this one is all that matters for this test
         os: 'linux',
         path: 'random-letters',
         name: 'host test',
       );
       expect(
         testDef.executionHandle.fx,
-        '/root/path/fuchsia/.jiri_root/bin/fx',
+        '/custom/.jiri_root/bin/fx',
       );
     });
 
@@ -44,8 +36,8 @@ void main() {
       ];
       List<TestDefinition> tds = tr.parseManifest(
         testJson: testJson,
-        buildDir: fuchsiaLocator.buildDir,
-        fxLocation: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fxLocation: FakeFxEnv.shared.fx,
       );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl, null);
@@ -75,8 +67,8 @@ void main() {
       ];
       List<TestDefinition> tds = tr.parseManifest(
         testJson: testJson,
-        buildDir: fuchsiaLocator.buildDir,
-        fxLocation: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fxLocation: FakeFxEnv.shared.fx,
       );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl.toString(), testJson[0]['test']['package_url']);
@@ -102,8 +94,8 @@ void main() {
       ];
       List<TestDefinition> tds = tr.parseManifest(
         testJson: testJson,
-        buildDir: fuchsiaLocator.buildDir,
-        fxLocation: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fxLocation: FakeFxEnv.shared.fx,
       );
       expect(tds, hasLength(1));
       expect(tds[0].path, '');
@@ -125,8 +117,8 @@ void main() {
       ];
       List<TestDefinition> tds = tr.parseManifest(
         testJson: testJson,
-        buildDir: fuchsiaLocator.buildDir,
-        fxLocation: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fxLocation: FakeFxEnv.shared.fx,
       );
       expect(tds, hasLength(1));
       expect(tds[0].executionHandle.testType, TestType.unsupportedDeviceTest);
@@ -134,29 +126,22 @@ void main() {
   });
 
   group('tests are aggregated correctly', () {
-    var envReader = MockEnvReader();
-    when(envReader.getCwd()).thenReturn('/root/path/fuchsia/out/default');
-    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-    when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-        .thenReturn('/root/path/fuchsia/out/default');
-    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-
     TestRunner buildTestRunner(TestsConfig testsConfig) => TestRunner();
 
     void _ignoreEvents(TestEvent _) {}
     TestsManifestReader tr = TestsManifestReader();
     List<TestDefinition> testDefinitions = [
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
+        buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: fuchsiaLocator.fx,
+        fx: FakeFxEnv.shared.fx,
         packageUrl: PackageUrl.fromString(
             'fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx'),
         name: 'device test',
       ),
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
-        fx: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fx: FakeFxEnv.shared.fx,
         os: 'linux',
         path: 'host_x64/path',
         // In practice, host tests have identical paths and names, but we
@@ -170,7 +155,10 @@ void main() {
       List<String> args = const [],
       List<TestDefinition> testDefs,
     }) {
-      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: args);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: args,
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: buildTestRunner,
@@ -257,8 +245,8 @@ void main() {
     test('when packageUrl.resourcePath are not components', () {
       expect(
         () => TestDefinition(
-          buildDir: fuchsiaLocator.buildDir,
-          fx: fuchsiaLocator.fx,
+          buildDir: FakeFxEnv.shared.outputDir,
+          fx: FakeFxEnv.shared.fx,
           os: 'fuchsia',
           packageUrl: PackageUrl.fromString(
               'fuchsia-pkg://fuchsia.com/fancy#meta/not-component'),
@@ -268,8 +256,8 @@ void main() {
       );
       expect(
         () => TestDefinition(
-          buildDir: fuchsiaLocator.buildDir,
-          fx: fuchsiaLocator.fx,
+          buildDir: FakeFxEnv.shared.outputDir,
+          fx: FakeFxEnv.shared.fx,
           os: 'fuchsia',
           packageUrl: PackageUrl.fromString(
               'fuchsia-pkg://fuchsia.com/fancy#bin/def-not-comp.so'),
@@ -280,7 +268,10 @@ void main() {
     });
 
     test('when packageUrl.packageName is matched', () {
-      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['fancy']);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['fancy'],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: buildTestRunner,
@@ -298,8 +289,10 @@ void main() {
     test(
         'when packageUrl.packageName is matched but discriminating '
         'flag prevents', () {
-      TestsConfig testsConfig =
-          TestsConfig.fromRawArgs(rawArgs: ['fancy', '--host']);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['fancy', '--host'],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: buildTestRunner,
@@ -316,14 +309,14 @@ void main() {
     test('when . is passed from the build dir', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['.', '--host'],
-        fuchsiaLocator: fuchsiaLocator,
+        fxEnv: FakeFxEnv(cwd: '/root/fuchsia/out/default'),
       );
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
           TestDefinition(
-            buildDir: fuchsiaLocator.buildDir,
-            fx: fuchsiaLocator.fx,
+            buildDir: FakeFxEnv.shared.outputDir,
+            fx: FakeFxEnv.shared.fx,
             name: 'awesome host test',
             os: 'linux',
             path: 'host_x64/test',
@@ -354,14 +347,14 @@ void main() {
     test('when . is passed from the build dir and there\'s device tests', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['.'],
-        fuchsiaLocator: fuchsiaLocator,
+        fxEnv: FakeFxEnv(cwd: '/root/fuchsia/out/default'),
       );
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
           TestDefinition(
-            buildDir: fuchsiaLocator.buildDir,
-            fx: fuchsiaLocator.fx,
+            buildDir: FakeFxEnv.shared.outputDir,
+            fx: FakeFxEnv.shared.fx,
             name: 'awesome device test',
             os: 'fuchsia',
             path: '/pkgfs/stuff',
@@ -422,7 +415,10 @@ void main() {
     );
     test('with a typo inside a path', () {
       var reader = TestsManifestReader();
-      var config = TestsConfig.fromRawArgs(rawArgs: ['scripts/fxtets']);
+      var config = TestsConfig.fromRawArgs(
+        rawArgs: ['scripts/fxtets'],
+        fxEnv: FakeFxEnv.shared,
+      );
       var parsedManifest = reader.aggregateTests(
         comparer: FuzzyComparer(threshold: 3),
         eventEmitter: (TestEvent event) => null,
@@ -445,7 +441,10 @@ void main() {
 
     test('with an fxtest typo', () {
       var reader = TestsManifestReader();
-      var config = TestsConfig.fromRawArgs(rawArgs: ['fxtest_tetss']);
+      var config = TestsConfig.fromRawArgs(
+        rawArgs: ['fxtest_tetss'],
+        fxEnv: FakeFxEnv.shared,
+      );
       var parsedManifest = reader.aggregateTests(
         comparer: FuzzyComparer(threshold: 3),
         eventEmitter: (TestEvent event) => null,
@@ -467,11 +466,6 @@ void main() {
   });
 
   group('tests are aggregated correctly with the -a flag', () {
-    var envReader = MockEnvReader();
-    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-    when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-        .thenReturn('/root/path/fuchsia/out/default');
-    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
     TestRunner buildTestRunner(TestsConfig testsConfig) => TestRunner();
 
     void _ignoreEvents(TestEvent _) {}
@@ -479,33 +473,33 @@ void main() {
 
     var tds = <TestDefinition>[
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
+        buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: fuchsiaLocator.fx,
+        fx: FakeFxEnv.shared.fx,
         packageUrl: PackageUrl.fromString(
             'fuchsia-pkg://fuchsia.com/pkg1#meta/test1.cmx'),
         name: 'pkg 1 test 1',
       ),
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
+        buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: fuchsiaLocator.fx,
+        fx: FakeFxEnv.shared.fx,
         packageUrl:
             PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg1#test2.cmx'),
         name: 'pkg 1 test 2',
       ),
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
+        buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
-        fx: fuchsiaLocator.fx,
+        fx: FakeFxEnv.shared.fx,
         packageUrl:
             PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg2#test1.cmx'),
         name: 'pkg 2 test 1',
         path: '//gnsubtree',
       ),
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
-        fx: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fx: FakeFxEnv.shared.fx,
         os: 'linux',
         path: '/asdf',
         name: '//host/test',
@@ -515,6 +509,7 @@ void main() {
     test('specifies a non-trailing component name with no package name', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['-c', 'test2', '//host/test'],
+        fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
@@ -536,6 +531,7 @@ void main() {
     test('specifies an impossible combination of two valid filters', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['pkg1', '-a', '//host/test'],
+        fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
@@ -552,7 +548,10 @@ void main() {
     });
 
     test('is not present to remove other pkg matches', () {
-      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['pkg1']);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['pkg1'],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: buildTestRunner,
@@ -571,8 +570,10 @@ void main() {
     });
 
     test('combines filters from different fields', () {
-      TestsConfig testsConfig =
-          TestsConfig.fromRawArgs(rawArgs: ['//gnsubtree', '-a', 'test1']);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['//gnsubtree', '-a', 'test1'],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: buildTestRunner,
@@ -590,7 +591,10 @@ void main() {
     });
 
     test('is not present to remove other component matches', () {
-      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['test1']);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['test1'],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: buildTestRunner,
@@ -612,6 +616,7 @@ void main() {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
         // `-a` flag will filter out `test1`
         rawArgs: ['pkg1', '-a', 'test2', '//host/test'],
+        fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,

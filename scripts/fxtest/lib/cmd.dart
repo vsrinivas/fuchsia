@@ -46,9 +46,6 @@ class FuchsiaTestCommand {
   /// Bundle of configuration options for this invocation.
   final TestsConfig testsConfig;
 
-  /// Absolute path of the active Fuchsia build.
-  final FuchsiaLocator fuchsiaLocator;
-
   /// Translators between [TestEvent] instances and output for the user.
   final List<OutputFormatter> outputFormatters;
 
@@ -70,7 +67,6 @@ class FuchsiaTestCommand {
 
   FuchsiaTestCommand({
     @required this.analyticsReporter,
-    @required this.fuchsiaLocator,
     @required this.outputFormatters,
     @required this.checklist,
     @required this.testsConfig,
@@ -94,25 +90,20 @@ class FuchsiaTestCommand {
     @required TestRunner Function(TestsConfig) testRunnerBuilder,
     DirectoryBuilder directoryBuilder,
     ExitCodeSetter exitCodeSetter,
-    FuchsiaLocator fuchsiaLocator,
     OutputFormatter outputFormatter,
   }) {
-    fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared;
     var _outputFormatter =
         outputFormatter ?? OutputFormatter.fromConfig(testsConfig);
     var _fileFormatter = FileFormatter.fromConfig(testsConfig);
     return FuchsiaTestCommand(
       analyticsReporter: testsConfig.flags.dryRun
           ? AnalyticsReporter.noop()
-          : AnalyticsReporter(
-              fuchsiaLocator: fuchsiaLocator,
-            ),
+          : AnalyticsReporter(fxEnv: testsConfig.fxEnv),
       checklist: PreChecker.fromConfig(
         testsConfig,
         eventSink: _outputFormatter.update,
       ),
       directoryBuilder: directoryBuilder ?? (path, {recursive}) => null,
-      fuchsiaLocator: fuchsiaLocator,
       outputFormatters: [
         _outputFormatter,
         if (_fileFormatter != null) _fileFormatter
@@ -144,7 +135,7 @@ class FuchsiaTestCommand {
     var parsedManifest = await readManifest(manifestReader);
 
     manifestReader.reportOnTestBundles(
-      userFriendlyBuildDir: fuchsiaLocator.userFriendlyBuildDir,
+      userFriendlyBuildDir: testsConfig.fxEnv.userFriendlyOutputDir,
       eventEmitter: emitEvent,
       parsedManifest: parsedManifest,
       testsConfig: testsConfig,
@@ -168,7 +159,8 @@ class FuchsiaTestCommand {
       emitEvent(TestInfo(testsConfig.wrapWith(
           '> fx build ${buildTargets?.join(' ') ?? ''}', [green, styleBold])));
       try {
-        await fxCommandRun(fuchsiaLocator.fx, 'build', buildTargets?.toList());
+        await fxCommandRun(
+            testsConfig.fxEnv.fx, 'build', buildTargets?.toList());
       } on FxRunException {
         emitEvent(FatalError(
             '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
@@ -192,8 +184,8 @@ class FuchsiaTestCommand {
     TestsManifestReader manifestReader,
   ) async {
     List<TestDefinition> testDefinitions = await manifestReader.loadTestsJson(
-      buildDir: fuchsiaLocator.buildDir,
-      fxLocation: fuchsiaLocator.fx,
+      buildDir: testsConfig.fxEnv.outputDir,
+      fxLocation: testsConfig.fxEnv.fx,
       manifestFileName: 'tests.json',
       usePackageHash: testsConfig.flags.shouldUsePackageHash,
     );
@@ -253,14 +245,14 @@ class FuchsiaTestCommand {
       TestBundle.build(
         confidence: confidence ?? 1,
         directoryBuilder: directoryBuilder,
-        fxSuffix: fuchsiaLocator.fx,
+        fxSuffix: testsConfig.fxEnv.fx,
         realtimeOutputSink: (String val) => emitEvent(TestOutputEvent(val)),
         timeElapsedSink: (Duration duration, String cmd, String output) =>
             emitEvent(TimeElapsedEvent(duration, cmd, output)),
         testRunnerBuilder: testRunnerBuilder,
         testDefinition: testDefinition,
         testsConfig: testsConfig,
-        workingDirectory: fuchsiaLocator.buildDir,
+        workingDirectory: testsConfig.fxEnv.outputDir,
       );
 
   Future<void> runTests(List<TestBundle> testBundles) async {

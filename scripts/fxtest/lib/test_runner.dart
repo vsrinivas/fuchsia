@@ -6,10 +6,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:meta/meta.dart';
-
-import './fxtest.dart';
-import './start_process.dart';
 
 /// Disposable runner which executes a single test and presents its output in
 /// realtime (via streams) and aggregates for the end (via a [StringBuffer]).
@@ -102,7 +101,7 @@ class SymbolizingTestRunner extends TestRunner {
   }) : assert(fx != null && fx != '');
 
   factory SymbolizingTestRunner.builder(TestsConfig testsConfig) =>
-      SymbolizingTestRunner(fx: testsConfig.fuchsiaLocator.fx);
+      SymbolizingTestRunner(fx: testsConfig.fxEnv.fx);
 
   @override
   _ProcessArgs _buildProcessArgs(String command, List<String> args) {

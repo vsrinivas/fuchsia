@@ -1,4 +1,5 @@
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 
 class FxRunException implements Exception {
   final String fxCmd;

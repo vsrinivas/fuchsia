@@ -2,36 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:path/path.dart' as p;
 import 'package:fxutils/fxutils.dart';
+import 'package:meta/meta.dart';
+import 'package:path/path.dart' as p;
 
-class FxEnv {
-  final EnvReader _envReader;
-  FxEnv({EnvReader envReader}) : _envReader = envReader ?? EnvReader();
+abstract class IFxEnv {
+  String getEnv(String variableName, [String defaultValue]);
 
-  /// Path to the fx executable
+  /// Path to the fx executable.
   String get fx => p.join(fuchsiaDir, fxLocation);
-
-  /// Absolute path to the build directory. Read from the environment variable.
-  String get outputDir => _envReader.getEnv('FUCHSIA_BUILD_DIR');
-
-  /// Absolute path to the root of the Fuchsia checkout. Read from the
-  /// environment variable.
-  String get fuchsiaDir => _envReader.getEnv('FUCHSIA_DIR');
-
-  /// The current architecture selected (currently one of x64/arm64)
-  String get fuchsiaArch => _envReader.getEnv('FUCHSIA_ARCH');
-
-  /// The path to the Fuchsia host-tools build directory
-  /// (usually $FUCHSIA_BUILD_DIR/host_$HOST_ARCH)
-  String get hostOutDir => _envReader.getEnv('HOST_OUT_DIR');
-
-  String get zirconBuildRoot => _envReader.getEnv('ZIRCON_BUILDROOT');
-
-  String get zirconToolsDir => _envReader.getEnv('ZIRCON_TOOLS_DIR');
-
-  /// Current working directory. Pulled from the OS.
-  String get cwd => _envReader.getCwd();
+  String get sshKey;
+  String get outputDir;
+  String get fuchsiaDir;
+  String get fuchsiaArch;
+  String get hostOutDir;
+  String get zirconBuildRoot;
+  String get zirconToolsDir;
+  String get cwd;
 
   /// Relative path to the current output directory from the root of the Fuchsia
   /// checkout.
@@ -41,9 +28,10 @@ class FxEnv {
   String get userFriendlyOutputDir =>
       relativeOutputDir != outputDir ? '/$relativeOutputDir' : outputDir;
 
-  /// The current working directory relative to the output directory.
+  /// Relative path between the current working directory and the output
+  /// directory.
   String get relativeCwd {
-    // `cwd` asked for from the output root
+    // `startingDir` asked for from the output root
     if (cwd == outputDir) {
       return cwdToken;
     }
@@ -53,7 +41,63 @@ class FxEnv {
       return p.relative(cwd, from: outputDir);
     }
 
-    // All other situations, return the actual current directory
+    // All other situations, return the actual starting directory.
     return cwd;
   }
+}
+
+/// Usage:
+/// ```dart
+/// final fxEnv = FxEnv.env(Platform.environment);
+///
+/// // Get the absolute path to the fx executable
+/// String fxPath = fxEnv.fx;
+///
+/// // Get the path to the directory of your current active build
+/// String buildPath = fxEnv.outputDir;
+/// ```
+class FxEnv extends IFxEnv {
+  final EnvReader _envReader;
+  FxEnv({@required EnvReader envReader})
+      : assert(envReader != null),
+        _envReader = envReader;
+
+  factory FxEnv.env(Map<String, String> env, {String cwd = '/cwd'}) =>
+      FxEnv(envReader: EnvReader(environment: env, cwd: cwd));
+
+  @override
+  String getEnv(String variableName, [String defaultValue]) =>
+      _envReader.getEnv(variableName, defaultValue);
+
+  /// Path to the ssh key required to reach the device.
+  @override
+  String get sshKey => _envReader.getEnv('FUCHSIA_SSH_KEY');
+
+  /// Absolute path to the build directory. Read from the environment variable.
+  @override
+  String get outputDir => _envReader.getEnv('FUCHSIA_BUILD_DIR');
+
+  /// Absolute path to the root of the Fuchsia checkout. Read from the
+  /// environment variable.
+  @override
+  String get fuchsiaDir => _envReader.getEnv('FUCHSIA_DIR');
+
+  /// The current architecture selected (currently one of x64/arm64)
+  @override
+  String get fuchsiaArch => _envReader.getEnv('FUCHSIA_ARCH');
+
+  /// The path to the Fuchsia host-tools build directory
+  /// (usually $FUCHSIA_BUILD_DIR/host_$HOST_ARCH)
+  @override
+  String get hostOutDir => _envReader.getEnv('HOST_OUT_DIR');
+
+  @override
+  String get zirconBuildRoot => _envReader.getEnv('ZIRCON_BUILDROOT');
+
+  @override
+  String get zirconToolsDir => _envReader.getEnv('ZIRCON_TOOLS_DIR');
+
+  /// Current working directory. Pulled from the OS.
+  @override
+  String get cwd => _envReader.getCwd();
 }

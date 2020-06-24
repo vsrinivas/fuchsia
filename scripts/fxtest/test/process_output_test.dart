@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:test/test.dart';
-
-import 'mock_start_process.dart';
 
 // Note: These tests pass locally (when executed by `pub run test`), but not
 // when built by GN, because of their dependency on `output_tester.sh`.
@@ -56,17 +53,7 @@ void main() {
 }
 
 /// Creates an output tester mock process with hardcoded output.
-Process createOutputTester() {
-  var stringEncoder = Utf8Encoder();
-  var stdoutController = StreamController<List<int>>()
-    ..add(stringEncoder.convert('line 1\n'))
-    ..add(stringEncoder.convert('line 2\n'))
-    ..close();
-  var stderrController = StreamController<List<int>>()
-    ..add(stringEncoder.convert('stderr\n'))
-    ..close();
-  return MockProcess(
-    stdout: stdoutController.stream,
-    stderr: stderrController.stream,
-  );
-}
+Process createOutputTester() => MockProcess.raw(
+      stdout: 'line 1\nline 2\n',
+      stderr: 'stderr\n',
+    );

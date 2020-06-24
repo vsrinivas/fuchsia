@@ -4,11 +4,10 @@
 
 import 'dart:async';
 
-import 'package:fxtest/test_runner.dart';
+import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:test/test.dart';
 import 'package:pedantic/pedantic.dart';
-
-import 'mock_start_process.dart';
 
 void main() {
   test('waits for test process to terminate before closing StreamController',

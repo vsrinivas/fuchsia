@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 
 import 'package:args/args.dart';
-import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 
 /// Test-friendly wrapper so unit tests can use `fxTestArgParser` without
 /// having its environment-aware print statements blow up.
 String getFriendlyBuildDir() {
   var buildDir = '//out/default';
   try {
-    buildDir = FuchsiaLocator.shared.userFriendlyBuildDir;
+    buildDir = FxEnv(
+      envReader: EnvReader.fromEnvironment(),
+    ).userFriendlyOutputDir;
 
     // ignore: avoid_catching_errors
   } on RangeError {

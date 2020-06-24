@@ -430,7 +430,7 @@ class FileFormatter extends StandardOutputFormatter {
   factory FileFormatter.fromConfig(TestsConfig testsConfig) {
     if (testsConfig.flags.shouldLog) {
       return FileFormatter._(
-        path: testsConfig.flags.logPath ?? testsConfig.fuchsiaLocator.buildDir,
+        path: testsConfig.flags.logPath ?? testsConfig.fxEnv.outputDir,
       );
     }
     return null;

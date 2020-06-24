@@ -4,6 +4,7 @@
 
 import 'dart:io';
 import 'package:fxutils/fxutils.dart';
+import 'package:meta/meta.dart';
 
 /// Re-entry helper for running other fx subcommands from within any subcommand
 /// written in Dart.
@@ -23,17 +24,16 @@ import 'package:fxutils/fxutils.dart';
 /// final output = await fx.getSubCommandOutput('some-command');
 /// ```
 class Fx {
-  final FxEnv rootLocator;
+  final FxEnv fxEnv;
   final ProcessLauncher _processLauncher;
   Fx({
+    @required this.fxEnv,
     StartProcess processStarter,
-    FxEnv rootLocator,
-  })  : rootLocator = rootLocator ?? FxEnv(),
-        _processLauncher = ProcessLauncher(processStarter: processStarter);
+  }) : _processLauncher = ProcessLauncher(processStarter: processStarter);
 
-  factory Fx.mock(Process process, [FxEnv rootLocator]) => Fx(
+  factory Fx.mock(Process process, [FxEnv fxEnv]) => Fx(
         processStarter: returnGivenProcess(process),
-        rootLocator: rootLocator,
+        fxEnv: fxEnv,
       );
 
   Future<String> getDeviceName() async {
@@ -92,7 +92,7 @@ class Fx {
     );
     if (allowedExitCodes != null &&
         !allowedExitCodes.contains(processResult.exitCode)) {
-      final fullCommand = [rootLocator.fx, cmd, ...?args];
+      final fullCommand = [fxEnv.fx, cmd, ...?args];
       throw FailedProcessException(
         command: fullCommand,
         exitCode: processResult.exitCode,
@@ -124,7 +124,7 @@ class Fx {
     SystemEncoding encoding = systemEncoding,
   }) async {
     return _processLauncher.run(
-      rootLocator.fx,
+      fxEnv.fx,
       [cmd, ...?args],
       mode: mode,
       outputEncoding: encoding,

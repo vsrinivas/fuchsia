@@ -1,16 +1,16 @@
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:meta/meta.dart';
-import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
+import 'fake_fx_env.dart';
 import 'helpers.dart';
-
-class MockEnvReader extends Mock implements EnvReader {}
 
 class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
   FuchsiaTestCommandCliFake()
       : super(
           ['--no-build'],
           usage: (parser) => null,
+          fxEnv: FakeFxEnv.shared,
         );
 
   @override
@@ -30,7 +30,6 @@ class FuchsiaTestCommandFake extends FuchsiaTestCommand {
           analyticsReporter: AnalyticsFaker(),
           checklist: AlwaysAllowChecklist(),
           directoryBuilder: (String path, {bool recursive}) => null,
-          fuchsiaLocator: FuchsiaLocator.shared,
           outputFormatters: outputFormatters,
           testsConfig: testsConfig,
           testRunnerBuilder: (testsConfig) => TestRunner(),
@@ -62,70 +61,16 @@ class AnalyticsFaker extends AnalyticsReporter {
 }
 
 void main() {
-  group('fuchsia directories are located correctly', () {
-    test('when the build directory is inside the checkout', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-      expect(fuchsiaLocator.fuchsiaDir, '/root/path/fuchsia');
-      expect(fuchsiaLocator.buildDir, '/root/path/fuchsia/out/default');
-      expect(fuchsiaLocator.relativeBuildDir, '/out/default');
-      expect(fuchsiaLocator.userFriendlyBuildDir, '//out/default');
-    });
-
-    test('when the cwd is requested from the build dir itself', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      when(envReader.getCwd()).thenReturn('/root/path/fuchsia/out/default');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-      expect(fuchsiaLocator.relativeCwd, '.');
-    });
-
-    test('when the cwd is requested from within the build dir', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      when(envReader.getCwd())
-          .thenReturn('/root/path/fuchsia/out/default/host_x64');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-      expect(fuchsiaLocator.relativeCwd, 'host_x64');
-    });
-
-    test(
-        'when the cwd is requested from within the tree but not within '
-        'the build dir', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      when(envReader.getCwd()).thenReturn('/root/path/fuchsia/tools');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-      expect(fuchsiaLocator.relativeCwd, '/root/path/fuchsia/tools');
-    });
-
-    test('when fuchsia tree directory path does not contain "fuchsia"', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/dev');
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/dev/out/default');
-      when(envReader.getCwd()).thenReturn('/root/path/dev/out/default');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-      expect(fuchsiaLocator.relativeCwd, '.');
-    });
-  });
-
   group('prechecks', () {
     test('raise errors if fx is missing', () {
       var logged = false;
-      var cmdCli = FuchsiaTestCommandCli([''], usage: (parser) {});
+      var cmdCli = FuchsiaTestCommandCli(
+        [''],
+        usage: (parser) {},
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(
         () => cmdCli.preRunChecks(
-          '/fake/fx',
           (Object obj) => logged = true,
         ),
         throwsA(TypeMatcher<MissingFxException>()),
@@ -134,24 +79,36 @@ void main() {
     });
 
     test('prints tests when asked', () async {
-      var logged = false;
+      String logged = 'empty';
       var calledUsage = false;
-      var cmdCli = FuchsiaTestCommandCli(['--printtests'], usage: (parser) {
-        calledUsage = true;
-      });
+      var cmdCli = FuchsiaTestCommandCli(
+        ['--printtests'],
+        usage: (parser) {
+          calledUsage = true;
+        },
+        fxEnv: FakeFxEnv.shared,
+      );
       bool shouldRun = await cmdCli.preRunChecks(
-        '/fake/fx',
-        (Object obj) => logged = true,
+        // '/fake/fx',
+        (dynamic output) => logged = output.toString(),
+        processLauncher: ProcessLauncher(
+          processStarter: returnGivenProcess(
+            MockProcess.raw(stdout: 'specific output\n'),
+          ),
+        ),
       );
       expect(calledUsage, false);
       expect(shouldRun, false);
       // Passing `--printtests` does its thing and exits before `/fake/fx` is
       // validated, which would otherwise throw an exception
-      expect(logged, true);
+      expect(logged, 'specific output\n');
     });
 
     test('skip update-if-in-base for command tests', () async {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: (testsConfig) => TestRunner(),
@@ -184,7 +141,10 @@ void main() {
     });
 
     test('skip update-if-in-base for host tests', () async {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: (testsConfig) => TestRunner(),
@@ -216,7 +176,10 @@ void main() {
     });
 
     test('run update-if-in-base for component tests', () async {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: (testsConfig) => TestRunner(),
@@ -260,16 +223,15 @@ void main() {
   });
 
   group('test analytics are reporting', () {
-    var envReader = MockEnvReader();
-    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-    var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+    var testsConfig = TestsConfig.fromRawArgs(
+      rawArgs: [],
+      fxEnv: FakeFxEnv.shared,
+    );
     test('functions on real test runs', () async {
       var cmd = FuchsiaTestCommand(
         analyticsReporter: AnalyticsFaker(),
         checklist: AlwaysAllowChecklist(),
         directoryBuilder: (String path, {bool recursive}) => null,
-        fuchsiaLocator: fuchsiaLocator,
         outputFormatters: [
           OutputFormatter.fromConfig(
             testsConfig,
@@ -277,14 +239,17 @@ void main() {
           )
         ],
         testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
-        testsConfig: TestsConfig.fromRawArgs(rawArgs: []),
+        testsConfig: TestsConfig.fromRawArgs(
+          rawArgs: [],
+          fxEnv: FakeFxEnv.shared,
+        ),
       );
       var testBundles = <TestBundle>[
         cmd.testBundleBuilder(
           TestDefinition(
             buildDir: '/',
             command: ['asdf'],
-            fx: fuchsiaLocator.fx,
+            fx: testsConfig.fxEnv.fx,
             name: 'Big Test',
             os: 'linux',
           ),
@@ -305,7 +270,6 @@ void main() {
         analyticsReporter: AnalyticsFaker(),
         checklist: AlwaysAllowChecklist(),
         directoryBuilder: (String path, {bool recursive}) => null,
-        fuchsiaLocator: fuchsiaLocator,
         outputFormatters: [
           OutputFormatter.fromConfig(
             testsConfig,
@@ -313,14 +277,17 @@ void main() {
           )
         ],
         testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
-        testsConfig: TestsConfig.fromRawArgs(rawArgs: ['--dry']),
+        testsConfig: TestsConfig.fromRawArgs(
+          rawArgs: ['--dry'],
+          fxEnv: FakeFxEnv.shared,
+        ),
       );
       var testBundles = <TestBundle>[
         cmd.testBundleBuilder(
           TestDefinition(
             buildDir: '/',
             command: ['asdf'],
-            fx: fuchsiaLocator.fx,
+            fx: testsConfig.fxEnv.fx,
             name: 'Big Test',
             os: 'linux',
           ),
@@ -342,18 +309,25 @@ void main() {
       /// Mock builder that should create evidence of having been called
       DirectoryBuilder mockBuilder,
     ) {
-      final envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_TEST_OUTDIR')).thenReturn('/whatever');
-      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-      FuchsiaLocator fuchsiaLocator = FuchsiaLocator(envReader: envReader);
       final testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['--e2e'],
-        fuchsiaLocator: fuchsiaLocator,
+        fxEnv: FakeFxEnv(
+          envReader: EnvReader(
+            environment: {
+              'FUCHSIA_DEVICE_ADDR': '-dev-addr-',
+              'FUCHSIA_SSH_KEY': '-ssh-key-',
+              'FUCHSIA_SSH_PORT': '-ssh-port-',
+              'FUCHSIA_TEST_OUTDIR': '-test-outdir-',
+              'SL4F_HTTP_PORT': '-http-port-',
+              'FUCHSIA_IPV4_ADDR': '-ipv4-addr-',
+            },
+            cwd: '/cwd',
+          ),
+        ),
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         directoryBuilder: mockBuilder,
-        fuchsiaLocator: fuchsiaLocator,
         testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
       );
       return <TestBundle>[
@@ -427,15 +401,21 @@ void main() {
     List<TestBundle> createBundlesFromJson(
       List<Map<String, dynamic>> json,
     ) {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: (testsConfig) => TestRunner(),
       );
 
       return json
-          .map((e) => cmd.testBundleBuilder(TestDefinition.fromJson(e,
-              buildDir: '/whatever', fx: '/whatever/fx')))
+          .map((e) => cmd.testBundleBuilder(TestDefinition.fromJson(
+                e,
+                buildDir: FakeFxEnv.shared.outputDir,
+                fx: FakeFxEnv.shared.fx,
+              )))
           .toList();
     }
 

@@ -4,6 +4,7 @@
 
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:io/ansi.dart' as ansi;
 import 'package:meta/meta.dart';
 
@@ -164,21 +165,24 @@ class TestsConfig {
   final Flags flags;
   final List<String> runnerTokens;
   final TestArguments testArguments;
-  final FuchsiaLocator fuchsiaLocator;
+  final IFxEnv fxEnv;
   final List<List<MatchableArgument>> testArgumentGroups;
   TestsConfig({
     @required this.flags,
     @required this.runnerTokens,
     @required this.testArguments,
     @required this.testArgumentGroups,
-    @required this.fuchsiaLocator,
+    @required this.fxEnv,
   });
 
   factory TestsConfig.fromRawArgs({
+    @required IFxEnv fxEnv,
     @required List<String> rawArgs,
     Map<String, String> defaultRawArgs,
-    FuchsiaLocator fuchsiaLocator,
   }) {
+    if (fxEnv == null) {
+      throw Exception('TestsConfig requires an FxEnv instance');
+    }
     var _testArguments = TestArguments(
       parser: fxTestArgParser,
       rawArgs: rawArgs,
@@ -187,7 +191,7 @@ class TestsConfig {
     var _testArgumentsCollector = TestNamesCollector(
       rawArgs: _testArguments.parsedArgs.arguments,
       rawTestNames: _testArguments.parsedArgs.rest,
-      fuchsiaLocator: fuchsiaLocator,
+      relativeCwd: fxEnv.relativeCwd,
     );
     Flags flags = Flags.fromArgResults(_testArguments.parsedArgs);
 
@@ -203,7 +207,7 @@ class TestsConfig {
     }
     return TestsConfig(
       flags: flags,
-      fuchsiaLocator: fuchsiaLocator ?? FuchsiaLocator.shared,
+      fxEnv: fxEnv,
       runnerTokens: runnerTokens,
       testArguments: _testArguments,
       testArgumentGroups: _testArgumentsCollector.collect(),
@@ -244,17 +248,13 @@ class TestsConfig {
   /// Environment variables to pass to the spawned process that runs our test.
   Map<String, String> get environment => flags.e2e
       ? {
-          'FUCHSIA_DEVICE_ADDR':
-              fuchsiaLocator.envReader.getEnv('FUCHSIA_DEVICE_ADDR'),
-          'FUCHSIA_SSH_KEY': fuchsiaLocator.envReader.getEnv('FUCHSIA_SSH_KEY'),
-          'FUCHSIA_SSH_PORT':
-              fuchsiaLocator.envReader.getEnv('FUCHSIA_SSH_PORT'),
-          'FUCHSIA_TEST_OUTDIR':
-              fuchsiaLocator.envReader.getEnv('FUCHSIA_TEST_OUTDIR'),
-          'SL4F_HTTP_PORT': fuchsiaLocator.envReader.getEnv('SL4F_HTTP_PORT'),
+          'FUCHSIA_DEVICE_ADDR': fxEnv.getEnv('FUCHSIA_DEVICE_ADDR'),
+          'FUCHSIA_SSH_KEY': fxEnv.getEnv('FUCHSIA_SSH_KEY'),
+          'FUCHSIA_SSH_PORT': fxEnv.getEnv('FUCHSIA_SSH_PORT'),
+          'FUCHSIA_TEST_OUTDIR': fxEnv.getEnv('FUCHSIA_TEST_OUTDIR'),
+          'SL4F_HTTP_PORT': fxEnv.getEnv('SL4F_HTTP_PORT'),
           // Legacy key
-          'FUCHSIA_IPV4_ADDR':
-              fuchsiaLocator.envReader.getEnv('FUCHSIA_DEVICE_ADDR'),
+          'FUCHSIA_IPV4_ADDR': fxEnv.getEnv('FUCHSIA_DEVICE_ADDR'),
         }
       : const {};
 }

@@ -4,6 +4,7 @@
 
 import 'package:async/async.dart';
 import 'package:test/test.dart';
+import 'fake_fx_env.dart';
 import 'helpers.dart';
 
 // But who will test the testers?
@@ -34,6 +35,21 @@ void main() {
       await expectLater(queue, emits('test 3'));
       expect(processResult.stdout, 'test\ntest 2\n');
       expect(processResult.stderr, 'test 3\n');
+    });
+  });
+
+  group('FakeFxEnv', () {
+    test('should return correct fuchsiaDir', () {
+      expect(FakeFxEnv.shared.fuchsiaDir, '/root/fuchsia');
+    });
+    test('should return correct outputDir', () {
+      expect(FakeFxEnv.shared.outputDir, '/root/fuchsia/out/default');
+    });
+    test('should return correct relativeCwd', () {
+      expect(
+        FakeFxEnv(cwd: '/root/fuchsia/out/default/host_x64/gen').relativeCwd,
+        'host_x64/gen',
+      );
     });
   });
 }

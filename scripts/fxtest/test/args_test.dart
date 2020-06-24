@@ -6,7 +6,9 @@ import 'package:args/args.dart';
 import 'package:async/async.dart';
 import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:mockito/mockito.dart';
+import 'fake_fx_env.dart';
 import 'helpers.dart';
 
 class MockEnvReader extends Mock implements EnvReader {}
@@ -14,16 +16,13 @@ class MockEnvReader extends Mock implements EnvReader {}
 void main() {
   group('test name arguments are parsed correctly', () {
     test('when a dot is passed to stand in as the current directory', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      when(envReader.getCwd())
-          .thenReturn('/root/path/fuchsia/out/default/host_x64/gen');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      final fxEnv = FakeFxEnv(
+        cwd: '/root/fuchsia/out/default/host_x64/gen',
+      );
       var collector = TestNamesCollector(
         rawTestNames: ['.'],
         rawArgs: ['.'],
-        fuchsiaLocator: fuchsiaLocator,
+        relativeCwd: fxEnv.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('host_x64/gen')]
@@ -33,6 +32,7 @@ void main() {
       var collector = TestNamesCollector(
         rawTestNames: ['asdf', 'asdf', 'xyz'],
         rawArgs: ['asdf', 'asdf', 'xyz'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('asdf')],
@@ -40,16 +40,11 @@ void main() {
       ]);
     });
     test('when a dot and duplicate are passed in', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      when(envReader.getCwd())
-          .thenReturn('/root/path/fuchsia/out/default/host_x64');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      final fakeFxEnv = FakeFxEnv(cwd: '/root/fuchsia/out/default/host_x64');
       var collector = TestNamesCollector(
         rawTestNames: ['asdf', '.', 'asdf'],
         rawArgs: ['asdf', '.', 'asdf', '--some-flag'],
-        fuchsiaLocator: fuchsiaLocator,
+        relativeCwd: fakeFxEnv.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('asdf')],
@@ -58,15 +53,11 @@ void main() {
     });
 
     test('when a dot is passed from the build directory', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      when(envReader.getCwd()).thenReturn('/root/path/fuchsia/out/default');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      final fakeFxEnv = FakeFxEnv(cwd: '/root/fuchsia/out/default');
       var collector = TestNamesCollector(
         rawTestNames: ['.'],
         rawArgs: ['.'],
-        fuchsiaLocator: fuchsiaLocator,
+        relativeCwd: fakeFxEnv.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('.')]
@@ -159,26 +150,20 @@ void main() {
   });
 
   group('arguments are passed through correctly', () {
-    var envReader = MockEnvReader();
-    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
-    when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-        .thenReturn('/root/path/fuchsia/out/default');
-    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-
     void _ignoreEvents(TestEvent _) {}
     TestsManifestReader tr = TestsManifestReader();
     List<TestDefinition> testDefinitions = [
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
-        fx: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fx: FakeFxEnv.shared.fx,
         name: 'device test',
         os: 'fuchsia',
         packageUrl:
             PackageUrl.fromString('fuchsia-pkg://fuchsia.com/fancy#test.cmx'),
       ),
       TestDefinition(
-        buildDir: fuchsiaLocator.buildDir,
-        fx: fuchsiaLocator.fx,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fx: FakeFxEnv.shared.fx,
         name: 'example-test',
         os: 'linux',
         path: '/asdf',
@@ -188,7 +173,7 @@ void main() {
     test('when there are pass-thru commands', () async {
       var testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['example-test', '--', '--xyz'],
-        fuchsiaLocator: fuchsiaLocator,
+        fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
@@ -218,7 +203,7 @@ void main() {
     test('when there are no pass-thru commands', () async {
       var testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['example-test'],
-        fuchsiaLocator: fuchsiaLocator,
+        fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
@@ -284,80 +269,105 @@ void main() {
   group('flags are parsed correctly', () {
     test('regarding --log', () {
       // The default workflow (not using CLI wrappers) doesn't write logs
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.shouldLog, false);
     });
 
     test('regarding --log from real code path', () {
-      var envReader = MockEnvReader();
-      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
-          .thenReturn('/root/path/fuchsia/out/default');
-      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
       var cliCmdWrapper = FuchsiaTestCommandCli(
         [],
         usage: (argParser) => {},
-        fuchsiaLocator: fuchsiaLocator,
+        fxEnv: FakeFxEnv.shared,
       );
       var cmd = cliCmdWrapper.createCommand();
       expect(cmd.testsConfig.flags.shouldLog, true);
     });
 
     test('with --info', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--info']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--info'],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.infoOnly, true);
       expect(testsConfig.flags.dryRun, true);
       expect(testsConfig.flags.shouldRebuild, false);
     });
 
     test('with --dry', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--dry']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--dry'],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.infoOnly, false);
       expect(testsConfig.flags.dryRun, true);
       expect(testsConfig.flags.shouldRebuild, false);
     });
 
     test('with --no-build', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--no-build']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--no-build'],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.shouldRebuild, false);
     });
 
     test('with no --no-build', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [''],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.shouldRebuild, true);
     });
 
     test('with --realm', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--realm=foo']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--realm=foo'],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.realm, 'foo');
       expect(
           testsConfig.runnerTokens, ['--realm-label=foo', '--restrict-logs']);
     });
 
     test('with no --restrict-logs', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
       // Still true because that is the default
       expect(testsConfig.flags.shouldRestrictLogs, true);
       expect(testsConfig.runnerTokens, ['--restrict-logs']);
     });
 
     test('with --no-restrict-logs', () {
-      var testsConfig =
-          TestsConfig.fromRawArgs(rawArgs: ['--no-restrict-logs']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--no-restrict-logs'],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.shouldRestrictLogs, false);
       expect(testsConfig.runnerTokens, []);
     });
 
     test('with --restrict-logs', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--restrict-logs']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--restrict-logs'],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.shouldRestrictLogs, true);
       expect(testsConfig.runnerTokens, ['--restrict-logs']);
     });
 
     test('with --restrict-logs and --realm', () {
-      var testsConfig = TestsConfig.fromRawArgs(rawArgs: [
-        '--restrict-logs',
-        '--realm=bar',
-      ]);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [
+          '--restrict-logs',
+          '--realm=bar',
+        ],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.realm, 'bar');
       expect(testsConfig.flags.shouldRestrictLogs, true);
       expect(
@@ -369,8 +379,10 @@ void main() {
     });
 
     test('with --min-severity-logs', () {
-      var testsConfig =
-          TestsConfig.fromRawArgs(rawArgs: ['--min-severity-logs=WARN']);
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--min-severity-logs=WARN'],
+        fxEnv: FakeFxEnv.shared,
+      );
       expect(testsConfig.flags.minSeverityLogs, 'WARN');
       expect(testsConfig.runnerTokens, contains('--min-severity-logs=WARN'));
     });
@@ -381,6 +393,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: [],
         rawTestNames: [],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.empty()],
@@ -391,6 +404,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['--some-flags', '--more-flags', 'asdf'],
         rawTestNames: [],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.empty()],
@@ -401,6 +415,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['test_one'],
         rawTestNames: ['test_one'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('test_one')],
@@ -411,6 +426,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['test_one', '--exact'],
         rawTestNames: ['test_one'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('test_one')],
@@ -421,6 +437,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['test_one', 'test_two'],
         rawTestNames: ['test_one', 'test_two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('test_one')],
@@ -432,6 +449,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['test_one', 'test_two', '--exact'],
         rawTestNames: ['test_one', 'test_two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('test_one')],
@@ -443,6 +461,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['test_one', '-a', 'filter-two'],
         rawTestNames: ['test_one'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [
@@ -456,6 +475,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['test_one', '-a', 'filter-two', 'test_two'],
         rawTestNames: ['test_one', 'test_two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [
@@ -477,6 +497,7 @@ void main() {
           'test_two'
         ],
         rawTestNames: ['test_one', 'test_two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [
@@ -501,6 +522,7 @@ void main() {
           'filter-four'
         ],
         rawTestNames: ['test_one', 'test_two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [
@@ -519,6 +541,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['-p', 'test_one', '-c', 'filter-two'],
         rawTestNames: [],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [
@@ -532,6 +555,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['-c', 'filter-one', 'test-two'],
         rawTestNames: ['test-two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [MatchableArgument.componentName('filter-one')],
@@ -543,6 +567,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['test-one', 'test-two', '-p', 'pkg-name', '-c', 'filter-two'],
         rawTestNames: ['test-one', 'test-two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [
@@ -562,6 +587,7 @@ void main() {
       var collector = TestNamesCollector(
         rawArgs: ['-p', 'pkg-name', '-c', 'filter-two', 'test-one', 'test-two'],
         rawTestNames: ['test-one', 'test-two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [
@@ -591,6 +617,7 @@ void main() {
           'test-two'
         ],
         rawTestNames: ['test-zero', 'test-one', 'test-two'],
+        relativeCwd: FakeFxEnv.shared.relativeCwd,
       );
       expect(collector.collect(), [
         [

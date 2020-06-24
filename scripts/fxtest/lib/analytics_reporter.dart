@@ -5,7 +5,7 @@
 import 'dart:io';
 
 import 'package:meta/meta.dart';
-import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 
 const String analyticsScript = 'tools/devshell/lib/metrics_custom_report.sh';
 
@@ -13,14 +13,14 @@ const String analyticsScript = 'tools/devshell/lib/metrics_custom_report.sh';
 class AnalyticsReporter {
   /// Object that knows the location of all relevant Fuchsia artifacts. Used
   /// to turn relative paths into absolute paths.
-  final FuchsiaLocator fuchsiaLocator;
+  final IFxEnv fxEnv;
 
   /// Shell script able to send metrics to Google Analytics.
   ///
   /// Likely `tools/devshell/lib/metrics_custom_report.sh`
   final String reporterCmd;
   AnalyticsReporter({
-    @required this.fuchsiaLocator,
+    @required this.fxEnv,
     this.reporterCmd = analyticsScript,
   });
 
@@ -28,7 +28,7 @@ class AnalyticsReporter {
   /// (e.g., `--dryrun`).
   AnalyticsReporter.noop()
       : reporterCmd = null,
-        fuchsiaLocator = null;
+        fxEnv = null;
 
   Future<void> report({
     @required String subcommand,
@@ -40,7 +40,7 @@ class AnalyticsReporter {
     }
 
     List<String> args = [
-      '${fuchsiaLocator.fuchsiaDir}/$reporterCmd',
+      '${fxEnv.fuchsiaDir}/$reporterCmd',
       subcommand,
       action,
     ];

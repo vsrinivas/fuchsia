@@ -45,11 +45,9 @@ dart_library("fxtest_lib") {
     "cmd_cli.dart",
     "command_tokens.dart",
     "constants.dart",
-    "env_reader.dart",
     "exceptions.dart",
     "execution_handle.dart",
     "exit_code.dart",
-    "fuchsia_locator.dart",
     "fxtest.dart",
     "matching/comparer.dart",
     "matching/comparison_result.dart",
@@ -62,7 +60,6 @@ dart_library("fxtest_lib") {
     "package_repository.dart",
     "package_url.dart",
     "rebuilder.dart",
-    "start_process.dart",
     "test_arguments.dart",
     "test_bundle.dart",
     "test_definition.dart",
@@ -75,6 +72,7 @@ dart_library("fxtest_lib") {
   ]
 
   deps = [
+    "//scripts/fxutils",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/edit_distance",
@@ -88,10 +86,7 @@ dart_library("fxtest_lib") {
 ## Tests
 
 dart_test("test_runner_test") {
-  sources = [
-    "mock_start_process.dart",
-    "test_runner_test.dart",
-  ]
+  sources = [ "test_runner_test.dart" ]
 
   deps = [
     ":fxtest_lib",

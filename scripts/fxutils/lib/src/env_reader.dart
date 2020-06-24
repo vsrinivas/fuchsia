@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:io';
+import 'package:meta/meta.dart';
 
 /// Wraps [Platform] for the sake of mocking env results in tests.
 ///
@@ -13,15 +14,31 @@ import 'dart:io';
 /// Note that, for now, this is unnecessary if there is actually a way to mock
 /// environment variables on a per-test basis, but after some research, I am
 /// unaware of any such trick.
+///
+/// Usage:
+/// ```dart
+/// final envReader = EnvReader(environment: Platform.environment);
+/// String envVariableValue = envReader.getEnv('MY_ENV_VAR');
+/// ```
 class EnvReader {
-  static Map<String, String> environment = Platform.environment;
-  static String cwd = Directory.current.path;
-  Map<String, String> overrides;
+  final String cwd;
 
-  EnvReader({this.overrides = const {}});
+  final Map<String, String> environment;
+  final Map<String, String> overrides;
 
-  String getEnv(String variableName, [String defaultValue]) =>
-      overrides[variableName] ?? environment[variableName] ?? defaultValue;
+  EnvReader({
+    @required this.environment,
+    @required this.cwd,
+    this.overrides = const {},
+  });
+  factory EnvReader.fromEnvironment() =>
+      EnvReader(environment: Platform.environment, cwd: Directory.current.path);
+
+  String getEnv(String variableName, [String defaultValue]) {
+    // print('asking for $variableName with overrides: $overrides');
+    // print('asking for $variableName with environment: $environment');
+    return overrides[variableName] ?? environment[variableName] ?? defaultValue;
+  }
 
   String getCwd() => overrides['cwd'] ?? cwd;
 }

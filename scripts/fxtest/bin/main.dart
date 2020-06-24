@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart';
 import 'package:io/ansi.dart';
 
 void usage(ArgParser parser) {
@@ -56,6 +57,7 @@ Future<void> main(List<String> args) async {
   try {
     cmdCli = FuchsiaTestCommandCli(
       args,
+      fxEnv: FxEnv(envReader: EnvReader.fromEnvironment()),
       usage: usage,
       directoryBuilder: _directoryBuilder,
     );
@@ -77,7 +79,6 @@ Future<void> main(List<String> args) async {
     // command, make sure everything is valid and that the user doesn't want
     // some simple debug output.
     bool shouldRun = await cmdCli.preRunChecks(
-      FuchsiaLocator.shared.fx,
       stdout.write,
     );
     if (shouldRun) {
