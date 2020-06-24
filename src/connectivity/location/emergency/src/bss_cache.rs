@@ -14,6 +14,7 @@ use {
         Future, FutureExt, Stream, StreamExt,
     },
     std::{collections::BTreeMap, pin::Pin},
+    thiserror::Error,
 };
 
 #[async_trait(?Send)]
@@ -36,17 +37,21 @@ pub struct RealBssCache {
 
 pub type BssId = [u8; BSS_ADDR_LEN_BYTES];
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Bss {
     pub(crate) rssi: Option<i8>,
     pub(crate) frequency: Option<u32>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Error, PartialEq)]
 pub enum UpdateError {
+    #[error("found BSSes, but no BSS IDs")]
     NoBssIds,
+    #[error("found no BSSes")]
     NoBsses,
+    #[error("connection to iterator failed")]
     Ipc,
+    #[error("iterator reported error")]
     Service,
 }
 

@@ -30,10 +30,19 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.location:fuchsia.location-rustc",
+    "//sdk/fidl/fuchsia.location.position:fuchsia.location.position-rustc",
+    "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor-rustc",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
   ]
 }
 
@@ -58,6 +67,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:static_assertions",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
