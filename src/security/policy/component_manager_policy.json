@@ -6,8 +6,6 @@
             ],
             main_process_critical: [
                 "/bootstrap/driver_manager",
-                "/bootstrap/fshost",
-                "/core/appmgr",
             ],
         }
     }
