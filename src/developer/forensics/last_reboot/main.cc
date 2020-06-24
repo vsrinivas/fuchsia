@@ -14,7 +14,7 @@
 
 #include <string>
 
-#include "src/developer/feedback/last_reboot/main_service.h"
+#include "src/developer/forensics/last_reboot/main_service.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 

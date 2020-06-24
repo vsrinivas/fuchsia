@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_MAIN_SERVICE_H_
-#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_MAIN_SERVICE_H_
+#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_MAIN_SERVICE_H_
+#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_MAIN_SERVICE_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -11,10 +11,10 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/inspect/cpp/component.h>
 
-#include "src/developer/feedback/last_reboot/last_reboot_info_provider.h"
-#include "src/developer/feedback/last_reboot/reboot_log.h"
-#include "src/developer/feedback/last_reboot/reboot_watcher.h"
-#include "src/developer/feedback/last_reboot/reporter.h"
+#include "src/developer/forensics/last_reboot/last_reboot_info_provider.h"
+#include "src/developer/forensics/last_reboot/reboot_log.h"
+#include "src/developer/forensics/last_reboot/reboot_watcher.h"
+#include "src/developer/forensics/last_reboot/reporter.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 #include "src/developer/forensics/utils/inspect_protocol_stats.h"
@@ -60,4 +60,4 @@ class MainService {
 }  // namespace last_reboot
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_MAIN_SERVICE_H_
+#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_MAIN_SERVICE_H_

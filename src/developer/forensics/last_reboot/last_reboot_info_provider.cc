@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/last_reboot/last_reboot_info_provider.h"
+#include "src/developer/forensics/last_reboot/last_reboot_info_provider.h"
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/feedback/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/last_reboot/reboot_reason.h"
 
 namespace forensics {
 namespace last_reboot {

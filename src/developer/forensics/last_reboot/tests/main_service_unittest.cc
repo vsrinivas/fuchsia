@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/last_reboot/main_service.h"
+#include "src/developer/forensics/last_reboot/main_service.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/inspect/cpp/hierarchy.h>

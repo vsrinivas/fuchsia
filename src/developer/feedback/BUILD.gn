@@ -12,17 +12,13 @@ group("feedback") {
     ":tests",
     "crasher",
     "feedback_data:feedback_agent",
-    "last_reboot:last-reboot",
   ]
 }
 
 group("tests") {
   testonly = true
 
-  public_deps = [
-    "feedback_data/tests",
-    "last_reboot/tests",
-  ]
+  public_deps = [ "feedback_data/tests" ]
 }
 
 # TODO(54226): remove once dependents are updated.

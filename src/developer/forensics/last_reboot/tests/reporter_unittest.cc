@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/last_reboot/reporter.h"
+#include "src/developer/forensics/last_reboot/reporter.h"
 
 #include <lib/fit/result.h>
 #include <lib/zx/time.h>
@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/last_reboot/reboot_log.h"
+#include "src/developer/forensics/last_reboot/reboot_log.h"
 #include "src/developer/forensics/testing/cobalt_test_fixture.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger.h"

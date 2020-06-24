@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REPORTER_H_
-#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REPORTER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REPORTER_H_
+#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REPORTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/feedback/last_reboot/reboot_log.h"
+#include "src/developer/forensics/last_reboot/reboot_log.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
@@ -48,4 +48,4 @@ class Reporter {
 }  // namespace last_reboot
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REPORTER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REPORTER_H_

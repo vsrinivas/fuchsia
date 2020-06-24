@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
+#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-#include "src/developer/feedback/last_reboot/reboot_log.h"
+#include "src/developer/forensics/last_reboot/reboot_log.h"
 
 namespace forensics {
 namespace last_reboot {
@@ -26,4 +26,4 @@ class LastRebootInfoProvider : public fuchsia::feedback::LastRebootInfoProvider 
 }  // namespace last_reboot
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_LAST_REBOOT_INFO_PROVIDER_H_

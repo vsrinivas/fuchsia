@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/last_reboot/reboot_log.h"
+#include "src/developer/forensics/last_reboot/reboot_log.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -11,7 +11,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/last_reboot/reboot_watcher.h"
+#include "src/developer/forensics/last_reboot/reboot_watcher.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"

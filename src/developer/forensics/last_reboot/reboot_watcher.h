@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_WATCHER_H_
-#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_WATCHER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_WATCHER_H_
+#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_WATCHER_H_
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -40,4 +40,4 @@ class ImminentGracefulRebootWatcher
 }  // namespace last_reboot
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_WATCHER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_WATCHER_H_

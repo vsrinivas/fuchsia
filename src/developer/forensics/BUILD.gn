@@ -9,6 +9,7 @@ group("forensics") {
     ":tests",
     "bugreport",
     "crash_reports:crash-reports",
+    "last_reboot:last-reboot",
     "//src/developer/exception_broker",
     "//src/developer/feedback",
   ]
@@ -20,6 +21,7 @@ group("tests") {
   deps = [
     "bugreport/tests",
     "crash_reports/tests",
+    "last_reboot/tests",
     "utils/tests",
     "//src/developer/exception_broker/tests",
     "//src/developer/feedback:tests",

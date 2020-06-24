@@ -17,8 +17,8 @@ executable("last_reboot_info_provider_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback/last_reboot:last_reboot_info_provider",
-    "//src/developer/feedback/last_reboot:reboot_reason",
+    "//src/developer/forensics/last_reboot:last_reboot_info_provider",
+    "//src/developer/forensics/last_reboot:reboot_reason",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -38,7 +38,7 @@ executable("main_service_unittest_exe") {
   deps = [
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/last_reboot:main_service",
+    "//src/developer/forensics/last_reboot:main_service",
     "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -58,8 +58,8 @@ executable("reboot_log_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/last_reboot:reboot_log",
-    "//src/developer/feedback/last_reboot:reboot_watcher",
+    "//src/developer/forensics/last_reboot:reboot_log",
+    "//src/developer/forensics/last_reboot:reboot_watcher",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -78,7 +78,7 @@ executable("reboot_reason_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback/last_reboot:reboot_reason",
+    "//src/developer/forensics/last_reboot:reboot_reason",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -93,7 +93,7 @@ executable("reboot_watcher_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//src/developer/feedback/last_reboot:reboot_watcher",
+    "//src/developer/forensics/last_reboot:reboot_watcher",
     "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -112,7 +112,7 @@ executable("reporter_unittest_exe") {
   sources = [ "reporter_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/last_reboot:reporter",
+    "//src/developer/forensics/last_reboot:reporter",
     "//src/developer/forensics/testing:cobalt_test_fixture",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",

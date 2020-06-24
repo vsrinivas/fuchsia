@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_LOG_H_
-#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_LOG_H_
+#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_LOG_H_
+#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_LOG_H_
 
 #include <lib/zx/time.h>
 
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/last_reboot/reboot_reason.h"
 
 namespace forensics {
 namespace last_reboot {
@@ -41,4 +41,4 @@ class RebootLog {
 }  // namespace last_reboot
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REBOOT_LOG_H_
+#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_LOG_H_
