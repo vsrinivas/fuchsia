@@ -99,16 +99,13 @@ zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     return status;
   }
 
-  // This is an if statement because, depending on the state of the ordinal
-  // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
   uint64_t ordinal = message.ordinal();
-  if (ordinal == fuchsia_logger_LogListenerLogGenOrdinal ||
-      ordinal == fuchsia_logger_LogListenerLogOrdinal) {
+  switch (ordinal) {
+  case fuchsia_logger_LogListenerLogOrdinal:
     return Log(std::move(message));
-  } else if (ordinal == fuchsia_logger_LogListenerLogManyGenOrdinal ||
-             ordinal == fuchsia_logger_LogListenerLogManyOrdinal) {
+  case fuchsia_logger_LogListenerLogManyOrdinal:
     return LogMany(std::move(message));
-  } else {
+  default:
     return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -292,7 +289,7 @@ std::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     return nullptr;
   }
   fuchsia_logger_LogListenRequest req = {};
-  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenGenOrdinal);
+  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenOrdinal);
   req.log_listener = FIDL_HANDLE_PRESENT;
   zx_handle_t listener_handle = listener.release();
   status = logger.write(0, &req, sizeof(req), &listener_handle, 1);

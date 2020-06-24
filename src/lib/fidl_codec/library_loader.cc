@@ -272,8 +272,6 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
     : enclosing_interface_(interface),
       name_(interface.enclosing_library()->ExtractString(json_definition, "method", "<unknown>",
                                                          "name")),
-      // TODO(FIDL-524): Step 4, i.e. both ord and gen are prepared by fidlc for
-      // direct consumption by the bindings.
       ordinal_(interface.enclosing_library()->ExtractUint64(json_definition, "method", name_,
                                                             "ordinal")),
       is_composed_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,

@@ -655,7 +655,7 @@ typedef struct admin_resp {
                                                                                                 \
     alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_Admin##name##Request msg;       \
     fidl_init_txn_header(&msg.hdr, 0,                                                           \
-                         fuchsia_hardware_power_statecontrol_Admin##name##GenOrdinal);          \
+                         fuchsia_hardware_power_statecontrol_Admin##name##Ordinal);          \
                                                                                                 \
     const char* errs;                                                                           \
     void* msg_handle = (void*)&msg;                                                             \
@@ -718,7 +718,7 @@ static int send_Reboot() {
     }
 
     alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_AdminRebootRequest msg;
-    fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_power_statecontrol_AdminRebootGenOrdinal);
+    fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_power_statecontrol_AdminRebootOrdinal);
     msg.reason = fuchsia_hardware_power_statecontrol_RebootReason_USER_REQUEST;
 
     const char* errs;

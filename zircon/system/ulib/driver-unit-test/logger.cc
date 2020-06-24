@@ -47,7 +47,7 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
 
   auto* req = builder.New<fuchsia_driver_test_LoggerLogMessageRequest>();
   fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_LoggerLogMessageGenOrdinal);
+                       fuchsia_driver_test_LoggerLogMessageOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(log_msg_size));
   req->msg.data = data;
@@ -75,7 +75,7 @@ zx_status_t Logger::SendLogTestCase() {
 
   auto* req = builder.New<fuchsia_driver_test_LoggerLogTestCaseRequest>();
   fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_LoggerLogTestCaseGenOrdinal);
+                       fuchsia_driver_test_LoggerLogTestCaseOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(test_name_size));
   req->name.data = data;

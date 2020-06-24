@@ -177,7 +177,7 @@ TEST(ControlFlowTest, MustSendEpitaph) {
     fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequest request = {};
     fidl_init_txn_header(
         &request.hdr, 0,
-        fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphGenOrdinal);
+        fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphOrdinal);
     ASSERT_OK(client_chan.write(0, &request, sizeof(request), nullptr, 0));
 
     ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));

@@ -30,7 +30,7 @@ zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<DriverHost>& dh
   // TODO(teisenbe): Allocate and track txids
   zx_txid_t txid = 1;
   fidl_init_txn_header(&req->hdr, txid,
-                       fuchsia_device_manager_DevhostControllerCreateDeviceGenOrdinal);
+                       fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal);
 
   req->coordinator_rpc = FIDL_HANDLE_PRESENT;
   req->device_controller_rpc = FIDL_HANDLE_PRESENT;
@@ -70,7 +70,7 @@ zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<DriverHost
   auto req = builder.New<fuchsia_device_manager_DevhostControllerCreateDeviceStubRequest>();
   ZX_ASSERT(req != nullptr);
   fidl_init_txn_header(&req->hdr, 1,
-                       fuchsia_device_manager_DevhostControllerCreateDeviceStubGenOrdinal);
+                       fuchsia_device_manager_DevhostControllerCreateDeviceStubOrdinal);
   // TODO(teisenbe): Allocate and track txids
   req->hdr.txid = 1;
 
@@ -179,7 +179,7 @@ zx_status_t dh_send_create_composite_device(const fbl::RefPtr<DriverHost>& dh,
   // TODO(teisenbe): Allocate and track txids
   zx_txid_t txid = 1;
   fidl_init_txn_header(&req->hdr, txid,
-                       fuchsia_device_manager_DevhostControllerCreateCompositeDeviceGenOrdinal);
+                       fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal);
 
   req->coordinator_rpc = FIDL_HANDLE_PRESENT;
   req->device_controller_rpc = FIDL_HANDLE_PRESENT;

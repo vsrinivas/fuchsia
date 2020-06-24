@@ -53,7 +53,7 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* driver_p
   fuchsia_hardware_test_DeviceGetChannelRequest req;
   std::memset(&req, 0, sizeof(req));
   zx_txid_t first_txid = 1;
-  fidl_init_txn_header(&req.hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelGenOrdinal);
+  fidl_init_txn_header(&req.hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
   uint32_t actual = 0;
   status = fidl_encode(&fuchsia_hardware_test_DeviceGetChannelRequestTable, &req, sizeof(req),
                        nullptr, 0, &actual, nullptr);
@@ -64,7 +64,7 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* driver_p
 
   std::memset(&req, 0, sizeof(req));
   zx_txid_t second_txid = 2;
-  fidl_init_txn_header(&req.hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelGenOrdinal);
+  fidl_init_txn_header(&req.hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
   status = fidl_encode(&fuchsia_hardware_test_DeviceGetChannelRequestTable, &req, sizeof(req),
                        nullptr, 0, &actual, nullptr);
   ASSERT_OK(status);

@@ -243,7 +243,7 @@ void prepopulate_protocol_dirs() {
 void describe_error(zx::channel h, zx_status_t status) {
   OnOpenMsg msg;
   memset(&msg, 0, sizeof(msg));
-  fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenGenOrdinal);
+  fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
   msg.primary.s = status;
   SendOnOpenEvent(h.get(), msg, nullptr, 0);
 }
@@ -528,7 +528,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     if (describe) {
       OnOpenMsg msg;
       memset(&msg, 0, sizeof(msg));
-      fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenGenOrdinal);
+      fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
 
       msg.primary.s = ZX_OK;
 

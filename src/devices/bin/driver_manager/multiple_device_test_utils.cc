@@ -32,7 +32,7 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(const zx::channel& remote
 
   // Validate the CreateDevice request.
   auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateDeviceGenOrdinal, hdr->ordinal);
+  ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
   ASSERT_OK(status);
@@ -61,7 +61,7 @@ void MultipleDeviceTestCase::CheckSuspendReceived(const zx::channel& remote,
   // Validate the Suspend request.
   auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
   *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerSuspendGenOrdinal, hdr->ordinal);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerSuspendOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DeviceControllerSuspendRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
   ASSERT_OK(status);
@@ -80,7 +80,7 @@ void MultipleDeviceTestCase::SendSuspendReply(const zx::channel& remote, zx_stat
   // Write the Suspend response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerSuspendGenOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerSuspendOrdinal);
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerSuspendResponseTable, bytes,
@@ -274,7 +274,7 @@ void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote, zx_t
   // Validate the unbind request.
   auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
   *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerUnbindGenOrdinal, hdr->ordinal);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerUnbindOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DeviceControllerUnbindRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
   ASSERT_OK(status);
@@ -322,7 +322,7 @@ void MultipleDeviceTestCase::CheckRemoveReceived(const zx::channel& remote, zx_t
 
   // Validate the remove request.
   auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerCompleteRemovalGenOrdinal, hdr->ordinal);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
   *txid = hdr->txid;
@@ -375,7 +375,7 @@ void MultipleDeviceTestCase::CheckResumeReceived(const zx::channel& remote,
   // Validate the Resume request.
   auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
   *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerResumeGenOrdinal, hdr->ordinal);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerResumeOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DeviceControllerResumeRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
   ASSERT_OK(status);
@@ -394,7 +394,7 @@ void MultipleDeviceTestCase::SendResumeReply(const zx::channel& remote, zx_statu
   // Write the Resume response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerResumeGenOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerResumeOrdinal);
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerResumeResponseTable, bytes, sizeof(*resp),
@@ -445,7 +445,7 @@ void MultipleDeviceTestCase::CheckInitReceived(const zx::channel& remote, zx_txi
   // Validate the init request.
   auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
   *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerInitGenOrdinal, hdr->ordinal);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerInitOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DeviceControllerInitRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
   ASSERT_OK(status);
@@ -462,7 +462,7 @@ void MultipleDeviceTestCase::SendInitReply(const zx::channel& remote, zx_txid_t 
   // Write the Resume response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerInitResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerInitGenOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerInitOrdinal);
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerInitResponseTable, bytes, sizeof(*resp),

@@ -216,7 +216,7 @@ static bool ldmsg_functions_are_consistent(void) {
     memset(&done_req, 0xba, sizeof(done_req));
     memset(&done_req.header, 0, sizeof(done_req.header));
     size_t req_len_out;
-    done_req.header.ordinal = fuchsia_ldsvc_LoaderDoneGenOrdinal;
+    done_req.header.ordinal = fuchsia_ldsvc_LoaderDoneOrdinal;
     ldmsg_req_encode(&done_req, &req_len_out, NULL, 0);
     const char* err_msg = NULL;
     zx_status_t res = fidl_decode(&fuchsia_ldsvc_LoaderDoneRequestTable, (void*)&done_req,
@@ -227,9 +227,9 @@ static bool ldmsg_functions_are_consistent(void) {
     // encode.
   }
 
-  check_string_round_trip(fuchsia_ldsvc_LoaderLoadObjectGenOrdinal,
+  check_string_round_trip(fuchsia_ldsvc_LoaderLoadObjectOrdinal,
                           &fuchsia_ldsvc_LoaderLoadObjectRequestTable);
-  check_string_round_trip(fuchsia_ldsvc_LoaderConfigGenOrdinal,
+  check_string_round_trip(fuchsia_ldsvc_LoaderConfigOrdinal,
                           &fuchsia_ldsvc_LoaderConfigRequestTable);
   END_TEST;
 }

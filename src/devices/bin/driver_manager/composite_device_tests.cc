@@ -35,7 +35,7 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
 
   // Validate the CreateCompositeDevice request.
   auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateCompositeDeviceGenOrdinal, hdr->ordinal);
+  ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable,
                        bytes, actual_bytes, handles, actual_handles, nullptr);
   ASSERT_OK(status);
@@ -53,7 +53,7 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
       reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponse*>(
           bytes);
   fidl_init_txn_header(&resp->hdr, 0,
-                       fuchsia_device_manager_DevhostControllerCreateCompositeDeviceGenOrdinal);
+                       fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal);
   resp->status = ZX_OK;
   status = fidl_encode(&fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable,
                        bytes, sizeof(*resp), handles, std::size(handles), &actual_handles, nullptr);

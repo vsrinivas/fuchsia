@@ -65,8 +65,6 @@ class CGenerator {
   struct NamedMethod {
     uint64_t ordinal;
     std::string ordinal_name;
-    uint64_t generated_ordinal;
-    std::string generated_ordinal_name;
     std::string identifier;
     std::string c_name;
     std::unique_ptr<NamedMessage> request;

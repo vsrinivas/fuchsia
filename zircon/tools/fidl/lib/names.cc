@@ -494,13 +494,6 @@ std::string NameOrdinal(std::string_view method_name) {
   return ordinal_name;
 }
 
-// TODO: Remove post-FIDL-425
-std::string NameGenOrdinal(std::string_view method_name) {
-  std::string ordinal_name(method_name);
-  ordinal_name += "GenOrdinal";
-  return ordinal_name;
-}
-
 std::string NameMessage(std::string_view method_name, types::MessageKind kind) {
   std::string message_name(method_name);
   switch (kind) {
