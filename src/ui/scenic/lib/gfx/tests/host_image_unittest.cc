@@ -93,15 +93,41 @@ VK_TEST_F(HostImageTest, DupVmoGPUTest) {
   auto device = vulkan_queues->vk_device();
   auto physical_device = vulkan_queues->vk_physical_device();
 
-  const vk::BufferUsageFlags kUsageFlags =
-      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
-      vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eStorageBuffer |
-      vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
+  // Create an VkImage and allocate exportable memory for that image.
+  //
+  // TODO(54153): Currently, on some platforms (like Fuchsia Emulator), only
+  // VkDeviceMemory dedicated to VkImages can be exportable.
+  //
+  // In order to make exportable VMO allocation possible for all platforms
+  // where we run this test, we'll allocate image dedicated memory if it is
+  // necessary (by checking image memory requirements).
+  //
+  // |AllocateExportableMemoryDedicatedToImageIfRequired()| will allocate an
+  // image-dedicated memory only if it is required, otherwise it will allocate
+  // non dedicated memory instead.
 
-  auto memory_requirements = GetBufferRequirements(device, kVmoSize, kUsageFlags);
-  auto memory = AllocateExportableMemory(device, physical_device, memory_requirements,
-                                         vk::MemoryPropertyFlagBits::eDeviceLocal);
+  // We create an image of size 256 x 64. The size of VMO is expected to
+  // be no less than 65536 bytes.
+  const uint32_t kWidth = 256u;
+  const uint32_t kHeight = 64u;
+  const uint32_t kExpectedVmoSize = kWidth * kHeight * 4u;
+  escher::ImageInfo image_info = {
+      .format = vk::Format::eR8G8B8A8Srgb,
+      .width = kWidth,
+      .height = kHeight,
+      .sample_count = 1,
+      .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst |
+               vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled,
+      .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
+      .tiling = vk::ImageTiling::eOptimal,
+      .is_external = true};
+  vk::Image image =
+      escher::image_utils::CreateVkImage(device, image_info, vk::ImageLayout::eUndefined);
 
+  MemoryAllocationResult allocation_result = AllocateExportableMemoryDedicatedToImageIfRequired(
+      device, physical_device, kExpectedVmoSize, image, vk::MemoryPropertyFlagBits::eDeviceLocal,
+      vulkan_queues->dispatch_loader());
+  vk::DeviceMemory memory = allocation_result.device_memory;
   // Import valid Vulkan device memory into Scenic.
   zx::vmo vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
 
@@ -109,12 +135,13 @@ VK_TEST_F(HostImageTest, DupVmoGPUTest) {
   auto status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
   ASSERT_EQ(status, ZX_OK);
 
-  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kExpectedVmoSize,
                                                fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
 
-  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId + 1, std::move(dup_vmo), kVmoSize,
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId + 1, std::move(dup_vmo), kExpectedVmoSize,
                                                fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
   device.freeMemory(memory);
+  device.destroyImage(image);
 }
 
 VK_TEST_F(HostImageTest, FindResource) {

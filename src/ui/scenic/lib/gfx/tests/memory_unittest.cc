@@ -22,9 +22,10 @@ namespace {
 const uint32_t kVmoSize = 4096;
 const uint32_t kMemoryId = 1;
 
-vk::Image Create1BytePerPixelSingleRowDeviceVkImageOfWidth(vk::Device device, uint32_t width) {
+vk::Image CreateSingleRowDeviceVkImageOfWidth(vk::Device device, uint32_t width,
+                                              vk::Format format) {
   escher::ImageInfo info = {
-      .format = vk::Format::eR8Uint,
+      .format = format,
       .width = width,
       .height = 1,
       .sample_count = 1,
@@ -94,7 +95,8 @@ VK_TEST_F(VkMemoryTest, ImportDeviceMemory) {
   // |AllocateExportableMemoryDedicatedToImageIfRequired()| will allocate an
   // image-dedicated memory only if it is required, otherwise it will allocate
   // non dedicated memory instead.
-  vk::Image image = Create1BytePerPixelSingleRowDeviceVkImageOfWidth(device, kVmoSize);
+  vk::Image image = CreateSingleRowDeviceVkImageOfWidth(device, /* width */ kVmoSize / 4,
+                                                        vk::Format::eR8G8B8A8Srgb);
   MemoryAllocationResult allocation_result = AllocateExportableMemoryDedicatedToImageIfRequired(
       device, physical_device, kVmoSize, image, vk::MemoryPropertyFlagBits::eDeviceLocal,
       vulkan_queues->dispatch_loader());
@@ -158,7 +160,8 @@ VK_TEST_F(VkMemoryTest, ImportReadOnlyDeviceMemory) {
   // |AllocateExportableMemoryDedicatedToImageIfRequired()| will allocate an
   // image-dedicated memory only if it is required, otherwise it will allocate
   // non dedicated memory instead.
-  vk::Image image = Create1BytePerPixelSingleRowDeviceVkImageOfWidth(device, kVmoSize);
+  vk::Image image = CreateSingleRowDeviceVkImageOfWidth(device, /* width */ kVmoSize / 4,
+                                                        vk::Format::eR8G8B8A8Srgb);
   MemoryAllocationResult allocation_result = AllocateExportableMemoryDedicatedToImageIfRequired(
       device, physical_device, kVmoSize, image, vk::MemoryPropertyFlagBits::eDeviceLocal,
       vulkan_queues->dispatch_loader());
@@ -198,7 +201,8 @@ VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
   // |AllocateExportableMemoryDedicatedToImageIfRequired()| will allocate an
   // image-dedicated memory only if it is required, otherwise it will allocate
   // non dedicated memory instead.
-  vk::Image image = Create1BytePerPixelSingleRowDeviceVkImageOfWidth(device, kVmoSize);
+  vk::Image image = CreateSingleRowDeviceVkImageOfWidth(device, /* width */ kVmoSize / 4,
+                                                        vk::Format::eR8G8B8A8Srgb);
   MemoryAllocationResult allocation_result = AllocateExportableMemoryDedicatedToImageIfRequired(
       device, physical_device, kVmoSize, image, vk::MemoryPropertyFlagBits::eDeviceLocal,
       vulkan_queues->dispatch_loader());
