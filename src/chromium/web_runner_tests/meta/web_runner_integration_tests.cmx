@@ -18,7 +18,11 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.device.NameProvider",
+            "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",

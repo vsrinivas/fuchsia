@@ -26,8 +26,12 @@
             "shell-commands"
         ],
         "services": [
+            "fuchsia.accessibility.semantics.SemanticsManager",
+            "fuchsia.device.NameProvider",
             "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
@@ -36,6 +40,7 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.policy.Presenter",
