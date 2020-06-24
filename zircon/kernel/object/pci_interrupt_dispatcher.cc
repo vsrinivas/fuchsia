@@ -105,6 +105,8 @@ void PciInterruptDispatcher::UnmaskInterrupt() {
   }
 }
 
+void PciInterruptDispatcher::DeactivateInterrupt() { }
+
 PciInterruptDispatcher::PciInterruptDispatcher(const fbl::RefPtr<PcieDevice>& device,
                                                uint32_t vector, bool maskable)
     : device_(device), vector_(vector), maskable_(maskable) {

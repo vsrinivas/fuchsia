@@ -28,6 +28,7 @@ class PciInterruptDispatcher final : public InterruptDispatcher {
  protected:
   void MaskInterrupt() final;
   void UnmaskInterrupt() final;
+  void DeactivateInterrupt() final;
   void UnregisterInterruptHandler() final;
 
  private:

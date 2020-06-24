@@ -51,6 +51,7 @@ class InterruptDispatcher
  protected:
   virtual void MaskInterrupt() = 0;
   virtual void UnmaskInterrupt() = 0;
+  virtual void DeactivateInterrupt() = 0;
   virtual void UnregisterInterruptHandler() = 0;
   virtual bool HasVcpu() const TA_REQ(spinlock_) { return false; }
 

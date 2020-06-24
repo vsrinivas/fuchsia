@@ -143,6 +143,7 @@ zx_status_t InterruptDispatcher::Destroy() {
   // taken a lock to call InterruptHandler, and it might take the same lock when we call
   // UnregisterInterruptHandler.
   MaskInterrupt();
+  DeactivateInterrupt();
   UnregisterInterruptHandler();
 
   // Using AutoReschedDisable is necessary for correctness to prevent

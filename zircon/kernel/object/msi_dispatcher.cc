@@ -222,3 +222,5 @@ void MsiDispatcherImpl::UnmaskInterrupt() {
     arch::DeviceMemoryBarrier();
   }
 }
+
+void MsiDispatcherImpl::DeactivateInterrupt() { }

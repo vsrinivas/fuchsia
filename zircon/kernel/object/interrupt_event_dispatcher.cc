@@ -169,6 +169,13 @@ void InterruptEventDispatcher::MaskInterrupt() { mask_interrupt(vector_); }
 
 void InterruptEventDispatcher::UnmaskInterrupt() { unmask_interrupt(vector_); }
 
+void InterruptEventDispatcher::DeactivateInterrupt() {
+#if __aarch64__
+  // deactivate_interrupt only exist in arm64
+  deactivate_interrupt(vector_);
+#endif
+}
+
 zx_status_t InterruptEventDispatcher::RegisterInterruptHandler() {
   return register_int_handler(vector_, IrqHandler, this);
 }

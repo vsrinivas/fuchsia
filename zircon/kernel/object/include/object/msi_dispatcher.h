@@ -117,6 +117,7 @@ class MsiDispatcherImpl : public MsiDispatcher {
         mask_bits_reg_((has_64bit) ? &capability_->mask_bits_64 : &capability_->mask_bits_32) {}
   void MaskInterrupt() final;
   void UnmaskInterrupt() final;
+  void DeactivateInterrupt() final;
 
  private:
   // Not all interrupt controllers / configurations support masking at the

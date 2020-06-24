@@ -30,6 +30,7 @@ class InterruptEventDispatcher final : public InterruptDispatcher {
 
   void MaskInterrupt() final;
   void UnmaskInterrupt() final;
+  void DeactivateInterrupt() final;
   void UnregisterInterruptHandler() final;
 
   zx_status_t RegisterInterruptHandler();

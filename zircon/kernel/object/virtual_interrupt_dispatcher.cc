@@ -45,6 +45,8 @@ void VirtualInterruptDispatcher::MaskInterrupt() {}
 
 void VirtualInterruptDispatcher::UnmaskInterrupt() {}
 
+void VirtualInterruptDispatcher::DeactivateInterrupt() {}
+
 void VirtualInterruptDispatcher::UnregisterInterruptHandler() {}
 
 VirtualInterruptDispatcher::VirtualInterruptDispatcher() {
