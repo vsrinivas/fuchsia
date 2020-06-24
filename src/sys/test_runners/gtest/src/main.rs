@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod errors;
 mod test_server;
 
 use {
@@ -15,7 +14,7 @@ use {
     futures::prelude::*,
     rand::Rng,
     std::{fs, path::Path},
-    test_runners_lib::elf_component,
+    test_runners_lib::elf,
     test_server::TestServer,
     thiserror::Error,
 };
@@ -53,7 +52,7 @@ async fn start_runner(
     while let Some(event) = stream.try_next().await.map_err(RunnerError::RequestRead)? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                let _ = elf_component::start_component(start_info, controller, get_new_test_server);
+                let _ = elf::start_component(start_info, controller, get_new_test_server);
             }
         }
     }

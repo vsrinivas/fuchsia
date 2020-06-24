@@ -119,7 +119,7 @@ pub enum ComponentNamespaceError {
 
 /// This represents Component namespace which is easier for other functions in this library to read
 /// and operate on.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ComponentNamespace {
     /// Pair representing path and directory proxy.
     items: Vec<(String, fio::DirectoryProxy)>,

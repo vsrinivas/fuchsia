@@ -2,26 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Type definitions for common errors related to running component or tests.
+
 use {
-    fuchsia_zircon as zx, runner::component::ComponentNamespaceError, std::convert::From,
-    test_runners_lib::LogError, thiserror::Error,
+    crate::{launch::LaunchError, logs::LogError},
+    fuchsia_zircon as zx,
+    runner::component::ComponentNamespaceError,
+    serde_json,
+    std::convert::From,
+    thiserror::Error,
 };
-
-/// Error encountered while running suite server
-#[derive(Debug, Error)]
-pub enum SuiteServerError {
-    #[error("test enumeration failed: {:?}", _0)]
-    Enumeration(EnumerationError),
-
-    #[error("error running test: {:?}", _0)]
-    RunTest(RunTestError),
-
-    #[error("stream failed: {:?}", _0)]
-    Stream(fidl::Error),
-
-    #[error("Cannot send fidl response: {:?}", _0)]
-    Response(fidl::Error),
-}
 
 /// Error encountered while enumerating test.
 #[derive(Debug, Error)]
@@ -30,7 +20,7 @@ pub enum EnumerationError {
     Namespace(NamespaceError),
 
     #[error("error launching test: {:?}", _0)]
-    LaunchTest(test_runners_lib::LaunchError),
+    LaunchTest(LaunchError),
 
     #[error("{:?}", _0)]
     Io(IoError),
@@ -72,7 +62,7 @@ pub enum RunTestError {
     Namespace(NamespaceError),
 
     #[error("error launching test: {:?}", _0)]
-    LaunchTest(test_runners_lib::LaunchError),
+    LaunchTest(LaunchError),
 
     #[error("{:?}", _0)]
     Io(IoError),
@@ -92,6 +82,9 @@ pub enum RunTestError {
     #[error("cannot send on_finished event: {:?}", _0)]
     SendFinishAllTests(fidl::Error),
 
+    #[error("Received unexpected exit code {} from test process.", _0)]
+    UnexpectedReturnCode(i64),
+
     #[error("can't get test result: {:?}", _0)]
     JsonParse(serde_json::error::Error),
 
@@ -100,18 +93,6 @@ pub enum RunTestError {
 
     #[error("Name in invocation cannot be null")]
     TestCaseName,
-}
-
-impl From<EnumerationError> for SuiteServerError {
-    fn from(error: EnumerationError) -> Self {
-        SuiteServerError::Enumeration(error)
-    }
-}
-
-impl From<RunTestError> for SuiteServerError {
-    fn from(error: RunTestError) -> Self {
-        SuiteServerError::RunTest(error)
-    }
 }
 
 impl From<IoError> for EnumerationError {
@@ -138,8 +119,8 @@ impl From<NamespaceError> for EnumerationError {
     }
 }
 
-impl From<test_runners_lib::LaunchError> for EnumerationError {
-    fn from(error: test_runners_lib::LaunchError) -> Self {
+impl From<LaunchError> for EnumerationError {
+    fn from(error: LaunchError) -> Self {
         EnumerationError::LaunchTest(error)
     }
 }
@@ -162,8 +143,8 @@ impl From<NamespaceError> for RunTestError {
     }
 }
 
-impl From<test_runners_lib::LaunchError> for RunTestError {
-    fn from(error: test_runners_lib::LaunchError) -> Self {
+impl From<LaunchError> for RunTestError {
+    fn from(error: LaunchError) -> Self {
         RunTestError::LaunchTest(error)
     }
 }

@@ -42,7 +42,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:uuid",
   ]
 
-  test_deps = [ "//src/sys/test_runners:test_lib" ]
+  test_deps = [
+    "//src/sys/test_runners:test_lib",
+    "//third_party/rust_crates:itertools",
+  ]
 }
 
 fuchsia_component("rust_test_runner") {

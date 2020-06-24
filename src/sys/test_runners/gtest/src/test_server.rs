@@ -3,20 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    crate::errors::*,
+    async_trait::async_trait,
     fidl_fuchsia_io::{
         self as fio, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
+    fidl_fuchsia_process as fproc,
+    fidl_fuchsia_test::{
+        self as ftest, Invocation, Result_ as TestResult, RunListenerProxy, Status,
+    },
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
-    futures::future::abortable,
-    futures::future::AbortHandle,
-    futures::prelude::*,
+    futures::{
+        future::{abortable, AbortHandle},
+        TryStreamExt,
+    },
     log::{debug, error, info},
-    rust_measure_tape_for_case::measure,
     serde::{Deserialize, Serialize},
     std::{
         path::Path,
@@ -24,45 +25,15 @@ use {
         sync::{Arc, Weak},
     },
     test_runners_lib::{
-        elf_component::{Component, SuiteServer},
-        LogError, LogStreamReader, LogWriter,
+        cases::TestCaseInfo,
+        elf::{Component, FidlError, KernelError, SuiteServer},
+        errors::*,
+        launch,
+        logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
     },
-    thiserror::Error,
 };
 
-/// Error encountered while working fidl lib.
-#[derive(Debug, Error)]
-pub enum FidlError {
-    #[error("cannot convert proxy to channel")]
-    ProxyToChannel,
-
-    #[error("cannot convert client end to proxy: {:?}", _0)]
-    ClientEndToProxy(fidl::Error),
-
-    #[error("cannot create fidl proxy: {:?}", _0)]
-    CreateProxy(fidl::Error),
-}
-
-/// Error encountered while working with kernel object.
-#[derive(Debug, Error)]
-pub enum KernelError {
-    #[error("job creation failed: {:?}", _0)]
-    CreateJob(zx::Status),
-
-    #[error("error waiting for test process to exit: {:?}", _0)]
-    ProcessExit(zx::Status),
-
-    #[error("error getting info from process: {:?}", _0)]
-    ProcessInfo(zx::Status),
-
-    #[error("error creating socket: {:?}", _0)]
-    CreateSocket(zx::Status),
-
-    #[error("cannot convert zircon socket to async socket: {:?}", _0)]
-    SocketToAsync(zx::Status),
-}
-
-/// Provides info about individual test cases.
+/// In `gtest_list_test` output, provides info about individual test cases.
 /// Example: For test FOO.Bar, this contains info about Bar.
 /// Please refer to documentation of `ListTestResult` for details.
 #[derive(Serialize, Deserialize, Debug)]
@@ -72,7 +43,7 @@ struct IndividualTestInfo {
     pub line: u64,
 }
 
-/// Provides info about individual test suites.
+/// In `gtest_list_test` output, provides info about individual test suites.
 /// Example: For test FOO.Bar, this contains info about FOO.
 /// Please refer to documentation of `ListTestResult` for details.
 #[derive(Serialize, Deserialize, Debug)]
@@ -82,6 +53,8 @@ struct TestSuiteResult {
     pub testsuite: Vec<IndividualTestInfo>,
 }
 
+/// Structure of the output of `<test binary> --gtest_list_test`.
+///
 /// Sample json will look like
 /// ```
 /// {
@@ -162,7 +135,7 @@ async fn read_file(dir: &DirectoryProxy, path: &Path) -> Result<String, anyhow::
 /// Implements `fuchsia.test.Suite` and runs provided test.
 pub struct TestServer {
     /// Cache to store enumerated test names.
-    test_list: Option<Vec<String>>,
+    test_list: Option<Arc<Vec<TestCaseInfo>>>,
 
     /// Directory where test data(json) is written by gtest.
     output_dir_proxy: fio::DirectoryProxy,
@@ -174,13 +147,52 @@ pub struct TestServer {
     output_dir_parent_path: String,
 }
 
+#[async_trait]
 impl SuiteServer for TestServer {
+    /// Launches test process and gets test list out. Returns list of tests names in the format
+    /// defined by gtests, i.e FOO.Bar.
+    /// It only runs enumeration logic once, caches and returns the same result back on subsequent
+    /// calls.
+
+    async fn enumerate_tests(
+        &mut self,
+        test_component: Arc<Component>,
+    ) -> Result<Arc<Vec<TestCaseInfo>>, EnumerationError> {
+        // Caching
+        if self.test_list.is_none() {
+            self.test_list = Some(Arc::new(
+                Self::enumerate_tests_internal(
+                    test_component,
+                    self.test_data_namespace()?,
+                    Clone::clone(&self.output_dir_proxy),
+                )
+                .await?,
+            ));
+        }
+
+        Ok(self.test_list.as_ref().expect("Unexpected caching error").clone())
+    }
+
+    // TODO(45852): Support disabled tests.
+    // TODO(45853): Support test stdout, or devise a mechanism to replace it.
+    async fn run_tests(
+        &self,
+        invocations: Vec<Invocation>,
+        component: Arc<Component>,
+        run_listener: &RunListenerProxy,
+    ) -> Result<(), RunTestError> {
+        for invocation in invocations {
+            self.run_test(invocation, component.clone(), run_listener).await?;
+        }
+        Ok(())
+    }
+
     /// Run this server.
     fn run(
         self,
         weak_component: Weak<Component>,
         test_url: &str,
-        stream: fidl_fuchsia_test::SuiteRequestStream,
+        stream: ftest::SuiteRequestStream,
     ) -> AbortHandle {
         let test_data_name = self.output_dir_name.clone();
         let test_data_parent = self.output_dir_parent_path.clone();
@@ -270,18 +282,7 @@ impl TestServer {
         // run test.
         // Load bearing to hold job guard.
         let (process, _job, mut stdlogger) =
-            test_runners_lib::launch_process(test_runners_lib::LaunchProcessArgs {
-                bin_path: &component.binary,
-                process_name: &component.name,
-                job: Some(
-                    component.job.create_child_job().map_err(KernelError::CreateJob).unwrap(),
-                ),
-                ns: component.ns.clone().map_err(NamespaceError::Clone)?,
-                args: Some(args),
-                name_infos: Some(names),
-                environs: None,
-            })
-            .await?;
+            launch_component_process::<RunTestError>(&component, names, args).await?;
 
         let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
             .map_err(KernelError::CreateSocket)
@@ -408,34 +409,13 @@ impl TestServer {
         Ok(())
     }
 
-    /// Runs requested tests and sends test events to the given listener.
-    // TODO(45852): Support disabled tests.
-    // TODO(45853): Support test stdout, or devise a mechanism to replace it.
-    pub async fn run_tests(
-        &self,
-        invocations: Vec<Invocation>,
+    /// Internal, uncached implementation of `enumerate_tests`.
+    async fn enumerate_tests_internal(
         component: Arc<Component>,
-        run_listener: &RunListenerProxy,
-    ) -> Result<(), RunTestError> {
-        for invocation in invocations {
-            self.run_test(invocation, component.clone(), run_listener).await?;
-        }
-        Ok(())
-    }
-
-    /// Launches test process and gets test list out. Returns list of tests names in the format
-    /// defined by gtests, i.e FOO.Bar.
-    /// It only runs enumeration logic once, caches and returns the same result back on subsequent
-    /// calls.
-    async fn enumerate_tests(
-        &mut self,
-        component: Arc<Component>,
-    ) -> Result<Vec<String>, EnumerationError> {
-        if let Some(t) = &self.test_list {
-            return Ok(t.clone());
-        }
-
-        let names = vec![self.test_data_namespace()?];
+        test_data_namespace: fproc::NameInfo,
+        output_dir_proxy: fio::DirectoryProxy,
+    ) -> Result<Vec<TestCaseInfo>, EnumerationError> {
+        let names = vec![test_data_namespace];
 
         let test_list_file = Path::new("test_list.json");
         let test_list_path = Path::new("/test_data").join(test_list_file);
@@ -448,18 +428,7 @@ impl TestServer {
 
         // Load bearing to hold job guard.
         let (process, _job, stdlogger) =
-            test_runners_lib::launch_process(test_runners_lib::LaunchProcessArgs {
-                bin_path: &component.binary,
-                process_name: &component.name,
-                job: Some(
-                    component.job.create_child_job().map_err(KernelError::CreateJob).unwrap(),
-                ),
-                ns: component.ns.clone().map_err(NamespaceError::Clone)?,
-                args: Some(args),
-                name_infos: Some(names),
-                environs: None,
-            })
-            .await?;
+            launch_component_process::<EnumerationError>(&component, names, args).await?;
 
         // collect stdout in background before waiting for process termination.
         let std_reader = LogStreamReader::new(stdlogger);
@@ -478,7 +447,7 @@ impl TestServer {
             error!("Failed getting list of tests:\n{}", output);
             return Err(EnumerationError::ListTest);
         }
-        let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
+        let result_str = match read_file(&output_dir_proxy, &test_list_file).await {
             Ok(b) => b,
             Err(e) => {
                 let logs = std_reader.get_logs().await?;
@@ -497,79 +466,38 @@ impl TestServer {
         let test_list: ListTestResult =
             serde_json::from_str(&result_str).map_err(EnumerationError::JsonParse)?;
 
-        let mut tests = Vec::<String>::with_capacity(test_list.tests);
+        let mut tests = Vec::<TestCaseInfo>::with_capacity(test_list.tests);
 
         for suite in &test_list.testsuites {
             for test in &suite.testsuite {
-                tests.push(format!("{}.{}", suite.name, test.name))
+                let name = format!("{}.{}", suite.name, test.name);
+                tests.push(TestCaseInfo { name })
             }
         }
 
-        self.test_list = Some(tests.clone());
-
-        return Ok(tests);
+        Ok(tests)
     }
+}
 
-    /// Implements `fuchsia.test.Suite` service and runs test.
-    async fn serve_test_suite(
-        mut self,
-        mut stream: ftest::SuiteRequestStream,
-        component: Weak<Component>,
-    ) -> Result<(), SuiteServerError> {
-        while let Some(event) = stream.try_next().await.map_err(SuiteServerError::Stream)? {
-            match event {
-                ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
-                    let component = component.upgrade();
-                    if component.is_none() {
-                        // no component object, return, test has ended.
-                        break;
-                    }
-                    let mut stream = iterator.into_stream().map_err(SuiteServerError::Stream)?;
-                    let tests = self.enumerate_tests(component.unwrap()).await?;
-
-                    fasync::spawn(
-                        async move {
-                            let mut iter =
-                                tests.into_iter().map(|name| ftest::Case { name: Some(name) });
-                            while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
-                                stream.try_next().await?
-                            {
-                                // Paginate cases
-                                let mut bytes_used: usize = 32; // Page overhead of message header + vector
-                                let mut case_count = 0;
-                                for case in iter.clone() {
-                                    bytes_used += measure(&case).num_bytes;
-                                    if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
-                                        break;
-                                    }
-                                    case_count += 1;
-                                }
-                                responder
-                                    .send(&mut iter.by_ref().take(case_count))
-                                    .map_err(SuiteServerError::Response)?;
-                            }
-                            Ok(())
-                        }
-                        .unwrap_or_else(|e: anyhow::Error| error!("error serving tests: {:?}", e)),
-                    );
-                }
-                ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
-                    let component = component.upgrade();
-                    if component.is_none() {
-                        // no component object, return, test has ended.
-                        break;
-                    }
-
-                    let listener =
-                        listener.into_proxy().map_err(FidlError::ClientEndToProxy).unwrap();
-
-                    self.run_tests(tests, component.unwrap(), &listener).await?;
-                    listener.on_finished().map_err(RunTestError::SendFinishAllTests).unwrap();
-                }
-            }
-        }
-        Ok(())
-    }
+/// Convenience wrapper around [`launch::launch_process`].
+async fn launch_component_process<E>(
+    component: &Component,
+    names: Vec<fproc::NameInfo>,
+    args: Vec<String>,
+) -> Result<(zx::Process, launch::ScopedJob, LoggerStream), E>
+where
+    E: From<NamespaceError> + From<launch::LaunchError>,
+{
+    Ok(launch::launch_process(launch::LaunchProcessArgs {
+        bin_path: &component.binary,
+        process_name: &component.name,
+        job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
+        ns: component.ns.clone().map_err(NamespaceError::Clone)?,
+        args: Some(args),
+        name_infos: Some(names),
+        environs: None,
+    })
+    .await?)
 }
 
 #[cfg(test)]
@@ -665,24 +593,21 @@ mod tests {
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
         assert_eq!(
-            server.enumerate_tests(component.clone()).await?,
+            *server.enumerate_tests(component.clone()).await?,
             vec![
-                "SampleTest1.SimpleFail",
-                "SampleTest1.Crashing",
-                "SampleTest2.SimplePass",
-                "SampleFixture.Test1",
-                "SampleFixture.Test2",
-                "SampleDisabled.DISABLED_Test1",
-                "WriteToStdout.TestPass",
-                "WriteToStdout.TestFail",
-                "Tests/SampleParameterizedTestFixture.Test/0",
-                "Tests/SampleParameterizedTestFixture.Test/1",
-                "Tests/SampleParameterizedTestFixture.Test/2",
-                "Tests/SampleParameterizedTestFixture.Test/3",
+                TestCaseInfo { name: "SampleTest1.SimpleFail".to_owned() },
+                TestCaseInfo { name: "SampleTest1.Crashing".to_owned() },
+                TestCaseInfo { name: "SampleTest2.SimplePass".to_owned() },
+                TestCaseInfo { name: "SampleFixture.Test1".to_owned() },
+                TestCaseInfo { name: "SampleFixture.Test2".to_owned() },
+                TestCaseInfo { name: "SampleDisabled.DISABLED_Test1".to_owned() },
+                TestCaseInfo { name: "WriteToStdout.TestPass".to_owned() },
+                TestCaseInfo { name: "WriteToStdout.TestFail".to_owned() },
+                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/0".to_owned() },
+                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/1".to_owned() },
+                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/2".to_owned() },
+                TestCaseInfo { name: "Tests/SampleParameterizedTestFixture.Test/3".to_owned() },
             ]
-            .into_iter()
-            .map(|s| s.to_owned())
-            .collect::<Vec<String>>()
         );
 
         Ok(())
@@ -705,7 +630,7 @@ mod tests {
         let mut server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
-        assert_eq!(server.enumerate_tests(component.clone()).await?, Vec::<String>::new());
+        assert_eq!(*server.enumerate_tests(component.clone()).await?, Vec::<TestCaseInfo>::new());
 
         Ok(())
     }
@@ -729,10 +654,10 @@ mod tests {
 
         let mut expected = vec![];
         for i in 0..1000 {
-            let s = format!("HugeStress/HugeTest.Test/{}", i);
-            expected.push(s);
+            let name = format!("HugeStress/HugeTest.Test/{}", i);
+            expected.push(TestCaseInfo { name });
         }
-        assert_eq!(server.enumerate_tests(component.clone()).await?, expected);
+        assert_eq!(*server.enumerate_tests(component.clone()).await?, expected);
 
         Ok(())
     }
@@ -763,8 +688,16 @@ mod tests {
                 .expect("Failed to run test suite")
         });
 
+        fn make_run_options() -> RunOptions {
+            let run_options = RunOptions::empty();
+            run_options
+        }
         suite_proxy
-            .run(&mut invocations.into_iter().map(|i| i.into()), RunOptions {}, run_listener_client)
+            .run(
+                &mut invocations.into_iter().map(|i| i.into()),
+                make_run_options(),
+                run_listener_client,
+            )
             .context("cannot call run")?;
 
         collect_listener_event(run_listener).await.context("Failed to collect results")

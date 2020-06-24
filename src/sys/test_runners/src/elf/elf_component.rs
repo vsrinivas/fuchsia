@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    super::SuiteServer,
     async_trait::async_trait,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_component_runner as fcrunner,
@@ -13,7 +14,6 @@ use {
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     futures::future::abortable,
-    futures::future::AbortHandle,
     futures::{future::BoxFuture, prelude::*},
     runner::component::ComponentNamespace,
     std::{
@@ -21,7 +21,7 @@ use {
         mem,
         ops::Deref,
         path::Path,
-        sync::{Arc, Mutex, Weak},
+        sync::{Arc, Mutex},
     },
     thiserror::Error,
     zx::{HandleBased, Task},
@@ -75,7 +75,8 @@ impl ComponentError {
     }
 }
 
-/// All information about this test component.
+/// All information about this test ELF component.
+#[derive(Debug)]
 pub struct Component {
     /// Component URL
     pub url: String,
@@ -213,7 +214,8 @@ impl ComponentRuntime {
 }
 
 /// Setup and run test component in background.
-/// |F|: Funciton which returns new instance of `SuitServer`.
+///
+/// * `F`: Function which returns new instance of `SuiteServer`.
 pub fn start_component<F, S>(
     start_info: fcrunner::ComponentStartInfo,
     mut server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
@@ -306,32 +308,23 @@ fn take_server_end<S: ServiceMarker>(end: &mut ServerEnd<S>) -> ServerEnd<S> {
     mem::replace(end, invalid_end)
 }
 
-/// Trait implemented by suite server for elf component test.
-pub trait SuiteServer {
-    /// Run this server.
-    /// |component|: Test component instance.
-    /// |test_utl|: Url of test component.
-    /// |stream|: Stream to serve Suite protocol on.
-    /// Returns abortable handle for suite server future.
-    fn run(
-        self,
-        component: Weak<Component>,
-        test_url: &str,
-        stream: fidl_fuchsia_test::SuiteRequestStream,
-    ) -> AbortHandle;
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::{
+            cases::TestCaseInfo,
+            errors::{EnumerationError, RunTestError},
+        },
         anyhow::Error,
         fidl::endpoints::{self, ClientEnd},
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fidl_fuchsia_test::{Invocation, RunListenerProxy},
         fuchsia_runtime::job_default,
-        futures::future::Aborted,
+        futures::future::{AbortHandle, Aborted},
         matches::assert_matches,
         runner::component::{ComponentNamespace, ComponentNamespaceError},
+        std::sync::Weak,
     };
 
     fn create_ns_from_current_ns(
@@ -378,6 +371,8 @@ mod tests {
     }
 
     struct DummyServer {}
+
+    #[async_trait]
     impl SuiteServer for DummyServer {
         fn run(
             self,
@@ -387,6 +382,22 @@ mod tests {
         ) -> AbortHandle {
             let (_, handle) = abortable(async {});
             handle
+        }
+
+        async fn enumerate_tests(
+            &mut self,
+            _test_component: Arc<Component>,
+        ) -> Result<Arc<Vec<TestCaseInfo>>, EnumerationError> {
+            Ok(Arc::new(vec![]))
+        }
+
+        async fn run_tests(
+            &self,
+            _invocations: Vec<Invocation>,
+            _component: Arc<Component>,
+            _run_listener: &RunListenerProxy,
+        ) -> Result<(), RunTestError> {
+            Ok(())
         }
     }
 

@@ -3,64 +3,104 @@
 // found in the LICENSE file.
 
 use {
-    crate::errors::*,
+    async_trait::async_trait,
     fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test::{Invocation, RunListenerProxy},
+    ftest::{Invocation, RunListenerProxy},
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
     futures::future::abortable,
     futures::future::AbortHandle,
     futures::prelude::*,
     log::{debug, error, info},
     regex::Regex,
-    rust_measure_tape_for_case::measure,
     std::{
         str::from_utf8,
         sync::{Arc, Weak},
     },
     test_runners_lib::{
-        elf_component::{Component, SuiteServer},
-        LogError, LogStreamReader, LogWriter,
+        cases::TestCaseInfo,
+        elf::{Component, FidlError, KernelError, SuiteServer},
+        errors::*,
+        launch,
+        logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
     },
-    thiserror::Error,
 };
-
-/// Error encountered while working fidl lib.
-#[derive(Debug, Error)]
-pub enum FidlError {
-    #[error("cannot convert client end to proxy: {:?}", _0)]
-    ClientEndToProxy(fidl::Error),
-
-    #[error("cannot create fidl proxy: {:?}", _0)]
-    CreateProxy(fidl::Error),
-}
-
-/// Error encountered while working with kernel object.
-#[derive(Debug, Error)]
-pub enum KernelError {
-    #[error("job creation failed: {:?}", _0)]
-    CreateJob(zx::Status),
-
-    #[error("error waiting for test process to exit: {:?}", _0)]
-    ProcessExit(zx::Status),
-
-    #[error("error getting info from process: {:?}", _0)]
-    ProcessInfo(zx::Status),
-
-    #[error("error creating socket: {:?}", _0)]
-    CreateSocket(zx::Status),
-
-    #[error("cannot convert zircon socket to async socket: {:?}", _0)]
-    SocketToAsync(zx::Status),
-}
 
 /// Implements `fuchsia.test.Suite` and runs provided test.
 pub struct TestServer {
     /// Cache to store enumerated test names.
-    test_list: Option<Vec<String>>,
+    test_list: Option<Arc<Vec<TestCaseInfo>>>,
 }
 
+#[async_trait]
 impl SuiteServer for TestServer {
+    /// Launches a process that lists the tests without actually running any of them. It then parses
+    /// the output of that process into a vector of strings.
+    ///
+    /// Example output for rust test process:
+    ///
+    /// ```text
+    /// tests::purposefully_failing_test: test
+    /// tests::test_full_path: test
+    /// tests::test_minimal_path: test
+    ///
+    /// 3 tests, 0 benchmarks
+    /// ```
+    ///
+    /// The list of tests is cached.
+    async fn enumerate_tests(
+        &mut self,
+        test_component: Arc<Component>,
+    ) -> Result<Arc<Vec<TestCaseInfo>>, EnumerationError> {
+        // Caching
+        if self.test_list.is_none() {
+            self.test_list = Some(Arc::new(Self::enumerate_tests_internal(test_component).await?));
+        }
+        Ok(self.test_list.as_ref().expect("Unexpected caching error").clone())
+    }
+
+    // TODO(45852): Support disabled tests.
+    async fn run_tests(
+        &self,
+        invocations: Vec<Invocation>,
+        test_component: Arc<Component>,
+        run_listener: &RunListenerProxy,
+    ) -> Result<(), RunTestError> {
+        for invocation in invocations {
+            let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
+            info!("Running test {}", test);
+
+            let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+                .map_err(KernelError::CreateSocket)
+                .unwrap();
+
+            let (case_listener_proxy, listener) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
+                    .map_err(FidlError::CreateProxy)
+                    .unwrap();
+
+            run_listener
+                .on_test_case_started(invocation, log_client, listener)
+                .map_err(RunTestError::SendStart)?;
+            let test_logger = fasync::Socket::from_socket(test_logger)
+                .map_err(KernelError::SocketToAsync)
+                .unwrap();
+            let mut test_logger = LogWriter::new(test_logger);
+
+            match self.run_test(&test, &test_component, &mut test_logger).await {
+                Ok(result) => {
+                    case_listener_proxy.finished(result).map_err(RunTestError::SendFinish)?;
+                }
+                Err(error) => {
+                    error!("failed to run test '{}'. {}", test, error);
+                    case_listener_proxy
+                        .finished(ftest::Result_ { status: Some(ftest::Status::Failed) })
+                        .map_err(RunTestError::SendFinish)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Run this server.
     fn run(
         self,
@@ -125,18 +165,8 @@ impl TestServer {
         // run test.
         // Load bearing to hold job guard.
         let (process, _job, mut stdlogger) =
-            test_runners_lib::launch_process(test_runners_lib::LaunchProcessArgs {
-                bin_path: &test_component.binary,
-                process_name: &test_component.name,
-                job: Some(
-                    test_component.job.create_child_job().map_err(KernelError::CreateJob).unwrap(),
-                ),
-                ns: test_component.ns.clone().map_err(NamespaceError::Clone)?,
-                args: Some(args),
-                name_infos: None,
-                environs: Some(vec![test_invoke]),
-            })
-            .await?;
+            launch_component_process::<RunTestError>(&test_component, args, Some(test_invoke))
+                .await?;
 
         let mut buf: Vec<u8> = vec![];
         let newline = b'\n';
@@ -181,86 +211,16 @@ impl TestServer {
         }
     }
 
-    /// Runs requested tests and sends test events to the given listener.
-    // TODO(45852): Support disabled tests.
-    pub async fn run_tests(
-        &self,
-        invocations: Vec<Invocation>,
+    /// Internal, uncached implementation of `enumerate_tests`.
+    async fn enumerate_tests_internal(
         test_component: Arc<Component>,
-        run_listener: &RunListenerProxy,
-    ) -> Result<(), RunTestError> {
-        for invocation in invocations {
-            let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
-            info!("Running test {}", test);
-
-            let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-                .map_err(KernelError::CreateSocket)
-                .unwrap();
-
-            let (case_listener_proxy, listener) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
-                    .map_err(FidlError::CreateProxy)
-                    .unwrap();
-
-            run_listener
-                .on_test_case_started(invocation, log_client, listener)
-                .map_err(RunTestError::SendStart)?;
-            let test_logger = fasync::Socket::from_socket(test_logger)
-                .map_err(KernelError::SocketToAsync)
-                .unwrap();
-            let mut test_logger = LogWriter::new(test_logger);
-
-            match self.run_test(&test, &test_component, &mut test_logger).await {
-                Ok(result) => {
-                    case_listener_proxy.finished(result).map_err(RunTestError::SendFinish)?;
-                }
-                Err(error) => {
-                    error!("failed to run test '{}'. {}", test, error);
-                    case_listener_proxy
-                        .finished(ftest::Result_ { status: Some(ftest::Status::Failed) })
-                        .map_err(RunTestError::SendFinish)?;
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Lauches a process that lists the tests without actually running any of them. It then parses
-    /// the output of that process into a vector of strings.
-    ///
-    /// Example output for rust test process:
-    ///
-    /// tests::purposefully_failing_test: test
-    /// tests::test_full_path: test
-    /// tests::test_minimal_path: test
-    ///
-    /// 3 tests, 0 benchmarks
-    ///
-    async fn enumerate_tests(
-        &mut self,
-        test_component: Arc<Component>,
-    ) -> Result<Vec<String>, EnumerationError> {
-        if let Some(t) = &self.test_list {
-            return Ok(t.clone());
-        }
-
+    ) -> Result<Vec<TestCaseInfo>, EnumerationError> {
         let mut args = vec!["-Z".to_owned(), "unstable-options".to_owned(), "--list".to_owned()];
         args.extend(test_component.args.clone());
 
         // Load bearing to hold job guard.
         let (process, _job, stdlogger) =
-            test_runners_lib::launch_process(test_runners_lib::LaunchProcessArgs {
-                bin_path: &test_component.binary,
-                process_name: &test_component.name,
-                job: Some(
-                    test_component.job.create_child_job().map_err(KernelError::CreateJob).unwrap(),
-                ),
-                ns: test_component.ns.clone().map_err(NamespaceError::Clone)?,
-                args: Some(args),
-                name_infos: None,
-                environs: None,
-            })
-            .await?;
+            launch_component_process::<EnumerationError>(&test_component, args, None).await?;
 
         // collect stdout in background before waiting for process termination.
         let std_reader = LogStreamReader::new(stdlogger);
@@ -280,82 +240,40 @@ impl TestServer {
             return Err(EnumerationError::ListTest);
         }
 
-        let mut test_names = vec![];
+        let mut tests = vec![];
         let regex = Regex::new(r"^(.*): test$").unwrap();
 
         for test in output.split("\n") {
             if let Some(capture) = regex.captures(test) {
                 if let Some(name) = capture.get(1) {
-                    test_names.push(String::from(name.as_str()));
+                    tests.push(TestCaseInfo { name: String::from(name.as_str()) });
                 }
             }
         }
 
-        self.test_list = Some(test_names.clone());
-
-        return Ok(test_names);
+        return Ok(tests);
     }
+}
 
-    /// Implements `fuchsia.test.Suite` service and runs test.
-    pub async fn serve_test_suite(
-        mut self,
-        mut stream: ftest::SuiteRequestStream,
-        component: Weak<Component>,
-    ) -> Result<(), SuiteServerError> {
-        while let Some(event) = stream.try_next().await.map_err(SuiteServerError::Stream)? {
-            match event {
-                ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
-                    let component = component.upgrade();
-                    if component.is_none() {
-                        // no component object, return, test has ended, channel would be closed shortly.
-                        break;
-                    }
-                    let mut stream = iterator.into_stream().map_err(SuiteServerError::Stream)?;
-                    let tests = self.enumerate_tests(component.unwrap()).await?;
-
-                    fasync::spawn(
-                        async move {
-                            let mut iter =
-                                tests.into_iter().map(|name| ftest::Case { name: Some(name) });
-                            while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
-                                stream.try_next().await?
-                            {
-                                // Paginate cases
-                                let mut bytes_used: usize = 32; // Page overhead of message header + vector
-                                let mut case_count = 0;
-                                for case in iter.clone() {
-                                    bytes_used += measure(&case).num_bytes;
-                                    if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
-                                        break;
-                                    }
-                                    case_count += 1;
-                                }
-                                responder
-                                    .send(&mut iter.by_ref().take(case_count))
-                                    .map_err(SuiteServerError::Response)?;
-                            }
-                            Ok(())
-                        }
-                        .unwrap_or_else(|e: anyhow::Error| error!("error serving tests: {:?}", e)),
-                    );
-                }
-                ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
-                    let component = component.upgrade();
-                    if component.is_none() {
-                        // no component object, return, test has ended, channel would be closed shortly.
-                        break;
-                    }
-
-                    let listener =
-                        listener.into_proxy().map_err(FidlError::ClientEndToProxy).unwrap();
-
-                    self.run_tests(tests, component.unwrap(), &listener).await?;
-                    listener.on_finished().map_err(RunTestError::SendFinishAllTests).unwrap();
-                }
-            }
-        }
-        Ok(())
-    }
+/// Convenience wrapper around [`launch::launch_process`].
+async fn launch_component_process<E>(
+    component: &Component,
+    args: Vec<String>,
+    test_invoke: Option<String>,
+) -> Result<(zx::Process, launch::ScopedJob, LoggerStream), E>
+where
+    E: From<NamespaceError> + From<launch::LaunchError>,
+{
+    Ok(launch::launch_process(launch::LaunchProcessArgs {
+        bin_path: &component.binary,
+        process_name: &component.name,
+        job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
+        ns: component.ns.clone().map_err(NamespaceError::Clone)?,
+        args: Some(args),
+        name_infos: None,
+        environs: test_invoke.map(|test_invoke| vec![test_invoke]),
+    })
+    .await?)
 }
 
 // TODO(45854): Add integration tests.
@@ -371,10 +289,11 @@ mod tests {
             Result_ as TestResult, RunListenerMarker, RunOptions, Status, SuiteMarker,
         },
         fuchsia_runtime::job_default,
+        itertools::Itertools,
         runner::component::ComponentNamespace,
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
-        test_runners_lib::*,
+        test_runners_lib::cases::TestCaseInfo,
         test_runners_test_lib::{collect_listener_event, names_to_invocation, ListenerEvent},
     };
 
@@ -421,20 +340,25 @@ mod tests {
     async fn enumerate_simple_test() -> Result<(), Error> {
         let component = sample_test_component().unwrap();
         let mut server = TestServer::new();
-        let mut expected = vec![
-            "my_tests::sample_test_one",
-            "my_tests::passing_test",
-            "my_tests::failing_test",
-            "my_tests::sample_test_two",
+        let expected: Vec<TestCaseInfo> = vec![
+            TestCaseInfo { name: "my_tests::sample_test_one".to_string() },
+            TestCaseInfo { name: "my_tests::passing_test".to_string() },
+            TestCaseInfo { name: "my_tests::failing_test".to_string() },
+            TestCaseInfo { name: "my_tests::sample_test_two".to_string() },
         ]
         .into_iter()
-        .map(|s| s.to_owned())
-        .collect::<Vec<String>>();
-        let mut actual = server.enumerate_tests(component.clone()).await?;
+        .sorted()
+        .collect();
 
-        expected.sort();
-        actual.sort();
-        assert_eq!(expected, actual);
+        let actual: Vec<TestCaseInfo> = server
+            .enumerate_tests(component.clone())
+            .await?
+            .iter()
+            .sorted()
+            .map(Clone::clone)
+            .collect();
+
+        assert_eq!(&expected, &actual);
 
         Ok(())
     }
@@ -453,7 +377,7 @@ mod tests {
         });
         let mut server = TestServer::new();
 
-        assert_eq!(server.enumerate_tests(component.clone()).await?, Vec::<String>::new());
+        assert_eq!(*server.enumerate_tests(component.clone()).await?, Vec::<TestCaseInfo>::new());
 
         Ok(())
     }
@@ -472,13 +396,18 @@ mod tests {
         });
         let mut server = TestServer::new();
 
-        let mut actual_tests = server.enumerate_tests(component.clone()).await?;
+        let actual_tests: Vec<TestCaseInfo> = server
+            .enumerate_tests(component.clone())
+            .await?
+            .iter()
+            .sorted()
+            .map(Clone::clone)
+            .collect();
 
-        actual_tests.sort();
+        let expected: Vec<TestCaseInfo> =
+            (1..=1000).map(|i| TestCaseInfo { name: format!("test_{}", i) }).sorted().collect();
 
-        let mut expected: Vec<String> = (1..=1000).map(|i| format!("test_{}", i)).collect();
-        expected.sort();
-        assert_eq!(expected, actual_tests);
+        assert_eq!(&expected, &actual_tests);
 
         Ok(())
     }
@@ -503,7 +432,7 @@ mod tests {
             .expect_err("this function have error-ed out due to non-existent file.");
 
         match err {
-            EnumerationError::LaunchTest(LaunchError::LoadInfo(
+            EnumerationError::LaunchTest(launch::LaunchError::LoadInfo(
                 runner::component::LaunchError::LoadingExecutable(_),
             )) => { /*this is the error we expect, do nothing*/ }
             err => panic!("invalid error:{}", err),
