@@ -52,6 +52,9 @@ It's also [forwarded over UDP by netsvc], which is what's printed when you run `
 `fx klog` in a background terminal can be a good way to capture logs if your SSH session fails, or
 as a backup if there are other issues with running `fx log`.
 
+If neither of the above are options, you can also use [`dlog`] from a device shell directly to dump
+the kernel debug logs.
+
 #### Format
 
 The kernel log's dumper emits lines in the format:
@@ -107,6 +110,7 @@ This aggregate log is run through the equivalent of `fx symbolize` before upload
 [`fuchsia.logger.LogListenerSafe`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogListenerSafe
 [printed over the kernel console]: /zircon/kernel/lib/debuglog/debuglog.cc
 [forwarded over UDP by netsvc]: /src/bringup/bin/netsvc/debuglog.cc
+[`dlog`]: /src/diagnostics/dlog/dlog.c
 [botanist]: /tools/botanist/cmd/main.go
 [testrunner]: /tools/testing/testrunner/cmd/main.go
 [Swarming]: https://chromium.googlesource.com/infra/luci/luci-py/+/master/appengine/swarming/doc/README.md
