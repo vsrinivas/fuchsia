@@ -62,19 +62,15 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeSessionEnvironment(std::string session_id);
   void InitializeLedger();
-  void InitializeAgentRunner();
+  void InitializeAgentRunner(std::string session_shell_url);
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
-  void InitializeModular(const fidl::StringPtr& session_shell_url,
-                         fuchsia::modular::AppConfig story_shell_config,
+  void InitializeModular(fuchsia::modular::AppConfig story_shell_config,
                          bool use_session_shell_for_story_shell_factory);
   void InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
                               fuchsia::ui::views::ViewToken view_token);
 
   void RunSessionShell(fuchsia::modular::AppConfig session_shell_config);
-  // This is a termination sequence that may be used with |OnTerminate()|, but also
-  // may be executed to terminate the currently running session shell.
-  void TerminateSessionShell(fit::function<void()> done);
 
   // |fuchsia::modular::SessionShellContext|
   void GetComponentContext(
@@ -114,6 +110,17 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   void ConnectSessionShellToStoryProvider();
 
+  // Connects to service Interface from the session shell. If the shell is not
+  // running, closes the request.
+  template<class Interface>
+  void ConnectToSessionShellService(fidl::InterfaceRequest<Interface> request) {
+      auto services = agent_runner_->GetAgentOutgoingServices(session_shell_url_);
+      if (!services) {
+          return;
+      }
+      services->ConnectToService(std::move(request));
+  }
+
   // The device-local unique identifier for this session. The uniqueness
   // is enforced by basemgr which vends sessions.
   std::string session_id_;
@@ -138,12 +145,12 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
   component::ServiceProviderImpl session_shell_services_;
 
+  std::string session_shell_url_;
   fidl::BindingSet<fuchsia::modular::SessionShellContext> session_shell_context_bindings_;
   fidl::BindingSet<fuchsia::modular::SessionRestartController> session_restart_controller_bindings_;
 
   fuchsia::modular::internal::SessionContextPtr session_context_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
   std::unique_ptr<ViewHost> session_shell_view_host_;
 
   std::unique_ptr<SessionStorage> session_storage_;

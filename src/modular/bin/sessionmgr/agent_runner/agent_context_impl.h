@@ -38,8 +38,7 @@ struct AgentContextInfo {
 // and instantiates one for every instance of an agent running. All requests for
 // this agent (identified for now by the agent's URL) are routed to this
 // class. This class manages all AgentControllers associated with this agent.
-class AgentContextImpl : fuchsia::modular::AgentContext,
-                         fuchsia::modular::AgentController {
+class AgentContextImpl : fuchsia::modular::AgentContext, fuchsia::modular::AgentController {
  public:
   // Starts the agent specified in |agent_config| and provides it:
   //  1) AgentContext service
@@ -49,10 +48,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // to clients through ConnectToService().
   //
   // If |on_crash| is not null, it will be called if the agent unexpectedly terminates.
-  AgentContextImpl(
-      const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
-      inspect::Node agent_node,
-      std::function<void()> on_crash = nullptr);
+  AgentContextImpl(const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
+                   inspect::Node agent_node, std::function<void()> on_crash = nullptr);
 
   // Manages the lifecycle of the already-running component |app_client| as an agent.
   //
@@ -60,10 +57,9 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // to clients through ConnectToService().
   //
   // If |on_crash| is not null, it will be called if the agent unexpectedly terminates.
-  AgentContextImpl(
-    const AgentContextInfo& info, std::string agent_url,
-    std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client, inspect::Node agent_node,
-    std::function<void()> on_crash = nullptr);
+  AgentContextImpl(const AgentContextInfo& info, std::string agent_url,
+                   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client,
+                   inspect::Node agent_node, std::function<void()> on_crash = nullptr);
 
   ~AgentContextImpl() override;
 
@@ -108,6 +104,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
     TERMINATED
   };
   State state() { return state_; }
+
+  component::Services& services() { return app_client_->services(); }
 
  private:
   // |fuchsia::modular::AgentContext|

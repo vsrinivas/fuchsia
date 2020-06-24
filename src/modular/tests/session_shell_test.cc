@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <fuchsia/testing/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/modular/testing/cpp/fake_agent.h>
 
 #include <gmock/gmock.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
@@ -927,6 +929,70 @@ TEST_F(SessionShellTest, StoryPuppetMasterAnnotateNotifiesWatcher) {
 
   RunLoopUntil([&] { return num_on_change_2_calls > 0; });
   EXPECT_EQ(1, num_annotations);
+}
+
+class ServicePublishingSessionShell : public modular_testing::FakeSessionShell {
+ public:
+  explicit ServicePublishingSessionShell(modular_testing::FakeComponent::Args args)
+      : FakeSessionShell(std::move(args)) {}
+
+  static std::unique_ptr<ServicePublishingSessionShell> CreateWithDefaultOptions() {
+    return std::make_unique<ServicePublishingSessionShell>(modular_testing::FakeComponent::Args{
+        .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+        .sandbox_services = FakeSessionShell::GetDefaultSandboxServices()});
+  }
+
+  int fake_service_connect_count() const { return fake_service_connect_count_; }
+
+ protected:
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
+    FakeSessionShell::OnCreate(std::move(startup_info));
+    component_context()->outgoing()->AddPublicService(
+        fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>(
+            [this](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
+              ++fake_service_connect_count_;
+              service_channels_.push_back(request.TakeChannel());
+            }));
+  }
+
+  std::vector<zx::channel> service_channels_;
+  int fake_service_connect_count_ = 0;
+};
+
+// Show that the session shell can publish a service that is accessible to agents
+// via the agent_service_index.
+TEST_F(SessionShellTest, SessionShellCanPublishServicesToAgents) {
+  auto session_shell = ServicePublishingSessionShell::CreateWithDefaultOptions();
+  auto agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
+
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  std::vector<fuchsia::modular::session::AgentServiceIndexEntry> agent_service_index;
+  fuchsia::modular::session::AgentServiceIndexEntry agent_service;
+  agent_service.set_service_name(fuchsia::testing::modular::TestProtocol::Name_);
+  agent_service.set_agent_url(session_shell->url());
+  agent_service_index.emplace_back(std::move(agent_service));
+
+  spec.mutable_sessionmgr_config()->set_agent_service_index(std::move(agent_service_index));
+  spec.mutable_sessionmgr_config()->set_session_agents({agent->url()});
+
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
+  builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
+  auto agent_intercept_options = agent->BuildInterceptOptions();
+  agent_intercept_options.sandbox_services.push_back(
+      fuchsia::testing::modular::TestProtocol::Name_);
+  builder.InterceptComponent(std::move(agent_intercept_options));
+  builder.BuildAndRun(test_harness());
+
+  RunLoopUntil([&] { return session_shell->is_running() && agent->is_running(); });
+
+  auto service_ptr =
+      agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>();
+  service_ptr.set_error_handler(
+      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "channel should not have closed"; });
+
+  RunLoopUntil([&] { return session_shell->fake_service_connect_count() > 0; });
+  EXPECT_EQ(1, session_shell->fake_service_connect_count());
+  service_ptr.set_error_handler(nullptr);
 }
 
 }  // namespace

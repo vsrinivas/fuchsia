@@ -96,6 +96,7 @@ executable("session_shell_test") {
   sources = [ "session_shell_test.cc" ]
 
   deps = [
+    ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",

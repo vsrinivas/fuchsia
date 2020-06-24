@@ -57,6 +57,7 @@ class TestAgent : fuchsia::modular::Agent,
         lifecycle_binding_(this),
         services_ptr_(std::move(services_ptr)) {
     auto outgoing_dir = std::make_unique<vfs::PseudoDir>();
+    outgoing_dir_ptr_ = outgoing_dir.get();
     outgoing_dir->AddEntry(
         fuchsia::modular::Agent::Name_,
         std::make_unique<vfs::Service>([this](zx::channel channel, async_dispatcher_t* /*unused*/) {
@@ -73,6 +74,16 @@ class TestAgent : fuchsia::modular::Agent,
     outgoing_dir_server_->Serve(std::move(directory_request));
     controller_.set_error_handler(
         [this](zx_status_t /*unused*/) { controller_connected_ = false; });
+  }
+
+  template <class Interface>
+  void AddOutgoingService(fidl::InterfaceRequestHandler<Interface> handler) {
+    outgoing_dir_ptr_->AddEntry(
+        Interface::Name_,
+        std::make_unique<vfs::Service>(
+            [handler = std::move(handler)](zx::channel channel, async_dispatcher_t* /*unused*/) {
+              handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+            }));
   }
 
   void KillApplication() { controller_.Unbind(); }
@@ -115,6 +126,7 @@ class TestAgent : fuchsia::modular::Agent,
   // `services_ptr_`) so that it is guaranteed to be destroyed *before* `agent_binding_` to protect
   // access to `services_ptr_`. See fxb/49304.
   std::unique_ptr<modular::PseudoDirServer> outgoing_dir_server_;
+  vfs::PseudoDir* outgoing_dir_ptr_;
 
   // The number of times Connect() has been called.
   int connect_call_count_ = 0;
@@ -484,6 +496,44 @@ TEST_F(AgentRunnerTest, AddRunningAgent_CanBeCriticalAgent) {
   test_agent->KillApplication();
 
   RunLoopUntil([&is_restart_called] { return is_restart_called; });
+}
+
+// Tests that GetAgentOutgoingServices() return null for a non-existent agent, and returns
+// a pointer to the component::Services for the agent component when given a valid running
+// agent.
+TEST_F(AgentRunnerTest, GetAgentOutgoingServices) {
+  // Register to intercept the agent launch.
+  std::unique_ptr<TestAgent> test_agent;
+  int service_connect_requests = 0;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&](fuchsia::sys::LaunchInfo launch_info,
+                         fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent =
+            std::make_unique<TestAgent>(std::move(launch_info.directory_request), std::move(ctrl));
+        test_agent->AddOutgoingService(
+            fidl::InterfaceRequestHandler<fuchsia::testing::modular::TestProtocol>(
+                [&](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
+                  ++service_connect_requests;
+                }));
+      });
+
+  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_, kTestAgentUrl}});
+
+  auto agent_runner = GetOrCreateAgentRunner();
+  EXPECT_EQ(nullptr, agent_runner->GetAgentOutgoingServices("noexist"));
+
+  fuchsia::testing::modular::TestProtocolPtr service_ptr1, service_ptr2;
+
+  fuchsia::modular::AgentServiceRequest request;
+  request.set_service_name(fuchsia::testing::modular::TestProtocol::Name_);
+  request.set_channel(service_ptr1.NewRequest().TakeChannel());
+  agent_runner->ConnectToAgentService("requestor_url", std::move(request));
+
+  auto agent_services = agent_runner->GetAgentOutgoingServices(kTestAgentUrl);
+  ASSERT_NE(nullptr, agent_services);
+  agent_services->ConnectToService(service_ptr2.NewRequest());
+
+  RunLoopUntil([&] { return service_connect_requests == 2; });
 }
 
 // Tests that AgentRunner terminates an agent component on teardown. In this case, the agent does

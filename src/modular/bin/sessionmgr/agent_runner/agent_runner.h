@@ -79,6 +79,10 @@ class AgentRunner {
   void ConnectToAgentService(const std::string& requestor_url,
                              fuchsia::modular::AgentServiceRequest request);
 
+  // Return a pointer to the outgoing Services from a running agent. Pointer should NOT
+  // be used outside the scope of the calling frame.
+  component::Services* GetAgentOutgoingServices(std::string agent_url);
+
   // Removes an agent. Called by AgentContextImpl when it is done.
   // NOTE: This should NOT take a const reference, since |agent_url| will die
   // the moment we delete |AgentContextImpl|.

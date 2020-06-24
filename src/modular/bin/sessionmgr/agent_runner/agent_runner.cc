@@ -270,6 +270,15 @@ void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
                    request.service_name(), std::move(*request.mutable_channel()));
 }
 
+component::Services* AgentRunner::GetAgentOutgoingServices(std::string agent_url) {
+  auto agent_it = running_agents_.find(agent_url);
+  if (agent_it == running_agents_.end()) {
+    return nullptr;
+  }
+
+  return &agent_it->second->services();
+}
+
 bool AgentRunner::AgentInServiceIndex(const std::string& agent_url) const {
   auto it = std::find_if(agent_service_index_.begin(), agent_service_index_.end(),
                          [agent_url](const auto& entry) { return entry.second == agent_url; });
