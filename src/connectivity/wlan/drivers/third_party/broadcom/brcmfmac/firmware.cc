@@ -112,27 +112,13 @@ zx_status_t LoadBinaryFromFile(Device* device, std::string_view filename, std::s
 
 }  // namespace
 
-zx_status_t GetFirmwareName(brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,
-                            std::string_view* name_out) {
+zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
+                              uint32_t chiprev, std::string* binary_out) {
   const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chipid, chiprev);
   if (firmware_mapping == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
-  *name_out = std::string_view(firmware_mapping->firmware_filename);
-  return ZX_OK;
-}
-
-zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
-                              uint32_t chiprev, std::string* binary_out) {
-  zx_status_t status = ZX_OK;
-
-  std::string_view firmware_name;
-  if ((status = GetFirmwareName(bus_type, chipid, chiprev, &firmware_name)) != ZX_OK) {
-    return status;
-  }
-
-  return LoadBinaryFromFile(device, firmware_name, binary_out);
+  return LoadBinaryFromFile(device, firmware_mapping->firmware_filename, binary_out);
 }
 
 zx_status_t GetClmBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,

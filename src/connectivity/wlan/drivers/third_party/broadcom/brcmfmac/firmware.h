@@ -25,9 +25,6 @@ namespace brcmfmac {
 
 class Device;
 
-zx_status_t GetFirmwareName(brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,
-                            std::string_view* name_out);
-
 // Get the firmware binary for the given bus and chip, as a data string.
 zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
                               uint32_t chiprev, std::string* binary_out);

@@ -17,8 +17,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_
 
-#include <string>
-
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/sdio.h>
@@ -226,8 +224,6 @@ struct brcmf_sdio_dev {
   bool oob_irq_requested;
   bool sd_irq_requested;
   bool irq_wake; /* irq wake enable flags */
-  std::string fw_name;
-  std::string nvram_name;
   bool wowl_enabled;
   enum brcmf_sdiod_state state;
   zx::vmo dma_buffer; /* DMA buffer used for SDIO transfers */

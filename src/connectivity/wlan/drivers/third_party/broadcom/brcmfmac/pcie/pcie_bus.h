@@ -47,14 +47,6 @@ class PcieBus {
  private:
   // Bus functionality implemnentation.
   static brcmf_bus_type GetBusType();
-  void Stop();
-  zx_status_t TxData(brcmf_netbuf* netbuf);
-  zx_status_t TxCtl(unsigned char* msg, uint len);
-  zx_status_t RxCtl(unsigned char* msg, uint len, int* rxlen_out);
-  void WowlConfig(bool enabled);
-  size_t GetRamsize();
-  zx_status_t GetMemdump(void* data, size_t len);
-  zx_status_t GetFwname(uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size);
   zx_status_t GetBootloaderMacaddr(uint8_t* mac_addr);
   zx_status_t GetWifiMetadata(void* config, size_t exp_size, size_t* actual);
 

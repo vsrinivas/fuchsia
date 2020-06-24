@@ -2425,13 +2425,6 @@ static struct pktq* brcmf_sdio_bus_gettxq(brcmf_bus* bus_if) {
   return &bus->txq;
 }
 
-static void brcmf_sdio_wowl_config(brcmf_bus* bus_if, bool enabled) {
-  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-
-  BRCMF_DBG(SDIO, "Configuring WOWL, enabled=%d", enabled);
-  sdiodev->wowl_enabled = enabled;
-}
-
 static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int prec) {
   struct brcmf_netbuf* p;
   int eprec = -1; /* precedence to evict from */
@@ -3011,44 +3004,6 @@ done:
   return err;
 }
 
-static size_t brcmf_sdio_bus_get_ramsize(brcmf_bus* bus_if) {
-  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-  struct brcmf_sdio* bus = sdiodev->bus;
-
-  return bus->ci->ramsize - bus->ci->srsize;
-}
-
-static zx_status_t brcmf_sdio_bus_get_memdump(brcmf_bus* bus_if, void* data, size_t mem_size) {
-  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-  struct brcmf_sdio* bus = sdiodev->bus;
-  zx_status_t err;
-  int address;
-  size_t offset;  // clang needs this unsigned
-  int len;
-
-  BRCMF_DBG(INFO, "dump at 0x%08x: size=%zu", bus->ci->rambase, mem_size);
-
-  address = bus->ci->rambase;
-  offset = 0;
-  err = ZX_OK;
-  sdio_claim_host(sdiodev->func1);
-  while (offset < mem_size) {
-    len = ((offset + MEMBLOCK) < mem_size) ? MEMBLOCK : mem_size - offset;
-    err = brcmf_sdiod_ramrw(sdiodev, false, address, data, len);
-    if (err != ZX_OK) {
-      BRCMF_ERR("error %d on reading %d membytes at 0x%08x", err, len, address);
-      goto done;
-    }
-    data = static_cast<char*>(data) + len;
-    offset += len;
-    address += len;
-  }
-
-done:
-  sdio_release_host(sdiodev->func1);
-  return err;
-}
-
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus) {
   if (!bus->dpc_triggered.load()) {
     bus->dpc_triggered.store(true);
@@ -3598,26 +3553,6 @@ static void brcmf_sdio_watchdog(struct brcmf_sdio* bus) {
   bus->sdiodev->drvr->irq_callback_lock.unlock();
 }
 
-static zx_status_t brcmf_sdio_get_fwname(brcmf_bus* bus_if, uint32_t chip, uint32_t chiprev,
-                                         uint8_t* fw_name, size_t* fw_name_size) {
-  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-  int ret = ZX_OK;
-
-  if (!sdiodev->fw_name.empty()) {
-    strlcpy((char*)fw_name, sdiodev->fw_name.c_str(), *fw_name_size);
-    *fw_name_size = sdiodev->fw_name.size() + 1;
-  } else {
-    std::string_view firmware_name;
-    ret = ::wlan::brcmfmac::GetFirmwareName(brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, chip, chiprev,
-                                            &firmware_name);
-    if (ret == ZX_OK) {
-      strlcpy(reinterpret_cast<char*>(fw_name), firmware_name.data(), *fw_name_size);
-      *fw_name_size = firmware_name.size() + 1;
-    }
-  }
-  return ret;
-}
-
 static zx_status_t brcmf_get_wifi_metadata(brcmf_bus* bus_if, void* data, size_t exp_size,
                                            size_t* actual) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
@@ -3632,18 +3567,14 @@ static zx_status_t brcmf_sdio_get_bootloader_macaddr(brcmf_bus* bus_if, uint8_t*
 
 static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .get_bus_type = []() { return BRCMF_BUS_TYPE_SDIO; },
+    .get_bootloader_macaddr = brcmf_sdio_get_bootloader_macaddr,
+    .get_wifi_metadata = brcmf_get_wifi_metadata,
     .preinit = brcmf_sdio_bus_preinit,
     .stop = brcmf_sdio_bus_stop,
     .txdata = brcmf_sdio_bus_txdata,
     .txctl = brcmf_sdio_bus_txctl,
     .rxctl = brcmf_sdio_bus_rxctl,
     .gettxq = brcmf_sdio_bus_gettxq,
-    .wowl_config = brcmf_sdio_wowl_config,
-    .get_ramsize = brcmf_sdio_bus_get_ramsize,
-    .get_memdump = brcmf_sdio_bus_get_memdump,
-    .get_fwname = brcmf_sdio_get_fwname,
-    .get_bootloader_macaddr = brcmf_sdio_get_bootloader_macaddr,
-    .get_wifi_metadata = brcmf_get_wifi_metadata,
 };
 
 zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
@@ -3791,7 +3722,6 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   int thread_result;
   struct brcmf_sdio* bus;
   WorkQueue* wq;
-  std::string_view firmware_name;
 
   BRCMF_DBG(TRACE, "Enter");
   /* Allocate private bus interface state */
@@ -3910,12 +3840,9 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->sr_enabled = false;
 
   BRCMF_DBG(INFO, "completed!!");
-  ret = ::wlan::brcmfmac::GetFirmwareName(brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->ci->chip,
-                                          bus->ci->chiprev, &firmware_name);
   if (ret != ZX_OK) {
     goto fail;
   }
-  sdiodev->fw_name = firmware_name;
 
   return bus;
 

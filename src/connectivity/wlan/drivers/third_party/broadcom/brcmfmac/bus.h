@@ -48,21 +48,6 @@ struct brcmf_bus_dcmd {
 /**
  * struct brcmf_bus_ops - bus callback operations.
  *
- * @preinit: execute bus/device specific dongle init commands (optional).
- * @init: prepare for communication with dongle.
- * @stop: clear pending frames, disable data flow.
- * @txdata: send a data frame to the dongle. When the data
- *  has been transferred, the common driver must be
- *  notified using brcmf_txcomplete(). The common
- *  driver calls this function with interrupts
- *  disabled.
- * @txctl: transmit a control request message to dongle.
- * @rxctl: receive a control response message from dongle.
- * @gettxq: obtain a reference of bus transmit queue (optional).
- * @wowl_config: specify if dongle is configured for wowl when going to suspend
- * @get_ramsize: obtain size of device memory.
- * @get_memdump: obtain device memory dump in provided buffer.
- * @get_fwname: obtain firmware name.
  * @get_bootloader_macaddr: obtain mac address from bootloader, if supported.
  *
  * This structure provides an abstract interface towards the
@@ -75,19 +60,16 @@ struct brcmf_bus;
 
 struct brcmf_bus_ops {
   enum brcmf_bus_type (*get_bus_type)();
+  zx_status_t (*get_bootloader_macaddr)(brcmf_bus* bus, uint8_t* mac_addr);
+  zx_status_t (*get_wifi_metadata)(brcmf_bus* bus, void* config, size_t exp_size, size_t* actual);
+
+  // Deprecated entry points.
   zx_status_t (*preinit)(brcmf_bus* bus);
   void (*stop)(brcmf_bus* bus);
   zx_status_t (*txdata)(brcmf_bus* bus, struct brcmf_netbuf* netbuf);
   zx_status_t (*txctl)(brcmf_bus* bus, unsigned char* msg, uint len);
   zx_status_t (*rxctl)(brcmf_bus* bus, unsigned char* msg, uint len, int* rxlen_out);
   struct pktq* (*gettxq)(brcmf_bus* bus);
-  void (*wowl_config)(brcmf_bus* bus, bool enabled);
-  size_t (*get_ramsize)(brcmf_bus* bus);
-  zx_status_t (*get_memdump)(brcmf_bus* bus, void* data, size_t len);
-  zx_status_t (*get_fwname)(brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name,
-                            size_t* fw_name_size);
-  zx_status_t (*get_bootloader_macaddr)(brcmf_bus* bus, uint8_t* mac_addr);
-  zx_status_t (*get_wifi_metadata)(brcmf_bus* bus, void* config, size_t exp_size, size_t* actual);
   void (*set_sim_timer)(brcmf_bus* bus, std::unique_ptr<std::function<void()>> fn,
                         zx_duration_t delay, uint64_t* id_out);
   void (*cancel_sim_timer)(brcmf_bus* bus, uint64_t id);
@@ -174,33 +156,6 @@ static inline zx_status_t brcmf_bus_gettxq(struct brcmf_bus* bus, struct pktq** 
       return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
-}
-
-static inline void brcmf_bus_wowl_config(struct brcmf_bus* bus, bool enabled) {
-  if (bus->ops->wowl_config) {
-    bus->ops->wowl_config(bus, enabled);
-  }
-}
-
-static inline size_t brcmf_bus_get_ramsize(struct brcmf_bus* bus) {
-  if (!bus->ops->get_ramsize) {
-    return 0;
-  }
-
-  return bus->ops->get_ramsize(bus);
-}
-
-static inline zx_status_t brcmf_bus_get_memdump(struct brcmf_bus* bus, void* data, size_t len) {
-  if (!bus->ops->get_memdump) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  return bus->ops->get_memdump(bus, data, len);
-}
-
-static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip, uint chiprev,
-                                               unsigned char* fw_name, size_t* fw_name_size) {
-  return bus->ops->get_fwname(bus, chip, chiprev, fw_name, fw_name_size);
 }
 
 static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus,

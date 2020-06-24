@@ -482,26 +482,6 @@ struct pktq* SimFirmware::BusGetTxQueue() {
   return nullptr;
 }
 
-void SimFirmware::BusWowlConfig(bool enabled) { ZX_PANIC("%s unimplemented", __FUNCTION__); }
-
-size_t SimFirmware::BusGetRamsize() {
-  ZX_PANIC("%s unimplemented", __FUNCTION__);
-  return 0;
-}
-
-zx_status_t SimFirmware::BusGetMemdump(void* data, size_t len) {
-  ZX_PANIC("%s unimplemented", __FUNCTION__);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t SimFirmware::BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name,
-                                      size_t* fw_name_size) {
-  constexpr char kFirmwareName[] = "sim-fake-fw.bin";
-  strlcpy((char*)fw_name, kFirmwareName, *fw_name_size);
-  *fw_name_size = sizeof(kFirmwareName);
-  return ZX_OK;
-}
-
 zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
   // Rather than simulate a fixed MAC address, return NOT_SUPPORTED, which will force
   // us to use a randomly-generated value

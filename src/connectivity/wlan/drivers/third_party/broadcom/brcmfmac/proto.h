@@ -28,24 +28,31 @@ struct brcmf_netbuf_reorder_data {
 };
 
 struct brcmf_proto {
-  zx_status_t (*hdrpull)(struct brcmf_pub* drvr, bool do_fws, struct brcmf_netbuf* netbuf,
-                         struct brcmf_if** ifp);
+  void (*add_iface)(struct brcmf_pub* drvr, int ifidx);
+  void (*del_iface)(struct brcmf_pub* drvr, int ifidx);
+  void (*reset_iface)(struct brcmf_pub* drvr, int ifidx);
+  void (*configure_addr_mode)(struct brcmf_pub* drvr, int ifidx, enum proto_addr_mode addr_mode);
   zx_status_t (*query_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
                             int32_t* fwerr);
   zx_status_t (*set_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
                           int32_t* fwerr);
   zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx,
                                std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
+  void* pd;
+
+  // Deprecated entry points.
+  zx_status_t (*hdrpull)(struct brcmf_pub* drvr, bool do_fws, struct brcmf_netbuf* netbuf,
+                         struct brcmf_if** ifp);
   int (*txdata)(struct brcmf_pub* drvr, int ifidx, uint8_t offset, struct brcmf_netbuf* netbuf);
-  void (*configure_addr_mode)(struct brcmf_pub* drvr, int ifidx, enum proto_addr_mode addr_mode);
-  void (*delete_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
-  void (*add_tdls_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
   void (*rxreorder)(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
   void (*add_if)(struct brcmf_if* ifp);
   void (*del_if)(struct brcmf_if* ifp);
   void (*reset_if)(struct brcmf_if* ifp);
   zx_status_t (*init_done)(struct brcmf_pub* drvr);
-  void* pd;
+
+  // Unimplemented entry points.
+  void (*delete_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
+  void (*add_tdls_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
 };
 
 static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws,
@@ -104,6 +111,9 @@ static inline void brcmf_proto_rxreorder(struct brcmf_if* ifp, struct brcmf_netb
 }
 
 static inline void brcmf_proto_add_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
+  if (drvr->proto->add_iface) {
+    return drvr->proto->add_iface(drvr, ifp->ifidx);
+  }
   if (!drvr->proto->add_if) {
     return;
   }
@@ -111,6 +121,9 @@ static inline void brcmf_proto_add_if(struct brcmf_pub* drvr, struct brcmf_if* i
 }
 
 static inline void brcmf_proto_del_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
+  if (drvr->proto->del_iface) {
+    return drvr->proto->del_iface(drvr, ifp->ifidx);
+  }
   if (!drvr->proto->del_if) {
     return;
   }
@@ -118,6 +131,9 @@ static inline void brcmf_proto_del_if(struct brcmf_pub* drvr, struct brcmf_if* i
 }
 
 static inline void brcmf_proto_reset_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
+  if (drvr->proto->reset_iface) {
+    return drvr->proto->reset_iface(drvr, ifp->ifidx);
+  }
   if (!drvr->proto->reset_if) {
     return;
   }

@@ -33,22 +33,6 @@
 #define BUS_OP(bus) bus->bus_priv.sim->sim_fw
 static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
     .get_bus_type = []() { return BRCMF_BUS_TYPE_SIM; },
-    .preinit = [](brcmf_bus* bus) { return BUS_OP(bus)->BusPreinit(); },
-    .stop = [](brcmf_bus* bus) { return BUS_OP(bus)->BusStop(); },
-    .txdata = [](brcmf_bus* bus, brcmf_netbuf* netbuf) { return BUS_OP(bus)->BusTxData(netbuf); },
-    .txctl = [](brcmf_bus* bus, unsigned char* msg,
-                uint len) { return BUS_OP(bus)->BusTxCtl(msg, len); },
-    .rxctl = [](brcmf_bus* bus, unsigned char* msg, uint len,
-                int* rxlen_out) { return BUS_OP(bus)->BusRxCtl(msg, len, rxlen_out); },
-    .gettxq = [](brcmf_bus* bus) { return BUS_OP(bus)->BusGetTxQueue(); },
-    .wowl_config = [](brcmf_bus* bus, bool enabled) { return BUS_OP(bus)->BusWowlConfig(enabled); },
-    .get_ramsize = [](brcmf_bus* bus) { return BUS_OP(bus)->BusGetRamsize(); },
-    .get_memdump = [](brcmf_bus* bus, void* data,
-                      size_t len) { return BUS_OP(bus)->BusGetMemdump(data, len); },
-    .get_fwname =
-        [](brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size) {
-          return BUS_OP(bus)->BusGetFwName(chip, chiprev, fw_name, fw_name_size);
-        },
     .get_bootloader_macaddr =
         [](brcmf_bus* bus, uint8_t* mac_addr) {
           return BUS_OP(bus)->BusGetBootloaderMacAddr(mac_addr);
@@ -72,6 +56,14 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
           *actual = sizeof(wifi_config);
           return ZX_OK;
         },
+    .preinit = [](brcmf_bus* bus) { return BUS_OP(bus)->BusPreinit(); },
+    .stop = [](brcmf_bus* bus) { return BUS_OP(bus)->BusStop(); },
+    .txdata = [](brcmf_bus* bus, brcmf_netbuf* netbuf) { return BUS_OP(bus)->BusTxData(netbuf); },
+    .txctl = [](brcmf_bus* bus, unsigned char* msg,
+                uint len) { return BUS_OP(bus)->BusTxCtl(msg, len); },
+    .rxctl = [](brcmf_bus* bus, unsigned char* msg, uint len,
+                int* rxlen_out) { return BUS_OP(bus)->BusRxCtl(msg, len, rxlen_out); },
+    .gettxq = [](brcmf_bus* bus) { return BUS_OP(bus)->BusGetTxQueue(); },
     .set_sim_timer =
         [](brcmf_bus* bus, std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
            uint64_t* id_out) { BUS_OP(bus)->BusSetTimer(std::move(fn), delay, id_out); },

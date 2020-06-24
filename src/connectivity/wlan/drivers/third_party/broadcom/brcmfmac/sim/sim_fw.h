@@ -208,10 +208,6 @@ class SimFirmware {
   zx_status_t BusTxData(struct brcmf_netbuf* netbuf);
   zx_status_t BusRxCtl(unsigned char* msg, uint len, int* rxlen_out);
   struct pktq* BusGetTxQueue();
-  void BusWowlConfig(bool enabled);
-  size_t BusGetRamsize();
-  zx_status_t BusGetMemdump(void* data, size_t len);
-  zx_status_t BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size);
   zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
   void BusSetTimer(std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
                    uint64_t* id_out);
