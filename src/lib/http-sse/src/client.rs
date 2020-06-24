@@ -6,7 +6,6 @@ use {
     crate::{Event, EventSource},
     fuchsia_hyper::HttpsClient,
     futures::{
-        compat::{Compat01As03, Future01CompatExt, Stream01CompatExt},
         stream::Stream,
         task::{Context, Poll},
     },
@@ -19,7 +18,7 @@ use {
 #[derive(Debug)]
 pub struct Client {
     source: EventSource,
-    chunks: Compat01As03<Body>,
+    chunks: Body,
     events: std::vec::IntoIter<Event>,
 }
 
@@ -33,17 +32,14 @@ impl Client {
             .header("accept", "text/event-stream")
             .body(Body::empty())
             .map_err(|e| ClientConnectError::CreateRequest(e))?;
-        let response = https_client
-            .request(request)
-            .compat()
-            .await
-            .map_err(|e| ClientConnectError::MakeRequest(e))?;
+        let response =
+            https_client.request(request).await.map_err(|e| ClientConnectError::MakeRequest(e))?;
         if response.status() != StatusCode::OK {
             return Err(ClientConnectError::HttpStatus(response.status()));
         }
         Ok(Self {
             source: EventSource::new(),
-            chunks: response.into_body().compat(),
+            chunks: response.into_body(),
             events: vec![].into_iter(),
         })
     }
@@ -97,17 +93,22 @@ pub enum ClientPollError {
 mod tests {
     use {
         super::*,
-        fuchsia_async::{self as fasync, net::TcpListener, EHandle},
+        fuchsia_async::{self as fasync, net::TcpListener},
         fuchsia_hyper::new_https_client,
         futures::{
-            future::{Future, FutureExt, TryFutureExt},
-            io::AsyncReadExt,
+            future::{Future, TryFutureExt},
             stream::{StreamExt, TryStreamExt},
-            task::SpawnExt,
         },
-        hyper::{server::Server, service::service_fn, Response},
+        hyper::{
+            server::{accept::from_stream, Server},
+            service::{make_service_fn, service_fn},
+            Response,
+        },
         matches::assert_matches,
-        std::net::{Ipv4Addr, SocketAddr},
+        std::{
+            convert::Infallible,
+            net::{Ipv4Addr, SocketAddr},
+        },
     };
 
     fn spawn_server<F>(handle_req: fn(Request<Body>) -> F) -> String
@@ -119,14 +120,17 @@ mod tests {
                 TcpListener::bind(&SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)).unwrap();
             let local_addr = listener.local_addr().unwrap();
             (
-                listener.accept_stream().map_ok(|(conn, _addr)| conn.compat()),
+                listener
+                    .accept_stream()
+                    .map_ok(|(conn, _addr)| fuchsia_hyper::TcpStream { stream: conn }),
                 format!("http://{}", local_addr),
             )
         };
-        let server = Server::builder(connections.compat())
-            .executor(EHandle::local().compat())
-            .serve(move || service_fn(move |req| handle_req(req).boxed().compat()))
-            .compat()
+        let server = Server::builder(from_stream(connections))
+            .executor(fuchsia_hyper::Executor)
+            .serve(make_service_fn(move |_socket: &fuchsia_hyper::TcpStream| async move {
+                Ok::<_, Infallible>(service_fn(handle_req))
+            }))
             .unwrap_or_else(|e| panic!("mock sse server failed: {:?}", e));
         fasync::spawn(server);
         url
@@ -219,13 +223,10 @@ mod tests {
                     &format!("{}", BODY_SIZE_LARGE_ENOUGH_TO_TRIGGER_DELAYED_STREAMING),
                 )
                 .header("content-type", "text/event-stream")
-                .body(Body::wrap_stream(
-                    futures::stream::iter(vec![
-                        Ok(vec![b' '; BODY_SIZE_LARGE_ENOUGH_TO_TRIGGER_DELAYED_STREAMING - 1]),
-                        Err("error-text".to_string()),
-                    ])
-                    .compat(),
-                ))
+                .body(Body::wrap_stream(futures::stream::iter(vec![
+                    Ok(vec![b' '; BODY_SIZE_LARGE_ENOUGH_TO_TRIGGER_DELAYED_STREAMING - 1]),
+                    Err("error-text".to_string()),
+                ])))
                 .unwrap())
         }
         let url = spawn_server(handle_req);

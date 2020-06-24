@@ -49,6 +49,7 @@ rustc_library("fuchsia-pkg-testing") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:tokio",
     "//third_party/rust_crates:tokio-rustls",
     "//third_party/rust_crates:walkdir",
   ]

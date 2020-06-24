@@ -2,22 +2,21 @@
 //!
 //! First parameter is the mandatory port to use.
 //! Certificate and private key are hardcoded to sample files.
-#![deny(warnings)]
-
-extern crate futures;
-extern crate hyper;
-extern crate rustls;
-extern crate tokio;
-extern crate tokio_rustls;
-extern crate tokio_tcp;
-
-use futures::future;
-use futures::Stream;
-use hyper::rt::Future;
-use hyper::service::service_fn;
+//! hyper will automatically use HTTP/2 if a client starts talking HTTP/2,
+//! otherwise HTTP/1.1 will be used.
+use core::task::{Context, Poll};
+use futures_util::{
+    future::TryFutureExt,
+    stream::{Stream, StreamExt, TryStreamExt},
+};
+use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode};
 use rustls::internal::pemfile;
+use std::pin::Pin;
+use std::vec::Vec;
 use std::{env, fs, io, sync};
+use tokio::net::{TcpListener, TcpStream};
+use tokio_rustls::server::TlsStream;
 use tokio_rustls::TlsAcceptor;
 
 fn main() {
@@ -32,15 +31,14 @@ fn error(err: String) -> io::Error {
     io::Error::new(io::ErrorKind::Other, err)
 }
 
-fn run_server() -> io::Result<()> {
+#[tokio::main]
+async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // First parameter is port number (optional, defaults to 1337)
     let port = match env::args().nth(1) {
         Some(ref p) => p.to_owned(),
         None => "1337".to_owned(),
     };
-    let addr = format!("127.0.0.1:{}", port)
-        .parse()
-        .map_err(|e| error(format!("{}", e)))?;
+    let addr = format!("127.0.0.1:{}", port);
 
     // Build TLS configuration.
     let tls_cfg = {
@@ -53,42 +51,59 @@ fn run_server() -> io::Result<()> {
         // Select a certificate to use.
         cfg.set_single_cert(certs, key)
             .map_err(|e| error(format!("{}", e)))?;
+        // Configure ALPN to accept HTTP/2, HTTP/1.1 in that order.
+        cfg.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
         sync::Arc::new(cfg)
     };
 
     // Create a TCP listener via tokio.
-    let tcp = tokio_tcp::TcpListener::bind(&addr)?;
+    let mut tcp = TcpListener::bind(&addr).await?;
     let tls_acceptor = TlsAcceptor::from(tls_cfg);
     // Prepare a long-running future stream to accept and serve cients.
-    let tls = tcp
+    let incoming_tls_stream = tcp
         .incoming()
-        .and_then(move |s| tls_acceptor.accept(s))
-        .then(|r| match r {
-            Ok(x) => Ok::<_, io::Error>(Some(x)),
-            Err(_e) => {
+        .map_err(|e| error(format!("Incoming failed: {:?}", e)))
+        .and_then(move |s| {
+            tls_acceptor.accept(s).map_err(|e| {
                 println!("[!] Voluntary server halt due to client-connection error...");
                 // Errors could be handled here, instead of server aborting.
                 // Ok(None)
-                Err(_e)
-            }
+                error(format!("TLS Error: {:?}", e))
+            })
         })
-        .filter_map(|x| x);
-    // Build a hyper server, which serves our custom echo service.
-    let fut = Server::builder(tls).serve(|| service_fn(echo));
+        .boxed();
+
+    let service = make_service_fn(|_| async { Ok::<_, io::Error>(service_fn(echo)) });
+    let server = Server::builder(HyperAcceptor {
+        acceptor: incoming_tls_stream,
+    })
+    .serve(service);
 
     // Run the future, keep going until an error occurs.
     println!("Starting to serve on https://{}.", addr);
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on_all(fut).map_err(|e| error(format!("{}", e)))?;
+    server.await?;
     Ok(())
 }
 
-// Future result: either a hyper body or an error.
-type ResponseFuture = Box<dyn Future<Item = Response<Body>, Error = hyper::Error> + Send>;
+struct HyperAcceptor<'a> {
+    acceptor: Pin<Box<dyn Stream<Item = Result<TlsStream<TcpStream>, io::Error>> + 'a>>,
+}
+
+impl hyper::server::accept::Accept for HyperAcceptor<'_> {
+    type Conn = TlsStream<TcpStream>;
+    type Error = io::Error;
+
+    fn poll_accept(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context,
+    ) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
+        Pin::new(&mut self.acceptor).poll_next(cx)
+    }
+}
 
 // Custom echo service, handling two different routes and a
 // catch-all 404 responder.
-fn echo(req: Request<Body>) -> ResponseFuture {
+async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     let mut response = Response::new(Body::empty());
     match (req.method(), req.uri().path()) {
         // Help route.
@@ -104,7 +119,7 @@ fn echo(req: Request<Body>) -> ResponseFuture {
             *response.status_mut() = StatusCode::NOT_FOUND;
         }
     };
-    Box::new(future::ok(response))
+    Ok(response)
 }
 
 // Load public certificate from file.

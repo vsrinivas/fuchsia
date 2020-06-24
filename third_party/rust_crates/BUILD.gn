@@ -172,17 +172,17 @@ if (is_fuchsia) {
 }
 if (is_fuchsia) {
   group("http") {
-    deps = [ ":http-v0_1_21" ]
+    deps = [ ":http-v0_2_1" ]
   }
 }
 if (is_fuchsia) {
   group("hyper") {
-    deps = [ ":hyper-v0_12_35" ]
+    deps = [ ":hyper-v0_13_6" ]
   }
 }
 if (is_fuchsia) {
   group("hyper-rustls") {
-    deps = [ ":hyper-rustls-v0_17_1" ]
+    deps = [ ":hyper-rustls-v0_20_0" ]
   }
 }
 if (is_fuchsia) {
@@ -415,7 +415,7 @@ group("rental") {
 }
 
 group("ring") {
-  deps = [ ":ring-v0_16_9" ]
+  deps = [ ":ring-v0_16_12" ]
 }
 
 group("rouille") {
@@ -477,7 +477,7 @@ group("rustc-hash") {
 
 if (is_fuchsia) {
   group("rustls") {
-    deps = [ ":rustls-v0_16_0" ]
+    deps = [ ":rustls-v0_17_0" ]
   }
 }
 if (is_fuchsia) {
@@ -600,14 +600,14 @@ group("timebomb") {
   deps = [ ":timebomb-v0_1_2" ]
 }
 
-if (!is_fuchsia) {
+if (is_fuchsia) {
   group("tokio") {
-    deps = [ ":tokio-v0_1_22" ]
+    deps = [ ":tokio-v0_2_21" ]
   }
 }
 if (is_fuchsia) {
   group("tokio-rustls") {
-    deps = [ ":tokio-rustls-v0_10_2" ]
+    deps = [ ":tokio-rustls-v0_13_1" ]
   }
 }
 group("toml") {
@@ -1235,25 +1235,26 @@ rust_library("backtrace-sys-v0_1_32") {
   ]
 }
 
-rust_library("base64-v0_10_1") {
+rust_library("base64-v0_11_0") {
   crate_name = "base64"
   crate_root = "//third_party/rust_crates/vendor/base64/src/lib.rs"
-  output_name = "base64-97cd7606f23ece87"
+  output_name = "base64-ba233daa82312979"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":byteorder-v1_3_1" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=97cd7606f23ece87",
-    "-Cextra-filename=-97cd7606f23ece87",
+    "--edition=2018",
+    "-Cmetadata=ba233daa82312979",
+    "-Cextra-filename=-ba233daa82312979",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
@@ -1559,31 +1560,6 @@ rust_library("byteorder-v1_3_1") {
     "--cfg=feature=\"i128\"",
     "--cfg=feature=\"std\"",
     "--cfg=byteorder_i128",
-  ]
-}
-
-rust_library("bytes-v0_4_11") {
-  crate_name = "bytes"
-  crate_root = "//third_party/rust_crates/vendor/bytes-0.4.11/src/lib.rs"
-  output_name = "bytes-9db293c39283cbe0"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":byteorder-v1_3_1" ]
-  deps += [ ":either-v1_5_0" ]
-  deps += [ ":iovec-v0_1_2" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=9db293c39283cbe0",
-    "-Cextra-filename=-9db293c39283cbe0",
-    "--cfg=feature=\"either\"",
   ]
 }
 
@@ -2009,29 +1985,6 @@ rust_library("crossbeam-epoch-v0_8_2") {
   ]
 }
 
-rust_library("crossbeam-queue-v0_1_2") {
-  crate_name = "crossbeam_queue"
-  crate_root =
-      "//third_party/rust_crates/vendor/crossbeam-queue-0.1.2/src/lib.rs"
-  output_name = "crossbeam_queue-7bd6e9d83d57d2bd"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":crossbeam-utils-v0_6_6" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=7bd6e9d83d57d2bd",
-    "-Cextra-filename=-7bd6e9d83d57d2bd",
-  ]
-}
-
 rust_library("crossbeam-queue-v0_2_1") {
   crate_name = "crossbeam_queue"
   crate_root = "//third_party/rust_crates/vendor/crossbeam-queue/src/lib.rs"
@@ -2053,33 +2006,6 @@ rust_library("crossbeam-queue-v0_2_1") {
     "-Cmetadata=e8eb2d3b2d6a8126",
     "-Cextra-filename=-e8eb2d3b2d6a8126",
     "--cfg=feature=\"default\"",
-    "--cfg=feature=\"std\"",
-  ]
-}
-
-rust_library("crossbeam-utils-v0_6_6") {
-  crate_name = "crossbeam_utils"
-  crate_root =
-      "//third_party/rust_crates/vendor/crossbeam-utils-0.6.6/src/lib.rs"
-  output_name = "crossbeam_utils-c334bfa6908b4ef"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":cfg-if-v0_1_10" ]
-  deps += [ ":lazy_static-v1_4_0" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=c334bfa6908b4ef",
-    "-Cextra-filename=-c334bfa6908b4ef",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -2338,8 +2264,6 @@ rust_library("either-v1_5_0") {
     "--edition=2015",
     "-Cmetadata=22a1bbc0eb940e7e",
     "-Cextra-filename=-22a1bbc0eb940e7e",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"use_std\"",
   ]
 }
 
@@ -2620,74 +2544,6 @@ rust_library("fuchsia-cprng-v0_1_1") {
   ]
 }
 
-rust_library("fuchsia-zircon-v0_3_3") {
-  crate_name = "fuchsia_zircon"
-  crate_root = "//third_party/rust_crates/vendor/fuchsia-zircon/src/lib.rs"
-  output_name = "fuchsia_zircon-60603820f072d290"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":bitflags-v1_2_1" ]
-  deps += [ ":fuchsia-zircon-sys-v0_3_3" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=60603820f072d290",
-    "-Cextra-filename=-60603820f072d290",
-  ]
-}
-
-rust_library("fuchsia-zircon-sys-v0_3_3") {
-  crate_name = "fuchsia_zircon_sys"
-  crate_root = "//third_party/rust_crates/vendor/fuchsia-zircon-sys/src/lib.rs"
-  output_name = "fuchsia_zircon_sys-126e49067c23ad96"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=126e49067c23ad96",
-    "-Cextra-filename=-126e49067c23ad96",
-  ]
-}
-
-rust_library("futures-v0_1_29") {
-  crate_name = "futures"
-  crate_root = "//third_party/rust_crates/vendor/futures-0.1.29/src/lib.rs"
-  output_name = "futures-4895479edadce94b"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=4895479edadce94b",
-    "-Cextra-filename=-4895479edadce94b",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"use_std\"",
-    "--cfg=feature=\"with-deprecated\"",
-  ]
-}
-
 rust_library("futures-v0_3_5") {
   crate_name = "futures"
   crate_root = "//third_party/rust_crates/vendor/futures/src/lib.rs"
@@ -2715,11 +2571,9 @@ rust_library("futures-v0_3_5") {
     "-Cextra-filename=-db6a965543caf277",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"async-await\"",
-    "--cfg=feature=\"compat\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"executor\"",
     "--cfg=feature=\"futures-executor\"",
-    "--cfg=feature=\"io-compat\"",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -2771,6 +2625,7 @@ rust_library("futures-core-v0_3_5") {
     "-Cmetadata=c855a77807dabce5",
     "-Cextra-filename=-c855a77807dabce5",
     "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -2868,6 +2723,7 @@ rust_library("futures-sink-v0_3_5") {
     "-Cmetadata=7686daea4c42d286",
     "-Cextra-filename=-7686daea4c42d286",
     "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -2960,7 +2816,6 @@ rust_library("futures-util-v0_3_5") {
   ]
 
   deps = []
-  deps += [ ":futures-v0_1_29" ]
   deps += [ ":futures-channel-v0_3_5" ]
   deps += [ ":futures-core-v0_3_5" ]
   deps += [ ":futures-io-v0_3_5" ]
@@ -2973,7 +2828,6 @@ rust_library("futures-util-v0_3_5") {
   deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
   deps += [ ":proc-macro-nested-v0_1_4" ]
   deps += [ ":slab-v0_4_2" ]
-  deps += [ ":tokio-io-v0_1_11" ]
 
   rustenv = []
 
@@ -2986,27 +2840,19 @@ rust_library("futures-util-v0_3_5") {
     "--cfg=feature=\"async-await\"",
     "--cfg=feature=\"async-await-macro\"",
     "--cfg=feature=\"channel\"",
-    "--cfg=feature=\"compat\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"futures-channel\"",
     "--cfg=feature=\"futures-io\"",
     "--cfg=feature=\"futures-macro\"",
     "--cfg=feature=\"futures-sink\"",
-    "--cfg=feature=\"futures_01\"",
     "--cfg=feature=\"io\"",
-    "--cfg=feature=\"io-compat\"",
     "--cfg=feature=\"memchr\"",
     "--cfg=feature=\"proc-macro-hack\"",
     "--cfg=feature=\"proc-macro-nested\"",
     "--cfg=feature=\"sink\"",
     "--cfg=feature=\"slab\"",
     "--cfg=feature=\"std\"",
-    "--cfg=feature=\"tokio-io\"",
   ]
-
-  aliased_deps = {
-    futures_01 = ":futures-v0_1_29"
-  }
 }
 
 rust_library("getopts-v0_2_18") {
@@ -3103,34 +2949,35 @@ rust_library("gzip-header-v0_2_0") {
   ]
 }
 
-rust_library("h2-v0_1_16") {
+rust_library("h2-v0_2_5") {
   crate_name = "h2"
   crate_root = "//third_party/rust_crates/vendor/h2/src/lib.rs"
-  output_name = "h2-dd6512fb815a83f7"
+  output_name = "h2-85a3d30816d5adab"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":byteorder-v1_3_1" ]
-  deps += [ ":bytes-v0_4_11" ]
+  deps += [ ":bytes-v0_5_4" ]
   deps += [ ":fnv-v1_0_6" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":http-v0_1_21" ]
+  deps += [ ":futures-core-v0_3_5" ]
+  deps += [ ":futures-sink-v0_3_5" ]
+  deps += [ ":futures-util-v0_3_5" ]
+  deps += [ ":http-v0_2_1" ]
   deps += [ ":indexmap-v1_0_2" ]
   deps += [ ":log-v0_4_8" ]
   deps += [ ":slab-v0_4_2" ]
-  deps += [ ":string-v0_1_3" ]
-  deps += [ ":tokio-io-v0_1_11" ]
+  deps += [ ":tokio-v0_2_21" ]
+  deps += [ ":tokio-util-v0_3_1" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=dd6512fb815a83f7",
-    "-Cextra-filename=-dd6512fb815a83f7",
+    "--edition=2018",
+    "-Cmetadata=85a3d30816d5adab",
+    "-Cextra-filename=-85a3d30816d5adab",
   ]
 }
 
@@ -3261,17 +3108,17 @@ rust_library("hex-v0_3_2") {
   ]
 }
 
-rust_library("http-v0_1_21") {
+rust_library("http-v0_2_1") {
   crate_name = "http"
   crate_root = "//third_party/rust_crates/vendor/http/src/lib.rs"
-  output_name = "http-bd98e9b27f03cd25"
+  output_name = "http-369d781893ae7aaa"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bytes-v0_4_11" ]
+  deps += [ ":bytes-v0_5_4" ]
   deps += [ ":fnv-v1_0_6" ]
   deps += [ ":itoa-v0_4_3" ]
 
@@ -3279,34 +3126,32 @@ rust_library("http-v0_1_21") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=bd98e9b27f03cd25",
-    "-Cextra-filename=-bd98e9b27f03cd25",
+    "--edition=2018",
+    "-Cmetadata=369d781893ae7aaa",
+    "-Cextra-filename=-369d781893ae7aaa",
   ]
 }
 
-rust_library("http-body-v0_1_0") {
+rust_library("http-body-v0_3_1") {
   crate_name = "http_body"
   crate_root = "//third_party/rust_crates/vendor/http-body/src/lib.rs"
-  output_name = "http_body-daa9e112ab148b2e"
+  output_name = "http_body-a81727a56a76505"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":http-v0_1_21" ]
-  deps += [ ":tokio-buf-v0_1_1" ]
+  deps += [ ":bytes-v0_5_4" ]
+  deps += [ ":http-v0_2_1" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=daa9e112ab148b2e",
-    "-Cextra-filename=-daa9e112ab148b2e",
+    "--edition=2018",
+    "-Cmetadata=a81727a56a76505",
+    "-Cextra-filename=-a81727a56a76505",
   ]
 }
 
@@ -3334,58 +3179,60 @@ rust_library("httparse-v1_3_3") {
   ]
 }
 
-rust_library("hyper-v0_12_35") {
+rust_library("hyper-v0_13_6") {
   crate_name = "hyper"
   crate_root = "//third_party/rust_crates/vendor/hyper/src/lib.rs"
-  output_name = "hyper-20422db3ff0b166f"
+  output_name = "hyper-e2c6feeec5315f6c"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":h2-v0_1_16" ]
-  deps += [ ":http-v0_1_21" ]
-  deps += [ ":http-body-v0_1_0" ]
+  deps += [ ":bytes-v0_5_4" ]
+  deps += [ ":futures-channel-v0_3_5" ]
+  deps += [ ":futures-core-v0_3_5" ]
+  deps += [ ":futures-util-v0_3_5" ]
+  deps += [ ":h2-v0_2_5" ]
+  deps += [ ":http-v0_2_1" ]
+  deps += [ ":http-body-v0_3_1" ]
   deps += [ ":httparse-v1_3_3" ]
-  deps += [ ":iovec-v0_1_2" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":log-v0_4_8" ]
+  deps += [ ":pin-project-v0_4_17" ]
   deps += [ ":time-v0_1_42" ]
-  deps += [ ":tokio-buf-v0_1_1" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":want-v0_2_0" ]
+  deps += [ ":tokio-v0_2_21" ]
+  deps += [ ":tower-service-v0_3_0" ]
+  deps += [ ":want-v0_3_0" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=20422db3ff0b166f",
-    "-Cextra-filename=-20422db3ff0b166f",
-    "--cfg=error_source",
-    "--cfg=try_from",
+    "--edition=2018",
+    "-Cmetadata=e2c6feeec5315f6c",
+    "-Cextra-filename=-e2c6feeec5315f6c",
+    "--cfg=feature=\"stream\"",
   ]
 }
 
-rust_library("hyper-rustls-v0_17_1") {
+rust_library("hyper-rustls-v0_20_0") {
   crate_name = "hyper_rustls"
   crate_root = "//third_party/rust_crates/vendor/hyper-rustls/src/lib.rs"
-  output_name = "hyper_rustls-b5421f83eb32a736"
+  output_name = "hyper_rustls-b9f204e9124022d3"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":hyper-v0_12_35" ]
-  deps += [ ":rustls-v0_16_0" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":tokio-rustls-v0_10_2" ]
+  deps += [ ":bytes-v0_5_4" ]
+  deps += [ ":futures-util-v0_3_5" ]
+  deps += [ ":hyper-v0_13_6" ]
+  deps += [ ":log-v0_4_8" ]
+  deps += [ ":rustls-v0_17_0" ]
+  deps += [ ":tokio-v0_2_21" ]
+  deps += [ ":tokio-rustls-v0_13_1" ]
   deps += [ ":webpki-v0_21_0" ]
 
   rustenv = []
@@ -3393,8 +3240,8 @@ rust_library("hyper-rustls-v0_17_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=b5421f83eb32a736",
-    "-Cextra-filename=-b5421f83eb32a736",
+    "-Cmetadata=b9f204e9124022d3",
+    "-Cextra-filename=-b9f204e9124022d3",
   ]
 }
 
@@ -3561,33 +3408,6 @@ rust_library("inflate-v0_4_5") {
   ]
 }
 
-rust_library("iovec-v0_1_2") {
-  crate_name = "iovec"
-  crate_root = "//third_party/rust_crates/vendor/iovec/src/lib.rs"
-  output_name = "iovec-f2596b64a4450bb1"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  if (true) {
-    deps += [ ":libc-v0_2_71" ]
-  }
-  if (false) {
-    deps += [ ":winapi-v0_2_8" ]
-  }
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=f2596b64a4450bb1",
-    "-Cextra-filename=-f2596b64a4450bb1",
-  ]
-}
-
 rust_library("itertools-v0_8_0") {
   crate_name = "itertools"
   crate_root = "//third_party/rust_crates/vendor/itertools/src/lib.rs"
@@ -3702,28 +3522,6 @@ rust_library("jsonway-v2_0_0") {
     "--edition=2015",
     "-Cmetadata=5ed994a48b787f8e",
     "-Cextra-filename=-5ed994a48b787f8e",
-  ]
-}
-
-rust_library("kernel32-sys-v0_2_2") {
-  crate_name = "kernel32"
-  crate_root = "//third_party/rust_crates/vendor/kernel32-sys/src/lib.rs"
-  output_name = "kernel32-f88317a30a39d57e"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":winapi-v0_2_8" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=f88317a30a39d57e",
-    "-Cextra-filename=-f88317a30a39d57e",
   ]
 }
 
@@ -3864,30 +3662,6 @@ rust_library("lipsum-v0_6_0") {
     "--edition=2015",
     "-Cmetadata=3f3d810083da13c9",
     "-Cextra-filename=-3f3d810083da13c9",
-  ]
-}
-
-rust_library("lock_api-v0_1_5") {
-  crate_name = "lock_api"
-  crate_root = "//third_party/rust_crates/vendor/lock_api-0.1.5/src/lib.rs"
-  output_name = "lock_api-fcce642a961a65a3"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":owning_ref-v0_4_0" ]
-  deps += [ ":scopeguard-v0_3_3" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=fcce642a961a65a3",
-    "-Cextra-filename=-fcce642a961a65a3",
-    "--cfg=feature=\"owning_ref\"",
   ]
 }
 
@@ -4188,105 +3962,6 @@ rust_library("miniz_oxide-v0_3_6") {
   ]
 }
 
-rust_library("mio-v0_6_19") {
-  crate_name = "mio"
-  crate_root = "//third_party/rust_crates/vendor/mio/src/lib.rs"
-  output_name = "mio-81a7eacf8d526aa2"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":iovec-v0_1_2" ]
-  deps += [ ":log-v0_4_8" ]
-  deps += [ ":net2-v0_2_33" ]
-  deps += [ ":slab-v0_4_2" ]
-  if (is_fuchsia) {
-    deps += [ ":fuchsia-zircon-v0_3_3" ]
-    deps += [ ":fuchsia-zircon-sys-v0_3_3" ]
-  }
-  if (true) {
-    deps += [ ":libc-v0_2_71" ]
-  }
-  if (false) {
-    deps += [ ":kernel32-sys-v0_2_2" ]
-    deps += [ ":miow-v0_2_1" ]
-    deps += [ ":winapi-v0_2_8" ]
-  }
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=81a7eacf8d526aa2",
-    "-Cextra-filename=-81a7eacf8d526aa2",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"with-deprecated\"",
-  ]
-
-  aliased_deps = {
-    kernel32 = ":kernel32-sys-v0_2_2"
-  }
-}
-
-rust_library("mio-uds-v0_6_7") {
-  crate_name = "mio_uds"
-  crate_root = "//third_party/rust_crates/vendor/mio-uds/src/lib.rs"
-  output_name = "mio_uds-d89fa551211c3350"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  if (true) {
-    deps += [ ":iovec-v0_1_2" ]
-    deps += [ ":libc-v0_2_71" ]
-    deps += [ ":mio-v0_6_19" ]
-  }
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=d89fa551211c3350",
-    "-Cextra-filename=-d89fa551211c3350",
-  ]
-}
-
-rust_library("miow-v0_2_1") {
-  crate_name = "miow"
-  crate_root = "//third_party/rust_crates/vendor/miow/src/lib.rs"
-  output_name = "miow-147280a3688929c0"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":kernel32-sys-v0_2_2" ]
-  deps += [ ":net2-v0_2_33" ]
-  deps += [ ":winapi-v0_2_8" ]
-  deps += [ ":ws2_32-sys-v0_2_1" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=147280a3688929c0",
-    "-Cextra-filename=-147280a3688929c0",
-  ]
-
-  aliased_deps = {
-    kernel32 = ":kernel32-sys-v0_2_2"
-    ws2_32 = ":ws2_32-sys-v0_2_1"
-  }
-}
-
 rust_library("multipart-v0_15_4") {
   crate_name = "multipart"
   crate_root = "//third_party/rust_crates/vendor/multipart/src/lib.rs"
@@ -4321,36 +3996,6 @@ rust_library("multipart-v0_15_4") {
     "--cfg=feature=\"safemem\"",
     "--cfg=feature=\"server\"",
     "--cfg=feature=\"twoway\"",
-  ]
-}
-
-rust_library("net2-v0_2_33") {
-  crate_name = "net2"
-  crate_root = "//third_party/rust_crates/vendor/net2/src/lib.rs"
-  output_name = "net2-176f1b4a4f28c623"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":cfg-if-v0_1_10" ]
-  if (false || true) {
-    deps += [ ":libc-v0_2_71" ]
-  }
-  if (false) {
-    deps += [ ":winapi-v0_3_8" ]
-  }
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=176f1b4a4f28c623",
-    "-Cextra-filename=-176f1b4a4f28c623",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"duration\"",
   ]
 }
 
@@ -4804,31 +4449,6 @@ rust_library("parking_lot-v0_10_2") {
   ]
 }
 
-rust_library("parking_lot-v0_7_1") {
-  crate_name = "parking_lot"
-  crate_root = "//third_party/rust_crates/vendor/parking_lot-0.7.1/src/lib.rs"
-  output_name = "parking_lot-ee551828d5b81c55"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":lock_api-v0_1_5" ]
-  deps += [ ":parking_lot_core-v0_4_0" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=ee551828d5b81c55",
-    "-Cextra-filename=-ee551828d5b81c55",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"owning_ref\"",
-  ]
-}
-
 rust_library("parking_lot-v0_9_0") {
   crate_name = "parking_lot"
   crate_root = "//third_party/rust_crates/vendor/parking_lot-0.9.0/src/lib.rs"
@@ -4850,36 +4470,6 @@ rust_library("parking_lot-v0_9_0") {
     "-Cmetadata=6721767503fecbee",
     "-Cextra-filename=-6721767503fecbee",
     "--cfg=feature=\"default\"",
-  ]
-}
-
-rust_library("parking_lot_core-v0_4_0") {
-  crate_name = "parking_lot_core"
-  crate_root =
-      "//third_party/rust_crates/vendor/parking_lot_core-0.4.0/src/lib.rs"
-  output_name = "parking_lot_core-62d7d2565ebbce0a"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":rand-v0_6_5" ]
-  deps += [ ":smallvec-v0_6_13" ]
-  if (true) {
-    deps += [ ":libc-v0_2_71" ]
-  }
-  if (false) {
-    deps += [ ":winapi-v0_3_8" ]
-  }
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=62d7d2565ebbce0a",
-    "-Cextra-filename=-62d7d2565ebbce0a",
   ]
 }
 
@@ -6584,10 +6174,10 @@ rust_proc_macro("rental-impl-v0_5_4") {
   ]
 }
 
-rust_library("ring-v0_16_9") {
+rust_library("ring-v0_16_12") {
   crate_name = "ring"
   crate_root = "//third_party/rust_crates/vendor/ring/src/lib.rs"
-  output_name = "ring-1a4d2989c2a229ab"
+  output_name = "ring-34f98e503c3d6a69"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6617,8 +6207,8 @@ rust_library("ring-v0_16_9") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=1a4d2989c2a229ab",
-    "-Cextra-filename=-1a4d2989c2a229ab",
+    "-Cmetadata=34f98e503c3d6a69",
+    "-Cextra-filename=-34f98e503c3d6a69",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"dev_urandom_fallback\"",
@@ -6996,19 +6586,19 @@ rust_library("rustc-serialize-v0_3_24") {
   ]
 }
 
-rust_library("rustls-v0_16_0") {
+rust_library("rustls-v0_17_0") {
   crate_name = "rustls"
   crate_root = "//third_party/rust_crates/vendor/rustls/src/lib.rs"
-  output_name = "rustls-f6aecf6cdd8f1804"
+  output_name = "rustls-e5718d4d3f3f0783"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":base64-v0_10_1" ]
+  deps += [ ":base64-v0_11_0" ]
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":ring-v0_16_9" ]
+  deps += [ ":ring-v0_16_12" ]
   deps += [ ":sct-v0_6_0" ]
   deps += [ ":webpki-v0_21_0" ]
 
@@ -7017,8 +6607,8 @@ rust_library("rustls-v0_16_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f6aecf6cdd8f1804",
-    "-Cextra-filename=-f6aecf6cdd8f1804",
+    "-Cmetadata=e5718d4d3f3f0783",
+    "-Cextra-filename=-e5718d4d3f3f0783",
     "--cfg=feature=\"dangerous_configuration\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"log\"",
@@ -7268,7 +6858,7 @@ rust_library("sct-v0_6_0") {
   ]
 
   deps = []
-  deps += [ ":ring-v0_16_9" ]
+  deps += [ ":ring-v0_16_12" ]
   deps += [ ":untrusted-v0_7_0" ]
 
   rustenv = []
@@ -7873,27 +7463,6 @@ rust_library("stb_truetype-v0_2_6") {
   ]
 }
 
-rust_library("string-v0_1_3") {
-  crate_name = "string"
-  crate_root = "//third_party/rust_crates/vendor/string/src/lib.rs"
-  output_name = "string-a461874f5259da6b"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=a461874f5259da6b",
-    "-Cextra-filename=-a461874f5259da6b",
-  ]
-}
-
 rust_library("strsim-v0_8_0") {
   crate_name = "strsim"
   crate_root = "//third_party/rust_crates/vendor/strsim/src/lib.rs"
@@ -8453,437 +8022,90 @@ rust_library("tiny_http-v0_6_2") {
   ]
 }
 
-rust_library("tokio-v0_1_22") {
+rust_library("tokio-v0_2_21") {
   crate_name = "tokio"
   crate_root = "//third_party/rust_crates/vendor/tokio/src/lib.rs"
-  output_name = "tokio-3b37e1b1451b5d95"
+  output_name = "tokio-4301d3f497b41b04"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":mio-v0_6_19" ]
-  deps += [ ":num_cpus-v1_12_0" ]
-  deps += [ ":tokio-codec-v0_1_1" ]
-  deps += [ ":tokio-current-thread-v0_1_6" ]
-  deps += [ ":tokio-executor-v0_1_10" ]
-  deps += [ ":tokio-fs-v0_1_6" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":tokio-reactor-v0_1_9" ]
-  deps += [ ":tokio-sync-v0_1_6" ]
-  deps += [ ":tokio-tcp-v0_1_3" ]
-  deps += [ ":tokio-threadpool-v0_1_15" ]
-  deps += [ ":tokio-timer-v0_2_11" ]
-  deps += [ ":tokio-udp-v0_1_3" ]
-  if (true) {
-    deps += [ ":tokio-uds-v0_2_5" ]
-  }
+  deps += [ ":bytes-v0_5_4" ]
+  deps += [ ":fnv-v1_0_6" ]
+  deps += [ ":futures-core-v0_3_5" ]
+  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":pin-project-lite-v0_1_4" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=3b37e1b1451b5d95",
-    "-Cextra-filename=-3b37e1b1451b5d95",
-    "--cfg=feature=\"bytes\"",
-    "--cfg=feature=\"codec\"",
+    "--edition=2018",
+    "-Cmetadata=4301d3f497b41b04",
+    "-Cextra-filename=-4301d3f497b41b04",
     "--cfg=feature=\"default\"",
-    "--cfg=feature=\"fs\"",
-    "--cfg=feature=\"io\"",
-    "--cfg=feature=\"mio\"",
-    "--cfg=feature=\"num_cpus\"",
-    "--cfg=feature=\"reactor\"",
-    "--cfg=feature=\"rt-full\"",
+    "--cfg=feature=\"fnv\"",
+    "--cfg=feature=\"futures-core\"",
+    "--cfg=feature=\"io-util\"",
+    "--cfg=feature=\"memchr\"",
+    "--cfg=feature=\"stream\"",
     "--cfg=feature=\"sync\"",
-    "--cfg=feature=\"tcp\"",
-    "--cfg=feature=\"timer\"",
-    "--cfg=feature=\"tokio-codec\"",
-    "--cfg=feature=\"tokio-current-thread\"",
-    "--cfg=feature=\"tokio-executor\"",
-    "--cfg=feature=\"tokio-fs\"",
-    "--cfg=feature=\"tokio-io\"",
-    "--cfg=feature=\"tokio-reactor\"",
-    "--cfg=feature=\"tokio-sync\"",
-    "--cfg=feature=\"tokio-tcp\"",
-    "--cfg=feature=\"tokio-threadpool\"",
-    "--cfg=feature=\"tokio-timer\"",
-    "--cfg=feature=\"tokio-udp\"",
-    "--cfg=feature=\"tokio-uds\"",
-    "--cfg=feature=\"udp\"",
-    "--cfg=feature=\"uds\"",
   ]
 }
 
-rust_library("tokio-buf-v0_1_1") {
-  crate_name = "tokio_buf"
-  crate_root = "//third_party/rust_crates/vendor/tokio-buf/src/lib.rs"
-  output_name = "tokio_buf-fbbfb7067251f78b"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":either-v1_5_0" ]
-  deps += [ ":futures-v0_1_29" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=fbbfb7067251f78b",
-    "-Cextra-filename=-fbbfb7067251f78b",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"either\"",
-    "--cfg=feature=\"util\"",
-  ]
-}
-
-rust_library("tokio-codec-v0_1_1") {
-  crate_name = "tokio_codec"
-  crate_root = "//third_party/rust_crates/vendor/tokio-codec/src/lib.rs"
-  output_name = "tokio_codec-79a4999fd45b8704"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=79a4999fd45b8704",
-    "-Cextra-filename=-79a4999fd45b8704",
-  ]
-}
-
-rust_library("tokio-current-thread-v0_1_6") {
-  crate_name = "tokio_current_thread"
-  crate_root =
-      "//third_party/rust_crates/vendor/tokio-current-thread/src/lib.rs"
-  output_name = "tokio_current_thread-cfc1621fd47b8137"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":tokio-executor-v0_1_10" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=cfc1621fd47b8137",
-    "-Cextra-filename=-cfc1621fd47b8137",
-  ]
-}
-
-rust_library("tokio-executor-v0_1_10") {
-  crate_name = "tokio_executor"
-  crate_root = "//third_party/rust_crates/vendor/tokio-executor/src/lib.rs"
-  output_name = "tokio_executor-42b5572ee83ff97c"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":crossbeam-utils-v0_7_2" ]
-  deps += [ ":futures-v0_1_29" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=42b5572ee83ff97c",
-    "-Cextra-filename=-42b5572ee83ff97c",
-  ]
-}
-
-rust_library("tokio-fs-v0_1_6") {
-  crate_name = "tokio_fs"
-  crate_root = "//third_party/rust_crates/vendor/tokio-fs/src/lib.rs"
-  output_name = "tokio_fs-d3f9892fe7bbbb00"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":tokio-threadpool-v0_1_15" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=d3f9892fe7bbbb00",
-    "-Cextra-filename=-d3f9892fe7bbbb00",
-  ]
-}
-
-rust_library("tokio-io-v0_1_11") {
-  crate_name = "tokio_io"
-  crate_root = "//third_party/rust_crates/vendor/tokio-io/src/lib.rs"
-  output_name = "tokio_io-c664b4df91f55d3d"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":log-v0_4_8" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=c664b4df91f55d3d",
-    "-Cextra-filename=-c664b4df91f55d3d",
-  ]
-}
-
-rust_library("tokio-reactor-v0_1_9") {
-  crate_name = "tokio_reactor"
-  crate_root = "//third_party/rust_crates/vendor/tokio-reactor/src/lib.rs"
-  output_name = "tokio_reactor-ff6394b58d980030"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":crossbeam-utils-v0_6_6" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_8" ]
-  deps += [ ":mio-v0_6_19" ]
-  deps += [ ":num_cpus-v1_12_0" ]
-  deps += [ ":parking_lot-v0_7_1" ]
-  deps += [ ":slab-v0_4_2" ]
-  deps += [ ":tokio-executor-v0_1_10" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":tokio-sync-v0_1_6" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=ff6394b58d980030",
-    "-Cextra-filename=-ff6394b58d980030",
-  ]
-}
-
-rust_library("tokio-rustls-v0_10_2") {
+rust_library("tokio-rustls-v0_13_1") {
   crate_name = "tokio_rustls"
   crate_root = "//third_party/rust_crates/vendor/tokio-rustls/src/lib.rs"
-  output_name = "tokio_rustls-2de5d312ceec4047"
+  output_name = "tokio_rustls-4bae2a85418b59f8"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":iovec-v0_1_2" ]
-  deps += [ ":rustls-v0_16_0" ]
-  deps += [ ":tokio-io-v0_1_11" ]
+  deps += [ ":futures-core-v0_3_5" ]
+  deps += [ ":rustls-v0_17_0" ]
+  deps += [ ":tokio-v0_2_21" ]
   deps += [ ":webpki-v0_21_0" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=2de5d312ceec4047",
-    "-Cextra-filename=-2de5d312ceec4047",
+    "--edition=2018",
+    "-Cmetadata=4bae2a85418b59f8",
+    "-Cextra-filename=-4bae2a85418b59f8",
   ]
 }
 
-rust_library("tokio-sync-v0_1_6") {
-  crate_name = "tokio_sync"
-  crate_root = "//third_party/rust_crates/vendor/tokio-sync/src/lib.rs"
-  output_name = "tokio_sync-c7c3d6c25d19b031"
+rust_library("tokio-util-v0_3_1") {
+  crate_name = "tokio_util"
+  crate_root = "//third_party/rust_crates/vendor/tokio-util/src/lib.rs"
+  output_name = "tokio_util-3bb14110668d9fbe"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":fnv-v1_0_6" ]
-  deps += [ ":futures-v0_1_29" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=c7c3d6c25d19b031",
-    "-Cextra-filename=-c7c3d6c25d19b031",
-  ]
-}
-
-rust_library("tokio-tcp-v0_1_3") {
-  crate_name = "tokio_tcp"
-  crate_root = "//third_party/rust_crates/vendor/tokio-tcp/src/lib.rs"
-  output_name = "tokio_tcp-c32192e1d66afacd"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":iovec-v0_1_2" ]
-  deps += [ ":mio-v0_6_19" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":tokio-reactor-v0_1_9" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=c32192e1d66afacd",
-    "-Cextra-filename=-c32192e1d66afacd",
-  ]
-}
-
-rust_library("tokio-threadpool-v0_1_15") {
-  crate_name = "tokio_threadpool"
-  crate_root = "//third_party/rust_crates/vendor/tokio-threadpool/src/lib.rs"
-  output_name = "tokio_threadpool-6eac45c082ab9282"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":crossbeam-deque-v0_7_3" ]
-  deps += [ ":crossbeam-queue-v0_1_2" ]
-  deps += [ ":crossbeam-utils-v0_6_6" ]
-  deps += [ ":futures-v0_1_29" ]
+  deps += [ ":bytes-v0_5_4" ]
+  deps += [ ":futures-core-v0_3_5" ]
+  deps += [ ":futures-sink-v0_3_5" ]
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":num_cpus-v1_12_0" ]
-  deps += [ ":rand-v0_6_5" ]
-  deps += [ ":slab-v0_4_2" ]
-  deps += [ ":tokio-executor-v0_1_10" ]
+  deps += [ ":pin-project-lite-v0_1_4" ]
+  deps += [ ":tokio-v0_2_21" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=6eac45c082ab9282",
-    "-Cextra-filename=-6eac45c082ab9282",
-  ]
-}
-
-rust_library("tokio-timer-v0_2_11") {
-  crate_name = "tokio_timer"
-  crate_root = "//third_party/rust_crates/vendor/tokio-timer/src/lib.rs"
-  output_name = "tokio_timer-2bae3272f0920172"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":crossbeam-utils-v0_6_6" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":slab-v0_4_2" ]
-  deps += [ ":tokio-executor-v0_1_10" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=2bae3272f0920172",
-    "-Cextra-filename=-2bae3272f0920172",
-  ]
-}
-
-rust_library("tokio-udp-v0_1_3") {
-  crate_name = "tokio_udp"
-  crate_root = "//third_party/rust_crates/vendor/tokio-udp/src/lib.rs"
-  output_name = "tokio_udp-691d15f6847fd07d"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":log-v0_4_8" ]
-  deps += [ ":mio-v0_6_19" ]
-  deps += [ ":tokio-codec-v0_1_1" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":tokio-reactor-v0_1_9" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=691d15f6847fd07d",
-    "-Cextra-filename=-691d15f6847fd07d",
-  ]
-}
-
-rust_library("tokio-uds-v0_2_5") {
-  crate_name = "tokio_uds"
-  crate_root = "//third_party/rust_crates/vendor/tokio-uds/src/lib.rs"
-  output_name = "tokio_uds-cac6fad360f30bf0"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":bytes-v0_4_11" ]
-  deps += [ ":futures-v0_1_29" ]
-  deps += [ ":iovec-v0_1_2" ]
-  deps += [ ":libc-v0_2_71" ]
-  deps += [ ":log-v0_4_8" ]
-  deps += [ ":mio-v0_6_19" ]
-  deps += [ ":mio-uds-v0_6_7" ]
-  deps += [ ":tokio-codec-v0_1_1" ]
-  deps += [ ":tokio-io-v0_1_11" ]
-  deps += [ ":tokio-reactor-v0_1_9" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=cac6fad360f30bf0",
-    "-Cextra-filename=-cac6fad360f30bf0",
+    "--edition=2018",
+    "-Cmetadata=3bb14110668d9fbe",
+    "-Cextra-filename=-3bb14110668d9fbe",
+    "--cfg=feature=\"codec\"",
+    "--cfg=feature=\"default\"",
   ]
 }
 
@@ -8907,6 +8129,27 @@ rust_library("toml-v0_5_6") {
     "-Cmetadata=2563c91c8a85577d",
     "-Cextra-filename=-2563c91c8a85577d",
     "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("tower-service-v0_3_0") {
+  crate_name = "tower_service"
+  crate_root = "//third_party/rust_crates/vendor/tower-service/src/lib.rs"
+  output_name = "tower_service-2289a8e10b994b8a"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=2289a8e10b994b8a",
+    "-Cextra-filename=-2289a8e10b994b8a",
   ]
 }
 
@@ -9845,17 +9088,16 @@ rust_library("walkdir-v2_3_1") {
   ]
 }
 
-rust_library("want-v0_2_0") {
+rust_library("want-v0_3_0") {
   crate_name = "want"
   crate_root = "//third_party/rust_crates/vendor/want/src/lib.rs"
-  output_name = "want-461bb7c5f46ed01f"
+  output_name = "want-7ea5f0f15ff169c0"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":futures-v0_1_29" ]
   deps += [ ":log-v0_4_8" ]
   deps += [ ":try-lock-v0_2_2" ]
 
@@ -9863,9 +9105,9 @@ rust_library("want-v0_2_0") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=461bb7c5f46ed01f",
-    "-Cextra-filename=-461bb7c5f46ed01f",
+    "--edition=2018",
+    "-Cmetadata=7ea5f0f15ff169c0",
+    "-Cextra-filename=-7ea5f0f15ff169c0",
   ]
 }
 
@@ -10076,7 +9318,7 @@ rust_library("webpki-v0_21_0") {
   ]
 
   deps = []
-  deps += [ ":ring-v0_16_9" ]
+  deps += [ ":ring-v0_16_12" ]
   deps += [ ":untrusted-v0_7_0" ]
 
   rustenv = []
@@ -10111,27 +9353,6 @@ rust_library("wepoll-binding-v2_0_2") {
     "--edition=2015",
     "-Cmetadata=354e0d9771b1ce76",
     "-Cextra-filename=-354e0d9771b1ce76",
-  ]
-}
-
-rust_library("winapi-v0_2_8") {
-  crate_name = "winapi"
-  crate_root = "//third_party/rust_crates/vendor/winapi/src/lib.rs"
-  output_name = "winapi-8ef403ac66a39c0c"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=8ef403ac66a39c0c",
-    "-Cextra-filename=-8ef403ac66a39c0c",
   ]
 }
 
@@ -10171,7 +9392,6 @@ rust_library("winapi-v0_3_8") {
     "--cfg=feature=\"wincon\"",
     "--cfg=feature=\"winerror\"",
     "--cfg=feature=\"winnt\"",
-    "--cfg=feature=\"winsock2\"",
     "--cfg=feature=\"ws2def\"",
     "--cfg=feature=\"ws2ipdef\"",
     "--cfg=feature=\"ws2tcpip\"",
@@ -10197,28 +9417,6 @@ rust_library("winapi-util-v0_1_2") {
     "--edition=2015",
     "-Cmetadata=b3a9f54dd0078b71",
     "-Cextra-filename=-b3a9f54dd0078b71",
-  ]
-}
-
-rust_library("ws2_32-sys-v0_2_1") {
-  crate_name = "ws2_32"
-  crate_root = "//third_party/rust_crates/vendor/ws2_32-sys/src/lib.rs"
-  output_name = "ws2_32-97adf20aa8b30112"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":winapi-v0_2_8" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=97adf20aa8b30112",
-    "-Cextra-filename=-97adf20aa8b30112",
   ]
 }
 

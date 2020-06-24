@@ -19,10 +19,14 @@ use rustls::TLSError;
 use rustls::sign;
 use rustls::{ALL_CIPHERSUITES, SupportedCipherSuite};
 use rustls::KeyLog;
+use rustls::ClientHello;
 #[cfg(feature = "quic")]
 use rustls::quic::{self, QuicExt, ClientQuicExt, ServerQuicExt};
 #[cfg(feature = "quic")]
 use ring::hkdf;
+
+#[cfg(feature = "dangerous_configuration")]
+use rustls::ClientCertVerified;
 
 use webpki;
 
@@ -228,7 +232,8 @@ fn client_can_get_server_cert() {
 fn server_can_get_client_cert() {
     for kt in ALL_KEY_TYPES.iter() {
         let mut client_config = make_client_config(*kt);
-        client_config.set_single_client_cert(kt.get_chain(), kt.get_key());
+        client_config.set_single_client_cert(kt.get_chain(), kt.get_key())
+            .unwrap();
 
         let server_config = Arc::new(make_server_config_with_mandatory_client_auth(*kt));
 
@@ -258,7 +263,8 @@ fn check_read_and_close(reader: &mut dyn io::Read, expect: &[u8]) {
 fn server_close_notify() {
     let kt = KeyType::RSA;
     let mut client_config = make_client_config(kt);
-    client_config.set_single_client_cert(kt.get_chain(), kt.get_key());
+    client_config.set_single_client_cert(kt.get_chain(), kt.get_key())
+        .unwrap();
 
     let server_config = Arc::new(make_server_config_with_mandatory_client_auth(kt));
 
@@ -286,7 +292,8 @@ fn server_close_notify() {
 fn client_close_notify() {
     let kt = KeyType::RSA;
     let mut client_config = make_client_config(kt);
-    client_config.set_single_client_cert(kt.get_chain(), kt.get_key());
+    client_config.set_single_client_cert(kt.get_chain(), kt.get_key())
+        .unwrap();
 
     let server_config = Arc::new(make_server_config_with_mandatory_client_auth(kt));
 
@@ -310,34 +317,38 @@ fn client_close_notify() {
     }
 }
 
+#[derive(Default)]
 struct ServerCheckCertResolve {
-    expected: String
-}
-
-impl ServerCheckCertResolve {
-    fn new(expect: &str) -> ServerCheckCertResolve {
-        ServerCheckCertResolve {
-            expected: expect.to_string()
-        }
-    }
+    expected_sni: Option<String>,
+    expected_sigalgs: Option<Vec<SignatureScheme>>,
+    expected_alpn: Option<Vec<Vec<u8>>>,
 }
 
 impl ResolvesServerCert for ServerCheckCertResolve {
-    fn resolve(&self,
-               server_name: Option<webpki::DNSNameRef<'_>>,
-               sigschemes: &[SignatureScheme])
-        -> Option<sign::CertifiedKey> {
-        if let Some(got_dns_name) = server_name {
-            let got: &str = got_dns_name.into();
-            if got != self.expected {
-                panic!("unexpected dns name (wanted '{}' got '{:?}')", &self.expected, got_dns_name);
-            }
-        } else {
-            panic!("dns name not provided (wanted '{}')", &self.expected);
+    fn resolve(&self, client_hello: ClientHello) -> Option<sign::CertifiedKey> {
+        if client_hello.sigschemes().len() == 0 {
+            panic!("no signature schemes shared by client");
         }
 
-        if sigschemes.len() == 0 {
-            panic!("no signature schemes shared by client");
+        if let Some(expected_sni) = &self.expected_sni {
+            let sni: &str = client_hello.server_name().expect("sni unexpectedly absent").into();
+            assert_eq!(expected_sni, sni);
+        }
+
+        if let Some(expected_sigalgs) = &self.expected_sigalgs {
+            if expected_sigalgs != &client_hello.sigschemes() {
+                panic!("unexpected signature schemes (wanted {:?} got {:?})",
+                       self.expected_sigalgs, client_hello.sigschemes());
+            }
+        }
+
+        if let Some(expected_alpn) = &self.expected_alpn {
+            let alpn = client_hello.alpn().expect("alpn unexpectedly absent");
+            assert_eq!(alpn.len(), expected_alpn.len());
+
+            for (got, wanted) in alpn.iter().zip(expected_alpn.iter()) {
+                assert_eq!(got, &wanted.as_slice());
+            }
         }
 
         None
@@ -350,7 +361,10 @@ fn server_cert_resolve_with_sni() {
         let client_config = make_client_config(*kt);
         let mut server_config = make_server_config(*kt);
 
-        server_config.cert_resolver = Arc::new(ServerCheckCertResolve::new("the-value-from-sni"));
+        server_config.cert_resolver = Arc::new(ServerCheckCertResolve {
+            expected_sni: Some("the-value-from-sni".into()),
+            ..Default::default()
+        });
 
         let mut client = ClientSession::new(&Arc::new(client_config), dns_name("the-value-from-sni"));
         let mut server = ServerSession::new(&Arc::new(server_config));
@@ -360,14 +374,79 @@ fn server_cert_resolve_with_sni() {
     }
 }
 
+#[test]
+fn server_cert_resolve_with_alpn() {
+    for kt in ALL_KEY_TYPES.iter() {
+        let mut client_config = make_client_config(*kt);
+        client_config.alpn_protocols = vec!["foo".into(), "bar".into()];
+
+        let mut server_config = make_server_config(*kt);
+        server_config.cert_resolver = Arc::new(ServerCheckCertResolve {
+            expected_alpn: Some(vec![ b"foo".to_vec(), b"bar".to_vec() ]),
+            ..Default::default()
+        });
+
+        let mut client = ClientSession::new(&Arc::new(client_config), dns_name("sni-value"));
+        let mut server = ServerSession::new(&Arc::new(server_config));
+
+        let err = do_handshake_until_error(&mut client, &mut server);
+        assert_eq!(err.is_err(), true);
+    }
+}
+
+
+fn check_sigalgs_reduced_by_ciphersuite(kt: KeyType, suite: CipherSuite,
+                                        expected_sigalgs: Vec<SignatureScheme>) {
+    let mut client_config = make_client_config(kt);
+    client_config.ciphersuites = vec![ find_suite(suite) ];
+
+    let mut server_config = make_server_config(kt);
+
+    server_config.cert_resolver = Arc::new(ServerCheckCertResolve {
+        expected_sigalgs: Some(expected_sigalgs),
+        ..Default::default()
+    });
+
+    let mut client = ClientSession::new(&Arc::new(client_config), dns_name("localhost"));
+    let mut server = ServerSession::new(&Arc::new(server_config));
+
+    let err = do_handshake_until_error(&mut client, &mut server);
+    assert_eq!(err.is_err(), true);
+}
+
+#[test]
+fn server_cert_resolve_reduces_sigalgs_for_rsa_ciphersuite() {
+    check_sigalgs_reduced_by_ciphersuite(
+        KeyType::RSA,
+        CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+        vec![
+            SignatureScheme::RSA_PSS_SHA512,
+            SignatureScheme::RSA_PSS_SHA384,
+            SignatureScheme::RSA_PSS_SHA256,
+            SignatureScheme::RSA_PKCS1_SHA512,
+            SignatureScheme::RSA_PKCS1_SHA384,
+            SignatureScheme::RSA_PKCS1_SHA256,
+        ]
+    );
+}
+
+#[test]
+fn server_cert_resolve_reduces_sigalgs_for_ecdsa_ciphersuite() {
+    check_sigalgs_reduced_by_ciphersuite(
+        KeyType::ECDSA,
+        CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+        vec![
+            SignatureScheme::ECDSA_NISTP384_SHA384,
+            SignatureScheme::ECDSA_NISTP256_SHA256,
+        ]
+    );
+}
+
 struct ServerCheckNoSNI {}
 
 impl ResolvesServerCert for ServerCheckNoSNI {
-    fn resolve(&self,
-               server_name: Option<webpki::DNSNameRef<'_>>,
-               _sigschemes: &[SignatureScheme])
-        -> Option<sign::CertifiedKey> {
-        assert!(server_name.is_none());
+    fn resolve(&self, client_hello: ClientHello) -> Option<sign::CertifiedKey> {
+        assert!(client_hello.server_name().is_none());
 
         None
     }
@@ -490,6 +569,197 @@ fn client_auth_works() {
         }
     }
 }
+
+#[cfg(feature = "dangerous_configuration")]
+mod test_verifier {
+    use super::*;
+    use crate::common::MockClientVerifier;
+    use rustls::internal::msgs::enums::AlertDescription;
+
+    // Client is authorized!
+    fn ver_ok() -> Result<ClientCertVerified, TLSError> {
+        Ok(rustls::ClientCertVerified::assertion())
+    }
+
+    // Use when we shouldn't even attempt verification
+    fn ver_unreachable() -> Result<ClientCertVerified, TLSError> {
+        unreachable!()
+    }
+
+    // Verifier that returns an error that we can expect
+    fn ver_err() -> Result<ClientCertVerified, TLSError> {
+        Err(TLSError::General("test err".to_string()))
+    }
+
+    #[test]
+    // Happy path, we resolve to a root, it is verified OK, should be able to connect
+    fn client_verifier_works() {
+        for kt in ALL_KEY_TYPES.iter() {
+            let client_verifier = MockClientVerifier {
+                verified: ver_ok,
+                subjects: Some(get_client_root_store(*kt).get_subjects()),
+                mandatory: Some(true),
+            };
+
+            let mut server_config = ServerConfig::new(Arc::new(client_verifier));
+            server_config.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+            let server_config = Arc::new(server_config);
+            let client_config = make_client_config_with_auth(*kt);
+
+            for client_config in AllClientVersions::new(client_config) {
+                let (mut client, mut server) = make_pair_for_arc_configs(&Arc::new(client_config.clone()),
+                                                                     &server_config);
+                let err = do_handshake_until_error(&mut client, &mut server);
+                assert_eq!(err, Ok(()));
+            }
+        }
+    }
+
+    // Common case, we do not find a root store to resolve to
+    #[test]
+    fn client_verifier_no_root() {
+        for kt in ALL_KEY_TYPES.iter() {
+            let client_verifier = MockClientVerifier {
+                verified: ver_ok,
+                subjects: None,
+                mandatory: Some(true),
+            };
+
+            let mut server_config = ServerConfig::new(Arc::new(client_verifier));
+            server_config.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+            let server_config = Arc::new(server_config);
+            let client_config = make_client_config_with_auth(*kt);
+
+            for client_config in AllClientVersions::new(client_config) {
+                let mut server = ServerSession::new(&server_config);
+                let mut client = ClientSession::new(&Arc::new(client_config), dns_name("notlocalhost"));
+                let errs = do_handshake_until_both_error(&mut client, &mut server);
+                assert_eq!(errs,
+                           Err(vec![
+                              TLSErrorFromPeer::Server(TLSError::General("client rejected by client_auth_root_subjects".into())),
+                              TLSErrorFromPeer::Client(TLSError::AlertReceived(AlertDescription::AccessDenied))
+                           ]));
+            }
+        }
+    }
+
+    // If we cannot resolve a root, we cannot decide if auth is mandatory
+    #[test]
+    fn client_verifier_no_auth_no_root() {
+        for kt in ALL_KEY_TYPES.iter() {
+            let client_verifier = MockClientVerifier {
+                verified: ver_unreachable,
+                subjects: None,
+                mandatory: Some(true),
+            };
+
+            let mut server_config = ServerConfig::new(Arc::new(client_verifier));
+            server_config.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+            let server_config = Arc::new(server_config);
+            let client_config = make_client_config(*kt);
+
+            for client_config in AllClientVersions::new(client_config) {
+                let mut server = ServerSession::new(&server_config);
+                let mut client = ClientSession::new(&Arc::new(client_config), dns_name("notlocalhost"));
+                let errs = do_handshake_until_both_error(&mut client, &mut server);
+                assert_eq!(errs,
+                           Err(vec![
+                               TLSErrorFromPeer::Server(TLSError::General("client rejected by client_auth_root_subjects".into())),
+                               TLSErrorFromPeer::Client(TLSError::AlertReceived(AlertDescription::AccessDenied))
+                            ]));
+            }
+        }
+    }
+
+        // If we do have a root, we must do auth
+    #[test]
+    fn client_verifier_no_auth_yes_root() {
+        for kt in ALL_KEY_TYPES.iter() {
+            let client_verifier = MockClientVerifier {
+                verified: ver_unreachable,
+                subjects: Some(get_client_root_store(*kt).get_subjects()),
+                mandatory: Some(true),
+            };
+
+            let mut server_config = ServerConfig::new(Arc::new(client_verifier));
+            server_config.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+            let server_config = Arc::new(server_config);
+            let client_config = make_client_config(*kt);
+
+            for client_config in AllClientVersions::new(client_config) {
+                println!("Failing: {:?}", client_config.versions);
+                let mut server = ServerSession::new(&server_config);
+                let mut client = ClientSession::new(&Arc::new(client_config), dns_name("localhost"));
+                let errs = do_handshake_until_both_error(&mut client, &mut server);
+                assert_eq!(errs,
+                           Err(vec![
+                               TLSErrorFromPeer::Server(TLSError::NoCertificatesPresented),
+                               TLSErrorFromPeer::Client(TLSError::AlertReceived(AlertDescription::CertificateRequired))
+                           ]));
+            }
+        }
+    }
+
+    #[test]
+    // Triple checks we propagate the TLSError through
+    fn client_verifier_fails_properly() {
+        for kt in ALL_KEY_TYPES.iter() {
+            let client_verifier = MockClientVerifier {
+                verified: ver_err,
+                subjects: Some(get_client_root_store(*kt).get_subjects()),
+                mandatory: Some(true),
+            };
+
+            let mut server_config = ServerConfig::new(Arc::new(client_verifier));
+            server_config.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+            let server_config = Arc::new(server_config);
+            let client_config = make_client_config_with_auth(*kt);
+
+            for client_config in AllClientVersions::new(client_config) {
+                let mut server = ServerSession::new(&server_config);
+                let mut client = ClientSession::new(&Arc::new(client_config), dns_name("localhost"));
+                let err = do_handshake_until_error(&mut client, &mut server);
+                assert_eq!(err, Err(TLSErrorFromPeer::Server(
+                            TLSError::General("test err".into()))));
+            }
+        }
+    }
+
+
+    #[test]
+    // If a verifier returns a None on Mandatory-ness, then we error out
+    fn client_verifier_must_determine_client_auth_requirement_to_continue() {
+        for kt in ALL_KEY_TYPES.iter() {
+            let client_verifier = MockClientVerifier {
+                verified: ver_ok,
+                subjects: Some(get_client_root_store(*kt).get_subjects()),
+                mandatory: None,
+            };
+
+            let mut server_config = ServerConfig::new(Arc::new(client_verifier));
+            server_config.set_single_cert(kt.get_chain(), kt.get_key()).unwrap();
+
+            let server_config = Arc::new(server_config);
+            let client_config = make_client_config_with_auth(*kt);
+
+            for client_config in AllClientVersions::new(client_config) {
+                let mut server = ServerSession::new(&server_config);
+                let mut client = ClientSession::new(&Arc::new(client_config), dns_name("localhost"));
+                let errs = do_handshake_until_both_error(&mut client, &mut server);
+                assert_eq!(errs,
+                           Err(vec![
+                               TLSErrorFromPeer::Server(TLSError::General("client rejected by client_auth_mandatory".into())),
+                               TLSErrorFromPeer::Client(TLSError::AlertReceived(AlertDescription::AccessDenied))
+                           ]));
+            }
+        }
+    }
+} // mod test_verifier
 
 #[test]
 fn client_error_is_sticky() {
@@ -1335,15 +1605,21 @@ struct KeyLogItem {
     secret: Vec<u8>,
 }
 
-struct KeyLogToVec(Mutex<Vec<KeyLogItem>>);
+struct KeyLogToVec {
+    label: &'static str,
+    items: Mutex<Vec<KeyLogItem>>,
+}
 
 impl KeyLogToVec {
-    fn new() -> Self {
-        KeyLogToVec(Mutex::new(vec![]))
+    fn new(who: &'static str) -> Self {
+        KeyLogToVec {
+            label: who,
+            items: Mutex::new(vec![]),
+        }
     }
 
     fn take(&self) -> Vec<KeyLogItem> {
-        mem::replace(&mut self.0.lock()
+        mem::replace(&mut self.items.lock()
                          .unwrap(),
                      vec![])
     }
@@ -1357,7 +1633,9 @@ impl KeyLog for KeyLogToVec {
             secret: secret.into()
         };
 
-        self.0.lock()
+        println!("key log {:?}: {:?}", self.label, value);
+
+        self.items.lock()
             .unwrap()
             .push(value);
     }
@@ -1365,8 +1643,8 @@ impl KeyLog for KeyLogToVec {
 
 #[test]
 fn key_log_for_tls12() {
-    let client_key_log = Arc::new(KeyLogToVec::new());
-    let server_key_log = Arc::new(KeyLogToVec::new());
+    let client_key_log = Arc::new(KeyLogToVec::new("client"));
+    let server_key_log = Arc::new(KeyLogToVec::new("server"));
 
     let kt = KeyType::RSA;
     let mut client_config = make_client_config(kt);
@@ -1402,8 +1680,8 @@ fn key_log_for_tls12() {
 
 #[test]
 fn key_log_for_tls13() {
-    let client_key_log = Arc::new(KeyLogToVec::new());
-    let server_key_log = Arc::new(KeyLogToVec::new());
+    let client_key_log = Arc::new(KeyLogToVec::new("client"));
+    let server_key_log = Arc::new(KeyLogToVec::new("server"));
 
     let kt = KeyType::RSA;
     let mut client_config = make_client_config(kt);
@@ -1699,9 +1977,10 @@ fn tls13_stateless_resumption() {
     assert_eq!(storage.takes(), 0);
 }
 
-#[test]
 #[cfg(feature = "quic")]
-fn quic_handshake() {
+mod test_quic {
+    use super::*;
+
     // Returns the sender's next secrets to use, or the receiver's error.
     fn step(send: &mut dyn Session, recv: &mut dyn Session) -> Result<Option<quic::Secrets>, TLSError> {
         let mut buf = Vec::new();
@@ -1722,137 +2001,173 @@ fn quic_handshake() {
         Ok(secrets)
     }
 
-    fn equal_prk(x: &ring::hkdf::Prk, y: &ring::hkdf::Prk) -> bool {
-        let mut x_data = [0; 16];
-        let mut y_data = [0; 16];
-        let x_okm = x.expand(&[b"info"], &ring::aead::quic::AES_128).unwrap();
-        x_okm.fill(&mut x_data[..]).unwrap();
-        let y_okm = y.expand(&[b"info"], &ring::aead::quic::AES_128).unwrap();
-        y_okm.fill(&mut y_data[..]).unwrap();
-        x_data == y_data
-    }
+#[test]
+    fn test_quic_handshake() {
+        fn equal_prk(x: &ring::hkdf::Prk, y: &ring::hkdf::Prk) -> bool {
+            let mut x_data = [0; 16];
+            let mut y_data = [0; 16];
+            let x_okm = x.expand(&[b"info"], &ring::aead::quic::AES_128).unwrap();
+            x_okm.fill(&mut x_data[..]).unwrap();
+            let y_okm = y.expand(&[b"info"], &ring::aead::quic::AES_128).unwrap();
+            y_okm.fill(&mut y_data[..]).unwrap();
+            x_data == y_data
+        }
 
-    fn equal_secrets(x: &quic::Secrets, y: &quic::Secrets) -> bool {
-        equal_prk(&x.client, &y.client) && equal_prk(&x.server, &y.server)
-    }
+        fn equal_secrets(x: &quic::Secrets, y: &quic::Secrets) -> bool {
+            equal_prk(&x.client, &y.client) && equal_prk(&x.server, &y.server)
+        }
 
-    let kt = KeyType::RSA;
-    let mut client_config = make_client_config(kt);
-    client_config.versions = vec![ProtocolVersion::TLSv1_3];
-    client_config.enable_early_data = true;
-    let client_config = Arc::new(client_config);
-    let mut server_config = make_server_config(kt);
-    server_config.versions = vec![ProtocolVersion::TLSv1_3];
-    server_config.max_early_data_size = 0xffffffff;
-    server_config.alpn_protocols = vec!["foo".into()];
-    let server_config = Arc::new(server_config);
-    let client_params = &b"client params"[..];
-    let server_params = &b"server params"[..];
+        let kt = KeyType::RSA;
+        let mut client_config = make_client_config(kt);
+        client_config.versions = vec![ProtocolVersion::TLSv1_3];
+        client_config.enable_early_data = true;
+        let client_config = Arc::new(client_config);
+        let mut server_config = make_server_config(kt);
+        server_config.versions = vec![ProtocolVersion::TLSv1_3];
+        server_config.max_early_data_size = 0xffffffff;
+        server_config.alpn_protocols = vec!["foo".into()];
+        let server_config = Arc::new(server_config);
+        let client_params = &b"client params"[..];
+        let server_params = &b"server params"[..];
 
-    // full handshake
-    let mut client =
-        ClientSession::new_quic(&client_config, dns_name("localhost"), client_params.into());
-    let mut server = ServerSession::new_quic(&server_config, server_params.into());
-    let client_initial = step(&mut client, &mut server).unwrap();
-    assert!(client_initial.is_none());
-    assert!(client.get_early_secret().is_none());
-    assert_eq!(server.get_quic_transport_parameters(), Some(client_params));
-    let server_hs = step(&mut server, &mut client).unwrap().unwrap();
-    assert!(server.get_early_secret().is_none());
-    let client_hs = step(&mut client, &mut server).unwrap().unwrap();
-    assert!(equal_secrets(&server_hs, &client_hs));
-    assert!(client.is_handshaking());
-    let server_1rtt = step(&mut server, &mut client).unwrap().unwrap();
-    assert!(!client.is_handshaking());
-    assert_eq!(client.get_quic_transport_parameters(), Some(server_params));
-    assert!(server.is_handshaking());
-    let client_1rtt = step(&mut client, &mut server).unwrap().unwrap();
-    assert!(!server.is_handshaking());
-    assert!(equal_secrets(&server_1rtt, &client_1rtt));
-    assert!(!equal_secrets(&server_hs, &server_1rtt));
-    assert!(step(&mut client, &mut server).unwrap().is_none());
-    assert!(step(&mut server, &mut client).unwrap().is_none());
-
-    // key update
-    let initial = quic::Secrets {
-        // Constant dummy values for reproducibility
-        client: hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
-            0xb8, 0x76, 0x77, 0x08, 0xf8, 0x77, 0x23, 0x58, 0xa6, 0xea, 0x9f, 0xc4, 0x3e, 0x4a,
-            0xdd, 0x2c, 0x96, 0x1b, 0x3f, 0x52, 0x87, 0xa6, 0xd1, 0x46, 0x7e, 0xe0, 0xae, 0xab,
-            0x33, 0x72, 0x4d, 0xbf,
-        ]),
-        server: hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
-            0x42, 0xdc, 0x97, 0x21, 0x40, 0xe0, 0xf2, 0xe3, 0x98, 0x45, 0xb7, 0x67, 0x61, 0x34,
-            0x39, 0xdc, 0x67, 0x58, 0xca, 0x43, 0x25, 0x9b, 0x87, 0x85, 0x06, 0x82, 0x4e, 0xb1,
-            0xe4, 0x38, 0xd8, 0x55,
-        ]),
-    };
-    let updated = client.update_secrets(&initial.client, &initial.server);
-    // The expected values will need to be updated if the negotiated hash function changes.
-    assert!(equal_prk(
-        &updated.client,
-        &hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
-            101, 250, 130, 179, 97, 208, 160, 166, 213, 90, 196, 212, 96, 49, 190, 24, 237, 225,
-            68, 97, 141, 123, 162, 108, 231, 21, 255, 184, 49, 245, 178, 148
-        ]))
-    );
-    assert!(equal_prk(
-        &updated.server,
-        &hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
-            171, 127, 244, 22, 119, 205, 252, 100, 179, 94, 91, 45, 99, 82, 236, 124, 44, 251, 63,
-            57, 94, 215, 175, 138, 178, 161, 97, 80, 51, 250, 107, 85
-        ]))
-    );
-
-    // 0-RTT handshake
-    let mut client =
-        ClientSession::new_quic(&client_config, dns_name("localhost"), client_params.into());
-    assert!(client.get_negotiated_ciphersuite().is_some());
-    let mut server = ServerSession::new_quic(&server_config, server_params.into());
-    step(&mut client, &mut server).unwrap();
-    assert_eq!(client.get_quic_transport_parameters(), Some(server_params));
-    {
-        let client_early = client.get_early_secret().unwrap();
-        let server_early = server.get_early_secret().unwrap();
-        assert!(equal_prk(client_early, server_early));
-    }
-    step(&mut server, &mut client).unwrap().unwrap();
-    step(&mut client, &mut server).unwrap().unwrap();
-    step(&mut server, &mut client).unwrap().unwrap();
-    assert!(client.is_early_data_accepted());
-
-    // 0-RTT rejection
-    {
-        let mut client_config = (*client_config).clone();
-        client_config.alpn_protocols = vec!["foo".into()];
+        // full handshake
         let mut client =
-            ClientSession::new_quic(&Arc::new(client_config), dns_name("localhost"), client_params.into());
+            ClientSession::new_quic(&client_config, dns_name("localhost"), client_params.into());
+        let mut server = ServerSession::new_quic(&server_config, server_params.into());
+        let client_initial = step(&mut client, &mut server).unwrap();
+        assert!(client_initial.is_none());
+        assert!(client.get_early_secret().is_none());
+        assert_eq!(server.get_quic_transport_parameters(), Some(client_params));
+        let server_hs = step(&mut server, &mut client).unwrap().unwrap();
+        assert!(server.get_early_secret().is_none());
+        let client_hs = step(&mut client, &mut server).unwrap().unwrap();
+        assert!(equal_secrets(&server_hs, &client_hs));
+        assert!(client.is_handshaking());
+        let server_1rtt = step(&mut server, &mut client).unwrap().unwrap();
+        assert!(!client.is_handshaking());
+        assert_eq!(client.get_quic_transport_parameters(), Some(server_params));
+        assert!(server.is_handshaking());
+        let client_1rtt = step(&mut client, &mut server).unwrap().unwrap();
+        assert!(!server.is_handshaking());
+        assert!(equal_secrets(&server_1rtt, &client_1rtt));
+        assert!(!equal_secrets(&server_hs, &server_1rtt));
+        assert!(step(&mut client, &mut server).unwrap().is_none());
+        assert!(step(&mut server, &mut client).unwrap().is_none());
+
+        // key update
+        let initial = quic::Secrets {
+            // Constant dummy values for reproducibility
+            client: hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
+                0xb8, 0x76, 0x77, 0x08, 0xf8, 0x77, 0x23, 0x58, 0xa6, 0xea, 0x9f, 0xc4, 0x3e, 0x4a,
+                0xdd, 0x2c, 0x96, 0x1b, 0x3f, 0x52, 0x87, 0xa6, 0xd1, 0x46, 0x7e, 0xe0, 0xae, 0xab,
+                0x33, 0x72, 0x4d, 0xbf,
+            ]),
+            server: hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
+                0x42, 0xdc, 0x97, 0x21, 0x40, 0xe0, 0xf2, 0xe3, 0x98, 0x45, 0xb7, 0x67, 0x61, 0x34,
+                0x39, 0xdc, 0x67, 0x58, 0xca, 0x43, 0x25, 0x9b, 0x87, 0x85, 0x06, 0x82, 0x4e, 0xb1,
+                0xe4, 0x38, 0xd8, 0x55,
+            ]),
+        };
+        let updated = client.update_secrets(&initial.client, &initial.server);
+        // The expected values will need to be updated if the negotiated hash function changes. Pull the
+        // values from ring's `hmac::Key::construct` with a debugger.
+        assert!(equal_prk(
+            &updated.client,
+            &hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
+                0x42, 0xca, 0xc8, 0xc9, 0x1c, 0xd5, 0xeb, 0x40, 0x68, 0x2e, 0x43, 
+                0x2e, 0xdf, 0x2d, 0x2b, 0xe9, 0xf4, 0x1a, 0x52, 0xca, 0x6b, 0x22, 0xd8, 0xe6, 0xcd, 0xb1, 
+                0xe8, 0xac, 0xa9, 0x6, 0x1f, 0xce
+            ]))
+        );
+        assert!(equal_prk(
+            &updated.server,
+            &hkdf::Prk::new_less_safe(hkdf::HKDF_SHA256, &[
+                0xeb, 0x7f, 0x5e, 0x2a, 0x12, 0x3f, 0x40, 0x7d, 0xb4, 0x99, 0xe3, 
+                0x61, 0xca, 0xe5, 0x90, 0xd4, 0xd9, 0x92, 0xe1, 0x4b, 0x7a, 0xce, 0x3, 0xc2, 0x44, 0xe0, 
+                0x42, 0x21, 0x15, 0xb6, 0xd3, 0x8a
+            ]))
+        );
+
+        // 0-RTT handshake
+        let mut client =
+            ClientSession::new_quic(&client_config, dns_name("localhost"), client_params.into());
+        assert!(client.get_negotiated_ciphersuite().is_some());
         let mut server = ServerSession::new_quic(&server_config, server_params.into());
         step(&mut client, &mut server).unwrap();
         assert_eq!(client.get_quic_transport_parameters(), Some(server_params));
-        assert!(client.get_early_secret().is_some());
-        assert!(server.get_early_secret().is_none());
+        {
+            let client_early = client.get_early_secret().unwrap();
+            let server_early = server.get_early_secret().unwrap();
+            assert!(equal_prk(client_early, server_early));
+        }
         step(&mut server, &mut client).unwrap().unwrap();
         step(&mut client, &mut server).unwrap().unwrap();
         step(&mut server, &mut client).unwrap().unwrap();
-        assert!(!client.is_early_data_accepted());
+        assert!(client.is_early_data_accepted());
+
+        // 0-RTT rejection
+        {
+            let mut client_config = (*client_config).clone();
+            client_config.alpn_protocols = vec!["foo".into()];
+            let mut client =
+                ClientSession::new_quic(&Arc::new(client_config), dns_name("localhost"), client_params.into());
+            let mut server = ServerSession::new_quic(&server_config, server_params.into());
+            step(&mut client, &mut server).unwrap();
+            assert_eq!(client.get_quic_transport_parameters(), Some(server_params));
+            assert!(client.get_early_secret().is_some());
+            assert!(server.get_early_secret().is_none());
+            step(&mut server, &mut client).unwrap().unwrap();
+            step(&mut client, &mut server).unwrap().unwrap();
+            step(&mut server, &mut client).unwrap().unwrap();
+            assert!(!client.is_early_data_accepted());
+        }
+
+        // failed handshake
+        let mut client = ClientSession::new_quic(
+            &client_config,
+            dns_name("example.com"),
+            client_params.into(),
+        );
+        let mut server = ServerSession::new_quic(&server_config, server_params.into());
+        step(&mut client, &mut server).unwrap();
+        step(&mut server, &mut client).unwrap().unwrap();
+        step(&mut server, &mut client).unwrap_err();
+        assert_eq!(
+            client.get_alert(),
+            Some(rustls::internal::msgs::enums::AlertDescription::BadCertificate)
+        );
     }
 
-    // failed handshake
-    let mut client = ClientSession::new_quic(
-        &client_config,
-        dns_name("example.com"),
-        client_params.into(),
-    );
-    let mut server = ServerSession::new_quic(&server_config, server_params.into());
-    step(&mut client, &mut server).unwrap();
-    step(&mut server, &mut client).unwrap().unwrap();
-    step(&mut server, &mut client).unwrap_err();
-    assert_eq!(
-        client.get_alert(),
-        Some(rustls::internal::msgs::enums::AlertDescription::BadCertificate)
-    );
-}
+#[test]
+    fn test_quic_rejects_missing_alpn() {
+        let client_params = &b"client params"[..];
+        let server_params = &b"server params"[..];
+
+        for &kt in ALL_KEY_TYPES.iter() {
+            let mut client_config = make_client_config(kt);
+            client_config.versions = vec![ProtocolVersion::TLSv1_3];
+            client_config.alpn_protocols = vec!["bar".into()];
+            let client_config = Arc::new(client_config);
+
+            let mut server_config = make_server_config(kt);
+            server_config.versions = vec![ProtocolVersion::TLSv1_3];
+            server_config.alpn_protocols = vec!["foo".into()];
+            let server_config = Arc::new(server_config);
+
+            let mut client = ClientSession::new_quic(&client_config,
+                                                     dns_name("localhost"),
+                                                     client_params.into());
+            let mut server = ServerSession::new_quic(&server_config,
+                                                     server_params.into());
+
+            assert_eq!(step(&mut client, &mut server).unwrap_err(),
+                       TLSError::NoApplicationProtocol);
+
+            assert_eq!(server.get_alert(),
+                       Some(rustls::internal::msgs::enums::AlertDescription::NoApplicationProtocol));
+        }
+    }
+} // mod test_quic
 
 #[test]
 fn test_client_does_not_offer_sha1() {
@@ -1968,6 +2283,72 @@ fn assert_lt(left: usize, right: usize) {
 #[test]
 fn session_types_are_not_huge() {
     // Arbitrary sizes
-    assert_lt(mem::size_of::<ServerSession>(), 2300);
-    assert_lt(mem::size_of::<ClientSession>(), 2300);
+    assert_lt(mem::size_of::<ServerSession>(), 1600);
+    assert_lt(mem::size_of::<ClientSession>(), 1600);
+}
+
+use rustls::internal::msgs::{message::Message, message::MessagePayload,
+    handshake::HandshakePayload, handshake::ClientExtension};
+
+#[test]
+fn test_server_rejects_duplicate_sni_names() {
+    fn duplicate_sni_payload(msg: &mut Message) {
+        if let MessagePayload::Handshake(hs) = &mut msg.payload {
+            if let HandshakePayload::ClientHello(ch) = &mut hs.payload {
+                for mut ext in ch.extensions.iter_mut() {
+                    if let ClientExtension::ServerName(snr) = &mut ext {
+                        snr.push(snr[0].clone());
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut client, mut server) = make_pair(KeyType::RSA);
+    transfer_altered(&mut client, duplicate_sni_payload, &mut server);
+    assert_eq!(server.process_new_packets(),
+               Err(TLSError::PeerMisbehavedError("ClientHello SNI contains duplicate name types".into())));
+}
+
+#[test]
+fn test_server_rejects_empty_sni_extension() {
+    fn empty_sni_payload(msg: &mut Message) {
+        if let MessagePayload::Handshake(hs) = &mut msg.payload {
+            if let HandshakePayload::ClientHello(ch) = &mut hs.payload {
+                for mut ext in ch.extensions.iter_mut() {
+                    if let ClientExtension::ServerName(snr) = &mut ext {
+                        snr.clear();
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut client, mut server) = make_pair(KeyType::RSA);
+    transfer_altered(&mut client, empty_sni_payload, &mut server);
+    assert_eq!(server.process_new_packets(),
+               Err(TLSError::PeerMisbehavedError("ClientHello SNI did not contain a hostname".into())));
+}
+
+#[test]
+fn test_server_rejects_clients_without_any_kx_group_overlap() {
+    fn different_kx_group(msg: &mut Message) {
+        if let MessagePayload::Handshake(hs) = &mut msg.payload {
+            if let HandshakePayload::ClientHello(ch) = &mut hs.payload {
+                for mut ext in ch.extensions.iter_mut() {
+                    if let ClientExtension::NamedGroups(ngs) = &mut ext {
+                        ngs.clear();
+                    }
+                    if let ClientExtension::KeyShare(ks) = &mut ext {
+                        ks.clear();
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut client, mut server) = make_pair(KeyType::RSA);
+    transfer_altered(&mut client, different_kx_group, &mut server);
+    assert_eq!(server.process_new_packets(),
+               Err(TLSError::PeerIncompatibleError("no kx group overlap with client".into())));
 }

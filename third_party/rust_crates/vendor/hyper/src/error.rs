@@ -3,12 +3,8 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::io;
 
-use httparse;
-use http;
-use h2;
-
 /// Result type often returned from methods that can have hyper `Error`s.
-pub type Result<T> = ::std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 type Cause = Box<dyn StdError + Send + Sync>;
 
@@ -39,7 +35,7 @@ pub(crate) enum Kind {
     /// Error occurred while connecting.
     Connect,
     /// Error creating a TcpListener.
-    #[cfg(feature = "runtime")]
+    #[cfg(feature = "tcp")]
     Listen,
     /// Error accepting on an Incoming stream.
     Accept,
@@ -69,7 +65,7 @@ pub(crate) enum Parse {
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum User {
-    /// Error calling user's Payload::poll_data().
+    /// Error calling user's HttpBody::poll_data().
     Body,
     /// Error calling user's MakeService.
     MakeService,
@@ -93,10 +89,11 @@ pub(crate) enum User {
 
     /// User polled for an upgrade, but low-level API is not using upgrades.
     ManualUpgrade,
-
-    /// Error trying to call `Executor::execute`.
-    Execute,
 }
+
+// Sentinel type to indicate the error was caused by a timeout.
+#[derive(Debug)]
+pub(crate) struct TimedOut;
 
 impl Error {
     /// Returns true if this was an HTTP parse error.
@@ -140,23 +137,19 @@ impl Error {
         self.inner.kind == Kind::BodyWriteAborted
     }
 
-    #[doc(hidden)]
-    #[cfg_attr(error_source, deprecated(note = "use Error::source instead"))]
-    pub fn cause2(&self) -> Option<&(dyn StdError + 'static + Sync + Send)> {
-        self.inner.cause.as_ref().map(|e| &**e)
+    /// Returns true if the error was caused by a timeout.
+    pub fn is_timeout(&self) -> bool {
+        self.find_source::<TimedOut>().is_some()
     }
 
     /// Consumes the error, returning its cause.
-    pub fn into_cause(self) -> Option<Box<dyn StdError + Sync + Send>> {
+    pub fn into_cause(self) -> Option<Box<dyn StdError + Send + Sync>> {
         self.inner.cause
     }
 
     pub(crate) fn new(kind: Kind) -> Error {
         Error {
-            inner: Box::new(ErrorImpl {
-                kind,
-                cause: None,
-            }),
+            inner: Box::new(ErrorImpl { kind, cause: None }),
         }
     }
 
@@ -169,43 +162,25 @@ impl Error {
         &self.inner.kind
     }
 
-    #[cfg(not(error_source))]
-    pub(crate) fn h2_reason(&self) -> h2::Reason {
-        // Since we don't have access to `Error::source`, we can only
-        // look so far...
-        let mut cause = self.cause2();
-        while let Some(err) = cause {
-            if let Some(h2_err) = err.downcast_ref::<h2::Error>() {
-                return h2_err
-                    .reason()
-                    .unwrap_or(h2::Reason::INTERNAL_ERROR);
-            }
-
-            cause = err
-                .downcast_ref::<Error>()
-                .and_then(Error::cause2);
-        }
-
-        // else
-        h2::Reason::INTERNAL_ERROR
-    }
-
-    #[cfg(error_source)]
-    pub(crate) fn h2_reason(&self) -> h2::Reason {
-        // Find an h2::Reason somewhere in the cause stack, if it exists,
-        // otherwise assume an INTERNAL_ERROR.
+    fn find_source<E: StdError + 'static>(&self) -> Option<&E> {
         let mut cause = self.source();
         while let Some(err) = cause {
-            if let Some(h2_err) = err.downcast_ref::<h2::Error>() {
-                return h2_err
-                    .reason()
-                    .unwrap_or(h2::Reason::INTERNAL_ERROR);
+            if let Some(ref typed) = err.downcast_ref() {
+                return Some(typed);
             }
             cause = err.source();
         }
 
         // else
-        h2::Reason::INTERNAL_ERROR
+        None
+    }
+
+    pub(crate) fn h2_reason(&self) -> h2::Reason {
+        // Find an h2::Reason somewhere in the cause stack, if it exists,
+        // otherwise assume an INTERNAL_ERROR.
+        self.find_source::<h2::Error>()
+            .and_then(|h2_err| h2_err.reason())
+            .unwrap_or(h2::Reason::INTERNAL_ERROR)
     }
 
     pub(crate) fn new_canceled() -> Error {
@@ -232,7 +207,7 @@ impl Error {
         Error::new(Kind::Io).with(cause)
     }
 
-    #[cfg(feature = "runtime")]
+    #[cfg(feature = "tcp")]
     pub(crate) fn new_listen<E: Into<Cause>>(cause: E) -> Error {
         Error::new(Kind::Listen).with(cause)
     }
@@ -309,10 +284,6 @@ impl Error {
         Error::new(Kind::Shutdown).with(cause)
     }
 
-    pub(crate) fn new_execute<E: Into<Cause>>(cause: E) -> Error {
-        Error::new_user(User::Execute).with(cause)
-    }
-
     pub(crate) fn new_h2(cause: ::h2::Error) -> Error {
         if cause.is_io() {
             Error::new_io(cause.into_io().expect("h2::Error::is_io"))
@@ -320,30 +291,7 @@ impl Error {
             Error::new(Kind::Http2).with(cause)
         }
     }
-}
 
-impl fmt::Debug for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut f = f.debug_tuple("Error");
-        f.field(&self.inner.kind);
-        if let Some(ref cause) = self.inner.cause {
-            f.field(cause);
-        }
-        f.finish()
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref cause) = self.inner.cause {
-            write!(f, "{}: {}", self.description(), cause)
-        } else {
-            f.write_str(self.description())
-        }
-    }
-}
-
-impl StdError for Error {
     fn description(&self) -> &str {
         match self.inner.kind {
             Kind::Parse(Parse::Method) => "invalid HTTP method parsed",
@@ -358,7 +306,7 @@ impl StdError for Error {
             Kind::ChannelClosed => "channel closed",
             Kind::Connect => "error trying to connect",
             Kind::Canceled => "operation was canceled",
-            #[cfg(feature = "runtime")]
+            #[cfg(feature = "tcp")]
             Kind::Listen => "error creating server listener",
             Kind::Accept => "error accepting connection",
             Kind::Body => "error reading a body from connection",
@@ -368,33 +316,46 @@ impl StdError for Error {
             Kind::Http2 => "http2 error",
             Kind::Io => "connection error",
 
-            Kind::User(User::Body) => "error from user's Payload stream",
+            Kind::User(User::Body) => "error from user's HttpBody stream",
             Kind::User(User::MakeService) => "error from user's MakeService",
             Kind::User(User::Service) => "error from user's Service",
             Kind::User(User::UnexpectedHeader) => "user sent unexpected header",
             Kind::User(User::UnsupportedVersion) => "request has unsupported HTTP version",
             Kind::User(User::UnsupportedRequestMethod) => "request has unsupported HTTP method",
-            Kind::User(User::UnsupportedStatusCode) => "response has 1xx status code, not supported by server",
+            Kind::User(User::UnsupportedStatusCode) => {
+                "response has 1xx status code, not supported by server"
+            }
             Kind::User(User::AbsoluteUriRequired) => "client requires absolute-form URIs",
             Kind::User(User::NoUpgrade) => "no upgrade available",
             Kind::User(User::ManualUpgrade) => "upgrade expected but low level API in use",
-            Kind::User(User::Execute) => "executor failed to spawn task",
         }
     }
+}
 
-    #[cfg(not(error_source))]
-    fn cause(&self) -> Option<&StdError> {
-        self
-            .inner
-            .cause
-            .as_ref()
-            .map(|cause| &**cause as &StdError)
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut f = f.debug_tuple("hyper::Error");
+        f.field(&self.inner.kind);
+        if let Some(ref cause) = self.inner.cause {
+            f.field(cause);
+        }
+        f.finish()
     }
+}
 
-    #[cfg(error_source)]
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref cause) = self.inner.cause {
+            write!(f, "{}: {}", self.description(), cause)
+        } else {
+            f.write_str(self.description())
+        }
+    }
+}
+
+impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        self
-            .inner
+        self.inner
             .cause
             .as_ref()
             .map(|cause| &**cause as &(dyn StdError + 'static))
@@ -411,10 +372,10 @@ impl From<Parse> for Error {
 impl From<httparse::Error> for Parse {
     fn from(err: httparse::Error) -> Parse {
         match err {
-            httparse::Error::HeaderName |
-            httparse::Error::HeaderValue |
-            httparse::Error::NewLine |
-            httparse::Error::Token => Parse::Header,
+            httparse::Error::HeaderName
+            | httparse::Error::HeaderValue
+            | httparse::Error::NewLine
+            | httparse::Error::Token => Parse::Header,
             httparse::Error::Status => Parse::Status,
             httparse::Error::TooManyHeaders => Parse::TooLarge,
             httparse::Error::Version => Parse::Version,
@@ -440,12 +401,6 @@ impl From<http::uri::InvalidUri> for Parse {
     }
 }
 
-impl From<http::uri::InvalidUriBytes> for Parse {
-    fn from(_: http::uri::InvalidUriBytes) -> Parse {
-        Parse::Uri
-    }
-}
-
 impl From<http::uri::InvalidUriParts> for Parse {
     fn from(_: http::uri::InvalidUriParts) -> Parse {
         Parse::Uri
@@ -457,10 +412,20 @@ trait AssertSendSync: Send + Sync + 'static {}
 #[doc(hidden)]
 impl AssertSendSync for Error {}
 
+// ===== impl TimedOut ====
+
+impl fmt::Display for TimedOut {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("operation timed out")
+    }
+}
+
+impl StdError for TimedOut {}
+
 #[cfg(test)]
 mod tests {
-    use std::mem;
     use super::*;
+    use std::mem;
 
     #[test]
     fn error_size_of() {

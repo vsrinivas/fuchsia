@@ -57,7 +57,6 @@ pub trait BoundKey<N: NonceSequence>: core::fmt::Debug {
     fn new(key: UnboundKey, nonce_sequence: N) -> Self;
 
     /// The key's AEAD algorithm.
-    #[inline]
     fn algorithm(&self) -> &'static Algorithm;
 }
 
@@ -269,7 +268,7 @@ impl<N: NonceSequence> core::fmt::Debug for SealingKey<N> {
 }
 
 impl<N: NonceSequence> SealingKey<N> {
-    /// Deprecated. Renamed to [`seal_in_place_append_tag()`].
+    /// Deprecated. Renamed to `seal_in_place_append_tag()`.
     #[deprecated(note = "Renamed to `seal_in_place_append_tag`.")]
     #[inline]
     pub fn seal_in_place<A, InOut>(
@@ -492,7 +491,7 @@ impl LessSafeKey {
         open_within_(&self.key, nonce, aad, in_out, ciphertext_and_tag)
     }
 
-    /// Deprecated. Renamed to [`seal_in_place_append_tag()`].
+    /// Deprecated. Renamed to `seal_in_place_append_tag()`.
     #[deprecated(note = "Renamed to `seal_in_place_append_tag`.")]
     #[inline]
     pub fn seal_in_place<A, InOut>(

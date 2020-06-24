@@ -314,18 +314,36 @@ impl Codec for ServerName {
 declare_u16_vec!(ServerNameRequest, ServerName);
 
 pub trait ConvertServerNameList {
-    fn get_hostname(&self) -> Option<webpki::DNSNameRef>;
+    fn has_duplicate_names_for_type(&self) -> bool;
+    fn get_single_hostname(&self) -> Option<webpki::DNSNameRef>;
 }
 
 impl ConvertServerNameList for ServerNameRequest {
-    fn get_hostname(&self) -> Option<webpki::DNSNameRef> {
+    /// RFC6066: "The ServerNameList MUST NOT contain more than one name of the same name_type."
+    fn has_duplicate_names_for_type(&self) -> bool {
+        let mut seen = collections::HashSet::new();
+
         for name in self {
-            if let ServerNamePayload::HostName(ref dns_name) = name.payload {
-                return Some(dns_name.as_ref());
+            if !seen.insert(name.typ.get_u8()) {
+                return true;
             }
         }
 
-        None
+        false
+    }
+
+    fn get_single_hostname(&self) -> Option<webpki::DNSNameRef> {
+        fn only_dns_hostnames(name: &ServerName) -> Option<webpki::DNSNameRef> {
+            if let ServerNamePayload::HostName(ref dns) = name.payload {
+                Some(dns.as_ref())
+            } else {
+                None
+            }
+        }
+
+        self.iter()
+            .filter_map(only_dns_hostnames)
+            .nth(0)
     }
 }
 
@@ -333,7 +351,7 @@ pub type ProtocolNameList = VecU16OfPayloadU8;
 
 pub trait ConvertProtocolNameList {
     fn from_slices(names: &[&[u8]]) -> Self;
-    fn to_vecs(&self) -> Vec<Vec<u8>>;
+    fn to_slices(&self) -> Vec<&[u8]>;
     fn as_single_slice(&self) -> Option<&[u8]>;
 }
 
@@ -348,12 +366,10 @@ impl ConvertProtocolNameList for ProtocolNameList {
         ret
     }
 
-    fn to_vecs(&self) -> Vec<Vec<u8>> {
-        let mut ret = Vec::new();
-        for proto in self {
-            ret.push(proto.0.clone());
-        }
-        ret
+    fn to_slices(&self) -> Vec<&[u8]> {
+        self.iter()
+            .map(|proto| -> &[u8] { &proto.0 })
+            .collect::<Vec<&[u8]>>()
     }
 
     fn as_single_slice(&self) -> Option<&[u8]> {
@@ -991,7 +1007,7 @@ impl ClientHelloPayload {
 
     pub fn psk_mode_offered(&self, mode: PSKKeyExchangeMode) -> bool {
         self.get_psk_modes()
-            .and_then(|modes| Some(modes.contains(&mode)))
+            .map(|modes| modes.contains(&mode))
             .or(Some(false))
             .unwrap()
     }
@@ -1663,7 +1679,7 @@ impl Codec for ServerKeyExchangePayload {
     fn read(r: &mut Reader) -> Option<ServerKeyExchangePayload> {
         // read as Unknown, fully parse when we know the
         // KeyExchangeAlgorithm
-        Payload::read(r).and_then(|x| Some(ServerKeyExchangePayload::Unknown(x)))
+        Payload::read(r).map(ServerKeyExchangePayload::Unknown)
     }
 }
 
@@ -1675,7 +1691,7 @@ impl ServerKeyExchangePayload {
             let result = match *kxa {
                 KeyExchangeAlgorithm::ECDHE => {
                     ECDHEServerKeyExchange::read(&mut rd)
-                        .and_then(|x| Some(ServerKeyExchangePayload::ECDHE(x)))
+                        .map(ServerKeyExchangePayload::ECDHE)
                 }
                 _ => None,
             };

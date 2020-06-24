@@ -1,7 +1,8 @@
 use crate::session::{Session, SessionCommon};
 use crate::keylog::{KeyLog, NoKeyLog};
 use crate::suites::{SupportedCipherSuite, ALL_CIPHERSUITES};
-use crate::msgs::enums::{ContentType, SignatureScheme};
+use crate::msgs::enums::ContentType;
+use crate::msgs::enums::SignatureScheme;
 use crate::msgs::enums::{AlertDescription, HandshakeType, ProtocolVersion};
 use crate::msgs::handshake::ServerExtension;
 use crate::msgs::message::Message;
@@ -95,15 +96,47 @@ pub trait ProducesTickets : Send + Sync {
 /// How to choose a certificate chain and signing key for use
 /// in server authentication.
 pub trait ResolvesServerCert : Send + Sync {
-    /// Choose a certificate chain and matching key given any server DNS
-    /// name provided via SNI, and signature schemes.
-    ///
-    /// The certificate chain is returned as a vec of `Certificate`s,
-    /// the key is inside a `SigningKey`.
-    fn resolve(&self,
-               server_name: Option<webpki::DNSNameRef>,
-               sigschemes: &[SignatureScheme])
-               -> Option<sign::CertifiedKey>;
+    /// Choose a certificate chain and matching key given simplified
+    /// ClientHello information.
+    /// 
+    /// Return `None` to abort the handshake.
+    fn resolve(&self, client_hello: ClientHello) -> Option<sign::CertifiedKey>;
+}
+
+/// A struct representing the received Client Hello
+pub struct ClientHello<'a> {
+    server_name: Option<webpki::DNSNameRef<'a>>,
+    sigschemes: &'a [SignatureScheme],
+    alpn: Option<&'a[&'a[u8]]>,
+}
+
+impl<'a> ClientHello<'a> {
+    /// Creates a new ClientHello
+    fn new(server_name: Option<webpki::DNSNameRef<'a>>, sigschemes:  &'a [SignatureScheme],
+    alpn: Option<&'a[&'a[u8]]>)->Self {
+        ClientHello {server_name, sigschemes, alpn}
+    }
+
+    /// Get the server name indicator.
+    /// 
+    /// Returns `None` if the client did not supply a SNI.
+    pub fn server_name(&self) -> Option<webpki::DNSNameRef> {
+        self.server_name
+    }
+
+    /// Get the compatible signature schemes.
+    /// 
+    /// Returns standard-specified default if the client omitted this extension.
+    pub fn sigschemes(&self) -> &[SignatureScheme] {
+        self.sigschemes
+    }
+
+    /// Get the alpn.
+    /// 
+    /// Returns `None` if the client did not include an ALPN extension
+    pub fn alpn(&self) -> Option<&'a[&'a[u8]]> {
+        self.alpn
+    }
 }
 
 /// Common configuration for a set of server sessions.
@@ -256,6 +289,11 @@ impl ServerConfig {
         self.alpn_protocols.clear();
         self.alpn_protocols.extend_from_slice(protocols);
     }
+
+    /// Overrides the default `ClientCertVerifier` with something else.
+    pub fn set_client_certificate_verifier(&mut self, verifier: Arc<dyn verify::ClientCertVerifier>) {
+        self.verifier = verifier;
+    }
 }
 
 pub struct ServerSessionImpl {
@@ -264,9 +302,13 @@ pub struct ServerSessionImpl {
     sni: Option<webpki::DNSName>,
     pub alpn_protocol: Option<Vec<u8>>,
     pub quic_params: Option<Vec<u8>>,
+    pub received_resumption_data: Option<Vec<u8>>,
+    pub resumption_data: Vec<u8>,
     pub error: Option<TLSError>,
     pub state: Option<Box<dyn hs::State + Send + Sync>>,
     pub client_cert_chain: Option<Vec<key::Certificate>>,
+    /// Whether to reject early data even if it would otherwise be accepted
+    pub reject_early_data: bool,
 }
 
 impl fmt::Debug for ServerSessionImpl {
@@ -284,9 +326,12 @@ impl ServerSessionImpl {
             sni: None,
             alpn_protocol: None,
             quic_params: None,
+            received_resumption_data: None,
+            resumption_data: Vec::new(),
             error: None,
             state: Some(Box::new(hs::ExpectClientHello::new(server_config, extra_exts))),
             client_cert_chain: None,
+            reject_early_data: false,
         }
     }
 
@@ -322,7 +367,7 @@ impl ServerSessionImpl {
         }
 
         // Decrypt if demanded by current state.
-        if self.common.peer_encrypting {
+        if self.common.record_layer.is_decrypting() {
             let dm = self.common.decrypt_incoming(msg)?;
             msg = dm;
         }
@@ -431,6 +476,24 @@ impl ServerSessionImpl {
         assert!(self.sni.is_none());
         self.sni = Some(value)
     }
+
+    fn export_keying_material(&self,
+                              output: &mut [u8],
+                              label: &[u8],
+                              context: Option<&[u8]>) -> Result<(), TLSError> {
+        self.state
+            .as_ref()
+            .ok_or_else(|| TLSError::HandshakeNotComplete)
+            .and_then(|st| st.export_keying_material(output, label, context))
+    }
+
+    fn send_some_plaintext(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut st = self.state.take();
+        st.as_mut()
+          .map(|st| st.perhaps_write_key_update(self));
+        self.state = st;
+        self.common.send_some_plaintext(buf)
+    }
 }
 
 /// This represents a single TLS server session.
@@ -468,6 +531,38 @@ impl ServerSession {
     /// resumption.
     pub fn get_sni_hostname(&self)-> Option<&str> {
         self.imp.get_sni().map(|s| s.as_ref().into())
+    }
+
+    /// Application-controlled portion of the resumption ticket supplied by the client, if any.
+    ///
+    /// Recovered from the prior session's `set_resumption_data`. Integrity is guaranteed by rustls.
+    ///
+    /// Returns `Some` iff a valid resumption ticket has been received from the client.
+    pub fn received_resumption_data(&self) -> Option<&[u8]> {
+        self.imp.received_resumption_data.as_ref().map(|x| &x[..])
+    }
+
+    /// Set the resumption data to embed in future resumption tickets supplied to the client.
+    ///
+    /// Defaults to the empty byte string. Must be less than 2^15 bytes to allow room for other
+    /// data. Should be called while `is_handshaking` returns true to ensure all transmitted
+    /// resumption tickets are affected.
+    ///
+    /// Integrity will be assured by rustls, but the data will be visible to the client. If secrecy
+    /// from the client is desired, encrypt the data separately.
+    pub fn set_resumption_data(&mut self, data: &[u8]) {
+        assert!(data.len() < 2usize.pow(15));
+        self.imp.resumption_data = data.into();
+    }
+
+    /// Explicitly discard early data, notifying the client
+    ///
+    /// Useful if invariants encoded in `received_resumption_data()` cannot be respected.
+    ///
+    /// Must be called while `is_handshaking` is true.
+    pub fn reject_early_data(&mut self) {
+        assert!(self.is_handshaking(), "cannot retroactively reject early data");
+        self.imp.reject_early_data = true;
     }
 }
 
@@ -525,7 +620,7 @@ impl Session for ServerSession {
                               output: &mut [u8],
                               label: &[u8],
                               context: Option<&[u8]>) -> Result<(), TLSError> {
-        self.imp.common.export_keying_material(output, label, context)
+        self.imp.export_keying_material(output, label, context)
     }
 
     fn get_negotiated_ciphersuite(&self) -> Option<&'static SupportedCipherSuite> {
@@ -553,7 +648,7 @@ impl io::Write for ServerSession {
     /// writing much data before it can be sent will
     /// cause excess memory usage.
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.imp.common.send_some_plaintext(buf)
+        self.imp.send_some_plaintext(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {

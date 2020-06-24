@@ -17,17 +17,19 @@ type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
 
 /// Which signature verification mechanisms we support.  No particular
 /// order.
-static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[&webpki::ECDSA_P256_SHA256,
-                                                   &webpki::ECDSA_P256_SHA384,
-                                                   &webpki::ECDSA_P384_SHA256,
-                                                   &webpki::ECDSA_P384_SHA384,
-                                                   &webpki::RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
-                                                   &webpki::RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
-                                                   &webpki::RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
-                                                   &webpki::RSA_PKCS1_2048_8192_SHA256,
-                                                   &webpki::RSA_PKCS1_2048_8192_SHA384,
-                                                   &webpki::RSA_PKCS1_2048_8192_SHA512,
-                                                   &webpki::RSA_PKCS1_3072_8192_SHA384];
+static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
+    &webpki::ECDSA_P256_SHA256,
+    &webpki::ECDSA_P256_SHA384,
+    &webpki::ECDSA_P384_SHA256,
+    &webpki::ECDSA_P384_SHA384,
+    &webpki::RSA_PSS_2048_8192_SHA256_LEGACY_KEY,
+    &webpki::RSA_PSS_2048_8192_SHA384_LEGACY_KEY,
+    &webpki::RSA_PSS_2048_8192_SHA512_LEGACY_KEY,
+    &webpki::RSA_PKCS1_2048_8192_SHA256,
+    &webpki::RSA_PKCS1_2048_8192_SHA384,
+    &webpki::RSA_PKCS1_2048_8192_SHA512,
+    &webpki::RSA_PKCS1_3072_8192_SHA384
+];
 
 /// Marker types.  These are used to bind the fact some verification
 /// (certificate chain or handshake signature) has taken place into
@@ -76,25 +78,46 @@ pub trait ClientCertVerifier : Send + Sync {
     /// `false` to skip requesting a client certificate. Defaults to `true`.
     fn offer_client_auth(&self) -> bool { true }
 
-    /// Returns `true` to require a client certificate and `false` to make client
-    /// authentication optional. Defaults to `self.offer_client_auth()`.
-    fn client_auth_mandatory(&self) -> bool { self.offer_client_auth() }
+    /// Return `Some(true)` to require a client certificate and `Some(false)` to make
+    /// client authentication optional. Return `None` to abort the connection.
+    /// Defaults to `Some(self.offer_client_auth())`.
+    ///
+    /// `sni` is the server name quoted by the client in its ClientHello; it has
+    /// been validated as a proper DNS name but is otherwise untrusted.
+    fn client_auth_mandatory(&self, _sni: Option<&webpki::DNSName>) -> Option<bool> {
+        Some(self.offer_client_auth())
+    }
 
     /// Returns the subject names of the client authentication trust anchors to
     /// share with the client when requesting client authentication.
-    fn client_auth_root_subjects(&self) -> DistinguishedNames;
+    ///
+    /// Return `None` to abort the connection.
+    ///
+    /// `sni` is the server name quoted by the client in its ClientHello; it has
+    /// been validated as a proper DNS name but is otherwise untrusted.
+    fn client_auth_root_subjects(&self, sni: Option<&webpki::DNSName>) -> Option<DistinguishedNames>;
 
-    /// Verify a certificate chain `presented_certs` is rooted in `roots`.
-    /// Does no further checking of the certificate.
+    /// Verify a certificate chain. `presented_certs` is the certificate chain from the client.
+    ///
+    /// `sni` is the server name quoted by the client in its ClientHello; it has
+    /// been validated as a proper DNS name but is otherwise untrusted.
     fn verify_client_cert(&self,
-                          presented_certs: &[Certificate]) -> Result<ClientCertVerified, TLSError>;
+                          presented_certs: &[Certificate],
+                          sni: Option<&webpki::DNSName>) -> Result<ClientCertVerified, TLSError>;
 }
 
+/// Default `ServerCertVerifier`, see the trait impl for more information.
 pub struct WebPKIVerifier {
+    /// time provider
     pub time: fn() -> Result<webpki::Time, TLSError>,
 }
 
 impl ServerCertVerifier for WebPKIVerifier {
+    /// Will verify the certificate is valid in the following ways:
+    /// - Signed by a  trusted `RootCertStore` CA
+    /// - Not Expired
+    /// - Valid for DNS entry
+    /// - OCSP data is present
     fn verify_server_cert(&self,
                           roots: &RootCertStore,
                           presented_certs: &[Certificate],
@@ -118,6 +141,7 @@ impl ServerCertVerifier for WebPKIVerifier {
 }
 
 impl WebPKIVerifier {
+    /// Create a new `WebPKIVerifier`
     pub fn new() -> WebPKIVerifier {
         WebPKIVerifier {
             time: try_now,
@@ -125,10 +149,12 @@ impl WebPKIVerifier {
     }
 }
 
+type CertChainAndRoots<'a, 'b> = (webpki::EndEntityCert<'a>,
+                                  Vec<&'a [u8]>,
+                                  Vec<webpki::TrustAnchor<'b>>);
+
 fn prepare<'a, 'b>(roots: &'b RootCertStore, presented_certs: &'a [Certificate])
-                   -> Result<(webpki::EndEntityCert<'a>,
-                              Vec<&'a [u8]>,
-                              Vec<webpki::TrustAnchor<'b>>), TLSError> {
+                   -> Result<CertChainAndRoots<'a, 'b>, TLSError> {
     if presented_certs.is_empty() {
         return Err(TLSError::NoCertificatesPresented);
     }
@@ -173,13 +199,13 @@ impl AllowAnyAuthenticatedClient {
 impl ClientCertVerifier for AllowAnyAuthenticatedClient {
     fn offer_client_auth(&self) -> bool { true }
 
-    fn client_auth_mandatory(&self) -> bool { true }
+    fn client_auth_mandatory(&self, _sni: Option<&webpki::DNSName>) -> Option<bool> { Some(true) }
 
-    fn client_auth_root_subjects(&self) -> DistinguishedNames {
-        self.roots.get_subjects()
+    fn client_auth_root_subjects(&self, _sni: Option<&webpki::DNSName>) -> Option<DistinguishedNames> {
+        Some(self.roots.get_subjects())
     }
 
-    fn verify_client_cert(&self, presented_certs: &[Certificate])
+    fn verify_client_cert(&self, presented_certs: &[Certificate], _sni: Option<&webpki::DNSName>)
                           -> Result<ClientCertVerified, TLSError> {
         let (cert, chain, trustroots) = prepare(&self.roots, presented_certs)?;
         let now = try_now()?;
@@ -215,15 +241,15 @@ impl AllowAnyAnonymousOrAuthenticatedClient {
 impl ClientCertVerifier for AllowAnyAnonymousOrAuthenticatedClient {
     fn offer_client_auth(&self) -> bool { self.inner.offer_client_auth() }
 
-    fn client_auth_mandatory(&self) -> bool { false }
+    fn client_auth_mandatory(&self, _sni: Option<&webpki::DNSName>) -> Option<bool> { Some(false) }
 
-    fn client_auth_root_subjects(&self) -> DistinguishedNames {
-        self.inner.client_auth_root_subjects()
+    fn client_auth_root_subjects(&self, sni: Option<&webpki::DNSName>) -> Option<DistinguishedNames> {
+        self.inner.client_auth_root_subjects(sni)
     }
 
-    fn verify_client_cert(&self, presented_certs: &[Certificate])
+    fn verify_client_cert(&self, presented_certs: &[Certificate], sni: Option<&webpki::DNSName>)
             -> Result<ClientCertVerified, TLSError> {
-        self.inner.verify_client_cert(presented_certs)
+        self.inner.verify_client_cert(presented_certs, sni)
     }
 }
 
@@ -238,20 +264,25 @@ impl NoClientAuth {
 impl ClientCertVerifier for NoClientAuth {
     fn offer_client_auth(&self) -> bool { false }
 
-    fn client_auth_root_subjects(&self) -> DistinguishedNames {
+    fn client_auth_root_subjects(&self, _sni: Option<&webpki::DNSName>) -> Option<DistinguishedNames> {
         unimplemented!();
     }
 
-    fn verify_client_cert(&self, _presented_certs: &[Certificate])
+    fn verify_client_cert(&self,_presented_certs: &[Certificate], _sni: Option<&webpki::DNSName>)
                           -> Result<ClientCertVerified, TLSError> {
         unimplemented!();
     }
 }
 
-static ECDSA_SHA256: SignatureAlgorithms = &[&webpki::ECDSA_P256_SHA256,
-                                             &webpki::ECDSA_P384_SHA256];
-static ECDSA_SHA384: SignatureAlgorithms = &[&webpki::ECDSA_P256_SHA384,
-                                             &webpki::ECDSA_P384_SHA384];
+static ECDSA_SHA256: SignatureAlgorithms = &[
+    &webpki::ECDSA_P256_SHA256,
+    &webpki::ECDSA_P384_SHA256
+];
+
+static ECDSA_SHA384: SignatureAlgorithms = &[
+    &webpki::ECDSA_P256_SHA384,
+    &webpki::ECDSA_P384_SHA384
+];
 
 static RSA_SHA256: SignatureAlgorithms = &[&webpki::RSA_PKCS1_2048_8192_SHA256];
 static RSA_SHA384: SignatureAlgorithms = &[&webpki::RSA_PKCS1_2048_8192_SHA384];

@@ -4584,3 +4584,4 @@ GFp_nistz256_point_add_affinex:
 .cfi_endproc	
 .size	GFp_nistz256_point_add_affinex,.-GFp_nistz256_point_add_affinex
 #endif
+.section	.note.GNU-stack,"",@progbits

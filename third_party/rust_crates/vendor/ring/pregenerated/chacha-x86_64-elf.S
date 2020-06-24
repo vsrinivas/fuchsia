@@ -1627,3 +1627,4 @@ ChaCha20_8x:
 .cfi_endproc	
 .size	ChaCha20_8x,.-ChaCha20_8x
 #endif
+.section	.note.GNU-stack,"",@progbits

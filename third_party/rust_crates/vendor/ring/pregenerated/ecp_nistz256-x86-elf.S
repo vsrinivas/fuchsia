@@ -1125,3 +1125,4 @@ GFp_nistz256_point_add_affine:
 	ret
 .size	GFp_nistz256_point_add_affine,.-.L_GFp_nistz256_point_add_affine_begin
 #endif
+.section	.note.GNU-stack,"",@progbits

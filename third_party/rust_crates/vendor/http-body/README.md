@@ -2,34 +2,19 @@
 
 A trait representing asynchronous operations on an HTTP body.
 
-[![Build Status][azure-badge]][azure-url]
+[![crates.io][crates-badge]][crates-url]
+[![documentation][docs-badge]][docs-url]
+[![MIT License][mit-badge]][mit-url]
+[![CI Status][ci-badge]][ci-url]
 
-[azure-badge]: https://dev.azure.com/seanmonstar/http-body/_apis/build/status/hyperium.http-body?branchName=master
-[azure-url]: https://dev.azure.com/seanmonstar/http-body/_build/latest?definitionId=1&branchName=master
-
-More information about this crate can be found in the [crate
-documentation][dox].
-
-[dox]: https://docs.rs/http-body
-
-## Usage
-
-To use `http-body`, first add this to your `Cargo.toml`:
-
-```toml
-[dependencies]
-http-body = "0.1.0"
-```
-
-Next, add this to your crate:
-
-```rust
-use http_body::Body;
-
-fn main() {
-    // ...
-}
-```
+[crates-badge]: https://img.shields.io/crates/v/http-body.svg
+[crates-url]: https://crates.io/crates/http-body
+[docs-badge]: https://docs.rs/http-body/badge.svg
+[docs-url]: https://docs.rs/http-body
+[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
+[mit-url]: LICENSE
+[ci-badge]: https://github.com/hyperium/http-body/workflows/CI/badge.svg
+[ci-url]: https://github.com/hyperium/http-body/actions?query=workflow%3ACI
 
 ## License
 

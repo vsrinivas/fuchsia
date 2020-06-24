@@ -1,21 +1,28 @@
-extern crate futures;
-extern crate http_body;
-extern crate tokio_buf;
-
-use futures::Poll;
-use http_body::Body;
-use tokio_buf::{BufStream, SizeHint};
+use http::HeaderMap;
+use http_body::{Body, SizeHint};
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 struct Mock {
     size_hint: SizeHint,
 }
 
-impl BufStream for Mock {
-    type Item = ::std::io::Cursor<Vec<u8>>;
+impl Body for Mock {
+    type Data = ::std::io::Cursor<Vec<u8>>;
     type Error = ();
 
-    fn poll_buf(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        unimplemented!();
+    fn poll_data(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        Poll::Ready(None)
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        Poll::Ready(Ok(None))
     }
 
     fn size_hint(&self) -> SizeHint {
@@ -24,13 +31,13 @@ impl BufStream for Mock {
 }
 
 #[test]
-fn buf_stream_is_end_stream() {
+fn is_end_stream_true() {
     let combos = [
         (None, None, false),
         (Some(123), None, false),
         (Some(0), Some(123), false),
         (Some(123), Some(123), false),
-        (Some(0), Some(0), true),
+        (Some(0), Some(0), false),
     ];
 
     for &(lower, upper, is_end_stream) in &combos {
@@ -46,12 +53,27 @@ fn buf_stream_is_end_stream() {
             size_hint.set_upper(upper);
         }
 
-        let mock = Mock { size_hint };
+        let mut mock = Mock { size_hint };
+
         assert_eq!(
             is_end_stream,
-            mock.is_end_stream(),
+            Pin::new(&mut mock).is_end_stream(),
             "size_hint = {:?}",
-            mock.size_hint
+            mock.size_hint.clone()
         );
     }
+}
+
+#[test]
+fn is_end_stream_default_false() {
+    let mut mock = Mock {
+        size_hint: SizeHint::default(),
+    };
+
+    assert_eq!(
+        false,
+        Pin::new(&mut mock).is_end_stream(),
+        "size_hint = {:?}",
+        mock.size_hint.clone()
+    );
 }

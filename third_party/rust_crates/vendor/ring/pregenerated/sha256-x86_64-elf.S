@@ -3967,3 +3967,4 @@ GFp_sha256_block_data_order_avx:
 .cfi_endproc	
 .size	GFp_sha256_block_data_order_avx,.-GFp_sha256_block_data_order_avx
 #endif
+.section	.note.GNU-stack,"",@progbits

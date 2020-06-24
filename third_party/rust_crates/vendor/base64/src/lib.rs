@@ -49,7 +49,7 @@
 //!
 //! The `_slice` flavors of encode or decode will panic if the provided output slice is too small,
 
-#![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
 #![deny(
     missing_docs,
     trivial_casts,
@@ -58,22 +58,38 @@
     unused_import_braces,
     unused_results,
     variant_size_differences,
-    warnings,
-    unsafe_code
+    warnings
 )]
+#![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 
-extern crate byteorder;
+#[cfg(all(feature = "alloc", not(any(feature = "std", test))))]
+extern crate alloc;
+#[cfg(any(feature = "std", test))]
+extern crate std as alloc;
+
+#[cfg(test)]
+#[macro_use]
+extern crate doc_comment;
+
+#[cfg(test)]
+doctest!("../README.md");
 
 mod chunked_encoder;
 pub mod display;
 mod tables;
+#[cfg(any(feature = "std", test))]
 pub mod write;
 
 mod encode;
-pub use encode::{encode, encode_config, encode_config_buf, encode_config_slice};
+pub use crate::encode::encode_config_slice;
+#[cfg(any(feature = "alloc", feature = "std", test))]
+pub use crate::encode::{encode, encode_config, encode_config_buf};
 
 mod decode;
-pub use decode::{decode, decode_config, decode_config_buf, decode_config_slice, DecodeError};
+#[cfg(any(feature = "alloc", feature = "std", test))]
+pub use crate::decode::{decode, decode_config, decode_config_buf};
+pub use crate::decode::{decode_config_slice, DecodeError};
 
 #[cfg(test)]
 mod tests;
@@ -127,7 +143,11 @@ pub struct Config {
 impl Config {
     /// Create a new `Config`.
     pub fn new(char_set: CharacterSet, pad: bool) -> Config {
-        Config { char_set, pad, decode_allow_trailing_bits: false }
+        Config {
+            char_set,
+            pad,
+            decode_allow_trailing_bits: false,
+        }
     }
 
     /// Sets whether to pad output with `=` characters.
@@ -140,7 +160,10 @@ impl Config {
     /// This is useful when implementing
     /// [forgiving-base64 decode](https://infra.spec.whatwg.org/#forgiving-base64-decode).
     pub fn decode_allow_trailing_bits(self, allow: bool) -> Config {
-        Config { decode_allow_trailing_bits: allow, ..self }
+        Config {
+            decode_allow_trailing_bits: allow,
+            ..self
+        }
     }
 }
 

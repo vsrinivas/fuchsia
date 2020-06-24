@@ -4,16 +4,18 @@
 
 use {
     anyhow::Error,
-    fuchsia_async::{self as fasync, net::TcpListener, EHandle},
+    fuchsia_async::{self as fasync, net::TcpListener},
     fuchsia_merkle::Hash,
-    futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
-        prelude::*,
-        task::SpawnExt,
+    futures::prelude::*,
+    hyper::{
+        header,
+        server::{accept::from_stream, Server},
+        service::{make_service_fn, service_fn},
+        Body, Method, Request, Response, StatusCode,
     },
-    hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
     serde_json::json,
     std::{
+        convert::Infallible,
         net::{Ipv4Addr, SocketAddr},
         str::FromStr,
     },
@@ -52,21 +54,25 @@ impl OmahaServer {
         let (connections, addr) = {
             let listener = TcpListener::bind(&addr)?;
             let local_addr = listener.local_addr()?;
-            (listener.accept_stream().map_ok(|(conn, _addr)| conn.compat()), local_addr)
+            (
+                listener
+                    .accept_stream()
+                    .map_ok(|(conn, _addr)| fuchsia_hyper::TcpStream { stream: conn }),
+                local_addr,
+            )
         };
 
         let response = self.response;
         let merkle = self.merkle;
-        let service = move || {
-            service_fn(move |req| {
-                handle_omaha_request(req, response, merkle.to_string()).boxed().compat()
-            })
-        };
+        let make_svc = make_service_fn(move |_socket| async move {
+            Ok::<_, Infallible>(service_fn(move |req| {
+                handle_omaha_request(req, response, merkle.to_string())
+            }))
+        });
 
-        let server = Server::builder(connections.compat())
-            .executor(EHandle::local().compat())
-            .serve(service)
-            .compat()
+        let server = Server::builder(from_stream(connections))
+            .executor(fuchsia_hyper::Executor)
+            .serve(make_svc)
             .unwrap_or_else(|e| panic!("error serving omaha server: {}", e));
 
         fasync::spawn(server);
@@ -83,7 +89,13 @@ async fn handle_omaha_request(
     assert_eq!(req.method(), Method::POST);
     assert_eq!(req.uri().query(), None);
 
-    let req_body = req.into_body().compat().try_concat().await.unwrap().to_vec();
+    let req_body = req
+        .into_body()
+        .try_fold(Vec::new(), |mut vec, b| async move {
+            vec.extend(b);
+            Ok(vec)
+        })
+        .await?;
     let req_json: serde_json::Value = serde_json::from_slice(&req_body).expect("parse json");
 
     let request = req_json.get("request").unwrap();
@@ -242,11 +254,17 @@ mod tests {
         });
         let request = Request::post(server).body(Body::from(body.to_string())).unwrap();
 
-        let response = client.request(request).compat().await?;
+        let response = client.request(request).await?;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body =
-            response.into_body().compat().try_concat().await.context("reading response body")?;
+        let body = response
+            .into_body()
+            .try_fold(Vec::new(), |mut vec, b| async move {
+                vec.extend(b);
+                Ok(vec)
+            })
+            .await
+            .context("reading response body")?;
         let obj: serde_json::Value =
             serde_json::from_slice(&body).context("parsing response json")?;
 

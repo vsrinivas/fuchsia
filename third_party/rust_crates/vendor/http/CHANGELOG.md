@@ -1,6 +1,22 @@
-# 0.1.21 (December 2, 2019)
+# 0.2.1 (March 25, 2020)
 
-* Fix `Method::is_idempotent` returning `false` for `PUT` and `DELETE.
+* Add `extensions_ref` and `extensions_mut` to `request::Builder` and `response::Builder`.
+
+# 0.2.0 (December 2, 2019)
+
+* Add `Version::HTTP_3` constant.
+* Add `HeaderValue::from_maybe_shared`, `HeaderValue::from_maybe_shared_unchecked`, `Uri::from_maybe_shared`, `Authority::from_maybe_shared`, and `PathAndQuery::from_maybe_shared`.
+* Change `request::Builder`, `response::Builder`, and `uri::Builder` to use by-value methods instead of by-ref.
+* Change from `HttpTryFrom` trait to `std::convert::TryFrom`.
+* Change `HeaderMap::entry` to no longer return a `Result`.
+* Change `HeaderMap::drain` iterator to match the behavior of `IntoIter`.
+* Change `Authority::port` to return an `Option<Port>` instead of `Option<u16>`.
+* Change `Uri::scheme` to return `Option<&Scheme>` instead of `Option<&str>`.
+* Change `Uri::authority` to return `Option<&Authority>` instead of `Option<&str>`.
+* Remove `InvalidUriBytes`, `InvalidHeaderNameBytes`, and `InvalidHeaderValueBytes` error types.
+* Remove `HeaderValue::from_shared`, `HeaderValue::from_shared_unchecked`, `Uri::from_shared`, `Authority::from_shared`, `Scheme::from_shared`, and `PathAndQuery::from_shared`.
+* Remove `Authority::port_part`.
+* Remove `Uri::scheme_part` and `Uri::authority_part`.
 
 # 0.1.20 (November 26, 2019)
 

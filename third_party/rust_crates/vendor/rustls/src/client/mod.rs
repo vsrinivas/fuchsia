@@ -217,9 +217,10 @@ impl ClientConfig {
     /// `key_der` is a DER-encoded RSA or ECDSA private key.
     pub fn set_single_client_cert(&mut self,
                                   cert_chain: Vec<key::Certificate>,
-                                  key_der: key::PrivateKey) {
-        let resolver = handy::AlwaysResolvesClientCert::new(cert_chain, &key_der);
+                                  key_der: key::PrivateKey) -> Result<(), TLSError> {
+        let resolver = handy::AlwaysResolvesClientCert::new(cert_chain, &key_der)?;
         self.client_auth_cert_resolver = Arc::new(resolver);
+        Ok(())
     }
 
     /// Access configuration options whose use is dangerous and requires
@@ -247,7 +248,7 @@ pub mod danger {
     impl<'a> DangerousClientConfig<'a> {
         /// Overrides the default `ServerCertVerifier` with something else.
         pub fn set_certificate_verifier(&mut self,
-                                        verifier: Arc<ServerCertVerifier>) {
+                                        verifier: Arc<dyn ServerCertVerifier>) {
             self.cfg.verifier = verifier;
         }
     }
@@ -456,7 +457,7 @@ impl ClientSessionImpl {
         }
 
         // Decrypt if demanded by current state.
-        if self.common.peer_encrypting {
+        if self.common.record_layer.is_decrypting() {
             let dm = self.common.decrypt_incoming(msg)?;
             msg = dm;
         }
@@ -505,7 +506,7 @@ impl ClientSessionImpl {
     }
 
     /// Process `msg`.  First, we get the current state.  Then we ask what messages
-    /// that state expects, enforced via a `Expectation`.  Finally, we ask the handler
+    /// that state expects, enforced via `check_message`.  Finally, we ask the handler
     /// to handle the message.
     fn process_main_protocol(&mut self, msg: Message) -> Result<(), TLSError> {
         // For TLS1.2, outside of the handshake, send rejection alerts for
@@ -580,6 +581,25 @@ impl ClientSessionImpl {
             .and_then(|sz| {
                 self.common.send_early_plaintext(&data[..sz])
             })
+    }
+
+    fn export_keying_material(&self,
+                              output: &mut [u8],
+                              label: &[u8],
+                              context: Option<&[u8]>) -> Result<(), TLSError> {
+        self.state
+            .as_ref()
+            .ok_or_else(|| TLSError::HandshakeNotComplete)
+            .and_then(|st| st.export_keying_material(output, label, context))
+    }
+
+    fn send_some_plaintext(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut st = self.state.take();
+        st.as_mut()
+            .map(|st| st.perhaps_write_key_update(self));
+        self.state = st;
+
+        self.common.send_some_plaintext(buf)
     }
 }
 
@@ -690,7 +710,7 @@ impl Session for ClientSession {
                               output: &mut [u8],
                               label: &[u8],
                               context: Option<&[u8]>) -> Result<(), TLSError> {
-        self.imp.common.export_keying_material(output, label, context)
+        self.imp.export_keying_material(output, label, context)
     }
 
     fn get_negotiated_ciphersuite(&self) -> Option<&'static SupportedCipherSuite> {
@@ -719,7 +739,7 @@ impl io::Write for ClientSession {
     /// writing much data before it can be sent will
     /// cause excess memory usage.
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.imp.common.send_some_plaintext(buf)
+        self.imp.send_some_plaintext(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {

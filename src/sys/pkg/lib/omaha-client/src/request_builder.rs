@@ -293,7 +293,7 @@ impl From<Intermediate> for Result<http::Request<hyper::Body>> {
     fn from(intermediate: Intermediate) -> Self {
         let mut builder = hyper::Request::post(intermediate.uri);
         for (key, value) in intermediate.headers {
-            builder.header(key, value);
+            builder = builder.header(key, value);
         }
 
         let body = serde_json::to_string(&intermediate.body)?;

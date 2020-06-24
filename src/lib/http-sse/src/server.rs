@@ -8,10 +8,13 @@ use {
         channel::{mpsc, oneshot},
         future::Future,
         lock::Mutex,
-        stream::{Stream, TryStreamExt},
+        stream::Stream,
         task::{Context, Poll},
     },
-    hyper::{Body, Chunk, Response, StatusCode},
+    hyper::{
+        body::{Body, Bytes},
+        Response, StatusCode,
+    },
     std::{mem::replace, ops::DerefMut, pin::Pin, sync::Arc},
 };
 
@@ -37,7 +40,7 @@ impl SseResponseCreator {
         Response::builder()
             .status(StatusCode::OK)
             .header("content-type", "text/event-stream")
-            .body(Body::wrap_stream(BodyAbortStream { abort_rx, chunk_rx }.compat()))
+            .body(Body::wrap_stream(BodyAbortStream { abort_rx, chunk_rx }))
             .unwrap() // builder arguments are all statically determined, build will not fail
     }
 }
@@ -78,14 +81,15 @@ impl EventSender {
     }
 }
 
-// Reimplementation of the Body created by hyper::body::Body::channel() b/c in-tree hyper uses old futures API
+// reimplementation of the body created by hyper::body::body::channel() b/c hyper doesn't allow
+// specifying the buffer size and doesn't provide an abort channel.
 struct BodyAbortStream {
     abort_rx: oneshot::Receiver<()>,
-    chunk_rx: mpsc::Receiver<Chunk>,
+    chunk_rx: mpsc::Receiver<Bytes>,
 }
 
 impl Stream for BodyAbortStream {
-    type Item = Result<Chunk, &'static str>;
+    type Item = Result<Bytes, &'static str>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if let Poll::Ready(_) = Pin::new(&mut self.abort_rx).poll(cx) {
@@ -99,10 +103,11 @@ impl Stream for BodyAbortStream {
     }
 }
 
-// Reimplementation of hyper::body::Sender b/c in-tree hyper uses old futures API
+// Reimplementation of hyper::body::Sender b/c in-tree hyper doesn't allow specifying the buffer
+// size and doesn't provide an abort channel.
 struct Client {
     abort_tx: oneshot::Sender<()>,
-    chunk_tx: mpsc::Sender<Chunk>,
+    chunk_tx: mpsc::Sender<Bytes>,
 }
 
 impl Client {
@@ -119,7 +124,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async::{self as fasync},
-        futures::{compat::Stream01CompatExt, stream::StreamExt},
+        futures::StreamExt,
         matches::assert_matches,
     };
 
@@ -143,7 +148,7 @@ mod tests {
         let resp = sse_response_creator.create().await;
 
         event_sender.send(&event).await;
-        let mut body_stream = resp.into_body().compat();
+        let mut body_stream = resp.into_body();
         let body_bytes = body_stream.next().await;
 
         assert_eq!(body_bytes.unwrap().unwrap().to_vec(), event.to_vec());
@@ -156,8 +161,8 @@ mod tests {
             SseResponseCreator::with_additional_buffer_size(0);
         assert_eq!(event_sender.client_count().await, 0);
 
-        let mut body_stream0 = sse_response_creator.create().await.into_body().compat();
-        let mut body_stream1 = sse_response_creator.create().await.into_body().compat();
+        let mut body_stream0 = sse_response_creator.create().await.into_body();
+        let mut body_stream1 = sse_response_creator.create().await.into_body();
         assert_eq!(event_sender.client_count().await, 2);
 
         event_sender.send(&event0).await;
@@ -181,8 +186,8 @@ mod tests {
     async fn drop_all_clients() {
         let (sse_response_creator, event_sender) =
             SseResponseCreator::with_additional_buffer_size(0);
-        let mut body_stream0 = sse_response_creator.create().await.into_body().compat();
-        let mut body_stream1 = sse_response_creator.create().await.into_body().compat();
+        let mut body_stream0 = sse_response_creator.create().await.into_body();
+        let mut body_stream1 = sse_response_creator.create().await.into_body();
         assert_eq!(event_sender.client_count().await, 2);
         event_sender.send(&Event::from_type_and_data("event_type", "data_contents").unwrap()).await;
 

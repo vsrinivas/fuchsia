@@ -1,64 +1,22 @@
 //! Asynchronous TLS/SSL streams for Tokio using [Rustls](https://github.com/ctz/rustls).
 
-pub extern crate rustls;
-pub extern crate webpki;
-
-extern crate bytes;
-extern crate futures;
-extern crate iovec;
-extern crate tokio_io;
-
 pub mod client;
 mod common;
 pub mod server;
 
-use common::Stream;
-use futures::{Async, Future, Poll};
+use common::{MidHandshake, Stream, TlsState};
+use futures_core::future::FusedFuture;
 use rustls::{ClientConfig, ClientSession, ServerConfig, ServerSession, Session};
+use std::future::Future;
+use std::io;
+use std::pin::Pin;
 use std::sync::Arc;
-use std::{io, mem};
-use tokio_io::{try_nb, AsyncRead, AsyncWrite};
+use std::task::{Context, Poll};
+use tokio::io::{AsyncRead, AsyncWrite};
 use webpki::DNSNameRef;
 
-#[derive(Debug, Copy, Clone)]
-pub enum TlsState {
-    #[cfg(feature = "early-data")]
-    EarlyData,
-    Stream,
-    ReadShutdown,
-    WriteShutdown,
-    FullyShutdown,
-}
-
-impl TlsState {
-    pub(crate) fn shutdown_read(&mut self) {
-        match *self {
-            TlsState::WriteShutdown | TlsState::FullyShutdown => *self = TlsState::FullyShutdown,
-            _ => *self = TlsState::ReadShutdown,
-        }
-    }
-
-    pub(crate) fn shutdown_write(&mut self) {
-        match *self {
-            TlsState::ReadShutdown | TlsState::FullyShutdown => *self = TlsState::FullyShutdown,
-            _ => *self = TlsState::WriteShutdown,
-        }
-    }
-
-    pub(crate) fn writeable(&self) -> bool {
-        match *self {
-            TlsState::WriteShutdown | TlsState::FullyShutdown => false,
-            _ => true,
-        }
-    }
-
-    pub(crate) fn readable(self) -> bool {
-        match self {
-            TlsState::ReadShutdown | TlsState::FullyShutdown => false,
-            _ => true,
-        }
-    }
-}
+pub use rustls;
+pub use webpki;
 
 /// A wrapper around a `rustls::ClientConfig`, providing an async `connect` method.
 #[derive(Clone)]
@@ -93,78 +51,66 @@ impl From<Arc<ServerConfig>> for TlsAcceptor {
 impl TlsConnector {
     /// Enable 0-RTT.
     ///
-    /// Note that you want to use 0-RTT.
-    /// You must set `enable_early_data` to `true` in `ClientConfig`.
+    /// If you want to use 0-RTT,
+    /// You must also set `ClientConfig.enable_early_data` to `true`.
     #[cfg(feature = "early-data")]
     pub fn early_data(mut self, flag: bool) -> TlsConnector {
         self.early_data = flag;
         self
     }
 
+    #[inline]
     pub fn connect<IO>(&self, domain: DNSNameRef, stream: IO) -> Connect<IO>
     where
-        IO: AsyncRead + AsyncWrite,
+        IO: AsyncRead + AsyncWrite + Unpin,
     {
         self.connect_with(domain, stream, |_| ())
     }
 
-    #[inline]
     pub fn connect_with<IO, F>(&self, domain: DNSNameRef, stream: IO, f: F) -> Connect<IO>
     where
-        IO: AsyncRead + AsyncWrite,
+        IO: AsyncRead + AsyncWrite + Unpin,
         F: FnOnce(&mut ClientSession),
     {
         let mut session = ClientSession::new(&self.inner, domain);
         f(&mut session);
 
-        #[cfg(not(feature = "early-data"))]
-        {
-            Connect(client::MidHandshake::Handshaking(client::TlsStream {
-                session,
-                io: stream,
-                state: TlsState::Stream,
-            }))
-        }
+        Connect(MidHandshake::Handshaking(client::TlsStream {
+            io: stream,
 
-        #[cfg(feature = "early-data")]
-        {
-            Connect(if self.early_data {
-                client::MidHandshake::EarlyData(client::TlsStream {
-                    session,
-                    io: stream,
-                    state: TlsState::EarlyData,
-                    early_data: (0, Vec::new()),
-                })
+            #[cfg(not(feature = "early-data"))]
+            state: TlsState::Stream,
+
+            #[cfg(feature = "early-data")]
+            state: if self.early_data && session.early_data().is_some() {
+                TlsState::EarlyData(0, Vec::new())
             } else {
-                client::MidHandshake::Handshaking(client::TlsStream {
-                    session,
-                    io: stream,
-                    state: TlsState::Stream,
-                    early_data: (0, Vec::new()),
-                })
-            })
-        }
+                TlsState::Stream
+            },
+
+            session,
+        }))
     }
 }
 
 impl TlsAcceptor {
+    #[inline]
     pub fn accept<IO>(&self, stream: IO) -> Accept<IO>
     where
-        IO: AsyncRead + AsyncWrite,
+        IO: AsyncRead + AsyncWrite + Unpin,
     {
         self.accept_with(stream, |_| ())
     }
 
-    #[inline]
     pub fn accept_with<IO, F>(&self, stream: IO, f: F) -> Accept<IO>
     where
-        IO: AsyncRead + AsyncWrite,
+        IO: AsyncRead + AsyncWrite + Unpin,
         F: FnOnce(&mut ServerSession),
     {
         let mut session = ServerSession::new(&self.inner);
         f(&mut session);
 
-        Accept(server::MidHandshake::Handshaking(server::TlsStream {
+        Accept(MidHandshake::Handshaking(server::TlsStream {
             session,
             io: stream,
             state: TlsState::Stream,
@@ -172,47 +118,95 @@ impl TlsAcceptor {
     }
 }
 
-/// Future returned from `ClientConfigExt::connect_async` which will resolve
+/// Future returned from `TlsConnector::connect` which will resolve
 /// once the connection handshake has finished.
-pub struct Connect<IO>(client::MidHandshake<IO>);
+pub struct Connect<IO>(MidHandshake<client::TlsStream<IO>>);
 
-/// Future returned from `ServerConfigExt::accept_async` which will resolve
+/// Future returned from `TlsAcceptor::accept` which will resolve
 /// once the accept handshake has finished.
-pub struct Accept<IO>(server::MidHandshake<IO>);
+pub struct Accept<IO>(MidHandshake<server::TlsStream<IO>>);
+
+/// Like [Connect], but returns `IO` on failure.
+pub struct FailableConnect<IO>(MidHandshake<client::TlsStream<IO>>);
+
+/// Like [Accept], but returns `IO` on failure.
+pub struct FailableAccept<IO>(MidHandshake<server::TlsStream<IO>>);
 
 impl<IO> Connect<IO> {
-    pub fn take_inner(&mut self) -> Option<IO> {
-        match mem::replace(&mut self.0, client::MidHandshake::End) {
-            client::MidHandshake::Handshaking(client::TlsStream { io, .. }) => Some(io),
-            _ => None
-        }
+    #[inline]
+    pub fn into_failable(self) -> FailableConnect<IO> {
+        FailableConnect(self.0)
     }
 }
 
 impl<IO> Accept<IO> {
-    pub fn take_inner(&mut self) -> Option<IO> {
-        match mem::replace(&mut self.0, server::MidHandshake::End) {
-            server::MidHandshake::Handshaking(server::TlsStream { io, .. }) => Some(io),
-            _ => None
-        }
+    #[inline]
+    pub fn into_failable(self) -> FailableAccept<IO> {
+        FailableAccept(self.0)
     }
 }
 
-impl<IO: AsyncRead + AsyncWrite> Future for Connect<IO> {
-    type Item = client::TlsStream<IO>;
-    type Error = io::Error;
+impl<IO: AsyncRead + AsyncWrite + Unpin> Future for Connect<IO> {
+    type Output = io::Result<client::TlsStream<IO>>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.0.poll()
+    #[inline]
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        Pin::new(&mut self.0).poll(cx).map_err(|(err, _)| err)
     }
 }
 
-impl<IO: AsyncRead + AsyncWrite> Future for Accept<IO> {
-    type Item = server::TlsStream<IO>;
-    type Error = io::Error;
+impl<IO: AsyncRead + AsyncWrite + Unpin> FusedFuture for Connect<IO> {
+    #[inline]
+    fn is_terminated(&self) -> bool {
+        self.0.is_terminated()
+    }
+}
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.0.poll()
+impl<IO: AsyncRead + AsyncWrite + Unpin> Future for Accept<IO> {
+    type Output = io::Result<server::TlsStream<IO>>;
+
+    #[inline]
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        Pin::new(&mut self.0).poll(cx).map_err(|(err, _)| err)
+    }
+}
+
+impl<IO: AsyncRead + AsyncWrite + Unpin> FusedFuture for Accept<IO> {
+    #[inline]
+    fn is_terminated(&self) -> bool {
+        self.0.is_terminated()
+    }
+}
+
+impl<IO: AsyncRead + AsyncWrite + Unpin> Future for FailableConnect<IO> {
+    type Output = Result<client::TlsStream<IO>, (io::Error, IO)>;
+
+    #[inline]
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        Pin::new(&mut self.0).poll(cx)
+    }
+}
+
+impl<IO: AsyncRead + AsyncWrite + Unpin> FusedFuture for FailableConnect<IO> {
+    #[inline]
+    fn is_terminated(&self) -> bool {
+        self.0.is_terminated()
+    }
+}
+
+impl<IO: AsyncRead + AsyncWrite + Unpin> Future for FailableAccept<IO> {
+    type Output = Result<server::TlsStream<IO>, (io::Error, IO)>;
+
+    #[inline]
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        Pin::new(&mut self.0).poll(cx)
+    }
+}
+
+impl<IO: AsyncRead + AsyncWrite + Unpin> FusedFuture for FailableAccept<IO> {
+    #[inline]
+    fn is_terminated(&self) -> bool {
+        self.0.is_terminated()
     }
 }
 
@@ -267,55 +261,52 @@ impl<T> From<server::TlsStream<T>> for TlsStream<T> {
     }
 }
 
-impl<T> io::Read for TlsStream<T>
+impl<T> AsyncRead for TlsStream<T>
 where
-    T: AsyncRead + AsyncWrite + io::Read,
+    T: AsyncRead + AsyncWrite + Unpin,
 {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        use TlsStream::*;
-        match self {
-            Client(io) => io.read(buf),
-            Server(io) => io.read(buf),
+    #[inline]
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
+        match self.get_mut() {
+            TlsStream::Client(x) => Pin::new(x).poll_read(cx, buf),
+            TlsStream::Server(x) => Pin::new(x).poll_read(cx, buf),
         }
     }
 }
-
-impl<T> io::Write for TlsStream<T>
-where
-    T: AsyncRead + AsyncWrite + io::Write,
-{
-    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
-        use TlsStream::*;
-        match self {
-            Client(io) => io.write(buf),
-            Server(io) => io.write(buf),
-        }
-    }
-
-    fn flush(&mut self) -> Result<(), io::Error> {
-        use TlsStream::*;
-        match self {
-            Client(io) => io.flush(),
-            Server(io) => io.flush(),
-        }
-    }
-}
-
-impl<T> AsyncRead for TlsStream<T> where T: AsyncRead + AsyncWrite {}
 
 impl<T> AsyncWrite for TlsStream<T>
 where
-    T: AsyncRead + AsyncWrite,
+    T: AsyncRead + AsyncWrite + Unpin,
 {
-    fn shutdown(&mut self) -> Poll<(), io::Error> {
-        use TlsStream::*;
-        match self {
-            Client(io) => io.shutdown(),
-            Server(io) => io.shutdown(),
+    #[inline]
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        match self.get_mut() {
+            TlsStream::Client(x) => Pin::new(x).poll_write(cx, buf),
+            TlsStream::Server(x) => Pin::new(x).poll_write(cx, buf),
+        }
+    }
+
+    #[inline]
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        match self.get_mut() {
+            TlsStream::Client(x) => Pin::new(x).poll_flush(cx),
+            TlsStream::Server(x) => Pin::new(x).poll_flush(cx),
+        }
+    }
+
+    #[inline]
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        match self.get_mut() {
+            TlsStream::Client(x) => Pin::new(x).poll_shutdown(cx),
+            TlsStream::Server(x) => Pin::new(x).poll_shutdown(cx),
         }
     }
 }
-
-#[cfg(feature = "early-data")]
-#[cfg(test)]
-mod test_0rtt;

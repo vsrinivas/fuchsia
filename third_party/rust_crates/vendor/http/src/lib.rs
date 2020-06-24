@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/http/0.1.21")]
+#![doc(html_root_url = "https://docs.rs/http/0.2.1")]
 
 //! A general purpose library of common HTTP types
 //!
@@ -148,20 +148,17 @@
 //!
 //! ```
 //! use http::Uri;
+//! use http::uri::Scheme;
 //!
 //! let uri = "https://www.rust-lang.org/index.html".parse::<Uri>().unwrap();
 //!
-//! assert_eq!(uri.scheme_str(), Some("https"));
+//! assert_eq!(uri.scheme(), Some(&Scheme::HTTPS));
 //! assert_eq!(uri.host(), Some("www.rust-lang.org"));
 //! assert_eq!(uri.path(), "/index.html");
 //! assert_eq!(uri.query(), None);
 //! ```
 
 #![deny(warnings, missing_docs, missing_debug_implementations)]
-
-extern crate bytes;
-extern crate fnv;
-extern crate itoa;
 
 #[cfg(test)]
 #[macro_use]
@@ -170,30 +167,31 @@ extern crate doc_comment;
 #[cfg(test)]
 doctest!("../README.md");
 
+#[macro_use]
+mod convert;
+
 pub mod header;
 pub mod method;
 pub mod request;
 pub mod response;
 pub mod status;
-pub mod version;
 pub mod uri;
+pub mod version;
 
 mod byte_str;
-mod convert;
 mod error;
 mod extensions;
 
-pub use convert::HttpTryFrom;
-pub use error::{Error, Result};
-pub use extensions::Extensions;
+pub use crate::error::{Error, Result};
+pub use crate::extensions::Extensions;
 #[doc(no_inline)]
-pub use header::{HeaderMap, HeaderValue};
-pub use method::Method;
-pub use request::Request;
-pub use response::Response;
-pub use status::StatusCode;
-pub use uri::Uri;
-pub use version::Version;
+pub use crate::header::{HeaderMap, HeaderValue};
+pub use crate::method::Method;
+pub use crate::request::Request;
+pub use crate::response::Response;
+pub use crate::status::StatusCode;
+pub use crate::uri::Uri;
+pub use crate::version::Version;
 
 fn _assert_types() {
     fn assert_send<T: Send>() {}

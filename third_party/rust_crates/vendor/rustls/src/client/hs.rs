@@ -14,7 +14,7 @@ use crate::msgs::codec::{Codec, Reader};
 use crate::msgs::persist;
 use crate::client::ClientSessionImpl;
 use crate::session::SessionSecrets;
-use crate::key_schedule::SecretKind;
+use crate::key_schedule::{KeyScheduleEarly, KeyScheduleHandshake};
 use crate::cipher;
 use crate::suites;
 use crate::verify;
@@ -67,6 +67,16 @@ pub type NextStateOrError = Result<NextState, TLSError>;
 pub trait State {
     fn check_message(&self, m: &Message) -> CheckResult;
     fn handle(self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> NextStateOrError;
+
+    fn export_keying_material(&self,
+                              _output: &mut [u8],
+                              _label: &[u8],
+                              _context: Option<&[u8]>) -> Result<(), TLSError> {
+        Err(TLSError::HandshakeNotComplete)
+    }
+
+    fn perhaps_write_key_update(&mut self, _sess: &mut ClientSessionImpl) {
+    }
 }
 
 pub fn illegal_param(sess: &mut ClientSessionImpl, why: &str) -> TLSError {
@@ -156,6 +166,7 @@ pub fn start_handshake(sess: &mut ClientSessionImpl, host_name: webpki::DNSName,
 
 struct ExpectServerHello {
     handshake: HandshakeDetails,
+    early_key_schedule: Option<KeyScheduleEarly>,
     hello: ClientHelloDetails,
     server_cert: ServerCertDetails,
     may_send_cert_status: bool,
@@ -289,9 +300,11 @@ fn emit_client_hello_for_retry(sess: &mut ClientSessionImpl,
         }),
     };
 
-    if fill_in_binder {
-        tls13::fill_in_psk_binder(sess, &mut handshake, &mut chp);
-    }
+    let early_key_schedule = if fill_in_binder {
+        Some(tls13::fill_in_psk_binder(sess, &mut handshake, &mut chp))
+    } else {
+        None
+    };
 
     let ch = Message {
         typ: ContentType::Handshake,
@@ -328,13 +341,15 @@ fn emit_client_hello_for_retry(sess: &mut ClientSessionImpl,
             .and_then(|resume| sess.find_cipher_suite(resume.cipher_suite)).unwrap();
 
         let client_hello_hash = handshake.transcript.get_hash_given(resuming_suite.get_hash(), &[]);
-        let client_early_traffic_secret = sess.common
-            .get_key_schedule()
-            .derive_logged_secret(SecretKind::ClientEarlyTrafficSecret, &client_hello_hash,
-                                  &*sess.config.key_log,
-                                  &handshake.randoms.client);
+        let client_early_traffic_secret = early_key_schedule
+            .as_ref()
+            .unwrap()
+            .client_early_traffic_secret(&client_hello_hash,
+                                         &*sess.config.key_log,
+                                         &handshake.randoms.client);
         // Set early data encryption key
         sess.common
+            .record_layer
             .set_message_encrypter(cipher::new_tls13_write(resuming_suite, &client_early_traffic_secret));
 
         #[cfg(feature = "quic")]
@@ -345,11 +360,12 @@ fn emit_client_hello_for_retry(sess: &mut ClientSessionImpl,
         // Now the client can send encrypted early data
         sess.common.early_traffic = true;
         trace!("Starting early data traffic");
-        sess.common.we_now_encrypting();
     }
 
     let next = ExpectServerHello {
-        handshake, hello,
+        handshake,
+        hello,
+        early_key_schedule,
         server_cert: ServerCertDetails::new(),
         may_send_cert_status: false,
         must_issue_new_ticket: false,
@@ -380,18 +396,21 @@ pub fn sct_list_is_invalid(scts: &SCTList) -> bool {
 }
 
 impl ExpectServerHello {
-    fn into_expect_tls13_encrypted_extensions(self) -> NextState {
+    fn into_expect_tls13_encrypted_extensions(self, key_schedule: KeyScheduleHandshake) -> NextState {
         Box::new(tls13::ExpectEncryptedExtensions {
             handshake: self.handshake,
+            key_schedule,
             server_cert: self.server_cert,
             hello: self.hello,
         })
     }
 
     fn into_expect_tls12_new_ticket_resume(self,
+                                           secrets: SessionSecrets,
                                            certv: verify::ServerCertVerified,
                                            sigv: verify::HandshakeSignatureValid) -> NextState {
         Box::new(tls12::ExpectNewTicket {
+            secrets,
             handshake: self.handshake,
             resuming: true,
             cert_verified: certv,
@@ -400,9 +419,11 @@ impl ExpectServerHello {
     }
 
     fn into_expect_tls12_ccs_resume(self,
+                                    secrets: SessionSecrets,
                                     certv: verify::ServerCertVerified,
                                     sigv: verify::HandshakeSignatureValid) -> NextState {
         Box::new(tls12::ExpectCCS {
+            secrets,
             handshake: self.handshake,
             ticket: ReceivedTicketDetails::new(),
             resuming: true,
@@ -522,9 +543,13 @@ impl State for ExpectServerHello {
         // handshake_traffic_secret.
         if sess.common.is_tls13() {
             tls13::validate_server_hello(sess, server_hello)?;
-            tls13::start_handshake_traffic(sess, server_hello, &mut self.handshake, &mut self.hello)?;
+            let key_schedule = tls13::start_handshake_traffic(sess,
+                                                              self.early_key_schedule.take(),
+                                                              server_hello,
+                                                              &mut self.handshake,
+                                                              &mut self.hello)?;
             tls13::emit_fake_ccs(&mut self.handshake, sess);
-            return Ok(self.into_expect_tls13_encrypted_extensions());
+            return Ok(self.into_expect_tls13_encrypted_extensions(key_schedule));
         }
 
         // TLS1.2 only from here-on
@@ -571,11 +596,9 @@ impl State for ExpectServerHello {
         }
 
         // See if we're successfully resuming.
-        let mut abbreviated_handshake = false;
         if let Some(ref resuming) = self.handshake.resuming_session {
             if resuming.session_id == self.handshake.session_id {
                 debug!("Server agreed to resume");
-                abbreviated_handshake = true;
 
                 // Is the server telling lies about the ciphersuite?
                 if resuming.cipher_suite != scs.unwrap().suite {
@@ -595,24 +618,22 @@ impl State for ExpectServerHello {
                 sess.config.key_log.log("CLIENT_RANDOM",
                                         &secrets.randoms.client,
                                         &secrets.master_secret);
-                sess.common.start_encryption_tls12(secrets);
+                sess.common.start_encryption_tls12(&secrets);
+
+                // Since we're resuming, we verified the certificate and
+                // proof of possession in the prior session.
+                let certv = verify::ServerCertVerified::assertion();
+                let sigv =  verify::HandshakeSignatureValid::assertion();
+
+                return if self.must_issue_new_ticket {
+                    Ok(self.into_expect_tls12_new_ticket_resume(secrets, certv, sigv))
+                } else {
+                    Ok(self.into_expect_tls12_ccs_resume(secrets, certv, sigv))
+                };
             }
         }
 
-        if abbreviated_handshake {
-            // Since we're resuming, we verified the certificate and
-            // proof of possession in the prior session.
-            let certv = verify::ServerCertVerified::assertion();
-            let sigv =  verify::HandshakeSignatureValid::assertion();
-
-            if self.must_issue_new_ticket {
-                Ok(self.into_expect_tls12_new_ticket_resume(certv, sigv))
-            } else {
-                Ok(self.into_expect_tls12_ccs_resume(certv, sigv))
-            }
-        } else {
-            Ok(self.into_expect_tls12_certificate())
-        }
+        Ok(self.into_expect_tls12_certificate())
     }
 }
 

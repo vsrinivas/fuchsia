@@ -185,6 +185,7 @@
 
 // Require docs for public APIs, deny unsafe code, etc.
 #![forbid(unsafe_code,
+          unused_must_use,
           unstable_features)]
 #![deny(trivial_casts,
         trivial_numeric_casts,
@@ -197,6 +198,9 @@
 // - ptr_arg: this triggers on references to type aliases that are Vec
 //   underneath.
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::ptr_arg))]
+
+// Enable documentation for all features on docs.rs
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 // log for logging (optional).
 #[cfg(feature = "logging")]
@@ -211,7 +215,6 @@ mod log {
     macro_rules! error    ( ($($tt:tt)*) => {{}} );
 }
 
-mod util;
 #[allow(missing_docs)]
 #[macro_use]
 mod msgs;
@@ -221,6 +224,7 @@ mod hash_hs;
 mod vecbuf;
 mod prf;
 mod cipher;
+mod record_layer;
 mod key_schedule;
 mod session;
 mod stream;
@@ -269,20 +273,20 @@ pub use crate::server::StoresServerSessions;
 pub use crate::server::handy::{NoServerSessionStorage, ServerSessionMemoryCache};
 pub use crate::server::{ServerConfig, ServerSession};
 pub use crate::server::handy::ResolvesServerCertUsingSNI;
-pub use crate::server::ResolvesServerCert;
-pub use crate::server::ProducesTickets;
+pub use crate::server::{ResolvesServerCert,ProducesTickets,ClientHello};
 pub use crate::ticketer::Ticketer;
 pub use crate::verify::{NoClientAuth, AllowAnyAuthenticatedClient,
                  AllowAnyAnonymousOrAuthenticatedClient};
 pub use crate::suites::{ALL_CIPHERSUITES, BulkAlgorithm, SupportedCipherSuite};
 pub use crate::key::{Certificate, PrivateKey};
 pub use crate::keylog::{KeyLog, NoKeyLog, KeyLogFile};
-pub use crate::vecbuf::WriteV;
+pub use crate::vecbuf::{WriteV, WriteVAdapter};
 
 /// Message signing interfaces and implementations.
 pub mod sign;
 
 #[cfg(feature = "quic")]
+#[cfg_attr(docsrs, doc(cfg(feature = "quic")))]
 /// APIs for implementing QUIC TLS
 pub mod quic;
 
@@ -296,8 +300,12 @@ mod quic {
 }
 
 #[cfg(feature = "dangerous_configuration")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dangerous_configuration")))]
 pub use crate::verify::{ServerCertVerifier, ServerCertVerified,
-    ClientCertVerifier, ClientCertVerified};
+    ClientCertVerifier, ClientCertVerified, WebPKIVerifier};
 #[cfg(feature = "dangerous_configuration")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dangerous_configuration")))]
 pub use crate::client::danger::DangerousClientConfig;
 
+/// This is the rustls manual.
+pub mod manual;

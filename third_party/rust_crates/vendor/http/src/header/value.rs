@@ -1,12 +1,11 @@
 use bytes::{Bytes, BytesMut};
 
-use std::{cmp, fmt, mem, str};
+use std::convert::TryFrom;
 use std::error::Error;
 use std::str::FromStr;
+use std::{cmp, fmt, mem, str};
 
-use ::convert::HttpTryFrom;
-use ::error::Never;
-use header::name::HeaderName;
+use crate::header::name::HeaderName;
 
 /// Represents an HTTP header field value.
 ///
@@ -28,11 +27,6 @@ pub struct HeaderValue {
 pub struct InvalidHeaderValue {
     _priv: (),
 }
-
-/// A possible error when converting a `HeaderValue` from a string or byte
-/// slice.
-#[derive(Debug)]
-pub struct InvalidHeaderValueBytes(InvalidHeaderValue);
 
 /// A possible error when converting a `HeaderValue` to a string representation.
 ///
@@ -104,7 +98,7 @@ impl HeaderValue {
     /// ```
     #[inline]
     pub fn from_str(src: &str) -> Result<HeaderValue, InvalidHeaderValue> {
-        HeaderValue::try_from(src)
+        HeaderValue::try_from_generic(src, |s| Bytes::copy_from_slice(s.as_bytes()))
     }
 
     /// Converts a HeaderName into a HeaderValue
@@ -150,38 +144,49 @@ impl HeaderValue {
     /// ```
     #[inline]
     pub fn from_bytes(src: &[u8]) -> Result<HeaderValue, InvalidHeaderValue> {
-        HeaderValue::try_from(src)
+        HeaderValue::try_from_generic(src, Bytes::copy_from_slice)
     }
 
     /// Attempt to convert a `Bytes` buffer to a `HeaderValue`.
     ///
-    /// If the argument contains invalid header value bytes, an error is
-    /// returned. Only byte values between 32 and 255 (inclusive) are permitted,
-    /// excluding byte 127 (DEL).
-    ///
-    /// This function is intended to be replaced in the future by a `TryFrom`
-    /// implementation once the trait is stabilized in std.
-    #[inline]
-    pub fn from_shared(src: Bytes) -> Result<HeaderValue, InvalidHeaderValueBytes> {
-        HeaderValue::try_from(src).map_err(InvalidHeaderValueBytes)
+    /// This will try to prevent a copy if the type passed is the type used
+    /// internally, and will copy the data if it is not.
+    pub fn from_maybe_shared<T>(src: T) -> Result<HeaderValue, InvalidHeaderValue>
+    where
+        T: AsRef<[u8]> + 'static,
+    {
+        if_downcast_into!(T, Bytes, src, {
+            return HeaderValue::from_shared(src);
+        });
+
+        HeaderValue::from_bytes(src.as_ref())
     }
 
     /// Convert a `Bytes` directly into a `HeaderValue` without validating.
     ///
     /// This function does NOT validate that illegal bytes are not contained
     /// within the buffer.
-    #[inline]
-    pub unsafe fn from_shared_unchecked(src: Bytes) -> HeaderValue {
+    pub unsafe fn from_maybe_shared_unchecked<T>(src: T) -> HeaderValue
+    where
+        T: AsRef<[u8]> + 'static,
+    {
         if cfg!(debug_assertions) {
-            match HeaderValue::from_shared(src) {
+            match HeaderValue::from_maybe_shared(src) {
                 Ok(val) => val,
                 Err(_err) => {
-                    //TODO: if the Bytes were part of the InvalidHeaderValueBytes,
-                    //this message could include the invalid bytes.
-                    panic!("HeaderValue::from_shared_unchecked() with invalid bytes");
-                },
+                    panic!("HeaderValue::from_maybe_shared_unchecked() with invalid bytes");
+                }
             }
         } else {
+
+            if_downcast_into!(T, Bytes, src, {
+                return HeaderValue {
+                    inner: src,
+                    is_sensitive: false,
+                };
+            });
+
+            let src = Bytes::copy_from_slice(src.as_ref());
             HeaderValue {
                 inner: src,
                 is_sensitive: false,
@@ -189,16 +194,18 @@ impl HeaderValue {
         }
     }
 
-    fn try_from<T: AsRef<[u8]> + Into<Bytes>>(src: T) -> Result<HeaderValue, InvalidHeaderValue> {
+    fn from_shared(src: Bytes) -> Result<HeaderValue, InvalidHeaderValue> {
+        HeaderValue::try_from_generic(src, std::convert::identity)
+    }
+
+    fn try_from_generic<T: AsRef<[u8]>, F: FnOnce(T) -> Bytes>(src: T, into: F) -> Result<HeaderValue, InvalidHeaderValue> {
         for &b in src.as_ref() {
             if !is_valid(b) {
-                return Err(InvalidHeaderValue {
-                    _priv: (),
-                });
+                return Err(InvalidHeaderValue { _priv: () });
             }
         }
         Ok(HeaderValue {
-            inner: src.into(),
+            inner: into(src),
             is_sensitive: false,
         })
     }
@@ -329,7 +336,7 @@ impl AsRef<[u8]> for HeaderValue {
 }
 
 impl fmt::Debug for HeaderValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_sensitive {
             f.write_str("Sensitive")
         } else {
@@ -339,9 +346,7 @@ impl fmt::Debug for HeaderValue {
             for (i, &b) in bytes.iter().enumerate() {
                 if !is_visible_ascii(b) || b == b'"' {
                     if from != i {
-                        f.write_str(unsafe {
-                            str::from_utf8_unchecked(&bytes[from..i])
-                        })?;
+                        f.write_str(unsafe { str::from_utf8_unchecked(&bytes[from..i]) })?;
                     }
                     if b == b'"' {
                         f.write_str("\\\"")?;
@@ -352,9 +357,7 @@ impl fmt::Debug for HeaderValue {
                 }
             }
 
-            f.write_str(unsafe {
-                str::from_utf8_unchecked(&bytes[from..])
-            })?;
+            f.write_str(unsafe { str::from_utf8_unchecked(&bytes[from..]) })?;
             f.write_str("\"")
         }
     }
@@ -364,7 +367,7 @@ impl From<HeaderName> for HeaderValue {
     #[inline]
     fn from(h: HeaderName) -> HeaderValue {
         HeaderValue {
-            inner: h.into(),
+            inner: h.into_bytes(),
             is_sensitive: false,
         }
     }
@@ -400,15 +403,6 @@ macro_rules! from_integers {
                     inner: buf.freeze(),
                     is_sensitive: false,
                 }
-            }
-        }
-
-        impl HttpTryFrom<$t> for HeaderValue {
-            type Error = Never;
-
-            #[inline]
-            fn try_from(num: $t) -> Result<Self, Self::Error> {
-                Ok(num.into())
             }
         }
 
@@ -458,14 +452,17 @@ from_integers! {
 #[cfg(test)]
 mod from_header_name_tests {
     use super::*;
-    use header::map::HeaderMap;
-    use header::name;
+    use crate::header::map::HeaderMap;
+    use crate::header::name;
 
     #[test]
     fn it_can_insert_header_name_as_header_value() {
         let mut map = HeaderMap::new();
         map.insert(name::UPGRADE, name::SEC_WEBSOCKET_PROTOCOL.into());
-        map.insert(name::ACCEPT, name::HeaderName::from_bytes(b"hello-world").unwrap().into());
+        map.insert(
+            name::ACCEPT,
+            name::HeaderName::from_bytes(b"hello-world").unwrap().into(),
+        );
 
         assert_eq!(
             map.get(name::UPGRADE).unwrap(),
@@ -488,13 +485,6 @@ impl FromStr for HeaderValue {
     }
 }
 
-impl From<HeaderValue> for Bytes {
-    #[inline]
-    fn from(value: HeaderValue) -> Bytes {
-        value.inner
-    }
-}
-
 impl<'a> From<&'a HeaderValue> for HeaderValue {
     #[inline]
     fn from(t: &'a HeaderValue) -> Self {
@@ -502,16 +492,7 @@ impl<'a> From<&'a HeaderValue> for HeaderValue {
     }
 }
 
-impl<'a> HttpTryFrom<&'a HeaderValue> for HeaderValue {
-    type Error = ::error::Never;
-
-    #[inline]
-    fn try_from(t: &'a HeaderValue) -> Result<Self, Self::Error> {
-        Ok(t.clone())
-    }
-}
-
-impl<'a> HttpTryFrom<&'a str> for HeaderValue {
+impl<'a> TryFrom<&'a str> for HeaderValue {
     type Error = InvalidHeaderValue;
 
     #[inline]
@@ -520,7 +501,7 @@ impl<'a> HttpTryFrom<&'a str> for HeaderValue {
     }
 }
 
-impl<'a> HttpTryFrom<&'a String> for HeaderValue {
+impl<'a> TryFrom<&'a String> for HeaderValue {
     type Error = InvalidHeaderValue;
     #[inline]
     fn try_from(s: &'a String) -> Result<Self, Self::Error> {
@@ -528,7 +509,7 @@ impl<'a> HttpTryFrom<&'a String> for HeaderValue {
     }
 }
 
-impl<'a> HttpTryFrom<&'a [u8]> for HeaderValue {
+impl<'a> TryFrom<&'a [u8]> for HeaderValue {
     type Error = InvalidHeaderValue;
 
     #[inline]
@@ -537,8 +518,8 @@ impl<'a> HttpTryFrom<&'a [u8]> for HeaderValue {
     }
 }
 
-impl HttpTryFrom<String> for HeaderValue {
-    type Error = InvalidHeaderValueBytes;
+impl TryFrom<String> for HeaderValue {
+    type Error = InvalidHeaderValue;
 
     #[inline]
     fn try_from(t: String) -> Result<Self, Self::Error> {
@@ -546,29 +527,19 @@ impl HttpTryFrom<String> for HeaderValue {
     }
 }
 
-impl HttpTryFrom<Bytes> for HeaderValue {
-    type Error = InvalidHeaderValueBytes;
-
-    #[inline]
-    fn try_from(bytes: Bytes) -> Result<Self, Self::Error> {
-        HeaderValue::from_shared(bytes)
-    }
-}
-
-impl HttpTryFrom<HeaderName> for HeaderValue {
+impl TryFrom<Vec<u8>> for HeaderValue {
     type Error = InvalidHeaderValue;
 
     #[inline]
-    fn try_from(name: HeaderName) -> Result<Self, Self::Error> {
-        // Infallable as header names have the same validations
-        Ok(name.into())
+    fn try_from(vec: Vec<u8>) -> Result<Self, Self::Error> {
+        HeaderValue::from_shared(vec.into())
     }
 }
 
 #[cfg(test)]
 mod try_from_header_name_tests {
     use super::*;
-    use header::name;
+    use crate::header::name;
 
     #[test]
     fn it_converts_using_try_from() {
@@ -597,40 +568,20 @@ impl fmt::Debug for InvalidHeaderValue {
 }
 
 impl fmt::Display for InvalidHeaderValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.description().fmt(f)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("failed to parse header value")
     }
 }
 
-impl Error for InvalidHeaderValue {
-    fn description(&self) -> &str {
-        "failed to parse header value"
-    }
-}
-
-impl fmt::Display for InvalidHeaderValueBytes {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Error for InvalidHeaderValueBytes {
-    fn description(&self) -> &str {
-        self.0.description()
-    }
-}
+impl Error for InvalidHeaderValue {}
 
 impl fmt::Display for ToStrError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.description().fmt(f)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("failed to convert header to a str")
     }
 }
 
-impl Error for ToStrError {
-    fn description(&self) -> &str {
-        "failed to convert header to a str"
-    }
-}
+impl Error for ToStrError {}
 
 // ===== PartialEq / PartialOrd =====
 
@@ -756,7 +707,8 @@ impl<'a> PartialOrd<HeaderValue> for &'a HeaderValue {
 }
 
 impl<'a, T: ?Sized> PartialEq<&'a T> for HeaderValue
-    where HeaderValue: PartialEq<T>
+where
+    HeaderValue: PartialEq<T>,
 {
     #[inline]
     fn eq(&self, other: &&'a T) -> bool {
@@ -765,7 +717,8 @@ impl<'a, T: ?Sized> PartialEq<&'a T> for HeaderValue
 }
 
 impl<'a, T: ?Sized> PartialOrd<&'a T> for HeaderValue
-    where HeaderValue: PartialOrd<T>
+where
+    HeaderValue: PartialOrd<T>,
 {
     #[inline]
     fn partial_cmp(&self, other: &&'a T) -> Option<cmp::Ordering> {

@@ -161,7 +161,7 @@ pub struct MirrorConfigBuilder {
 impl MirrorConfigBuilder {
     pub fn new(mirror_url: impl Into<http::Uri>) -> Result<Self, MirrorConfigError> {
         let mirror_url = mirror_url.into();
-        if mirror_url.scheme_part().is_none() {
+        if mirror_url.scheme().is_none() {
             return Err(MirrorConfigError::MirrorUrlMissingScheme);
         }
         let blob_mirror_url = blob_mirror_url_from_mirror_url(&mirror_url);
@@ -175,7 +175,7 @@ impl MirrorConfigBuilder {
         mirror_url: impl Into<http::Uri>,
     ) -> Result<Self, (Self, MirrorConfigError)> {
         self.config.mirror_url = mirror_url.into();
-        if self.config.mirror_url.scheme_part().is_none() {
+        if self.config.mirror_url.scheme().is_none() {
             return Err((self, MirrorConfigError::MirrorUrlMissingScheme));
         }
         Ok(self)
@@ -186,7 +186,7 @@ impl MirrorConfigBuilder {
         blob_mirror_url: impl Into<http::Uri>,
     ) -> Result<Self, (Self, MirrorConfigError)> {
         self.config.blob_mirror_url = blob_mirror_url.into();
-        if self.config.blob_mirror_url.scheme_part().is_none() {
+        if self.config.blob_mirror_url.scheme().is_none() {
             return Err((self, MirrorConfigError::BlobMirrorUrlMissingScheme));
         }
         Ok(self)
@@ -218,14 +218,14 @@ impl TryFrom<fidl::MirrorConfig> for MirrorConfig {
     fn try_from(other: fidl::MirrorConfig) -> Result<Self, RepositoryParseError> {
         let mirror_url =
             other.mirror_url.ok_or(RepositoryParseError::MirrorUrlMissing)?.parse::<Uri>()?;
-        if mirror_url.scheme_part().is_none() {
+        if mirror_url.scheme().is_none() {
             Err(MirrorConfigError::MirrorUrlMissingScheme)?
         }
         let blob_mirror_url = match other.blob_mirror_url {
             None => blob_mirror_url_from_mirror_url(&mirror_url),
             Some(s) => {
                 let url = s.parse::<http::Uri>()?;
-                if url.scheme_part().is_none() {
+                if url.scheme().is_none() {
                     Err(MirrorConfigError::BlobMirrorUrlMissingScheme)?
                 }
                 url

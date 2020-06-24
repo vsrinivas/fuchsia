@@ -361,3 +361,4 @@ GFp_gcm_ghash_clmul:
 .byte	112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62
 .byte	0
 #endif
+.section	.note.GNU-stack,"",@progbits

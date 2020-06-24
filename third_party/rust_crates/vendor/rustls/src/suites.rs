@@ -22,10 +22,11 @@ pub enum BulkAlgorithm {
 }
 
 /// The result of a key exchange.  This has our public key,
-/// and the agreed premaster secret.
+/// and the agreed shared secret (also known as the "premaster secret"
+/// in TLS1.0-era protocols, and "Z" in TLS1.3).
 pub struct KeyExchangeResult {
     pub pubkey: ring::agreement::PublicKey,
-    pub premaster_secret: Vec<u8>,
+    pub shared_secret: Vec<u8>,
 }
 
 /// An in-progress key exchange.  This has the algorithm,
@@ -116,7 +117,7 @@ impl KeyExchange {
 
         Some(KeyExchangeResult {
             pubkey: self.pubkey,
-            premaster_secret: secret.unwrap(),
+            shared_secret: secret.unwrap(),
         })
     }
 }
@@ -374,7 +375,7 @@ pub static TLS13_AES_128_GCM_SHA256: SupportedCipherSuite = SupportedCipherSuite
 };
 
 /// A list of all the cipher suites supported by rustls.
-pub static ALL_CIPHERSUITES: [&'static SupportedCipherSuite; 9] =
+pub static ALL_CIPHERSUITES: [&SupportedCipherSuite; 9] =
     [// TLS1.3 suites
      &TLS13_CHACHA20_POLY1305_SHA256,
      &TLS13_AES_256_GCM_SHA384,
@@ -431,6 +432,15 @@ pub fn reduce_given_version(all: &[&'static SupportedCipherSuite],
         .filter(|&&suite| suite.usable_for_version(version))
         .cloned()
         .collect()
+}
+
+/// Return true if `sigscheme` is usable by any of the given suites.
+pub fn compatible_sigscheme_for_suites(sigscheme: SignatureScheme,
+                                       common_suites: &[&'static SupportedCipherSuite]) -> bool {
+    let sigalg = sigscheme.sign();
+
+    common_suites.iter()
+        .any(|&suite| suite.sign == SignatureAlgorithm::Anonymous || suite.sign == sigalg)
 }
 
 #[cfg(test)]

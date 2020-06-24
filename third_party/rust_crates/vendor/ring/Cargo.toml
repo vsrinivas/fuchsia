@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "ring"
-version = "0.16.9"
+version = "0.16.12"
 authors = ["Brian Smith <brian@briansmith.org>"]
 build = "build.rs"
 links = "ring-asm"

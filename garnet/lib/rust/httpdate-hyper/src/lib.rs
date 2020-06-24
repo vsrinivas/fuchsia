@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fuchsia_hyper;
-use futures::compat::Future01CompatExt;
 use hyper;
 use lazy_static::lazy_static;
 use rustls::Certificate;
@@ -130,7 +129,7 @@ async fn get_network_time_backstop(
 
     let client = fuchsia_hyper::new_https_client_dangerous(config, Default::default());
 
-    let response = client.get(url).compat().await.map_err(|_| HttpsDateError::NetworkError)?;
+    let response = client.get(url).await.map_err(|_| HttpsDateError::NetworkError)?;
 
     // Ok, so now we pull the Date header out of the response.
     // Technically the Date header is the date of page creation, but it's the best

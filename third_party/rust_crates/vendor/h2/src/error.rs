@@ -1,9 +1,9 @@
-use codec::{SendError, UserError};
-use proto;
+use crate::codec::{SendError, UserError};
+use crate::proto;
 
 use std::{error, fmt, io};
 
-pub use frame::Reason;
+pub use crate::frame::Reason;
 
 /// Represents HTTP/2.0 operation errors.
 ///
@@ -73,25 +73,23 @@ impl Error {
             _ => None,
         }
     }
+
+    pub(crate) fn from_io(err: io::Error) -> Self {
+        Error {
+            kind: Kind::Io(err),
+        }
+    }
 }
 
 impl From<proto::Error> for Error {
     fn from(src: proto::Error) -> Error {
-        use proto::Error::*;
+        use crate::proto::Error::*;
 
         Error {
             kind: match src {
                 Proto(reason) => Kind::Proto(reason),
                 Io(e) => Kind::Io(e),
             },
-        }
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(src: io::Error) -> Error {
-        Error {
-            kind: Kind::Io(src),
         }
     }
 }
@@ -109,7 +107,7 @@ impl From<SendError> for Error {
         match src {
             SendError::User(e) => e.into(),
             SendError::Connection(reason) => reason.into(),
-            SendError::Io(e) => e.into(),
+            SendError::Io(e) => Error::from_io(e),
         }
     }
 }
@@ -134,14 +132,4 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        use self::Kind::*;
-
-        match self.kind {
-            Io(ref e) => error::Error::description(e),
-            Proto(ref reason) => reason.description(),
-            User(ref user) => user.description(),
-        }
-    }
-}
+impl error::Error for Error {}

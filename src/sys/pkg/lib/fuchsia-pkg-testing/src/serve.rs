@@ -9,19 +9,23 @@ use {
     anyhow::{format_err, Error},
     chrono::Utc,
     fidl_fuchsia_pkg_ext::RepositoryConfig,
-    fuchsia_async::{self as fasync, net::TcpListener, EHandle},
+    fuchsia_async::{self as fasync, net::TcpListener},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
     futures::{
-        compat::{AsyncRead01CompatExt, Compat, Future01CompatExt, Stream01CompatExt},
         future::{BoxFuture, RemoteHandle},
         prelude::*,
-        task::SpawnExt,
     },
     http::Uri,
     http_sse::{Event, EventSender, SseResponseCreator},
-    hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
+    hyper::{
+        header,
+        server::{accept::from_stream, Server},
+        service::{make_service_fn, service_fn},
+        Body, Method, Request, Response, StatusCode,
+    },
     std::{
+        convert::Infallible,
         io::Cursor,
         net::{Ipv6Addr, SocketAddr},
         path::{Path, PathBuf},
@@ -32,8 +36,8 @@ use {
 
 pub mod handler;
 
-trait AsyncReadWrite: AsyncRead + AsyncWrite + Send {}
-impl<T> AsyncReadWrite for T where T: AsyncRead + AsyncWrite + Send {}
+trait AsyncReadWrite: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send {}
+impl<T> AsyncReadWrite for T where T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send {}
 
 /// A builder to construct a test repository server.
 pub struct ServedRepositoryBuilder {
@@ -79,10 +83,13 @@ impl ServedRepositoryBuilder {
             (listener, local_addr)
         };
 
-        let listener = listener.accept_stream().map_err(Error::from).map_ok(|(conn, _addr)| conn);
+        let listener = listener
+            .accept_stream()
+            .map_err(Error::from)
+            .map_ok(|(conn, _addr)| fuchsia_hyper::TcpStream { stream: conn });
 
-        let connections: Compat<
-            Pin<Box<dyn Stream<Item = Result<Compat<Pin<Box<dyn AsyncReadWrite>>>, Error>> + Send>>,
+        let connections: Pin<
+            Box<dyn Stream<Item = Result<Pin<Box<dyn AsyncReadWrite>>, Error>> + Send>,
         > = if self.use_https {
             // build a server configuration using a test CA and cert chain
             let certs = parse_cert_chain(&include_bytes!("../certs/server.certchain")[..]);
@@ -94,20 +101,14 @@ impl ServedRepositoryBuilder {
             // wrap incoming tcp streams
             listener
                 .and_then(move |conn| {
-                    tls_acceptor.accept(conn.compat()).compat().map(|res| match res {
-                        Ok(conn) => Ok((Pin::new(Box::new(conn.compat()))
-                            as Pin<Box<dyn AsyncReadWrite>>)
-                            .compat()),
+                    tls_acceptor.accept(conn).map(|res| match res {
+                        Ok(conn) => Ok(Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>),
                         Err(e) => Err(Error::from(e)),
                     })
                 })
                 .boxed()
-                .compat()
         } else {
-            listener
-                .map_ok(|conn| (Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>).compat())
-                .boxed()
-                .compat()
+            listener.map_ok(|conn| Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>).boxed()
         };
 
         let root = self.repo.path();
@@ -117,42 +118,43 @@ impl ServedRepositoryBuilder {
             SseResponseCreator::with_additional_buffer_size(10);
         let auto_response_creator = Arc::new(auto_response_creator);
 
-        let service = move || {
+        let make_svc = make_service_fn(move |_socket| {
             let root = root.clone();
             let uri_path_override_handlers = Arc::clone(&uri_path_override_handlers);
             let auto_response_creator = Arc::clone(&auto_response_creator);
 
-            service_fn(move |req| {
-                let method = req.method().to_owned();
-                let path = req.uri().path().to_owned();
-                ServedRepository::handle_tuf_repo_request(
-                    root.clone(),
-                    Arc::clone(&uri_path_override_handlers),
-                    Arc::clone(&auto_response_creator),
-                    req,
-                )
-                .map(move |x| -> Result<Response<Body>, hyper::Error> {
-                    println!(
-                        "{} [http repo] {} {} => {}",
-                        Utc::now().format("%T.%6f"),
-                        method,
-                        path,
-                        x.status()
-                    );
-                    Ok(x)
-                })
-                .boxed()
-                .compat()
-            })
-        };
+            async move {
+                Ok::<_, Infallible>(service_fn(move |req| {
+                    let method = req.method().to_owned();
+                    let path = req.uri().path().to_owned();
+                    ServedRepository::handle_tuf_repo_request(
+                        root.clone(),
+                        Arc::clone(&uri_path_override_handlers),
+                        Arc::clone(&auto_response_creator),
+                        req,
+                    )
+                    .inspect(move |x| {
+                        println!(
+                            "{} [http repo] {} {} => {}",
+                            Utc::now().format("%T.%6f"),
+                            method,
+                            path,
+                            x.status()
+                        )
+                    })
+                    .map(Ok::<_, Infallible>)
+                }))
+            }
+        });
 
         let (stop, rx_stop) = futures::channel::oneshot::channel();
 
-        let (server, wait_stop) = Server::builder(connections)
-            .executor(EHandle::local().compat())
-            .serve(service)
-            .with_graceful_shutdown(rx_stop.compat())
-            .compat()
+        let (server, wait_stop) = Server::builder(from_stream(connections))
+            .executor(fuchsia_hyper::Executor)
+            .serve(make_svc)
+            .with_graceful_shutdown(
+                rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
+            )
             .unwrap_or_else(|e| panic!("error serving repo over http: {}", e))
             .remote_handle();
 
@@ -319,7 +321,7 @@ impl ServedRepository {
 async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
     let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
     let client = fuchsia_hyper::new_client();
-    let response = client.request(request).compat().await?;
+    let response = client.request(request).await?;
 
     if response.status() != StatusCode::OK {
         return Err(format_err!("unexpected status code: {:?}", response.status()));
@@ -327,7 +329,6 @@ async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
 
     let body = response
         .into_body()
-        .compat()
         .try_fold(Vec::new(), |mut vec, b| async move {
             vec.extend(b);
             Ok(vec)

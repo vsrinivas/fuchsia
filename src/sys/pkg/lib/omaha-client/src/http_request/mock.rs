@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::http_request::HttpRequest;
-use futures::compat::Stream01CompatExt;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hyper::{Body, Request, Response};
@@ -78,20 +77,43 @@ impl MockHttpRequest {
         self.request.replace(Request::default())
     }
 
-    pub async fn assert_body(&self, body: &[u8]) {
-        let chunks = self.take_request().into_body().compat().try_concat().await.unwrap();
-        assert_eq!(body, chunks.as_ref())
+    pub async fn assert_body(self, body: &[u8]) {
+        let chunks = self
+            .take_request()
+            .into_body()
+            .try_fold(Vec::new(), |mut vec, b| async move {
+                vec.extend(b);
+                Ok(vec)
+            })
+            .await
+            .unwrap();
+        assert_eq!(body, &chunks[..])
     }
 
-    pub async fn assert_body_str(&self, body: &str) {
-        let chunks = self.take_request().into_body().compat().try_concat().await.unwrap();
+    pub async fn assert_body_str(self, body: &str) {
+        let chunks = self
+            .take_request()
+            .into_body()
+            .try_fold(Vec::new(), |mut vec, b| async move {
+                vec.extend(b);
+                Ok(vec)
+            })
+            .await
+            .unwrap();
         assert_eq!(body, String::from_utf8_lossy(chunks.as_ref()));
     }
 }
 
 #[cfg(test)]
 async fn response_to_vec(response: Response<Body>) -> Vec<u8> {
-    response.into_body().compat().try_concat().await.unwrap().to_vec()
+    response
+        .into_body()
+        .try_fold(Vec::new(), |mut vec, b| async move {
+            vec.extend(b);
+            Ok(vec)
+        })
+        .await
+        .unwrap()
 }
 
 #[test]

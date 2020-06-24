@@ -2,10 +2,10 @@ use std::error;
 use std::fmt;
 use std::result;
 
-use header;
-use method;
-use status;
-use uri;
+use crate::header;
+use crate::method;
+use crate::status;
+use crate::uri;
 
 /// A generic "error" for HTTP connections
 ///
@@ -24,12 +24,9 @@ enum ErrorKind {
     StatusCode(status::InvalidStatusCode),
     Method(method::InvalidMethod),
     Uri(uri::InvalidUri),
-    UriShared(uri::InvalidUriBytes),
     UriParts(uri::InvalidUriParts),
     HeaderName(header::InvalidHeaderName),
-    HeaderNameShared(header::InvalidHeaderNameBytes),
     HeaderValue(header::InvalidHeaderValue),
-    HeaderValueShared(header::InvalidHeaderValueBytes),
 }
 
 impl fmt::Debug for Error {
@@ -42,7 +39,7 @@ impl fmt::Debug for Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self.get_ref(), f)
     }
 }
@@ -54,130 +51,79 @@ impl Error {
     }
 
     /// Return a reference to the lower level, inner error.
-    #[allow(warnings)]
-    pub fn get_ref(&self) -> &(error::Error + 'static) {
+    pub fn get_ref(&self) -> &(dyn error::Error + 'static) {
         use self::ErrorKind::*;
 
         match self.inner {
             StatusCode(ref e) => e,
             Method(ref e) => e,
             Uri(ref e) => e,
-            UriShared(ref e) => e,
             UriParts(ref e) => e,
             HeaderName(ref e) => e,
-            HeaderNameShared(ref e) => e,
             HeaderValue(ref e) => e,
-            HeaderValueShared(ref e) => e,
         }
     }
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        use self::ErrorKind::*;
-
-        match self.inner {
-            StatusCode(ref e) => e.description(),
-            Method(ref e) => e.description(),
-            Uri(ref e) => e.description(),
-            UriShared(ref e) => e.description(),
-            UriParts(ref e) => e.description(),
-            HeaderName(ref e) => e.description(),
-            HeaderNameShared(ref e) => e.description(),
-            HeaderValue(ref e) => e.description(),
-            HeaderValueShared(ref e) => e.description(),
-        }
-    }
-
     // Return any available cause from the inner error. Note the inner error is
     // not itself the cause.
-    #[allow(warnings)]
-    fn cause(&self) -> Option<&error::Error> {
-        self.get_ref().cause()
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        self.get_ref().source()
     }
 }
 
 impl From<status::InvalidStatusCode> for Error {
     fn from(err: status::InvalidStatusCode) -> Error {
-        Error { inner: ErrorKind::StatusCode(err) }
+        Error {
+            inner: ErrorKind::StatusCode(err),
+        }
     }
 }
 
 impl From<method::InvalidMethod> for Error {
     fn from(err: method::InvalidMethod) -> Error {
-        Error { inner: ErrorKind::Method(err) }
+        Error {
+            inner: ErrorKind::Method(err),
+        }
     }
 }
 
 impl From<uri::InvalidUri> for Error {
     fn from(err: uri::InvalidUri) -> Error {
-        Error { inner: ErrorKind::Uri(err) }
-    }
-}
-
-impl From<uri::InvalidUriBytes> for Error {
-    fn from(err: uri::InvalidUriBytes) -> Error {
-        Error { inner: ErrorKind::UriShared(err) }
+        Error {
+            inner: ErrorKind::Uri(err),
+        }
     }
 }
 
 impl From<uri::InvalidUriParts> for Error {
     fn from(err: uri::InvalidUriParts) -> Error {
-        Error { inner: ErrorKind::UriParts(err) }
+        Error {
+            inner: ErrorKind::UriParts(err),
+        }
     }
 }
 
 impl From<header::InvalidHeaderName> for Error {
     fn from(err: header::InvalidHeaderName) -> Error {
-        Error { inner: ErrorKind::HeaderName(err) }
-    }
-}
-
-impl From<header::InvalidHeaderNameBytes> for Error {
-    fn from(err: header::InvalidHeaderNameBytes) -> Error {
-        Error { inner: ErrorKind::HeaderNameShared(err) }
+        Error {
+            inner: ErrorKind::HeaderName(err),
+        }
     }
 }
 
 impl From<header::InvalidHeaderValue> for Error {
     fn from(err: header::InvalidHeaderValue) -> Error {
-        Error { inner: ErrorKind::HeaderValue(err) }
+        Error {
+            inner: ErrorKind::HeaderValue(err),
+        }
     }
 }
 
-impl From<header::InvalidHeaderValueBytes> for Error {
-    fn from(err: header::InvalidHeaderValueBytes) -> Error {
-        Error { inner: ErrorKind::HeaderValueShared(err) }
-    }
-}
-
-// A crate-private type until we can use !.
-//
-// Being crate-private, we should be able to swap the type out in a
-// backwards compatible way.
-pub enum Never {}
-
-impl From<Never> for Error {
-    fn from(never: Never) -> Error {
-        match never {}
-    }
-}
-
-impl fmt::Debug for Never {
-    fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {}
-    }
-}
-
-impl fmt::Display for Never {
-    fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {}
-    }
-}
-
-impl error::Error for Never {
-    fn description(&self) -> &str {
-        match *self {}
+impl From<std::convert::Infallible> for Error {
+    fn from(err: std::convert::Infallible) -> Error {
+        match err {}
     }
 }
 
@@ -191,11 +137,11 @@ mod tests {
             let err: Error = e.into();
             let ie = err.get_ref();
             assert!(!ie.is::<header::InvalidHeaderValue>());
-            assert!( ie.is::<status::InvalidStatusCode>());
+            assert!(ie.is::<status::InvalidStatusCode>());
             ie.downcast_ref::<status::InvalidStatusCode>().unwrap();
 
             assert!(!err.is::<header::InvalidHeaderValue>());
-            assert!( err.is::<status::InvalidStatusCode>());
+            assert!(err.is::<status::InvalidStatusCode>());
         } else {
             panic!("Bad status allowed!");
         }

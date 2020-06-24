@@ -2,29 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use hyper_rustls;
-use rustls;
-
 use {
     fidl_fuchsia_posix_socket::{ProviderMarker, ProviderSynchronousProxy},
     fuchsia_async::{
-        net::{TcpConnector, TcpStream},
-        EHandle,
+        self,
+        net::{self, TcpConnector},
     },
     fuchsia_component::client::connect_channel_to_service_at,
     fuchsia_zircon as zx,
     futures::{
-        compat::Compat,
-        future::{Future, FutureExt, TryFutureExt},
-        io::{self, AsyncReadExt},
+        future::{Future, FutureExt},
+        io::{self, AsyncRead, AsyncWrite},
         ready,
-        task::{Context, Poll, SpawnExt},
+        task::{Context, Poll},
     },
+    http::uri::{Scheme, Uri},
     hyper::{
         client::{
-            connect::{Connect, Connected, Destination},
+            connect::{Connected, Connection},
             Client,
         },
+        service::Service,
         Body,
     },
     std::{
@@ -46,14 +44,57 @@ pub struct HyperConnectorFuture {
     tcp_options: TcpOptions,
 }
 
+pub struct TcpStream {
+    pub stream: net::TcpStream,
+}
+
+impl tokio::io::AsyncRead for TcpStream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
+        Pin::new(&mut self.stream).poll_read(cx, buf)
+    }
+
+    // TODO: override poll_read_buf and call readv on the underlying stream
+}
+
+impl tokio::io::AsyncWrite for TcpStream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        Pin::new(&mut self.stream).poll_write(cx, buf)
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+
+    // TODO: override poll_write_buf and call writev on the underlying stream
+}
+
+impl Connection for TcpStream {
+    fn connected(&self) -> Connected {
+        Connected::new()
+    }
+}
+
 impl Future for HyperConnectorFuture {
-    type Output = Result<(Compat<TcpStream>, Connected), io::Error>;
+    type Output = Result<TcpStream, io::Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let connector = self.tcp_connector_res.as_mut().map_err(|x| x.take().unwrap())?;
-        let stream = ready!(connector.poll_unpin(cx)?);
-        let () = apply_tcp_options(stream.std(), &self.tcp_options)?;
-        Poll::Ready(Ok((stream.compat(), Connected::new())))
+        let HyperConnectorFuture { tcp_connector_res, tcp_options } = &mut *self;
+        let connector = tcp_connector_res.as_mut().map_err(|x| x.take().unwrap())?;
+        let stream = ready!(connector.poll_unpin(cx))?;
+        let () = apply_tcp_options(stream.std(), tcp_options)?;
+        Poll::Ready(Ok(TcpStream { stream }))
     }
 }
 
@@ -87,6 +128,7 @@ pub struct TcpOptions {
 
 /// A Fuchsia-compatible implementation of hyper's `Connect` trait which allows
 /// creating a TcpStream to a particular destination.
+#[derive(Clone)]
 pub struct HyperConnector {
     tcp_options: TcpOptions,
 }
@@ -100,42 +142,62 @@ impl HyperConnector {
     }
 }
 
-impl Connect for HyperConnector {
-    type Transport = Compat<TcpStream>;
-    type Error = io::Error;
-    type Future = Compat<HyperConnectorFuture>;
-    fn connect(&self, dst: Destination) -> Self::Future {
-        let res = (|| {
-            let host = dst.host();
-            let port = match dst.port() {
-                Some(port) => port,
-                None => {
-                    if dst.scheme() == "https" {
-                        443
-                    } else {
-                        80
-                    }
-                }
-            };
+impl Service<Uri> for HyperConnector {
+    type Response = TcpStream;
+    type Error = std::io::Error;
+    type Future = HyperConnectorFuture;
 
-            let addr = if let Some(addr) = parse_ip_addr(host, port) {
-                addr
-            } else {
-                // TODO(cramertj): smarter DNS-- nonblocking, don't just pick first addr
-                (host, port).to_socket_addrs()?.next().ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::Other, "destination resolved to no address")
-                })?
-            };
-            TcpStream::connect(addr)
-        })();
-        HyperConnectorFuture { tcp_connector_res: res.map_err(Some), tcp_options: self.tcp_options }
-            .compat()
+    fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        // This connector is always ready, but others might not be.
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, dst: Uri) -> Self::Future {
+        HyperConnectorFuture {
+            tcp_connector_res: (|| {
+                let host = dst.host().ok_or(io::Error::new(
+                    io::ErrorKind::Other,
+                    "destination host is unspecified",
+                ))?;
+                let port = match dst.port() {
+                    Some(port) => port.as_u16(),
+                    None => {
+                        if dst.scheme() == Some(&Scheme::HTTPS) {
+                            443
+                        } else {
+                            80
+                        }
+                    }
+                };
+
+                let addr = if let Some(addr) = parse_ip_addr(host, port) {
+                    addr
+                } else {
+                    // TODO(cramertj): smarter DNS-- nonblocking, don't just pick first addr
+                    (host, port).to_socket_addrs()?.next().ok_or_else(|| {
+                        io::Error::new(io::ErrorKind::Other, "destination resolved to no address")
+                    })?
+                };
+                net::TcpStream::connect(addr)
+            })()
+            .map_err(Some),
+            tcp_options: self.tcp_options.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Executor;
+
+impl<F: Future + Send + 'static> hyper::rt::Executor<F> for Executor {
+    fn execute(&self, fut: F) {
+        fuchsia_async::spawn(fut.map(|_| ()))
     }
 }
 
 /// Returns a new Fuchsia-compatible hyper client for making HTTP requests.
 pub fn new_client() -> HttpClient {
-    Client::builder().executor(EHandle::local().compat()).build(HyperConnector::new())
+    Client::builder().executor(Executor).build(HyperConnector::new())
 }
 
 pub fn new_https_client_dangerous(
@@ -144,7 +206,7 @@ pub fn new_https_client_dangerous(
 ) -> HttpsClient {
     let https =
         hyper_rustls::HttpsConnector::from((HyperConnector::from_tcp_options(tcp_options), tls));
-    Client::builder().executor(EHandle::local().compat()).build(https)
+    Client::builder().executor(Executor).build(https)
 }
 
 /// Returns a new Fuchsia-compatible hyper client for making HTTP and HTTPS requests.
@@ -264,23 +326,21 @@ mod test {
         let idle = std::time::Duration::from_secs(36);
         let interval = std::time::Duration::from_secs(47);
         let count = 58;
-        let connector = HyperConnector::from_tcp_options(TcpOptions {
+        let uri = format!("https://{}", addr).parse::<hyper::Uri>().unwrap();
+        let stream = HyperConnector::from_tcp_options(TcpOptions {
             keepalive_idle: Some(idle),
             keepalive_interval: Some(interval),
             keepalive_count: Some(count),
             ..Default::default()
-        });
-        let uri = format!("https://{}", addr).parse::<hyper::Uri>().unwrap();
-        let stream = connector
-            .connect(Destination::try_from_uri(uri).unwrap())
-            .into_inner()
-            .await
-            .unwrap()
-            .0;
+        })
+        .call(uri)
+        .await
+        .unwrap()
+        .stream;
 
-        assert_eq!(stream.get_ref().std().keepalive().unwrap(), Some(idle));
-        assert_eq!(stream.get_ref().std().keepalive_interval().unwrap(), interval);
-        assert_eq!(stream.get_ref().std().keepalive_count().unwrap(), count);
+        assert_eq!(stream.std().keepalive().unwrap(), Some(idle));
+        assert_eq!(stream.std().keepalive_interval().unwrap(), interval);
+        assert_eq!(stream.std().keepalive_count().unwrap(), count);
     }
 
     #[test]

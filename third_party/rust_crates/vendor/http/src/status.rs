@@ -14,11 +14,10 @@
 //! assert!(StatusCode::OK.is_success());
 //! ```
 
-use std::fmt;
+use std::convert::TryFrom;
 use std::error::Error;
+use std::fmt;
 use std::str::FromStr;
-
-use HttpTryFrom;
 
 /// An HTTP status code (`status-code` in RFC 7230 et al.).
 ///
@@ -138,8 +137,9 @@ impl StatusCode {
     /// The reason phrase is defined as being exclusively for human readers. You should avoid
     /// deriving any meaning from it at all costs.
     ///
-    /// Bear in mind also that in HTTP/2.0 the reason phrase is abolished from transmission, and so
-    /// this canonical reason phrase really is the only reason phrase you’ll find.
+    /// Bear in mind also that in HTTP/2.0 and HTTP/3.0 the reason phrase is abolished from
+    /// transmission, and so this canonical reason phrase really is the only reason phrase you’ll
+    /// find.
     ///
     /// # Example
     ///
@@ -150,7 +150,6 @@ impl StatusCode {
     pub fn canonical_reason(&self) -> Option<&'static str> {
         canonical_reason(self.0)
     }
-
 
     /// Check if status is within 100-199.
     #[inline]
@@ -184,7 +183,7 @@ impl StatusCode {
 }
 
 impl fmt::Debug for StatusCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.0, f)
     }
 }
@@ -198,9 +197,13 @@ impl fmt::Debug for StatusCode {
 /// assert_eq!(format!("{}", StatusCode::OK), "200 OK");
 /// ```
 impl fmt::Display for StatusCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", u16::from(*self),
-               self.canonical_reason().unwrap_or("<unknown status code>"))
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {}",
+            u16::from(*self),
+            self.canonical_reason().unwrap_or("<unknown status code>")
+        )
     }
 }
 
@@ -247,16 +250,7 @@ impl<'a> From<&'a StatusCode> for StatusCode {
     }
 }
 
-impl<'a> HttpTryFrom<&'a StatusCode> for StatusCode {
-    type Error = ::error::Never;
-
-    #[inline]
-    fn try_from(t: &'a StatusCode) -> Result<Self, Self::Error> {
-        Ok(t.clone())
-    }
-}
-
-impl<'a> HttpTryFrom<&'a [u8]> for StatusCode {
+impl<'a> TryFrom<&'a [u8]> for StatusCode {
     type Error = InvalidStatusCode;
 
     #[inline]
@@ -265,7 +259,7 @@ impl<'a> HttpTryFrom<&'a [u8]> for StatusCode {
     }
 }
 
-impl<'a> HttpTryFrom<&'a str> for StatusCode {
+impl<'a> TryFrom<&'a str> for StatusCode {
     type Error = InvalidStatusCode;
 
     #[inline]
@@ -274,7 +268,7 @@ impl<'a> HttpTryFrom<&'a str> for StatusCode {
     }
 }
 
-impl HttpTryFrom<u16> for StatusCode {
+impl TryFrom<u16> for StatusCode {
     type Error = InvalidStatusCode;
 
     #[inline]
@@ -520,16 +514,12 @@ impl fmt::Debug for InvalidStatusCode {
 }
 
 impl fmt::Display for InvalidStatusCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.description())
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("invalid status code")
     }
 }
 
-impl Error for InvalidStatusCode {
-    fn description(&self) -> &str {
-        "invalid status code"
-    }
-}
+impl Error for InvalidStatusCode {}
 
 macro_rules! status_code_strs {
     ($($num:expr,)+) => {

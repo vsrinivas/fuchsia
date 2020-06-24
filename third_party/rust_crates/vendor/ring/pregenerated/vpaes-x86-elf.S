@@ -395,3 +395,4 @@ GFp_vpaes_encrypt:
 	ret
 .size	GFp_vpaes_encrypt,.-.L_GFp_vpaes_encrypt_begin
 #endif
+.section	.note.GNU-stack,"",@progbits

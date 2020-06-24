@@ -16,14 +16,9 @@ use {
     fuchsia_trace as trace,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
-    futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
-        lock::Mutex as AsyncMutex,
-        prelude::*,
-        stream::FuturesUnordered,
-    },
+    futures::{lock::Mutex as AsyncMutex, prelude::*, stream::FuturesUnordered},
     http_uri_ext::HttpUriExt as _,
-    hyper::{body::Payload, Body, Request, StatusCode},
+    hyper::{body::HttpBody, Body, Request, StatusCode},
     parking_lot::Mutex,
     pkgfs::install::BlobKind,
     std::{
@@ -538,19 +533,14 @@ async fn download_blob(
     let request = Request::get(uri)
         .body(Body::empty())
         .map_err(|e| FetchError::Http { e, uri: uri.to_string() })?;
-    let response = client
-        .request(request)
-        .compat()
-        .await
-        .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })?;
+    let response =
+        client.request(request).await.map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })?;
 
     if response.status() != StatusCode::OK {
         return Err(FetchError::BadHttpStatus { code: response.status(), uri: uri.to_string() });
     }
 
-    let body = response.into_body();
-
-    let expected_len = match (expected_len, body.content_length()) {
+    let expected_len = match (expected_len, response.size_hint().exact()) {
         (Some(expected), Some(actual)) => {
             if expected != actual {
                 return Err(FetchError::ContentLengthMismatch {
@@ -568,7 +558,7 @@ async fn download_blob(
 
     let mut dest = dest.truncate(expected_len).await.map_err(FetchError::Truncate)?;
 
-    let mut chunks = body.compat();
+    let mut chunks = response.into_body();
     let mut written = 0u64;
     while let Some(chunk) =
         chunks.try_next().await.map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })?

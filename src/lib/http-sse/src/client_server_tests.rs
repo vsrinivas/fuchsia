@@ -6,18 +6,19 @@
 
 use {
     super::*,
-    fuchsia_async::{self as fasync, net::TcpListener, EHandle},
+    fuchsia_async::{self as fasync, net::TcpListener},
     fuchsia_hyper::new_https_client,
     futures::{
-        compat::Future01CompatExt,
-        future::{join, FutureExt, TryFutureExt},
-        io::AsyncReadExt,
+        future::{join, TryFutureExt},
         stream::{StreamExt, TryStreamExt},
-        task::SpawnExt,
     },
-    hyper::{server::Server, service::service_fn},
+    hyper::{
+        server::{accept::from_stream, Server},
+        service::{make_service_fn, service_fn},
+    },
     matches::assert_matches,
     std::{
+        convert::Infallible,
         net::{Ipv4Addr, SocketAddr},
         sync::Arc,
     },
@@ -28,25 +29,26 @@ fn spawn_server(buffer_size: usize) -> (String, EventSender) {
         let listener = TcpListener::bind(&SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)).unwrap();
         let local_addr = listener.local_addr().unwrap();
         (
-            listener.accept_stream().map_ok(|(conn, _addr)| conn.compat()),
+            listener
+                .accept_stream()
+                .map_ok(|(conn, _addr)| fuchsia_hyper::TcpStream { stream: conn }),
             format!("http://{}", local_addr),
         )
     };
     let (sse_response_creator, event_sender) =
         SseResponseCreator::with_additional_buffer_size(buffer_size);
     let sse_response_creator = Arc::new(sse_response_creator);
-    let server = Server::builder(connections.compat())
-        .executor(EHandle::local().compat())
-        .serve(move || {
+    let server = Server::builder(from_stream(connections))
+        .executor(fuchsia_hyper::Executor)
+        .serve(make_service_fn(move |_socket: &fuchsia_hyper::TcpStream| {
             let sse_response_creator = Arc::clone(&sse_response_creator);
-            service_fn(move |_req| {
-                let sse_response_creator = Arc::clone(&sse_response_creator);
-                async move { Result::<_, void::Void>::Ok(sse_response_creator.create().await) }
-                    .boxed()
-                    .compat()
-            })
-        })
-        .compat()
+            async move {
+                Ok::<_, Infallible>(service_fn(move |_req| {
+                    let sse_response_creator = Arc::clone(&sse_response_creator);
+                    async move { Ok::<_, Infallible>(sse_response_creator.create().await) }
+                }))
+            }
+        }))
         .unwrap_or_else(|e| panic!("mock sse server failed: {:?}", e));
     fasync::spawn(server);
     (url, event_sender)

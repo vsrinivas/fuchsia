@@ -24,7 +24,6 @@ use crate::common::{ProtocolState, UpdateCheckSchedule};
 
 use futures::{
     channel::{mpsc, oneshot},
-    compat::Stream01CompatExt,
     future,
     lock::Mutex,
     prelude::*,
@@ -854,9 +853,15 @@ where
         })?;
 
         let (parts, body) = res.into_parts();
-        let data = body.compat().try_concat().await?;
 
-        Ok((parts, data.to_vec()))
+        let data = body
+            .try_fold(Vec::new(), |mut vec, b| async move {
+                vec.extend(b);
+                Ok(vec)
+            })
+            .await?;
+
+        Ok((parts, data))
     }
 
     /// This method takes the response bytes from Omaha, and converts them into a protocol::Response
@@ -1039,15 +1044,14 @@ mod tests {
     // Assert that the last request made to |http| is equal to the request built by
     // |request_builder|.
     async fn assert_request<'a>(http: MockHttpRequest, request_builder: RequestBuilder<'a>) {
-        let body = request_builder
-            .build()
-            .unwrap()
-            .into_body()
-            .compat()
-            .try_concat()
+        let body = request_builder.build().unwrap().into_body();
+        let body = body
+            .try_fold(Vec::new(), |mut vec, b| async move {
+                vec.extend(b);
+                Ok(vec)
+            })
             .await
-            .unwrap()
-            .to_vec();
+            .unwrap();
         // Compare string instead of Vec<u8> for easier debugging.
         let body_str = String::from_utf8_lossy(&body);
         http.assert_body_str(&body_str).await;

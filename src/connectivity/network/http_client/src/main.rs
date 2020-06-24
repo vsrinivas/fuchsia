@@ -9,38 +9,22 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_hyper as fhyper,
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
-        future::BoxFuture,
-        prelude::*,
-        StreamExt,
-    },
-    http::HttpTryFrom,
+    futures::{future::BoxFuture, prelude::*, StreamExt},
     hyper,
     log::{debug, error, info, trace},
+    std::convert::TryFrom,
 };
 
 static MAX_REDIRECTS: u8 = 10;
 static DEFAULT_DEADLINE_DURATION: zx::Duration = zx::Duration::from_seconds(15);
 
-fn version_to_str(version: hyper::Version) -> &'static str {
-    match version {
-        hyper::Version::HTTP_09 => "0.9",
-        hyper::Version::HTTP_10 => "1.0",
-        hyper::Version::HTTP_11 => "1.1",
-        hyper::Version::HTTP_2 => "2.0",
-    }
-}
-
 fn to_status_line(version: hyper::Version, status: hyper::StatusCode) -> Vec<u8> {
     match status.canonical_reason() {
-        None => format!("HTTP/{} {}", version_to_str(version), status.as_str()).as_bytes().to_vec(),
-        Some(canonical_reason) => {
-            format!("HTTP/{} {} {}", version_to_str(version), status.as_str(), canonical_reason)
-                .as_bytes()
-                .to_vec()
-        }
+        None => format!("{:?} {}", version, status.as_str()),
+        Some(canonical_reason) => format!("{:?} {} {}", version, status.as_str(), canonical_reason),
     }
+    .as_bytes()
+    .to_vec()
 }
 
 fn tcp_options() -> fhyper::TcpOptions {
@@ -119,7 +103,7 @@ async fn to_success_response(
     };
 
     fasync::spawn(async move {
-        let mut hyper_body = hyper_response.body_mut().compat();
+        let hyper_body = hyper_response.body_mut();
         while let Some(chunk) = hyper_body.next().await {
             if let Ok(chunk) = chunk {
                 let mut offset: usize = 0;
@@ -162,13 +146,24 @@ async fn to_success_response(
 }
 
 fn to_fidl_error(error: &hyper::Error) -> net_http::Error {
-    // TODO(zmbush): Handle more error cases when hyper is updated.
     if error.is_parse() {
         net_http::Error::UnableToParse
+    } else if error.is_user() {
+        //TODO(zmbush): handle this case.
+        net_http::Error::Internal
+    } else if error.is_canceled() {
+        //TODO(zmbush): handle this case.
+        net_http::Error::Internal
     } else if error.is_closed() {
         net_http::Error::ChannelClosed
     } else if error.is_connect() {
         net_http::Error::Connect
+    } else if error.is_incomplete_message() {
+        //TODO(zmbush): handle this case.
+        net_http::Error::Internal
+    } else if error.is_body_write_aborted() {
+        //TODO(zmbush): handle this case.
+        net_http::Error::Internal
     } else {
         net_http::Error::Internal
     }
@@ -243,11 +238,9 @@ impl Loader {
     }
 
     fn build_request(&self) -> Result<hyper::Request<hyper::Body>, http::Error> {
-        let mut builder = hyper::Request::builder();
-        builder.method(&self.method);
-        builder.uri(&self.url);
+        let mut builder = hyper::Request::builder().method(&self.method).uri(&self.url);
         for (name, value) in &self.headers {
-            builder.header(name, value);
+            builder = builder.header(name, value);
         }
         builder.body(self.body.clone().into())
     }
@@ -258,7 +251,7 @@ impl Loader {
     ) -> BoxFuture<'static, Result<(), Error>> {
         async move {
             let client = fhyper::new_https_client_from_tcp_options(tcp_options());
-            let hyper_response = match client.request(self.build_request()?).compat().await {
+            let hyper_response = match client.request(self.build_request()?).await {
                 Ok(response) => response,
                 Err(error) => {
                     info!("Received network level error from hyper: {}", error);
@@ -318,7 +311,7 @@ impl Loader {
 
         async move {
             let client = fhyper::new_https_client_from_tcp_options(tcp_options());
-            let result = client.request(self.build_request()?).compat().await;
+            let result = client.request(self.build_request()?).await;
 
             Ok(match result {
                 Ok(hyper_response) => {
@@ -351,7 +344,7 @@ fn calculate_redirect(
     location: &hyper::header::HeaderValue,
 ) -> Option<hyper::Uri> {
     let old_parts = old_url.clone().into_parts();
-    let mut new_parts = hyper::Uri::try_from(location.to_str().ok()?).ok()?.into_parts();
+    let mut new_parts = hyper::Uri::try_from(location.as_bytes()).ok()?.into_parts();
     if new_parts.scheme.is_none() {
         new_parts.scheme = old_parts.scheme;
     }

@@ -22,6 +22,7 @@ use std::ops::{Deref, DerefMut};
 use rustls::internal::msgs::enums::ProtocolVersion;
 use rustls::quic::ClientQuicExt;
 use rustls::quic::ServerQuicExt;
+use rustls::ClientHello;
 
 static BOGO_NACK: i32 = 89;
 
@@ -169,14 +170,14 @@ struct DummyClientAuth {
 impl rustls::ClientCertVerifier for DummyClientAuth {
     fn offer_client_auth(&self) -> bool { true }
 
-    fn client_auth_mandatory(&self) -> bool { self.mandatory }
+    fn client_auth_mandatory(&self, _sni: Option<&webpki::DNSName>) -> Option<bool> { Some(self.mandatory) }
 
-    fn client_auth_root_subjects(&self) -> rustls::DistinguishedNames {
-        rustls::DistinguishedNames::new()
+    fn client_auth_root_subjects(&self, _sni: Option<&webpki::DNSName>) -> Option<rustls::DistinguishedNames> {
+        Some(rustls::DistinguishedNames::new())
     }
 
     fn verify_client_cert(&self,
-                          _certs: &[rustls::Certificate]) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
+                          _certs: &[rustls::Certificate], _sni: Option<&webpki::DNSName>) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
         Ok(rustls::ClientCertVerified::assertion())
     }
 }
@@ -215,10 +216,8 @@ struct FixedSignatureSchemeServerCertResolver {
 }
 
 impl rustls::ResolvesServerCert for FixedSignatureSchemeServerCertResolver {
-    fn resolve(&self,
-               server_name: Option<webpki::DNSNameRef<'_>>,
-               sigschemes: &[rustls::SignatureScheme]) -> Option<rustls::sign::CertifiedKey> {
-        let mut certkey = self.resolver.resolve(server_name, sigschemes)?;
+    fn resolve(&self, client_hello: ClientHello) -> Option<rustls::sign::CertifiedKey> {
+        let mut certkey = self.resolver.resolve(client_hello)?;
         certkey.key = Arc::new(Box::new(FixedSignatureSchemeSigningKey {
             key: certkey.key.clone(),
             scheme: self.scheme,
@@ -360,7 +359,8 @@ fn make_client_cfg(opts: &Options) -> Arc<rustls::ClientConfig> {
     if !opts.cert_file.is_empty() && !opts.key_file.is_empty() {
         let cert = load_cert(&opts.cert_file);
         let key = load_key(&opts.key_file);
-        cfg.set_single_client_cert(cert, key);
+        cfg.set_single_client_cert(cert, key)
+            .unwrap();
     }
 
     if !opts.cert_file.is_empty() && opts.use_signing_scheme > 0 {

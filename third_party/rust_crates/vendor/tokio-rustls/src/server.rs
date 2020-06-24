@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::IoSession;
 use rustls::Session;
 
 /// A wrapper around an underlying raw stream which implements the TLS or SSL
@@ -8,11 +9,6 @@ pub struct TlsStream<IO> {
     pub(crate) io: IO,
     pub(crate) session: ServerSession,
     pub(crate) state: TlsState,
-}
-
-pub(crate) enum MidHandshake<IO> {
-    Handshaking(TlsStream<IO>),
-    End,
 }
 
 impl<IO> TlsStream<IO> {
@@ -32,106 +28,107 @@ impl<IO> TlsStream<IO> {
     }
 }
 
-impl<IO> Future for MidHandshake<IO>
-where
-    IO: AsyncRead + AsyncWrite,
-{
-    type Item = TlsStream<IO>;
-    type Error = io::Error;
+impl<IO> IoSession for TlsStream<IO> {
+    type Io = IO;
+    type Session = ServerSession;
 
     #[inline]
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        if let MidHandshake::Handshaking(stream) = self {
-            let state = stream.state;
-            let (io, session) = stream.get_mut();
-            let mut stream = Stream::new(io, session).set_eof(!state.readable());
+    fn skip_handshake(&self) -> bool {
+        false
+    }
 
-            if stream.session.is_handshaking() {
-                try_nb!(stream.complete_io());
-            }
+    #[inline]
+    fn get_mut(&mut self) -> (&mut TlsState, &mut Self::Io, &mut Self::Session) {
+        (&mut self.state, &mut self.io, &mut self.session)
+    }
 
-            if stream.session.wants_write() {
-                try_nb!(stream.complete_io());
-            }
-        }
-
-        match mem::replace(self, MidHandshake::End) {
-            MidHandshake::Handshaking(stream) => Ok(Async::Ready(stream)),
-            MidHandshake::End => panic!(),
-        }
+    #[inline]
+    fn into_io(self) -> Self::Io {
+        self.io
     }
 }
 
-impl<IO> io::Read for TlsStream<IO>
+impl<IO> AsyncRead for TlsStream<IO>
 where
-    IO: AsyncRead + AsyncWrite,
+    IO: AsyncRead + AsyncWrite + Unpin,
 {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let mut stream = Stream::new(&mut self.io, &mut self.session).set_eof(!self.state.readable());
+    #[cfg(feature = "unstable")]
+    unsafe fn prepare_uninitialized_buffer(&self, _buf: &mut [std::mem::MaybeUninit<u8>]) -> bool {
+        // TODO
+        //
+        // https://doc.rust-lang.org/nightly/std/io/trait.Read.html#method.initializer
+        false
+    }
 
-        match self.state {
-            TlsState::Stream | TlsState::WriteShutdown => match stream.read(buf) {
-                Ok(0) => {
-                    self.state.shutdown_read();
-                    Ok(0)
-                }
-                Ok(n) => Ok(n),
-                Err(ref e) if e.kind() == io::ErrorKind::ConnectionAborted => {
-                    self.state.shutdown_read();
-                    if self.state.writeable() {
-                        stream.session.send_close_notify();
-                        self.state.shutdown_write();
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
+        let this = self.get_mut();
+        let mut stream =
+            Stream::new(&mut this.io, &mut this.session).set_eof(!this.state.readable());
+
+        match &this.state {
+            TlsState::Stream | TlsState::WriteShutdown => {
+                match stream.as_mut_pin().poll_read(cx, buf) {
+                    Poll::Ready(Ok(0)) => {
+                        this.state.shutdown_read();
+                        Poll::Ready(Ok(0))
                     }
-                    Ok(0)
+                    Poll::Ready(Ok(n)) => Poll::Ready(Ok(n)),
+                    Poll::Ready(Err(ref err)) if err.kind() == io::ErrorKind::ConnectionAborted => {
+                        this.state.shutdown_read();
+                        if this.state.writeable() {
+                            stream.session.send_close_notify();
+                            this.state.shutdown_write();
+                        }
+                        Poll::Ready(Ok(0))
+                    }
+                    Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+                    Poll::Pending => Poll::Pending,
                 }
-                Err(e) => Err(e),
-            },
-            TlsState::ReadShutdown | TlsState::FullyShutdown => Ok(0),
+            }
+            TlsState::ReadShutdown | TlsState::FullyShutdown => Poll::Ready(Ok(0)),
             #[cfg(feature = "early-data")]
             s => unreachable!("server TLS can not hit this state: {:?}", s),
         }
     }
 }
 
-impl<IO> io::Write for TlsStream<IO>
-where
-    IO: AsyncRead + AsyncWrite,
-{
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        Stream::new(&mut self.io, &mut self.session)
-            .set_eof(!self.state.readable())
-            .write(buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Stream::new(&mut self.io, &mut self.session)
-            .set_eof(!self.state.readable())
-            .flush()?;
-        self.io.flush()
-    }
-}
-
-impl<IO> AsyncRead for TlsStream<IO>
-where
-    IO: AsyncRead + AsyncWrite,
-{
-    unsafe fn prepare_uninitialized_buffer(&self, _: &mut [u8]) -> bool {
-        false
-    }
-}
-
 impl<IO> AsyncWrite for TlsStream<IO>
 where
-    IO: AsyncRead + AsyncWrite,
+    IO: AsyncRead + AsyncWrite + Unpin,
 {
-    fn shutdown(&mut self) -> Poll<(), io::Error> {
+    /// Note: that it does not guarantee the final data to be sent.
+    /// To be cautious, you must manually call `flush`.
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        let this = self.get_mut();
+        let mut stream =
+            Stream::new(&mut this.io, &mut this.session).set_eof(!this.state.readable());
+        stream.as_mut_pin().poll_write(cx, buf)
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        let this = self.get_mut();
+        let mut stream =
+            Stream::new(&mut this.io, &mut this.session).set_eof(!this.state.readable());
+        stream.as_mut_pin().poll_flush(cx)
+    }
+
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         if self.state.writeable() {
             self.session.send_close_notify();
             self.state.shutdown_write();
         }
 
-        let mut stream = Stream::new(&mut self.io, &mut self.session).set_eof(!self.state.readable());
-        try_nb!(stream.complete_io());
-        stream.io.shutdown()
+        let this = self.get_mut();
+        let mut stream =
+            Stream::new(&mut this.io, &mut this.session).set_eof(!this.state.readable());
+        stream.as_mut_pin().poll_shutdown(cx)
     }
 }

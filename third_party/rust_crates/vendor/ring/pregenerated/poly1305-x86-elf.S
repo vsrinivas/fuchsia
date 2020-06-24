@@ -1364,3 +1364,4 @@ _poly1305_emit_sse2:
 .byte	114,103,62,0
 .align	4
 #endif
+.section	.note.GNU-stack,"",@progbits

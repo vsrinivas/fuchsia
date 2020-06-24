@@ -123,7 +123,7 @@ fn can_roundtrip_other_sni_name_types() {
 }
 
 #[test]
-fn get_hostname_returns_none_for_other_sni_name_types() {
+fn get_single_hostname_returns_none_for_other_sni_name_types() {
     let bytes = [
         0, 0,
         0, 7,
@@ -137,7 +137,8 @@ fn get_hostname_returns_none_for_other_sni_name_types() {
 
     assert_eq!(ext.get_type(), ExtensionType::ServerName);
     if let ClientExtension::ServerName(snr) = ext {
-        assert!(snr.get_hostname().is_none());
+        assert!(!snr.has_duplicate_names_for_type());
+        assert!(snr.get_single_hostname().is_none());
     } else {
         unreachable!();
     }
@@ -163,7 +164,9 @@ fn can_roundtrip_multiname_sni() {
         ClientExtension::ServerName(req) => {
             assert_eq!(2, req.len());
 
-            let dns_name_str: &str = req.get_hostname().unwrap().into();
+            assert!(req.has_duplicate_names_for_type());
+
+            let dns_name_str: &str = req.get_single_hostname().unwrap().into();
             assert_eq!(dns_name_str, "hi");
 
             assert_eq!(req[0].typ, ServerNameType::HostName);
@@ -297,8 +300,8 @@ fn can_roundtrip_multi_proto() {
     match ext {
         ClientExtension::Protocols(prot) => {
             assert_eq!(2, prot.len());
-            assert_eq!(vec![b"hi".to_vec(), b"lo".to_vec()],
-                       prot.to_vecs());
+            assert_eq!(vec![b"hi", b"lo"],
+                       prot.to_slices());
             assert_eq!(prot.as_single_slice(), None);
         }
         _ => unreachable!()
@@ -323,7 +326,7 @@ fn can_roundtrip_single_proto() {
     match ext {
         ClientExtension::Protocols(prot) => {
             assert_eq!(1, prot.len());
-            assert_eq!(vec![b"hi".to_vec()], prot.to_vecs());
+            assert_eq!(vec![b"hi"], prot.to_slices());
             assert_eq!(prot.as_single_slice(), Some(&b"hi"[..]));
         }
         _ => unreachable!()

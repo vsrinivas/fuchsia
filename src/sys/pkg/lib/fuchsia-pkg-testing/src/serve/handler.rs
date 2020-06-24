@@ -8,7 +8,6 @@ use {
     crate::serve::UriPathHandler,
     futures::{
         channel::{mpsc, oneshot},
-        compat::Stream01CompatExt,
         future::{ready, BoxFuture},
         prelude::*,
     },
@@ -380,7 +379,9 @@ impl UriPathHandler for BlockResponseBodyOnce {
 
             // Notify the test.
             notify
-                .send(Box::new(move || sender.send_data(contents.into()).expect("sending body")))
+                .send(Box::new(move || {
+                    sender.try_send_data(contents.into()).expect("sending body")
+                }))
                 .map_err(|_| ())
                 .expect("receiver to still exist");
 
@@ -393,7 +394,12 @@ impl UriPathHandler for BlockResponseBodyOnce {
 }
 
 async fn body_to_bytes(body: Body) -> Vec<u8> {
-    body.compat().try_concat().await.expect("body stream to complete").to_vec()
+    body.try_fold(Vec::new(), |mut vec, b| async move {
+        vec.extend(b);
+        Ok(vec)
+    })
+    .await
+    .expect("body stream to complete")
 }
 
 /// Handler that yields the response up to the final byte, then produces an error.  Panics if the
@@ -410,13 +416,10 @@ impl UriPathHandler for OneByteShortThenError {
             Response::builder()
                 .status(hyper::StatusCode::OK)
                 .header(CONTENT_LENGTH, bytes.len() + 1)
-                .body(Body::wrap_stream(
-                    futures::stream::iter(vec![
-                        Ok(bytes),
-                        Err("all_but_one_byte_then_eror has sent all but one bytes".to_string()),
-                    ])
-                    .compat(),
-                ))
+                .body(Body::wrap_stream(futures::stream::iter(vec![
+                    Ok(bytes),
+                    Err("all_but_one_byte_then_eror has sent all but one bytes".to_string()),
+                ])))
                 .expect("valid response")
         }
         .boxed()
@@ -437,9 +440,9 @@ impl UriPathHandler for OneByteShortThenDisconnect {
             Response::builder()
                 .status(hyper::StatusCode::OK)
                 .header(CONTENT_LENGTH, bytes.len() + 1)
-                .body(Body::wrap_stream(
-                    futures::stream::iter(vec![Result::<Vec<u8>, String>::Ok(bytes)]).compat(),
-                ))
+                .body(Body::wrap_stream(futures::stream::iter(vec![
+                    Result::<Vec<u8>, String>::Ok(bytes),
+                ])))
                 .expect("valid response")
         }
         .boxed()

@@ -5,7 +5,7 @@
 
 #![allow(dead_code)]
 
-use futures::{compat::Future01CompatExt, future::BoxFuture, prelude::*};
+use futures::{future::BoxFuture, prelude::*};
 use hyper::{Body, Client, Request, Response};
 use omaha_client::http_request::HttpRequest;
 
@@ -18,7 +18,7 @@ impl HttpRequest for FuchsiaHyperHttpRequest {
         &mut self,
         req: Request<Body>,
     ) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
-        self.client.request(req).compat().boxed()
+        self.client.request(req).boxed()
     }
 }
 

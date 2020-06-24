@@ -1,9 +1,9 @@
-use crate::msgs::enums::SignatureScheme;
 use crate::sign;
 use crate::key;
 use webpki;
 use crate::server;
 use crate::error::TLSError;
+use crate::server::ClientHello;
 
 use std::collections;
 use std::sync::{Arc, Mutex};
@@ -95,10 +95,7 @@ impl server::ProducesTickets for NeverProducesTickets {
 pub struct FailResolveChain {}
 
 impl server::ResolvesServerCert for FailResolveChain {
-    fn resolve(&self,
-               _server_name: Option<webpki::DNSNameRef>,
-               _sigschemes: &[SignatureScheme])
-               -> Option<sign::CertifiedKey> {
+    fn resolve(&self, _client_hello: ClientHello) -> Option<sign::CertifiedKey> {
         None
     }
 }
@@ -136,10 +133,7 @@ impl AlwaysResolvesChain {
 }
 
 impl server::ResolvesServerCert for AlwaysResolvesChain {
-    fn resolve(&self,
-               _server_name: Option<webpki::DNSNameRef>,
-               _sigschemes: &[SignatureScheme])
-               -> Option<sign::CertifiedKey> {
+    fn resolve(&self, _client_hello: ClientHello) -> Option<sign::CertifiedKey> {
         Some(self.0.clone())
     }
 }
@@ -172,11 +166,8 @@ impl ResolvesServerCertUsingSNI {
 }
 
 impl server::ResolvesServerCert for ResolvesServerCertUsingSNI {
-    fn resolve(&self,
-               server_name: Option<webpki::DNSNameRef>,
-               _sigschemes: &[SignatureScheme])
-               -> Option<sign::CertifiedKey> {
-        if let Some(name) = server_name {
+    fn resolve(&self, client_hello: ClientHello) -> Option<sign::CertifiedKey> {
+        if let Some(name) = client_hello.server_name() {
             self.by_name.get(name.into())
                 .cloned()
         } else {
