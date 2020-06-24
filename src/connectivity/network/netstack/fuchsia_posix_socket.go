@@ -314,7 +314,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	go func() {
 		defer close(eps.loopPollDone)
 
-		sigs := zx.Signals(zx.SignalSocketWriteDisabled | zx.SignalSocketPeerWriteDisabled | localSignalClosing)
+		sigs := zx.Signals(zx.SignalSocketWriteDisabled | localSignalClosing)
 
 		for {
 			obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
@@ -325,13 +325,6 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 			if obs&sigs&zx.SignalSocketWriteDisabled != 0 {
 				sigs ^= zx.SignalSocketWriteDisabled
 				if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil && err != tcpip.ErrNotConnected {
-					panic(err)
-				}
-			}
-
-			if obs&sigs&zx.SignalSocketPeerWriteDisabled != 0 {
-				sigs ^= zx.SignalSocketPeerWriteDisabled
-				if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
 					panic(err)
 				}
 			}
