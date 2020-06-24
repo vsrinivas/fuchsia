@@ -93,11 +93,11 @@ TEST(WlanphyTest, is_power_of_two) {
 }
 
 TEST(WlanphyTest, ConvertPhyRolesInfo) {
-  constexpr wlan_info_mac_role_mask_t kClient = WLAN_INFO_MAC_ROLE_CLIENT;
-  constexpr wlan_info_mac_role_mask_t kAp = WLAN_INFO_MAC_ROLE_AP;
-  constexpr wlan_info_mac_role_mask_t kMesh = WLAN_INFO_MAC_ROLE_MESH;
-  constexpr wlan_info_mac_role_mask_t kClientAp = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
-  constexpr wlan_info_mac_role_mask_t kClientApMesh =
+  constexpr wlan_info_mac_role_t kClient = WLAN_INFO_MAC_ROLE_CLIENT;
+  constexpr wlan_info_mac_role_t kAp = WLAN_INFO_MAC_ROLE_AP;
+  constexpr wlan_info_mac_role_t kMesh = WLAN_INFO_MAC_ROLE_MESH;
+  constexpr wlan_info_mac_role_t kClientAp = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
+  constexpr wlan_info_mac_role_t kClientApMesh =
       WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP | WLAN_INFO_MAC_ROLE_MESH;
 
   // Check that each role only occupies one bitfield

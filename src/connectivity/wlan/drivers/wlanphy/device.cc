@@ -150,7 +150,7 @@ static void ConvertPhyDriverFeaturesInfo(::std::vector<wlan_common::DriverFeatur
 }
 
 void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
-                         wlan_info_mac_role_mask_t mac_roles_mask) {
+                         wlan_info_mac_role_t mac_roles_mask) {
   MacRoles->resize(0);
   if (mac_roles_mask & WLAN_INFO_MAC_ROLE_CLIENT) {
     MacRoles->push_back(wlan_device::MacRole::CLIENT);

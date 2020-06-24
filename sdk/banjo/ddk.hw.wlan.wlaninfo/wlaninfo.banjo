@@ -17,9 +17,6 @@ enum WlanInfoMacRole : uint8 {
     /// Device operating as a mesh node.
     mesh = 0x4;
 };
-/// Bitfield to use for combining WlanInfoMacRole values.
-/// This type is the same size as WlanInfoMacRole.
-enum WlanInfoMacRoleMask : uint8 {};
 
 enum WlanInfoPhyType {
     /// IEEE 802.11 for 1, 2 Mbps.

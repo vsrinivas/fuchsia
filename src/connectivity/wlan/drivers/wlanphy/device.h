@@ -54,7 +54,7 @@ class Device : public ::fuchsia::wlan::device::Phy {
 void ConvertPhyBandInfo(::std::vector<::fuchsia::wlan::device::BandInfo>* BandInfo,
                         uint8_t bands_count, const wlan_info_band_info_t* all_phy_bands);
 void ConvertPhyRolesInfo(::std::vector<::fuchsia::wlan::device::MacRole>* MacRoles,
-                         wlan_info_mac_role_mask_t mac_roles_mask);
+                         wlan_info_mac_role_t mac_roles_mask);
 void ConvertPhyCaps(::std::vector<::fuchsia::wlan::device::Capability>* Capabilities,
                     uint32_t phy_caps_mask);
 }  // namespace wlanphy
