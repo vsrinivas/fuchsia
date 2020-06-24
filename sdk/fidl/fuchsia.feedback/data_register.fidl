@@ -17,7 +17,7 @@ library fuchsia.feedback;
 /// component data and will not service new connections.
 [Discoverable]
 protocol ComponentDataRegister {
-    /// Updates or inserts extra component data to be included in feedback reports.
+    /// Upserts, i.e. updates or inserts, extra component data to be included in feedback reports.
     ///
     /// The namespace and each annotation key are used to decide whether to update or insert an
     /// annotation. If an annotation is already present for a given key within the same namespace,
@@ -25,22 +25,28 @@ protocol ComponentDataRegister {
     ///
     /// For instance, assuming these are the data already held by the server (from previous calls
     /// to Upsert()):
+    /// ```
     /// {
     ///   "bar": { # namespace
     ///     "channel": "stable",
     ///   },
     ///   "foo": { # namespace
     ///     "version": "0.2",
-    ///   },
+    ///   }
     /// }
-    ///
-    /// then Upsert({
+    /// ```
+    /// then:
+    /// ```
+    /// Upsert({
     ///   "namespace": "bar",
     ///   "annotations": [
     ///     "version": "1.2.3.45",
     ///     "channel": "beta",
     ///   ]
-    /// }) would result in the server now holding:
+    /// })
+    /// ```
+    /// would result in the server now holding:
+    /// ```
     /// {
     ///   "bar": { # namespace
     ///     "channel": "beta", # updated
@@ -48,8 +54,9 @@ protocol ComponentDataRegister {
     ///   },
     ///   "foo": { # namespace
     ///     "version": "0.2", # untouched
-    ///   },
+    ///   }
     /// }
+    /// ```
     ///
     /// Note that the server will only hold at most MAX_NUM_ANNOTATIONS_PER_NAMESPACE distinct
     /// annotation keys per namespace, picking up the latest values.

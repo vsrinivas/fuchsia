@@ -14,9 +14,9 @@ using fuchsia.sys;
 /// platform's exception handling and crash reporting.
 [Discoverable]
 protocol CrashReportingProductRegister {
-    /// Updates or inserts a crash reporting product for a given component URL.
+    /// Upserts, i.e. updates or inserts, a crash reporting product for a given component URL.
     ///
-    /// Upsert() may be called multiple times for the same |component_url|, e.g., once for each
+    /// Upsert() may be called multiple times for the same `component_url`, e.g., once for each
     /// launch of the component, in which case only the most recent call's product information
     /// will be used in crash reports.
     Upsert(fuchsia.sys.component_url component_url, CrashReportingProduct product);
