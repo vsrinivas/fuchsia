@@ -9,8 +9,8 @@
 #include <set>
 #include <string>
 
-#include "src/developer/feedback/bugreport/bug_reporter.h"
-#include "src/developer/feedback/bugreport/command_line_options.h"
+#include "src/developer/forensics/bugreport/bug_reporter.h"
+#include "src/developer/forensics/bugreport/command_line_options.h"
 
 int main(int argc, char** argv) {
   using namespace ::forensics::bugreport;

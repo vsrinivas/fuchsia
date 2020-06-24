@@ -7,6 +7,7 @@ group("forensics") {
 
   deps = [
     ":tests",
+    "bugreport",
     "//src/developer/exception_broker",
     "//src/developer/feedback",
   ]
@@ -16,6 +17,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "bugreport/tests",
     "utils/tests",
     "//src/developer/exception_broker/tests",
     "//src/developer/feedback:tests",

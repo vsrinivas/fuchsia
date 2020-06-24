@@ -10,7 +10,6 @@ group("feedback") {
 
   public_deps = [
     ":tests",
-    "bugreport",
     "crash_reports:crash-reports",
     "crasher",
     "feedback_data:feedback_agent",
@@ -22,7 +21,6 @@ group("tests") {
   testonly = true
 
   public_deps = [
-    "bugreport/tests",
     "crash_reports/tests",
     "feedback_data/tests",
     "last_reboot/tests",

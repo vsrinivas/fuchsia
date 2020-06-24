@@ -51,4 +51,4 @@ These messages appear when running [`fx bugreport`].
 [Viewing]: /docs/development/logs/viewing.md
 [feedback agent]: /src/developer/feedback
 [persistent disk store]: /src/developer/feedback/feedback_data/system_log_recorder/system_log_recorder.h
-[`fx bugreport`]: /src/developer/feedback/bugreport/README.md
+[`fx bugreport`]: /src/developer/forensics/bugreport/README.md

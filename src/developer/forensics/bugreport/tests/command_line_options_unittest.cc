@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/bugreport/command_line_options.h"
+#include "src/developer/forensics/bugreport/command_line_options.h"
 
 #include <gtest/gtest.h>
 

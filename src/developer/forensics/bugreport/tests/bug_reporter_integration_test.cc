@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/bugreport/bug_reporter.h"
+#include "src/developer/forensics/bugreport/bug_reporter.h"
 #include "src/developer/forensics/utils/archive.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/file.h"

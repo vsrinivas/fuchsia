@@ -14,7 +14,7 @@ executable("bugreport_integration_test_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.mem",
-    "//src/developer/feedback/bugreport:src",
+    "//src/developer/forensics/bugreport:src",
     "//src/developer/forensics/utils:archive",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -32,7 +32,7 @@ executable("bugreport_unittest_exe") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/bugreport:src",
+    "//src/developer/forensics/bugreport:src",
     "//src/developer/forensics/testing/stubs:data_provider",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -51,7 +51,7 @@ executable("command_line_options_unittest_exe") {
   sources = [ "command_line_options_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/bugreport:command_line_options",
+    "//src/developer/forensics/bugreport:command_line_options",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
