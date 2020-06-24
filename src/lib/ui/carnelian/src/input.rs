@@ -307,6 +307,22 @@ mod pointer_tests {
     }
 }
 
+pub mod consumer_control {
+    use super::*;
+
+    #[derive(Debug, PartialEq, Clone)]
+    pub enum Phase {
+        Down,
+        Up,
+    }
+
+    #[derive(Debug, PartialEq, Clone)]
+    pub struct Event {
+        pub phase: Phase,
+        pub button: hid_input_report::ConsumerControlButton,
+    }
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct DeviceId(pub String);
 
@@ -324,6 +340,7 @@ pub enum EventType {
     Mouse(mouse::Event),
     Keyboard(keyboard::Event),
     Touch(touch::Event),
+    ConsumerControl(consumer_control::Event),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -452,6 +469,7 @@ pub(crate) struct InputReportHandler {
     pressed_mouse_buttons: HashSet<u8>,
     pressed_keys: HashSet<fidl_fuchsia_ui_input2::Key>,
     raw_contacts: HashSet<touch::RawContact>,
+    pressed_consumer_control_buttons: HashSet<hid_input_report::ConsumerControlButton>,
 }
 
 impl InputReportHandler {
@@ -719,6 +737,60 @@ impl InputReportHandler {
         vec![event]
     }
 
+    fn handle_consumer_control_report(
+        &mut self,
+        event_time: u64,
+        device_id: &DeviceId,
+        consumer_control: &hid_input_report::ConsumerControlInputReport,
+    ) -> Vec<Event> {
+        fn create_consumer_control_event(
+            event_time: u64,
+            device_id: &DeviceId,
+            phase: consumer_control::Phase,
+            button: hid_input_report::ConsumerControlButton,
+        ) -> Event {
+            let consumer_control_event = consumer_control::Event { phase, button };
+            Event {
+                event_time,
+                device_id: device_id.clone(),
+                event_type: EventType::ConsumerControl(consumer_control_event),
+            }
+        }
+
+        let pressed_consumer_control_buttons: HashSet<hid_input_report::ConsumerControlButton> =
+            if let Some(ref pressed_buttons) = consumer_control.pressed_buttons {
+                let pressed_buttons_set = pressed_buttons.iter().cloned().collect();
+                pressed_buttons_set
+            } else {
+                HashSet::new()
+            };
+        let newly_pressed = pressed_consumer_control_buttons
+            .difference(&self.pressed_consumer_control_buttons)
+            .map(|button| {
+                create_consumer_control_event(
+                    event_time,
+                    device_id,
+                    consumer_control::Phase::Down,
+                    *button,
+                )
+            });
+
+        let released = self
+            .pressed_consumer_control_buttons
+            .difference(&pressed_consumer_control_buttons)
+            .map(|button| {
+                create_consumer_control_event(
+                    event_time,
+                    device_id,
+                    consumer_control::Phase::Up,
+                    *button,
+                )
+            });
+        let events = newly_pressed.chain(released).collect();
+        self.pressed_consumer_control_buttons = pressed_consumer_control_buttons;
+        events
+    }
+
     pub fn handle_input_report(
         &mut self,
         device_id: &DeviceId,
@@ -734,6 +806,13 @@ impl InputReportHandler {
         }
         if let Some(touch) = input_report.touch.as_ref() {
             events.extend(self.handle_touch_input_report(event_time, &device_id, touch));
+        }
+        if let Some(consumer_control) = input_report.consumer_control.as_ref() {
+            events.extend(self.handle_consumer_control_report(
+                event_time,
+                &device_id,
+                consumer_control,
+            ));
         }
         events
     }
@@ -861,6 +940,36 @@ mod input_report_tests {
         assert_eq!(start_point, IntPoint::new(129, 44));
         assert_eq!(end_point, IntPoint::new(616, 213));
         assert_eq!(move_count, 181);
+    }
+
+    #[test]
+    fn test_consumer_control() {
+        use hid_input_report::ConsumerControlButton::{VolumeDown, VolumeUp};
+        let reports = test_data::consumer_control_input_reports();
+
+        let device_id = DeviceId("cc-1".to_string());
+
+        let mut input_handler = make_input_handler();
+        let events: Vec<(consumer_control::Phase, hid_input_report::ConsumerControlButton)> =
+            reports
+                .iter()
+                .map(|input_report| input_handler.handle_input_report(&device_id, input_report))
+                .flatten()
+                .filter_map(|event| match event.event_type {
+                    EventType::ConsumerControl(consumer_control_event) => {
+                        Some((consumer_control_event.phase, consumer_control_event.button))
+                    }
+                    _ => None,
+                })
+                .collect();
+
+        let expected = [
+            (consumer_control::Phase::Down, VolumeUp),
+            (consumer_control::Phase::Up, VolumeUp),
+            (consumer_control::Phase::Down, VolumeDown),
+            (consumer_control::Phase::Up, VolumeDown),
+        ];
+        assert_eq!(events, expected);
     }
 }
 
@@ -1164,6 +1273,58 @@ mod scenic_input_tests {
 
 #[cfg(test)]
 mod test_data {
+    pub fn consumer_control_input_reports() -> Vec<fidl_fuchsia_input_report::InputReport> {
+        use fidl_fuchsia_input_report::{
+            ConsumerControlButton::{VolumeDown, VolumeUp},
+            ConsumerControlInputReport, InputReport,
+        };
+        vec![
+            InputReport {
+                event_time: Some(66268999833),
+                mouse: None,
+                trace_id: Some(2),
+                sensor: None,
+                touch: None,
+                keyboard: None,
+                consumer_control: Some(ConsumerControlInputReport {
+                    pressed_buttons: Some([VolumeUp].to_vec()),
+                }),
+            },
+            InputReport {
+                event_time: Some(66434561666),
+                mouse: None,
+                trace_id: Some(3),
+                sensor: None,
+                touch: None,
+                keyboard: None,
+                consumer_control: Some(ConsumerControlInputReport {
+                    pressed_buttons: Some([].to_vec()),
+                }),
+            },
+            InputReport {
+                event_time: Some(358153537000),
+                mouse: None,
+                trace_id: Some(4),
+                sensor: None,
+                touch: None,
+                keyboard: None,
+                consumer_control: Some(ConsumerControlInputReport {
+                    pressed_buttons: Some([VolumeDown].to_vec()),
+                }),
+            },
+            InputReport {
+                event_time: Some(358376260958),
+                mouse: None,
+                trace_id: Some(5),
+                sensor: None,
+                touch: None,
+                keyboard: None,
+                consumer_control: Some(ConsumerControlInputReport {
+                    pressed_buttons: Some([].to_vec()),
+                }),
+            },
+        ]
+    }
     pub fn hello_world_keyboard_reports() -> Vec<fidl_fuchsia_input_report::InputReport> {
         use {
             fidl_fuchsia_input_report::{InputReport, KeyboardInputReport},

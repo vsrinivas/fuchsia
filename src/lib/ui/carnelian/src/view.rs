@@ -114,6 +114,9 @@ pub trait ViewAssistant {
             input::EventType::Keyboard(keyboard_event) => {
                 self.handle_keyboard_event(context, event, keyboard_event)
             }
+            input::EventType::ConsumerControl(consumer_control_event) => {
+                self.handle_consumer_control_event(context, event, consumer_control_event)
+            }
         }
     }
 
@@ -269,6 +272,17 @@ pub trait ViewAssistant {
         context: &mut ViewAssistantContext,
         event: &input::Event,
         keyboard_event: &input::keyboard::Event,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    /// This method is called when consumer control events come to this view.
+    #[allow(unused_variables)]
+    fn handle_consumer_control_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        event: &input::Event,
+        consumer_control_event: &input::consumer_control::Event,
     ) -> Result<(), Error> {
         Ok(())
     }
