@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/sdk/sdk_atom.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
 # A Rust executable which can be bundled in an SDK.
 #
@@ -31,80 +31,10 @@ template("rustc_binary_sdk") {
     forward_variables_from(invoker, "*", [ "category" ])
   }
 
-  if (!is_fuchsia) {
-    if (defined(invoker.output_name)) {
-      output_name = invoker.output_name
-    } else {
-      output_name = target_name
-    }
-
-    file_base = "tools/$output_name"
-
-    # TODO(fxb/42999): remove extra atom
-    if (current_cpu == host_cpu) {
-      sdk_atom("${target_name}_sdk_legacy") {
-        id = "sdk://$file_base"
-
-        category = invoker.category
-
-        meta = {
-          dest = "$file_base-meta.json"
-          schema = "host_tool"
-          value = {
-            type = "host_tool"
-            name = output_name
-            root = "tools"
-            files = [ file_base ]
-          }
-        }
-
-        files = [
-          {
-            source = "$root_out_dir/$output_name"
-            dest = file_base
-          },
-        ]
-
-        if (defined(invoker.sdk_deps)) {
-          deps = invoker.sdk_deps
-        }
-
-        non_sdk_deps = [ ":$main_target_name" ]
-      }
-    }
-
-    if (host_os == "linux" || host_os == "mac") {
-      file_base = "tools/$current_cpu/$output_name"
-    }
-
-    sdk_atom("${target_name}_sdk") {
-      id = "sdk://$file_base"
-
-      category = invoker.category
-
-      meta = {
-        dest = "$file_base-meta.json"
-        schema = "host_tool"
-        value = {
-          type = "host_tool"
-          name = output_name
-          root = "tools"
-          files = [ file_base ]
-        }
-      }
-
-      files = [
-        {
-          source = "$root_out_dir/$output_name"
-          dest = file_base
-        },
-      ]
-
-      if (defined(invoker.sdk_deps)) {
-        deps = invoker.sdk_deps
-      }
-
-      non_sdk_deps = [ ":$main_target_name" ]
-    }
+  sdk_host_tool("${main_target_name}_sdk") {
+    forward_variables_from(invoker, "*", [ "deps" ])
+    output_name = main_target_name
+    binary = "$root_out_dir/$main_target_name"
+    deps = [ ":$main_target_name" ]
   }
 }
