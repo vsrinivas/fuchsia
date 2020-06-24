@@ -6,7 +6,6 @@
 
 library benchmarkfidl;
 
-[BindingsDenylist = "dart"]
 struct Union1Struct {
     Union1 u;
 };
@@ -15,7 +14,6 @@ union Union1 {
     1: uint8 field1;
 };
 
-[BindingsDenylist = "dart"]
 struct Union16Struct {
     Union16 u;
 };
@@ -39,7 +37,6 @@ union Union16 {
     16: uint8 field16;
 };
 
-[BindingsDenylist = "dart"]
 struct Union256Struct {
     Union256 u;
 };

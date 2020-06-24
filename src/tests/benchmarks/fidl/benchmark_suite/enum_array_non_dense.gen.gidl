@@ -7,7 +7,7 @@
 // array of 256 enums that cannot be validated with a range
 // Disabled on LLCPP / Walker because of enum bug in GIDL
 benchmark("EnumArray/NonDense/256") {
-    bindings_denylist = [llcpp, walker, dart],
+    bindings_denylist = [llcpp, walker],
     value = EnumArrayNonDense256{
         values: [
             1,

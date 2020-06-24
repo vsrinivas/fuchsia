@@ -21,7 +21,6 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/LastSetOthersReserved/256",
@@ -29,6 +28,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
+				// Dart has a 256 argument limit which is exceeded by the table constructor.
 				Denylist: []config.Binding{config.Dart},
 			},
 		},

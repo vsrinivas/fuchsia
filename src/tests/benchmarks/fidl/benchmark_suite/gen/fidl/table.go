@@ -20,18 +20,18 @@ func init() {
 				Config: config.Config{
 					"size": 1,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"size": 16,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"size": 256,
 				},
+				// Dart has a 256 argument limit and all set table fields are passed into
+				// the constructor.
 				Denylist: []config.Binding{config.Dart},
 			},
 		},

@@ -6,7 +6,6 @@
 
 library benchmarkfidl;
 
-[BindingsDenylist = "dart"]
 struct Table1Struct {
     Table1 value;
 };
@@ -15,7 +14,6 @@ table Table1 {
     1: uint8 field1;
 };
 
-[BindingsDenylist = "dart"]
 struct Table16Struct {
     Table16 value;
 };

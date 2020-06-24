@@ -6,7 +6,6 @@
 
 // Binary tree with depth 8 (255 elements)
 benchmark("StructTree/Depth8") {
-    bindings_denylist = [dart],
     value = StructTree8{
         left:StructTree7{
             left:StructTree6{

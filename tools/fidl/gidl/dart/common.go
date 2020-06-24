@@ -96,6 +96,10 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 		typeName := fidlcommon.ToUpperCamelCase(string(integerDecl.Subtype()))
 		return fmt.Sprintf("%sList.fromList([%s])", typeName, strings.Join(elements, ", "))
 	}
+	if floatDecl, ok := elemDecl.(*gidlmixer.FloatDecl); ok {
+		typeName := fidlcommon.ToUpperCamelCase(string(floatDecl.Subtype()))
+		return fmt.Sprintf("%sList.fromList([%s])", typeName, strings.Join(elements, ", "))
+	}
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }
 

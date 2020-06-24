@@ -11,43 +11,36 @@ struct StructTree1 {
     uint8 b;
 };
 
-[BindingsDenylist = "dart"]
 struct StructTree2 {
     StructTree1 left;
     StructTree1 right;
 };
 
-[BindingsDenylist = "dart"]
 struct StructTree3 {
     StructTree2 left;
     StructTree2 right;
 };
 
-[BindingsDenylist = "dart"]
 struct StructTree4 {
     StructTree3 left;
     StructTree3 right;
 };
 
-[BindingsDenylist = "dart"]
 struct StructTree5 {
     StructTree4 left;
     StructTree4 right;
 };
 
-[BindingsDenylist = "dart"]
 struct StructTree6 {
     StructTree5 left;
     StructTree5 right;
 };
 
-[BindingsDenylist = "dart"]
 struct StructTree7 {
     StructTree6 left;
     StructTree6 right;
 };
 
-[BindingsDenylist = "dart"]
 struct StructTree8 {
     StructTree7 left;
     StructTree7 right;

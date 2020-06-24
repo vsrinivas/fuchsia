@@ -12,43 +12,36 @@ struct PaddedStructTree1 {
     uint32 b;
 };
 
-[BindingsDenylist = "dart"]
 struct PaddedStructTree2 {
     PaddedStructTree1 left;
     PaddedStructTree1 right;
 };
 
-[BindingsDenylist = "dart"]
 struct PaddedStructTree3 {
     PaddedStructTree2 left;
     PaddedStructTree2 right;
 };
 
-[BindingsDenylist = "dart"]
 struct PaddedStructTree4 {
     PaddedStructTree3 left;
     PaddedStructTree3 right;
 };
 
-[BindingsDenylist = "dart"]
 struct PaddedStructTree5 {
     PaddedStructTree4 left;
     PaddedStructTree4 right;
 };
 
-[BindingsDenylist = "dart"]
 struct PaddedStructTree6 {
     PaddedStructTree5 left;
     PaddedStructTree5 right;
 };
 
-[BindingsDenylist = "dart"]
 struct PaddedStructTree7 {
     PaddedStructTree6 left;
     PaddedStructTree6 right;
 };
 
-[BindingsDenylist = "dart"]
 struct PaddedStructTree8 {
     PaddedStructTree7 left;
     PaddedStructTree7 right;

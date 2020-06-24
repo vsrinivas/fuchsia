@@ -19,13 +19,11 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
@@ -33,7 +31,7 @@ func init() {
 				},
 				// The Rust bindings only supports arrays of size 0-32, 64, and 256.
 				// CPP generated code is slow to compile in clang.
-				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker, config.Dart},
+				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker},
 			},
 			{
 				Config: config.Config{
@@ -41,7 +39,7 @@ func init() {
 				},
 				// The Rust bindings only supports arrays of size 0-32, 64, and 256.
 				// CPP generated code is slow to compile in clang.
-				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker, config.Dart},
+				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker},
 			},
 		},
 	})

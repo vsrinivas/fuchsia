@@ -22,6 +22,7 @@ func init() {
 					"depth": 8,
 				},
 				// Go runs into a stack overflow.
+				// Dart doesn't support recursive type generation.
 				Denylist: []config.Binding{config.Go, config.Dart},
 			},
 		},

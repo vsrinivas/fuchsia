@@ -6,7 +6,6 @@
 
 // Struct with 16 uint8 fields
 benchmark("StructField/16") {
-    bindings_denylist = [dart],
     value = StructField16{
         field1: 0,
         field2: 1,

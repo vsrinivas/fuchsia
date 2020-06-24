@@ -6,7 +6,6 @@
 
 // 256 element vector of structs
 benchmark("StructVector/256") {
-    bindings_denylist = [dart],
     value = StructVector{
         elems: [
 

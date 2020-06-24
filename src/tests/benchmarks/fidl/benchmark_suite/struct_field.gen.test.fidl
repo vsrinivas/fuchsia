@@ -6,7 +6,6 @@
 
 library benchmarkfidl;
 
-[BindingsDenylist = "dart"]
 struct StructField16 {
     uint8 field1;
     uint8 field2;

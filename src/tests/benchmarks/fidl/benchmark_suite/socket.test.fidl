@@ -6,7 +6,6 @@ library benchmarkfidl;
 
 // The following are based on fuchsia.posix.socket.DatagramSocket.RecvMsg:
 
-[BindingsDenylist = "dart"]
 struct DatagramSocketRecvMsgRequest {
     uint32 addr_len;
     uint32 data_len;
@@ -14,7 +13,6 @@ struct DatagramSocketRecvMsgRequest {
     int16 flags;
 };
 
-[BindingsDenylist = "dart"]
 struct DatagramSocketRecvMsgResponse {
     bytes:128 addr;
     bytes data;
@@ -22,20 +20,17 @@ struct DatagramSocketRecvMsgResponse {
     uint32 truncated;
 };
 
-[BindingsDenylist = "dart"]
 union DatagramSocketRecvMsgResult {
     1: DatagramSocketRecvMsgResponse response;
     2: uint32 err;
 };
 
-[BindingsDenylist = "dart"]
 struct DatagramSocketRecvMsgResultStruct {
     DatagramSocketRecvMsgResult result;
 };
 
 // The following are based on fuchsia.posix.socket.DatagramSocket.SendMsg2:
 
-[BindingsDenylist = "dart"]
 struct DatagramSocketSendMsg2Request {
     bytes:128 addr;
     bytes:MAX data;
@@ -43,18 +38,15 @@ struct DatagramSocketSendMsg2Request {
     int16 flags;
 };
 
-[BindingsDenylist = "dart"]
 struct DatagramSocketSendMsg2Response {
     int64 len;
 };
 
-[BindingsDenylist = "dart"]
 union DatagramSocketSendMsg2Result {
     1: DatagramSocketSendMsg2Response response;
     2: uint32 err;
 };
 
-[BindingsDenylist = "dart"]
 struct DatagramSocketSendMsg2ResultStruct {
     DatagramSocketSendMsg2Result result;
 };

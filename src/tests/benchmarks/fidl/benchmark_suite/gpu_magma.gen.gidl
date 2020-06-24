@@ -7,7 +7,6 @@
 // Based on fuchsia.gpu.magma.Primary.ExecuteImmediateCommand
 // 128 bytes was the most common command size in a trace
 benchmark("GPUMagma/ExecuteImmediateCommandsRequest/CommandByte128/Semaphore8") {
-    bindings_denylist = [dart],
     value = ExecuteImmediateCommandsRequest{
         context_id: 1,
         command_data: [
@@ -37,7 +36,7 @@ benchmark("GPUMagma/ExecuteImmediateCommandsRequest/CommandByte128/Semaphore8") 
 // Based on fuchsia.gpu.magma.Primary.ExecuteImmediateCommand
 // 1024 bytes command size appeared as a small cluster in a trace
 benchmark("GPUMagma/ExecuteImmediateCommandsRequest/CommandByte1024/Semaphore32") {
-    bindings_denylist = [llcpp, cpp, dart],
+    bindings_denylist = [llcpp, cpp],
     value = ExecuteImmediateCommandsRequest{
         context_id: 1,
         command_data: [

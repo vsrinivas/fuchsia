@@ -6,7 +6,6 @@
 
 // Based on fuchsia.hardware.display.Controller.OnVsync
 benchmark("HardwareDisplay/OnVsyncEvent/Image64") {
-    bindings_denylist = [dart],
     value = OnVsyncEvent{
         display_id: 1,
         timestamp: 1,

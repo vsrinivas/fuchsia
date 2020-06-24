@@ -6,7 +6,6 @@
 
 // 256 float array in a struct
 benchmark("FloatArray/256") {
-    bindings_denylist = [dart],
     value = FloatArray256{
         values: [
             0.94519615, 0.24496509, 0.65595627, 0.05434384, 0.3675872, 0.28948045, 0.1924386, 0.65533215,

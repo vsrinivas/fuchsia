@@ -6,7 +6,6 @@
 
 // 256 bool array in a struct
 benchmark("BoolArray/256") {
-    bindings_denylist = [dart],
     value = BoolArray256{
         values: [
             true,

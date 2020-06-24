@@ -12,7 +12,6 @@ struct StructArrayElement {
     uint16 b;
 };
 
-[BindingsDenylist = "dart"]
 struct StructArray256 {
     array<StructArrayElement>:256 elems;
 };

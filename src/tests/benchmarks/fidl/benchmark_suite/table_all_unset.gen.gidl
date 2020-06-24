@@ -6,7 +6,6 @@
 
 // Table with 1 field all unset
 benchmark("Table/Unset/1") {
-    bindings_denylist = [dart],
     value = Table1Struct{
         value: Table1{},
     },
@@ -14,7 +13,6 @@ benchmark("Table/Unset/1") {
 
 // Table with 16 fields all unset
 benchmark("Table/Unset/16") {
-    bindings_denylist = [dart],
     value = Table16Struct{
         value: Table16{},
     },

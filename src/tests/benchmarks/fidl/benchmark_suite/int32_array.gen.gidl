@@ -6,7 +6,6 @@
 
 // 256 element int32 array in a struct
 benchmark("Int32Array/256") {
-    bindings_denylist = [dart],
     value = Int32Array256{
         bytes: [
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,

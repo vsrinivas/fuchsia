@@ -6,7 +6,6 @@
 
 // 256 element array of structs
 benchmark("StructArray/256") {
-    bindings_denylist = [dart],
     value = StructArray256{
         elems: [
 

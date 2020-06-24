@@ -6,7 +6,6 @@
 
 // 16 byte vector in a struct
 benchmark("ByteVector/16") {
-    bindings_denylist = [dart],
     value = ByteVector{
         bytes: [
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -17,7 +16,6 @@ benchmark("ByteVector/16") {
 
 // 256 byte vector in a struct
 benchmark("ByteVector/256") {
-    bindings_denylist = [dart],
 	enable_send_event_benchmark = true,
     value = ByteVector{
         bytes: [
@@ -59,7 +57,6 @@ benchmark("ByteVector/256") {
 
 // 4096 byte vector in a struct
 benchmark("ByteVector/4096") {
-    bindings_denylist = [dart],
 	enable_send_event_benchmark = true,
     value = ByteVector{
         bytes: [
@@ -613,7 +610,7 @@ benchmark("ByteVector/4096") {
 // 65536 byte vector in a struct
 // Disabled on HLCPP / LLCPP due to clang performance issues
 benchmark("ByteVector/65536") {
-    bindings_denylist = [cpp, llcpp, walker, dart],
+    bindings_denylist = [cpp, llcpp, walker],
     value = ByteVector{
         bytes: [
             // 1 - 256

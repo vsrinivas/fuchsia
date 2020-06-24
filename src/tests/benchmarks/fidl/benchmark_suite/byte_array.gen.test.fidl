@@ -6,22 +6,20 @@
 
 library benchmarkfidl;
 
-[BindingsDenylist = "dart"]
 struct ByteArray16 {
     array<uint8>:16 bytes;
 };
 
-[BindingsDenylist = "dart"]
 struct ByteArray256 {
     array<uint8>:256 bytes;
 };
 
-[BindingsDenylist = "rust, cpp, llcpp, walker, dart"]
+[BindingsDenylist = "rust, cpp, llcpp, walker"]
 struct ByteArray4096 {
     array<uint8>:4096 bytes;
 };
 
-[BindingsDenylist = "rust, cpp, llcpp, walker, dart"]
+[BindingsDenylist = "rust, cpp, llcpp, walker"]
 struct ByteArray65536 {
     array<uint8>:65536 bytes;
 };

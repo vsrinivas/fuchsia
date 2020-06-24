@@ -20,12 +20,13 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Config: config.Config{
 					"size": 256,
 				},
+				// Dart has a 256 argument limit and all struct fields are passed into
+				// the constructor.
 				Denylist: []config.Binding{config.Dart},
 			},
 		},

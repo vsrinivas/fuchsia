@@ -6,7 +6,6 @@
 
 library benchmarkfidl;
 
-[BindingsDenylist = "dart"]
 struct FloatArray256 {
     array<float32>:256 values;
 };

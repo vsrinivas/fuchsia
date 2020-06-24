@@ -22,7 +22,6 @@ func init() {
 					"size":         1,
 					"field_to_set": 1,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/1_of_16",
@@ -31,7 +30,6 @@ func init() {
 					"size":         16,
 					"field_to_set": 1,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/1_of_256",
@@ -40,6 +38,7 @@ func init() {
 					"size":         256,
 					"field_to_set": 1,
 				},
+				// Dart has a 256 argument limit which is exceeded by the table constructor.
 				Denylist: []config.Binding{config.Dart},
 			},
 			{
@@ -49,7 +48,6 @@ func init() {
 					"size":         16,
 					"field_to_set": 16,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/16_of_256",
@@ -58,6 +56,7 @@ func init() {
 					"size":         256,
 					"field_to_set": 16,
 				},
+				// Dart has a 256 argument limit which is exceeded by the table constructor.
 				Denylist: []config.Binding{config.Dart},
 			},
 			{
@@ -67,6 +66,7 @@ func init() {
 					"size":         256,
 					"field_to_set": 256,
 				},
+				// Dart has a 256 argument limit which is exceeded by the table constructor.
 				Denylist: []config.Binding{config.Dart},
 			},
 		},

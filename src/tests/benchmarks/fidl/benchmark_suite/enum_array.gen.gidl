@@ -7,7 +7,7 @@
 // 256 enum array in a struct
 // Disabled on LLCPP / Walker because of enum bug in GIDL
 benchmark("EnumArray/256") {
-    bindings_denylist = [llcpp, walker, dart],
+    bindings_denylist = [llcpp, walker],
     value = EnumArray256{
         values: [
             1,

@@ -22,7 +22,6 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name:    "ByteArray/256",
@@ -30,7 +29,6 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 			{
 				Name: "ByteArray/4096",
@@ -40,7 +38,7 @@ func init() {
 				Config: config.Config{
 					"size": 4096,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker, config.Dart},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
 			},
 			{
 				Name: "ByteArray/65536",
@@ -50,7 +48,7 @@ func init() {
 				Config: config.Config{
 					"size": 65536,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker, config.Dart},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
 			},
 		},
 	})

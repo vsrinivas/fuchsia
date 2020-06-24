@@ -21,7 +21,6 @@ func init() {
 				Config: config.Config{
 					"depth": 8,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

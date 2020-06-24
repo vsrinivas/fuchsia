@@ -145,7 +145,7 @@ void main() async {
     await File('/data/results.json').writeAsString(
       encoder.convert(resultsToJson(results, benchmarks.name)),
     mode: FileMode.write);
-  });
+  }, timeout: Timeout(Duration(minutes: 10)));
 }
 `))
 

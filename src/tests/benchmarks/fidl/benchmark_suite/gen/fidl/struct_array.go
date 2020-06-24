@@ -25,7 +25,6 @@ struct StructArrayElement{
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

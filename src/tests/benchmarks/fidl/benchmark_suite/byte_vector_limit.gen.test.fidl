@@ -6,6 +6,6 @@
 
 library benchmarkfidl;
 
-[BindingsDenylist = "dart"]struct ByteVectorLimit1 {
+struct ByteVectorLimit1 {
     vector<uint8>:1 bytes;
 };

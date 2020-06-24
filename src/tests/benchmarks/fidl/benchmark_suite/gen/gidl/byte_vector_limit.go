@@ -23,7 +23,6 @@ func init() {
 				Config: config.Config{
 					"limit": 1,
 				},
-				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

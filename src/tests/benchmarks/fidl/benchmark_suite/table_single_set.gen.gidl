@@ -6,7 +6,6 @@
 
 // Table with 1 field with the 1st field set
 benchmark("Table/SingleSet/1_of_1") {
-    bindings_denylist = [dart],
     value = Table1Struct{
         value: Table1{
             field1: 1,
@@ -16,7 +15,6 @@ benchmark("Table/SingleSet/1_of_1") {
 
 // Table with 16 fields with the 1st field set
 benchmark("Table/SingleSet/1_of_16") {
-    bindings_denylist = [dart],
     value = Table16Struct{
         value: Table16{
             field1: 1,
@@ -36,7 +34,6 @@ benchmark("Table/SingleSet/1_of_256") {
 
 // Table with 16 fields with the 16th field set
 benchmark("Table/SingleSet/16_of_16") {
-    bindings_denylist = [dart],
     value = Table16Struct{
         value: Table16{
             field16: 1,

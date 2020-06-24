@@ -6,7 +6,6 @@
 
 // 1 byte vector with a 1-element limit in a struct
 benchmark("ByteVectorLimit/1") {
-    bindings_denylist = [dart],
     value = ByteVectorLimit1{
         bytes: [ 0 ]
     },

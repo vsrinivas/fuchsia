@@ -4,7 +4,6 @@
 // found in the LICENSE file.
 
 benchmark("DatagramSocket/RecvMsg/Request") {
-    bindings_denylist = [dart],
     value = DatagramSocketRecvMsgRequest{
         addr_len: 1,
         data_len: 2,
@@ -14,7 +13,6 @@ benchmark("DatagramSocket/RecvMsg/Request") {
 }
 
 benchmark("DatagramSocket/RecvMsg/Result") {
-    bindings_denylist = [dart],
     value = DatagramSocketRecvMsgResultStruct {
         result: DatagramSocketRecvMsgResult{
             response: DatagramSocketRecvMsgResponse{
@@ -259,7 +257,6 @@ benchmark("DatagramSocket/RecvMsg/Result") {
 }
 
 benchmark("DatagramSocket/SendMsg2/Request") {
-    bindings_denylist = [dart],
     value = DatagramSocketSendMsg2Request {
         // 128 bytes for addr
         addr: [
@@ -500,7 +497,6 @@ benchmark("DatagramSocket/SendMsg2/Request") {
 }
 
 benchmark("DatagramSocket/SendMsg2/Result") {
-    bindings_denylist = [dart],
     value = DatagramSocketSendMsg2ResultStruct {
         result: DatagramSocketSendMsg2Result{
             response: DatagramSocketSendMsg2Response{
