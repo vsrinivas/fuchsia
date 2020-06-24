@@ -8,21 +8,31 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
 
+const (
+	testFunc         = "Test"
+	copySinksFunc    = "CopySinks"
+	runBugreportFunc = "RunBugreport"
+)
+
 type fakeTester struct {
-	testErr error
-	runTest func(testsharder.Test, io.Writer, io.Writer)
+	testErr   error
+	runTest   func(testsharder.Test, io.Writer, io.Writer)
+	funcCalls []string
 }
 
 func (t *fakeTester) Test(_ context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
+	t.funcCalls = append(t.funcCalls, testFunc)
 	if t.runTest != nil {
 		t.runTest(test, stdout, stderr)
 	}
@@ -34,6 +44,12 @@ func (t *fakeTester) Close() error {
 }
 
 func (t *fakeTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
+	t.funcCalls = append(t.funcCalls, copySinksFunc)
+	return nil
+}
+
+func (t *fakeTester) RunBugreport(_ context.Context, _ string) error {
+	t.funcCalls = append(t.funcCalls, runBugreportFunc)
 	return nil
 }
 
@@ -269,5 +285,47 @@ func TestRunTest(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRunTests(t *testing.T) {
+	tests := []testsharder.Test{
+		{
+			build.Test{
+				Name:       "bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			}, 2,
+		}, {
+			build.Test{
+				Name:       "baz",
+				Path:       "/foo/baz",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/baz",
+			}, 1,
+		},
+	}
+	tester := &fakeTester{}
+	err := runTests(context.Background(), tests, tester, &testOutputs{tap: &tap.Producer{}})
+	if err != nil {
+		t.Errorf("got error: %v", err)
+	}
+	funcCalls := strings.Join(tester.funcCalls, ",")
+	testCount := strings.Count(funcCalls, testFunc)
+	copySinksCount := strings.Count(funcCalls, copySinksFunc)
+	bugreportCount := strings.Count(funcCalls, runBugreportFunc)
+	if testCount != 3 {
+		t.Errorf("ran %d tests, expected: 3", testCount)
+	}
+	if copySinksCount != 1 {
+		t.Errorf("ran CopySinks %d times, expected: 1", copySinksCount)
+	}
+	if bugreportCount != 1 {
+		t.Errorf("ran RunBugreport %d times, expected: 1", bugreportCount)
+	}
+	// Ensure CopySinks and RunBugreport are run after all calls to Test.
+	lastCalls := strings.Join(tester.funcCalls[len(tester.funcCalls)-2:], ",")
+	if !strings.Contains(lastCalls, copySinksFunc) || !strings.Contains(lastCalls, runBugreportFunc) {
+		t.Errorf("expected last calls to include %v, actual: %v", []string{runBugreportFunc, copySinksFunc}, lastCalls)
 	}
 }

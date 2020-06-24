@@ -10,12 +10,15 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
@@ -109,6 +112,10 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 }
 
 func (t *subprocessTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+	return nil
+}
+
+func (t *subprocessTester) RunBugreport(ctx context.Context, bugreportFile string) error {
 	return nil
 }
 
@@ -253,6 +260,22 @@ func (t *fuchsiaSSHTester) CopySinks(ctx context.Context, sinks []runtests.DataS
 	return nil
 }
 
+// RunBugreport runs `bugreport` on the device.
+func (t *fuchsiaSSHTester) RunBugreport(ctx context.Context, bugreportFile string) error {
+	if bugreportFile == "" {
+		return nil
+	}
+	bugreportOutFile, err := osmisc.CreateFile(filepath.Join(t.localOutputDir, bugreportFile))
+	if err != nil {
+		return fmt.Errorf("failed to create bugreport output file: %w", err)
+	}
+	defer bugreportOutFile.Close()
+	startTime := time.Now()
+	err = t.r.Run(ctx, []string{"/bin/bugreport"}, bugreportOutFile, os.Stderr)
+	logger.Debugf(ctx, "ran bugreport in %v", time.Now().Sub(startTime))
+	return err
+}
+
 // Close terminates the underlying SSH connection. The object is no longer
 // usable after calling this method.
 func (t *fuchsiaSSHTester) Close() error {
@@ -309,6 +332,10 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 }
 
 func (t *fuchsiaSerialTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+	return nil
+}
+
+func (t *fuchsiaSerialTester) RunBugreport(ctx context.Context, bugreportFile string) error {
 	return nil
 }
 

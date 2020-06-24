@@ -55,6 +55,9 @@ var (
 	// default will be run_test_component.
 	useRuntests bool
 
+	// The output filename for the bugreport. This will be created in the outDir.
+	bugreportFile string
+
 	// Per-test timeout.
 	perTestTimeout time.Duration
 )
@@ -74,6 +77,7 @@ func init() {
 	flag.StringVar(&outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
+	flag.StringVar(&bugreportFile, "bugreport-output", "", "The output filename for the bugreport. This will be created in the output directory.")
 	// TODO(fxb/36480): Support different timeouts for different tests.
 	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Usage = usage
@@ -179,6 +183,7 @@ type tester interface {
 	Test(context.Context, testsharder.Test, io.Writer, io.Writer) (runtests.DataSinkReference, error)
 	Close() error
 	CopySinks(context.Context, []runtests.DataSinkReference) error
+	RunBugreport(context.Context, string) error
 }
 
 func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile, serialSocketPath string) error {
@@ -247,6 +252,10 @@ func runTests(ctx context.Context, tests []testsharder.Test, t tester, outputs *
 			}
 			sinks = append(sinks, result.DataSinks)
 		}
+	}
+	// TODO(ihuh): Combine the following functions into a single postprocess function.
+	if err := t.RunBugreport(ctx, bugreportFile); err != nil {
+		return err
 	}
 	return t.CopySinks(ctx, sinks)
 }
