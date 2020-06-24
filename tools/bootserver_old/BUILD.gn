@@ -2,17 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
-sdk_executable("bootserver") {
-  category = "partner"
+executable("bootserver") {
   sources = [
     "bootserver.c",
     "netboot.c",
     "tftp.c",
   ]
   deps = [ "//zircon/public/lib/tftp" ]
+}
+
+sdk_host_tool("bootserver_sdk") {
+  category = "partner"
+  output_name = "bootserver"
+  deps = [ ":bootserver" ]
 }
 
 install_host_tools("host") {

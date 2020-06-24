@@ -2,15 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("//build/test.gni")
 import("//build/testing/host_test_data.gni")
 
-sdk_executable("bin") {
-  category = "partner"
-
+executable("bin") {
   output_name = "trace2json"
 
   sources = [ "main.cc" ]
@@ -37,6 +35,12 @@ source_set("lib") {
     "//third_party/zlib:zfstream",
     "//zircon/system/ulib/trace-reader",
   ]
+}
+
+sdk_host_tool("bin_sdk") {
+  category = "partner"
+  output_name = "trace2json"
+  deps = [ ":bin" ]
 }
 
 install_host_tools("trace2json") {

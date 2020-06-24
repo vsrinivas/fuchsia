@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
 declare_args() {
   # Normally these tests are not built and run because they require large amounts of optional data
@@ -21,15 +21,19 @@ source_set("e2e_test_headers") {
 
 # ZXDB currently only compiles for the host.
 if (is_host) {
-  sdk_executable("zxdb") {
-    category = "partner"
-
+  executable("zxdb") {
     sources = [ "main_host.cc" ]
     deps = [
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/console",
     ]
+  }
+
+  sdk_host_tool("zxdb_sdk") {
+    category = "partner"
+    output_name = "zxdb"
+    deps = [ ":zxdb" ]
   }
 
   test("zxdb_e2e_tests") {

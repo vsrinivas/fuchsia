@@ -2,14 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
-sdk_executable("bin") {
+executable("bin") {
   output_name = "far"
-
-  category = "partner"
 
   sources = [ "main.cc" ]
 
@@ -17,6 +15,12 @@ sdk_executable("bin") {
     "//src/lib/fxl",
     "//src/sys/pkg/lib/far",
   ]
+}
+
+sdk_host_tool("bin_sdk") {
+  category = "partner"
+  output_name = "far"
+  deps = [ ":bin" ]
 }
 
 package("far") {

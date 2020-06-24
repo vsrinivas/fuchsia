@@ -9,10 +9,9 @@
 # See fxb/36139.                         #
 ##########################################
 
-import("//build/cpp/sdk_executable.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
-sdk_executable("minfs") {
-  category = "partner"
+executable("minfs") {
   sources = [ "main.cc" ]
   deps = [
     "//zircon/public/lib/bitmap",
@@ -25,4 +24,10 @@ sdk_executable("minfs") {
   if (!is_fuchsia) {
     deps += [ "//zircon/public/lib/zx-panic-libc" ]
   }
+}
+
+sdk_host_tool("minfs_sdk") {
+  category = "partner"
+  output_name = "minfs"
+  deps = [ ":minfs" ]
 }

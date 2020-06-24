@@ -9,13 +9,18 @@
 # See fxb/36139.                         #
 ##########################################
 
-import("//build/cpp/sdk_executable.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
-sdk_executable("merkleroot") {
-  category = "partner"
+executable("merkleroot") {
   sources = [ "merkleroot.cc" ]
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/digest",
   ]
+}
+
+sdk_host_tool("merkleroot_sdk") {
+  category = "partner"
+  output_name = "merkleroot"
+  deps = [ ":merkleroot" ]
 }

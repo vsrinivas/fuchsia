@@ -9,10 +9,9 @@
 # See fxb/36139.                         #
 ##########################################
 
-import("//build/cpp/sdk_executable.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
-sdk_executable("fvm") {
-  category = "partner"
+executable("fvm") {
   sources = [ "main.cc" ]
   deps = [
     "//zircon/public/lib/fbl",
@@ -35,4 +34,10 @@ sdk_executable("fvm") {
   } else {
     sources += [ "mtd-stub.cc" ]
   }
+}
+
+sdk_host_tool("fvm_sdk") {
+  category = "partner"
+  output_name = "fvm"
+  deps = [ ":fvm" ]
 }

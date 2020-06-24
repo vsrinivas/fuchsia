@@ -2,16 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 if (is_host) {
-  sdk_executable("fidlcat") {
-    category = "partner"
-
+  executable("fidlcat") {
     output_name = "fidlcat"
 
     sources = [ "main.cc" ]
@@ -27,6 +25,12 @@ if (is_host) {
       "//zircon/public/lib/cmdline",
       "//zircon/public/lib/fidl_base",
     ]
+  }
+
+  sdk_host_tool("fidlcat_sdk") {
+    category = "partner"
+    output_name = "fidlcat"
+    deps = [ ":fidlcat" ]
   }
 
   static_library("lib") {

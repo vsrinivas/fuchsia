@@ -34,7 +34,7 @@ There are a few GN templates developers should use to enable the inclusion of
 their code in an SDK:
 - [`sdk_shared_library`](/build/cpp/sdk_shared_library.gni)
 - [`sdk_source_set`](/build/cpp/sdk_source_set.gni)
-- [`sdk_executable`](/build/cpp/sdk_executable.gni)
+- [`sdk_host_tool`](/build/sdk/sdk_host_tool.gni)
 
 Some language-specific targets are also SDK-ready:
 - [`dart_library`](/build/dart/dart_library.gni)
