@@ -166,6 +166,7 @@ class Vfs {
 
 #ifdef __Fuchsia__
   using ShutdownCallback = fit::callback<void(zx_status_t status)>;
+  using CloseAllConnectionsForVnodeCallback = fit::callback<void()>;
 
   // Unmounts the underlying filesystem. The result of shutdown is delivered via
   // calling |closure|.
@@ -221,9 +222,10 @@ class Vfs {
     return ServeDirectory(vn, std::move(channel), fs::Rights::All());
   }
 
-  // Closes all connections to a Vnode. The caller must ensure that no new
-  // connections or transactions are created during this point.
-  virtual void CloseAllConnectionsForVnode(const Vnode& node) = 0;
+  // Closes all connections to a Vnode and calls |callback| after all connections are closed. The
+  // caller must ensure that no new connections or transactions are created during this point.
+  virtual void CloseAllConnectionsForVnode(const Vnode& node,
+                                           CloseAllConnectionsForVnodeCallback callback) = 0;
 
   // Pins a handle to a remote filesystem onto a vnode, if possible.
   zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_EXCLUDES(vfs_lock_);

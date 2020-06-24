@@ -36,13 +36,17 @@ void SynchronousVfs::Shutdown(ShutdownCallback handler) {
   }
 }
 
-void SynchronousVfs::CloseAllConnectionsForVnode(const Vnode& node) {
+void SynchronousVfs::CloseAllConnectionsForVnode(const Vnode& node,
+                                                 CloseAllConnectionsForVnodeCallback callback) {
   for (auto connection = connections_.begin(); connection != connections_.end();) {
     auto c = connection;
     connection++;
     if (c->vnode().get() == &node) {
       c->SyncTeardown();
     }
+  }
+  if (callback) {
+    callback();
   }
 }
 

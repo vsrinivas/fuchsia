@@ -5,6 +5,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-testing/test_loop.h>
 
 #include <fs/managed_vfs.h>
 #include <fs/pseudo_dir.h>
@@ -61,7 +62,7 @@ TEST(ManagedVfs, UnmountAndShutdown) {
   ASSERT_TRUE(static_cast<fs::Vfs*>(&vfs)->IsTerminating());
 }
 
-static void CheckClosesConnection(fs::Vfs* vfs) {
+static void CheckClosesConnection(fs::Vfs* vfs, async::TestLoop* loop) {
   zx::channel local_a, remote_a, local_b, remote_b;
   ASSERT_OK(zx::channel::create(0, &local_a, &remote_a));
   ASSERT_OK(zx::channel::create(0, &local_b, &remote_b));
@@ -70,25 +71,46 @@ static void CheckClosesConnection(fs::Vfs* vfs) {
   auto dir_b = fbl::MakeRefCounted<fs::PseudoDir>();
   ASSERT_OK(vfs->ServeDirectory(dir_a, std::move(remote_a)));
   ASSERT_OK(vfs->ServeDirectory(dir_b, std::move(remote_b)));
-  vfs->CloseAllConnectionsForVnode(*dir_a);
+  bool callback_called = false;
+  vfs->CloseAllConnectionsForVnode(*dir_a, [&callback_called]() { callback_called = true; });
+  loop->RunUntilIdle();
   zx_signals_t signals;
   ASSERT_OK(local_a.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
   ASSERT_EQ(ZX_ERR_TIMED_OUT, local_b.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(0), &signals));
+  ASSERT_TRUE(callback_called);
 }
 
 TEST(ManagedVfs, CloseAllConnections) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::TestLoop loop;
   fs::ManagedVfs vfs(loop.dispatcher());
-  loop.StartThread();
-  CheckClosesConnection(&vfs);
-  loop.Shutdown();
+  CheckClosesConnection(&vfs, &loop);
+  loop.RunUntilIdle();
 }
 
 TEST(SynchronousVfs, CloseAllConnections) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::TestLoop loop;
   fs::SynchronousVfs vfs(loop.dispatcher());
-  loop.StartThread();
-  CheckClosesConnection(&vfs);
-  loop.Shutdown();
+  CheckClosesConnection(&vfs, &loop);
+  loop.RunUntilIdle();
+}
+
+TEST(ManagedVfs, CloseAllConnectionsForVnodeWithoutAnyConnections) {
+  async::TestLoop loop;
+  fs::ManagedVfs vfs(loop.dispatcher());
+  fs::PseudoDir dir;
+  bool closed = false;
+  vfs.CloseAllConnectionsForVnode(dir, [&closed]() { closed = true; });
+  loop.RunUntilIdle();
+  ASSERT_TRUE(closed);
+}
+
+TEST(SynchronousVfs, CloseAllConnectionsForVnodeWithoutAnyConnections) {
+  async::TestLoop loop;
+  fs::SynchronousVfs vfs(loop.dispatcher());
+  fs::PseudoDir dir;
+  bool closed = false;
+  vfs.CloseAllConnectionsForVnode(dir, [&closed]() { closed = true; });
+  loop.RunUntilIdle();
+  ASSERT_TRUE(closed);
 }

@@ -13,7 +13,9 @@
 
 #include <atomic>
 #include <memory>
+#include <unordered_map>
 
+#include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fs/internal/connection.h>
@@ -46,7 +48,8 @@ class ManagedVfs : public Vfs {
   // It is unsafe to call Shutdown multiple times.
   void Shutdown(ShutdownCallback handler) override __TA_EXCLUDES(lock_);
 
-  void CloseAllConnectionsForVnode(const Vnode& node) final;
+  void CloseAllConnectionsForVnode(const Vnode& node,
+                                   CloseAllConnectionsForVnodeCallback callback) final;
 
  private:
   // Posts the task for OnShutdownComplete if it is safe to do so.
@@ -74,6 +77,9 @@ class ManagedVfs : public Vfs {
   async::TaskMethod<ManagedVfs, &ManagedVfs::OnShutdownComplete> shutdown_task_ __TA_GUARDED(lock_){
       this};
   ShutdownCallback shutdown_handler_ __TA_GUARDED(lock_);
+
+  std::unordered_map<internal::Connection*, std::shared_ptr<fbl::AutoCall<fit::callback<void()>>>>
+      closing_connections_ __TA_GUARDED(lock_);
 };
 
 }  // namespace fs

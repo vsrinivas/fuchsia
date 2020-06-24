@@ -176,7 +176,8 @@ void zx_device::CloseAllConnections() {
   async::PostTask(internal::ContextForApi()->loop().dispatcher(),
                   [dev = fbl::RefPtr<zx_device>(this)] {
                     if (dev->vnode) {
-                      dev->driver_host_context_->vfs()->CloseAllConnectionsForVnode(*dev->vnode);
+                      dev->driver_host_context_->vfs()->CloseAllConnectionsForVnode(
+                          *dev->vnode, /*callback=*/nullptr);
                     }
                   });
 }

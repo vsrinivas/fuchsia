@@ -34,7 +34,8 @@ class SynchronousVfs : public Vfs {
  public:
   SynchronousVfs();
 
-  void CloseAllConnectionsForVnode(const Vnode& node) final;
+  void CloseAllConnectionsForVnode(const Vnode& node,
+                                   CloseAllConnectionsForVnodeCallback callback) final;
 
   explicit SynchronousVfs(async_dispatcher_t* dispatcher);
 

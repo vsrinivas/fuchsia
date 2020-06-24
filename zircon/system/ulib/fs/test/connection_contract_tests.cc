@@ -31,7 +31,8 @@ class NoOpVfs : public fs::Vfs {
     ADD_FAILURE("Should never be reached in this test");
     return false;
   }
-  void CloseAllConnectionsForVnode(const fs::Vnode& node) final {
+  void CloseAllConnectionsForVnode(const fs::Vnode& node,
+                                   CloseAllConnectionsForVnodeCallback callback) final {
     FAIL("Should never be reached in this test");
   }
 };
