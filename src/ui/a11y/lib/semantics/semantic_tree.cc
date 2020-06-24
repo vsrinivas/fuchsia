@@ -13,6 +13,7 @@
 #include <unordered_set>
 
 #include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace a11y {
 namespace {
@@ -349,6 +350,25 @@ void SemanticTree::PerformHitTesting(
   hit_testing_handler_(local_point, std::move(callback));
 }
 
+std::string vec3ToString(const fuchsia::ui::gfx::vec3 vec) {
+  return fxl::StringPrintf("(x: %.1f, y: %.1f, z: %.1f)", vec.x, vec.y, vec.z);
+}
+
+std::string mat4ToString(const fuchsia::ui::gfx::mat4 mat) {
+  std::string retval = "{ ";
+  for (int i = 0; i < 4; i++) {
+    retval.append(fxl::StringPrintf("col%d: (%.1f,%.1f,%.1f,%.1f), ", i, mat.matrix[i * 4],
+                                    mat.matrix[i * 4 + 1], mat.matrix[i * 4 + 2],
+                                    mat.matrix[i * 4 + 3]));
+  }
+  return retval.append(" }");
+}
+
+std::string locationToString(const fuchsia::ui::gfx::BoundingBox location) {
+  return fxl::Concatenate(
+      {"{ min: ", vec3ToString(location.min), ", max: ", vec3ToString(location.max), " }"});
+}
+
 std::string SemanticTree::ToString() const {
   std::function<void(const Node*, int, std::string*)> printNode;
 
@@ -360,11 +380,13 @@ std::string SemanticTree::ToString() const {
     // Add indentation
     output->append(4 * current_level, ' ');
 
-    *output = fxl::Concatenate({*output, "ID: ", std::to_string(node->node_id()), " Label:",
-                                node->has_attributes() && node->attributes().has_label()
-                                    ? node->attributes().label()
-                                    : "no label",
-                                "\n"});
+    *output = fxl::Concatenate(
+        {*output, "ID: ", std::to_string(node->node_id()), " Label:",
+         node->has_attributes() && node->attributes().has_label() ? node->attributes().label()
+                                                                  : "no label",
+         " Location: ", node->has_location() ? locationToString(node->location()) : "no location",
+         " Transform: ", node->has_transform() ? mat4ToString(node->transform()) : "no transform",
+         "\n"});
 
     if (!node->has_child_ids()) {
       return;
