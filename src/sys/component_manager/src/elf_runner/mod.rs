@@ -404,7 +404,12 @@ impl ElfRunner {
             .raw_koid();
 
         self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-        Ok(Some(ElfComponent::new(runtime_dir, Job::from(component_job), lifecycle_client)))
+        Ok(Some(ElfComponent::new(
+            runtime_dir,
+            Job::from(component_job),
+            lifecycle_client,
+            program_config.main_process_critical,
+        )))
     }
 }
 
@@ -497,6 +502,10 @@ struct ElfComponent {
     job: Arc<Job>,
 
     lifecycle_channel: Option<LifecycleProxy>,
+
+    /// We need to remember if we marked the main process as critical, because if we're asked to
+    /// kill a component that has such a marking it'll bring down everything.
+    main_process_critical: bool,
 }
 
 impl ElfComponent {
@@ -504,14 +513,18 @@ impl ElfComponent {
         _runtime_dir: RuntimeDirectory,
         job: Job,
         lifecycle_channel: Option<LifecycleProxy>,
+        main_process_critical: bool,
     ) -> Self {
-        Self { _runtime_dir, job: Arc::new(job), lifecycle_channel }
+        Self { _runtime_dir, job: Arc::new(job), lifecycle_channel, main_process_critical }
     }
 }
 
 #[async_trait]
 impl runner::component::Controllable for ElfComponent {
     async fn kill(mut self) {
+        if self.main_process_critical {
+            warn!("killing a component with 'main_process_critical', so this will also kill component_manager and all of its components");
+        }
         let _ = self.job.kill().map_err(|e| error!("failed killing job during kill: {}", e));
     }
 
@@ -815,7 +828,7 @@ mod tests {
                 .expect("job handle duplication failed"),
         );
 
-        let component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None);
+        let component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None, false);
 
         let job_info = job_copy.info()?;
         assert!(!job_info.exited);
@@ -850,7 +863,7 @@ mod tests {
         );
 
         let mut component =
-            ElfComponent::new(TreeBuilder::empty_dir().build(), job, Some(lifecycle_client));
+            ElfComponent::new(TreeBuilder::empty_dir().build(), job, Some(lifecycle_client), false);
 
         let job_info = job_copy.info()?;
         assert!(!job_info.exited);
@@ -909,7 +922,7 @@ mod tests {
                 .expect("job handle duplication failed"),
         );
 
-        let mut component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None);
+        let mut component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None, false);
 
         let job_info = job_copy.info()?;
         assert!(!job_info.exited);
@@ -941,7 +954,7 @@ mod tests {
         );
 
         let mut component =
-            ElfComponent::new(TreeBuilder::empty_dir().build(), job, Some(lifecycle_client));
+            ElfComponent::new(TreeBuilder::empty_dir().build(), job, Some(lifecycle_client), false);
 
         let job_info = job_copy.info()?;
         assert!(!job_info.exited);
@@ -974,7 +987,7 @@ mod tests {
                 .expect("job handle duplication failed"),
         );
 
-        let component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None);
+        let component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None, false);
 
         let job_info = job_copy.info()?;
         assert!(!job_info.exited);
