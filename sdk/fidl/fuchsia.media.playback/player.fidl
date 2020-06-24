@@ -40,6 +40,11 @@ protocol Player {
 
     /// Adds a new binding to this player.
     AddBinding(request<Player> player_request);
+
+    /// Sets the rate to be used when the player is playing. `rate` must be positive. The
+    /// `timeline_function` field of `PlayerStatus` indicates the actual rate when the player
+    /// is playing.
+    SetPlaybackRate(float32 playback_rate);
 };
 
 /// Player status information.

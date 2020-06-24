@@ -57,6 +57,9 @@ class CommandQueue {
   // Queues a |SetFileSource| command.
   void SetFile(const std::string& path) { AddCommand(new SetFileCommand(path)); }
 
+  // Queues a |SetPlaybackRate| command.
+  void SetPlaybackRate(float rate) { AddCommand(new SetPlaybackRateCommand(rate)); }
+
   // Queues a play command.
   void Play() { AddCommand(new PlayCommand()); }
 
@@ -140,6 +143,12 @@ class CommandQueue {
     SetFileCommand(const std::string& path) : path_(path) {}
     void Execute(CommandQueue* command_queue) override;
     std::string path_;
+  };
+
+  struct SetPlaybackRateCommand : public Command {
+    SetPlaybackRateCommand(float rate) : rate_(rate) {}
+    void Execute(CommandQueue* command_queue) override;
+    float rate_;
   };
 
   struct PlayCommand : public Command {

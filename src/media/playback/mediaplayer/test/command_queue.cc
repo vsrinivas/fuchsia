@@ -143,6 +143,15 @@ void CommandQueue::SetFileCommand::Execute(CommandQueue* command_queue) {
   command_queue->ExecuteNextCommand();
 }
 
+void CommandQueue::SetPlaybackRateCommand::Execute(CommandQueue* command_queue) {
+  if (command_queue->verbose_) {
+    std::cerr << "SetPlaybackRate " << rate_ << "\n";
+  }
+
+  command_queue->player_->SetPlaybackRate(rate_);
+  command_queue->ExecuteNextCommand();
+}
+
 void CommandQueue::PlayCommand::Execute(CommandQueue* command_queue) {
   if (command_queue->verbose_) {
     std::cerr << "Play\n";

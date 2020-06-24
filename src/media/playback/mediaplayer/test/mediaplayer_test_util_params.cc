@@ -19,6 +19,23 @@ MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(const fxl::CommandLine& com
   test_seek_ = command_line.HasOption("test-seek");
   experiment_ = command_line.HasOption("experiment");
 
+  std::string rate_as_string;
+  if (command_line.GetOptionValue("rate", &rate_as_string)) {
+    char* end;
+    rate_ = std::strtof(rate_as_string.c_str(), &end);
+    if (end == rate_as_string.c_str() || *end != '\0') {
+      Usage();
+      std::cerr << "Unrecognized --rate value\n";
+      return;
+    }
+
+    if (rate_ <= 0.0f) {
+      Usage();
+      std::cerr << "--rate value must be positive\n";
+      return;
+    }
+  }
+
   for (const std::string& arg : command_line.positional_args()) {
     if (arg.compare(0, 1, "/") == 0) {
       std::string url = "file://";
@@ -58,9 +75,10 @@ void MediaPlayerTestUtilParams::Usage() {
   std::cerr << "mediaplayer_test_util usage:\n";
   std::cerr << "    present_view mediaplayer_test_util [ options ] url-or-path*\n";
   std::cerr << "options:\n";
-  std::cerr << "    --play       play on startup\n";
-  std::cerr << "    --loop       play the files in a loop on startup\n";
-  std::cerr << "    --test-seek  play random segments of one file on startup\n";
+  std::cerr << "    --play        play on startup\n";
+  std::cerr << "    --loop        play the files in a loop on startup\n";
+  std::cerr << "    --test-seek   play random segments of one file on startup\n";
+  std::cerr << "    --rate=<rate> sets the playback rate (default is 1.0)\n";
   // --experiment is deliberately omitted here. See the .h file.
 }
 

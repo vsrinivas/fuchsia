@@ -92,6 +92,7 @@ class FidlAudioRenderer : public AudioRenderer {
   size_t payload_buffer_size_ = 0;
   size_t expected_packet_size_ = 0;
   bool stall_logged_ = false;
+  bool unsupported_rate_ = false;
 
   PacketTimingTracker arrivals_;
   PacketTimingTracker departures_;

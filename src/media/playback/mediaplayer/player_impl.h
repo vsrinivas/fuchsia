@@ -55,6 +55,8 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player> request) override;
 
+  void SetPlaybackRate(float playback_rate) override;
+
   void CreateFileSource(
       zx::channel file_channel,
       fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) override;
@@ -203,6 +205,8 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
 
   // Current status.
   fuchsia::media::playback::PlayerStatus status_;
+
+  float playback_rate_ = 1.0f;
 };
 
 }  // namespace media_player

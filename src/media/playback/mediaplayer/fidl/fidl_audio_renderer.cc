@@ -199,7 +199,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
       TRACE_INSTANT("mediaplayer:render", "no_pts", TRACE_SCOPE_THREAD, "pts", new_pts);
       packet->SetPts(new_pts);
     } else {
-      int64_t min_pts = from_ns(current_timeline_function()(now) + min_lead_time_ns_);
+      int64_t min_pts = from_ns(current_timeline_function()(now) + target_lead_time_ns_);
       if (next_pts_to_assign_ < min_pts) {
         // Packet has arrived too late to be rendered. Slip the PTS into the future so we aren't
         // starving anymore. If the overall arrival rate of packets is too low, this will happen
@@ -249,8 +249,13 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     }
   }
 
-  if (packet->size() == 0) {
+  if (packet->size() == 0 || unsupported_rate_) {
+    // Don't send the packet if it's zero-sized or the current rate isn't supported.
     packet = nullptr;
+    if (unsupported_rate_) {
+      // Needed to enure end-of-stream is notified.
+      UpdateLastRenderedPts(start_pts_ns);
+    }
   } else {
     fuchsia::media::StreamPacket audioPacket;
     audioPacket.pts = start_pts;
@@ -358,11 +363,10 @@ void FidlAudioRenderer::Prime(fit::closure callback) {
 void FidlAudioRenderer::SetTimelineFunction(media::TimelineFunction timeline_function,
                                             fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  // AudioRenderer only supports 0/1 (paused) or 1/1 (normal playback rate).
-  // TODO(dalesat): Remove this DCHECK when AudioRenderer supports other rates,
-  // build an SRC into this class, or prohibit other rates entirely.
-  FX_DCHECK(timeline_function.subject_delta() == 0 ||
-            (timeline_function.subject_delta() == 1 && timeline_function.reference_delta() == 1));
+  // AudioRenderer only fully supports 0/1 (paused) or 1/1 (normal playback rate). If the
+  // playback rate isn't 1/1, packets are discarded rather than being renderered. This means
+  // that if the |SetPlaybackRate| method is used on the player to set a rate other than 1.0,
+  // the audio portion of the content will not be heard.
 
   when_input_connection_ready_ = [this, timeline_function,
                                   callback = std::move(callback)]() mutable {
@@ -389,6 +393,14 @@ void FidlAudioRenderer::BindGainControl(
 
 void FidlAudioRenderer::OnTimelineTransition() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+
+  auto& timeline = current_timeline_function();
+  unsupported_rate_ =
+      timeline.subject_delta() != 0 && timeline.subject_delta() != timeline.reference_delta();
+  if (unsupported_rate_) {
+    audio_renderer_->DiscardAllPackets([]() {});
+  }
+
   SignalCurrentDemand();
 }
 
@@ -408,7 +420,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
     // the capacity of the payload VMO. We'll refrain from requesting another packet at the
     // risk of failing to meet lead time commitments. This is unlikely to happen on a target
     // with real hardware, but happens from time to time in automated test on emulators.
-    if (! stall_logged_) {
+    if (!stall_logged_) {
       FX_LOGS(WARNING) << "Audio stalled, because the renderer is not retiring packets";
       stall_logged_ = true;
     }

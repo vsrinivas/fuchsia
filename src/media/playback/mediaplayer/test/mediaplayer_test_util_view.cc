@@ -103,6 +103,10 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
     HandleStatusChanged(status);
   };
 
+  if (params_.rate() != 1.0f) {
+    player_->SetPlaybackRate(params_.rate());
+  }
+
   // Seed the random number generator.
   std::srand(std::time(nullptr));
 

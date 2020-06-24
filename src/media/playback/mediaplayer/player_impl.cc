@@ -343,10 +343,11 @@ void PlayerImpl::Update() {
           // operation completes.
           state_ = State::kWaiting;
           waiting_reason_ = "for renderers to start progressing";
-          SetTimelineFunction(1.0f, zx::clock::get_monotonic().get() + kMinimumLeadTime, [this]() {
-            state_ = State::kPlaying;
-            Update();
-          });
+          SetTimelineFunction(playback_rate_, zx::clock::get_monotonic().get() + kMinimumLeadTime,
+                              [this]() {
+                                state_ = State::kPlaying;
+                                Update();
+                              });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the flush is complete.
@@ -509,6 +510,23 @@ void PlayerImpl::BindGainControl(
 void PlayerImpl::AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
   FX_DCHECK(request);
   AddBindingInternal(std::move(request));
+}
+
+void PlayerImpl::SetPlaybackRate(float playback_rate) {
+  if (playback_rate < 0.0f) {
+    return;
+  }
+
+  if (playback_rate == playback_rate_) {
+    return;
+  }
+
+  playback_rate_ = playback_rate;
+
+  if (state_ == State::kPlaying && target_state_ == State::kPlaying) {
+    SetTimelineFunction(playback_rate_, zx::clock::get_monotonic().get() + kMinimumLeadTime,
+                        []() {});
+  }
 }
 
 void PlayerImpl::CreateFileSource(

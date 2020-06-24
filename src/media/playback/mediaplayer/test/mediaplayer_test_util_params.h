@@ -34,6 +34,8 @@ class MediaPlayerTestUtilParams {
 
   const std::vector<std::string>& urls() const { return urls_; }
 
+  float rate() const { return rate_; }
+
  private:
   void Usage();
 
@@ -44,6 +46,7 @@ class MediaPlayerTestUtilParams {
   bool loop_ = false;
   bool test_seek_ = false;
   bool experiment_ = false;
+  float rate_ = 1.0f;
 
   // Disallow copy, assign and move.
   MediaPlayerTestUtilParams(const MediaPlayerTestUtilParams&) = delete;
