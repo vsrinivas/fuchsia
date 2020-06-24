@@ -215,12 +215,18 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
   // Submit the ioctl request on the worker thread.
   IoctlState ioctl_state = {};
   ioctl_state.response = std::move(tx_data);
+  ioctl_state.status = ZX_OK;
   work_list.emplace_back([&]() {
     AssertIsWorkerThread();
 
     const zx_status_t status = [&]() {
       AssertIsWorkerThread();
       zx_status_t status = ZX_OK;
+
+      if (ioctl_state_ != nullptr) {
+        // Only one Ioctl() call can be in-flight at any time.
+        return ZX_ERR_ALREADY_EXISTS;
+      }
 
       void* buffer = nullptr;
       if ((status = control_submit_ring_->MapWrite(1, &buffer)) != ZX_OK) {
@@ -243,6 +249,7 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
         return status;
       }
 
+      ioctl_state_ = &ioctl_state;
       return ZX_OK;
     }();
 
@@ -250,28 +257,33 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
       ioctl_state.status = status;
       sync_completion_signal(&ioctl_state.completion);
     }
-
-    ioctl_state_ = &ioctl_state;
   });
   AppendToWorkQueue(std::move(work_list));
 
   // Wait for the ioctl to be serviced.
   if ((status = sync_completion_wait(&ioctl_state.completion, timeout.get())) != ZX_OK) {
-    if (status == ZX_ERR_TIMED_OUT) {
-      // Cancel the ioctl request.
-      WorkList work_list;
-      work_list.emplace_back([this]() {
-        AssertIsWorkerThread();
-        if (ioctl_state_ == nullptr) {
-          return;
-        }
-        sync_completion_signal(&ioctl_state_->completion);
-        ioctl_state_ = nullptr;
-      });
-      AppendToWorkQueue(std::move(work_list));
-      sync_completion_wait(&ioctl_state.completion, ZX_TIME_INFINITE);
+    if (status != ZX_ERR_TIMED_OUT) {
+      return status;
     }
-    return status;
+
+    // If we timeout on the completion wait, cancel the ioctl request.
+    WorkList work_list;
+    work_list.emplace_back([this]() {
+      AssertIsWorkerThread();
+      if (ioctl_state_ == nullptr) {
+        // It's possible that we sent the ioctl request cancel task, but the ioctl managed to
+        // complete betwwen the time that we timed out on the completion and the time the cancel
+        // task actually executed.  In this case we will just allow the task completion to be
+        // reported normally.
+        return;
+      }
+
+      ioctl_state_->status = ZX_ERR_TIMED_OUT;
+      sync_completion_signal(&ioctl_state_->completion);
+      ioctl_state_ = nullptr;
+    });
+    AppendToWorkQueue(std::move(work_list));
+    sync_completion_wait(&ioctl_state.completion, ZX_TIME_INFINITE);
   }
 
   if (ioctl_state.status != ZX_OK) {
