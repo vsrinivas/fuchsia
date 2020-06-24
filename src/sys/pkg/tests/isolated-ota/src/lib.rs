@@ -34,7 +34,7 @@ use {
 
 const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 const TEST_CERTS_PATH: &str = "/pkg/data/ssl";
-const TEST_REPO_URL: &str = "fuchsia-pkg://x64.test.fuchsia.com";
+const TEST_REPO_URL: &str = "fuchsia-pkg://integration.test.fuchsia.com";
 
 enum OmahaState {
     /// Don't use Omaha for this update.

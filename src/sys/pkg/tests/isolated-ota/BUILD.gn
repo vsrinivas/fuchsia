@@ -10,6 +10,7 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -30,7 +31,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
