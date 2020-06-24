@@ -5,6 +5,9 @@ The `isolated-ota` library provides a simple interface that allows a Fuchsia
 system to be installed over the air to a given blobfs and paver from a provided
 TUF repository and channel.
 
+To use it, you need to make sure your image includes the package
+`//src/sys/pkg/lib/isolated-ota:isolated-swd`.
+
 It does this by setting up the software delivery stack:
 1. `pkgfs` is launched against the provided blobfs.
 2. `pkg-cache` is launched, using the `pkgfs` from step 1.

@@ -41,11 +41,6 @@ rustc_library("isolated-ota") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # Pull in the package containing the isolated SWD stack.
-  # TODO(51134): include pkgfs in here and use it, rather than
-  # assuming it's in the package we're launched from.
-  non_rust_deps = [ ":isolated-swd" ]
-
   test_deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
