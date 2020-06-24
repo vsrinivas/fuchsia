@@ -299,7 +299,7 @@ TEST_P(HardLinkTest, Errors) {
 std::vector<TestFilesystemOptions> GetTestCombinations() {
   std::vector<TestFilesystemOptions> test_combinations;
   for (TestFilesystemOptions options : AllTestFilesystems()) {
-    if (options.file_system->GetTraits().supports_hard_links) {
+    if (options.filesystem->GetTraits().supports_hard_links) {
       test_combinations.push_back(options);
     }
   }

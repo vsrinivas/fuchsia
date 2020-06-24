@@ -21,8 +21,8 @@
 #define ZX_FS_RIGHT_ADMIN 0x00000004U
 #define ZX_FS_RIGHT_EXECUTABLE 0x00000008U
 // All known rights.
-#define ZX_FS_RIGHTS (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | \
-                      ZX_FS_RIGHT_ADMIN | ZX_FS_RIGHT_EXECUTABLE)
+#define ZX_FS_RIGHTS \
+  (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_RIGHT_EXECUTABLE)
 // A mask for all possible rights including future extensions.
 #define ZX_FS_RIGHTS_SPACE 0x0000FFFFU
 // NOTE: Reserving lower 16 bits for future rights extensions. Flags should start at 0x00010000.
@@ -50,8 +50,8 @@ typedef struct {
   char name[];
 } vfs_watch_msg_t;
 
-#define VFS_TYPE_BLOBFS 0x9e694d21
-#define VFS_TYPE_MINFS 0x6e694d21
-#define VFS_TYPE_MEMFS 0x3e694d21
+#define VFS_TYPE_BLOBFS 0x9e694d21ul
+#define VFS_TYPE_MINFS 0x6e694d21ul
+#define VFS_TYPE_MEMFS 0x3e694d21ul
 
 #endif  // SYSROOT_ZIRCON_DEVICE_VFS_H_

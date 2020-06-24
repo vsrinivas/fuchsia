@@ -37,6 +37,12 @@ class RamDisk {
   // Returns the path to the device.
   std::string path() const { return ramdisk_get_path(client_); }
 
+  zx::status<> SleepAfter(uint64_t block_count) {
+    return zx::make_status(ramdisk_sleep_after(client_, block_count));
+  }
+
+  zx::status<> Wake() { return zx::make_status(ramdisk_wake(client_)); }
+
  private:
   RamDisk(ramdisk_client_t* client) : client_(client) {}
 

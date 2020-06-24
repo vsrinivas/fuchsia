@@ -18,11 +18,10 @@
 #include <fs-management/mount.h>
 
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 
 namespace fs_test {
 
-// Creates a ramdisk with an optional FVM partition. Returns the ram-disk and the device path.
+// Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
 static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
     const TestFilesystemOptions& options) {
   // Create a ram-disk.
@@ -53,13 +52,20 @@ TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
                                .use_fvm = true,
                                .device_block_size = 512,
                                .device_block_count = 131'072,
-                               .fvm_slice_size = 1'048'576,
-                               .file_system = &MinfsFilesystem::SharedInstance()};
+                               .fvm_slice_size = 8 * 1'048'576,
+                               .filesystem = &MinfsFilesystem::SharedInstance()};
+}
+
+TestFilesystemOptions TestFilesystemOptions::MinfsWithoutFvm() {
+  TestFilesystemOptions minfs_with_no_fvm = TestFilesystemOptions::DefaultMinfs();
+  minfs_with_no_fvm.description = "MinfsWithoutFvm";
+  minfs_with_no_fvm.use_fvm = false;
+  return minfs_with_no_fvm;
 }
 
 TestFilesystemOptions TestFilesystemOptions::DefaultMemfs() {
   return TestFilesystemOptions{.description = "Memfs",
-                               .file_system = &MemfsFilesystem::SharedInstance()};
+                               .filesystem = &MemfsFilesystem::SharedInstance()};
 }
 
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options) {
@@ -67,11 +73,8 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
 }
 
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
-  TestFilesystemOptions minfs_with_no_fvm = TestFilesystemOptions::DefaultMinfs();
-  minfs_with_no_fvm.description = "MinfsWithoutFvm";
-  minfs_with_no_fvm.use_fvm = false;
   return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
-                                            minfs_with_no_fvm,
+                                            TestFilesystemOptions::MinfsWithoutFvm(),
                                             TestFilesystemOptions::DefaultMemfs()};
 }
 
@@ -134,6 +137,8 @@ class MinfsInstance : public FilesystemInstance {
     return zx::make_status(
         fsck(device_path_.c_str(), DISK_FORMAT_MINFS, &options, launch_stdio_sync));
   }
+
+  isolated_devmgr::RamDisk* GetRamDisk() override { return &ram_disk_; }
 
  private:
   isolated_devmgr::RamDisk ram_disk_;
@@ -210,7 +215,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
 
 zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& options) {
   // Make a file system.
-  auto instance_or = options.file_system->Make(options);
+  auto instance_or = options.filesystem->Make(options);
   if (instance_or.is_error()) {
     return instance_or.take_error();
   }
@@ -221,16 +226,16 @@ zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& o
     FX_LOGS(ERROR) << "Unable to create mount point: " << errno;
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  TestFilesystem file_system(options, std::move(instance_or).value(), mount_path_c_str);
-  auto status = file_system.Mount();
+  TestFilesystem filesystem(options, std::move(instance_or).value(), mount_path_c_str);
+  auto status = filesystem.Mount();
   if (status.is_error()) {
     return status.take_error();
   }
-  return zx::ok(std::move(file_system));
+  return zx::ok(std::move(filesystem));
 }
 
 TestFilesystem::~TestFilesystem() {
-  if (file_system_) {
+  if (filesystem_) {
     if (mounted_) {
       auto status = Unmount();
       if (status.is_error()) {
@@ -242,7 +247,7 @@ TestFilesystem::~TestFilesystem() {
 }
 
 zx::status<> TestFilesystem::Mount() {
-  auto status = file_system_->Mount(mount_path_);
+  auto status = filesystem_->Mount(mount_path_);
   if (status.is_ok()) {
     mounted_ = true;
   }
@@ -250,16 +255,16 @@ zx::status<> TestFilesystem::Mount() {
 }
 
 zx::status<> TestFilesystem::Unmount() {
-  if (!file_system_) {
+  if (!filesystem_) {
     return zx::ok();
   }
-  auto status = file_system_->Unmount(mount_path_.c_str());
+  auto status = filesystem_->Unmount(mount_path_.c_str());
   if (status.is_ok()) {
     mounted_ = false;
   }
   return status;
 }
 
-zx::status<> TestFilesystem::Fsck() { return file_system_->Fsck(); }
+zx::status<> TestFilesystem::Fsck() { return filesystem_->Fsck(); }
 
 }  // namespace fs_test

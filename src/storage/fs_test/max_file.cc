@@ -239,7 +239,7 @@ std::vector<ParamType> GetTestCombinations() {
     options.device_block_count = 1'048'576;
     options.fvm_slice_size = 8'388'608;
     test_combinations.push_back(ParamType{options, false});
-    if (options.file_system->GetTraits().can_unmount) {
+    if (options.filesystem->GetTraits().can_unmount) {
       test_combinations.push_back(ParamType{options, true});
     }
   }

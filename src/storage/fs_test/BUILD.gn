@@ -31,12 +31,9 @@ shared_library("fs_test") {
     "misc.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//sdk/lib/fdio",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/bin/minfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
@@ -45,6 +42,7 @@ shared_library("fs_test") {
     "//zircon/system/ulib/memfs",
   ]
   public_deps = [
+    "//src/lib/isolated_devmgr/v2_component:client",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
@@ -214,6 +212,30 @@ fuchsia_component("link-tests") {
   ]
 }
 
+test("minfs_tests") {
+  sources = [ "minfs.cc" ]
+  deps = [
+    ":fs_test",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/minfs",
+  ]
+}
+
+fuchsia_component("minfs-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/minfs-tests.cml"
+  deps = [
+    ":manifests",
+    ":minfs_tests",
+  ]
+}
+
 test("overflow_tests") {
   sources = [ "overflow.cc" ]
   deps = [
@@ -260,6 +282,7 @@ fuchsia_test_package("fs-tests") {
     ":dot-dot-tests",
     ":fcntl-tests",
     ":link-tests",
+    ":minfs-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
@@ -302,6 +325,7 @@ action("manifests") {
     "$target_gen_dir/fcntl-tests.cml",
     "$target_gen_dir/link-tests.cml",
     "$target_gen_dir/max-file-tests.cml",
+    "$target_gen_dir/minfs-tests.cml",
     "$target_gen_dir/overflow-tests.cml",
     "$target_gen_dir/read-write-tests.cml",
   ]

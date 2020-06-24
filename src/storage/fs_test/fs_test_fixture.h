@@ -24,6 +24,7 @@ class __EXPORT BaseFilesystemTest : public testing::Test {
   }
 
   TestFilesystem& fs() { return fs_; }
+  const TestFilesystem& fs() const { return fs_; }
 
  protected:
   TestFilesystem fs_;

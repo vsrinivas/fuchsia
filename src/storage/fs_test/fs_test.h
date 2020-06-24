@@ -10,22 +10,26 @@
 
 #include <string>
 
+#include <fbl/unique_fd.h>
 #include <fs-management/format.h>
+
+#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 
 namespace fs_test {
 
 class Filesystem;
 
 struct TestFilesystemOptions {
-  static TestFilesystemOptions DefaultMinfs();
-  static TestFilesystemOptions DefaultMemfs();
+  __EXPORT static TestFilesystemOptions DefaultMinfs();
+  __EXPORT static TestFilesystemOptions MinfsWithoutFvm();
+  __EXPORT static TestFilesystemOptions DefaultMemfs();
 
   std::string description;
   bool use_fvm = false;
   uint64_t device_block_size = 0;
   uint64_t device_block_count = 0;
   uint64_t fvm_slice_size = 0;
-  const Filesystem* file_system = nullptr;
+  const Filesystem* filesystem = nullptr;
 };
 
 __EXPORT std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
@@ -43,6 +47,7 @@ class FilesystemInstance {
   virtual zx::status<> Mount(const std::string& mount_path) = 0;
   virtual zx::status<> Unmount(const std::string& mount_path) = 0;
   virtual zx::status<> Fsck() = 0;
+  virtual isolated_devmgr::RamDisk* GetRamDisk() { return nullptr; }
 
  protected:
   // A wrapper around fs-management that can be used by subclasses if they so wish.
@@ -120,6 +125,7 @@ class __EXPORT TestFilesystem {
 
   ~TestFilesystem();
 
+  const TestFilesystemOptions& options() const { return options_; }
   const std::string& mount_path() const { return mount_path_; }
   bool is_mounted() const { return mounted_; }
 
@@ -133,15 +139,22 @@ class __EXPORT TestFilesystem {
   // called first if that is required.
   zx::status<> Fsck();
 
-  const Filesystem::Traits& GetTraits() const { return options_.file_system->GetTraits(); }
+  const Filesystem::Traits& GetTraits() const { return options_.filesystem->GetTraits(); }
+
+  fbl::unique_fd GetRootFd() const {
+    return fbl::unique_fd(open(mount_path_.c_str(), O_RDONLY | O_DIRECTORY));
+  }
+
+  // Returns the ramdisk, or nullptr if one isn't being used.
+  isolated_devmgr::RamDisk* GetRamDisk() const { return filesystem_->GetRamDisk(); }
 
  private:
   TestFilesystem(const TestFilesystemOptions& options,
-                 std::unique_ptr<FilesystemInstance> file_system, const std::string& mount_path)
-      : options_(options), file_system_(std::move(file_system)), mount_path_(mount_path) {}
+                 std::unique_ptr<FilesystemInstance> filesystem, const std::string& mount_path)
+      : options_(options), filesystem_(std::move(filesystem)), mount_path_(mount_path) {}
 
   TestFilesystemOptions options_;
-  std::unique_ptr<FilesystemInstance> file_system_;
+  std::unique_ptr<FilesystemInstance> filesystem_;
   std::string mount_path_;
   bool mounted_ = false;
 };
