@@ -197,7 +197,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
                                                 const fbl::RefPtr<zx_device_t>& child,
                                                 const char* proxy_args,
                                                 const zx_device_prop_t* props, uint32_t prop_count,
-                                                zx::channel client_remote) {
+                                                zx::vmo inspect, zx::channel client_remote) {
   bool add_invisible = child->flags() & DEV_FLAG_INVISIBLE;
   fuchsia::device::manager::AddDeviceConfig add_device_config;
 

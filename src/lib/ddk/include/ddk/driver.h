@@ -162,6 +162,9 @@ typedef struct device_add_args {
   // If DEVICE_ADD_INVISIBLE is set, the client will not be connected until
   // device_make_visible is called.
   zx_handle_t client_remote;
+
+  // Optional VMO representing that will get used in devfs inspect tree.
+  zx_handle_t inspect_vmo;
 } device_add_args_t;
 
 typedef struct device_make_visible_args {

@@ -79,6 +79,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   // Otherwise we will pass this channel to the devcoordinator via internal::device_add.
   zx::channel client_remote(args->client_remote);
 
+  zx::vmo inspect(args->inspect_vmo);
+
   {
     auto api_ctx = internal::ContextForApi();
     fbl::AutoLock lock(&api_ctx->api_lock());
@@ -139,14 +141,15 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
       r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
-                             std::move(client_remote));
+                             std::move(inspect), std::move(client_remote));
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
       dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
-      r = api_ctx->DeviceAdd(dev, parent_ref, nullptr, 0, nullptr,
+      r = api_ctx->DeviceAdd(dev, parent_ref, nullptr, 0, nullptr, zx::vmo(),
                              zx::channel() /* client_remote */);
     } else {
       bool pass_client_remote = args->flags & DEVICE_ADD_INVISIBLE;
       r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, nullptr,
+                             std::move(inspect),
                              pass_client_remote ? std::move(client_remote) : zx::channel());
     }
     if (r != ZX_OK) {
