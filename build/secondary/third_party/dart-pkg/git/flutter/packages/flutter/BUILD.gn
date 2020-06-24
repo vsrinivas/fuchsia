@@ -14,6 +14,7 @@ dart_library("flutter") {
 
   deps = [
     "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/characters",
     "//third_party/dart-pkg/pub/collection",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/typed_data",
