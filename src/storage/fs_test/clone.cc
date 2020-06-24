@@ -22,7 +22,7 @@
 namespace fs_test {
 namespace {
 
-using CloneTest = FileSystemTest;
+using CloneTest = FilesystemTest;
 
 TEST_P(CloneTest, SimpleClone) {
   std::string file = GetPath("file");
@@ -55,7 +55,7 @@ TEST_P(CloneTest, SimpleClone) {
   ASSERT_EQ(unlink(file.c_str()), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, CloneTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, CloneTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

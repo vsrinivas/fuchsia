@@ -24,7 +24,7 @@
 namespace fs_test {
 namespace {
 
-using AppendTest = FileSystemTest;
+using AppendTest = FilesystemTest;
 
 TEST_P(AppendTest, Append) {
   char buf[4096];
@@ -145,11 +145,11 @@ TEST_P(AppendTest, AppendOnClone) {
   ASSERT_EQ(unlink(append_clone.c_str()), 0);
 }
 
-using ParamType = std::tuple<TestFileSystemOptions, /*thread_count=*/int>;
+using ParamType = std::tuple<TestFilesystemOptions, /*thread_count=*/int>;
 
-class AppendAtomicTest : public BaseFileSystemTest, public testing::WithParamInterface<ParamType> {
+class AppendAtomicTest : public BaseFilesystemTest, public testing::WithParamInterface<ParamType> {
  public:
-  AppendAtomicTest() : BaseFileSystemTest(std::get<0>(GetParam())) {}
+  AppendAtomicTest() : BaseFilesystemTest(std::get<0>(GetParam())) {}
 
   int thread_count() const { return std::get<1>(GetParam()); }
 };
@@ -225,11 +225,11 @@ std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) 
   return s.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AppendTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AppendTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AppendAtomicTest,
-                         testing::Combine(testing::ValuesIn(AllTestFileSystems()),
+                         testing::Combine(testing::ValuesIn(AllTestFilesystems()),
                                           testing::Values(1, 2, 5, 10)),
                          GetParamDescription);
 

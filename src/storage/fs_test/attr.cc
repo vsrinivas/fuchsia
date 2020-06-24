@@ -22,7 +22,7 @@
 namespace fs_test {
 namespace {
 
-using AttrTest = FileSystemTest;
+using AttrTest = FilesystemTest;
 
 zx_time_t ToNanoSeconds(struct timespec ts) {
   // assumes very small number of seconds in deltas
@@ -206,7 +206,7 @@ TEST_P(AttrTest, ParentModificationTimeUpdatedCorrectly) {
   ASSERT_EQ(rmdir(parent.c_str()), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AttrTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AttrTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

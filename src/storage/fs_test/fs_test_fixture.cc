@@ -6,7 +6,7 @@
 
 namespace fs_test {
 
-BaseFileSystemTest::~BaseFileSystemTest() {
+BaseFilesystemTest::~BaseFilesystemTest() {
   if (fs_.is_mounted()) {
     EXPECT_EQ(fs_.Unmount().status_value(), ZX_OK);
   }

@@ -9,7 +9,7 @@
 namespace fs_test {
 namespace {
 
-using ReadWriteTest = FileSystemTest;
+using ReadWriteTest = FilesystemTest;
 
 TEST_P(ReadWriteTest, ReadFileAfterWritingFileSucceeds) {
   std::string file = fs_.mount_path() + "/123";
@@ -21,7 +21,7 @@ TEST_P(ReadWriteTest, ReadFileAfterWritingFileSucceeds) {
   EXPECT_TRUE(!memcmp(buf, "hello", 5));
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, ReadWriteTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, ReadWriteTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

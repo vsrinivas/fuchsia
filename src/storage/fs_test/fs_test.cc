@@ -24,7 +24,7 @@ namespace fs_test {
 
 // Creates a ramdisk with an optional FVM partition. Returns the ram-disk and the device path.
 static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
-    const TestFileSystemOptions& options) {
+    const TestFilesystemOptions& options) {
   // Create a ram-disk.
   auto ram_disk_or =
       isolated_devmgr::RamDisk::Create(options.device_block_size, options.device_block_count);
@@ -48,34 +48,34 @@ static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDis
   return zx::ok(std::make_pair(std::move(ram_disk_or).value(), device_path));
 }
 
-TestFileSystemOptions TestFileSystemOptions::DefaultMinfs() {
-  return TestFileSystemOptions{.description = "MinfsWithFvm",
+TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
+  return TestFilesystemOptions{.description = "MinfsWithFvm",
                                .use_fvm = true,
                                .device_block_size = 512,
                                .device_block_count = 131'072,
                                .fvm_slice_size = 1'048'576,
-                               .file_system = &MinfsFileSystem::SharedInstance()};
+                               .file_system = &MinfsFilesystem::SharedInstance()};
 }
 
-TestFileSystemOptions TestFileSystemOptions::DefaultMemfs() {
-  return TestFileSystemOptions{.description = "Memfs",
-                               .file_system = &MemfsFileSystem::SharedInstance()};
+TestFilesystemOptions TestFilesystemOptions::DefaultMemfs() {
+  return TestFilesystemOptions{.description = "Memfs",
+                               .file_system = &MemfsFilesystem::SharedInstance()};
 }
 
-std::ostream& operator<<(std::ostream& out, const TestFileSystemOptions& options) {
+std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options) {
   return out << options.description;
 }
 
-std::vector<TestFileSystemOptions> AllTestFileSystems() {
-  TestFileSystemOptions minfs_with_no_fvm = TestFileSystemOptions::DefaultMinfs();
+std::vector<TestFilesystemOptions> AllTestFilesystems() {
+  TestFilesystemOptions minfs_with_no_fvm = TestFilesystemOptions::DefaultMinfs();
   minfs_with_no_fvm.description = "MinfsWithoutFvm";
   minfs_with_no_fvm.use_fvm = false;
-  return std::vector<TestFileSystemOptions>{TestFileSystemOptions::DefaultMinfs(),
+  return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
                                             minfs_with_no_fvm,
-                                            TestFileSystemOptions::DefaultMemfs()};
+                                            TestFilesystemOptions::DefaultMemfs()};
 }
 
-zx::status<> FileSystemInstance::Mount(const std::string& device_path,
+zx::status<> FilesystemInstance::Mount(const std::string& device_path,
                                        const std::string& mount_path, disk_format_t format) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
@@ -99,7 +99,7 @@ zx::status<> FileSystemInstance::Mount(const std::string& device_path,
   return zx::ok();
 }
 
-zx::status<> FileSystem::Format(const std::string& device_path, disk_format_t format) {
+zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t format) {
   auto status =
       zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &default_mkfs_options));
   if (status.is_error()) {
@@ -110,13 +110,13 @@ zx::status<> FileSystem::Format(const std::string& device_path, disk_format_t fo
   return zx::ok();
 }
 
-class MinfsInstance : public FileSystemInstance {
+class MinfsInstance : public FilesystemInstance {
  public:
   MinfsInstance(isolated_devmgr::RamDisk ram_disk, const std::string& device_path)
       : ram_disk_(std::move(ram_disk)), device_path_(device_path) {}
 
   zx::status<> Mount(const std::string& mount_path) override {
-    return FileSystemInstance::Mount(device_path_, mount_path, DISK_FORMAT_MINFS);
+    return FilesystemInstance::Mount(device_path_, mount_path, DISK_FORMAT_MINFS);
   }
 
   zx::status<> Unmount(const std::string& mount_path) override {
@@ -140,21 +140,21 @@ class MinfsInstance : public FileSystemInstance {
   std::string device_path_;
 };
 
-zx::status<std::unique_ptr<FileSystemInstance>> MinfsFileSystem::Make(
-    const TestFileSystemOptions& options) const {
+zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Make(
+    const TestFilesystemOptions& options) const {
   auto ram_disk_or = CreateRamDisk(options);
   if (ram_disk_or.is_error()) {
     return ram_disk_or.take_error();
   }
   auto [ram_disk, device_path] = std::move(ram_disk_or).value();
-  zx::status<> status = FileSystem::Format(device_path, DISK_FORMAT_MINFS);
+  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_MINFS);
   if (status.is_error()) {
     return status.take_error();
   }
   return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_disk), device_path));
 }
 
-class MemfsInstance : public FileSystemInstance {
+class MemfsInstance : public FilesystemInstance {
  public:
   MemfsInstance() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
     FX_CHECK(loop_.StartThread() == ZX_OK);
@@ -198,8 +198,8 @@ class MemfsInstance : public FileSystemInstance {
   zx::channel root_;  // Not valid after mounted.
 };
 
-zx::status<std::unique_ptr<FileSystemInstance>> MemfsFileSystem::Make(
-    const TestFileSystemOptions& options) const {
+zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
+    const TestFilesystemOptions& options) const {
   auto instance = std::make_unique<MemfsInstance>();
   zx::status<> status = instance->Format();
   if (status.is_error()) {
@@ -208,7 +208,7 @@ zx::status<std::unique_ptr<FileSystemInstance>> MemfsFileSystem::Make(
   return zx::ok(std::move(instance));
 }
 
-zx::status<TestFileSystem> TestFileSystem::Create(const TestFileSystemOptions& options) {
+zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& options) {
   // Make a file system.
   auto instance_or = options.file_system->Make(options);
   if (instance_or.is_error()) {
@@ -221,7 +221,7 @@ zx::status<TestFileSystem> TestFileSystem::Create(const TestFileSystemOptions& o
     FX_LOGS(ERROR) << "Unable to create mount point: " << errno;
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  TestFileSystem file_system(options, std::move(instance_or).value(), mount_path_c_str);
+  TestFilesystem file_system(options, std::move(instance_or).value(), mount_path_c_str);
   auto status = file_system.Mount();
   if (status.is_error()) {
     return status.take_error();
@@ -229,7 +229,7 @@ zx::status<TestFileSystem> TestFileSystem::Create(const TestFileSystemOptions& o
   return zx::ok(std::move(file_system));
 }
 
-TestFileSystem::~TestFileSystem() {
+TestFilesystem::~TestFilesystem() {
   if (file_system_) {
     if (mounted_) {
       auto status = Unmount();
@@ -241,7 +241,7 @@ TestFileSystem::~TestFileSystem() {
   }
 }
 
-zx::status<> TestFileSystem::Mount() {
+zx::status<> TestFilesystem::Mount() {
   auto status = file_system_->Mount(mount_path_);
   if (status.is_ok()) {
     mounted_ = true;
@@ -249,7 +249,7 @@ zx::status<> TestFileSystem::Mount() {
   return status;
 }
 
-zx::status<> TestFileSystem::Unmount() {
+zx::status<> TestFilesystem::Unmount() {
   if (!file_system_) {
     return zx::ok();
   }
@@ -260,6 +260,6 @@ zx::status<> TestFileSystem::Unmount() {
   return status;
 }
 
-zx::status<> TestFileSystem::Fsck() { return file_system_->Fsck(); }
+zx::status<> TestFilesystem::Fsck() { return file_system_->Fsck(); }
 
 }  // namespace fs_test

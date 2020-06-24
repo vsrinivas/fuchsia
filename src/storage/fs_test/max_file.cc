@@ -22,14 +22,14 @@
 namespace fs_test {
 namespace {
 
-using ParamType = std::tuple<TestFileSystemOptions, /*remount=*/bool>;
+using ParamType = std::tuple<TestFilesystemOptions, /*remount=*/bool>;
 
 constexpr int kMb = 1 << 20;
 constexpr int kPrintSize = 100 * kMb;
 
-class MaxFileTest : public BaseFileSystemTest, public testing::WithParamInterface<ParamType> {
+class MaxFileTest : public BaseFilesystemTest, public testing::WithParamInterface<ParamType> {
  public:
-  MaxFileTest() : BaseFileSystemTest(std::get<0>(GetParam())) {}
+  MaxFileTest() : BaseFilesystemTest(std::get<0>(GetParam())) {}
 
   bool ShouldRemount() const { return std::get<1>(GetParam()); }
 };
@@ -232,7 +232,7 @@ std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) 
 
 std::vector<ParamType> GetTestCombinations() {
   std::vector<ParamType> test_combinations;
-  for (TestFileSystemOptions options : AllTestFileSystems()) {
+  for (TestFilesystemOptions options : AllTestFilesystems()) {
     // Use a larger ram-disk than the default so that the maximum transaction limit is exceeded for
     // during delayed data allocation on non-FVM-backed Minfs partitions.
     options.device_block_size = 512;

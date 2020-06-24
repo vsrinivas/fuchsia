@@ -26,7 +26,7 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-using AccessTest = FileSystemTest;
+using AccessTest = FilesystemTest;
 
 TEST_P(AccessTest, ReadOnlyFileIsImmutable) {
   const std::string filename = GetPath("alpha");
@@ -447,11 +447,11 @@ TEST_P(AccessTest, TestOpathFdCount) {
   ASSERT_EQ(rmdir(dirname.c_str()), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AccessTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AccessTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirectoryPermissionTest,
-                         testing::ValuesIn(AllTestFileSystems()),
+                         testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

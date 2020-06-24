@@ -17,7 +17,7 @@
 namespace fs_test {
 namespace {
 
-using DotDotTest = FileSystemTest;
+using DotDotTest = FilesystemTest;
 
 // Test cases of '..' where the path can be canonicalized on the client.
 TEST_P(DotDotTest, DotDotClient) {
@@ -135,7 +135,7 @@ TEST_P(DotDotTest, DotDotRename) {
   ASSERT_EQ(unlink(GetPath("foo").c_str()), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DotDotTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DotDotTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

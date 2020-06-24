@@ -19,7 +19,7 @@
 namespace fs_test {
 namespace {
 
-using OverflowTest = FileSystemTest;
+using OverflowTest = FilesystemTest;
 
 // Make a 'len' byte long filename (not including null) consisting of the character 'c'.
 std::string MakeName(std::string_view mount_path, size_t len, char c) {
@@ -122,7 +122,7 @@ TEST_P(OverflowTest, OutOfRangeTruncateAndSeekFails) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, OverflowTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, OverflowTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

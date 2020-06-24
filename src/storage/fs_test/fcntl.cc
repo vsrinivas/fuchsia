@@ -18,7 +18,7 @@
 namespace fs_test {
 namespace {
 
-using FcntlTest = FileSystemTest;
+using FcntlTest = FilesystemTest;
 
 TEST_P(FcntlTest, FcntlAppend) {
   fbl::unique_fd fd(open(GetPath("file").c_str(), O_APPEND | O_RDWR | O_CREAT, 0644));
@@ -97,7 +97,7 @@ TEST_P(FcntlTest, FcntlAccessBits) {
   ASSERT_EQ(unlink(GetPath("file").c_str()), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, FcntlTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, FcntlTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

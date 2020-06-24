@@ -11,11 +11,11 @@
 
 namespace fs_test {
 
-class __EXPORT BaseFileSystemTest : public testing::Test {
+class __EXPORT BaseFilesystemTest : public testing::Test {
  public:
-  BaseFileSystemTest(const TestFileSystemOptions& options)
-      : fs_(TestFileSystem::Create(options).value()) {}
-  ~BaseFileSystemTest();
+  BaseFilesystemTest(const TestFilesystemOptions& options)
+      : fs_(TestFilesystem::Create(options).value()) {}
+  ~BaseFilesystemTest();
 
   std::string GetPath(std::string_view relative_path) const {
     std::string path = fs_.mount_path() + "/";
@@ -23,30 +23,30 @@ class __EXPORT BaseFileSystemTest : public testing::Test {
     return path;
   }
 
-  TestFileSystem& fs() { return fs_; }
+  TestFilesystem& fs() { return fs_; }
 
  protected:
-  TestFileSystem fs_;
+  TestFilesystem fs_;
 };
 
 // Example:
 //
 // #include "fs_test_fixture.h"
 //
-// using MyTest = FileSystemTest;
+// using MyTest = FilesystemTest;
 //
 // TEST_P(MyTest, CheckThatFooSucceeds) {
 //   ...
 // }
 //
 // INSTANTIATE_TEST_SUITE_P(FooTests, MyTest,
-//                          testing::ValuesIn(AllTestFileSystems()),
+//                          testing::ValuesIn(AllTestFilesystems()),
 //                          testing::PrintToStringParamName());
 
-class FileSystemTest : public BaseFileSystemTest,
-                       public testing::WithParamInterface<TestFileSystemOptions> {
+class FilesystemTest : public BaseFilesystemTest,
+                       public testing::WithParamInterface<TestFilesystemOptions> {
  public:
-  FileSystemTest() : BaseFileSystemTest(GetParam()) {}
+  FilesystemTest() : BaseFilesystemTest(GetParam()) {}
 };
 
 }  // namespace fs_test

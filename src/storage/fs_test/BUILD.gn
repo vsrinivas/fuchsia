@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
@@ -52,8 +53,7 @@ shared_library("fs_test") {
   ]
 }
 
-executable("access_tests") {
-  testonly = true
+test("access_tests") {
   sources = [ "access.cc" ]
   deps = [
     ":fs_test",
@@ -72,8 +72,7 @@ fuchsia_component("access-tests") {
   ]
 }
 
-executable("append_tests") {
-  testonly = true
+test("append_tests") {
   sources = [ "append.cc" ]
   deps = [
     ":fs_test",
@@ -91,8 +90,7 @@ fuchsia_component("append-tests") {
   ]
 }
 
-executable("attr_tests") {
-  testonly = true
+test("attr_tests") {
   sources = [ "attr.cc" ]
   deps = [
     ":fs_test",
@@ -110,8 +108,7 @@ fuchsia_component("attr-tests") {
   ]
 }
 
-executable("basic_tests") {
-  testonly = true
+test("basic_tests") {
   sources = [ "basic.cc" ]
   deps = [
     ":fs_test",
@@ -128,8 +125,7 @@ fuchsia_component("basic-tests") {
   ]
 }
 
-executable("clone_tests") {
-  testonly = true
+test("clone_tests") {
   sources = [ "clone.cc" ]
   deps = [
     ":fs_test",
@@ -147,8 +143,7 @@ fuchsia_component("clone-tests") {
   ]
 }
 
-executable("directory_tests") {
-  testonly = true
+test("directory_tests") {
   sources = [ "directory.cc" ]
   deps = [
     ":fs_test",
@@ -166,8 +161,7 @@ fuchsia_component("directory-tests") {
   ]
 }
 
-executable("dot_dot_tests") {
-  testonly = true
+test("dot_dot_tests") {
   sources = [ "dot_dot.cc" ]
   deps = [
     ":fs_test",
@@ -184,8 +178,7 @@ fuchsia_component("dot-dot-tests") {
   ]
 }
 
-executable("fcntl_tests") {
-  testonly = true
+test("fcntl_tests") {
   sources = [ "fcntl.cc" ]
   deps = [
     ":fs_test",
@@ -203,8 +196,7 @@ fuchsia_component("fcntl-tests") {
   ]
 }
 
-executable("link_tests") {
-  testonly = true
+test("link_tests") {
   sources = [ "link.cc" ]
   deps = [
     ":fs_test",
@@ -222,8 +214,7 @@ fuchsia_component("link-tests") {
   ]
 }
 
-executable("overflow_tests") {
-  testonly = true
+test("overflow_tests") {
   sources = [ "overflow.cc" ]
   deps = [
     ":fs_test",
@@ -240,8 +231,7 @@ fuchsia_component("overflow-tests") {
   ]
 }
 
-executable("read_write_tests") {
-  testonly = true
+test("read_write_tests") {
   sources = [ "read_write.cc" ]
   deps = [
     ":fs_test",
@@ -275,8 +265,7 @@ fuchsia_test_package("fs-tests") {
   ]
 }
 
-executable("max_file_tests") {
-  testonly = true
+test("max_file_tests") {
   sources = [ "max_file.cc" ]
   deps = [
     ":fs_test",

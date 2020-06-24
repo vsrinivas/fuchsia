@@ -27,7 +27,7 @@
 namespace fs_test {
 namespace {
 
-using DirectoryTest = FileSystemTest;
+using DirectoryTest = FilesystemTest;
 
 TEST_P(DirectoryTest, DirectoryFilenameMax) {
   // TODO(smklein): This value may be filesystem-specific. Plumb it through
@@ -452,7 +452,7 @@ TEST_P(DirectoryTest, RenameIntoUnlinkedDirectoryFails) {
   ASSERT_EQ(errno, EPIPE);  // ZX_ERR_BAD_STATE maps to EPIPE, for now.
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirectoryTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirectoryTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

@@ -19,7 +19,7 @@
 namespace fs_test {
 namespace {
 
-using BasicTest = FileSystemTest;
+using BasicTest = FilesystemTest;
 
 TEST_P(BasicTest, Basic) {
   ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
@@ -75,7 +75,7 @@ TEST_P(BasicTest, UncleanClose) {
   ASSERT_EQ(unlink(GetPath("foobar").c_str()), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BasicTest, testing::ValuesIn(AllTestFileSystems()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BasicTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

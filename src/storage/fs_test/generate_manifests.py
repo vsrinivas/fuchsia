@@ -21,6 +21,6 @@ for file in sys.argv[2:]:
     substitute(
         {
             'binary':
-                'bin/' +
+                'test/' +
                 os.path.splitext(os.path.basename(file))[0].replace('-', '_')
         }, input, output)

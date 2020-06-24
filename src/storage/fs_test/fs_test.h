@@ -14,31 +14,31 @@
 
 namespace fs_test {
 
-class FileSystem;
+class Filesystem;
 
-struct TestFileSystemOptions {
-  static TestFileSystemOptions DefaultMinfs();
-  static TestFileSystemOptions DefaultMemfs();
+struct TestFilesystemOptions {
+  static TestFilesystemOptions DefaultMinfs();
+  static TestFilesystemOptions DefaultMemfs();
 
   std::string description;
   bool use_fvm = false;
   uint64_t device_block_size = 0;
   uint64_t device_block_count = 0;
   uint64_t fvm_slice_size = 0;
-  const FileSystem* file_system = nullptr;
+  const Filesystem* file_system = nullptr;
 };
 
-__EXPORT std::ostream& operator<<(std::ostream& out, const TestFileSystemOptions& options);
+__EXPORT std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
 
-__EXPORT std::vector<TestFileSystemOptions> AllTestFileSystems();
+__EXPORT std::vector<TestFilesystemOptions> AllTestFilesystems();
 
 // A file system instance is a specific instance created for test purposes.
-class FileSystemInstance {
+class FilesystemInstance {
  public:
-  FileSystemInstance() = default;
-  FileSystemInstance(const FileSystemInstance&) = delete;
-  FileSystemInstance& operator=(const FileSystemInstance&) = delete;
-  virtual ~FileSystemInstance() = default;
+  FilesystemInstance() = default;
+  FilesystemInstance(const FilesystemInstance&) = delete;
+  FilesystemInstance& operator=(const FilesystemInstance&) = delete;
+  virtual ~FilesystemInstance() = default;
 
   virtual zx::status<> Mount(const std::string& mount_path) = 0;
   virtual zx::status<> Unmount(const std::string& mount_path) = 0;
@@ -51,8 +51,8 @@ class FileSystemInstance {
 };
 
 // Base class for all supported file systems. It is a factory class that generates
-// instances of FileSystemInstance subclasses.
-class FileSystem {
+// instances of FilesystemInstance subclasses.
+class Filesystem {
  public:
   struct Traits {
     bool can_unmount = false;
@@ -60,8 +60,8 @@ class FileSystem {
     bool supports_hard_links = true;
   };
 
-  virtual zx::status<std::unique_ptr<FileSystemInstance>> Make(
-      const TestFileSystemOptions& options) const = 0;
+  virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
+      const TestFilesystemOptions& options) const = 0;
   virtual const Traits& GetTraits() const = 0;
 
  protected:
@@ -71,7 +71,7 @@ class FileSystem {
 
 // Template that implementations can use to gain the SharedInstance method.
 template <typename T>
-class FileSystemImpl : public FileSystem {
+class FilesystemImpl : public Filesystem {
  public:
   static const T& SharedInstance() {
     static const auto* const kInstance = new T();
@@ -80,10 +80,10 @@ class FileSystemImpl : public FileSystem {
 };
 
 // Support for Minfs.
-class MinfsFileSystem : public FileSystemImpl<MinfsFileSystem> {
+class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
  public:
-  zx::status<std::unique_ptr<FileSystemInstance>> Make(
-      const TestFileSystemOptions& options) const override;
+  zx::status<std::unique_ptr<FilesystemInstance>> Make(
+      const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {
     static Traits traits{
         .can_unmount = true,
@@ -95,10 +95,10 @@ class MinfsFileSystem : public FileSystemImpl<MinfsFileSystem> {
 };
 
 // Support for Memfs.
-class MemfsFileSystem : public FileSystemImpl<MemfsFileSystem> {
+class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
  public:
-  zx::status<std::unique_ptr<FileSystemInstance>> Make(
-      const TestFileSystemOptions& options) const override;
+  zx::status<std::unique_ptr<FilesystemInstance>> Make(
+      const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {
     static Traits traits{
         .can_unmount = false,
@@ -110,15 +110,15 @@ class MemfsFileSystem : public FileSystemImpl<MemfsFileSystem> {
 };
 
 // Helper that creates a test file system with the given options and will clean-up upon destruction.
-class __EXPORT TestFileSystem {
+class __EXPORT TestFilesystem {
  public:
   // Creates and returns a mounted test file system.
-  static zx::status<TestFileSystem> Create(const TestFileSystemOptions& options);
+  static zx::status<TestFilesystem> Create(const TestFilesystemOptions& options);
 
-  TestFileSystem(TestFileSystem&&) = default;
-  TestFileSystem& operator=(TestFileSystem&&) = default;
+  TestFilesystem(TestFilesystem&&) = default;
+  TestFilesystem& operator=(TestFilesystem&&) = default;
 
-  ~TestFileSystem();
+  ~TestFilesystem();
 
   const std::string& mount_path() const { return mount_path_; }
   bool is_mounted() const { return mounted_; }
@@ -133,15 +133,15 @@ class __EXPORT TestFileSystem {
   // called first if that is required.
   zx::status<> Fsck();
 
-  const FileSystem::Traits& GetTraits() const { return options_.file_system->GetTraits(); }
+  const Filesystem::Traits& GetTraits() const { return options_.file_system->GetTraits(); }
 
  private:
-  TestFileSystem(const TestFileSystemOptions& options,
-                 std::unique_ptr<FileSystemInstance> file_system, const std::string& mount_path)
+  TestFilesystem(const TestFilesystemOptions& options,
+                 std::unique_ptr<FilesystemInstance> file_system, const std::string& mount_path)
       : options_(options), file_system_(std::move(file_system)), mount_path_(mount_path) {}
 
-  TestFileSystemOptions options_;
-  std::unique_ptr<FileSystemInstance> file_system_;
+  TestFilesystemOptions options_;
+  std::unique_ptr<FilesystemInstance> file_system_;
   std::string mount_path_;
   bool mounted_ = false;
 };

@@ -22,7 +22,7 @@
 namespace fs_test {
 namespace {
 
-using HardLinkTest = FileSystemTest;
+using HardLinkTest = FilesystemTest;
 
 void CheckLinkCount(const std::string& path, unsigned count) {
   struct stat s;
@@ -296,9 +296,9 @@ TEST_P(HardLinkTest, Errors) {
   ASSERT_EQ(unlink(old_path.c_str()), 0);
 }
 
-std::vector<TestFileSystemOptions> GetTestCombinations() {
-  std::vector<TestFileSystemOptions> test_combinations;
-  for (TestFileSystemOptions options : AllTestFileSystems()) {
+std::vector<TestFilesystemOptions> GetTestCombinations() {
+  std::vector<TestFilesystemOptions> test_combinations;
+  for (TestFilesystemOptions options : AllTestFilesystems()) {
     if (options.file_system->GetTraits().supports_hard_links) {
       test_combinations.push_back(options);
     }
