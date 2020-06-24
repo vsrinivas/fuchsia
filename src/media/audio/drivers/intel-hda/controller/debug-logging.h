@@ -13,7 +13,7 @@
 // order to enable them, you can pass something like the following in the kernel
 // command line args.
 //
-//   driver.intel_hda.log=+trace,+spew
+//   driver.intel_hda.log=trace
 //
 constexpr size_t LOG_PREFIX_STORAGE = 32;
 

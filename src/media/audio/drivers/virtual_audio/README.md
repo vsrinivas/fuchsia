@@ -28,7 +28,7 @@ supported formats.
 TRACE and SPEW levels of logging are disabled by default. To enable them, use an 'fx set' command\
 like the following:
 
-    fx set x64 --args=kernel_cmdline_args=[\"driver.virtual_audio.log=+trace\"]
+    fx set x64 --args=kernel_cmdline_args=[\"driver.virtual_audio.log=trace\"]
 
 ## FIDL Interfaces
 
