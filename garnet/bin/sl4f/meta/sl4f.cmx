@@ -10,6 +10,7 @@
             "class/input-report",
             "class/light",
             "class/wlanphy",
+            "ft5726-touch",
             "svc/fuchsia.kernel.Stats",
             "sys/platform",
             "wifi"

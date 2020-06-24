@@ -5,6 +5,7 @@
 /// Enum for supported Device commands.
 pub enum DeviceMethod {
     GetDeviceName,
+    Rebind,
 }
 
 impl std::str::FromStr for DeviceMethod {
@@ -13,6 +14,7 @@ impl std::str::FromStr for DeviceMethod {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "GetDeviceName" => Ok(DeviceMethod::GetDeviceName),
+            "Rebind" => Ok(DeviceMethod::Rebind),
             _ => return Err(format_err!("invalid Device Facade method: {}", method)),
         }
     }
