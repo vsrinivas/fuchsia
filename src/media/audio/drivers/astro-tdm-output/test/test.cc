@@ -43,6 +43,9 @@ struct AstroAudioStreamOutCodecInitTest : public AstroAudioStreamOut {
   AstroAudioStreamOutCodecInitTest(zx_device_t* parent, std::unique_ptr<Tas27xx> codec)
       : AstroAudioStreamOut(parent) {
     codec_ = std::move(codec);
+    tdm_config_.type = metadata::TdmType::I2s;
+    tdm_config_.codec = metadata::Codec::Tas2770;
+
   }
 
   zx_status_t InitPDev() override {

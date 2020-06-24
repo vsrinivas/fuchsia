@@ -8,9 +8,21 @@
 namespace metadata {
 
 enum class Codec : uint32_t {
+  None,
+  Tas2770,
   Tas5782,
   Tas5805,
   Tas5720x3,
+};
+
+enum class TdmType : uint32_t {
+  I2s,
+  Pcm,
+};
+
+struct Tdm {
+  TdmType type;
+  Codec codec;
 };
 
 }  // namespace metadata

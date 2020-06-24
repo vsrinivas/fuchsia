@@ -19,6 +19,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/metadata/audio.h>
 #include <ddktl/protocol/gpio.h>
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-tdm-audio.h>
@@ -47,6 +48,7 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   std::unique_ptr<Tas27xx> codec_;           // protected for unit test.
   std::unique_ptr<AmlTdmDevice> aml_audio_;  // protected for unit test.
+  metadata::Tdm tdm_config_ = {};            // protected for unit test.
 
  private:
   friend class fbl::RefPtr<AstroAudioStreamOut>;

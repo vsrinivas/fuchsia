@@ -11,6 +11,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <fbl/auto_call.h>
@@ -29,9 +30,10 @@ enum {
 constexpr size_t kNumberOfChannels = 1;
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
+constexpr size_t kBytesPerSample = 2;
 // Calculate ring buffer size for 1 second of 16-bit, max rate.
 constexpr size_t kRingBufferSize =
-    fbl::round_up<size_t, size_t>(kMaxSampleRate * 2 * kNumberOfChannels, PAGE_SIZE);
+    fbl::round_up<size_t, size_t>(kMaxSampleRate * kBytesPerSample * kNumberOfChannels, PAGE_SIZE);
 
 AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent) : SimpleAudioStream(parent, false) {
   frames_per_second_ = kMinSampleRate;
@@ -48,16 +50,32 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   aml_audio_->Initialize();
   // Setup TDM.
 
-  // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample.
-  // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
-  // to provide i2s framing
-  aml_audio_->ConfigTdmOutSlot(3, 1, 31, 15, 0);
+  switch (tdm_config_.type) {
+    case metadata::TdmType::I2s:
+      // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample.
+      // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
+      // to provide i2s framing
+      aml_audio_->ConfigTdmOutSlot(3, 1, 31, 15, 0);
 
-  // Lane 0, unmask first slot only (0x00000002),
-  status = aml_audio_->ConfigTdmOutLane(0, 0x00000002, 0);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
-    return status;
+      // Lane 0, unmask first slot only (0x00000002),
+      status = aml_audio_->ConfigTdmOutLane(0, 0x00000002, 0);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
+        return status;
+      }
+      break;
+    case metadata::TdmType::Pcm:
+      // bitoffset = 3, 1 slot, 16 bits/slot, 16 bits/sample.
+      // bitoffest = 3 places msb of sample one sclk period after fsync to provide PCM framing.
+      aml_audio_->ConfigTdmOutSlot(3, 0, 15, 15, 0);
+
+      // Lane 0, unmask first slot1 (0x00000001),
+      status = aml_audio_->ConfigTdmOutLane(0, 0x00000001, 0);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
+        return status;
+      }
+      break;
   }
 
   // PLL sourcing audio clock tree should be running at 768MHz
@@ -76,12 +94,26 @@ zx_status_t AstroAudioStreamOut::InitHW() {
 
   // 48kHz: sclk=76.8MHz/25 = 3.072MHz, 3.072MHz/64=48kkHz
   // 96kHz: sclk=153.6MHz/25 = 6.144MHz, 6.144MHz/64=96kHz
-  // lrduty = 32 sclk cycles (write 31) for i2s
-  // invert sclk = true = sclk is rising edge in middle of bit for i2s
-  status = aml_audio_->SetSclkDiv(24, 31, 63, true);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
-    return status;
+  switch (tdm_config_.type) {
+    case metadata::TdmType::I2s:
+      // lrduty = 32 sclk cycles (write 31) for i2s
+      // invert sclk = true = sclk is rising edge in middle of bit for i2s
+      status = aml_audio_->SetSclkDiv(24, 31, 63, true);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
+        return status;
+      }
+      break;
+    case metadata::TdmType::Pcm:
+      // lrduty = 1 sclk cycles (write 0) for PCM
+      // TODO(andresoportus): For now we set lrduty to 2 sclk cycles (write 1), 1 does not work.
+      // invert sclk = false = sclk is falling edge in middle of bit for PCM
+      status = aml_audio_->SetSclkDiv(24, 1, 15, false);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
+        return status;
+      }
+      break;
   }
 
   // Allow clock divider changes to stabilize
@@ -105,12 +137,30 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return status;
   }
 
+  size_t actual = 0;
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &tdm_config_,
+                               sizeof(metadata::Tdm), &actual);
+  if (status != ZX_OK || sizeof(metadata::Tdm) != actual) {
+    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    return status;
+  }
+
   zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t actual;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual < countof(fragments)) {
-    zxlogf(ERROR, "could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
+  // Either we have all fragments (for I2S) or we have only one fragment (for PCM).
+  switch (tdm_config_.type) {
+    case metadata::TdmType::I2s:
+      if (actual != countof(fragments)) {
+        zxlogf(ERROR, "could not get the correct number of fragments for I2S %lu", actual);
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      break;
+    case metadata::TdmType::Pcm:
+      if (actual != 1) {
+        zxlogf(ERROR, "could not get the correct number of fragments for PCM %lu", actual);
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      break;
   }
 
   pdev_ = fragments[FRAGMENT_PDEV];
@@ -118,24 +168,32 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient audio_fault = fragments[FRAGMENT_FAULT_GPIO];
-  ddk::GpioProtocolClient audio_en = fragments[FRAGMENT_ENABLE_GPIO];
+  switch (tdm_config_.type) {
+    case metadata::TdmType::I2s: {
+      ddk::GpioProtocolClient audio_fault = fragments[FRAGMENT_FAULT_GPIO];
+      ddk::GpioProtocolClient audio_en = fragments[FRAGMENT_ENABLE_GPIO];
 
-  if (!audio_fault.is_valid() || !audio_en.is_valid()) {
-    zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
+      if (!audio_fault.is_valid() || !audio_en.is_valid()) {
+        zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
+        return ZX_ERR_NO_RESOURCES;
+      }
 
-  ddk::I2cChannel i2c = fragments[FRAGMENT_I2C];
-  if (!i2c.is_valid()) {
-    zxlogf(ERROR, "%s failed to allocate i2c", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
+      ddk::I2cChannel i2c = fragments[FRAGMENT_I2C];
+      if (!i2c.is_valid()) {
+        zxlogf(ERROR, "%s failed to allocate i2c", __func__);
+        return ZX_ERR_NO_RESOURCES;
+      }
 
-  codec_ = Tas27xx::Create(std::move(i2c), std::move(audio_en), std::move(audio_fault), true, true);
-  if (!codec_) {
-    zxlogf(ERROR, "%s could not get tas27xx", __func__);
-    return ZX_ERR_NO_RESOURCES;
+      codec_ =
+          Tas27xx::Create(std::move(i2c), std::move(audio_en), std::move(audio_fault), true, true);
+      if (!codec_) {
+        zxlogf(ERROR, "%s could not get tas27xx", __func__);
+        return ZX_ERR_NO_RESOURCES;
+      }
+    } break;
+    case metadata::TdmType::Pcm:
+      // No codec for PCM.
+      break;
   }
 
   status = pdev_.GetBti(0, &bti_);
@@ -149,10 +207,22 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   if (status != ZX_OK) {
     return status;
   }
-  aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B);
-  if (aml_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create tdm device", __func__);
-    return ZX_ERR_NO_MEMORY;
+
+  switch (tdm_config_.type) {
+    case metadata::TdmType::I2s:
+      aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B);
+      if (aml_audio_ == nullptr) {
+        zxlogf(ERROR, "%s failed to create TDM device", __func__);
+        return ZX_ERR_NO_MEMORY;
+      }
+      break;
+    case metadata::TdmType::Pcm:
+      aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_A, FRDDR_A, MCLK_A);
+      if (aml_audio_ == nullptr) {
+        zxlogf(ERROR, "%s failed to create PCM device", __func__);
+        return ZX_ERR_NO_MEMORY;
+      }
+      break;
   }
 
   // Initialize the ring buffer
@@ -175,10 +245,12 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return status;
   }
 
-  status = codec_->Init(frames_per_second_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not initialize tas27xx - %d\n", __func__, status);
-    return status;
+  if (tdm_config_.codec != metadata::Codec::None) {
+    status = codec_->Init(frames_per_second_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s could not initialize tas27xx - %d\n", __func__, status);
+      return status;
+    }
   }
 
   return ZX_OK;
@@ -198,27 +270,46 @@ zx_status_t AstroAudioStreamOut::Init() {
   }
 
   // Set our gain capabilities.
-  float gain;
-  status = codec_->GetGain(&gain);
-  if (status != ZX_OK) {
-    return status;
+  if (tdm_config_.codec != metadata::Codec::None) {
+    float gain;
+    status = codec_->GetGain(&gain);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    cur_gain_state_.cur_gain = gain;
+    cur_gain_state_.cur_mute = false;
+    cur_gain_state_.cur_agc = false;
+
+    cur_gain_state_.min_gain = codec_->GetMinGain();
+    cur_gain_state_.max_gain = codec_->GetMaxGain();
+    cur_gain_state_.gain_step = codec_->GetGainStep();
+    cur_gain_state_.can_mute = false;
+    cur_gain_state_.can_agc = false;
+  } else {
+    cur_gain_state_.cur_gain = 1.f;
+    cur_gain_state_.cur_mute = false;
+    cur_gain_state_.cur_agc = false;
+
+    cur_gain_state_.min_gain = 1.f;
+    cur_gain_state_.max_gain = 1.f;
+    cur_gain_state_.gain_step = .0f;
+    cur_gain_state_.can_mute = false;
+    cur_gain_state_.can_agc = false;
   }
 
-  cur_gain_state_.cur_gain = gain;
-  cur_gain_state_.cur_mute = false;
-  cur_gain_state_.cur_agc = false;
-
-  cur_gain_state_.min_gain = codec_->GetMinGain();
-  cur_gain_state_.max_gain = codec_->GetMaxGain();
-  cur_gain_state_.gain_step = codec_->GetGainStep();
-  cur_gain_state_.can_mute = false;
-  cur_gain_state_.can_agc = false;
-
-  snprintf(device_name_, sizeof(device_name_), "astro-audio-out");
+  switch (tdm_config_.type) {
+    case metadata::TdmType::I2s:
+      snprintf(device_name_, sizeof(device_name_), "astro-audio-i2s-out");
+      unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
+      break;
+    case metadata::TdmType::Pcm:
+      snprintf(device_name_, sizeof(device_name_), "astro-audio-pcm-out");
+      unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
+      break;
+  }
   snprintf(mfr_name_, sizeof(mfr_name_), "Spacely Sprockets");
   snprintf(prod_name_, sizeof(prod_name_), "astro");
-
-  unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
   // TODO(mpuryear): change this to the domain of the clock received from the board driver
   clock_domain_ = 0;
@@ -246,25 +337,31 @@ void AstroAudioStreamOut::ProcessRingNotification() {
 
 zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = aml_audio_->fifo_depth();
+  switch (tdm_config_.type) {
+    case metadata::TdmType::I2s:
+      // Report our external delay based on the chosen frame rate.  Note that these
+      // delays were measured on Astro hardware, and should be pretty good, but they
+      // will not be perfect.  One reason for this is that we are not taking any
+      // steps to align our start time with start of a TDM frame, which will cause
+      // up to 1 frame worth of startup error ever time that the output starts.
+      // Also note that this is really nothing to worry about.  Hitting our target
+      // to within 20.8uSec (for 48k) is pretty good.
+      switch (req.frames_per_second) {
+        case 48000:
+          external_delay_nsec_ = ZX_USEC(125);
+          break;
 
-  // Report our external delay based on the chosen frame rate.  Note that these
-  // delays were measured on Astro hardware, and should be pretty good, but they
-  // will not be perfect.  One reason for this is that we are not taking any
-  // steps to align our start time with start of a TDM frame, which will cause
-  // up to 1 frame worth of startup error ever time that the output starts.
-  // Also note that this is really nothing to worry about.  Hitting our target
-  // to within 20.8uSec (for 48k) is pretty good.
-  switch (req.frames_per_second) {
-    case 48000:
-      external_delay_nsec_ = ZX_USEC(125);
+        case 96000:
+          external_delay_nsec_ = ZX_NSEC(83333);
+          break;
+
+        default:
+          return ZX_ERR_INVALID_ARGS;
+      }
       break;
-
-    case 96000:
-      external_delay_nsec_ = ZX_NSEC(83333);
+    case metadata::TdmType::Pcm:
+      external_delay_nsec_ = 0;  // Unknown.
       break;
-
-    default:
-      return ZX_ERR_INVALID_ARGS;
   }
 
   if (req.frames_per_second != frames_per_second_) {

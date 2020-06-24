@@ -249,7 +249,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:03:11/clocks",
       "aml-thermal/thermal",
-      "astro-audio-out",
+      "astro-i2s-audio-out",
       "sys/platform/05:03:13/astro-audio-in",
       "aml-secure-mem/aml-securemem",
       //"sys/platform/05:05:3/aml-uart/serial/bt-transport-uart/bcm-hci",

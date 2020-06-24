@@ -102,7 +102,7 @@ static_assert(sizeof(audio_stream_format_range_t) == 16,
 //
 typedef uint32_t audio_set_gain_flags_t;
 #define AUDIO_SGF_MUTE_VALID \
-  ((audio_set_gain_flags_t)0x1)                            // Whether or not the mute flag is valid.
+  ((audio_set_gain_flags_t)0x1)  // Whether or not the mute flag is valid.
 #define AUDIO_SGF_AGC_VALID ((audio_set_gain_flags_t)0x2)  // Whether or not the agc flag is valid.
 #define AUDIO_SGF_GAIN_VALID \
   ((audio_set_gain_flags_t)0x4)  // Whether or not the gain float is valid.
@@ -315,6 +315,10 @@ typedef struct audio_stream_unique_id {
 #define AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADSET_JACK \
   {                                                 \
     .data = { 0x04, 0x00 }                          \
+  }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT \
+  {                                       \
+    .data = { 0x05, 0x00 }                \
   }
 
 typedef struct audio_stream_cmd_get_unique_id_resp {
