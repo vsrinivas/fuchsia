@@ -72,24 +72,28 @@ enum WlanInfoDriverFeature {
     temp_direct_sme_channel = 0x40000000;
 };
 
-enum WlanInfoHardwareCapability {
+/// IEEE Std 802.11-206 Section 9.4.1.4 Capability Information Field
+enum WlanInfoHardwareCapability : uint32 {
     /// Short packet preamble.
-    short_preamble = 0x01;
+    short_preamble = 0x0020;
 
     /// Spectrum management.
-    spectrum_mgmt = 0x02;
-
-    /// Short slot times after packet collision.
-    short_slot_time = 0x04;
-
-    /// Radio measurement.
-    radio_msmt = 0x08;
-
-    // Supports simutaneous client-ap use
-    simultaneous_client_ap = 0x10;
+    spectrum_mgmt = 0x0100;
 
     // QoS capable.
-    qos_capable = 0x20;
+    qos = 0x0200;
+
+    /// Short slot times after packet collision.
+    short_slot_time = 0x0400;
+
+    /// Radio measurement.
+    radio_msmt = 0x1000;
+
+    // Supports simutaneous client-ap use
+    // TODO(fxb/54923): Move SIMULTANEOUS_CLIENT_AP to a different Fuchsia specific capability enum.
+    // This enum should only be used for IEEE 802.11 fields. This type should also be reduced
+    // to uint16_t once this is done.
+    simultaneous_client_ap = 0x10000;
 };
 
 /// This is a simplified expression of channel starting frequencies. Expand this
