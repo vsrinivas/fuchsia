@@ -741,6 +741,9 @@ func mustCloneWithNewMsgType(t *testing.T, b *stack.PacketBuffer, msgType dhcpMs
 	}
 	h.setOptions(opts)
 
+	// Disable checksum verification since we've surely invalidated it.
+	header.UDP(b.Header.View()[header.IPv4MinimumSize:]).SetChecksum(0)
+
 	b.Data = buffer.NewViewFromBytes(h).ToVectorisedView()
 	return b
 }
