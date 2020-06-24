@@ -52,8 +52,6 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
     logger_.CompleteError(Error::kConnectionError);
   });
 
-  // Resets |log_many_called_| for the new call to DumpLogs().
-  log_many_called_ = false;
   logger_->DumpLogsSafe(std::move(log_listener_h), /*options=*/nullptr);
 
   return logger_.WaitForDone(std::move(timeout))
@@ -77,13 +75,6 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages,
                           LogManyCallback done) {
-  log_many_called_ = true;
-
-  if (messages.empty()) {
-    FX_LOGS(WARNING) << "LogMany() was called with no messages";
-    return;
-  }
-
   for (auto& message : messages) {
     Log(std::move(message), []() {});
   }
@@ -98,14 +89,6 @@ void LogListener::Log(fuchsia::logger::LogMessage message, LogCallback done) {
 void LogListener::Done() {
   if (logger_.IsAlreadyDone()) {
     return;
-  }
-
-  if (!log_many_called_) {
-    FX_LOGS(WARNING) << "Done() was called before any calls to LogMany()";
-  }
-
-  if (logs_.empty()) {
-    FX_LOGS(WARNING) << "Done() was called, but no logs have been collected yet";
   }
 
   logger_.CompleteOk();

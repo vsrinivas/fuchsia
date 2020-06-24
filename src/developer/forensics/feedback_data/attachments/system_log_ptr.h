@@ -50,10 +50,6 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
 
   fidl::OneShotPtr<fuchsia::logger::Log> logger_;
 
-  // Wether LogMany() was called since the last call to CollectLogs().
-  // This is to help debug FLK-179.
-  bool log_many_called_ = false;
-
   std::string logs_;
 };
 
