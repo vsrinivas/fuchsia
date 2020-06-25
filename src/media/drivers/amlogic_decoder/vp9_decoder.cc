@@ -723,7 +723,7 @@ void Vp9Decoder::HandleInterrupt() {
 
   if (state_ == DecoderState::kFailed) {
     // An interrupt can (finally) arrive (after all) immediately after watchdog triggers.
-    LOG(WARN, "state_ == DecoderState::kFailed - ignoring interrupt");
+    LOG(WARNING, "state_ == DecoderState::kFailed - ignoring interrupt");
     return;
   }
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
@@ -1019,7 +1019,7 @@ bool Vp9Decoder::CanBeSwappedIn() {
 void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   Frame* frame = reference_frame_map_[params->frame_to_show];
   if (!frame) {
-    LOG(WARN, "Showing existing frame that doesn't exist");
+    LOG(WARNING, "Showing existing frame that doesn't exist");
     SkipFrameAfterFirmwareSlow();
     return;
   }
@@ -1109,7 +1109,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     // Since VP9 DRM packaging (see shaka-packager) does not encrypt any portion of the
     // uncompressed_header_size of each frame, nor does it encrypt the superframe index, we can also
     // do this for DRM content as soon as sysmem and decryptor changes are in.
-    LOG(WARN, "!has_keyframe_ && params.frame_type != kVp9FrameTypeKeyFrame --- frame_type: %u",
+    LOG(WARNING, "!has_keyframe_ && params.frame_type != kVp9FrameTypeKeyFrame --- frame_type: %u",
         params.frame_type);
     SkipFrameAfterFirmwareSlow();
     return;
@@ -1119,7 +1119,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     // actually observed this for non-keyframe frames where we never delivered the preceding
     // keyframe to the FW, so in that case most likely the frame size information wasn't availalbe
     // to the FW.
-    LOG(WARN, "params.hw_width == 0 || params.hw_height == 0 --- hw_width: %u hw_height: %u",
+    LOG(WARNING, "params.hw_width == 0 || params.hw_height == 0 --- hw_width: %u hw_height: %u",
         params.hw_width, params.hw_height);
     SkipFrameAfterFirmwareSlow();
     return;

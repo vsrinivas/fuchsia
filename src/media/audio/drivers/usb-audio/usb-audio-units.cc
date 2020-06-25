@@ -69,7 +69,7 @@ fbl::RefPtr<AudioUnit> AudioUnit::Create(const DescriptorListMemory::Iterator& i
     case USB_AUDIO_AC_EXTENSION_UNIT:
       return ExtensionUnit::Create(iter, iid);
     default:
-      GLOBAL_LOG(WARN, "Unrecognized audio control descriptor (type %u) @ offset %zu\n",
+      GLOBAL_LOG(WARNING, "Unrecognized audio control descriptor (type %u) @ offset %zu\n",
                  hdr->bDescriptorSubtype, iter.offset());
       return nullptr;
   }
@@ -120,7 +120,7 @@ zx_status_t AudioUnit::CtrlReq(const usb_protocol_t& proto, uint8_t code, uint16
   }
 
   if (status != ZX_OK) {
-    GLOBAL_LOG(WARN,
+    GLOBAL_LOG(WARNING,
                "WARNING: Audio control request failed! Unit (%s:id %u), "
                "code 0x%02x val 0x%04hx, ndx 0x%04x [bytes expected %u, got %zu] (status %d)\n",
                type_name(), id(), code, val, index(), len, done, status);
@@ -134,7 +134,7 @@ fbl::RefPtr<InputTerminal> InputTerminal::Create(const DescriptorListMemory::Ite
   auto hdr = iter.hdr_as<usb_audio_ac_input_terminal_desc>();
 
   if (hdr == nullptr) {
-    GLOBAL_LOG(WARN, "InputTerminal header appears invalid @ offset %zu\n", iter.offset());
+    GLOBAL_LOG(WARNING, "InputTerminal header appears invalid @ offset %zu\n", iter.offset());
     return nullptr;
   }
 
@@ -150,7 +150,7 @@ fbl::RefPtr<OutputTerminal> OutputTerminal::Create(const DescriptorListMemory::I
   auto hdr = iter.hdr_as<usb_audio_ac_output_terminal_desc>();
 
   if (hdr == nullptr) {
-    GLOBAL_LOG(WARN, "OutputTerminal header appears invalid @ offset %zu\n", iter.offset());
+    GLOBAL_LOG(WARNING, "OutputTerminal header appears invalid @ offset %zu\n", iter.offset());
     return nullptr;
   }
 
@@ -196,7 +196,7 @@ fbl::RefPtr<MixerUnit> MixerUnit::Create(const DescriptorListMemory::Iterator& i
     }
   }
 
-  GLOBAL_LOG(WARN, "MixerUnit header appears invalid @ offset %zu\n", iter.offset());
+  GLOBAL_LOG(WARNING, "MixerUnit header appears invalid @ offset %zu\n", iter.offset());
   return nullptr;
 }
 
@@ -217,7 +217,7 @@ fbl::RefPtr<SelectorUnit> SelectorUnit::Create(const DescriptorListMemory::Itera
     }
   }
 
-  GLOBAL_LOG(WARN, "SelectorUnit header appears invalid @ offset %zu\n", iter.offset());
+  GLOBAL_LOG(WARNING, "SelectorUnit header appears invalid @ offset %zu\n", iter.offset());
   return nullptr;
 }
 
@@ -288,13 +288,13 @@ fbl::RefPtr<FeatureUnit> FeatureUnit::Create(const DescriptorListMemory::Iterato
         }
       }
 
-      GLOBAL_LOG(WARN, "Out of memory attempting to allocate FeatureUnit @ offset %zu\n",
+      GLOBAL_LOG(WARNING, "Out of memory attempting to allocate FeatureUnit @ offset %zu\n",
                  iter.offset());
       return nullptr;
     }
   }
 
-  GLOBAL_LOG(WARN, "FeatureUnit header appears invalid @ offset %zu\n", iter.offset());
+  GLOBAL_LOG(WARNING, "FeatureUnit header appears invalid @ offset %zu\n", iter.offset());
   return nullptr;
 }
 
@@ -310,7 +310,7 @@ zx_status_t FeatureUnit::Probe(const usb_protocol_t& proto) {
   // come back here and update this driver.
   ZX_DEBUG_ASSERT(feature_desc()->bControlSize != 0);  // Create should have checked this already
   if (feature_desc()->bControlSize > sizeof(uint32_t)) {
-    GLOBAL_LOG(WARN, "FeatureUnit id %u has unsupported bControlSize > %zu (%u)\n", id(),
+    GLOBAL_LOG(WARNING, "FeatureUnit id %u has unsupported bControlSize > %zu (%u)\n", id(),
                sizeof(uint32_t), feature_desc()->bControlSize);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -353,7 +353,7 @@ zx_status_t FeatureUnit::Probe(const usb_protocol_t& proto) {
   ZX_DEBUG_ASSERT(features_.size() > 0);  // Create should have checked this already
   if (((features_[0].supported_ & ch_feat_union & kUniformControls) != 0) ||  // Check #1
       ((ch_feat_union ^ ch_feat_intersection) & kUniformControls)) {          // Check #2
-    GLOBAL_LOG(WARN,
+    GLOBAL_LOG(WARNING,
                "FeatureUnit id %u has unsupported non-uniform gain controls.  "
                "Master 0x%08x, Channel Union 0x%08x, Channel Intersection 0x%08x.\n",
                id(), features_[0].supported_, ch_feat_union, ch_feat_intersection);
@@ -407,7 +407,7 @@ zx_status_t FeatureUnit::Probe(const usb_protocol_t& proto) {
       for (size_t i = 2; i < features_.size(); ++i) {
         if ((vol_min_ != features_[i].vol_min_) || (vol_max_ != features_[i].vol_max_) ||
             (vol_res_ != features_[i].vol_res_)) {
-          GLOBAL_LOG(WARN,
+          GLOBAL_LOG(WARNING,
                      "FeatureUnit id %u has unsupported non-uniform gain controls.  "
                      "Channel %zu's gain range [%hd, %hd, %hd] does not match Channel 1's "
                      "range [%hd, %hd, %hd]\n",
@@ -419,13 +419,13 @@ zx_status_t FeatureUnit::Probe(const usb_protocol_t& proto) {
     }
 
     if (vol_min_ > vol_max_) {
-      GLOBAL_LOG(WARN, "FeatureUnit id %u has invalid volume range [%hd, %hd]\n", id(), vol_min_,
+      GLOBAL_LOG(WARNING, "FeatureUnit id %u has invalid volume range [%hd, %hd]\n", id(), vol_min_,
                  vol_max_);
       return ZX_ERR_NOT_SUPPORTED;
     }
 
     if (!vol_res_) {
-      GLOBAL_LOG(WARN, "FeatureUnit id %u has invalid volume res %hd\n", id(), vol_res_);
+      GLOBAL_LOG(WARNING, "FeatureUnit id %u has invalid volume res %hd\n", id(), vol_res_);
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -559,7 +559,7 @@ fbl::RefPtr<ProcessingUnit> ProcessingUnit::Create(const DescriptorListMemory::I
     }
   }
 
-  GLOBAL_LOG(WARN, "ProcessingUnit header appears invalid @ offset %zu\n", iter.offset());
+  GLOBAL_LOG(WARNING, "ProcessingUnit header appears invalid @ offset %zu\n", iter.offset());
   return nullptr;
 }
 
@@ -583,7 +583,7 @@ fbl::RefPtr<ExtensionUnit> ExtensionUnit::Create(const DescriptorListMemory::Ite
     }
   }
 
-  GLOBAL_LOG(WARN, "ExtensionUnit header appears invalid @ offset %zu\n", iter.offset());
+  GLOBAL_LOG(WARNING, "ExtensionUnit header appears invalid @ offset %zu\n", iter.offset());
   return nullptr;
 }
 

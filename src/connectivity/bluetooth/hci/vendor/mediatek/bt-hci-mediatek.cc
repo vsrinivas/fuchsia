@@ -1079,7 +1079,7 @@ int BtHciMediatek::Thread() {
       thread_running_ = false;
       break;
     } else {
-      zxlogf(WARN, "%s: Unknown packet type %u or key %lu\n", __FILE__, packet.type, packet.key);
+      zxlogf(WARNING, "%s: Unknown packet type %u or key %lu\n", __FILE__, packet.type, packet.key);
     }
 
     if (!cmd_channel_.is_valid() && !acl_channel_.is_valid() && !snoop_channel_.is_valid()) {

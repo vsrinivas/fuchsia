@@ -342,7 +342,7 @@ void IntelHDAController::ProcessControllerIRQ() {
 
 zx_status_t IntelHDAController::HandleIrq() {
   if (GetState() != State::OPERATING) {
-    LOG(WARN, "IRQ Handler shutting down due to invalid state (%u)!\n",
+    LOG(WARNING, "IRQ Handler shutting down due to invalid state (%u)!\n",
         static_cast<uint32_t>(GetState()));
     return ZX_ERR_BAD_STATE;
   }

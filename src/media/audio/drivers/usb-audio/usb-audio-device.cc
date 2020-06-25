@@ -153,14 +153,14 @@ void UsbAudioDevice::Probe() {
 
     // We are only prepared to find interface descriptors at this point.
     if (hdr->bDescriptorType != USB_DT_INTERFACE) {
-      LOG(WARN, "Skipping unexpected descriptor (len = %u, type = %u)\n", hdr->bLength,
+      LOG(WARNING, "Skipping unexpected descriptor (len = %u, type = %u)\n", hdr->bLength,
           hdr->bDescriptorType);
       continue;
     }
 
     auto ihdr = iter.hdr_as<usb_interface_descriptor_t>();
     if (ihdr == nullptr) {
-      LOG(WARN, "Skipping bad interface descriptor header @ offset %zu/%zu\n", iter.offset(),
+      LOG(WARNING, "Skipping bad interface descriptor header @ offset %zu/%zu\n", iter.offset(),
           iter.desc_list()->size());
       continue;
     }
@@ -169,7 +169,7 @@ void UsbAudioDevice::Probe() {
         ((ihdr->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL) &&
          (ihdr->bInterfaceSubClass != USB_SUBCLASS_AUDIO_STREAMING) &&
          (ihdr->bInterfaceSubClass != USB_SUBCLASS_MIDI_STREAMING))) {
-      LOG(WARN, "Skipping unknown interface (class %u, subclass %u)\n", ihdr->bInterfaceClass,
+      LOG(WARNING, "Skipping unknown interface (class %u, subclass %u)\n", ihdr->bInterfaceClass,
           ihdr->bInterfaceSubClass);
       continue;
     }
@@ -177,13 +177,13 @@ void UsbAudioDevice::Probe() {
     switch (ihdr->bInterfaceSubClass) {
       case USB_SUBCLASS_AUDIO_CONTROL: {
         if (control_ifc != nullptr) {
-          LOG(WARN, "More than one audio control interface detected, skipping.\n");
+          LOG(WARNING, "More than one audio control interface detected, skipping.\n");
           break;
         }
 
         auto control = UsbAudioControlInterface::Create(this);
         if (control == nullptr) {
-          LOG(WARN, "Failed to allocate audio control interface\n");
+          LOG(WARNING, "Failed to allocate audio control interface\n");
           break;
         }
 
@@ -218,13 +218,13 @@ void UsbAudioDevice::Probe() {
         if (ifc_iter.IsValid()) {
           zx_status_t res = ifc_iter->AddInterface(&iter);
           if (res != ZX_OK) {
-            LOG(WARN, "Failed to add audio stream interface (id %u) @ offset %zu/%zu\n", iid,
+            LOG(WARNING, "Failed to add audio stream interface (id %u) @ offset %zu/%zu\n", iid,
                 iter.offset(), iter.desc_list()->size());
           }
         } else {
           auto ifc = UsbAudioStreamInterface::Create(this, &iter);
           if (ifc == nullptr) {
-            LOG(WARN, "Failed to create audio stream interface (id %u) @ offset %zu/%zu\n", iid,
+            LOG(WARNING, "Failed to create audio stream interface (id %u) @ offset %zu/%zu\n", iid,
                 iter.offset(), iter.desc_list()->size());
           } else {
             LOG(DEBUG, "Discovered new audio streaming interface (id %u)\n", iid);
@@ -276,7 +276,7 @@ void UsbAudioDevice::Probe() {
   }
 
   if ((control_ifc == nullptr) && !aud_stream_ifcs.is_empty()) {
-    LOG(WARN, "No control interface discovered.  Discarding all audio streaming interfaces\n");
+    LOG(WARNING, "No control interface discovered.  Discarding all audio streaming interfaces\n");
     aud_stream_ifcs.clear();
   }
 
@@ -298,7 +298,7 @@ void UsbAudioDevice::Probe() {
     // Find the path which goes with this interface.
     auto path = control_ifc->ExtractPath(stream_ifc->term_link(), stream_ifc->direction());
     if (path == nullptr) {
-      LOG(WARN,
+      LOG(WARNING,
           "Discarding audio streaming interface (id %u) as we could not find a path to match "
           "its terminal link ID (%u) and direction (%u)\n",
           stream_ifc->iid(), stream_ifc->term_link(),
@@ -315,7 +315,7 @@ void UsbAudioDevice::Probe() {
     // in separate clock domain.  We still need to add support for this
     // case, see ZX-2044 for details.
     if (stream_ifc->ep_sync_type() == EndpointSyncType::Async) {
-      LOG(WARN,
+      LOG(WARNING,
           "Warning: Creating USB audio %s with operating in Asynchronous Isochronous mode. "
           "See ZX-2044\n",
           stream_ifc->direction() == Direction::Input ? "input" : "output");
@@ -381,7 +381,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
         // more complicated world, we should handle this, but for
         // now we just log a warning and skip it.
         if ((info.out_ep != nullptr) || (info.in_ep != nullptr)) {
-          LOG(WARN,
+          LOG(WARNING,
               "Multiple alternate settings found for MIDI streaming interface "
               "(iid %u, alt %u)\n",
               ihdr->bInterfaceNumber, ihdr->bAlternateSetting);
@@ -427,7 +427,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
         // If this is not a bulk transfer endpoint, then we are not quite sure what to do with
         // it.  Log a warning and skip it.
         if (usb_ep_type(ep_desc) != USB_ENDPOINT_BULK) {
-          LOG(WARN,
+          LOG(WARNING,
               "Skipping Non-bulk transfer endpoint (%u) found for MIDI streaming interface "
               "(iid %u, alt %u)\n",
               usb_ep_type(ep_desc), info.ifc->bInterfaceNumber, info.ifc->bAlternateSetting);
@@ -440,7 +440,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
         // If we have already found an endpoint for this interface, log a
         // warning and skip this one.
         if (ep_tgt != nullptr) {
-          LOG(WARN,
+          LOG(WARNING,
               "Multiple %s endpoints found found for MIDI streaming interface "
               "(iid %u, alt %u, exiting ep_addr 0x%02x, new ep_addr 0x%02x)\n",
               log_tag, info.ifc->bInterfaceNumber, info.ifc->bAlternateSetting,

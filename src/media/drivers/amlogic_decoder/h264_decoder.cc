@@ -576,7 +576,7 @@ zx_status_t H264Decoder::InitializeStream() {
 
   uint32_t max_dpb_size = GetMaxDpbSize(level_idc, mb_width, mb_height);
   if (max_dpb_size == 0) {
-    LOG(WARN,
+    LOG(WARNING,
         "level_idc, mb_width and/or mb_height invalid? - level_idc: %u mb_width: %u mb_height: %u",
         level_idc, mb_width, mb_height);
     return ZX_ERR_INTERNAL;
@@ -589,14 +589,14 @@ zx_status_t H264Decoder::InitializeStream() {
   // bitstream could be broken.
   uint32_t max_reference_size = stream_info.max_reference_size();
   if (max_reference_size > max_dpb_size) {
-    LOG(WARN,
+    LOG(WARNING,
         "max_reference_size is too large - clamping - max_reference_size: %u max_dpb_size: %u",
         max_reference_size, max_dpb_size);
     max_reference_size = max_dpb_size;
   } else if (max_reference_size == 0) {
     // This is technically permissible by the h.264 spec, but still try to increase it to avoid
     // issues.
-    LOG(WARN, "max_reference_size is zero - unexpected - using default: %u", max_dpb_size);
+    LOG(WARNING, "max_reference_size is zero - unexpected - using default: %u", max_dpb_size);
     max_reference_size = max_dpb_size;
   }
 

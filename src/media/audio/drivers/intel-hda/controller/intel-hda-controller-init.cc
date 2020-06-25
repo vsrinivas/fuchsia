@@ -685,7 +685,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   // at construction time.
   zx_status_t dsp_probe_result = ProbeAudioDSP(dev_node_);
   if (dsp_probe_result != ZX_OK) {
-    LOG(WARN, "Error probing DSP: %s", zx_status_get_string(dsp_probe_result));
+    LOG(WARNING, "Error probing DSP: %s", zx_status_get_string(dsp_probe_result));
     // We continue despite the failure because the absence of the Audio
     // DSP is not (always) a failure.
     // TODO(yky) Come up with a way to warn for the absence of Audio DSP

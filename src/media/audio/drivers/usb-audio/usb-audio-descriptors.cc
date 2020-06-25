@@ -85,7 +85,7 @@ bool DescriptorListMemory::Iterator::ValidateOffset() {
   auto cleanup = fbl::MakeAutoCall([this] { offset_ = mem_->size(); });
 
   if (space < sizeof(usb_descriptor_header_t)) {
-    GLOBAL_LOG(WARN,
+    GLOBAL_LOG(WARNING,
                "Insufficient space at offset %zu to contain even the most basic USB descriptor "
                "(space needed %zu, space left %zu)\n",
                offset_, sizeof(usb_descriptor_header_t), space);
@@ -95,7 +95,7 @@ bool DescriptorListMemory::Iterator::ValidateOffset() {
   auto tmp = reinterpret_cast<uintptr_t>(mem_->data());
   auto h = reinterpret_cast<const usb_descriptor_header_t*>(tmp + offset_);
   if (h->bLength > space) {
-    GLOBAL_LOG(WARN,
+    GLOBAL_LOG(WARNING,
                "Malformed USB descriptor header (type %u) at offset %zu.  "
                "Header indicates that it is %u bytes long, but there %zu bytes remaining\n",
                h->bDescriptorType, offset_, h->bLength, space);

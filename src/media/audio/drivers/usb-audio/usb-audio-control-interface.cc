@@ -73,7 +73,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
     auto hdr = iter->hdr_as<usb_audio_desc_header>();
     if (!hdr) {
-      LOG(WARN, "Badly formed audio control descriptor header @ offset %zu\n", iter->offset());
+      LOG(WARNING, "Badly formed audio control descriptor header @ offset %zu\n", iter->offset());
       continue;
     }
 
@@ -81,11 +81,12 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
       if (class_hdr_ == nullptr) {
         class_hdr_ = iter->hdr_as<usb_audio_ac_header_desc>();
         if (class_hdr_ == nullptr) {
-          LOG(WARN, "Badly formed audio control class specific header @ offset %zu\n",
+          LOG(WARNING, "Badly formed audio control class specific header @ offset %zu\n",
               iter->offset());
         }
       } else {
-        LOG(WARN, "Duplicate audio control class specific header @ offset %zu\n", iter->offset());
+        LOG(WARNING, "Duplicate audio control class specific header @ offset %zu\n",
+            iter->offset());
       }
 
       continue;
@@ -93,7 +94,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
     auto unit = AudioUnit::Create(*iter, interface_hdr_->bInterfaceNumber);
     if (unit == nullptr) {
-      LOG(WARN, "Failed to create audio Terminal/Unit (type %u) @ offset %zu\n",
+      LOG(WARNING, "Failed to create audio Terminal/Unit (type %u) @ offset %zu\n",
           hdr->bDescriptorSubtype, iter->offset());
     } else {
       // Add our new unit to the collection we are building up.  There
@@ -103,7 +104,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
       // best we can).
       uint32_t id = unit->id();
       if (!units_.insert_or_find(std::move(unit))) {
-        LOG(WARN, "Collision when attempting to add unit id %u; skipping this unit\n", id);
+        LOG(WARNING, "Collision when attempting to add unit id %u; skipping this unit\n", id);
       }
     }
   }
@@ -219,7 +220,7 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
     uint32_t source_id = current->source_id(i);
     auto next = units_.find(source_id);
     if (!next.IsValid()) {
-      LOG(WARN, "Can't find upstream unit id %u while tracing from unit id %u.\n", source_id,
+      LOG(WARNING, "Can't find upstream unit id %u while tracing from unit id %u.\n", source_id,
           current->id());
       continue;
     }

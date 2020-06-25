@@ -180,7 +180,7 @@ void CodecConnection::ProcessWakeupEvt() {
   //
   // Currently, we support neither power management, nor hot-unplug.  Just log
   // the fact that we have been woken up and do nothing.
-  LOG(WARN, "Wakeup event received - Don't know how to handle this yet!\n");
+  LOG(WARNING, "Wakeup event received - Don't know how to handle this yet!\n");
 }
 
 void CodecConnection::Shutdown() {

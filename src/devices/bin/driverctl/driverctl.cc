@@ -24,7 +24,7 @@ static void usage(void) {
           "Command \"log\":\n"
           "  Option is one of:\n"
           "    \"error\" or \"e\":   DDK_LOG_ERROR\n"
-          "    \"warn\" or \"w\":    DDK_LOG_WARN\n"
+          "    \"warning\" or \"w\": DDK_LOG_WARNING\n"
           "    \"info\" or \"i\":    DDK_LOG_INFO\n"
           "    \"debug\" or \"d\":   DDK_LOG_DEBUG\n"
           "    \"trace\" or \"t\":   DDK_LOG_TRACE\n"
@@ -80,8 +80,8 @@ int main(int argc, char** argv) {
       case DDK_LOG_ERROR:
         printf("error\n");
         break;
-      case DDK_LOG_WARN:
-        printf("warn\n");
+      case DDK_LOG_WARNING:
+        printf("warning\n");
         break;
       case DDK_LOG_INFO:
         printf("info\n");
@@ -103,8 +103,8 @@ int main(int argc, char** argv) {
   fx_log_severity_t flags = 0;
   if (!strcasecmp(arg, "e") || !strcasecmp(arg, "error")) {
     flags = DDK_LOG_ERROR;
-  } else if (!strcasecmp(arg, "w") || !strcasecmp(arg, "warn")) {
-    flags = DDK_LOG_WARN;
+  } else if (!strcasecmp(arg, "w") || !strcasecmp(arg, "warning")) {
+    flags = DDK_LOG_WARNING;
   } else if (!strcasecmp(arg, "i") || !strcasecmp(arg, "info")) {
     flags = DDK_LOG_INFO;
   } else if (!strcasecmp(arg, "d") || !strcasecmp(arg, "debug")) {
