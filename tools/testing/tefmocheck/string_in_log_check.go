@@ -17,7 +17,9 @@ type stringInLogCheck struct {
 	String string
 	// ExceptString will cause Check() to return false if present.
 	ExceptString string
-	Log          LogType
+	// ExceptBlock will cause Check() to return false if the string is only within this block.
+	ExceptBlock *LogBlock
+	Log         LogType
 }
 
 func (c stringInLogCheck) Check(to *TestingOutputs) bool {
@@ -30,8 +32,27 @@ func (c stringInLogCheck) Check(to *TestingOutputs) bool {
 	case SyslogType:
 		toCheck = to.Syslog
 	}
-	if bytes.Contains(toCheck, []byte(c.String)) {
-		return c.ExceptString == "" || !bytes.Contains(toCheck, []byte(c.ExceptString))
+	if c.ExceptString != "" && bytes.Contains(toCheck, []byte(c.ExceptString)) {
+		return false
+	}
+	stringBytes := []byte(c.String)
+	if c.ExceptBlock == nil {
+		return bytes.Contains(toCheck, stringBytes)
+	}
+	blocks := bytes.Split(toCheck, []byte(c.ExceptBlock.StartString))
+	// blocks[0] is everything before the first StartString.
+	if bytes.Contains(blocks[0], stringBytes) {
+		return true
+	}
+	for _, block := range blocks[1:] {
+		// Each block will have started with the StartString of the ExceptBlock.
+		subBlocks := bytes.SplitN(block, []byte(c.ExceptBlock.EndString), 2)
+		if len(subBlocks) > 1 {
+			// Check the logs after the EndString.
+			if bytes.Contains(subBlocks[1], stringBytes) {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -81,7 +102,11 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 		ret = append(ret, stringInLogCheck{String: "ERROR: AddressSanitizer", Log: logType})
 		ret = append(ret, stringInLogCheck{String: "ERROR: LeakSanitizer", Log: logType})
 		ret = append(ret, stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Log: logType})
-		ret = append(ret, stringInLogCheck{String: "ZIRCON KERNEL OOPS", Log: logType})
+		ret = append(ret, stringInLogCheck{
+			String:      "ZIRCON KERNEL OOPS",
+			Log:         logType,
+			ExceptBlock: &LogBlock{StartString: " lock_dep_dynamic_analysis_tests ", EndString: " lock_dep_static_analysis_tests "},
+		})
 		ret = append(ret, stringInLogCheck{String: "ZIRCON KERNEL PANIC", Log: logType})
 	}
 	// These may be in the output of tests, but the syslog doesn't contain any test output.

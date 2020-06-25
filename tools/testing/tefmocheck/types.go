@@ -24,6 +24,12 @@ const (
 	SyslogType         LogType = "syslog"
 )
 
+// LogBlock defines a section of a log and can be used to exclude checks from that block.
+type LogBlock struct {
+	StartString string
+	EndString   string
+}
+
 // FailureModeCheck checks whether a failure mode appears.
 type FailureModeCheck interface {
 	// Check analyzes TestingOutputs and returns true if the failure mode was detected.
