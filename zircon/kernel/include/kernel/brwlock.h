@@ -246,13 +246,15 @@ LOCK_DEP_POLICY_OPTION(BrwLockNoPi, BrwLockNoPi::Reader, BrwLockNoPi::ReaderPoli
 
 using ::internal::BrwLockPi;
 
-#define DECLARE_BRWLOCK_PI(container_type) LOCK_DEP_INSTRUMENT(container_type, BrwLockPi)
+#define DECLARE_BRWLOCK_PI(container_type, ...) \
+  LOCK_DEP_INSTRUMENT(container_type, BrwLockPi, ##__VA_ARGS__)
 #define DECLARE_SINGLETON_BRWLOCK_PI(name, ...) \
   LOCK_DEP_SINGLETON_LOCK(name, BrwLockPi, ##__VA_ARGS__)
 
 using BrwLockNoPi = internal::BrwLockNoPi;
 
-#define DECLARE_BRWLOCK_NO_PI(container_type) LOCK_DEP_INSTRUMENT(container_type, BrwLockNoPi)
+#define DECLARE_BRWLOCK_NO_PI(container_type, ...) \
+  LOCK_DEP_INSTRUMENT(container_type, BrwLockNoPi, ##__VA_ARGS__)
 #define DECLARE_SINGLETON_BRWLOCK_NO_PI(name, ...) \
   LOCK_DEP_SINGLETON_LOCK(name, BrwLockNoPi, ##__VA_ARGS__)
 
