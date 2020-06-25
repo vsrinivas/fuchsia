@@ -5,39 +5,44 @@
 ### BUILD.gn
 
 ```gn
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-executable("my_test_bin") {
+executable("my_test") {
+  sources = [ "my_test.cc" ]
   testonly = true
-  output_name = "my_test"
-
-  sources = [
-    "my_test.cc",
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }
 
-test_package("my_test_pkg") {
-  deps = [
-    ":my_test_bin",
-  ]
+fuchsia_component("my-test-component") {
+  testonly = true
+  manifest = "meta/my_test.cmx"
+  deps = [ ":my_test" ]
+}
 
-  tests = [
-    {
-      name = "my_test"
-    },
-  ]
+fuchsia_test_package("my-test-package") {
+  test_components = [ ":my-test-component" ]
+}
+
+group("tests") {
+  deps = [ ":my-integration-test" ]
+  testonly = true
 }
 ```
 
 `test_package` will expect that there is a corresponding cmx file in the `meta`
 folder. So for above example there should be a `my_test.cmx` file in `meta/`.
 
+See also: [test packages][test-packages]
+
 ### meta/my\_test.cmx
 
 ```json
 {
     "program": {
-        "binary": "test/my_test"
+        "binary": "bin/my_test"
     },
     "sandbox": {
         "services": [...]
@@ -110,7 +115,7 @@ Tests can use these services by mentioning them in their `sandbox > services`.
 
 Tests and the components launched in a hermetic environment will have access to system's `fuchsia.logger.LogSink` service if it is included in their sandbox. For tests to inject Logger, the tests must use `injected-services` (see below). Then, the injected Logger service takes precedence.
 
-### Restricting log severity
+## Restricting log severity
 
 Tests may be configured to fail when the component's test environment produces
 high severity [logs][syslogs]. This is useful for when such logs, for instance
@@ -237,3 +242,4 @@ This option would be replaced once we fix CP-144 (in component manager v2).
 [max-severity-fuchsia]: /garnet/bin/run_test_component/max_severity_fuchsia.json
 [max-severity-experiences]: https://fuchsia.googlesource.com/experiences/+/refs/heads/master/tests/config/max_severity_experiences.json
 [syslogs]: /docs/development/logs/concepts.md
+[test-packages]: /docs/development/components/build.md#test-packages
