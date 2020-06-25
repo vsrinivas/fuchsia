@@ -1,5 +1,12 @@
 # Bluetooth Profile: AVRCP
 
+This component implements the Audio Video Remote Control Profile (AVRCP) as
+specified by the Bluetooth SIG in the [official specification](https://www.bluetooth.org/docman/handlers/downloaddoc.ashx?doc_id=457082).
+
+The `bt-avrcp` component is a system service that is created when needed - typically as a side effect of launching the [bt-a2dp-sink](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/bluetooth/profiles/bt-a2dp-sink/) or [bt-avrcp-target](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/bluetooth/profiles/bt-avrcp-target/) components. Once launched, `bt-avrcp` will persist until explicitly terminated.
+
+The component registers both the Controller (CT) and Target (TG) roles with the BR/EDR [Profile](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl) Service.
+
 ## Build configuration
 
 Follow the steps for the A2DP sink profile and add this module to your build with
