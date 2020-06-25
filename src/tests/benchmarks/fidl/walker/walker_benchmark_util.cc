@@ -33,7 +33,10 @@ class NoOpVisitor final
 
   static constexpr bool kContinueAfterConstraintViolation = true;
 
-  static constexpr bool kAllowNonNullableCollectionsToBeAbsent = false;
+  Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
+    OnError("absent pointer disallowed in non-nullable collection");
+    return Status::kConstraintViolationError;
+  }
 
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,

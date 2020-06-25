@@ -262,7 +262,7 @@ TEST(ComplexTable, FailToDecodeAbsentTable) {
       fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
                      static_cast<uint32_t>(encoded_bytes.size())));
   auto decode_result = fidl::Decode(std::move(encoded_msg));
-  ASSERT_STREQ(decode_result.error, "Table data cannot be absent");
+  ASSERT_STREQ(decode_result.error, "absent pointer disallowed in non-nullable collection");
   ASSERT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
 }
 TEST(ComplexTable, Success) {

@@ -389,6 +389,7 @@ Result Walker<VisitorImpl>::WalkStructPointer(const FidlCodedStructPointer* code
   if (*PtrTo<Ptr<void>>(position) == nullptr) {
     return Result::kContinue;
   }
+
   OutOfLineDepth inner_depth = INCREASE_DEPTH(depth);
   FIDL_DEPTH_GUARD(inner_depth);
   Position obj_position;
@@ -439,16 +440,17 @@ Result Walker<VisitorImpl>::WalkTable(const FidlCodedTable* coded_table,
                                       OutOfLineDepth depth) {
   auto envelope_vector_ptr = PtrTo<fidl_vector_t>(position);
   if (envelope_vector_ptr->data == nullptr) {
-    // The vector of envelope headers in a table is always non-nullable.
-    if (unlikely(!VisitorImpl::kAllowNonNullableCollectionsToBeAbsent)) {
-      visitor_->OnError("Table data cannot be absent");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
     if (unlikely(envelope_vector_ptr->count != 0)) {
       visitor_->OnError("Table envelope vector data absent but non-zero count");
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
     }
+    OutOfLineDepth array_depth = INCREASE_DEPTH(depth);
+    FIDL_DEPTH_GUARD(array_depth);
+    auto status = visitor_->VisitAbsentPointerInNonNullableCollection(&envelope_vector_ptr->data);
+    FIDL_STATUS_GUARD(status);
+    return Result::kContinue;
   }
+
   uint32_t size;
   if (unlikely(mul_overflow(envelope_vector_ptr->count, sizeof(fidl_envelope_t), &size))) {
     visitor_->OnError("integer overflow calculating table size");
@@ -536,19 +538,20 @@ Result Walker<VisitorImpl>::WalkString(const FidlCodedString* coded_string,
   auto status = visitor_->VisitVectorOrStringCount(&string_ptr->size);
   FIDL_STATUS_GUARD(status);
   if (string_ptr->data == nullptr) {
-    if (unlikely(!coded_string->nullable && !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent)) {
-      visitor_->OnError("non-nullable string is absent");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
-    if (likely(size == 0)) {
-      if (coded_string->nullable || !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
-        return Result::kContinue;
-      }
-    } else {
+    if (unlikely(size != 0)) {
       visitor_->OnError("string is absent but length is not zero");
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
     }
+    if (unlikely(!coded_string->nullable)) {
+      OutOfLineDepth array_depth = INCREASE_DEPTH(depth);
+      FIDL_DEPTH_GUARD(array_depth);
+      status = visitor_->VisitAbsentPointerInNonNullableCollection(
+          &reinterpret_cast<Ptr<void>&>(const_cast<Ptr<char>&>(string_ptr->data)));
+      FIDL_STATUS_GUARD(status);
+    }
+    return Result::kContinue;
   }
+
   uint64_t bound = coded_string->max_size;
   if (unlikely(size > std::numeric_limits<uint32_t>::max())) {
     visitor_->OnError("string size overflows 32 bits");
@@ -597,20 +600,21 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
   const uint64_t count = vector_ptr->count & ~kVectorOwnershipMask;
   auto status = visitor_->VisitVectorOrStringCount(&vector_ptr->count);
   FIDL_STATUS_GUARD(status);
-  if (vector_ptr->data == nullptr) {
-    if (unlikely(!coded_vector->nullable && !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent)) {
-      visitor_->OnError("non-nullable vector is absent");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
-    if (likely(count == 0)) {
-      if (coded_vector->nullable || !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
-        return Result::kContinue;
-      }
-    } else {
+
+  if (unlikely(vector_ptr->data == nullptr)) {
+    if (unlikely(count != 0)) {
       visitor_->OnError("absent vector of non-zero elements");
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
     }
+    if (unlikely(!coded_vector->nullable)) {
+      OutOfLineDepth array_depth = INCREASE_DEPTH(depth);
+      FIDL_DEPTH_GUARD(array_depth);
+      status = visitor_->VisitAbsentPointerInNonNullableCollection(&vector_ptr->data);
+      FIDL_STATUS_GUARD(status);
+    }
+    return Result::kContinue;
   }
+
   if (unlikely(count > coded_vector->max_count)) {
     visitor_->OnError("message tried to access too large of a bounded vector");
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);

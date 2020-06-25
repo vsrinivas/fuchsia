@@ -34,7 +34,6 @@ struct EnvelopeCheckpoint {
   uint32_t num_handles;
 };
 
-constexpr uintptr_t kAllocPresenceMarker = FIDL_ALLOC_PRESENT;
 constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
 
 class FidlValidator final
@@ -52,15 +51,14 @@ class FidlValidator final
 
   static constexpr bool kContinueAfterConstraintViolation = true;
 
-  static constexpr bool kAllowNonNullableCollectionsToBeAbsent = false;
+  Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
+    SetError("absent pointer disallowed in non-nullable collection");
+    return Status::kConstraintViolationError;
+  }
 
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       Position* out_position) {
-    if (reinterpret_cast<uintptr_t>(*object_ptr_ptr) != kAllocPresenceMarker) {
-      SetError("validator encountered invalid pointer");
-      return Status::kConstraintViolationError;
-    }
     uint32_t new_offset;
     if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
       SetError("overflow updating out-of-line offset");

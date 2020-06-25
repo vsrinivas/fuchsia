@@ -106,10 +106,7 @@ class Visitor {
   // Visit an indirection, which can be the data pointer of a string/vector, the data pointer
   // of an envelope from a table, the pointer in a nullable type, etc.
   //
-  // If kAllowNonNullableCollectionsToBeAbsent is false, this is only called when
-  // the pointer is present.
-  // Otherwise, this is called in case of present pointers, as well as non-nullable but absent
-  // vectors and strings.
+  // This will only be called when the pointer is present / non-null.
   //
   // |ptr_position|   Position of the pointer.
   // |pointee_type|   Type of the pointee.
@@ -122,6 +119,17 @@ class Visitor {
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       Position* out_position) {
+    __builtin_unreachable();
+  }
+
+  // Visit a null/absent pointer in a collection that is normally non-nullable.
+  //
+  // The original intent of this method is to handle linearization of null data portions of
+  // empty LLCPP vectors and strings.
+  //
+  // |object_ptr_ptr| Pointer to the data pointer, obtained from |ptr_position.Get(start)|.
+  //                  It can be used to patch the pointer.
+  Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
     __builtin_unreachable();
   }
 
@@ -191,14 +199,10 @@ constexpr bool CheckVisitorInterface() {
       std::is_same<decltype(ImplSubType::kContinueAfterConstraintViolation), const bool>::value,
       "ImplSubType must declare constexpr bool kContinueAfterConstraintViolation");
 
-  // kAllowNonNullableCollectionsToBeAbsent:
-  // - When true, the walker will allow non-nullable vectors/strings to have a null data pointer
-  //   and zero count, treating them as if they are empty (non-null data pointer and zero count).
-  // - When false, the above case becomes a constraint violation error.
-  static_assert(std::is_same<decltype(ImplSubType::kAllowNonNullableCollectionsToBeAbsent),
-                             const bool>::value,
-                "ImplSubType must declare constexpr bool kAllowNonNullableCollectionsToBeAbsent");
-
+  static_assert(
+      internal::SameInterface<decltype(&Visitor::VisitAbsentPointerInNonNullableCollection),
+                              decltype(&ImplSubType::VisitAbsentPointerInNonNullableCollection)>,
+      "Incorrect/missing VisitAbsentPointerInNonNullableCollection");
   static_assert(internal::SameInterface<decltype(&Visitor::VisitPointer),
                                         decltype(&ImplSubType::VisitPointer)>,
                 "Incorrect/missing VisitPointer");

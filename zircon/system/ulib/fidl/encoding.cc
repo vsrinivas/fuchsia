@@ -92,9 +92,20 @@ class FidlEncoder final
 
   static constexpr bool kContinueAfterConstraintViolation = true;
 
-  // TODO(fxb/53258) The template parameter can be removed, reducing code size if this is a
-  // function.
-  static constexpr bool kAllowNonNullableCollectionsToBeAbsent = (mode == Mode::LinearizeAndEncode);
+  Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
+    if (mode == Mode::LinearizeAndEncode) {
+      // Empty LLCPP vectors and strings typically have null data portions, which differs
+      // from the wire format representation (0 length out-of-line object for empty vector
+      // or string).
+      // By marking the pointer as present, the wire format will have the correct
+      // representation.
+      *object_ptr_ptr = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+      return Status::kSuccess;
+    }
+
+    SetError("absent pointer disallowed in non-nullable collection");
+    return Status::kConstraintViolationError;
+  }
 
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
