@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.factory.AlphaFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
                 "fuchsia.factory.CastCredentialsFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
                 "fuchsia.factory.MiscFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
                 "fuchsia.factory.PlayReadyFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
@@ -16,6 +17,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.factory.AlphaFactoryStoreProvider",
             "fuchsia.factory.CastCredentialsFactoryStoreProvider",
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.factory.PlayReadyFactoryStoreProvider",

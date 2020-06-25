@@ -11,7 +11,9 @@ use {
     fidl::endpoints::{create_proxy, Request, RequestStream, ServerEnd, ServiceMarker},
     fidl_fuchsia_boot::FactoryItemsMarker,
     fidl_fuchsia_factory::{
-        CastCredentialsFactoryStoreProviderMarker, CastCredentialsFactoryStoreProviderRequest,
+        AlphaFactoryStoreProviderMarker, AlphaFactoryStoreProviderRequest,
+        AlphaFactoryStoreProviderRequestStream, CastCredentialsFactoryStoreProviderMarker,
+        CastCredentialsFactoryStoreProviderRequest,
         CastCredentialsFactoryStoreProviderRequestStream, MiscFactoryStoreProviderMarker,
         MiscFactoryStoreProviderRequest, MiscFactoryStoreProviderRequestStream,
         PlayReadyFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderRequest,
@@ -49,6 +51,7 @@ const CONCURRENT_LIMIT: usize = 10_000;
 const DEFAULT_BOOTFS_FACTORY_ITEM_EXTRA: u32 = 0;
 
 enum IncomingServices {
+    AlphaFactoryStoreProvider(AlphaFactoryStoreProviderRequestStream),
     CastCredentialsFactoryStoreProvider(CastCredentialsFactoryStoreProviderRequestStream),
     MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
     PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
@@ -276,6 +279,7 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     fs.dir("svc")
+        .add_fidl_service(IncomingServices::AlphaFactoryStoreProvider)
         .add_fidl_service(IncomingServices::CastCredentialsFactoryStoreProvider)
         .add_fidl_service(IncomingServices::MiscFactoryStoreProvider)
         .add_fidl_service(IncomingServices::PlayReadyFactoryStoreProvider)
@@ -285,6 +289,9 @@ async fn main() -> Result<(), Error> {
 
     syslog::fx_log_info!("{}", "Setting up factory directories");
     let dir_mtx = Arc::new(Mutex::new(directory_proxy));
+    let alpha_config = Config::load::<AlphaFactoryStoreProviderMarker>().unwrap_or_default();
+    let alpha_directory = Arc::new(Mutex::new(apply_config(alpha_config, dir_mtx.clone()).await));
+
     let cast_credentials_config = Config::load::<CastCredentialsFactoryStoreProviderMarker>()?;
     let cast_directory =
         Arc::new(Mutex::new(apply_config(cast_credentials_config, dir_mtx.clone()).await));
@@ -305,6 +312,7 @@ async fn main() -> Result<(), Error> {
     let weave_directory = Arc::new(Mutex::new(apply_config(weave_config, dir_mtx.clone()).await));
 
     fs.for_each_concurrent(CONCURRENT_LIMIT, move |incoming_service| {
+        let alpha_directory_clone = alpha_directory.clone();
         let cast_directory_clone = cast_directory.clone();
         let misc_directory_clone = misc_directory.clone();
         let playready_directory_clone = playready_directory.clone();
@@ -313,6 +321,17 @@ async fn main() -> Result<(), Error> {
 
         async move {
             match incoming_service {
+                IncomingServices::AlphaFactoryStoreProvider(stream) => {
+                    let alpha_directory_clone = alpha_directory_clone.clone();
+                    handle_request_stream(
+                        stream,
+                        alpha_directory_clone,
+                        |req: AlphaFactoryStoreProviderRequest| {
+                            req.into_get_factory_store().map(|item| item.0)
+                        },
+                    )
+                    .await
+                }
                 IncomingServices::CastCredentialsFactoryStoreProvider(stream) => {
                     let cast_directory_clone = cast_directory_clone.clone();
                     handle_request_stream(

@@ -7,9 +7,9 @@ use {
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_boot::FactoryItemsMarker,
     fidl_fuchsia_factory::{
-        CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
-        PlayReadyFactoryStoreProviderMarker, WeaveFactoryStoreProviderMarker,
-        WidevineFactoryStoreProviderMarker,
+        AlphaFactoryStoreProviderMarker, CastCredentialsFactoryStoreProviderMarker,
+        MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
+        WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
     },
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     files_async::{self, DirentKind},
@@ -28,6 +28,8 @@ use {
     about = "Commands to view factory contents"
 )]
 pub enum Opt {
+    #[structopt(name = "alpha")]
+    Alpha(FactoryStoreCmd),
     #[structopt(name = "cast")]
     Cast(FactoryStoreCmd),
     #[structopt(name = "factory-items")]
@@ -108,6 +110,11 @@ async fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
 
     match opt {
+        Opt::Alpha(cmd) => {
+            let proxy = connect_to_service::<AlphaFactoryStoreProviderMarker>()
+                .expect("Failed to connect to AlphaFactoryStoreProvider service");
+            process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
+        }
         Opt::Cast(cmd) => {
             let proxy = connect_to_service::<CastCredentialsFactoryStoreProviderMarker>()
                 .expect("Failed to connect to CastCredentialsFactoryStoreProvider service");
@@ -164,6 +171,7 @@ mod tests {
         super::*,
         fidl_fuchsia_boot::{FactoryItemsRequest, FactoryItemsRequestStream},
         fidl_fuchsia_factory::{
+            AlphaFactoryStoreProviderRequest, AlphaFactoryStoreProviderRequestStream,
             CastCredentialsFactoryStoreProviderRequest,
             CastCredentialsFactoryStoreProviderRequestStream, MiscFactoryStoreProviderRequest,
             MiscFactoryStoreProviderRequestStream, PlayReadyFactoryStoreProviderRequest,
@@ -189,18 +197,21 @@ mod tests {
     const FACTORYCTL_PKG_URL: &str =
         "fuchsia-pkg://fuchsia.com/factoryctl_tests#meta/factoryctl.cmx";
 
+    const ALPHA_TXT_FILE_NAME: &str = "txt/alpha.txt";
     const CAST_TXT_FILE_NAME: &str = "txt/cast.txt";
     const MISC_TXT_FILE_NAME: &str = "misc/misc.txt";
     const PLAYREADY_TXT_FILE_NAME: &str = "txt/playready.txt";
     const WEAVE_TXT_FILE_NAME: &str = "txt/weave.txt";
     const WIDEVINE_TXT_FILE_NAME: &str = "widevine.txt";
 
+    const ALPHA_BIN_FILE_NAME: &str = "alpha.bin";
     const CAST_BIN_FILE_NAME: &str = "cast.bin";
     const MISC_BIN_FILE_NAME: &str = "bin/misc.bin";
     const PLAYREADY_BIN_FILE_NAME: &str = "playready/playready.bin";
     const WEAVE_BIN_FILE_NAME: &str = "weave.bin";
     const WIDEVINE_BIN_FILE_NAME: &str = "widevine.bin";
 
+    const ALPHA_TXT_FILE_CONTENTS: &str = "an alpha file";
     const CAST_TXT_FILE_CONTENTS: &str = "a cast file";
     const MISC_TXT_FILE_CONTENTS: &str = "a misc file";
     const PLAYREADY_TXT_FILE_CONTENTS: &str = "a playready file";
@@ -208,6 +219,7 @@ mod tests {
     const WIDEVINE_TXT_FILE_CONTENTS: &str = "a widevine file";
 
     const FACTORY_ITEM_CONTENTS: &[u8] = &[0xf0, 0xe8, 0x65, 0x94];
+    const ALPHA_BIN_FILE_CONTENTS: &[u8] = &[0xaa, 0xbb, 0xcc, 0xdd];
     const CAST_BIN_FILE_CONTENTS: &[u8] = &[0x0, 0x18, 0xF1, 0x6d];
     const MISC_BIN_FILE_CONTENTS: &[u8] = &[0x0, 0xf3, 0x17, 0xb6];
     const PLAYREADY_BIN_FILE_CONTENTS: &[u8] = &[0x0e, 0xb8, 0x1a, 0xc6];
@@ -216,6 +228,7 @@ mod tests {
 
     enum IncomingServices {
         FactoryItems(FactoryItemsRequestStream),
+        AlphaFactoryStoreProvider(AlphaFactoryStoreProviderRequestStream),
         CastCredentialsFactoryStoreProvider(CastCredentialsFactoryStoreProviderRequestStream),
         MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
         PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
@@ -260,6 +273,7 @@ mod tests {
     fn run_test_services() -> Result<NestedEnvironment, Error> {
         let mut fs = ServiceFs::new();
         fs.add_fidl_service(IncomingServices::FactoryItems)
+            .add_fidl_service(IncomingServices::AlphaFactoryStoreProvider)
             .add_fidl_service(IncomingServices::CastCredentialsFactoryStoreProvider)
             .add_fidl_service(IncomingServices::MiscFactoryStoreProvider)
             .add_fidl_service(IncomingServices::PlayReadyFactoryStoreProvider)
@@ -279,6 +293,30 @@ mod tests {
                                 vmo.write(&FACTORY_ITEM_CONTENTS, 0)?;
                                 responder.send(Some(vmo), FACTORY_ITEM_CONTENTS.len() as u32)?;
                                 Ok(())
+                            },
+                        )
+                        .await
+                        .unwrap();
+                }
+                IncomingServices::AlphaFactoryStoreProvider(stream) => {
+                    stream
+                        .err_into::<Error>()
+                        .try_for_each(
+                            |AlphaFactoryStoreProviderRequest::GetFactoryStore {
+                                 dir,
+                                 control_handle: _,
+                             }| {
+                                async move {
+                                    let alpha_proxy = start_test_dir(
+                                        ALPHA_TXT_FILE_NAME,
+                                        ALPHA_TXT_FILE_CONTENTS,
+                                        ALPHA_BIN_FILE_NAME,
+                                        ALPHA_BIN_FILE_CONTENTS,
+                                    )?;
+                                    alpha_proxy
+                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    Ok(())
+                                }
                             },
                         )
                         .await
@@ -415,6 +453,7 @@ mod tests {
         let env = run_test_services()?;
 
         for (store, action, bin_file_name, txt_file_name) in vec![
+            ("alpha", "list", ALPHA_BIN_FILE_NAME, ALPHA_TXT_FILE_NAME),
             ("cast", "list", CAST_BIN_FILE_NAME, CAST_TXT_FILE_NAME),
             ("misc", "list", MISC_BIN_FILE_NAME, MISC_TXT_FILE_NAME),
             ("playready", "list", PLAYREADY_BIN_FILE_NAME, PLAYREADY_TXT_FILE_NAME),
@@ -440,6 +479,7 @@ mod tests {
         let env = run_test_services()?;
 
         for (store, action, file_name, contents) in vec![
+            ("alpha", "dump", ALPHA_TXT_FILE_NAME, ALPHA_TXT_FILE_CONTENTS),
             ("cast", "dump", CAST_TXT_FILE_NAME, CAST_TXT_FILE_CONTENTS),
             ("misc", "dump", MISC_TXT_FILE_NAME, MISC_TXT_FILE_CONTENTS),
             ("playready", "dump", PLAYREADY_TXT_FILE_NAME, PLAYREADY_TXT_FILE_CONTENTS),
@@ -466,6 +506,12 @@ mod tests {
         let env = run_test_services()?;
 
         for (store, action, file_name, contents) in vec![
+            (
+                "alpha",
+                "dump",
+                ALPHA_BIN_FILE_NAME,
+                ALPHA_BIN_FILE_CONTENTS.to_hex(HEX_DISPLAY_CHUNK_SIZE),
+            ),
             (
                 "cast",
                 "dump",

@@ -7,9 +7,9 @@
 use {
     anyhow::Error,
     fidl_fuchsia_factory::{
-        CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
-        PlayReadyFactoryStoreProviderMarker, WeaveFactoryStoreProviderMarker,
-        WidevineFactoryStoreProviderMarker,
+        AlphaFactoryStoreProviderMarker, CastCredentialsFactoryStoreProviderMarker,
+        MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
+        WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
     },
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
@@ -191,6 +191,24 @@ async fn read_factory_files_from_weave_store() -> Result<(), Error> {
 async fn read_factory_files_from_weave_store_missing_files_fail() -> Result<(), Error> {
     let dir_proxy = connect_to_factory_store_provider!(WeaveFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "weave_bad").await.unwrap_err();
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn read_factory_files_from_alpha_store() -> Result<(), Error> {
+    let dir_proxy = connect_to_factory_store_provider!(AlphaFactoryStoreProviderMarker);
+    let path = format!("{}/{}", DATA_FILE_PATH, "alpha_file");
+    let expected_contents =
+        fs::read(&path).expect(&format!("Unable to read expected file: {}", &path));
+    let contents = read_file_from_proxy(&dir_proxy, "alpha").await?;
+    assert_eq!(expected_contents, contents);
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn read_factory_files_from_alpha_store_missing_files_fail() -> Result<(), Error> {
+    let dir_proxy = connect_to_factory_store_provider!(AlphaFactoryStoreProviderMarker);
+    read_file_from_proxy(&dir_proxy, "alpha_bad").await.unwrap_err();
     Ok(())
 }
 

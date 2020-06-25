@@ -144,6 +144,10 @@ test_package("factory_store_providers_ext4_tests") {
       path = rebase_path("testdata/input/weave_file")
       dest = "weave_file"
     },
+    {
+      path = rebase_path("testdata/input/alpha_file")
+      dest = "alpha_file"
+    },
   ]
 
   meta = [
@@ -226,6 +230,10 @@ test_package("factory_store_providers_tests") {
       path = rebase_path("testdata/input/weave_file")
       dest = "weave_file"
     },
+    {
+      path = rebase_path("testdata/input/alpha_file")
+      dest = "alpha_file"
+    },
   ]
 
   meta = [
@@ -256,6 +264,7 @@ config_data("factory_store_providers_ext4_tests_config") {
 
   sources = [
     "testdata/factory.config",
+    "testdata/fuchsia.factory.AlphaFactoryStoreProvider.config",
     "testdata/fuchsia.factory.CastCredentialsFactoryStoreProvider.config",
     "testdata/fuchsia.factory.MiscFactoryStoreProvider.config",
     "testdata/fuchsia.factory.PlayReadyFactoryStoreProvider.config",
@@ -268,6 +277,7 @@ config_data("factory_store_providers_tests_config") {
   for_pkg = "factory_store_providers_tests"
 
   sources = [
+    "testdata/fuchsia.factory.AlphaFactoryStoreProvider.config",
     "testdata/fuchsia.factory.CastCredentialsFactoryStoreProvider.config",
     "testdata/fuchsia.factory.MiscFactoryStoreProvider.config",
     "testdata/fuchsia.factory.PlayReadyFactoryStoreProvider.config",
