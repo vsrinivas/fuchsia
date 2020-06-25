@@ -1949,6 +1949,39 @@ TEST_F(NetStreamSocketsTest, ShutdownReset) {
   EXPECT_EQ(fds.revents, POLLHUP|POLLERR);
 }
 
+// ShutdownPendingWrite tests for all of the application writes that
+// occurred before shutdown SHUT_WR, to be received by the remote.
+TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
+  // Fill the send buffer of the server socket so that we have some
+  // pending data waiting to be sent out to the remote.
+  ssize_t wrote = fill_stream_send_buf(server.get(), client.get());
+
+  // SHUT_WR should enqueue a FIN after all of the application writes.
+  EXPECT_EQ(shutdown(server.get(), SHUT_WR), 0) << strerror(errno);
+
+  // All client reads are expected to return here, including the last
+  // read on receiving a FIN. Keeping a timeout for unexpected failures.
+  struct timeval tv = {};
+  tv.tv_sec = kTimeout;
+  EXPECT_EQ(setsockopt(client.get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
+
+  ssize_t rcvd = 0;
+  ssize_t ret;
+  // Keep a large enough buffer to reduce the number of read calls, as
+  // we expect the receive buffer to be filled up at this point.
+  char buf[4096];
+  // Each read would make room for the server to send out more data
+  // that has been enqueued from successful server socket writes.
+  while ((ret = read(client.get(), &buf, sizeof(buf))) > 0) {
+    rcvd += ret;
+  }
+  // Expect the last read to return 0 after the stack sees a FIN.
+  EXPECT_EQ(ret, 0) << strerror(errno);
+  // Expect no data drops and all written data by server is received
+  // by the client.
+  EXPECT_EQ(rcvd, wrote);
+}
+
 enum class sendMethod {
   WRITE,
   WRITEV,

@@ -6,10 +6,11 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_
 
 #include <cstdint>
+#include <sys/types.h>
 
 // TODO(iyerm): 10s seems too long for our test-cases
 const int32_t kTimeout = 10000;  // 10 seconds
 
-void fill_stream_send_buf(int fd, int peer_fd);
+ssize_t fill_stream_send_buf(int fd, int peer_fd);
 
 #endif  // SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_

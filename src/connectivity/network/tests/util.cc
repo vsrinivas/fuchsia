@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-void fill_stream_send_buf(int fd, int peer_fd) {
+ssize_t fill_stream_send_buf(int fd, int peer_fd) {
   // We're about to fill the send buffer; shrink it and the other side's receive buffer to the
   // minimum allowed.
   {
@@ -55,20 +55,21 @@ void fill_stream_send_buf(int fd, int peer_fd) {
   // buf size should be neither too small in which case too many writes operation is required
   // to fill out the sending buffer nor too big in which case a big stack is needed for the buf
   // array.
-  int cnt = 0;
+  ssize_t cnt = 0;
   {
     char buf[sndbuf_opt + rcvbuf_opt];
-    int size;
+    ssize_t size;
     while ((size = write(fd, buf, sizeof(buf))) > 0) {
       cnt += size;
     }
+    EXPECT_EQ(size, -1);
+    EXPECT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
   }
   EXPECT_GT(cnt, 0);
-  ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
-
 #if defined(__linux__)
   EXPECT_EQ(fcntl(fd, F_SETFL, flags), 0) << strerror(errno);
 #else
   EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &original_tv, tv_len), 0) << strerror(errno);
 #endif
+  return cnt;
 }
