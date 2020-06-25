@@ -7,7 +7,6 @@ group("features") {
   deps = [
     "ambient-executable-policy",
     "build-info",
-    "global-data",
     "hub",
     "isolated-temp",
     "misc-storage",

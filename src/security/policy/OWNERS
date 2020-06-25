@@ -10,7 +10,6 @@ jln@google.com
 zarvox@google.com
 
 per-file build_info_allowlist_* = file: /src/sys/appmgr/OWNERS
-per-file global_data_allowlist_* = file: /src/sys/appmgr/OWNERS
 per-file package_resolver_allowlist_* = file: /src/sys/pkg/OWNERS
 per-file package_cache_allowlist_* = file: /src/sys/pkg/OWNERS
 per-file pkgfs_versions_allowlist_* = file: /src/sys/pkg/OWNERS

@@ -27,7 +27,6 @@ template("sandbox_test_package") {
                              "environments",
                              "deprecated_shell",
                              "deprecated_misc_storage",
-                             "global_data",
                              "output_name",
                              "target_name",
                              "testonly",
@@ -39,7 +38,6 @@ template("sandbox_test_package") {
                            [
                              "deprecated_shell",
                              "deprecated_misc_storage",
-                             "global_data",
                            ])
     testonly = true
     meta = [
