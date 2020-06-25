@@ -20,7 +20,7 @@ pub enum RoutingError {
         moniker
     )]
     SourceInstanceNotExecutable { moniker: AbsoluteMoniker },
-    #[error("Failed to open path `{}` in outgoing directory of `{}`: {}", moniker, path, err)]
+    #[error("Failed to open path `{}` in outgoing directory of `{}`: {}", path, moniker, err)]
     OpenOutgoingFailed {
         moniker: AbsoluteMoniker,
         path: String,
