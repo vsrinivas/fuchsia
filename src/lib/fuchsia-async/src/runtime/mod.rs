@@ -50,6 +50,12 @@ pub trait WakeupTime {
     fn into_time(self) -> Time;
 }
 
+impl WakeupTime for std::time::Duration {
+    fn into_time(self) -> Time {
+        Time::now() + self.into()
+    }
+}
+
 /// A trait which allows futures to be easily wrapped in a timeout.
 pub trait TimeoutExt: Future + Sized {
     /// Wraps the future in a timeout, calling `on_timeout` to produce a result
