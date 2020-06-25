@@ -6,7 +6,11 @@
 
 #include <iostream>
 
+#include "src/connectivity/network/mdns/service/dns_formatting.h"
+
 namespace mdns {
+
+#ifndef MDNS_TRACE
 
 std::ostream& operator<<(std::ostream& os, DnsType value) {
   switch (value) {
@@ -34,6 +38,8 @@ std::ostream& operator<<(std::ostream& os, DnsType value) {
       return os << "TYPE " << static_cast<uint16_t>(value);
   }
 }
+
+#endif
 
 std::ostream& operator<<(std::ostream& os, MdnsResourceSection value) {
   switch (value) {

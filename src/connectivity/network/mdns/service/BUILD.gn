@@ -135,6 +135,10 @@ test("mdns_test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  if (enable_mdns_trace) {
+    defines = [ "MDNS_TRACE" ]
+  }
 }
 
 package("mdns") {
