@@ -17,8 +17,7 @@
 namespace {
 
 void asan_early_init(unsigned int arg) {
-  arch_asan_reallocate_shadow(reinterpret_cast<uintptr_t>(addr2shadow(kAsanStartAddress)),
-                              reinterpret_cast<uintptr_t>(addr2shadow(kAsanEndAddress)));
+  arch_asan_reallocate_shadow();
   g_asan_initialized.store(true);
 }
 

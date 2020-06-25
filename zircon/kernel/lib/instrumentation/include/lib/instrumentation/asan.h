@@ -29,7 +29,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <arch/kernel_aspace.h>
 #include <ktl/array.h>
+
+#ifdef __x86_64__
+inline constexpr size_t kAsanShift = 3;
+inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
+#endif  // __x86_64__
 
 // ASAN dynamic poison interface - allows caller to "poison" or "unpoison" a region of kernel
 // virtual addresses. Accesses to poisoned memory are invalid and may cause a fault or asan
@@ -69,6 +75,13 @@ bool asan_entire_region_is_poisoned(uintptr_t address, size_t size);
 // Returns number of bytes to add to heap allocations of |size| for a redzone, to detect out-of
 // bounds accesses. (Rounds up the size to an ASAN granule)
 size_t asan_heap_redzone_size(size_t size);
+
+// Adds the virtual region defined by [start, start+size) to the regions
+// instrumented by asan. After calling this function, users can call
+// asan_poison_shadow on the bytes in the newly added region.
+// This function can only be called before SMP is set up.
+// TODO(30033): Allow calling after SMP is set up.
+void asan_remap_shadow(uintptr_t start, size_t size);
 
 // Distinguished kasan poison values.
 // LLVM defines userspace equivalents of these in compiler-rt/lib/asan/asan_internal.h

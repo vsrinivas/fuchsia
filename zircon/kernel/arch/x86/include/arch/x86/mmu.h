@@ -81,6 +81,7 @@
 // During early boot the entire shadow is mapped read-only to a single zero page. Later, read-write
 // pages replace portions of the shadow corresponding to memory covered by ASAN.
 #define X86_KERNEL_KASAN_INITIAL_PT_FLAGS (X86_MMU_PG_G | X86_MMU_PG_P)
+#define X86_KERNEL_KASAN_INITIAL_PD_FLAGS (X86_MMU_PG_P)
 #define X86_KERNEL_KASAN_RW_PT_FLAGS (X86_MMU_PG_G | X86_MMU_PG_RW | X86_MMU_PG_P)
 #define X86_KERNEL_KASAN_PD_FLAGS (X86_MMU_PG_RW | X86_MMU_PG_P)
 

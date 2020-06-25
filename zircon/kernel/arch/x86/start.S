@@ -165,7 +165,6 @@ FUNCTION_LABEL(_start)
     // 64 PDP entries.
     // TODO(fxb/30033): Unmap the shadow's shadow, the region of shadow memory covering the
     // shadow map. This should never be accessed.
-
     // Make the kasan Page Tables point to the zero page
     movl $NO_OF_PT_ENTRIES, %ecx
     movl $PHYS(kasan_shadow_pt), %edi
@@ -175,7 +174,7 @@ FUNCTION_LABEL(_start)
     // Make the Page Directory point to the Page Table
     movl $NO_OF_PT_ENTRIES, %ecx
     movl $PHYS(kasan_shadow_pd),  %edi
-    movabs $PHYS(kasan_shadow_pt) + X86_KERNEL_KASAN_PD_FLAGS, %rax
+    movabs $PHYS(kasan_shadow_pt) + X86_KERNEL_KASAN_INITIAL_PD_FLAGS, %rax
     rep stosq
 
     // Put the page directory entry into the pdp_high. It's 64 entries starting from
@@ -184,7 +183,7 @@ FUNCTION_LABEL(_start)
 #define PDP_HIGH_OFFSET_START (((KASAN_SHADOW_OFFSET) >> 30) & 0x1ff)
     movl $PHYS(pdp_high + PDP_HIGH_OFFSET_START * 8), %edi
     movl $X86_KERNEL_KASAN_PDP_ENTRIES, %ecx
-    movabs $PHYS(kasan_shadow_pd) + X86_KERNEL_KASAN_PD_FLAGS, %rax
+    movabs $PHYS(kasan_shadow_pd) + X86_KERNEL_KASAN_INITIAL_PD_FLAGS, %rax
     rep stosq
 #endif  // __has_feature(address_sanitizer)
 

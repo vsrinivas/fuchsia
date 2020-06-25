@@ -19,12 +19,20 @@
 #include <ktl/unique_ptr.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
+#include <vm/vm_address_region.h>
 
 #if __has_feature(address_sanitizer)
 namespace {
 
 constexpr size_t kAsanShift = 3;
 constexpr size_t kAsanGranularity = (1 << kAsanShift);
+
+static inline uint8_t* test_addr2shadow(uintptr_t address) {
+  uint8_t* const kasan_shadow_map = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET);
+  uint8_t* const shadow_byte_address =
+      kasan_shadow_map + ((address - KERNEL_ASPACE_BASE) >> kAsanShift);
+  return shadow_byte_address;
+}
 
 // Makes sure that a region returned by malloc are unpoisoned.
 bool kasan_test_malloc_poisons() {
@@ -216,6 +224,58 @@ bool kasan_test_quarantine() {
   END_TEST;
 }
 
+// Read one byte from every page of the kASAN shadow. Serves as a consistency check for shadow
+// page tables.
+bool kasan_test_walk_shadow() {
+  BEGIN_TEST;
+
+  uint8_t* const start = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET);
+  uint8_t* const end = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET + kAsanShadowSize);
+  for (volatile uint8_t* p = start; p < end; p += PAGE_SIZE) {
+    p[0];  // Read one byte from each page of the shadow.
+  }
+
+  END_TEST;
+}
+
+// Test that asan_remap_shadow makes a writable shadow region for address ranges.
+//
+// asan_remap_shadow is normally only allowed to be called in early boot; this test is safe
+// to use it, however, because it only runs on one CPU.
+bool kasan_test_remap_shadow() {
+  BEGIN_TEST;
+
+  auto kernel_vmar = VmAspace::kernel_aspace()->RootVmar()->as_vm_address_region();
+  fbl::RefPtr<VmAddressRegion> test_vmar;
+  auto status = kernel_vmar->CreateSubVmar(
+      /*offset=*/0, /*size=*/(2 * PAGE_SIZE) << kAsanShift, /*align_pow2=*/kAsanShift,
+      /*vmar_flags=*/VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE, "kasan_test_remap_shadow",
+      &test_vmar);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Walk the shadow before asan_remap_shadow to ensure that the shadow is present and to
+  // create TLB entries for the shadow map pointing to non-writable (old) pages.
+  uint8_t* test_vmar_shadow_start = test_addr2shadow(test_vmar->base());
+  uint8_t* test_vmar_shadow_end = test_addr2shadow(test_vmar->base() + test_vmar->size());
+  uint8_t sum = 0;
+  for (uint8_t* p = test_vmar_shadow_start; p < test_vmar_shadow_end; p += PAGE_SIZE) {
+    sum += p[0];
+  }
+  EXPECT_EQ(0, sum);
+
+  asan_remap_shadow(test_vmar->base(), test_vmar->size());
+
+  // Walk the shadow after asan_remap_shadow and write to every page. The write should succeed and
+  // write to newly-allocated shadow pages.
+  for (volatile uint8_t* p = test_vmar_shadow_start; p < test_vmar_shadow_end; p += PAGE_SIZE) {
+    p[0] = 1;
+  }
+  memset(test_vmar_shadow_start, 0, test_vmar_shadow_end - test_vmar_shadow_start);
+
+  test_vmar->Destroy();
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(kasan_tests)
@@ -228,6 +288,8 @@ UNITTEST("detects_buffer_overflows", kasan_test_detects_buffer_overflows)
 UNITTEST("test_poisoning_heap", kasan_test_poison_heap)
 UNITTEST("test_poisoning_heap_partial", kasan_test_poison_heap_partial)
 UNITTEST("test_quarantine", kasan_test_quarantine)
+UNITTEST("test_walk_shadow", kasan_test_walk_shadow)
+UNITTEST("test_asan_remap_shadow", kasan_test_remap_shadow)
 UNITTEST_END_TESTCASE(kasan_tests, "kasan", "Kernel Address Sanitizer Tests")
 
 #endif  // _has_feature(address_sanitizer)

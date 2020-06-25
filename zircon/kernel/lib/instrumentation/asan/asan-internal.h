@@ -19,9 +19,6 @@
 
 extern ktl::atomic<bool> g_asan_initialized;
 
-inline constexpr size_t kAsanShift = 3;
-inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
-
 // The redzone is an area of poisoned bytes added at the end of memory allocations. This allows
 // detecting out-of-bounds accesses.
 //
@@ -64,6 +61,6 @@ void asan_check_memory_overlap(uintptr_t offseta, size_t lena, uintptr_t offsetb
 
 #endif  // __x86_64__
 
-void arch_asan_reallocate_shadow(uintptr_t physmap_shadow_begin, uintptr_t physmap_shadow_end);
+void arch_asan_reallocate_shadow();
 
 #endif  // ZIRCON_KERNEL_LIB_INSTRUMENTATION_ASAN_ASAN_INTERNAL_H_
