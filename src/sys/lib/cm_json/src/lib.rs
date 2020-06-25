@@ -48,7 +48,7 @@ pub const CMX_SCHEMA: &JsonSchema<'_> =
 pub enum Error {
     InvalidArgs(String),
     Io(io::Error),
-    Parse(String),
+    Parse { err: String },
     Validate { schema_name: Option<String>, err: String },
     ValidateFidl(anyhow::Error),
     Internal(String),
@@ -63,7 +63,7 @@ impl Error {
     }
 
     pub fn parse(err: impl fmt::Display) -> Self {
-        Self::Parse(err.to_string())
+        Self::Parse { err: err.to_string() }
     }
 
     pub fn validate(err: impl fmt::Display) -> Self {
@@ -88,13 +88,13 @@ impl fmt::Display for Error {
         match &self {
             Error::InvalidArgs(err) => write!(f, "Invalid args: {}", err),
             Error::Io(err) => write!(f, "IO error: {}", err),
-            Error::Parse(err) => write!(f, "Parse error: {}", err),
+            Error::Parse { err } => write!(f, "{}", err),
             Error::Validate { schema_name, err } => {
                 let schema_str = schema_name
                     .as_ref()
                     .map(|n| format!("Validation against schema '{}' failed: ", n))
                     .unwrap_or("".to_string());
-                write!(f, "Validate error: {}{}", schema_str, err)
+                write!(f, "{}{}", schema_str, err)
             }
             Error::ValidateFidl(err) => write!(f, "FIDL validation failed: {}", err),
             Error::Internal(err) => write!(f, "Internal error: {}", err),
@@ -112,12 +112,6 @@ impl From<io::Error> for Error {
 impl From<Utf8Error> for Error {
     fn from(err: Utf8Error) -> Self {
         Error::Utf8(err)
-    }
-}
-
-impl From<cm::ParseError> for Error {
-    fn from(err: cm::ParseError) -> Self {
-        Error::parse(err)
     }
 }
 
@@ -152,7 +146,7 @@ mod tests {
     #[test]
     fn test_syntax_error_message() {
         let result = serde_json::from_str::<cm::Name>("foo").map_err(Error::from);
-        assert_matches!(result, Err(Error::Parse(_)));
+        assert_matches!(result, Err(Error::Parse { .. }));
     }
 
     #[test]

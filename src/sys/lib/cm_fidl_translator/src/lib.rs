@@ -539,12 +539,12 @@ fn dictionary_from_map(in_obj: Map<String, Value>) -> Result<fdata::Dictionary, 
                 for val in arr {
                     match val {
                         Value::String(s) => strs.push(s.clone()),
-                        _ => return Err(Error::Parse(format!("Value must be string"))),
+                        _ => return Err(Error::validate("Value must be string")),
                     };
                 }
                 Some(Box::new(fdata::DictionaryValue::StrVec(strs)))
             }
-            _ => return Err(Error::Parse(format!("Value must be string or list of strings"))),
+            _ => return Err(Error::validate("Value must be string or list of strings")),
         };
         entries.push(fdata::DictionaryEntry { key, value });
     }
@@ -561,7 +561,7 @@ fn convert_value(v: Value) -> Result<Option<Box<fsys::Value>>, Error> {
             } else if let Some(f) = n.as_f64() {
                 Some(Box::new(fsys::Value::Fnum(f)))
             } else {
-                return Err(Error::Parse(format!("Number is out of range: {}", n)));
+                return Err(Error::validate(format!("Number is out of range: {}", n)));
             }
         }
         Value::String(s) => Some(Box::new(fsys::Value::Str(s.clone()))),
@@ -638,7 +638,7 @@ mod tests {
         });
 
         let res = translate(&format!("{}", input));
-        assert_matches!(res, Err(Error::Parse(_)));
+        assert_matches!(res, Err(Error::Parse { .. }));
     }
 
     test_translate! {

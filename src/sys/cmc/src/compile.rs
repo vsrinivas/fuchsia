@@ -5,7 +5,7 @@
 use crate::cml::{self, CapabilityClause};
 use crate::one_or_many::OneOrMany;
 use crate::validate;
-use cm_json::{self, cm, Error};
+use cm_json::{cm, Error};
 use serde::ser::Serialize;
 use serde_json::{
     self,
@@ -40,8 +40,7 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
 
     let mut buffer = String::new();
     File::open(&file.as_path())?.read_to_string(&mut buffer)?;
-    let value = cm_json::from_json5_str(&buffer)?;
-    let document = validate::parse_cml(value)?;
+    let document = validate::parse_cml(&buffer)?;
     let out = compile_cml(document)?;
 
     let mut res = Vec::new();
@@ -501,7 +500,7 @@ fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Env
                             .collect::<Result<Vec<_>, Error>>()
                     })
                     .transpose()?,
-                stop_timeout_ms: env.stop_timeout_ms,
+                stop_timeout_ms: env.stop_timeout_ms.map(|s| s.0),
             })
         })
         .collect()
@@ -789,7 +788,8 @@ fn extract_environment_ref(r: Option<&cml::EnvironmentRef>) -> Option<cm::Name> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cm_json::{self, Error};
+    use cm_json::Error;
+    use matches::assert_matches;
     use serde_json::json;
     use std::fs::File;
     use std::io;
@@ -2271,11 +2271,10 @@ mod tests {
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         {
             let result = compile(&tmp_in_path, false, Some(tmp_out_path.clone()));
-            let expected_result: Result<(), Error> = Err(Error::parse(
-                "invalid value: string \"realm\", expected one or an array of \"framework\", \
-                \"self\", or \"#<child-name>\"",
-            ));
-            assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
+            assert_matches!(
+                result,
+                Err(Error::Parse { err, ..  }) if &err == "invalid value: string \"realm\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
+            );
         }
         // Compilation failed so output should not exist.
         {

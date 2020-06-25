@@ -6,6 +6,7 @@ use {
     crate::{cml, one_or_many::OneOrMany},
     cm_json::{self, Error, JsonSchema, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
+    json5,
     lazy_static::lazy_static,
     serde_json::Value,
     std::{
@@ -46,10 +47,9 @@ pub fn validate<P: AsRef<Path>>(
 }
 
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
-pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
-    // TODO(52963): Include line and column number in the error.
+pub fn parse_cml(buffer: &str) -> Result<cml::Document, Error> {
     let document: cml::Document =
-        serde_json::from_value(value).map_err(|e| Error::parse(format!("{}", e)))?;
+        json5::from_str(buffer).map_err(|e| Error::parse(format!("{}", e)))?;
     let mut ctx = ValidationContext {
         document: &document,
         all_children: HashMap::new(),
@@ -81,33 +81,29 @@ fn validate_file<P: AsRef<Path>>(
 
     // Validate based on file extension.
     let ext = file.extension().and_then(|e| e.to_str());
-    let v = match ext {
+    match ext {
         Some("cmx") => {
-            let v = cm_json::from_json_str(&buffer)?;
+            let v = serde_json::from_str(&buffer)?;
             validate_json(&v, CMX_SCHEMA)?;
-            v
+            // Validate against any extra schemas provided.
+            for extra_schema in extra_schemas {
+                let schema = JsonSchema::new_from_file(&extra_schema.0.as_ref())?;
+                validate_json(&v, &schema).map_err(|e| match (&e, &extra_schema.1) {
+                    (Error::Validate { schema_name, err }, Some(extra_msg)) => Error::Validate {
+                        schema_name: schema_name.clone(),
+                        err: format!("{}\n{}", err, extra_msg),
+                    },
+                    _ => e,
+                })?;
+            }
         }
         Some("cml") => {
-            let v = cm_json::from_json5_str(&buffer)?;
-            parse_cml(v.clone())?;
-            v
+            parse_cml(&buffer)?;
         }
         _ => {
             return Err(Error::invalid_args(BAD_EXTENSION));
         }
     };
-
-    // Validate against any extra schemas provided.
-    for extra_schema in extra_schemas {
-        let schema = JsonSchema::new_from_file(&extra_schema.0.as_ref())?;
-        validate_json(&v, &schema).map_err(|e| match (&e, &extra_schema.1) {
-            (Error::Validate { schema_name, err }, Some(extra_msg)) => Error::Validate {
-                schema_name: schema_name.clone(),
-                err: format!("{}\n{}", err, extra_msg),
-            },
-            _ => e,
-        })?;
-    }
     Ok(())
 }
 
@@ -1070,16 +1066,15 @@ mod tests {
     macro_rules! test_validate_cml {
         (
             $(
-                $test_name:ident => {
-                    input = $input:expr,
-                    result = $result:expr,
-                },
+                $test_name:ident($input:expr, $($pattern:tt)+),
             )+
         ) => {
             $(
                 #[test]
                 fn $test_name() {
-                    validate_test("test.cml", $input, $result);
+                    let input = format!("{}", $input);
+                    let result = write_and_validate("test.cml", input.as_bytes());
+                    assert_matches!(result, $($pattern)+);
                 }
             )+
         }
@@ -1088,60 +1083,37 @@ mod tests {
     macro_rules! test_validate_cmx {
         (
             $(
-                $test_name:ident => {
-                    input = $input:expr,
-                    result = $result:expr,
-                },
+                $test_name:ident($input:expr, $($pattern:tt)+),
             )+
         ) => {
             $(
                 #[test]
                 fn $test_name() {
-                    validate_test("test.cmx", $input, $result);
+                    let input = format!("{}", $input);
+                    let result = write_and_validate("test.cmx", input.as_bytes());
+                    assert_matches!(result, $($pattern)+);
                 }
             )+
         }
     }
 
-    fn validate_test(
-        filename: &str,
-        input: serde_json::value::Value,
-        expected_result: Result<(), Error>,
-    ) {
-        let input_str = format!("{}", input);
-        validate_json_str(filename, &input_str, expected_result);
-    }
-
-    fn validate_json_str(filename: &str, input: &str, expected_result: Result<(), Error>) {
+    fn write_and_validate(filename: &str, input: &[u8]) -> Result<(), Error> {
         let tmp_dir = TempDir::new().unwrap();
         let tmp_file_path = tmp_dir.path().join(filename);
-
-        File::create(&tmp_file_path).unwrap().write_all(input.as_bytes()).unwrap();
-
-        let result = validate(&vec![tmp_file_path], &[]);
-        assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
+        File::create(&tmp_file_path).unwrap().write_all(input).unwrap();
+        validate(&vec![tmp_file_path], &[])
     }
 
     #[test]
     fn test_validate_invalid_json_fails() {
-        let tmp_dir = TempDir::new().unwrap();
-        let tmp_file_path = tmp_dir.path().join("test.cml");
-
-        File::create(&tmp_file_path).unwrap().write_all(b"{").unwrap();
-
-        let err = validate(&vec![tmp_file_path], &[]).expect_err("not an err");
-        let err = format!("{}", err);
-        assert!(err.contains("Couldn't read input as JSON5"), "{}", err);
-    }
-
-    #[test]
-    fn test_json5_parse_number() {
-        let json: Value = cm_json::from_json5_str("1").expect("couldn't parse");
-        if let Value::Number(n) = json {
-            assert!(n.is_i64());
-        } else {
-            panic!("{:?} is not a number", json);
-        }
+        let result = write_and_validate("test.cml", b"{");
+        let expected_err = r#" --> 1:2
+  |
+1 | {
+  |  ^---
+  |
+  = expected identifier or string"#;
+        assert_matches!(result, Err(Error::Parse { err, .. }) if &err == expected_err);
     }
 
     #[test]
@@ -1159,28 +1131,29 @@ mod tests {
                 },
             ],
         }"##;
-        validate_json_str("test.cml", input, Ok(()));
+        let result = write_and_validate("test.cml", input.as_bytes());
+        assert_matches!(result, Ok(()));
     }
 
     test_validate_cml! {
         // program
-        test_cml_empty_json => {
-            input = json!({}),
-            result = Ok(()),
-        },
-        test_cml_program => {
-            input = json!(
+        test_cml_empty_json(
+            json!({}),
+            Ok(())
+        ),
+        test_cml_program(
+            json!(
                 {
                     "program": { "binary": "bin/app" },
                     "use": [ { "runner": "elf" } ],
                 }
             ),
-            result = Ok(()),
-        },
+            Ok(())
+        ),
 
         // use
-        test_cml_use => {
-            input = json!({
+        test_cml_use(
+            json!({
                 "use": [
                   { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                   { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
@@ -1221,50 +1194,50 @@ mod tests {
                   },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_use_event_missing_from => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_use_event_missing_from(
+            json!({
                 "use": [
                     { "event": "started" },
                 ]
             }),
-            result = Err(Error::validate("\"from\" should be present with \"event\"")),
-        },
-        test_cml_use_missing_props => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" should be present with \"event\""
+        ),
+        test_cml_use_missing_props(
+            json!({
                 "use": [ { "as": "/svc/fuchsia.logger.Log" } ]
             }),
-            result = Err(Error::validate("`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\"")),
-        },
-        test_cml_use_as_with_meta_storage => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\""
+        ),
+        test_cml_use_as_with_meta_storage(
+            json!({
                 "use": [ { "storage": "meta", "as": "/meta" } ]
             }),
-            result = Err(Error::validate("\"as\" field cannot be used with storage type \"meta\"")),
-        },
-        test_cml_use_as_with_runner => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with storage type \"meta\""
+        ),
+        test_cml_use_as_with_runner(
+            json!({
                 "use": [ { "runner": "elf", "as": "xxx" } ]
             }),
-            result = Err(Error::validate("\"as\" field cannot be used with \"runner\"")),
-        },
-        test_cml_use_from_with_meta_storage => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"runner\""
+        ),
+        test_cml_use_from_with_meta_storage(
+            json!({
                 "use": [ { "storage": "cache", "from": "realm" } ]
             }),
-            result = Err(Error::validate("\"from\" field cannot be used with \"storage\"")),
-        },
-        test_cml_use_invalid_from => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" field cannot be used with \"storage\""
+        ),
+        test_cml_use_invalid_from(
+            json!({
                 "use": [
                   { "service": "/fonts/CoolFonts", "from": "self" }
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"self\", expected \"realm\", \"framework\", or none")),
-        },
-        test_cml_use_bad_as => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"realm\", \"framework\", or none"
+        ),
+        test_cml_use_bad_as(
+            json!({
                 "use": [
                     {
                         "protocol": ["/fonts/CoolFonts", "/fonts/FunkyFonts"],
@@ -1272,37 +1245,37 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\" field can only be specified when one `protocol` is supplied.")),
-        },
-        test_cml_use_bad_duplicate_targets => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
+        ),
+        test_cml_use_bad_duplicate_targets(
+            json!({
                 "use": [
                   { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                   { "protocol": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                 ],
             }),
-            result = Err(Error::validate("\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target protocol")),
-        },
-        test_cml_use_bad_duplicate_protocol => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target protocol"
+        ),
+        test_cml_use_bad_duplicate_protocol(
+            json!({
                 "use": [
                   { "protocol": ["/svc/fuchsia.sys2.Realm", "/svc/fuchsia.sys2.Realm"] },
                 ],
             }),
-            result = Err(Error::parse("invalid value: array with duplicate element, expected a path or nonempty array of paths, with unique elements")),
-        },
-        test_cml_use_empty_protocols => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: array with duplicate element, expected a path or nonempty array of paths, with unique elements"
+        ),
+        test_cml_use_empty_protocols(
+            json!({
                 "use": [
                     {
                         "protocol": [],
                     },
                 ],
             }),
-            result = Err(Error::parse("invalid length 0, expected a path or nonempty array of paths, with unique elements")),
-        },
-        test_cml_use_bad_subdir => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
+        ),
+        test_cml_use_bad_subdir(
+            json!({
                 "use": [
                   {
                     "directory": "/data/config",
@@ -1312,10 +1285,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
-        },
-        test_cml_use_resolver_fails => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with no leading `/` and non-empty segments"
+        ),
+        test_cml_use_resolver_fails(
+            json!({
                 "use": [
                     {
                         "resolver": "pkg_resolver",
@@ -1323,46 +1296,46 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate("`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\"")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\""
+        ),
 
-        test_cml_use_disallows_nested_dirs => {
-            input = json!({
+        test_cml_use_disallows_nested_dirs(
+            json!({
                 "use": [
                     { "directory": "/foo/bar", "rights": [ "r*" ] },
                     { "directory": "/foo/bar/baz", "rights": [ "r*" ] },
                 ],
             }),
-            result = Err(Error::validate("directory \"/foo/bar/baz\" is a prefix of \"use\" target directory \"/foo/bar\"")),
-        },
-        test_cml_use_disallows_common_prefixes_protocol => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar/baz\" is a prefix of \"use\" target directory \"/foo/bar\""
+        ),
+        test_cml_use_disallows_common_prefixes_protocol(
+            json!({
                 "use": [
                     { "directory": "/foo/bar", "rights": [ "r*" ] },
                     { "protocol": "/foo/bar/fuchsia.2" },
                 ],
             }),
-            result = Err(Error::validate("protocol \"/foo/bar/fuchsia.2\" is a prefix of \"use\" target directory \"/foo/bar\"")),
-        },
-        test_cml_use_disallows_common_prefixes_service => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "protocol \"/foo/bar/fuchsia.2\" is a prefix of \"use\" target directory \"/foo/bar\""
+        ),
+        test_cml_use_disallows_common_prefixes_service(
+            json!({
                 "use": [
                     { "directory": "/foo/bar", "rights": [ "r*" ] },
                     { "service": "/foo/bar/baz/fuchsia.logger.Log" },
                 ],
             }),
-            result = Err(Error::validate("service \"/foo/bar/baz/fuchsia.logger.Log\" is a prefix of \"use\" target directory \"/foo/bar\"")),
-        },
-        test_cml_use_disallows_filter_on_non_events => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "service \"/foo/bar/baz/fuchsia.logger.Log\" is a prefix of \"use\" target directory \"/foo/bar\""
+        ),
+        test_cml_use_disallows_filter_on_non_events(
+            json!({
                 "use": [
                     { "directory": "/foo/bar", "rights": [ "r*" ], "filter": {"path": "/diagnostics"} },
                 ],
             }),
-            result = Err(Error::validate("\"filter\" can only be used with \"event\"")),
-        },
-        test_cml_use_bad_as_in_event => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be used with \"event\""
+        ),
+        test_cml_use_bad_as_in_event(
+            json!({
                 "use": [
                     {
                         "event": ["destroyed", "stopped"],
@@ -1371,10 +1344,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\" field can only be specified when one `event` is supplied")),
-        },
-        test_cml_use_duplicate_events => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `event` is supplied"
+        ),
+        test_cml_use_duplicate_events(
+            json!({
                 "use": [
                     {
                         "event": ["destroyed", "started"],
@@ -1386,21 +1359,20 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"destroyed\" is a duplicate \"use\" target event")),
-        },
-        test_cml_use_event_stream_missing_events => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"destroyed\" is a duplicate \"use\" target event"
+        ),
+        test_cml_use_event_stream_missing_events(
+            json!({
                 "use": [
                     {
                         "event_stream": ["destroyed"],
                     },
                 ]
             }),
-            result = Err(Error::validate(format!(
-                        "Event \"destroyed\" in event stream not found in any \"use\" declaration."))),
-        },
-        test_cml_use_bad_filter_in_event => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Event \"destroyed\" in event stream not found in any \"use\" declaration."
+        ),
+        test_cml_use_bad_filter_in_event(
+            json!({
                 "use": [
                     {
                         "event": ["destroyed", "stopped"],
@@ -1409,10 +1381,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"filter\" field can only be specified when one `event` is supplied")),
-        },
-        test_cml_use_bad_filter_and_as_in_event => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" field can only be specified when one `event` is supplied"
+        ),
+        test_cml_use_bad_filter_and_as_in_event(
+            json!({
                 "use": [
                     {
                         "event": ["destroyed", "stopped"],
@@ -1422,11 +1394,11 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\",\"filter\" fields can only be specified when one `event` is supplied")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\",\"filter\" fields can only be specified when one `event` is supplied"
+        ),
         // expose
-        test_cml_expose => {
-            input = json!({
+        test_cml_expose(
+            json!({
                 "expose": [
                     {
                         "service": "/loggers/fuchsia.logger.Log",
@@ -1458,10 +1430,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_expose_service_multiple_from => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_expose_service_multiple_from(
+            json!({
                 "expose": [
                     {
                         "service": "/loggers/fuchsia.logger.Log",
@@ -1475,10 +1447,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_expose_all_valid_chars => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_expose_all_valid_chars(
+            json!({
                 "expose": [
                     { "service": "/loggers/fuchsia.logger.Log", "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-." }
                 ],
@@ -1489,24 +1461,24 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_expose_missing_props => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_expose_missing_props(
+            json!({
                 "expose": [ {} ]
             }),
-            result = Err(Error::parse("missing field `from`")),
-        },
-        test_cml_expose_missing_from => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `from`"
+        ),
+        test_cml_expose_missing_from(
+            json!({
                 "expose": [
                     { "service": "/loggers/fuchsia.logger.Log", "from": "#missing" }
                 ]
             }),
-            result = Err(Error::validate("\"expose\" source \"#missing\" does not appear in \"children\"")),
-        },
-        test_cml_expose_duplicate_target_paths => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#missing\" does not appear in \"children\""
+        ),
+        test_cml_expose_duplicate_target_paths(
+            json!({
                 "expose": [
                     { "service": "/fonts/CoolFonts", "from": "self" },
                     { "service": "/svc/logger", "from": "#logger", "as": "/thing" },
@@ -1519,12 +1491,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate(
-                    "\"/thing\" is a duplicate \"expose\" target directory for \"realm\""
-            )),
-        },
-        test_cml_expose_invalid_multiple_from => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"expose\" target directory for \"realm\""
+        ),
+        test_cml_expose_invalid_multiple_from(
+            json!({
                     "expose": [ {
                         "protocol": "/svc/fuchsua.logger.Log",
                         "from": [ "self", "#logger" ],
@@ -1536,19 +1506,19 @@ mod tests {
                         },
                     ]
                 }),
-            result = Err(Error::validate("\"protocol\" capabilities cannot have multiple \"from\" clauses")),
-        },
-        test_cml_expose_bad_from => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"protocol\" capabilities cannot have multiple \"from\" clauses"
+        ),
+        test_cml_expose_bad_from(
+            json!({
                 "expose": [ {
                     "service": "/loggers/fuchsia.logger.Log", "from": "realm"
                 } ]
             }),
-            result = Err(Error::parse("invalid value: string \"realm\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\"")),
-        },
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"realm\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
+        ),
         // if "as" is specified, only 1 "protocol" array item is allowed.
-        test_cml_expose_bad_as => {
-            input = json!({
+        test_cml_expose_bad_as(
+            json!({
                 "expose": [
                     {
                         "protocol": ["/svc/A", "/svc/B"],
@@ -1563,10 +1533,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\" field can only be specified when one `protocol` is supplied.")),
-        },
-        test_cml_expose_bad_duplicate_targets => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
+        ),
+        test_cml_expose_bad_duplicate_targets(
+            json!({
                 "expose": [
                     {
                         "protocol": ["/svc/A", "/svc/B"],
@@ -1578,10 +1548,10 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate("\"/svc/A\" is a duplicate \"expose\" target protocol for \"realm\"")),
-        },
-        test_cml_expose_empty_protocols => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/A\" is a duplicate \"expose\" target protocol for \"realm\""
+        ),
+        test_cml_expose_empty_protocols(
+            json!({
                 "expose": [
                     {
                         "protocol": [],
@@ -1590,10 +1560,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::parse("invalid length 0, expected a path or nonempty array of paths, with unique elements")),
-        },
-        test_cml_expose_bad_subdir => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
+        ),
+        test_cml_expose_bad_subdir(
+            json!({
                 "expose": [
                     {
                         "directory": "/volumes/blobfs",
@@ -1603,10 +1573,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
-        },
-        test_cml_expose_invalid_subdir_to_framework => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with no leading `/` and non-empty segments"
+        ),
+        test_cml_expose_invalid_subdir_to_framework(
+            json!({
                 "expose": [
                     {
                         "directory": "/volumes/blobfs",
@@ -1617,11 +1587,9 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate(
-                "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead.")),
-        },
-        test_cml_expose_resolver_from_self => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead."),
+        test_cml_expose_resolver_from_self(
+            json!({
                 "expose": [
                     {
                         "resolver": "pkg_resolver",
@@ -1635,10 +1603,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_expose_resolver_from_self_missing => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_expose_resolver_from_self_missing(
+            json!({
                 "expose": [
                     {
                         "resolver": "pkg_resolver",
@@ -1646,10 +1614,10 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate("Resolver \"pkg_resolver\" is exposed from self, so it must be declared in \"resolvers\"")),
-        },
-        test_cml_expose_to_framework_ok => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is exposed from self, so it must be declared in \"resolvers\""
+        ),
+        test_cml_expose_to_framework_ok(
+            json!({
                 "expose": [
                     {
                         "directory": "/foo",
@@ -1659,10 +1627,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_expose_to_framework_invalid => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_expose_to_framework_invalid(
+            json!({
                 "expose": [
                     {
                         "directory": "/foo",
@@ -1677,12 +1645,12 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("Expose to framework can only be done from self.")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Expose to framework can only be done from self."
+        ),
 
         // offer
-        test_cml_offer => {
-            input = json!({
+        test_cml_offer(
+            json!({
                 "offer": [
                     {
                         "service": "/svc/fuchsia.logger.Log",
@@ -1779,10 +1747,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_offer_service_multiple_from => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_offer_service_multiple_from(
+            json!({
                 "offer": [
                     {
                         "service": "/loggers/fuchsia.logger.Log",
@@ -1801,10 +1769,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_offer_all_valid_chars => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_offer_all_valid_chars(
+            json!({
                 "offer": [
                     {
                         "service": "/svc/fuchsia.logger.Log",
@@ -1835,46 +1803,46 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_offer_missing_props => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_offer_missing_props(
+            json!({
                 "offer": [ {} ]
             }),
-            result = Err(Error::parse("missing field `from`")),
-        },
-        test_cml_offer_missing_from => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `from`"
+        ),
+        test_cml_offer_missing_from(
+            json!({
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#missing",
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            result = Err(Error::validate("\"offer\" source \"#missing\" does not appear in \"children\"")),
-        },
-        test_cml_storage_offer_missing_from => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"children\""
+        ),
+        test_cml_storage_offer_missing_from(
+            json!({
                     "offer": [ {
                         "storage": "cache",
                         "from": "#missing",
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            result = Err(Error::validate("\"offer\" source \"#missing\" does not appear in \"storage\"")),
-        },
-        test_cml_offer_bad_from => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"storage\""
+        ),
+        test_cml_offer_bad_from(
+            json!({
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#invalid@",
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            result = Err(Error::parse("invalid value: string \"#invalid@\", expected one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\"")),
-        },
-        test_cml_offer_invalid_multiple_from => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#invalid@\", expected one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\""
+        ),
+        test_cml_offer_invalid_multiple_from(
+            json!({
                     "offer": [ {
                         "protocol": "/svc/fuchsia.logger.Log",
                         "from": [ "self", "#logger" ],
@@ -1891,10 +1859,10 @@ mod tests {
                         },
                     ]
                 }),
-            result = Err(Error::validate("\"protocol\" capabilities cannot have multiple \"from\" clauses")),
-        },
-        test_cml_storage_offer_bad_to => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"protocol\" capabilities cannot have multiple \"from\" clauses"
+        ),
+        test_cml_storage_offer_bad_to(
+            json!({
                     "offer": [ {
                         "storage": "cache",
                         "from": "realm",
@@ -1906,40 +1874,40 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm"
                     } ]
                 }),
-            result = Err(Error::validate("\"as\" field cannot be used for storage offer targets")),
-        },
-        test_cml_offer_empty_targets => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used for storage offer targets"
+        ),
+        test_cml_offer_empty_targets(
+            json!({
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
                     "to": []
                 } ]
             }),
-            result = Err(Error::parse("invalid length 0, expected a nonempty array of offer targets, with unique elements")),
-        },
-        test_cml_offer_duplicate_targets => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a nonempty array of offer targets, with unique elements"
+        ),
+        test_cml_offer_duplicate_targets(
+            json!({
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
                     "to": ["#a", "#a"]
                 } ]
             }),
-            result = Err(Error::parse("invalid value: array with duplicate element, expected a nonempty array of offer targets, with unique elements")),
-        },
-        test_cml_offer_target_missing_props => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: array with duplicate element, expected a nonempty array of offer targets, with unique elements"
+        ),
+        test_cml_offer_target_missing_props(
+            json!({
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
                     "as": "/svc/fuchsia.logger.SysLog",
                 } ]
             }),
-            result = Err(Error::parse("missing field `to`")),
-        },
-        test_cml_offer_target_missing_to => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `to`"
+        ),
+        test_cml_offer_target_missing_to(
+            json!({
                 "offer": [ {
                     "service": "/snvc/fuchsia.logger.Log",
                     "from": "#logger",
@@ -1950,10 +1918,10 @@ mod tests {
                     "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                 } ]
             }),
-            result = Err(Error::validate("\"#missing\" is an \"offer\" target but it does not appear in \"children\" or \"collections\"")),
-        },
-        test_cml_offer_target_bad_to => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"#missing\" is an \"offer\" target but it does not appear in \"children\" or \"collections\""
+        ),
+        test_cml_offer_target_bad_to(
+            json!({
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
@@ -1961,10 +1929,10 @@ mod tests {
                     "as": "/svc/fuchsia.logger.SysLog",
                 } ]
             }),
-            result = Err(Error::parse("invalid value: string \"self\", expected \"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\"")),
-        },
-        test_cml_offer_empty_protocols => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
+        ),
+        test_cml_offer_empty_protocols(
+            json!({
                 "offer": [
                     {
                         "protocol": [],
@@ -1974,10 +1942,10 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::parse("invalid length 0, expected a path or nonempty array of paths, with unique elements")),
-        },
-        test_cml_offer_target_equals_from => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
+        ),
+        test_cml_offer_target_equals_from(
+            json!({
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
@@ -1988,10 +1956,10 @@ mod tests {
                     "name": "logger", "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
                 } ],
             }),
-            result = Err(Error::validate("Offer target \"#logger\" is same as source")),
-        },
-        test_cml_storage_offer_target_equals_from => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Offer target \"#logger\" is same as source"
+        ),
+        test_cml_storage_offer_target_equals_from(
+            json!({
                 "offer": [ {
                     "storage": "data",
                     "from": "#minfs",
@@ -2007,10 +1975,10 @@ mod tests {
                     "path": "/minfs",
                 } ],
             }),
-            result = Err(Error::validate("Storage offer target \"#logger\" is same as source")),
-        },
-        test_cml_offer_duplicate_target_paths => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage offer target \"#logger\" is same as source"
+        ),
+        test_cml_offer_duplicate_target_paths(
+            json!({
                 "offer": [
                     {
                         "service": "/svc/logger",
@@ -2040,10 +2008,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"/thing\" is a duplicate \"offer\" target directory for \"#echo_server\"")),
-        },
-        test_cml_offer_duplicate_storage_types => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"offer\" target directory for \"#echo_server\""
+        ),
+        test_cml_offer_duplicate_storage_types(
+            json!({
                 "offer": [
                     {
                         "storage": "cache",
@@ -2066,10 +2034,10 @@ mod tests {
                     "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                 } ]
             }),
-            result = Err(Error::validate("\"cache\" is a duplicate \"offer\" target storage type for \"#echo_server\"")),
-        },
-        test_cml_offer_duplicate_runner_name => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"cache\" is a duplicate \"offer\" target storage type for \"#echo_server\""
+        ),
+        test_cml_offer_duplicate_runner_name(
+            json!({
                 "offer": [
                     {
                         "runner": "elf",
@@ -2087,11 +2055,11 @@ mod tests {
                     "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                 } ]
             }),
-            result = Err(Error::validate("\"elf\" is a duplicate \"offer\" target runner for \"#echo_server\"")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"elf\" is a duplicate \"offer\" target runner for \"#echo_server\""
+        ),
         // if "as" is specified, only 1 "protocol" array item is allowed.
-        test_cml_offer_bad_as => {
-            input = json!({
+        test_cml_offer_bad_as(
+            json!({
                 "offer": [
                     {
                         "protocol": ["/svc/A", "/svc/B"],
@@ -2107,10 +2075,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\" field can only be specified when one `protocol` is supplied.")),
-        },
-        test_cml_offer_bad_subdir => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
+        ),
+        test_cml_offer_bad_subdir(
+            json!({
                 "offer": [
                     {
                         "directory": "/data/index",
@@ -2126,10 +2094,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
-        },
-        test_cml_offer_resolver_from_self => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with no leading `/` and non-empty segments"
+        ),
+        test_cml_offer_resolver_from_self(
+            json!({
                 "offer": [
                     {
                         "resolver": "pkg_resolver",
@@ -2150,10 +2118,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_offer_resolver_from_self_missing => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_offer_resolver_from_self_missing(
+            json!({
                 "offer": [
                     {
                         "resolver": "pkg_resolver",
@@ -2168,10 +2136,10 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate("Resolver \"pkg_resolver\" is offered from self, so it must be declared in \"resolvers\"")),
-        },
-        test_cml_offer_dependency_on_wrong_type => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is offered from self, so it must be declared in \"resolvers\""
+        ),
+        test_cml_offer_dependency_on_wrong_type(
+            json!({
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "realm",
@@ -2183,10 +2151,10 @@ mod tests {
                             "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                     } ]
                 }),
-            result = Err(Error::validate("Dependency can only be provided for protocol and directory capabilities")),
-        },
-        test_cml_offer_dependency_cycle => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Dependency can only be provided for protocol and directory capabilities"
+        ),
+        test_cml_offer_dependency_cycle(
+            json!({
                     "offer": [
                         {
                             "protocol": "/svc/fuchsia.logger.Log",
@@ -2234,11 +2202,16 @@ mod tests {
                         },
                     ]
                 }),
-            result = Err(Error::validate(
-                "Strong dependency cycles were found. Break the cycle by removing a dependency or marking an offer as weak. Cycles: {{child a -> child b -> child c -> child a}, {child b -> child d -> child b}}")),
-        },
-        test_cml_offer_weak_dependency_cycle => {
-            input = json!({
+            Err(Error::Validate {
+                schema_name: None,
+                err
+            }) if &err ==
+                "Strong dependency cycles were found. Break the cycle by removing a \
+                dependency or marking an offer as weak. Cycles: \
+                {{child a -> child b -> child c -> child a}, {child b -> child d -> child b}}"
+        ),
+        test_cml_offer_weak_dependency_cycle(
+            json!({
                     "offer": [
                         {
                             "protocol": "/svc/fuchsia.logger.Log",
@@ -2263,10 +2236,10 @@ mod tests {
                         },
                     ]
                 }),
-            result = Ok(()),
-        },
-        test_cml_offer_disallows_filter_on_non_events => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_offer_disallows_filter_on_non_events(
+            json!({
                 "offer": [
                     {
                         "directory": "/foo/bar",
@@ -2283,12 +2256,12 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate("\"filter\" can only be used with \"event\"")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be used with \"event\""
+        ),
 
         // children
-        test_cml_children => {
-            input = json!({
+        test_cml_children(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -2306,16 +2279,16 @@ mod tests {
                     },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_children_missing_props => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_children_missing_props(
+            json!({
                 "children": [ {} ]
             }),
-            result = Err(Error::parse("missing field `name`")),
-        },
-        test_cml_children_duplicate_names => {
-           input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
+        ),
+        test_cml_children_duplicate_names(
+           json!({
                "children": [
                     {
                         "name": "logger",
@@ -2327,10 +2300,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"children\" and once in \"children\"")),
-        },
-        test_cml_children_bad_startup => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"logger\" is defined twice, once in \"children\" and once in \"children\""
+        ),
+        test_cml_children_bad_startup(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -2339,10 +2312,10 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::parse("unknown variant `zzz`, expected `lazy` or `eager`")),
-        },
-        test_cml_children_bad_environment => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `zzz`, expected `lazy` or `eager`"
+        ),
+        test_cml_children_bad_environment(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -2351,10 +2324,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"realm\", expected \"#<environment-name>\"")),
-        },
-        test_cml_children_unknown_environment => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"realm\", expected \"#<environment-name>\""
+        ),
+        test_cml_children_unknown_environment(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -2363,10 +2336,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"foo_env\" does not appear in \"environments\"")),
-        },
-        test_cml_children_environment => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"foo_env\" does not appear in \"environments\""
+        ),
+        test_cml_children_environment(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -2380,10 +2353,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_collections_bad_environment => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_collections_bad_environment(
+            json!({
                 "collections": [
                     {
                         "name": "tests",
@@ -2392,10 +2365,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"realm\", expected \"#<environment-name>\"")),
-        },
-        test_cml_collections_unknown_environment => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"realm\", expected \"#<environment-name>\""
+        ),
+        test_cml_collections_unknown_environment(
+            json!({
                 "collections": [
                     {
                         "name": "tests",
@@ -2404,10 +2377,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"foo_env\" does not appear in \"environments\"")),
-        },
-        test_cml_collections_environment => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"foo_env\" does not appear in \"environments\""
+        ),
+        test_cml_collections_environment(
+            json!({
                 "collections": [
                     {
                         "name": "tests",
@@ -2421,12 +2394,12 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
+            Ok(())
+        ),
 
 
-        test_cml_environment_timeout => {
-            input = json!({
+        test_cml_environment_timeout(
+            json!({
                 "environments": [
                     {
                         "name": "foo_env",
@@ -2434,11 +2407,11 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
+            Ok(())
+        ),
 
-        test_cml_environment_bad_timeout => {
-            input = json!({
+        test_cml_environment_bad_timeout(
+            json!({
                 "environments": [
                     {
                         "name": "foo_env",
@@ -2446,12 +2419,12 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("invalid value: integer `-3`, expected u32")),
-        },
+            Err(Error::Parse { err, .. }) if &err == "invalid value: integer `-3`, expected an unsigned 32-bit integer"
+        ),
 
         // collections
-        test_cml_collections => {
-            input = json!({
+        test_cml_collections(
+            json!({
                 "collections": [
                     {
                         "name": "modular",
@@ -2463,16 +2436,16 @@ mod tests {
                     },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_collections_missing_props => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_collections_missing_props(
+            json!({
                 "collections": [ {} ]
             }),
-            result = Err(Error::parse("missing field `name`")),
-        },
-        test_cml_collections_duplicate_names => {
-           input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
+        ),
+        test_cml_collections_duplicate_names(
+           json!({
                "collections": [
                     {
                         "name": "modular",
@@ -2484,10 +2457,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("identifier \"modular\" is defined twice, once in \"collections\" and once in \"collections\"")),
-        },
-        test_cml_collections_bad_durability => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"modular\" is defined twice, once in \"collections\" and once in \"collections\""
+        ),
+        test_cml_collections_bad_durability(
+            json!({
                 "collections": [
                     {
                         "name": "modular",
@@ -2495,12 +2468,12 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::parse("unknown variant `zzz`, expected `persistent` or `transient`")),
-        },
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `zzz`, expected `persistent` or `transient`"
+        ),
 
         // storage
-        test_cml_storage => {
-            input = json!({
+        test_cml_storage(
+            json!({
                 "storage": [
                     {
                         "name": "a",
@@ -2525,10 +2498,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_storage_all_valid_chars => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_storage_all_valid_chars(
+            json!({
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-from",
@@ -2543,28 +2516,28 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_storage_missing_props => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_storage_missing_props(
+            json!({
                 "storage": [ {} ]
             }),
-            result = Err(Error::parse("missing field `name`")),
-        },
-        test_cml_storage_missing_from => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
+        ),
+        test_cml_storage_missing_from(
+            json!({
                     "storage": [ {
                         "name": "minfs",
                         "from": "#missing",
                         "path": "/minfs"
                     } ]
                 }),
-            result = Err(Error::validate("\"storage\" source \"#missing\" does not appear in \"children\"")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"storage\" source \"#missing\" does not appear in \"children\""
+        ),
 
         // runner
-        test_cml_runner => {
-            input = json!({
+        test_cml_runner(
+            json!({
                 "runner": [
                     {
                         "name": "a",
@@ -2589,10 +2562,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_runner_all_valid_chars => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_runner_all_valid_chars(
+            json!({
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-from",
@@ -2607,28 +2580,28 @@ mod tests {
                     }
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_runner_missing_props => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_runner_missing_props(
+            json!({
                 "runners": [ {} ]
             }),
-            result = Err(Error::parse("missing field `name`")),
-        },
-        test_cml_runner_missing_from => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
+        ),
+        test_cml_runner_missing_from(
+            json!({
                     "runners": [ {
                         "name": "minfs",
                         "from": "#missing",
                         "path": "/minfs"
                     } ]
                 }),
-            result = Err(Error::validate("\"runner\" source \"#missing\" does not appear in \"children\"")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"runner\" source \"#missing\" does not appear in \"children\""
+        ),
 
         // environments
-        test_cml_environments => {
-            input = json!({
+        test_cml_environments(
+            json!({
                 "environments": [
                     {
                         "name": "my_env_a",
@@ -2644,11 +2617,11 @@ mod tests {
                     },
                 ],
             }),
-            result = Ok(()),
-        },
+            Ok(())
+        ),
 
-        test_invalid_cml_environment_no_stop_timeout => {
-            input = json!({
+        test_invalid_cml_environment_no_stop_timeout(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2656,14 +2629,13 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate(
+            Err(Error::Validate { schema_name: None, err }) if &err ==
                 "'__stop_timeout_ms' must be provided if the environment does not extend \
                 another environment"
-            )),
-        },
+        ),
 
-        test_cml_environment_invalid_extends => {
-            input = json!({
+        test_cml_environment_invalid_extends(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2671,17 +2643,17 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::Parse("unknown variant `some_made_up_string`, expected `realm` or `none`".to_string())),
-        },
-        test_cml_environment_missing_props => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `some_made_up_string`, expected `realm` or `none`"
+        ),
+        test_cml_environment_missing_props(
+            json!({
                 "environments": [ {} ]
             }),
-            result = Err(Error::parse("missing field `name`")),
-        },
+            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
+        ),
 
-        test_cml_environment_with_runners => {
-            input = json!({
+        test_cml_environment_with_runners(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2695,10 +2667,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Ok(()),
-        },
-        test_cml_environment_with_runners_alias => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_environment_with_runners_alias(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2713,10 +2685,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Ok(()),
-        },
-        test_cml_environment_with_runners_missing => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_environment_with_runners_missing(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2737,10 +2709,10 @@ mod tests {
                      }
                 ],
             }),
-            result = Ok(()),
-        },
-        test_cml_environment_with_runners_bad_name => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_environment_with_runners_bad_name(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2755,10 +2727,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::parse("invalid value: string \"#elf\", expected a name containing only alpha-numeric characters or [_-.]")),
-        },
-        test_cml_environment_with_runners_duplicate_name => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#elf\", expected a name containing only alpha-numeric characters or [_-.]"
+        ),
+        test_cml_environment_with_runners_duplicate_name(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2777,12 +2749,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::validate(concat!(
-                "Duplicate runners registered under name \"dart\": \"other-dart\" and \"dart\"."
-            ))),
-        },
-        test_cml_environment_with_runner_from_missing_child => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Duplicate runners registered under name \"dart\": \"other-dart\" and \"dart\"."
+        ),
+        test_cml_environment_with_runner_from_missing_child(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2796,12 +2766,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate(
-                "\"elf\" runner source \"#missing_child\" does not appear in \"children\""
-            )),
-        },
-        test_cml_environment_with_runner_cycle => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"elf\" runner source \"#missing_child\" does not appear in \"children\""
+        ),
+        test_cml_environment_with_runner_cycle(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2823,15 +2791,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate(concat!(
-                "Strong dependency cycles were found. Break the cycle by removing a dependency \
-                or marking an offer as weak. Cycles: \
-                {{child child -> environment my_env -> child child}}"
-            ))),
-        },
-
-        test_cml_environment_with_resolvers => {
-            input = json!({
+            Err(Error::Validate { err, schema_name: None, .. }) if &err ==
+                    "Strong dependency cycles were found. Break the cycle by removing a \
+                    dependency or marking an offer as weak. Cycles: \
+                    {{child child -> environment my_env -> child child}}"
+        ),
+        test_cml_environment_with_resolvers(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2846,10 +2812,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Ok(()),
-        },
-        test_cml_environment_with_resolvers_bad_scheme => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_environment_with_resolvers_bad_scheme(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2864,12 +2830,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::parse(
-                "invalid value: string \"9scheme\", expected a valid URL scheme"
-            )),
-        },
-        test_cml_environment_with_resolvers_duplicate_scheme => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"9scheme\", expected a valid URL scheme"
+        ),
+        test_cml_environment_with_resolvers_duplicate_scheme(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2889,13 +2853,10 @@ mod tests {
                     }
                 ],
             }),
-            result = Err(Error::validate(concat!(
-                "scheme \"fuchsia-pkg\" for resolver \"base_resolver\" is already registered; ",
-                "previously registered to resolver \"pkg_resolver\"."
-            ))),
-        },
-        test_cml_environment_with_resolver_from_missing_child => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "scheme \"fuchsia-pkg\" for resolver \"base_resolver\" is already registered; previously registered to resolver \"pkg_resolver\"."
+        ),
+        test_cml_environment_with_resolver_from_missing_child(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2910,12 +2871,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate(
-                "\"pkg_resolver\" resolver source \"#missing_child\" does not appear in \"children\""
-            )),
-        },
-        test_cml_environment_with_resolver_cycle => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"pkg_resolver\" resolver source \"#missing_child\" does not appear in \"children\""
+        ),
+        test_cml_environment_with_resolver_cycle(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2937,14 +2896,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate(concat!(
-                "Strong dependency cycles were found. Break the cycle by removing a dependency \
-                or marking an offer as weak. \
-                Cycles: {{child child -> environment my_env -> child child}}"
-            ))),
-        },
-        test_cml_environment_with_cycle_multiple_components => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
+                    "Strong dependency cycles were found. Break the cycle by removing a \
+                    dependency or marking an offer as weak. \
+                    Cycles: {{child child -> environment my_env -> child child}}"
+        ),
+        test_cml_environment_with_cycle_multiple_components(
+            json!({
                 "environments": [
                     {
                         "name": "my_env",
@@ -2978,15 +2936,15 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate(concat!(
+            Err(Error::Validate { schema_name: None, err }) if &err ==
                 "Strong dependency cycles were found. Break the cycle by removing a dependency \
-                or marking an offer as weak. Cycles: {{child a -> child b -> environment my_env -> child a}}"
-            ))),
-        },
+                or marking an offer as weak. \
+                Cycles: {{child a -> child b -> environment my_env -> child a}}"
+        ),
 
         // facets
-        test_cml_facets => {
-            input = json!({
+        test_cml_facets(
+            json!({
                 "facets": {
                     "metadata": {
                         "title": "foo",
@@ -2995,18 +2953,18 @@ mod tests {
                     }
                 }
             }),
-            result = Ok(()),
-        },
-        test_cml_facets_wrong_type => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_facets_wrong_type(
+            json!({
                 "facets": 55
             }),
-            result = Err(Error::parse("invalid type: integer `55`, expected a map")),
-        },
+            Err(Error::Parse { err, .. }) if &err == "invalid type: integer `55`, expected a map"
+        ),
 
         // constraints
-        test_cml_rights_all => {
-            input = json!({
+        test_cml_rights_all(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3016,10 +2974,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_rights_invalid => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_rights_invalid(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3027,10 +2985,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("unknown variant `cAnnect`, expected one of `connect`, `enumerate`, `execute`, `get_attributes`, `modify_directory`, `read_bytes`, `traverse`, `update_attributes`, `write_bytes`, `admin`, `r*`, `w*`, `x*`, `rw*`, `rx*`")),
-        },
-        test_cml_rights_duplicate => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `cAnnect`, expected one of `connect`, `enumerate`, `execute`, `get_attributes`, `modify_directory`, `read_bytes`, `traverse`, `update_attributes`, `write_bytes`, `admin`, `r*`, `w*`, `x*`, `rw*`, `rx*`"
+        ),
+        test_cml_rights_duplicate(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3038,10 +2996,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid value: array with duplicate element, expected a nonempty array of rights, with unique elements")),
-        },
-        test_cml_rights_empty => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: array with duplicate element, expected a nonempty array of rights, with unique elements"
+        ),
+        test_cml_rights_empty(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3049,10 +3007,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid length 0, expected a nonempty array of rights, with unique elements")),
-        },
-        test_cml_rights_alias_star_expansion => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a nonempty array of rights, with unique elements"
+        ),
+        test_cml_rights_alias_star_expansion(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3060,10 +3018,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_rights_alias_star_expansion_with_longform => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_rights_alias_star_expansion_with_longform(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3071,10 +3029,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_rights_alias_star_expansion_with_longform_collision => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_rights_alias_star_expansion_with_longform_collision(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3082,10 +3040,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate("\"read_bytes\" is duplicated in the rights clause.")),
-        },
-        test_cml_rights_alias_star_expansion_collision => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"read_bytes\" is duplicated in the rights clause."
+        ),
+        test_cml_rights_alias_star_expansion_collision(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/bar",
@@ -3093,18 +3051,18 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate("\"x*\" is duplicated in the rights clause.")),
-        },
-        test_cml_rights_use_invalid => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"x*\" is duplicated in the rights clause."
+        ),
+        test_cml_rights_use_invalid(
+            json!({
                 "use": [
                   { "directory": "/foo", },
                 ]
             }),
-            result = Err(Error::validate("Rights required for this use statement.")),
-        },
-        test_cml_rights_offer_dir_invalid => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Rights required for this use statement."
+        ),
+        test_cml_rights_offer_dir_invalid(
+            json!({
                 "offer": [
                   {
                     "directory": "/foo",
@@ -3119,10 +3077,10 @@ mod tests {
                   }
                 ],
             }),
-            result = Err(Error::validate("Rights required for this offer as it is offering from self.")),
-        },
-        test_cml_rights_expose_dir_invalid => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Rights required for this offer as it is offering from self."
+        ),
+        test_cml_rights_expose_dir_invalid(
+            json!({
                 "expose": [
                   {
                     "directory": "/foo/bar",
@@ -3130,10 +3088,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::validate("Rights required for this expose statement as it is exposing from self.")),
-        },
-        test_cml_path => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Rights required for this expose statement as it is exposing from self."
+        ),
+        test_cml_path(
+            json!({
                 "use": [
                   {
                     "directory": "/foo/?!@#$%/Bar",
@@ -3141,50 +3099,50 @@ mod tests {
                   },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_path_invalid_empty => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_path_invalid_empty(
+            json!({
                 "use": [
                   { "service": "" },
                 ]
             }),
-            result = Err(Error::parse("invalid length 0, expected a non-empty path no more than 1024 characters in length")),
-        },
-        test_cml_path_invalid_root => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a non-empty path no more than 1024 characters in length"
+        ),
+        test_cml_path_invalid_root(
+            json!({
                 "use": [
                   { "service": "/" },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"/\", expected a path with leading `/` and non-empty segments")),
-        },
-        test_cml_path_invalid_absolute_is_relative => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with leading `/` and non-empty segments"
+        ),
+        test_cml_path_invalid_absolute_is_relative(
+            json!({
                 "use": [
                   { "service": "foo/bar" },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"foo/bar\", expected a path with leading `/` and non-empty segments")),
-        },
-        test_cml_path_invalid_trailing => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"foo/bar\", expected a path with leading `/` and non-empty segments"
+        ),
+        test_cml_path_invalid_trailing(
+            json!({
                 "use": [
                   { "service": "/foo/bar/" },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"/foo/bar/\", expected a path with leading `/` and non-empty segments")),
-        },
-        test_cml_path_too_long => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/foo/bar/\", expected a path with leading `/` and non-empty segments"
+        ),
+        test_cml_path_too_long(
+            json!({
                 "use": [
                   { "service": format!("/{}", "a".repeat(1024)) },
                 ]
             }),
-            result = Err(Error::parse("invalid length 1025, expected a non-empty path no more than 1024 characters in length")),
-        },
-        test_cml_relative_path => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 1025, expected a non-empty path no more than 1024 characters in length"
+        ),
+        test_cml_relative_path(
+            json!({
                 "use": [
                   {
                     "directory": "/foo",
@@ -3193,10 +3151,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_relative_path_invalid_empty => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_relative_path_invalid_empty(
+            json!({
                 "use": [
                   {
                     "directory": "/foo",
@@ -3205,10 +3163,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid length 0, expected a non-empty path no more than 1024 characters in length")),
-        },
-        test_cml_relative_path_invalid_root => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a non-empty path no more than 1024 characters in length"
+        ),
+        test_cml_relative_path_invalid_root(
+            json!({
                 "use": [
                   {
                     "directory": "/foo",
@@ -3217,10 +3175,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"/\", expected a path with no leading `/` and non-empty segments")),
-        },
-        test_cml_relative_path_invalid_absolute => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with no leading `/` and non-empty segments"
+        ),
+        test_cml_relative_path_invalid_absolute(
+            json!({
                 "use": [
                   {
                     "directory": "/foo",
@@ -3229,10 +3187,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"/bar\", expected a path with no leading `/` and non-empty segments")),
-        },
-        test_cml_relative_path_invalid_trailing => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/bar\", expected a path with no leading `/` and non-empty segments"
+        ),
+        test_cml_relative_path_invalid_trailing(
+            json!({
                 "use": [
                   {
                     "directory": "/foo",
@@ -3241,10 +3199,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"bar/\", expected a path with no leading `/` and non-empty segments")),
-        },
-        test_cml_relative_path_too_long => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"bar/\", expected a path with no leading `/` and non-empty segments"
+        ),
+        test_cml_relative_path_too_long(
+            json!({
                 "use": [
                   {
                     "directory": "/foo",
@@ -3253,10 +3211,10 @@ mod tests {
                   },
                 ]
             }),
-            result = Err(Error::parse("invalid length 1025, expected a non-empty path no more than 1024 characters in length")),
-        },
-        test_cml_relative_ref_too_long => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 1025, expected a non-empty path no more than 1024 characters in length"
+        ),
+        test_cml_relative_ref_too_long(
+            json!({
                 "expose": [
                     {
                         "service": "/loggers/fuchsia.logger.Log",
@@ -3270,10 +3228,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("invalid length 102, expected one or an array of \"framework\", \"self\", or \"#<child-name>\"")),
-        },
-        test_cml_child_name => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 102, expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
+        ),
+        test_cml_child_name(
+            json!({
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
@@ -3281,10 +3239,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_child_name_invalid => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_child_name_invalid(
+            json!({
                 "children": [
                     {
                         "name": "#bad",
@@ -3292,10 +3250,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"#bad\", expected a name containing only alpha-numeric characters or [_-.]")),
-        },
-        test_cml_child_name_too_long => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#bad\", expected a name containing only alpha-numeric characters or [_-.]"
+        ),
+        test_cml_child_name_too_long(
+            json!({
                 "children": [
                     {
                         "name": "a".repeat(101),
@@ -3303,10 +3261,10 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("invalid length 101, expected a non-empty name no more than 100 characters in length")),
-        },
-        test_cml_url => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 101, expected a non-empty name no more than 100 characters in length"
+        ),
+        test_cml_url(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -3314,10 +3272,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Ok(()),
-        },
-        test_cml_url_invalid => {
-            input = json!({
+            Ok(())
+        ),
+        test_cml_url_invalid(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -3325,10 +3283,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("invalid value: string \"fuchsia-pkg\", expected a valid URL")),
-        },
-        test_cml_url_too_long => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"fuchsia-pkg\", expected a valid URL"
+        ),
+        test_cml_url_too_long(
+            json!({
                 "children": [
                     {
                         "name": "logger",
@@ -3336,10 +3294,10 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("invalid length 4097, expected a non-empty URL no more than 4096 characters in length")),
-        },
-        test_cml_duplicate_identifiers_children_collection => {
-           input = json!({
+            Err(Error::Parse { err, .. }) if &err == "invalid length 4097, expected a non-empty URL no more than 4096 characters in length"
+        ),
+        test_cml_duplicate_identifiers_children_collection(
+           json!({
                "children": [
                     {
                         "name": "logger",
@@ -3353,10 +3311,10 @@ mod tests {
                    }
                ]
            }),
-           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"collections\" and once in \"children\"")),
-        },
-        test_cml_duplicate_identifiers_children_storage => {
-           input = json!({
+           Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"logger\" is defined twice, once in \"collections\" and once in \"children\""
+        ),
+        test_cml_duplicate_identifiers_children_storage(
+           json!({
                "children": [
                     {
                         "name": "logger",
@@ -3371,10 +3329,10 @@ mod tests {
                     }
                 ]
            }),
-           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"storage\" and once in \"children\"")),
-        },
-        test_cml_duplicate_identifiers_collection_storage => {
-           input = json!({
+           Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"logger\" is defined twice, once in \"storage\" and once in \"children\""
+        ),
+        test_cml_duplicate_identifiers_collection_storage(
+           json!({
                "collections": [
                     {
                         "name": "logger",
@@ -3389,10 +3347,10 @@ mod tests {
                     }
                 ]
            }),
-           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"storage\" and once in \"collections\"")),
-        },
-        test_cml_duplicate_identifiers_children_runners => {
-           input = json!({
+           Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"logger\" is defined twice, once in \"storage\" and once in \"collections\""
+        ),
+        test_cml_duplicate_identifiers_children_runners(
+           json!({
                "children": [
                     {
                         "name": "logger",
@@ -3407,10 +3365,10 @@ mod tests {
                     }
                 ]
            }),
-           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"runners\" and once in \"children\"")),
-        },
-        test_cml_duplicate_identifiers_environments => {
-            input = json!({
+           Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"logger\" is defined twice, once in \"runners\" and once in \"children\""
+        ),
+        test_cml_duplicate_identifiers_environments(
+            json!({
                 "children": [
                      {
                          "name": "logger",
@@ -3423,16 +3381,16 @@ mod tests {
                      }
                  ]
             }),
-            result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"environments\" and once in \"children\"")),
-        },
-        test_cml_program_no_runner => {
-            input = json!({"program": { "binary": "bin/app" }}),
-            result = Err(Error::validate("Component has a \'program\' block defined, but doesn\'t \'use\' a runner capability. Components need to \'use\' a runner to actually execute code.")),
-        },
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"logger\" is defined twice, once in \"environments\" and once in \"children\""
+        ),
+        test_cml_program_no_runner(
+            json!({"program": { "binary": "bin/app" }}),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Component has a \'program\' block defined, but doesn\'t \'use\' a runner capability. Components need to \'use\' a runner to actually execute code."
+        ),
 
         // Resolvers
-        test_cml_resolvers_duplicates => {
-            input = json!({
+        test_cml_resolvers_duplicates(
+            json!({
                 "resolvers": [
                     {
                         "name": "pkg_resolver",
@@ -3444,57 +3402,56 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate("identifier \"pkg_resolver\" is defined twice, once in \"resolvers\" and once in \"resolvers\"")),
-        },
-        test_cml_resolvers_missing_name => {
-            input = json!({
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"pkg_resolver\" is defined twice, once in \"resolvers\" and once in \"resolvers\""
+        ),
+        test_cml_resolvers_missing_name(
+            json!({
                 "resolvers": [
                     {
                         "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
             }),
-            result = Err(Error::parse("missing field `name`")),
-        },
-        test_cml_resolvers_missing_path => {
-            input = json!({
+            Err(Error::Parse { err, .. }) if &err == "missing field `name`"
+        ),
+        test_cml_resolvers_missing_path(
+            json!({
                 "resolvers": [
                     {
                         "name": "pkg_resolver",
                     },
                 ]
             }),
-            result = Err(Error::parse("missing field `path`")),
-        },
+            Err(Error::Parse { err, .. }) if &err == "missing field `path`"
+        ),
     }
 
     test_validate_cmx! {
-        test_cmx_err_empty_json => {
-            input = json!({}),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "This property is required at /program")),
-        },
-        test_cmx_program => {
-            input = json!({"program": { "binary": "bin/app" }}),
-            result = Ok(()),
-        },
-        test_cmx_program_no_binary => {
-            input = json!({ "program": {}}),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "OneOf conditions are not met at /program")),
-        },
-        test_cmx_bad_program => {
-            input = json!({"prigram": { "binary": "bin/app" }}),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "Property conditions are not met at , \
-                                       This property is required at /program")),
-        },
-        test_cmx_sandbox => {
-            input = json!({
+        test_cmx_err_empty_json(
+            json!({}),
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "This property is required at /program"
+        ),
+        test_cmx_program(
+            json!({"program": { "binary": "bin/app" }}),
+            Ok(())
+        ),
+        test_cmx_program_no_binary(
+            json!({ "program": {}}),
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "OneOf conditions are not met at /program"
+        ),
+        test_cmx_bad_program(
+            json!({"prigram": { "binary": "bin/app" }}),
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "Property conditions are not met at , This property is required at /program"
+        ),
+        test_cmx_sandbox(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": { "dev": [ "class/camera" ] }
             }),
-            result = Ok(()),
-        },
-        test_cmx_facets => {
-            input = json!({
+            Ok(())
+        ),
+        test_cmx_facets(
+            json!({
                 "program": { "binary": "bin/app" },
                 "facets": {
                     "fuchsia.test": {
@@ -3502,80 +3459,80 @@ mod tests {
                     }
                 }
             }),
-            result = Ok(()),
-        },
-        test_cmx_block_system_data => {
-            input = json!({
+            Ok(())
+        ),
+        test_cmx_block_system_data(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "data" ]
                 }
             }),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
-        },
-        test_cmx_block_system_data_stem => {
-            input = json!({
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "Not condition is not met at /sandbox/system/0"
+        ),
+        test_cmx_block_system_data_stem(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "data-should-pass" ]
                 }
             }),
-            result = Ok(()),
-        },
-        test_cmx_block_system_data_leading_slash => {
-            input = json!({
+            Ok(())
+        ),
+        test_cmx_block_system_data_leading_slash(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "/data" ]
                 }
             }),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
-        },
-        test_cmx_block_system_data_subdir => {
-            input = json!({
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "Not condition is not met at /sandbox/system/0"
+        ),
+        test_cmx_block_system_data_subdir(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "data/should-fail" ]
                 }
             }),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
-        },
-        test_cmx_block_system_deprecated_data => {
-            input = json!({
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "Not condition is not met at /sandbox/system/0"
+        ),
+        test_cmx_block_system_deprecated_data(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "deprecated-data" ]
                 }
             }),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
-        },
-        test_cmx_block_system_deprecated_data_stem => {
-            input = json!({
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "Not condition is not met at /sandbox/system/0"
+        ),
+        test_cmx_block_system_deprecated_data_stem(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "deprecated-data-should-pass" ]
                 }
             }),
-            result = Ok(()),
-        },
-        test_cmx_block_system_deprecated_data_leading_slash => {
-            input = json!({
+            Ok(())
+        ),
+        test_cmx_block_system_deprecated_data_leading_slash(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "/deprecated-data" ]
                 }
             }),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
-        },
-        test_cmx_block_system_deprecated_data_subdir => {
-            input = json!({
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "Not condition is not met at /sandbox/system/0"
+        ),
+        test_cmx_block_system_deprecated_data_subdir(
+            json!({
                 "program": { "binary": "bin/app" },
                 "sandbox": {
                     "system": [ "deprecated-data/should-fail" ]
                 }
             }),
-            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
-        },
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if s == *CMX_SCHEMA.name && &err == "Not condition is not met at /sandbox/system/0"
+        ),
     }
 
     // We can't simply using JsonSchema::new here and create a temp file with the schema content
@@ -3605,87 +3562,70 @@ mod tests {
     macro_rules! test_validate_extra_schemas {
         (
             $(
-                $test_name:ident => {
-                    input = $input:expr,
-                    extra_schemas = $extra_schemas:expr,
-                    result = $result:expr,
-                },
+                $test_name:ident($input:expr, $extra_schemas:expr, $($pattern:tt)+),
             )+
         ) => {
             $(
                 #[test]
                 fn $test_name() -> Result<(), Error> {
-                    validate_extra_schemas_test($input, $extra_schemas, $result)
+                    let tmp_dir = TempDir::new()?;
+                    let tmp_cmx_path = tmp_dir.path().join("test.cmx");
+                    let input = format!("{}", $input);
+                    File::create(&tmp_cmx_path)?.write_all(input.as_bytes())?;
+                    let extra_schemas: &[(&JsonSchema<'_>, Option<String>)] = $extra_schemas;
+                    let extra_schema_paths: Vec<_> = extra_schemas
+                        .iter()
+                        .map(|i| (Path::new(&*i.0.name), i.1.clone()))
+                        .collect();
+                    let result = validate(&[tmp_cmx_path.as_path()], &extra_schema_paths);
+                    assert_matches!(result, $($pattern)+);
+                    Ok(())
                 }
             )+
         }
     }
 
-    fn validate_extra_schemas_test(
-        input: serde_json::value::Value,
-        extra_schemas: &[(&JsonSchema<'_>, Option<String>)],
-        expected_result: Result<(), Error>,
-    ) -> Result<(), Error> {
-        let input_str = format!("{}", input);
-        let tmp_dir = TempDir::new()?;
-        let tmp_cmx_path = tmp_dir.path().join("test.cmx");
-        File::create(&tmp_cmx_path)?.write_all(input_str.as_bytes())?;
-
-        let extra_schema_paths =
-            extra_schemas.iter().map(|i| (Path::new(&*i.0.name), i.1.clone())).collect::<Vec<_>>();
-        let result = validate(&[tmp_cmx_path.as_path()], &extra_schema_paths);
-        assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
-        Ok(())
-    }
-
     test_validate_extra_schemas! {
-        test_validate_extra_schemas_empty_json => {
-            input = json!({"program": {"binary": "a"}}),
-            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
-            result = Ok(()),
-        },
-        test_validate_extra_schemas_empty_features => {
-            input = json!({"sandbox": {"features": []}, "program": {"binary": "a"}}),
-            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
-            result = Ok(()),
-        },
-        test_validate_extra_schemas_feature_not_present => {
-            input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
-            result = Ok(()),
-        },
-        test_validate_extra_schemas_feature_present => {
-            input = json!({"sandbox": {"features" : ["deprecated-shell"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
-            result = Err(Error::validate_schema(&BLOCK_SHELL_FEATURE_SCHEMA, "Not condition is not met at /sandbox/features/0")),
-        },
-        test_validate_extra_schemas_block_dev => {
-            input = json!({"dev": ["misc"], "program": {"binary": "a"}}),
-            extra_schemas = &[(&BLOCK_DEV_SCHEMA, None)],
-            result = Err(Error::validate_schema(&BLOCK_DEV_SCHEMA, "Not condition is not met at /dev")),
-        },
-        test_validate_multiple_extra_schemas_valid => {
-            input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None), (&BLOCK_DEV_SCHEMA, None)],
-            result = Ok(()),
-        },
-        test_validate_multiple_extra_schemas_invalid => {
-            input = json!({"dev": ["misc"], "sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None), (&BLOCK_DEV_SCHEMA, None)],
-            result = Err(Error::validate_schema(&BLOCK_DEV_SCHEMA, "Not condition is not met at /dev")),
-        },
-    }
-
-    #[test]
-    fn test_validate_extra_error() -> Result<(), Error> {
-        validate_extra_schemas_test(
+        test_validate_extra_schemas_empty_json(
+            json!({"program": {"binary": "a"}}),
+            &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
+            Ok(())
+        ),
+        test_validate_extra_schemas_empty_features(
+            json!({"sandbox": {"features": []}, "program": {"binary": "a"}}),
+            &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
+            Ok(())
+        ),
+        test_validate_extra_schemas_feature_not_present(
+            json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
+            &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
+            Ok(())
+        ),
+        test_validate_extra_schemas_feature_present(
+            json!({"sandbox": {"features" : ["deprecated-shell"]}, "program": {"binary": "a"}}),
+            &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if *s == BLOCK_SHELL_FEATURE_SCHEMA.name && &err == "Not condition is not met at /sandbox/features/0"
+        ),
+        test_validate_extra_schemas_block_dev(
+            json!({"dev": ["misc"], "program": {"binary": "a"}}),
+            &[(&BLOCK_DEV_SCHEMA, None)],
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if *s == BLOCK_DEV_SCHEMA.name && &err == "Not condition is not met at /dev"
+        ),
+        test_validate_multiple_extra_schemas_valid(
+            json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
+            &[(&BLOCK_SHELL_FEATURE_SCHEMA, None), (&BLOCK_DEV_SCHEMA, None)],
+            Ok(())
+        ),
+        test_validate_multiple_extra_schemas_invalid(
+            json!({"dev": ["misc"], "sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
+            &[(&BLOCK_SHELL_FEATURE_SCHEMA, None), (&BLOCK_DEV_SCHEMA, None)],
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if *s == BLOCK_DEV_SCHEMA.name && &err == "Not condition is not met at /dev"
+        ),
+        test_validate_extra_error(
             json!({"dev": ["misc"], "program": {"binary": "a"}}),
             &[(&BLOCK_DEV_SCHEMA, Some("Extra error".to_string()))],
-            Err(Error::validate_schema(
-                &BLOCK_DEV_SCHEMA,
-                "Not condition is not met at /dev\nExtra error",
-            )),
-        )
+            Err(Error::Validate { schema_name: Some(s), err, .. }) if *s == BLOCK_DEV_SCHEMA.name && &err == "Not condition is not met at /dev\nExtra error"
+        ),
     }
 
     fn empty_offer() -> cml::Offer {

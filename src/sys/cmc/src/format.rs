@@ -137,8 +137,8 @@ pub fn format_cml(buffer: String, filename: Option<String>) -> Result<Vec<u8>, E
     json5format::format(&buffer, filename, Some(options)).map_err(|err| match err {
         json5format::Error::Configuration(errstr) => Error::Internal(errstr),
         json5format::Error::Parse(location, errstr) => match location {
-            Some(location) => Error::Parse(format!("{}: {}", location, errstr)),
-            None => Error::Parse(errstr),
+            Some(location) => Error::Parse { err: format!("{}: {}", location, errstr) },
+            None => Error::Parse { err: errstr },
         },
         json5format::Error::Internal(location, errstr) => match location {
             Some(location) => Error::Internal(format!("{}: {}", location, errstr)),

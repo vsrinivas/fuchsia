@@ -128,20 +128,21 @@ fn gen_visit_seq(
 ) -> TokenStream2 {
     let inner = {
         let mut tokens = quote!();
+        tokens.append_all(quote! {
+            let mut elements = vec![];
+            while let Some(e) = seq.next_element::<#inner_type>()? {
+                elements.push(e);
+            }
+        });
         if let Some(min_length) = min_length {
             tokens.append_all(quote! {
-                let len = seq.size_hint().expect("missing size hint");
-                if len < #min_length {
-                    return Err(serde::de::Error::invalid_length(len, &#expected));
+                if elements.len() < #min_length {
+                    return Err(serde::de::Error::invalid_length(elements.len(), &#expected));
                 }
             });
         }
         if unique_items {
             tokens.append_all(quote! {
-                let mut elements = vec![];
-                while let Some(e) = seq.next_element::<#inner_type>()? {
-                    elements.push(e);
-                }
                 let mut items = std::collections::HashSet::new();
                 for e in &elements {
                     if !items.insert(e) {
@@ -156,10 +157,6 @@ fn gen_visit_seq(
             });
         } else {
             tokens.append_all(quote! {
-                let mut elements = vec![];
-                while let Some(e) = seq.next_element::<#inner_type>()? {
-                    elements.push(e);
-                }
                 Ok(#ty(elements))
             });
         }

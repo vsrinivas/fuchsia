@@ -21,6 +21,7 @@ if (host_toolchain == current_toolchain) {
       "//src/sys/lib/cm_types",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:json5",
       "//third_party/rust_crates:json5format",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:maplit",

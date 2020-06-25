@@ -156,6 +156,42 @@ pub struct OneOrManyExposeFromRefs;
 #[unique_items = true]
 pub struct OneOrManyOfferFromRefs;
 
+/// The stop timeout configured in an environment.
+#[derive(Debug, Clone, Copy)]
+pub struct StopTimeoutMs(pub u32);
+
+impl<'de> de::Deserialize<'de> for StopTimeoutMs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = StopTimeoutMs;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("an unsigned 32-bit integer")
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                if v < 0 || v > i64::from(u32::max_value()) {
+                    return Err(E::invalid_value(
+                        de::Unexpected::Signed(v),
+                        &"an unsigned 32-bit integer",
+                    ));
+                }
+                Ok(StopTimeoutMs(v as u32))
+            }
+        }
+
+        deserializer.deserialize_i64(Visitor)
+    }
+}
+
 /// A relative reference to another object. This is a generic type that can encode any supported
 /// reference subtype. For named references, it holds a reference to the name instead of the name
 /// itself.
@@ -517,7 +553,7 @@ pub struct Environment {
     pub runners: Option<Vec<RunnerRegistration>>,
     pub resolvers: Option<Vec<ResolverRegistration>>,
     #[serde(rename(deserialize = "__stop_timeout_ms"))]
-    pub stop_timeout_ms: Option<u32>,
+    pub stop_timeout_ms: Option<StopTimeoutMs>,
 }
 
 #[derive(Deserialize, Debug)]
