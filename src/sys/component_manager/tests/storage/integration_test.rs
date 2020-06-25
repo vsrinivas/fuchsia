@@ -10,7 +10,7 @@ use {
     futures::StreamExt,
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
-    std::{path::PathBuf, sync::Arc},
+    std::{path::PathBuf, sync::Arc, sync::Mutex},
     test_utils_lib::{events::*, test_utils::*},
 };
 
@@ -77,9 +77,15 @@ async fn storage_from_collection() -> Result<(), Error> {
         .subscribe(vec![Started::NAME, Destroyed::NAME, CapabilityRouted::NAME])
         .await?;
 
-    // The root component connects to the Trigger capability to start the dynamic child.
-    // Inject the Trigger capability upon request.
-    let trigger_capability = TriggerCapability::new();
+    // Create a mutex that is used to hold the response from the trigger
+    // service until after the tests inspects the storage.
+    let trigger_lock = Arc::new(Mutex::new(()));
+    let trigger_guard = trigger_lock.lock();
+
+    // The root component connects to the Trigger capability to create a
+    // rendezvous so the test can inspect storage before the child is
+    // destroyed.
+    let trigger_capability = TriggerCapability::new(trigger_lock.clone());
     event_source.install_injector(trigger_capability).await?;
 
     event_source.start_component_tree().await?;
@@ -105,6 +111,10 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
 
+    // The storage state is checked, drop the guard and allow the
+    // TriggerService to respond to the root component.
+    drop(trigger_guard);
+
     // Expect the dynamic child to be destroyed
     let event = event_stream
         .wait_until_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:storage_user:1"))
@@ -123,11 +133,13 @@ async fn storage_from_collection() -> Result<(), Error> {
     Ok(())
 }
 
-struct TriggerCapability;
+struct TriggerCapability {
+    lock: Arc<Mutex<()>>,
+}
 
 impl TriggerCapability {
-    fn new() -> Arc<Self> {
-        Arc::new(Self {})
+    fn new(l: Arc<Mutex<()>>) -> Arc<Self> {
+        Arc::new(Self { lock: l })
     }
 }
 
@@ -140,6 +152,7 @@ impl Injector for TriggerCapability {
         mut request_stream: ftest::TriggerRequestStream,
     ) -> Result<(), Error> {
         while let Some(Ok(ftest::TriggerRequest::Run { responder })) = request_stream.next().await {
+            let _guard = self.lock.lock();
             responder.send("")?;
         }
         Ok(())

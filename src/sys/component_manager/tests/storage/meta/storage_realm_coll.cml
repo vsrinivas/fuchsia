@@ -25,6 +25,10 @@
             protocol: "/svc/fidl.test.components.Trigger",
             from: "framework",
         },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+        },
     ],
     offer: [
         {

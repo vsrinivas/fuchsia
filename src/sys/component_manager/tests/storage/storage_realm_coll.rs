@@ -7,6 +7,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fidl_test_components as ftest, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    fuchsia_zircon as zx,
 };
 
 #[fasync::run_singlethreaded]
@@ -32,7 +33,7 @@ async fn main() -> Result<(), Error> {
     // Bind to child
     let mut child_ref =
         fsys::ChildRef { name: "storage_user".to_string(), collection: Some("coll".to_string()) };
-    let (_, server_end) = create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+    let (_keep_alive, server_end) = create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
 
     realm
         .bind_child(&mut child_ref, server_end)
@@ -40,6 +41,7 @@ async fn main() -> Result<(), Error> {
         .context("bind_child failed")?
         .expect("failed to bind child");
 
+    // Wait for a response from the TriggerService before destroying the child.
     let trigger =
         connect_to_service::<ftest::TriggerMarker>().context("error connecting to trigger")?;
     trigger.run().await?;
@@ -51,5 +53,7 @@ async fn main() -> Result<(), Error> {
         .context("delete_child failed")?
         .expect("failed to delete child");
 
+    // Wait up to 30 days before returning, the test should finish by then.
+    fasync::Timer::new(fasync::Time::after(zx::Duration::from_hours(24 * 30))).await;
     Ok(())
 }

@@ -17,6 +17,7 @@ use {
         StreamExt,
     },
     std::{convert::TryFrom, sync::Arc},
+    thiserror::Error,
 };
 
 /// Ordering is used by `EventSource::expect_events`to determine if it should allow events to be
@@ -102,10 +103,13 @@ impl EventSource {
             Abortable::new(
                 async move {
                     loop {
-                        let event = event_stream
-                            .wait_until_type::<CapabilityRouted>()
-                            .await
-                            .expect("Type mismatch");
+                        let event = match event_stream.wait_until_type::<CapabilityRouted>().await {
+                            Ok(e) => e,
+                            Err(e) => match e.downcast::<EventStreamError>() {
+                                Ok(EventStreamError::StreamClosed) => return,
+                                Err(e) => panic!("Unknown error! {:?}", e),
+                            },
+                        };
 
                         if let Ok(payload) = &event.result {
                             if payload.capability_id == injector.capability_path() {
@@ -139,10 +143,13 @@ impl EventSource {
             Abortable::new(
                 async move {
                     loop {
-                        let event = event_stream
-                            .wait_until_type::<CapabilityRouted>()
-                            .await
-                            .expect("Type mismatch");
+                        let event = match event_stream.wait_until_type::<CapabilityRouted>().await {
+                            Ok(e) => e,
+                            Err(e) => match e.downcast::<EventStreamError>() {
+                                Ok(EventStreamError::StreamClosed) => return,
+                                Err(e) => panic!("Unknown error! {:?}", e),
+                            },
+                        };
 
                         if let Ok(payload) = &event.result {
                             if payload.capability_id == interposer.capability_path() {
@@ -210,17 +217,22 @@ pub struct EventStream {
     stream: fsys::EventStreamRequestStream,
 }
 
+#[derive(Debug, Error, Clone)]
+pub enum EventStreamError {
+    #[error("Stream terminated unexpectedly")]
+    StreamClosed,
+}
+
 impl EventStream {
     pub fn new(stream: fsys::EventStreamRequestStream) -> Self {
         Self { stream }
     }
 
-    pub async fn next(&mut self) -> Result<fsys::Event, Error> {
-        if let Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) = self.stream.next().await
-        {
-            Ok(event)
-        } else {
-            Err(format_err!("Stream terminated unexpectedly"))
+    pub async fn next(&mut self) -> Result<fsys::Event, EventStreamError> {
+        match self.stream.next().await {
+            Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => Ok(event),
+            Some(_) => Err(EventStreamError::StreamClosed),
+            None => Err(EventStreamError::StreamClosed),
         }
     }
 

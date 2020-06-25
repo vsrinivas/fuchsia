@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "test/lifecycle_timeout_unresponsive_integration_test",
+        binary: "test/component_exit_integration_test",
     },
     collections: [
         {
@@ -22,7 +22,7 @@
         },
         {
             event: [
-                "destroyed",
+                "capability_routed",
                 "resolved",
                 "stopped",
             ],
@@ -31,10 +31,12 @@
     ],
     offer: [
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "self",
+            to: [ "#test-collection" ],
+        },
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
             from: "self",
             to: [ "#test-collection" ],
         },

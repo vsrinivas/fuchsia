@@ -1,0 +1,9 @@
+{
+    program: {
+        binary: "bin/immediate_exit",
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+    ],
+}

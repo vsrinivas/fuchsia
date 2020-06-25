@@ -21,8 +21,8 @@ use {
     fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
-    futures::future::{BoxFuture, FutureExt},
+    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Process, Task},
+    futures::future::{AbortHandle, Abortable, BoxFuture, FutureExt},
     log::{error, warn},
     std::convert::TryFrom,
     std::{path::Path, sync::Arc},
@@ -288,7 +288,7 @@ impl ElfRunner {
         &self,
         start_info: fcrunner::ComponentStartInfo,
         checker: &ScopedPolicyChecker,
-    ) -> Result<Option<ElfComponent>, ElfRunnerError> {
+    ) -> Result<Option<(ElfComponent, Process)>, ElfRunnerError> {
         let resolved_url =
             runner::get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
@@ -402,13 +402,15 @@ impl ElfRunner {
             .get_koid()
             .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
             .raw_koid();
-
         self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-        Ok(Some(ElfComponent::new(
-            runtime_dir,
-            Job::from(component_job),
-            lifecycle_client,
-            program_config.main_process_critical,
+        Ok(Some((
+            ElfComponent::new(
+                runtime_dir,
+                Job::from(component_job),
+                lifecycle_client,
+                program_config.main_process_critical,
+            ),
+            process,
         )))
     }
 }
@@ -584,21 +586,48 @@ impl Runner for ScopedElfRunner {
         start_info: fcrunner::ComponentStartInfo,
         server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
     ) {
-        // start the component and move the Controller into a new async
+        // Start the component and move the Controller into a new async
         // execution context.
         let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
         match self.runner.start_component(start_info, &self.checker).await {
-            Ok(Some(elf_component)) => {
-                // This future completes when the
-                // Controller is told to stop/kill the component.
+            Ok(Some((elf_component, process))) => {
+                let (handle, registration) = AbortHandle::new_pair();
+
+                // Spawn a future that watches for the process to exit
                 fasync::spawn(async move {
-                    let server_stream = server_end.into_stream().expect("failed to convert");
-                    runner::component::Controller::new(elf_component, server_stream)
-                        .serve()
-                        .await
-                        .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
+                    let _ = fasync::OnSignals::new(
+                        &process.as_handle_ref(),
+                        zx::Signals::PROCESS_TERMINATED,
+                    )
+                    .await;
+                    handle.abort();
+                });
+
+                // Create a future which owns and serves the controller channel
+                // and can be aborted if the process exits. Aborting the
+                // future causes the channel to be dropped and closed.
+                let abortable_future = Abortable::new(
+                    // This future completes when the
+                    // Controller is told to stop/kill the component.
+                    async move {
+                        let server_stream = server_end.into_stream().expect("failed to convert");
+                        runner::component::Controller::new(elf_component, server_stream)
+                            .serve()
+                            .await
+                            .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
+                    },
+                    registration,
+                );
+
+                fasync::spawn(async {
+                    // TODO(fxb/53413) Currently we don't care whether this was
+                    // aborted or completed on its own. In the future we should
+                    // set an epitaph on the controller channel if the process
+                    // exited.
+                    let _ = abortable_future.await;
                 });
             }
+
             Ok(None) => {
                 // TODO(fxb/): Should this signal an error?
             }
@@ -726,6 +755,57 @@ mod tests {
         }
     }
 
+    /// Creates start info for a component which runs until told to exit. The
+    /// ComponentController protocol can be used to stop the component when the
+    /// test is done inspecting the launched component.
+    fn lifecycle_startinfo(
+        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+    ) -> fcrunner::ComponentStartInfo {
+        // Get a handle to /pkg
+        let pkg_path = "/pkg".to_string();
+        let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
+            .unwrap()
+            .into_channel()
+            .unwrap()
+            .into_zx_channel();
+        let pkg_handle = ClientEnd::new(pkg_chan);
+
+        let ns = vec![fcrunner::ComponentNamespaceEntry {
+            path: Some(pkg_path),
+            directory: Some(pkg_handle),
+        }];
+
+        fcrunner::ComponentStartInfo {
+            resolved_url: Some(
+                "fuchsia-pkg://fuchsia.com/lifecycle_full#meta/lifecycle_full.cm".to_string(),
+            ),
+            program: Some(fdata::Dictionary {
+                entries: Some(vec![
+                    fdata::DictionaryEntry {
+                        key: "args".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![
+                            "foo".to_string(),
+                            "bar".to_string(),
+                        ]))),
+                    },
+                    fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            "bin/lifecycle_full".to_string(),
+                        ))),
+                    },
+                    fdata::DictionaryEntry {
+                        key: "lifecycle.stop_event".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
+                    },
+                ]),
+            }),
+            ns: Some(ns),
+            outgoing_dir: None,
+            runtime_dir,
+        }
+    }
+
     // TODO(fsamuel): A variation of this is used in a couple of places. We should consider
     // refactoring this into a test util file.
     async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
@@ -737,9 +817,9 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn hello_world_test() -> Result<(), Error> {
+    async fn args_test() -> Result<(), Error> {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
-        let start_info = hello_world_startinfo(Some(ServerEnd::new(runtime_dir_server)));
+        let start_info = lifecycle_startinfo(Some(ServerEnd::new(runtime_dir_server)));
 
         let runtime_dir_proxy = DirectoryProxy::from_channel(
             fasync::Channel::from_channel(runtime_dir_client).unwrap(),
@@ -774,9 +854,9 @@ mod tests {
         assert!(job_id > 0);
         assert_ne!(process_id, job_id);
 
-        // Kill the process before finishing the test so that it doesn't pagefault due to an
-        // invalid stdout handle.
-        controller.kill().expect("kill failed");
+        controller.stop().expect("Stop request failed");
+        // Wait for the process to exit so the test doesn't pagefault due to an invalid stdout
+        // handle.
         fasync::OnSignals::new(&controller.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
             .await
             .expect("failed waiting for channel to close");
@@ -1004,11 +1084,11 @@ mod tests {
         Ok(())
     }
 
-    // Modify the standard test StartInfo to request ambient_mark_vmo_exec job policy
-    fn hello_world_startinfo_mark_vmo_exec(
+    /// Modify the standard test StartInfo to request ambient_mark_vmo_exec job policy
+    fn lifecycle_startinfo_mark_vmo_exec(
         runtime_dir: Option<ServerEnd<DirectoryMarker>>,
     ) -> fcrunner::ComponentStartInfo {
-        let mut start_info = hello_world_startinfo(runtime_dir);
+        let mut start_info = lifecycle_startinfo(runtime_dir);
         start_info.program.as_mut().map(|dict| {
             dict.entries.as_mut().map(|ent| {
                 ent.push(fdata::DictionaryEntry {
@@ -1040,7 +1120,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn vmex_security_policy_denied() -> Result<(), Error> {
-        let start_info = hello_world_startinfo_mark_vmo_exec(None);
+        let start_info = lifecycle_startinfo_mark_vmo_exec(None);
 
         // Config does not allowlist any monikers to have access to the job policy.
         let config = Arc::new(RuntimeConfig::default());
@@ -1071,7 +1151,7 @@ mod tests {
     async fn vmex_security_policy_allowed() -> Result<(), Error> {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info =
-            hello_world_startinfo_mark_vmo_exec(Some(ServerEnd::new(runtime_dir_server)));
+            lifecycle_startinfo_mark_vmo_exec(Some(ServerEnd::new(runtime_dir_server)));
         let runtime_dir_proxy = DirectoryProxy::from_channel(
             fasync::Channel::from_channel(runtime_dir_client).unwrap(),
         );
