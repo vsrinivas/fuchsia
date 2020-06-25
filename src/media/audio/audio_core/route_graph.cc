@@ -10,6 +10,23 @@
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
+
+// TODO(55132): Remove this workaround.
+static constexpr uint32_t kMinUltrasoundRate = 96000;
+
+bool DeviceConfigurationSupportsUsage(AudioDevice* device, StreamUsage usage) {
+  if (usage != StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND) &&
+      usage != StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)) {
+    return true;
+  }
+
+  FX_DCHECK(device->format());
+  auto device_rate = device->format()->frames_per_second();
+  return device_rate >= kMinUltrasoundRate;
+}
+
+}  // namespace
 
 RouteGraph::RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matrix)
     : link_matrix_(*link_matrix), device_config_(device_config) {
@@ -229,7 +246,7 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
         }
 
         const auto& profile = LookupDeviceProfile(device);
-        if (profile.supports_usage(usage)) {
+        if (profile.supports_usage(usage) && DeviceConfigurationSupportsUsage(device, usage)) {
           return Target(device, profile.loudness_transform());
         }
       }

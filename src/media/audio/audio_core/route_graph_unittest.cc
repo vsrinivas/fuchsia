@@ -44,8 +44,6 @@ class FakeAudioObject : public AudioObject {
           .channels = 1,
           .frames_per_second = 48000,
       });
-      FX_CHECK(format_result.is_ok());
-
       format_ = {format_result.take_value()};
     }
     usage_ = std::move(usage);
@@ -89,6 +87,12 @@ class FakeAudioOutput : public AudioOutput {
       const AudioObject& dest) override {
     return fit::ok(nullptr);
   }
+
+  void set_format(Format format) { format_ = format; }
+  std::optional<Format> format() const override { return format_; }
+
+ private:
+  std::optional<Format> format_;
 };
 
 static const DeviceConfig kConfigNoPolicy = DeviceConfig();
@@ -901,6 +905,74 @@ TEST_F(RouteGraphTest, DoesNotRelinkRendererIfUnroutedDeviceIsAdded) {
   under_test_.AddDevice(input.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
   EXPECT_EQ(1u, renderer->total_links_formed());
+}
+
+static const DeviceConfig kConfigWithUltrasound = DeviceConfig(
+    /*profiles=*/{{{kSupportsAllDeviceId},
+                   DeviceConfig::OutputDeviceProfile(
+                       /*eligible_for_loopback=*/true,
+                       /*output_usage_support_set=*/
+                       StreamUsageSetFromRenderUsages(kRenderUsages))}},
+    /*default=*/
+    {DeviceConfig::OutputDeviceProfile(
+        /*eligible_for_loopback=*/true,
+        /*output_usage_support_set=*/{StreamUsage::WithRenderUsage(RenderUsage::MEDIA)})},
+    {}, {});
+
+class RouteGraphUltrasoundTest : public RouteGraphTest {
+ public:
+  RouteGraphUltrasoundTest() : RouteGraphTest(kConfigWithUltrasound) {}
+};
+
+TEST_F(RouteGraphUltrasoundTest, DoNotLinkUltrasoundRendererToDeviceWithLowRate) {
+  auto renderer = FakeAudioObject::FakeRenderer();
+  auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
+  output_and_driver.output->set_format(
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 1,
+                         .frames_per_second = 48000,
+                     })
+          .take_value());
+  RunLoopUntilIdle();
+  auto output = output_and_driver.output;
+  const RoutingProfile kRoutableProfile{
+      .routable = true,
+      .usage = StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND),
+  };
+
+  under_test_.AddDevice(output.get());
+  under_test_.AddRenderer(renderer);
+  under_test_.SetRendererRoutingProfile(*renderer, kRoutableProfile);
+
+  EXPECT_THAT(DestLinks(*renderer),
+              UnorderedElementsAreArray(std::vector<AudioObject*>{context().throttle_output()}));
+}
+
+TEST_F(RouteGraphUltrasoundTest, LinkUltrasoundRendererToDeviceWithSufficientRate) {
+  auto renderer = FakeAudioObject::FakeRenderer();
+  auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
+  output_and_driver.output->set_format(
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 1,
+                         .frames_per_second = 96000,
+                     })
+          .take_value());
+  RunLoopUntilIdle();
+
+  auto output = output_and_driver.output;
+  const RoutingProfile kRoutableProfile{
+      .routable = true,
+      .usage = StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND),
+  };
+
+  under_test_.AddDevice(output.get());
+  under_test_.AddRenderer(renderer);
+  under_test_.SetRendererRoutingProfile(*renderer, kRoutableProfile);
+
+  EXPECT_THAT(DestLinks(*renderer),
+              UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
 }
 
 }  // namespace
