@@ -6,51 +6,31 @@
 
 #![deny(missing_docs)]
 
-#[cfg(target_os = "fuchsia")]
-mod executor;
-#[cfg(target_os = "fuchsia")]
-pub use self::executor::{
-    spawn, spawn_local, DurationExt, EHandle, Executor, PacketReceiver, ReceiverRegistration, Time,
-    WaitState,
-};
+mod runtime;
+pub use self::runtime::*;
+
+mod handle;
+pub use self::handle::channel::{Channel, RecvMsg};
+pub use self::handle::socket::Socket;
+
 #[cfg(target_os = "fuchsia")]
 pub mod net;
-#[cfg(target_os = "fuchsia")]
-mod task;
-#[cfg(target_os = "fuchsia")]
-pub use self::task::Task;
-#[cfg(target_os = "fuchsia")]
-mod zircon_handle;
 
 #[cfg(target_os = "fuchsia")]
-mod fuchsia {
-    pub(crate) use super::zircon_handle as platform_handle;
-    pub use super::zircon_handle::fifo::{
-        Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry,
+pub use self::handle::{
+    fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry},
+    on_signals::OnSignals,
+    rwhandle::RWHandle,
+};
+
+/// An emulation library for Zircon handles on non-Fuchsia platforms.
+#[cfg(not(target_os = "fuchsia"))]
+pub mod emulated_handle {
+    pub use super::handle::{
+        AsHandleRef, Channel, Handle, HandleBased, HandleRef, HandleType, MessageBuf, Socket,
+        SocketOpts,
     };
-    pub use super::zircon_handle::on_signals::OnSignals;
-    pub use super::zircon_handle::rwhandle::RWHandle;
 }
-#[cfg(target_os = "fuchsia")]
-pub use fuchsia::*;
-
-#[cfg(not(target_os = "fuchsia"))]
-pub mod emulated_handle;
-
-#[cfg(not(target_os = "fuchsia"))]
-mod not_fuchsia {
-    pub(crate) use super::emulated_handle as platform_handle;
-}
-#[cfg(not(target_os = "fuchsia"))]
-pub(crate) use not_fuchsia::*;
-
-pub use platform_handle::channel::{Channel, RecvMsg};
-pub use platform_handle::socket::Socket;
-
-#[cfg(target_os = "fuchsia")]
-mod timer;
-#[cfg(target_os = "fuchsia")]
-pub use self::timer::{Interval, OnTimeout, TimeoutExt, Timer, WakeupTime};
 
 /// A future which can be used by multiple threads at once.
 pub mod atomic_future;

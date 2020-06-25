@@ -28,6 +28,7 @@ rustc_library("fuchsia-async") {
     deps += [
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:slab",
+      "//third_party/rust_crates:smol",
     ]
   }
   test_deps = [ "//third_party/rust_crates:futures-test" ]

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::executor::{EHandle, PacketReceiver, ReceiverRegistration},
+    crate::runtime::{EHandle, PacketReceiver, ReceiverRegistration},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::task::{AtomicWaker, Context, Poll},
     std::sync::{
@@ -162,7 +162,7 @@ where
         signal: zx::Signals,
         clear_closed: bool,
     ) -> Result<(), zx::Status> {
-        crate::executor::need_signal(
+        crate::runtime::need_signal(
             cx,
             task,
             &self.receiver.signals,
@@ -192,7 +192,7 @@ where
     }
 
     fn schedule_packet(&self, signals: zx::Signals) -> Result<(), zx::Status> {
-        crate::executor::schedule_packet(
+        crate::runtime::schedule_packet(
             self.handle.as_handle_ref(),
             self.receiver.port(),
             self.receiver.key(),

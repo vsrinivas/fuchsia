@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::task::Poll;
 
-use crate::executor::{EHandle, PacketReceiver, ReceiverRegistration};
+use crate::runtime::{EHandle, PacketReceiver, ReceiverRegistration};
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::task::{AtomicWaker, Context};
 

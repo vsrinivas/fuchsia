@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::atomic_future::AtomicFuture;
+use crate::runtime::DurationExt;
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::future::{self, FutureObj, LocalFutureObj};
@@ -149,15 +150,6 @@ impl ops::SubAssign<zx::Duration> for Time {
     fn sub_assign(&mut self, d: zx::Duration) {
         self.0.sub_assign(d)
     }
-}
-
-/// An extension trait to provide `after_now` on `zx::Duration`.
-pub trait DurationExt {
-    /// Return a `Time` which is a `Duration` after the current time.
-    /// `duration.after_now()` is equivalent to `Time::after(duration)`.
-    ///
-    /// This method requires that an executor has been set up.
-    fn after_now(self) -> Time;
 }
 
 impl DurationExt for zx::Duration {
@@ -1099,7 +1091,7 @@ mod tests {
     use std::task::Poll;
 
     use super::*;
-    use crate::{timer::Timer, zircon_handle::on_signals::OnSignals};
+    use crate::{handle::on_signals::OnSignals, Timer};
 
     fn time_operations_param(zxt1: zx::Time, zxt2: zx::Time, d: zx::Duration) {
         let t1 = Time::from_zx(zxt1);

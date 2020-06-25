@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::task::Poll;
 
-use crate::executor::{EHandle, PacketReceiver, ReceiverRegistration};
+use crate::runtime::{EHandle, PacketReceiver, ReceiverRegistration};
 
 const READABLE: usize = libc::EPOLLIN as usize;
 const WRITABLE: usize = libc::EPOLLOUT as usize;

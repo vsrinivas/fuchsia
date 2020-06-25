@@ -8,14 +8,13 @@
 //! at a particular point in the future.
 
 use {
-    crate::executor::{EHandle, Time},
+    crate::runtime::{EHandle, Time, WakeupTime},
     fuchsia_zircon as zx,
     futures::{
         stream::FusedStream,
         task::{AtomicWaker, Context},
         FutureExt, Stream,
     },
-    pin_utils::{unsafe_pinned, unsafe_unpinned},
     std::{
         future::Future,
         marker::Unpin,
@@ -28,12 +27,12 @@ use {
     },
 };
 
-/// The time when a Timer should wakeup.
-pub trait WakeupTime {
-    /// Convert this time into a fuchsia_async::Time.
-    /// This is allowed to be innacurate, but the innacuracy must make the wakeup time later,
-    /// never earlier.
-    fn into_time(self) -> Time;
+impl WakeupTime for std::time::Instant {
+    fn into_time(self) -> Time {
+        let now_as_instant = std::time::Instant::now();
+        let now_as_time = Time::now();
+        now_as_time + self.saturating_duration_since(now_as_instant).into()
+    }
 }
 
 impl WakeupTime for Time {
@@ -45,70 +44,6 @@ impl WakeupTime for Time {
 impl WakeupTime for zx::Time {
     fn into_time(self) -> Time {
         self.into()
-    }
-}
-
-impl WakeupTime for std::time::Instant {
-    fn into_time(self) -> Time {
-        let now_as_instant = std::time::Instant::now();
-        let now_as_time = Time::now();
-        now_as_time + self.saturating_duration_since(now_as_instant).into()
-    }
-}
-
-/// A trait which allows futures to be easily wrapped in a timeout.
-pub trait TimeoutExt: Future + Sized {
-    /// Wraps the future in a timeout, calling `on_timeout` to produce a result
-    /// when the timeout occurs.
-    fn on_timeout<WT, OT>(self, time: WT, on_timeout: OT) -> OnTimeout<Self, OT>
-    where
-        WT: WakeupTime,
-        OT: FnOnce() -> Self::Output,
-    {
-        OnTimeout { timer: Timer::new(time), future: self, on_timeout: Some(on_timeout) }
-    }
-}
-
-impl<F: Future + Sized> TimeoutExt for F {}
-
-/// A wrapper for a future which will complete with a provided closure when a timeout occurs.
-#[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
-pub struct OnTimeout<F, OT> {
-    timer: Timer,
-    future: F,
-    on_timeout: Option<OT>,
-}
-
-impl<F, OT> OnTimeout<F, OT> {
-    // Safety: this is safe because `OnTimeout` is only `Unpin` if
-    // the future is `Unpin`, and aside from `future`, all other fields are
-    // treated as movable.
-    unsafe_unpinned!(timer: Timer);
-    unsafe_pinned!(future: F);
-    unsafe_unpinned!(on_timeout: Option<OT>);
-}
-
-impl<F: Unpin, OT> Unpin for OnTimeout<F, OT> {}
-
-impl<F: Future, OT> Future for OnTimeout<F, OT>
-where
-    OT: FnOnce() -> F::Output,
-{
-    type Output = F::Output;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        if let Poll::Ready(item) = self.as_mut().future().poll(cx) {
-            return Poll::Ready(item);
-        }
-        if let Poll::Ready(()) = self.as_mut().timer().poll_unpin(cx) {
-            let ot = OnTimeout::on_timeout(self.as_mut())
-                .take()
-                .expect("polled withtimeout after completion");
-            let item = (ot)();
-            return Poll::Ready(item);
-        }
-        Poll::Pending
     }
 }
 
@@ -234,19 +169,6 @@ mod test {
         let shorter = Timer::new(Time::after(100.millis()));
         let longer = Timer::new(Time::after(1.second()));
         match exec.run(shorter.select(longer), 4) {
-            Either::Left(()) => {}
-            Either::Right(()) => panic!("wrong timer fired"),
-        }
-    }
-
-    #[test]
-    fn shorter_fires_first_instant() {
-        use std::time::{Duration, Instant};
-        let mut exec = Executor::new().unwrap();
-        let now = Instant::now();
-        let shorter = Timer::new(now + Duration::from_millis(100));
-        let longer = Timer::new(now + Duration::from_secs(1));
-        match exec.run_singlethreaded(shorter.select(longer)) {
             Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
         }
