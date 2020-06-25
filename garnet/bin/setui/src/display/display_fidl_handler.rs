@@ -178,10 +178,12 @@ async fn process_sensor_request(
     context: RequestContext<LightSensorData, DisplayWatchLightSensorResponder>,
     req: DisplayRequest,
 ) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    #[allow(unreachable_patterns)]
     if let DisplayRequest::WatchLightSensor { delta, responder } = req {
         context
             .watch_with_change_fn(
+                // Bucket watch requests to the nearest 0.01.
+                // TODO(fxb/55112): this might be just an integer
+                format!("{:.2}", delta),
                 Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
                     if let (Some(old_lux), Some(new_lux)) =
                         (old_data.illuminance_lux, new_data.illuminance_lux)
@@ -206,11 +208,12 @@ async fn process_sensor_request_2(
     context: RequestContext<LightSensorData, DisplayWatchLightSensor2Responder>,
     req: DisplayRequest,
 ) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
     if let DisplayRequest::WatchLightSensor2 { delta, responder } = req {
         context
             .watch_with_change_fn(
+                // Bucket watch requests to the nearest 0.01.
+                // TODO(fxb/55112): this might be just an integer
+                format!("{:.2}", delta),
                 Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
                     if let (Some(old_lux), Some(new_lux)) =
                         (old_data.illuminance_lux, new_data.illuminance_lux)

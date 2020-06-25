@@ -17,6 +17,7 @@ use crate::switchboard::base::{
 };
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
+use std::hash::Hash;
 
 pub type RequestResultCreator<'a, S> = LocalBoxFuture<'a, Result<Option<Request<S>>, Error>>;
 
@@ -26,20 +27,22 @@ type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 /// such as the switchboard and hanging get functionality. Note that we do not
 /// directly expose the hanging get handler so that we can better control its
 /// lifetime.
-pub struct RequestContext<T, ST>
+pub struct RequestContext<T, ST, K = String>
 where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Send + Sync + 'static,
 {
     switchboard_messenger: switchboard::message::Messenger,
-    hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST>>>,
+    hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST, K>>>,
     exit_tx: ExitSender,
 }
 
-impl<T, ST> RequestContext<T, ST>
+impl<T, ST, K> RequestContext<T, ST, K>
 where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Send + Sync + 'static,
 {
     pub async fn request(
         &self,
@@ -72,6 +75,7 @@ where
 
     pub async fn watch_with_change_fn(
         &self,
+        change_function_key: K,
         change_function: ChangeFunction<T>,
         responder: ST,
         close_on_error: bool,
@@ -79,6 +83,7 @@ where
         let mut hanging_get_lock = self.hanging_get_handler.lock().await;
         hanging_get_lock
             .watch_with_change_fn(
+                Some(change_function_key),
                 change_function,
                 responder,
                 if close_on_error { Some(self.exit_tx.clone()) } else { None },
@@ -98,12 +103,13 @@ macro_rules! request_respond {
     };
 }
 
-impl<T, ST> Clone for RequestContext<T, ST>
+impl<T, ST, K> Clone for RequestContext<T, ST, K>
 where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Send + Sync + 'static,
 {
-    fn clone(&self) -> RequestContext<T, ST> {
+    fn clone(&self) -> RequestContext<T, ST, K> {
         RequestContext {
             switchboard_messenger: self.switchboard_messenger.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
@@ -117,8 +123,8 @@ where
 /// request is processed. The returned value is a result with an optional
 /// request, containing None if not processed and the original request
 /// otherwise.
-pub type RequestCallback<S, T, ST> =
-    Box<dyn Fn(RequestContext<T, ST>, Request<S>) -> RequestResultCreator<'static, S>>;
+pub type RequestCallback<S, T, ST, K> =
+    Box<dyn Fn(RequestContext<T, ST, K>, Request<S>) -> RequestResultCreator<'static, S>>;
 pub type RequestStream<S> = <S as ServiceMarker>::RequestStream;
 
 /// A processing unit is an entity that is able to process a stream request and
@@ -139,26 +145,28 @@ where
 /// trait, allowing a RequestCallback to participate in stream request
 /// processing. The SettingProcessingUnit maintains a hanging get handler keyed
 /// to the constructed type.
-struct SettingProcessingUnit<S, T, ST>
+struct SettingProcessingUnit<S, T, ST, K>
 where
     S: ServiceMarker,
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Send + Sync + 'static,
 {
-    callback: RequestCallback<S, T, ST>,
-    hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST>>>,
+    callback: RequestCallback<S, T, ST, K>,
+    hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST, K>>>,
 }
 
-impl<S, T, ST> SettingProcessingUnit<S, T, ST>
+impl<S, T, ST, K> SettingProcessingUnit<S, T, ST, K>
 where
     S: ServiceMarker,
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Send + Sync + 'static,
 {
     async fn new(
         setting_type: SettingType,
         switchboard_messenger: switchboard::message::Messenger,
-        callback: RequestCallback<S, T, ST>,
+        callback: RequestCallback<S, T, ST, K>,
     ) -> Self {
         Self {
             callback: callback,
@@ -171,11 +179,12 @@ where
     }
 }
 
-impl<S, T, ST> Drop for SettingProcessingUnit<S, T, ST>
+impl<S, T, ST, K> Drop for SettingProcessingUnit<S, T, ST, K>
 where
     S: ServiceMarker,
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Send + Sync + 'static,
 {
     fn drop(&mut self) {
         let hanging_get_handler = self.hanging_get_handler.clone();
@@ -185,11 +194,12 @@ where
     }
 }
 
-impl<S, T, ST> ProcessingUnit<S> for SettingProcessingUnit<S, T, ST>
+impl<S, T, ST, K> ProcessingUnit<S> for SettingProcessingUnit<S, T, ST, K>
 where
     S: ServiceMarker,
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Send + Sync + 'static,
 {
     fn process(
         &self,
@@ -229,16 +239,17 @@ where
         Self { request_stream: stream, switchboard_messenger, processing_units: Vec::new() }
     }
 
-    pub async fn register<V, SV>(
+    pub async fn register<V, SV, K>(
         &mut self,
         setting_type: SettingType,
-        callback: RequestCallback<S, V, SV>,
+        callback: RequestCallback<S, V, SV, K>,
     ) where
         V: From<SettingResponse> + Send + Sync + 'static,
         SV: Sender<V> + Send + Sync + 'static,
+        K: Eq + Hash + Clone + Send + Sync + 'static,
     {
         let processing_unit = Box::new(
-            SettingProcessingUnit::<S, V, SV>::new(
+            SettingProcessingUnit::<S, V, SV, K>::new(
                 setting_type,
                 self.switchboard_messenger.clone(),
                 callback,

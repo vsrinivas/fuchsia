@@ -54,6 +54,7 @@ fidl_process_full!(
     SettingType::Light,
     LightGroupSet,
     LightWatchLightGroupsResponder,
+    String,
     process_request
 );
 

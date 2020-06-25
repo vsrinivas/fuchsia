@@ -9,11 +9,12 @@
 /// - `Switchboard` setting type.
 /// - FIDL setting type.
 /// - The responder type for the `HangingGetHandler`.
+/// - An optional type of a key for change functions if custom change functions are used.
 /// - The handler function for requests.
 #[macro_export]
 macro_rules! fidl_process_full {
     ($interface:ident $(,$setting_type:expr, $fidl_settings:ty,
-            $fidl_responder:ty, $handle_func:ident)+$(,)*) => {
+            $fidl_responder:ty, $change_func_key:ty, $handle_func:ident)+$(,)*) => {
         type HandleResult<'a> = LocalBoxFuture<'a, Result<Option<paste::item!{[<$interface Request>]}>, anyhow::Error>>;
 
         pub mod fidl_io {
@@ -35,7 +36,7 @@ macro_rules! fidl_process_full {
 
                     let mut processor = FidlProcessor::<paste::item!{[<$interface Marker>]}>::new(stream, messenger).await;
                         $(processor
-                            .register::<$fidl_settings, $fidl_responder>(
+                            .register::<$fidl_settings, $fidl_responder, $change_func_key>(
                                 $setting_type,
                                 Box::new(
                                     move |context, req| -> HandleResult<'_> {
@@ -51,7 +52,7 @@ macro_rules! fidl_process_full {
                 });
             }
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -69,11 +70,13 @@ macro_rules! fidl_process {
                 $setting_type,
                 [<$interface Settings>],
                 [<$interface WatchResponder>],
+                String,
                 $handle_func
-                $(,$item_setting_type, $fidl_settings, $fidl_responder, $item_handle_func)*
+                $(,$item_setting_type, $fidl_settings, $fidl_responder, String, $item_handle_func)*
             );
         }
     };
+
     // Generates a fidl_io mod with a spawn for the given fidl interface,
     // setting type, and handler function. Additional handlers can be specified
     // by providing the responder type and handle function.
@@ -85,14 +88,17 @@ macro_rules! fidl_process {
                 $setting_type,
                 [<$interface Settings>],
                 [<$interface WatchResponder>],
+                String,
                 $handle_func
                 $(, $setting_type,
                 [<$interface Settings>],
                 $fidl_responder,
+                String,
                 $item_handle_func)*
             );
         }
     };
+
     // Generates a fidl_io mod with a spawn for the given fidl interface,
     // setting type, fidl setting type and handler function. To be used when the
     // fidl interface and fidl setting type differ in name.
@@ -104,6 +110,7 @@ macro_rules! fidl_process {
                 $setting_type,
                 $fidl_settings,
                 [<$interface WatchResponder>],
+                String,
                 $handle_func
             );
         }
