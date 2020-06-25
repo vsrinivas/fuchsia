@@ -5,7 +5,6 @@
 use {
     crate::{
         commands::{Command, ListCommand},
-        constants,
         types::Error,
     },
     fuchsia_inspect::testing::InspectDataFetcher,
@@ -27,17 +26,6 @@ pub fn get_moniker_from_result(result: &serde_json::Value) -> Result<String, Err
 }
 
 /// Returns the moniker in a json response or an error if one is not found
-pub fn get_url_from_result(result: &serde_json::Value) -> Result<String, Error> {
-    Ok(result
-        .get("metadata")
-        .ok_or(Error::archive_missing_property("metadata"))?
-        .get("component_url")
-        .ok_or(Error::archive_missing_property("component_url"))?
-        .as_str()
-        .ok_or(Error::ArchiveInvalidJson)?
-        .to_string())
-}
-
 /// Returns the selectors for a component whose url contains the `manifest` string.
 pub async fn get_selectors_for_manifest(
     manifest: &Option<String>,
@@ -66,8 +54,7 @@ pub async fn get_selectors_for_manifest(
 /// Returns the component "moniker" and the hierarchy data for results of
 /// reading from the archive using the given selectors.
 pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarchy)>, Error> {
-    let mut fetcher =
-        InspectDataFetcher::new().with_timeout(*constants::IQUERY_TIMEOUT).retry_if_empty(false);
+    let mut fetcher = InspectDataFetcher::new().retry_if_empty(false);
     // We support receiving the moniker or a tree selector
     for selector in selectors {
         if selector.contains(":") {

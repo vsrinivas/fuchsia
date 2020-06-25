@@ -77,6 +77,11 @@ pub fn result_equals_expected(result: &str, expected: &str) -> bool {
     clean_result.trim() == expected.trim()
 }
 
+pub async fn wait_for_terminated(mut app: App) {
+    app.kill().expect("app killed correctly");
+    app.wait().await.expect("app exited correctly");
+}
+
 fn launch(
     env_label: &str,
     url: impl Into<String>,

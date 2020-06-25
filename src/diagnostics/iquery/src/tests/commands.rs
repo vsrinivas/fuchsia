@@ -16,32 +16,35 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_list() {
-    let (_env, _app) = utils::start_basic_component("list-test").await.expect("create comp 1");
-    let (_env2, _app2) = utils::start_basic_component("list-test2").await.expect("create comp 2");
+    let (_env, app) = utils::start_basic_component("list-test").await.expect("create comp 1");
+    let (_env2, app2) = utils::start_basic_component("list-test2").await.expect("create comp 2");
     assert_command!(
         command: "list",
         golden_basename: list_test,
         args: [],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_list_no_duplicates() {
-    let (_env, _app) = utils::start_test_component("list-dup-test").await.expect("create comp 1");
+    let (_env, app) = utils::start_test_component("list-dup-test").await.expect("create comp 1");
     assert_command!(
         command: "list",
         golden_basename: list_no_dups,
         args: [],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_list_filter_manifest() {
-    let (_env, _app) =
+    let (_env, app) =
         utils::start_basic_component("list-filter-test").await.expect("create comp 1");
-    let (_env, _app) =
+    let (_env, app2) =
         utils::start_test_component("list-filter-test2").await.expect("create comp 2");
     assert_command!(
         command: "list",
@@ -49,18 +52,22 @@ async fn test_list_filter_manifest() {
         args: [ "--manifest", "basic_component.cmx" ],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_list_with_urls() {
-    let (_env, _app) = utils::start_basic_component("list-url-test").await.expect("create comp 1");
-    let (_env, _app) = utils::start_test_component("list-url-test2").await.expect("create comp 2");
+    let (_env, app) = utils::start_basic_component("list-url-test").await.expect("create comp 1");
+    let (_env, app2) = utils::start_test_component("list-url-test2").await.expect("create comp 2");
     assert_command!(
         command: "list",
         golden_basename: list_with_url,
         args: [ "--with-url" ],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
 
 // List files command
@@ -68,20 +75,21 @@ async fn test_list_with_urls() {
 #[fasync::run_singlethreaded(test)]
 async fn list_files_empty_path_uses_cwd() {
     std::env::set_current_dir(Path::new("/hub")).expect("change dir");
-    let (_env, _app) =
+    let (_env, app) =
         utils::start_basic_component("list-file-test-1").await.expect("create comp 1");
     assert_command!(
         command: "list-files",
         golden_basename: list_files_cwd,
         args: []
     );
+    utils::wait_for_terminated(app).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn list_files() {
-    let (_env, _app) =
+    let (_env, app) =
         utils::start_basic_component("list-file-test-2").await.expect("create comp 1");
-    let (_env2, _app2) =
+    let (_env2, app2) =
         utils::start_test_component("list-file-test-3").await.expect("create comp 2");
     assert_command!(
         command: "list-files",
@@ -91,6 +99,8 @@ async fn list_files() {
             "/hub/r/list-file-test-*/*/c/*/*/out/diagnostics/"
         ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
 
 // Selectors command
@@ -103,10 +113,10 @@ async fn test_selectors_empty() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_selectors() {
-    let (_env, _app) = utils::start_basic_component("selectors-test").await.expect("create comp 1");
-    let (_env2, _app2) =
+    let (_env, app) = utils::start_basic_component("selectors-test").await.expect("create comp 1");
+    let (_env2, app2) =
         utils::start_basic_component("selectors-test2").await.expect("create comp 2");
-    let (_env3, _app3) =
+    let (_env3, app3) =
         utils::start_test_component("selectors-test3").await.expect("create comp 3");
     assert_command!(
         command: "selectors",
@@ -118,13 +128,16 @@ async fn test_selectors() {
         ],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
+    utils::wait_for_terminated(app3).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_selectors_filter() {
-    let (_env, _app) =
+    let (_env, app) =
         utils::start_basic_component("selectors-filter").await.expect("create comp 1");
-    let (_env, _app) =
+    let (_env, app2) =
         utils::start_test_component("selectors-filter2").await.expect("create comp 2");
     assert_command!(
         command: "selectors",
@@ -136,6 +149,8 @@ async fn test_selectors_filter() {
         ],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
 
 // Show file
@@ -156,9 +171,9 @@ async fn test_invalid_location() {
 
 #[fasync::run_singlethreaded(test)]
 async fn show_file_test() {
-    let (_env, _app) =
+    let (_env, app) =
         utils::start_basic_component("show-file-test-1").await.expect("create comp 1");
-    let (_env2, _app2) =
+    let (_env2, app2) =
         utils::start_test_component("show-file-test-2").await.expect("create comp 2");
     assert_command!(
         command: "show-file",
@@ -168,11 +183,13 @@ async fn show_file_test() {
             "/hub/r/show-file-test-2/*/c/test_component.cmx/*/out/diagnostics/*"
         ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn inspect_vmo_file_directly() {
-    let (_env, _app) = utils::start_test_component("show-file-vmo-2").await.expect("create comp 2");
+    let (_env, app) = utils::start_test_component("show-file-vmo-2").await.expect("create comp 2");
     let paths = expand_paths(&[
         "/hub/r/show-file-vmo-2/*/c/test_component.cmx/*/out/diagnostics/*".to_string(),
     ])
@@ -187,14 +204,15 @@ async fn inspect_vmo_file_directly() {
         golden_basename: show_file_vmo,
         args: [ &path ]
     );
+    utils::wait_for_terminated(app).await;
 }
 
 // Show
 
 #[fasync::run_singlethreaded(test)]
 async fn test_no_selectors() {
-    let (_env, _app) = utils::start_basic_component("show-all-test").await.expect("create comp 1");
-    let (_env2, _app2) =
+    let (_env, app) = utils::start_basic_component("show-all-test").await.expect("create comp 1");
+    let (_env2, app2) =
         utils::start_basic_component("show-all-test2").await.expect("create comp 2");
     assert_command!(
         command: "show",
@@ -202,13 +220,15 @@ async fn test_no_selectors() {
         args: [],
         test_opts: [ "with_retries", "remove_observer" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn show_test() {
-    let (_env, _app) = utils::start_basic_component("show-test").await.expect("create comp 1");
-    let (_env2, _app2) = utils::start_basic_component("show-test2").await.expect("create comp 2");
-    let (_env3, _app3) = utils::start_basic_component("show-test3").await.expect("create comp 3");
+    let (_env, app) = utils::start_basic_component("show-test").await.expect("create comp 1");
+    let (_env2, app2) = utils::start_basic_component("show-test2").await.expect("create comp 2");
+    let (_env3, app3) = utils::start_basic_component("show-test3").await.expect("create comp 3");
     assert_command!(
         command: "show",
         golden_basename: show_test,
@@ -219,22 +239,25 @@ async fn show_test() {
         ],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
+    utils::wait_for_terminated(app3).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn empty_result_on_null_payload() {
-    let (_env, _app) =
-        utils::start_basic_component("show-test-empty").await.expect("create comp 1");
+    let (_env, app) = utils::start_basic_component("show-test-empty").await.expect("create comp 1");
     let result =
         utils::execute_command(&["show", "show-test-empty/basic_component.cmx:root/nothing:here"])
             .await;
     assert_matches!(result, Ok(res) if res == "");
+    utils::wait_for_terminated(app).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn show_filter_manifest() {
-    let (_env, _app) = utils::start_basic_component("show-filter").await.expect("create comp 1");
-    let (_env, _app) = utils::start_test_component("show-filter2").await.expect("create comp 2");
+    let (_env, app) = utils::start_basic_component("show-filter").await.expect("create comp 1");
+    let (_env, app2) = utils::start_test_component("show-filter2").await.expect("create comp 2");
     assert_command!(
         command: "show",
         golden_basename: show_filter_test,
@@ -245,4 +268,6 @@ async fn show_filter_manifest() {
         ],
         test_opts: [ "with_retries" ]
     );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
 }
