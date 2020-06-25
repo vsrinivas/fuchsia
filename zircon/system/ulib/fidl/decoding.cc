@@ -56,7 +56,7 @@ class FidlDecoder final
         num_handles_(num_handles),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg) {
-    if (handles != nullptr) {
+    if (likely(handles != nullptr)) {
       handles_ = handles;
     }
   }
@@ -68,7 +68,7 @@ class FidlDecoder final
         num_handles_(num_handle_infos),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg) {
-    if (handle_infos != nullptr) {
+    if (likely(handle_infos != nullptr)) {
       handles_ = handle_infos;
     }
   }
@@ -86,11 +86,11 @@ class FidlDecoder final
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       Position* out_position) {
     uint32_t new_offset;
-    if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
+    if (unlikely(!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset))) {
       SetError("overflow updating out-of-line offset");
       return Status::kMemoryError;
     }
-    if (new_offset > num_bytes_) {
+    if (unlikely(new_offset > num_bytes_)) {
       SetError("message tried to decode more than provided number of bytes");
       return Status::kMemoryError;
     }
@@ -101,7 +101,7 @@ class FidlDecoder final
         return status;
       }
     }
-    if (pointee_type == PointeeType::kString) {
+    if (unlikely(pointee_type == PointeeType::kString)) {
       auto status = fidl_validate_string(reinterpret_cast<const char*>(&bytes_[next_out_of_line_]),
                                          inline_size);
       if (status != ZX_OK) {
@@ -122,13 +122,13 @@ class FidlDecoder final
     assert(has_handle_infos());
     zx_handle_info_t received_handle_info = handle_infos()[handle_idx_];
     zx_handle_t received_handle = received_handle_info.handle;
-    if (received_handle == ZX_HANDLE_INVALID) {
+    if (unlikely(received_handle == ZX_HANDLE_INVALID)) {
       SetError("invalid handle detected in handle table");
       return Status::kConstraintViolationError;
     }
 
-    if (required_handle_subtype != received_handle_info.type &&
-        required_handle_subtype != ZX_OBJ_TYPE_NONE) {
+    if (unlikely(required_handle_subtype != received_handle_info.type &&
+                 required_handle_subtype != ZX_OBJ_TYPE_NONE)) {
       SetError("decoded handle object type does not match expected type");
       return Status::kConstraintViolationError;
     }
@@ -140,7 +140,7 @@ class FidlDecoder final
       return Status::kSuccess;
     }
     // Check for required rights that are not present on the received handle.
-    if (subtract_rights(required_handle_rights, received_handle_info.rights) != 0) {
+    if (unlikely(subtract_rights(required_handle_rights, received_handle_info.rights) != 0)) {
       SetError("decoded handle missing required rights");
       return Status::kConstraintViolationError;
     }
@@ -151,7 +151,7 @@ class FidlDecoder final
       zx_status_t status =
           zx_handle_replace(received_handle_info.handle, required_handle_rights, &received_handle);
       assert(status != ZX_ERR_BAD_HANDLE);
-      if (status != ZX_OK) {
+      if (unlikely(status != ZX_OK)) {
         SetError("failed to replace handle");
         return Status::kConstraintViolationError;
       }
@@ -167,24 +167,24 @@ class FidlDecoder final
 
   Status VisitHandle(Position handle_position, HandlePointer handle,
                      zx_rights_t required_handle_rights, zx_obj_type_t required_handle_subtype) {
-    if (*handle != FIDL_HANDLE_PRESENT) {
+    if (unlikely(*handle != FIDL_HANDLE_PRESENT)) {
       SetError("message tried to decode a garbage handle");
       return Status::kConstraintViolationError;
     }
-    if (handle_idx_ == num_handles_) {
+    if (unlikely(handle_idx_ == num_handles_)) {
       SetError("message decoded too many handles");
       return Status::kConstraintViolationError;
     }
 
     if (has_handles()) {
-      if (handles()[handle_idx_] == ZX_HANDLE_INVALID) {
+      if (unlikely(handles()[handle_idx_] == ZX_HANDLE_INVALID)) {
         SetError("invalid handle detected in handle table");
         return Status::kConstraintViolationError;
       }
       *handle = handles()[handle_idx_];
       handle_idx_++;
       return Status::kSuccess;
-    } else if (has_handle_infos()) {
+    } else if (likely(has_handle_infos())) {
       return VisitHandleInfo(handle_position, handle, required_handle_rights,
                              required_handle_subtype);
     } else {
@@ -212,11 +212,11 @@ class FidlDecoder final
     // Now that the envelope has been consumed, check the correctness of the envelope header.
     uint32_t num_bytes = next_out_of_line_ - prev_checkpoint.num_bytes;
     uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
-    if (envelope->num_bytes != num_bytes) {
+    if (unlikely(envelope->num_bytes != num_bytes)) {
       SetError("Envelope num_bytes was mis-sized");
       return Status::kConstraintViolationError;
     }
-    if (envelope->num_handles != num_handles) {
+    if (unlikely(envelope->num_handles != num_handles)) {
       SetError("Envelope num_handles was mis-sized");
       return Status::kConstraintViolationError;
     }
@@ -226,7 +226,7 @@ class FidlDecoder final
   Status VisitUnknownEnvelope(EnvelopePointer envelope) {
     // If we do not have the coding table for this payload,
     // treat it as unknown and close its contained handles
-    if (envelope->num_handles > 0) {
+    if (unlikely(envelope->num_handles > 0)) {
       if (has_handles()) {
         memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
                envelope->num_handles * sizeof(zx_handle_t));
@@ -269,7 +269,7 @@ class FidlDecoder final
 
   Status ValidatePadding(const uint8_t* padding_ptr, uint32_t padding_length) {
     for (uint32_t i = 0; i < padding_length; i++) {
-      if (padding_ptr[i] != 0) {
+      if (unlikely(padding_ptr[i] != 0)) {
         SetError("non-zero padding bytes detected during decoding");
         return Status::kConstraintViolationError;
       }
@@ -311,16 +311,16 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     if (out_error_msg)
       *out_error_msg = msg;
   };
-  if (handles == nullptr && num_handles != 0) {
+  if (unlikely(handles == nullptr && num_handles != 0)) {
     set_error("Cannot provide non-zero handle count and null handle pointer");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (bytes == nullptr) {
+  if (unlikely(bytes == nullptr)) {
     set_error("Cannot decode null bytes");
     drop_all_handles();
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!FidlIsAligned(reinterpret_cast<uint8_t*>(bytes))) {
+  if (unlikely(!FidlIsAligned(reinterpret_cast<uint8_t*>(bytes)))) {
     set_error("Bytes must be aligned to FIDL_ALIGNMENT");
     drop_all_handles();
     return ZX_ERR_INVALID_ARGS;
@@ -328,8 +328,8 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
 
   uint32_t next_out_of_line;
   zx_status_t status;
-  if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
-      ZX_OK) {
+  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line,
+                                                       out_error_msg)) != ZX_OK)) {
     drop_all_handles();
     return status;
   }
@@ -337,23 +337,23 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   FidlDecoder decoder(bytes, num_bytes, handles, num_handles, next_out_of_line, out_error_msg);
   fidl::Walk(decoder, type, Position{reinterpret_cast<uint8_t*>(bytes)});
 
-  if (decoder.status() != ZX_OK) {
+  if (unlikely(decoder.status() != ZX_OK)) {
     drop_all_handles();
     return decoder.status();
   }
-  if (!decoder.DidConsumeAllBytes()) {
+  if (unlikely(!decoder.DidConsumeAllBytes())) {
     set_error("message did not decode all provided bytes");
     drop_all_handles();
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!decoder.DidConsumeAllHandles()) {
+  if (unlikely(!decoder.DidConsumeAllHandles())) {
     set_error("message did not decode all provided handles");
     drop_all_handles();
     return ZX_ERR_INVALID_ARGS;
   }
 
 #ifdef __Fuchsia__
-  if (decoder.unknown_handle_idx() > 0) {
+  if (unlikely(decoder.unknown_handle_idx() > 0)) {
     (void)zx_handle_close_many(decoder.unknown_handles(), decoder.unknown_handle_idx());
   }
 #endif

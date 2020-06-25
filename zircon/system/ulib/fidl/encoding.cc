@@ -70,7 +70,7 @@ class FidlEncoder final
         num_handles_(num_handles),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg) {
-    if (handles != nullptr) {
+    if (likely(handles != nullptr)) {
       handles_ = handles;
     }
   }
@@ -83,7 +83,7 @@ class FidlEncoder final
         num_handles_(num_handle_dispositions),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg) {
-    if (handle_dispositions != nullptr) {
+    if (likely(handle_dispositions != nullptr)) {
       handles_ = handle_dispositions;
     }
   }
@@ -120,11 +120,11 @@ class FidlEncoder final
                                       ~fidl::internal::kNonArrayTrackingPtrOwnershipMask);
 
     uint32_t new_offset;
-    if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
+    if (unlikely(!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset))) {
       SetError("overflow updating out-of-line offset");
       return Status::kMemoryError;
     }
-    if (new_offset > num_bytes_) {
+    if (unlikely(new_offset > num_bytes_)) {
       SetError("pointed offset exceeds buffer size");
       return Status::kConstraintViolationError;
     }
@@ -132,7 +132,7 @@ class FidlEncoder final
     if (mode == Mode::LinearizeAndEncode) {
       // Copy the pointee to the desired location in secondary storage
       memcpy(&bytes_[next_out_of_line_], object_ptr, inline_size);
-    } else if (object_ptr != &bytes_[next_out_of_line_]) {
+    } else if (unlikely(object_ptr != &bytes_[next_out_of_line_])) {
       SetError("noncontiguous out of line storage during encode");
       return Status::kMemoryError;
     }
@@ -144,7 +144,7 @@ class FidlEncoder final
     // Validate that we have a UTF8 string.
     // TODO(fxb/52215): For strings, it would most likely be more efficient
     // to validate and copy at the same time.
-    if (pointee_type == PointeeType::kString) {
+    if (unlikely(pointee_type == PointeeType::kString)) {
       auto status =
           fidl_validate_string(reinterpret_cast<char*>(&bytes_[next_out_of_line_]), inline_size);
       if (status != ZX_OK) {
@@ -174,7 +174,7 @@ class FidlEncoder final
 
     if (has_handles()) {
       handles()[handle_idx_] = *dest_handle;
-    } else if (has_handle_dispositions()) {
+    } else if (likely(has_handle_dispositions())) {
       handle_dispositions()[handle_idx_] = zx_handle_disposition_t{
           .operation = ZX_HANDLE_OP_MOVE,
           .handle = *dest_handle,
@@ -228,11 +228,11 @@ class FidlEncoder final
       envelope->num_handles = num_handles;
     } else {
       // Validate the claimed num_bytes/num_handles.
-      if (envelope->num_bytes != num_bytes) {
+      if (unlikely(envelope->num_bytes != num_bytes)) {
         SetError("Envelope num_bytes was mis-sized");
         return Status::kConstraintViolationError;
       }
-      if (envelope->num_handles != num_handles) {
+      if (unlikely(envelope->num_handles != num_handles)) {
         SetError("Envelope num_handles was mis-sized");
         return Status::kConstraintViolationError;
       }
@@ -299,37 +299,37 @@ zx_status_t fidl_linearize_and_encode_impl(const fidl_type_t* type, void* value,
     if (out_error_msg)
       *out_error_msg = msg;
   };
-  if (value == nullptr) {
+  if (unlikely(value == nullptr)) {
     set_error("Cannot encode null value");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (out_bytes == nullptr) {
+  if (unlikely(out_bytes == nullptr)) {
     set_error("Cannot encode to null byte array");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!FidlIsAligned(reinterpret_cast<uint8_t*>(value))) {
+  if (unlikely(!FidlIsAligned(reinterpret_cast<uint8_t*>(value)))) {
     set_error("Value must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!FidlIsAligned(out_bytes)) {
+  if (unlikely(!FidlIsAligned(out_bytes))) {
     set_error("Bytes must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (num_bytes % FIDL_ALIGNMENT != 0) {
+  if (unlikely(num_bytes % FIDL_ALIGNMENT != 0)) {
     set_error("num_bytes must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }
 
   zx_status_t status;
   uint32_t next_out_of_line;
-  if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
-      ZX_OK) {
+  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line,
+                                                       out_error_msg)) != ZX_OK)) {
     return status;
   }
 
   // Zero region between primary object and next out of line object.
   size_t primary_size;
-  if ((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
+  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
     return status;
   }
 
@@ -350,13 +350,13 @@ zx_status_t fidl_linearize_and_encode_impl(const fidl_type_t* type, void* value,
     close_handles(out_handles, encoder.num_out_handles());
   };
 
-  if (encoder.status() == ZX_OK) {
-    if (out_num_actual_bytes == nullptr) {
+  if (likely(encoder.status() == ZX_OK)) {
+    if (unlikely(out_num_actual_bytes == nullptr)) {
       set_error("Cannot encode with null out_actual_bytes");
       drop_all_handles();
       return ZX_ERR_INVALID_ARGS;
     }
-    if (out_num_actual_handles == nullptr) {
+    if (unlikely(out_num_actual_handles == nullptr)) {
       set_error("Cannot encode with null out_actual_handles");
       drop_all_handles();
       return ZX_ERR_INVALID_ARGS;
@@ -367,7 +367,7 @@ zx_status_t fidl_linearize_and_encode_impl(const fidl_type_t* type, void* value,
     drop_all_handles();
   }
 
-  if (out_handles == nullptr && num_handles != 0) {
+  if (unlikely(out_handles == nullptr && num_handles != 0)) {
     set_error("Cannot provide non-zero handle count and null handle pointer");
     // When |handles| is nullptr, handles are closed as part of traversal.
     return ZX_ERR_INVALID_ARGS;
@@ -385,29 +385,29 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     if (out_error_msg)
       *out_error_msg = msg;
   };
-  if (bytes == nullptr) {
+  if (unlikely(bytes == nullptr)) {
     set_error("Cannot encode null bytes");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!FidlIsAligned(reinterpret_cast<uint8_t*>(bytes))) {
+  if (unlikely(!FidlIsAligned(reinterpret_cast<uint8_t*>(bytes)))) {
     set_error("Bytes must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (num_bytes % FIDL_ALIGNMENT != 0) {
+  if (unlikely(num_bytes % FIDL_ALIGNMENT != 0)) {
     set_error("num_bytes must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }
 
   zx_status_t status;
   uint32_t next_out_of_line;
-  if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
-      ZX_OK) {
+  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line,
+                                                       out_error_msg)) != ZX_OK)) {
     return status;
   }
 
   // Zero region between primary object and next out of line object.
   size_t primary_size;
-  if ((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
+  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
     return status;
   }
   memset(reinterpret_cast<uint8_t*>(bytes) + primary_size, 0, next_out_of_line - primary_size);
@@ -424,13 +424,13 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     close_handles(handles, encoder.num_out_handles());
   };
 
-  if (encoder.status() == ZX_OK) {
-    if (encoder.num_out_bytes() != num_bytes) {
+  if (likely(encoder.status() == ZX_OK)) {
+    if (unlikely(encoder.num_out_bytes() != num_bytes)) {
       set_error("message did not encode all provided bytes");
       drop_all_handles();
       return ZX_ERR_INVALID_ARGS;
     }
-    if (out_actual_handles == nullptr) {
+    if (unlikely(out_actual_handles == nullptr)) {
       set_error("Cannot encode with null out_actual_handles");
       drop_all_handles();
       return ZX_ERR_INVALID_ARGS;
@@ -440,7 +440,7 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     drop_all_handles();
   }
 
-  if (handles == nullptr && max_handles != 0) {
+  if (unlikely(handles == nullptr && max_handles != 0)) {
     set_error("Cannot provide non-zero handle count and null handle pointer");
     // When |handles| is nullptr, handles are closed as part of traversal.
     return ZX_ERR_INVALID_ARGS;
