@@ -679,6 +679,13 @@ TEST(ProcessLimboManager, DisablingFrees) {
     ASSERT_TRUE(called);
     ASSERT_EQ(limbo_manager.limbo().size(), 0u);
   }
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  excps[0].job.kill();
+  excps[1].job.kill();
+  excps[2].job.kill();
 }
 
 }  // namespace
