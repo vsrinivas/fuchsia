@@ -36,4 +36,7 @@ func TestTaskStateCheck(t *testing.T) {
 	if c.Check(&shouldNotMatch) {
 		t.Errorf("c.Check(%q) returned true, expected false", "NOT_"+stateName)
 	}
+	if len(c.DebugText()) == 0 {
+		t.Error("c.DebugText() returned empty string")
+	}
 }

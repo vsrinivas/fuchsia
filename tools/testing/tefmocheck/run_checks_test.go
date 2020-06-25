@@ -5,6 +5,8 @@
 package tefmocheck
 
 import (
+	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 
@@ -23,6 +25,10 @@ func (c alwaysTrueCheck) Name() string {
 	return "always_true"
 }
 
+func (c alwaysTrueCheck) DebugText() string {
+	return "True dat"
+}
+
 type alwaysFalseCheck struct{}
 
 func (c alwaysFalseCheck) Check(*TestingOutputs) bool {
@@ -31,6 +37,10 @@ func (c alwaysFalseCheck) Check(*TestingOutputs) bool {
 
 func (c alwaysFalseCheck) Name() string {
 	return "always_false"
+}
+
+func (c alwaysFalseCheck) DebugText() string {
+	return "Lies!"
 }
 
 type alwaysPanicCheck struct{}
@@ -43,6 +53,10 @@ func (c alwaysPanicCheck) Name() string {
 	return "always_panic"
 }
 
+func (c alwaysPanicCheck) DebugText() string {
+	return ""
+}
+
 func TestRunChecks(t *testing.T) {
 	falseCheck := alwaysFalseCheck{}
 	trueCheck := alwaysTrueCheck{}
@@ -50,6 +64,11 @@ func TestRunChecks(t *testing.T) {
 	checks := []FailureModeCheck{
 		falseCheck, trueCheck, panicCheck,
 	}
+	outputsDir, err := ioutil.TempDir("", "check-outputs")
+	if err != nil {
+		t.Fatal("failed to create temp outputs dir:", err)
+	}
+	defer os.RemoveAll(outputsDir)
 	want := []runtests.TestDetails{
 		{
 			Name:                 path.Join(checkTestNamePrefix, falseCheck.Name()),
@@ -60,6 +79,7 @@ func TestRunChecks(t *testing.T) {
 			Name:                 path.Join(checkTestNamePrefix, trueCheck.Name()),
 			Result:               runtests.TestFailure,
 			IsTestingFailureMode: true,
+			OutputFile:           debugPathForCheck(outputsDir, trueCheck),
 		},
 		{
 			Name:                 path.Join(checkTestNamePrefix, panicCheck.Name()),
@@ -68,8 +88,18 @@ func TestRunChecks(t *testing.T) {
 		},
 	}
 
-	got := RunChecks(checks, nil)
+	got, err := RunChecks(checks, nil, outputsDir)
+	if err != nil {
+		t.Error("RunChecks() failed with:", err)
+	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("RunChecks() returned unexpected tests (-want +got):\n%s", diff)
+	}
+	for _, td := range want {
+		if td.OutputFile != "" {
+			if _, err := os.Stat(td.OutputFile); err != nil {
+				t.Errorf("failed to stat OutputFile %s: %v", td.OutputFile, err)
+			}
+		}
 	}
 }

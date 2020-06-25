@@ -6,9 +6,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
-// MassTestFailureCheck checks if lots of tests failed.
-// If so, then it's unlikely that any one test is to blame.
-// Rather the device or OS probably had a low level problem.
 type MassTestFailureCheck struct {
 	MaxFailed int
 }
@@ -28,4 +25,11 @@ func (c MassTestFailureCheck) Check(to *TestingOutputs) bool {
 
 func (c MassTestFailureCheck) Name() string {
 	return fmt.Sprintf("more_than_%d_tests_failed", c.MaxFailed)
+}
+
+func (c MassTestFailureCheck) DebugText() string {
+	return fmt.Sprintf(
+		`More than %d tests failed.
+It's unlikely that any one test is to blame. Rather the device or OS probably had a low level problem.`,
+		c.MaxFailed)
 }

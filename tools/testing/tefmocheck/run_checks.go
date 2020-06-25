@@ -1,12 +1,20 @@
 package tefmocheck
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
 	"path"
+	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 const checkTestNamePrefix = "testing_failure_mode"
+
+func debugPathForCheck(outputsDir string, check FailureModeCheck) string {
+	return filepath.Join(outputsDir, checkTestNamePrefix, check.Name(), "debug.txt")
+}
 
 // RunChecks runs the given checks on the given TestingOutputs.
 // It always returns the same list of tests, with one corresponding to each check.
@@ -18,7 +26,7 @@ const checkTestNamePrefix = "testing_failure_mode"
 // even if it passed or was skipped.
 // In order for these bugs to be useful, we want a failure to be associated only with the most
 // specific, helpful failure modes, which then get routed to specific bugs.
-func RunChecks(checks []FailureModeCheck, to *TestingOutputs) []runtests.TestDetails {
+func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string) ([]runtests.TestDetails, error) {
 	var checkTests []runtests.TestDetails
 	anyFailed := false
 	for _, check := range checks {
@@ -32,10 +40,22 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs) []runtests.TestDet
 			testDetails.Result = runtests.TestSuccess
 		} else if anyFailed = check.Check(to); anyFailed {
 			testDetails.Result = runtests.TestFailure
+			if len(outputsDir) > 0 {
+				testDetails.OutputFile = debugPathForCheck(outputsDir, check)
+				if err := os.MkdirAll(filepath.Dir(testDetails.OutputFile), 0777); err != nil {
+					return nil, err
+				}
+				debugText := fmt.Sprintf(
+					"This is a synthetic test that was produced by the tefmocheck tool during post-processing of test results. See https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/tefmocheck/README.md\n%s",
+					check.DebugText())
+				if err := ioutil.WriteFile(testDetails.OutputFile, []byte(debugText), 0666); err != nil {
+					return nil, err
+				}
+			}
 		} else {
 			testDetails.Result = runtests.TestSuccess
 		}
 		checkTests = append(checkTests, testDetails)
 	}
-	return checkTests
+	return checkTests, nil
 }

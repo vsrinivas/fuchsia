@@ -12,7 +12,8 @@ import (
 
 func TestMassTestFailureCheck(t *testing.T) {
 	const killerString = "KILLER STRING"
-	c := MassTestFailureCheck{MaxFailed: 3}
+	// Declare as a FailureModeCheck to ensure it implements the interface.
+	var c FailureModeCheck = MassTestFailureCheck{MaxFailed: 3}
 	summary := runtests.TestSummary{
 		Tests: []runtests.TestDetails{
 			{Result: runtests.TestFailure},

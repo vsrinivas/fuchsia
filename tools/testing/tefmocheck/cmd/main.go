@@ -61,6 +61,7 @@ func main() {
 	var swarmingOutputPath = flag.String("swarming-output", "", "Path to a file containing the stdout and stderr of the Swarming task. Optional.")
 	var syslogPath = flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
 	var serialLogPath = flag.String("serial-log", "", "Path to a file containing the serial log. Optional.")
+	var outputsDir = flag.String("outputs-dir", "", "If set, will produce text output files for the produced tests in this dir. Optional.")
 	flag.Parse()
 
 	if *help || flag.NArg() > 0 || *swarmingSummaryPath == "" {
@@ -123,7 +124,10 @@ func main() {
 	// TaskStateChecks should go at the end, since they're not very specific.
 	checks = append(checks, tefmocheck.TaskStateChecks...)
 
-	checkTests := tefmocheck.RunChecks(checks, &testingOutputs)
+	checkTests, err := tefmocheck.RunChecks(checks, &testingOutputs, *outputsDir)
+	if err != nil {
+		log.Fatalf("failed to run checks: %v", err)
+	}
 
 	inputSummary.Tests = append(inputSummary.Tests, checkTests...)
 	jsonOutput, err := json.MarshalIndent(inputSummary, "", "  ")
