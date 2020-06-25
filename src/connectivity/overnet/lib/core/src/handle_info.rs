@@ -31,13 +31,13 @@ pub(crate) struct HandleInfo {
 #[cfg(not(target_os = "fuchsia"))]
 pub(crate) fn handle_info(hdl: HandleRef<'_>) -> Result<HandleInfo, Error> {
     let handle_type = match hdl.handle_type() {
-        fidl::FidlHdlType::Channel => {
+        fidl::HandleType::Channel => {
             HandleType::Channel(ChannelRights::Read | ChannelRights::Write)
         }
-        fidl::FidlHdlType::Socket => {
+        fidl::HandleType::Socket => {
             HandleType::Socket(SocketType::Stream, SocketRights::Read | SocketRights::Write)
         }
-        fidl::FidlHdlType::Invalid => bail!("Unsupported handle type"),
+        fidl::HandleType::Invalid => bail!("Unsupported handle type"),
     };
     let (this_handle_key, pair_handle_key) = hdl.emulated_koid_pair();
     Ok(HandleInfo { handle_type, this_handle_key, pair_handle_key })

@@ -8,6 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 source_set("deps") {
   deps = [
+    "//src/lib/fuchsia-async",
     "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
@@ -20,12 +21,7 @@ source_set("deps") {
     "//third_party/rust_crates:thiserror",
   ]
   if (is_fuchsia) {
-    deps += [
-      "//src/lib/fuchsia-async",
-      "//src/lib/zircon/rust:fuchsia-zircon",
-    ]
-  } else {
-    deps += [ "//third_party/rust_crates:lazy_static" ]
+    deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
   }
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::RWHandle,
+    super::rwhandle::RWHandle,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::ready,
     std::{

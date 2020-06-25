@@ -1099,7 +1099,7 @@ mod tests {
     use std::task::Poll;
 
     use super::*;
-    use crate::{on_signals::OnSignals, timer::Timer};
+    use crate::{timer::Timer, zircon_handle::on_signals::OnSignals};
 
     fn time_operations_param(zxt1: zx::Time, zxt2: zx::Time, d: zx::Duration) {
         let t1 = Time::from_zx(zxt1);
