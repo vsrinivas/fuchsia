@@ -44,6 +44,9 @@ class AssocTest : public SimTest {
   // Send repeated association responses
   void SendMultipleResp();
 
+  // Send association response with WMM IE
+  void SendAssocRespWithWmm();
+
   // Send one authentication response to help client passing through authentication process
   void SendOpenAuthResp();
 
@@ -70,6 +73,7 @@ class AssocTest : public SimTest {
 
     // There should be one result for each association response received
     std::list<wlan_assoc_result_t> expected_results;
+    std::vector<uint8_t> expected_wmm_param;
 
     // An optional function to call when we see the association request go out
     std::optional<std::function<void()>> on_assoc_req_callback;
@@ -270,7 +274,13 @@ void AssocTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
 void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   context_.assoc_resp_count++;
   EXPECT_EQ(resp->result_code, context_.expected_results.front());
+  EXPECT_EQ(resp->wmm_param_present, !context_.expected_wmm_param.empty());
+  if (resp->wmm_param_present && !context_.expected_wmm_param.empty()) {
+    EXPECT_EQ(memcmp(resp->wmm_param, context_.expected_wmm_param.data(), WLAN_WMM_PARAM_LEN), 0);
+  }
   context_.expected_results.pop_front();
+  context_.expected_wmm_param.clear();
+
   if (start_disassoc_) {
     SCHEDULE_CALL(zx::msec(200), &AssocTest::StartDisassoc, this);
   } else if (start_deauth_) {
@@ -657,6 +667,28 @@ void AssocTest::SendMultipleResp() {
   }
 }
 
+void AssocTest::SendAssocRespWithWmm() {
+  uint8_t mac_buf[ETH_ALEN];
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  common::MacAddr my_mac(mac_buf);
+  simulation::SimAssocRespFrame assoc_resp_frame(context_.bssid, my_mac, WLAN_ASSOC_RESULT_SUCCESS);
+
+  uint8_t raw_ies[] = {
+      // WMM param
+      0xdd, 0x18, 0x00, 0x50, 0xf2, 0x02, 0x01, 0x01,  // WMM header
+      0x80,                                            // Qos Info - U-ASPD enabled
+      0x00,                                            // reserved
+      0x03, 0xa4, 0x00, 0x00,                          // Best effort AC params
+      0x27, 0xa4, 0x00, 0x00,                          // Background AC params
+      0x42, 0x43, 0x5e, 0x00,                          // Video AC params
+      0x62, 0x32, 0x2f, 0x00,                          // Voice AC params
+  };
+  assoc_resp_frame.AddRawIes(fbl::Span(raw_ies, sizeof(raw_ies)));
+
+  env_->Tx(assoc_resp_frame, context_.tx_info, this);
+}
+
 void AssocTest::SendOpenAuthResp() {
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
@@ -709,6 +741,25 @@ TEST_F(AssocTest, AssocWhileScanning) {
       .num_ssids = 0,
   };
   client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &scan_req);
+
+  env_->Run(kTestDuration);
+
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+}
+
+TEST_F(AssocTest, AssocWithWmm) {
+  // Create our device instance
+  Init();
+
+  uint8_t expected_wmm_param[] = {0x80, 0x00, 0x03, 0xa4, 0x00, 0x00, 0x27, 0xa4, 0x00,
+                                  0x00, 0x42, 0x43, 0x5e, 0x00, 0x62, 0x32, 0x2f, 0x00};
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_wmm_param.insert(context_.expected_wmm_param.end(), expected_wmm_param,
+                                     expected_wmm_param + sizeof(expected_wmm_param));
+  context_.on_assoc_req_callback = std::bind(&AssocTest::SendAssocRespWithWmm, this);
+  context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
+
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 

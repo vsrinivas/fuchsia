@@ -105,12 +105,14 @@ class SimManagementFrame : public SimFrame {
   // Frame subtype identifier for management frames
   virtual SimMgmtFrameType MgmtFrameType() const = 0;
   void AddCSAIE(const wlan_channel_t& channel, uint8_t channel_switch_count);
+  void AddRawIes(fbl::Span<const uint8_t> raw_ies);
   std::shared_ptr<InformationElement> FindIE(InformationElement::SimIEType ie_type) const;
   void RemoveIE(InformationElement::SimIEType);
 
   common::MacAddr src_addr_ = {};
   common::MacAddr dst_addr_ = {};
   std::list<std::shared_ptr<InformationElement>> IEs_;
+  std::vector<uint8_t> raw_ies_;
   // This is a brief alternative for security related IEs since we don't include entire IE for
   // security protocol such as WPA IE or RSNE IE.
   enum SimSecProtoType sec_proto_type_ = SEC_PROTO_TYPE_OPEN;

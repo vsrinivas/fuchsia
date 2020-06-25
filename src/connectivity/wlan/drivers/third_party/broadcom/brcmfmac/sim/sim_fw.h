@@ -31,6 +31,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_errinj.h"
@@ -49,6 +50,9 @@ constexpr zx::duration kBeaconTimeout = zx::sec(5);
 constexpr zx::duration kStartAPConfDelay = zx::msec(10);
 // Delay between events E_LINK and E_SSID.
 constexpr zx::duration kSsidEventDelay = zx::msec(100);
+
+// Size allocated to hold association frame IEs in SIM FW
+#define ASSOC_IES_MAX_LEN 1000
 
 class SimFirmware {
   class BcdcResponse {
@@ -417,6 +421,9 @@ class SimFirmware {
   bool dev_is_up_ = false;
   uint32_t mpc_ = 1;  // Read FW appears to be setting this to 1 by default.
   zx::duration beacon_timeout_ = kBeaconTimeout;
+  std::atomic<unsigned long> error_inject_bits_ = 0;
+  uint8_t assoc_resp_ies_[ASSOC_IES_MAX_LEN];
+  size_t assoc_resp_ies_len_ = 0;
 };
 
 }  // namespace wlan::brcmfmac

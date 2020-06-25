@@ -1404,12 +1404,47 @@ static struct brcmf_vs_tlv* brcmf_find_wpaie(const uint8_t* ie_buf, uint32_t ie_
   return nullptr;
 }
 
+void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg, wlanif_assoc_confirm_t* confirm) {
+  confirm->wmm_param_present = false;
+
+  uint8_t* assoc_resp_ie = cfg->conn_info.resp_ie;
+  size_t assoc_resp_ie_len =
+      (size_t)cfg->conn_info.resp_ie_len >= 0 ? cfg->conn_info.resp_ie_len : 0;
+  size_t offset = 0;
+  while (offset < assoc_resp_ie_len) {
+    uint8_t type = assoc_resp_ie[offset];
+    uint8_t len = assoc_resp_ie[offset + TLV_LEN_OFF];
+
+    if (type == WLAN_IE_TYPE_VENDOR_SPECIFIC) {
+      uint8_t wmm_param_hdr[] = {
+          0x00, 0x50, 0xf2,  // MSFT OUI
+          0x02,              // WMM OUI type
+          0x01, 0x01,        // WMM param subtype & version
+      };
+      if (len >= sizeof(wmm_param_hdr) &&
+          !memcmp(assoc_resp_ie + offset + TLV_HDR_LEN, wmm_param_hdr, sizeof(wmm_param_hdr))) {
+        if (len - sizeof(wmm_param_hdr) == WLAN_WMM_PARAM_LEN &&
+            offset + TLV_HDR_LEN + len <= assoc_resp_ie_len) {
+          memcpy(&confirm->wmm_param, &assoc_resp_ie[offset + TLV_HDR_LEN + sizeof(wmm_param_hdr)],
+                 WLAN_WMM_PARAM_LEN);
+          confirm->wmm_param_present = true;
+          break;
+        }
+      }
+    }
+    offset += len + TLV_HDR_LEN;
+  }
+}
+
 void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   wlanif_assoc_confirm_t conf;
 
   conf.result_code = result_code;
   BRCMF_DBG(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
   conf.association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
+  set_assoc_conf_wmm_param(cfg, &conf);
 
   BRCMF_DBG(WLANIF, "Sending assoc result to SME. result: %" PRIu8 ", aid: %" PRIu16 "",
             conf.result_code, conf.association_id);

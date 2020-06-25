@@ -697,6 +697,9 @@ void SimFirmware::AssocClearContext() {
   assoc_state_.scan_results.clear();
   // Clear out the channel setting
   iface_tbl_[assoc_state_.ifidx].chanspec = 0;
+
+  assoc_resp_ies_len_ = 0;
+  memset(assoc_resp_ies_, 0, ASSOC_IES_MAX_LEN);
 }
 
 void SimFirmware::AuthClearContext() {
@@ -989,6 +992,13 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
     } else {
       BRCMF_WARN("Station with impossible capability not being an ess or ibss found\n");
     }
+
+    // Set values that are returned for iovar "assoc_resp_ies"
+    ZX_ASSERT_MSG(frame->raw_ies_.size() <= ASSOC_IES_MAX_LEN,
+                  "Assoc resp frame IEs longer than ASSOC_IES_MAX_LEN: %lu > %d",
+                  frame->raw_ies_.size(), ASSOC_IES_MAX_LEN);
+    memcpy(assoc_resp_ies_, frame->raw_ies_.data(), frame->raw_ies_.size());
+    assoc_resp_ies_len_ = frame->raw_ies_.size();
 
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx, nullptr,
                       BRCMF_EVENT_MSG_LINK);
@@ -1421,6 +1431,7 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     auto tlv = static_cast<const uint32_t*>(value);
     iface_tbl_[ifidx].tlv = *tlv;
   }
+
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'", name);
   return ZX_OK;
@@ -1544,6 +1555,17 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
       return ZX_ERR_BAD_STATE;
     }
     memcpy(value_out, &iface_tbl_[ifidx].tlv, sizeof(uint32_t));
+  } else if (!std::strcmp(name, "assoc_info")) {
+    if (value_len < sizeof(struct brcmf_cfg80211_assoc_ielen_le)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    ((struct brcmf_cfg80211_assoc_ielen_le*)value_out)->req_len = 0;
+    ((struct brcmf_cfg80211_assoc_ielen_le*)value_out)->resp_len = assoc_resp_ies_len_;
+  } else if (!std::strcmp(name, "assoc_resp_ies")) {
+    if (value_len < assoc_resp_ies_len_) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(value_out, assoc_resp_ies_, assoc_resp_ies_len_);
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'", name);

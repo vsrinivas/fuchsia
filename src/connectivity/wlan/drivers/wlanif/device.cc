@@ -13,7 +13,9 @@
 #include <wlan/common/logging.h>
 
 #include "convert.h"
+#include "ddk/protocol/wlanif.h"
 #include "driver.h"
+#include "fuchsia/wlan/mlme/cpp/fidl.h"
 
 namespace wlanif {
 
@@ -788,6 +790,14 @@ void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
 
   // association_id
   fidl_resp.association_id = resp->association_id;
+
+  if (resp->wmm_param_present) {
+    // Sanity check that the param length in banjo and FIDL are the same
+    static_assert(WLAN_WMM_PARAM_LEN == wlan_mlme::WMM_PARAM_LEN);
+    auto wmm_param = wlan_mlme::WmmParameter::New();
+    memcpy(wmm_param->bytes.data(), resp->wmm_param, WLAN_WMM_PARAM_LEN);
+    fidl_resp.wmm_param = std::move(wmm_param);
+  }
 
   binding_.events().AssociateConf(std::move(fidl_resp));
 }

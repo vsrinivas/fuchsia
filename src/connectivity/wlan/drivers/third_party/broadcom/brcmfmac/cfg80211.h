@@ -528,4 +528,7 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie);
 void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss);
 
+// If the WMM parameter IE (used for QoS) is available from the association response, set its
+// body into the Association Confirm message.
+void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg, wlanif_assoc_confirm_t* confirm);
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_

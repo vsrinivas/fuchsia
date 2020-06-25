@@ -4,6 +4,8 @@
 
 #include "sim-frame.h"
 
+#include "fbl/span.h"
+
 namespace wlan::simulation {
 
 /* InformationElement function implementations.*/
@@ -39,6 +41,7 @@ SimManagementFrame::SimManagementFrame(const SimManagementFrame& mgmt_frame) {
       default:;
     }
   }
+  raw_ies_ = mgmt_frame.raw_ies_;
 }
 
 SimManagementFrame::~SimManagementFrame() = default;
@@ -62,6 +65,10 @@ void SimManagementFrame::AddCSAIE(const wlan_channel_t& channel, uint8_t channel
   auto ie = std::make_shared<CSAInformationElement>(false, channel.primary, channel_switch_count);
   // Ensure no IE with this IE type exist
   AddIE(InformationElement::IE_TYPE_CSA, ie);
+}
+
+void SimManagementFrame::AddRawIes(fbl::Span<const uint8_t> raw_ies) {
+  raw_ies_.insert(raw_ies_.end(), raw_ies.begin(), raw_ies.end());
 }
 
 void SimManagementFrame::AddIE(InformationElement::SimIEType ie_type,
