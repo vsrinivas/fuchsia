@@ -16,7 +16,7 @@ if (is_host) {
     sources = [
       "$host_tools_dir/device-finder",
       "//prebuilt/tools/artifacts/artifacts",
-      "//prebuilt/tools/lkgb/lkgb",
+      "//prebuilt/tools/lkg/lkg",
     ]
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
     public_deps = [ "//tools/net/dev_finder:host($host_toolchain)" ]

@@ -15,7 +15,7 @@ import (
 
 type ArchiveConfig struct {
 	outputDir     string
-	lkgbPath      string
+	lkgPath       string
 	artifactsPath string
 	archive       *artifacts.Archive
 }
@@ -26,7 +26,7 @@ func NewArchiveConfig(fs *flag.FlagSet) *ArchiveConfig {
 	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
 	fs.StringVar(&c.outputDir, "output-dir", "", "save temporary files to this directory, defaults to a tempdir")
-	fs.StringVar(&c.lkgbPath, "lkgb", filepath.Join(testDataPath, "lkgb"), "path to lkgb, default is $FUCHSIA_DIR/prebuilt/tools/lkgb/lkgb")
+	fs.StringVar(&c.lkgPath, "lkg", filepath.Join(testDataPath, "lkg"), "path to lkg, default is $FUCHSIA_DIR/prebuilt/tools/lkg/lkg")
 	fs.StringVar(&c.artifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
 
 	return c
@@ -52,7 +52,7 @@ func (c *ArchiveConfig) OutputDir() (string, func(), error) {
 func (c *ArchiveConfig) BuildArchive() *artifacts.Archive {
 	if c.archive == nil {
 		// Connect to the build archive service.
-		c.archive = artifacts.NewArchive(c.lkgbPath, c.artifactsPath)
+		c.archive = artifacts.NewArchive(c.lkgPath, c.artifactsPath)
 	}
 
 	return c.archive

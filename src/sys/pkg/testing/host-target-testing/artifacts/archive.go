@@ -18,9 +18,9 @@ import (
 
 // Archive allows interacting with the build artifact repository.
 type Archive struct {
-	// lkgb (typically found in $FUCHSIA_DIR/prebuilt/tools/lkgb/lkgb) is
+	// lkg (typically found in $FUCHSIA_DIR/prebuilt/tools/lkg/lkg) is
 	// used to look up the latest build id for a given builder.
-	lkgbPath string
+	lkgPath string
 
 	// artifacts (typically found in $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts)
 	// is used to download artifacts for a given build id.
@@ -28,9 +28,9 @@ type Archive struct {
 }
 
 // NewArchive creates a new Archive.
-func NewArchive(lkgbPath string, artifactsPath string) *Archive {
+func NewArchive(lkgPath string, artifactsPath string) *Archive {
 	return &Archive{
-		lkgbPath:      lkgbPath,
+		lkgPath:       lkgPath,
 		artifactsPath: artifactsPath,
 	}
 }
