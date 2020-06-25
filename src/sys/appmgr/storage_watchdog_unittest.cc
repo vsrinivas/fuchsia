@@ -83,7 +83,8 @@ TEST_F(StorageWatchdogTest, Basic) {
   for (size_t i = 0; i < 10; ++i) {
     auto filename = std::to_string(i);
     ASSERT_TRUE(files::WriteFile(files::JoinPath(EXAMPLE_PATH, filename), TMPDATA, TMPDATA_SIZE));
-    ASSERT_TRUE(files::WriteFile(files::JoinPath(EXAMPLE_TEST_PATH, filename), TMPDATA, TMPDATA_SIZE));
+    ASSERT_TRUE(
+        files::WriteFile(files::JoinPath(EXAMPLE_TEST_PATH, filename), TMPDATA, TMPDATA_SIZE));
   }
 
   watchdog.info.used_bytes = watchdog.info.total_bytes - 128;

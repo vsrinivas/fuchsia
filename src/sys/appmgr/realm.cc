@@ -768,7 +768,7 @@ void Realm::CreateComponentWithRunnerForScheme(std::string runner_url,
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   component_request.Extract(&controller);
   runner->StartComponent(std::move(package), std::move(startup_info), std::move(ns),
-                         std::move(controller));
+                         std::move(controller), std::nullopt);
 }
 
 void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
@@ -992,7 +992,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       // Use other component runners.
       CreateRunnerComponentFromPackage(std::move(package), std::move(launch_info), runtime,
                                        builder.BuildForRunner(), std::move(component_request),
-                                       std::move(ns), std::move(program_metadata));
+                                       std::move(ns), std::move(program_metadata),
+                                       std::move(pkg_clone));
     }
   }
 }
@@ -1049,7 +1050,7 @@ void Realm::CreateRunnerComponentFromPackage(
     fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
     RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
     ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
-    fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata) {
+    fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata, zx::channel package_handle) {
   TRACE_DURATION("appmgr", "Realm::CreateRunnerComponentFromPackage", "package.resolved_url",
                  package->resolved_url, "launch_info.url", launch_info.url);
 
@@ -1071,7 +1072,7 @@ void Realm::CreateRunnerComponentFromPackage(
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   component_request.Extract(&controller);
   runner->StartComponent(std::move(inner_package), std::move(startup_info), std::move(ns),
-                         std::move(controller));
+                         std::move(controller), std::move(package_handle));
 }
 
 RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {

@@ -215,7 +215,8 @@ class ComponentBridge : public ComponentControllerBase {
                   fuchsia::sys::ComponentControllerPtr remote_controller,
                   ComponentContainer<ComponentBridge>* container, std::string url, std::string args,
                   std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-                  zx::channel exported_dir, zx::channel client_request);
+                  zx::channel exported_dir, zx::channel client_request,
+                  std::optional<zx::channel> package_handle);
 
   ~ComponentBridge() override;
 

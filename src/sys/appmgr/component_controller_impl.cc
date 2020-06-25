@@ -448,7 +448,8 @@ ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentC
                                  ComponentContainer<ComponentBridge>* container, std::string url,
                                  std::string args, std::string label, std::string hub_instance_id,
                                  fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
-                                 zx::channel client_request)
+                                 zx::channel client_request,
+                                 std::optional<zx::channel> package_handle)
     : ComponentControllerBase(std::move(request), std::move(url), std::move(args), std::move(label),
                               hub_instance_id, std::move(ns), std::move(exported_dir),
                               std::move(client_request), MAX_RETRIES_OUT_DIAGNOSTICS),
@@ -479,6 +480,9 @@ ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentC
   // |this| at the end of the previous statement.
 
   hub()->AddIncomingServices(this->incoming_services());
+  if (package_handle.has_value() && package_handle->is_valid()) {
+    hub()->AddPackageHandle(fbl::MakeRefCounted<fs::RemoteDir>(std::move(*package_handle)));
+  }
 }
 
 void ComponentBridge::NotifyStopped() {

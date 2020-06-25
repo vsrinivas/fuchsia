@@ -250,7 +250,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
       RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
       ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
-      fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata);
+      fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata, zx::channel package_handle);
 
   // When a component event will be triggered, this finds what provider to notify and with what
   // identity data. The provider will be either the one attached to this component or some

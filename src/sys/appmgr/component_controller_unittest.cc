@@ -138,6 +138,7 @@ std::vector<std::string> GetDirectoryEntries(fbl::RefPtr<fs::Vnode> dir) {
 void AssertHubHasIncomingServices(const ComponentControllerBase* component,
                                   const std::vector<std::string>& extra_service_names) {
   ASSERT_TRUE(PathExists(component->hub_dir(), "in"));
+  ASSERT_TRUE(PathExists(component->hub_dir(), "in/pkg"));
   fbl::RefPtr<fs::Vnode> in_svc_dir;
   ASSERT_TRUE(PathExists(component->hub_dir(), "in/svc", &in_svc_dir));
   for (auto& service : extra_service_names) {
@@ -160,6 +161,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
     vfs_.SetDispatcher(async_get_default_dispatcher());
+    pkg_vfs_.SetDispatcher(async_get_default_dispatcher());
 
     // create child job
     zx_status_t status = zx::job::create(*zx::job::default_job(), 0u, &job_);
@@ -184,7 +186,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
  protected:
   std::unique_ptr<ComponentControllerImpl> CreateComponent(
       fuchsia::sys::ComponentControllerPtr& controller, zx::channel export_dir = zx::channel(),
-      fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
+      zx::channel pkg_dir = zx::channel(), fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // job_ is used later in a test to check the job-id, so we need to make a
     // clone of it to pass into std::move
     zx::job job_clone;
@@ -194,7 +196,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     }
     return std::make_unique<ComponentControllerImpl>(
         controller.NewRequest(), &realm_, std::move(job_clone), std::move(process_), "test-url",
-        "test-arg", "test-label", ns, std::move(export_dir), zx::channel(), zx::channel());
+        "test-arg", "test-label", ns, std::move(export_dir), zx::channel(), std::move(pkg_dir));
   }
 
   FakeRealm realm_;
@@ -202,6 +204,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
   std::string process_koid_;
   zx::process process_;
   fs::SynchronousVfs vfs_;
+  fs::SynchronousVfs pkg_vfs_;
 };
 
 class ComponentBridgeTest : public gtest::RealLoopFixture,
@@ -211,6 +214,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
     vfs_.SetDispatcher(async_get_default_dispatcher());
+    pkg_vfs_.SetDispatcher(async_get_default_dispatcher());
     binding_.Bind(remote_controller_.NewRequest());
     binding_.set_error_handler([this](zx_status_t status) {
       binding_error_handler_called_ = true;
@@ -228,6 +232,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
  protected:
   std::unique_ptr<ComponentBridge> CreateComponentBridge(
       fuchsia::sys::ComponentControllerPtr& controller, zx::channel export_dir = zx::channel(),
+      zx::channel package_handle = zx::channel(),
       fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // only allow creation of one component.
     if (!remote_controller_) {
@@ -235,7 +240,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
     }
     auto component = std::make_unique<ComponentBridge>(
         controller.NewRequest(), std::move(remote_controller_), &runner_, "test-url", "test-arg",
-        "test-label", "1", ns, std::move(export_dir), zx::channel());
+        "test-label", "1", ns, std::move(export_dir), zx::channel(), std::move(package_handle));
     component->SetParentJobId(runner_.koid());
     return component;
   }
@@ -250,6 +255,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
   ::fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fuchsia::sys::ComponentControllerPtr remote_controller_;
   fs::SynchronousVfs vfs_;
+  fs::SynchronousVfs pkg_vfs_;
   int64_t errcode_ = 1;
 
   bool binding_error_handler_called_;
@@ -386,7 +392,10 @@ TEST_F(ComponentControllerTest, Hub) {
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
-  auto component = CreateComponent(component_ptr, std::move(export_dir_req));
+  zx::channel pkg_dir, pkg_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
+  auto component =
+      CreateComponent(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req));
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -417,7 +426,10 @@ TEST_F(ComponentControllerTest, HubWithIncomingServices) {
 
   fxl::RefPtr<Namespace> ns = CreateFakeNamespace({"service_a", "service_b"});
 
-  auto component = CreateComponent(component_ptr, std::move(export_dir_req), ns);
+  zx::channel pkg_dir, pkg_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
+  auto component =
+      CreateComponent(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req), ns);
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -661,7 +673,10 @@ TEST_F(ComponentBridgeTest, Hub) {
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
-  auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req));
+  zx::channel pkg_dir, pkg_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
+  auto component =
+      CreateComponentBridge(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req));
 
   RunLoopUntil([&component] { return PathExists(component->hub_dir(), "out"); });
 
@@ -686,7 +701,10 @@ TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
 
   fxl::RefPtr<Namespace> ns = CreateFakeNamespace({"service_a", "service_b"});
 
-  auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req), ns);
+  zx::channel pkg_dir, pkg_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
+  auto component =
+      CreateComponentBridge(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req), ns);
 
   RunLoopUntil([&component] { return PathExists(component->hub_dir(), "out"); });
 

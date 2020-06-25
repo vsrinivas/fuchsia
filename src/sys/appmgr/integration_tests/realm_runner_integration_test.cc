@@ -422,6 +422,14 @@ TEST_F(RealmRunnerTest, ProbeHub) {
 
   std::vector<std::string> paths = {glob.begin(), glob.end()};
   EXPECT_NE(paths[0], paths[1]);
+
+  // Verify that the pkg directory exists and can be enumerated.
+  auto component_1_pkg_dir = fxl::StringPrintf("%s/in/pkg/*", paths[0].c_str());
+  files::Glob pkg_dir_glob(component_1_pkg_dir);
+  std::vector<std::string> pkg_dir_contents = {pkg_dir_glob.begin(), pkg_dir_glob.end()};
+  ASSERT_EQ(pkg_dir_contents.size(), 1u) << "expected 1 entry in pkg";
+  EXPECT_EQ("meta", files::GetBaseName(pkg_dir_contents[0]));
+
   EXPECT_EQ(files::GetDirectoryName(paths[0]), files::GetDirectoryName(paths[1]));
 }
 
