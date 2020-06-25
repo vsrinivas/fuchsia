@@ -1,0 +1,10 @@
+{
+    "program" : {
+        "binary": "test/files_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

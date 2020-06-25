@@ -5,7 +5,10 @@
 import("//build/test/test_package.gni")
 
 source_set("common") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//src/lib/files:*",
+  ]
 
   sources = [
     "build_config.h",
@@ -17,7 +20,7 @@ source_set("common") {
 source_set("memory") {
   visibility = [
     ":*",
-    "//src/lib/files",
+    "//src/lib/files:*",
   ]
 
   sources = [
@@ -40,7 +43,7 @@ source_set("memory") {
 source_set("strings") {
   visibility = [
     ":*",
-    "//src/lib/files",
+    "//src/lib/files:*",
   ]
 
   sources = [
@@ -116,13 +119,6 @@ executable("fxl_unittests") {
   testonly = true
 
   sources = [
-    # TODO: Move the files-related tests to a separate target.
-    "//src/lib/files/directory_unittest.cc",
-    "//src/lib/files/file_descriptor_unittest.cc",
-    "//src/lib/files/file_unittest.cc",
-    "//src/lib/files/glob_unittest.cc",
-    "//src/lib/files/path_unittest.cc",
-    "//src/lib/files/scoped_temp_dir_unittest.cc",
     "//src/lib/fxl/log_settings_command_line_unittest.cc",
     "command_line_unittest.cc",
     "functional/apply_unittest.cc",
