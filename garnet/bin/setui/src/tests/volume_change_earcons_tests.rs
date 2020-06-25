@@ -5,7 +5,7 @@ use {
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
     crate::internal::event,
-    crate::message::base::{MessageEvent, MessengerType},
+    crate::message::base::MessengerType,
     crate::registry::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::registry::device_storage::DeviceStorage,
     crate::switchboard::base::{
@@ -15,14 +15,9 @@ use {
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
-    crate::tests::fakes::usage_reporter_service::UsageReporterService,
     crate::tests::scaffold,
     crate::EnvironmentBuilder,
-    fidl_fuchsia_media::{
-        AudioRenderUsage, Usage,
-        UsageState::{Ducked, Muted, Unadjusted},
-        UsageStateDucked, UsageStateMuted, UsageStateUnadjusted,
-    },
+    fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
         AudioMarker, AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings,
         Volume,
@@ -45,9 +40,6 @@ const CHANGED_VOLUME_UNMUTED: bool = false;
 
 const MAX_VOLUME_EARCON_ID: u32 = 0;
 const VOLUME_EARCON_ID: u32 = 1;
-
-const SUPPRESSED_VOLUME_EARCON_EVENT: event::Event =
-    event::Event::Earcon(event::earcon::Event::Suppressed(event::earcon::EarconType::Volume));
 
 const INITIAL_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
@@ -120,7 +112,6 @@ impl From<AudioStreamSettings> for AudioStream {
 struct FakeServices {
     input_device_registry: Arc<Mutex<InputDeviceRegistryService>>,
     sound_player: Arc<Mutex<SoundPlayerService>>,
-    usage_reporter: Arc<Mutex<UsageReporterService>>,
 }
 
 async fn create_environment(
@@ -198,15 +189,11 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     let sound_player_service_handle = Arc::new(Mutex::new(SoundPlayerService::new()));
     service_registry.lock().await.register_service(sound_player_service_handle.clone());
 
-    let usage_reporter_service_handle = Arc::new(Mutex::new(UsageReporterService::new()));
-    service_registry.lock().await.register_service(usage_reporter_service_handle.clone());
-
     (
         service_registry,
         FakeServices {
             input_device_registry: input_device_registry_service_handle,
             sound_player: sound_player_service_handle,
-            usage_reporter: usage_reporter_service_handle,
         },
     )
 }
@@ -218,26 +205,8 @@ async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
     proxy.set(audio_settings).await.expect("set completed").expect("set successful");
 }
 
-/// Verifies that a stream equal to |stream| is inside of |settings|.
-fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
-    settings
-        .streams
-        .expect("audio settings contain streams")
-        .into_iter()
-        .find(|x| *x == stream)
-        .expect("contains stream");
-}
-
 async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32) {
-    assert_eq!(receiver.next().await.unwrap(), (id, AudioRenderUsage::Media));
-}
-
-async fn verify_event(receptor: &mut event::message::Receptor, event: event::Event) {
-    if let Some(MessageEvent::Message(event::Payload::Event(received_event), ..)) =
-        receptor.next().await
-    {
-        assert_eq!(received_event, event);
-    }
+    assert_eq!(receiver.next().await.unwrap(), (id, AudioRenderUsage::Background));
 }
 
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
@@ -330,70 +299,4 @@ async fn test_earcons_on_multiple_channel_change() {
     // pipeline.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
-}
-
-// Test to ensure that when another higher priority stream is playing,
-// the earcons sounds don't play.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_earcons_with_active_stream() {
-    let (service_registry, fake_services) = create_services().await;
-    let (env, _, mut receptor) =
-        create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
-    let mut sound_event_receiver =
-        fake_services.sound_player.lock().await.create_sound_played_listener().await;
-
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    let settings = audio_proxy.watch2().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
-    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
-
-    fake_services
-        .usage_reporter
-        .lock()
-        .await
-        .set_usage_state(
-            Usage::RenderUsage(AudioRenderUsage::Background {}),
-            Muted(UsageStateMuted {}),
-        )
-        .await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    let settings = audio_proxy.watch2().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
-
-    verify_event(&mut receptor, SUPPRESSED_VOLUME_EARCON_EVENT).await;
-
-    fake_services
-        .usage_reporter
-        .lock()
-        .await
-        .set_usage_state(
-            Usage::RenderUsage(AudioRenderUsage::Background {}),
-            Ducked(UsageStateDucked {}),
-        )
-        .await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    verify_event(&mut receptor, SUPPRESSED_VOLUME_EARCON_EVENT).await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    verify_event(&mut receptor, SUPPRESSED_VOLUME_EARCON_EVENT).await;
-
-    fake_services
-        .usage_reporter
-        .lock()
-        .await
-        .set_usage_state(
-            Usage::RenderUsage(AudioRenderUsage::Background {}),
-            Unadjusted(UsageStateUnadjusted {}),
-        )
-        .await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
 }

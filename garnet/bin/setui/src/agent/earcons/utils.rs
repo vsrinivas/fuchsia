@@ -76,7 +76,7 @@ pub async fn play_sound<'a>(
         }
     }
 
-    match sound_player_proxy.play_sound(id, AudioRenderUsage::Media).await {
+    match sound_player_proxy.play_sound(id, AudioRenderUsage::Background).await {
         Ok(_) => {
             // TODO(fxb/50246): Add inspect logging.
         }

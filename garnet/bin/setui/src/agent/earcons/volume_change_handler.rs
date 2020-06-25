@@ -7,7 +7,6 @@ use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
 use crate::audio::{create_default_modified_timestamps, ModifiedTimestamps};
 use crate::input::monitor_media_buttons;
-use crate::internal::event::{earcon, Event, Publisher};
 use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
@@ -16,15 +15,6 @@ use crate::switchboard::base::{
 };
 
 use anyhow::Error;
-use fidl::endpoints::create_request_stream;
-use fidl_fuchsia_media::{
-    AudioRenderUsage,
-    Usage::RenderUsage,
-    UsageReporterMarker,
-    UsageState::{Ducked, Muted},
-    UsageWatcherRequest,
-    UsageWatcherRequest::OnStateChanged,
-};
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_debug, fx_log_err};
@@ -34,10 +24,6 @@ use std::collections::HashSet;
 
 /// The `VolumeChangeHandler` takes care of the earcons functionality on volume change.
 pub struct VolumeChangeHandler {
-    // An event MessageHub publisher to notify the rest of the system of events,
-    // such as suppressed earcons.
-    event_publisher: Publisher,
-    priority_stream_playing: bool,
     common_earcons_params: CommonEarconsParams,
     last_media_user_volume: Option<f32>,
     volume_button_event: i8,
@@ -57,7 +43,6 @@ const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 impl VolumeChangeHandler {
     pub async fn create(
         params: CommonEarconsParams,
-        event_publisher: Publisher,
         switchboard_messenger: switchboard::message::Messenger,
     ) -> Result<(), Error> {
         // Listen to button presses.
@@ -93,22 +78,11 @@ impl VolumeChangeHandler {
 
         let (volume_tx, mut volume_rx) = futures::channel::mpsc::unbounded::<SettingResponse>();
 
-        let usage_reporter_proxy =
-            params.service_context.lock().await.connect::<UsageReporterMarker>().await?;
-
-        // Create channel for usage reporter watch results.
-        let (usage_tx, mut usage_rx) = create_request_stream()?;
-
-        // Watch for changes in usage.
-        usage_reporter_proxy.watch(&mut RenderUsage(AudioRenderUsage::Background), usage_tx)?;
-
         fasync::spawn(async move {
             let mut handler = Self {
-                event_publisher,
                 common_earcons_params: params,
                 last_media_user_volume,
                 volume_button_event: 0,
-                priority_stream_playing: false,
                 modified_timestamps: create_default_modified_timestamps(),
                 switchboard_messenger: switchboard_messenger.clone(),
             };
@@ -138,12 +112,6 @@ impl VolumeChangeHandler {
                         if let Some(SettingResponse::Audio(audio_info)) = volume_response {
                             handler.on_audio_info(audio_info).await;
                         }
-                    }
-                    background_usage = usage_rx.next() => {
-                        if let Some(Ok(request)) = background_usage {
-                            handler.on_background_usage(request);
-                        }
-
                     }
                 }
             }
@@ -258,26 +226,11 @@ impl VolumeChangeHandler {
         }
     }
 
-    /// Invoked when the background usage changes, determining whether a
-    /// priority stream is playing.
-    fn on_background_usage(&mut self, usage_request: UsageWatcherRequest) {
-        let OnStateChanged { state, responder, .. } = usage_request;
-        if responder.send().is_err() {
-            fx_log_err!("could not send response for background usage");
-        }
-        self.priority_stream_playing = match state {
-            Muted(_) | Ducked(_) => true,
-            _ => false,
-        };
-    }
-
     /// Play the earcons sound given the changed volume streams.
     ///
     /// The parameters are packaged together. See [VolumeChangeParams].
     fn play_media_volume_sound(&self, volume: Option<f32>) {
         let common_earcons_params = self.common_earcons_params.clone();
-        let priority_stream_playing = self.priority_stream_playing;
-        let publisher = self.event_publisher.clone();
 
         fasync::spawn(async move {
             // Connect to the SoundPlayer if not already connected.
@@ -295,14 +248,6 @@ impl VolumeChangeHandler {
             if let (Some(sound_player_proxy), Some(volume_level)) =
                 (sound_player_connection.as_ref(), volume)
             {
-                if priority_stream_playing {
-                    fx_log_debug!("Detected a stream already playing, not playing earcons sound");
-                    publisher.send_event(Event::Earcon(earcon::Event::Suppressed(
-                        earcon::EarconType::Volume,
-                    )));
-                    return;
-                }
-
                 if volume_level >= 1.0 {
                     play_sound(
                         &sound_player_proxy,
@@ -330,10 +275,8 @@ impl VolumeChangeHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::base::Descriptor;
     use crate::audio::default_audio_info;
     use crate::internal::common::default_time;
-    use crate::internal::event;
     use crate::message::base::MessengerType;
     use crate::service_context::ServiceContext;
     use futures::lock::Mutex;
@@ -371,11 +314,6 @@ mod tests {
 
         let mut handler = VolumeChangeHandler {
             switchboard_messenger: messenger,
-            event_publisher: Publisher::create(
-                &event::message::create_hub(),
-                event::Address::Agent(Descriptor::Component("Test")),
-            )
-            .await,
             common_earcons_params: CommonEarconsParams {
                 service_context: ServiceContext::create(None),
                 sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),
@@ -383,7 +321,6 @@ mod tests {
             },
             last_media_user_volume: Some(1.0),
             volume_button_event: 0,
-            priority_stream_playing: false,
             modified_timestamps: old_timestamps,
         };
         let changed_streams = handler.calculate_changed_streams(fake_streams, new_timestamps);

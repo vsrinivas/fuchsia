@@ -16,7 +16,6 @@ use {
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::SoundPlayerService,
-    crate::tests::fakes::usage_reporter_service::UsageReporterService,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
@@ -126,9 +125,6 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
     let sound_player_service_handle = Arc::new(Mutex::new(SoundPlayerService::new()));
     service_registry.lock().await.register_service(sound_player_service_handle.clone());
-
-    let usage_reporter_service_handle = Arc::new(Mutex::new(UsageReporterService::new()));
-    service_registry.lock().await.register_service(usage_reporter_service_handle.clone());
 
     (
         service_registry,

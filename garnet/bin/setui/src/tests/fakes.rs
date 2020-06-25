@@ -12,4 +12,3 @@ pub mod hardware_power_statecontrol_service;
 pub mod input_device_registry_service;
 pub mod service_registry;
 pub mod sound_player_service;
-pub mod usage_reporter_service;
