@@ -841,6 +841,7 @@ TEST(EthernetConfigTests, EthernetSetMulticastPromiscClearOnCloseTest) {
   tap.reset();
 }
 
+// This test was disabled for being flaky (TODO(fxbug.dev/21334)).
 TEST(EthernetDataTests, DISABLED_EthernetDataTest_Send) {
   EthertapClient tap;
   EthernetClient client;
@@ -891,6 +892,7 @@ TEST(EthernetDataTests, DISABLED_EthernetDataTest_Send) {
   ASSERT_NO_FATAL_FAILURES(EthernetCleanupHelper(&tap, &client));
 }
 
+// This test was disabled for being flaky (TODO(fxbug.dev/21334)).
 TEST(EthernetDataTests, DISABLED_EthernetDataTest_Recv) {
   EthertapClient tap;
   EthernetClient client;
