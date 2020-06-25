@@ -1537,6 +1537,8 @@ class Syscall {
 
   // Computes all the fidl codec types for this syscall.
   void ComputeTypes();
+  const fidl_codec::StructMember* SearchInlineMember(const std::string& name, bool invoked) const;
+  const fidl_codec::StructMember* SearchOutlineMember(const std::string& name, bool invoked) const;
 
  private:
   const std::string name_;
@@ -1788,6 +1790,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
   bool with_process_info() const { return message_decoder_dispatcher_.with_process_info(); }
 
+  fidl_codec::LibraryLoader* loader() const { return message_decoder_dispatcher_.loader(); }
+
   const SyscallDisplay* last_displayed_syscall() const { return last_displayed_syscall_; }
   void set_last_displayed_syscall(const SyscallDisplay* last_displayed_syscall) {
     last_displayed_syscall_ = last_displayed_syscall;
@@ -1838,6 +1842,7 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   std::ostream& os_;
   // True if we always display the binary dump of the messages.
   const bool dump_messages_;
+  uint32_t next_invoked_event_id_ = 0;
 };
 
 class SyscallCompareDispatcher : public SyscallDisplayDispatcher {

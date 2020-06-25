@@ -227,6 +227,42 @@ void Syscall::ComputeTypes() {
   }
 }
 
+const fidl_codec::StructMember* Syscall::SearchInlineMember(const std::string& name,
+                                                            bool invoked) const {
+  if (invoked) {
+    for (const auto& member : input_inline_members_) {
+      if (member->name() == name) {
+        return member.get();
+      }
+    }
+  } else {
+    for (const auto& member : output_inline_members_) {
+      if (member->name() == name) {
+        return member.get();
+      }
+    }
+  }
+  return nullptr;
+}
+
+const fidl_codec::StructMember* Syscall::SearchOutlineMember(const std::string& name,
+                                                             bool invoked) const {
+  if (invoked) {
+    for (const auto& member : input_outline_members_) {
+      if (member->name() == name) {
+        return member.get();
+      }
+    }
+  } else {
+    for (const auto& member : output_outline_members_) {
+      if (member->name() == name) {
+        return member.get();
+      }
+    }
+  }
+  return nullptr;
+}
+
 SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_options)
     : decode_options_(decode_options) {
   Populate();
@@ -367,6 +403,7 @@ void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonito
 }
 
 void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {
+  invoked_event->set_id(next_invoked_event_id_++);
   if (!display_started()) {
     // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
     const fidl_codec::FidlMessageValue* message = invoked_event->GetMessage();

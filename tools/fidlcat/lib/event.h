@@ -7,11 +7,16 @@
 
 #include <zircon/system/public/zircon/types.h>
 
+#include <map>
+#include <memory>
+#include <vector>
+
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_types.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "tools/fidlcat/lib/fidlcat_printer.h"
+#include "tools/fidlcat/proto/session.pb.h"
 
 namespace fidlcat {
 
@@ -79,16 +84,20 @@ class Location {
 class Event {
  public:
   explicit Event(int64_t timestamp) : timestamp_(timestamp) {}
+  virtual ~Event() = default;
 
   // Timestamp in nanoseconds.
   int64_t timestamp() const { return timestamp_; }
+
+  // Write the content of the event into a protobuf event.
+  virtual void Write(proto::Event* dst) const = 0;
 
  private:
   const int64_t timestamp_;
 };
 
 // Event which gives the result of a process launching.
-class ProcessLaunchedEvent : public Event {
+class ProcessLaunchedEvent final : public Event {
  public:
   ProcessLaunchedEvent(int64_t timestamp, std::string_view command, std::string_view error_message)
       : Event(timestamp), command_(command), error_message_(error_message) {}
@@ -96,13 +105,15 @@ class ProcessLaunchedEvent : public Event {
   const std::string& command() const { return command_; }
   const std::string& error_message() const { return error_message_; }
 
+  void Write(proto::Event* dst) const override;
+
  private:
   const std::string command_;
   const std::string error_message_;
 };
 
 // Event which tells that we started monitoring a process.
-class ProcessMonitoredEvent : public Event {
+class ProcessMonitoredEvent final : public Event {
  public:
   ProcessMonitoredEvent(int64_t timestamp, Process* process, std::string_view error_message)
       : Event(timestamp), process_(process), error_message_(error_message) {}
@@ -110,17 +121,21 @@ class ProcessMonitoredEvent : public Event {
   Process* process() const { return process_; }
   const std::string& error_message() const { return error_message_; }
 
+  void Write(proto::Event* dst) const override;
+
  private:
   Process* const process_;
   const std::string error_message_;
 };
 
 // Event which tells that we stop monitoring a process.
-class StopMonitoringEvent : public Event {
+class StopMonitoringEvent final : public Event {
  public:
   StopMonitoringEvent(int64_t timestamp, Process* process) : Event(timestamp), process_(process) {}
 
   Process* process() const { return process_; }
+
+  void Write(proto::Event* dst) const override;
 
  private:
   Process* const process_;
@@ -178,10 +193,13 @@ class SyscallEvent : public ThreadEvent {
 };
 
 // Event that represents the arguments of a syscall (When the syscall is called).
-class InvokedEvent : public SyscallEvent {
+class InvokedEvent final : public SyscallEvent {
  public:
   InvokedEvent(int64_t timestamp, Thread* thread, const Syscall* syscall)
       : SyscallEvent(timestamp, thread, syscall) {}
+
+  uint32_t id() const { return id_; }
+  void set_id(uint32_t id) { id_ = id; }
 
   const std::vector<Location>& stack_frame() const { return stack_frame_; }
   std::vector<Location>& stack_frame() { return stack_frame_; }
@@ -189,15 +207,18 @@ class InvokedEvent : public SyscallEvent {
   bool displayed() const { return displayed_; }
   void set_displayed() { displayed_ = true; }
 
+  void Write(proto::Event* dst) const override;
+
   void PrettyPrint(FidlcatPrinter& printer) const;
 
  public:
+  uint32_t id_ = 0;
   std::vector<Location> stack_frame_;
   bool displayed_ = false;
 };
 
 // Event that represents the return value and out parameters when a syscall returns.
-class OutputEvent : public SyscallEvent {
+class OutputEvent final : public SyscallEvent {
  public:
   OutputEvent(int64_t timestamp, Thread* thread, const Syscall* syscall, int64_t returned_value,
               std::shared_ptr<InvokedEvent> invoked_event)
@@ -205,7 +226,10 @@ class OutputEvent : public SyscallEvent {
         returned_value_(returned_value),
         invoked_event_(std::move(invoked_event)) {}
 
+  int64_t returned_value() const { return returned_value_; }
   const InvokedEvent* invoked_event() const { return invoked_event_.get(); }
+
+  void Write(proto::Event* dst) const override;
 
   void PrettyPrint(FidlcatPrinter& printer) const;
 
@@ -216,17 +240,45 @@ class OutputEvent : public SyscallEvent {
 };
 
 // Event that represents an exception.
-class ExceptionEvent : public ThreadEvent {
+class ExceptionEvent final : public ThreadEvent {
  public:
   ExceptionEvent(int64_t timestamp, Thread* thread) : ThreadEvent(timestamp, thread) {}
 
   const std::vector<Location>& stack_frame() const { return stack_frame_; }
   std::vector<Location>& stack_frame() { return stack_frame_; }
 
+  void Write(proto::Event* dst) const override;
+
   void PrettyPrint(FidlcatPrinter& printer) const;
 
  private:
   std::vector<Location> stack_frame_;
+};
+
+// Class to decode events from protobuf.
+class EventDecoder {
+ public:
+  explicit EventDecoder(SyscallDisplayDispatcher* dispatcher) : dispatcher_(dispatcher) {}
+
+  SyscallDisplayDispatcher* dispatcher() const { return dispatcher_; }
+
+  // Decodes a protobuf event and dispatch it.
+  bool DecodeAndDispatchEvent(const proto::Event& proto_event);
+
+ private:
+  // Decode the values for a syscall event.
+  bool DecodeValues(
+      SyscallEvent* event,
+      const ::google::protobuf::Map<::std::string, ::fidl_codec::proto::Value>& inline_fields,
+      const ::google::protobuf::Map<::std::string, ::fidl_codec::proto::Value>& outline_fields,
+      bool invoked);
+
+  // Dispatcher used to decode the events.
+  SyscallDisplayDispatcher* dispatcher_;
+
+  // Map of all invoked events already decoded. Used to associate the invoked event to an output
+  // event.
+  std::map<uint32_t, std::shared_ptr<InvokedEvent>> invoked_events_;
 };
 
 }  // namespace fidlcat

@@ -169,7 +169,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
     case proto::Value::kStringValue:
       return std::make_unique<fidl_codec::StringValue>(proto_value.string_value());
     case proto::Value::kHandleValue: {
-      const proto::HandleInfo proto_handle_info = proto_value.handle_value();
+      const proto::HandleInfo& proto_handle_info = proto_value.handle_value();
       zx_handle_info handle_info;
       handle_info.handle = proto_handle_info.handle();
       handle_info.type = proto_handle_info.type();
@@ -212,7 +212,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       }
       bool ok = true;
       auto vector_value = std::make_unique<fidl_codec::VectorValue>();
-      proto::Vector proto_vector_value = proto_value.vector_value();
+      const proto::Vector& proto_vector_value = proto_value.vector_value();
       for (int index = 0; index < proto_vector_value.value_size(); ++index) {
         std::unique_ptr<fidl_codec::Value> value =
             DecodeValue(loader, proto_vector_value.value(index), component_type);
@@ -258,7 +258,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       return table_value;
     }
     case proto::Value::kFidlMessageValue: {
-      const proto::FidlMessage proto_message = proto_value.fidl_message_value();
+      const proto::FidlMessage& proto_message = proto_value.fidl_message_value();
       const std::vector<const fidl_codec::InterfaceMethod*>* methods =
           loader->GetByOrdinal(proto_message.ordinal());
       if (methods == nullptr || methods->empty()) {

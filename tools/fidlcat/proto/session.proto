@@ -1,0 +1,67 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+package fidlcat.proto;
+
+import "src/lib/fidl_codec/proto/value.proto";
+
+// Defines an event.
+message Event {
+  int64 timestamp = 1;
+  oneof Kind {
+    ProcessLaunchedEvent process_launched = 2;
+    ProcessMonitoredEvent process_monitored = 3;
+    StopMonitoringEvent stop_monitoring = 4;
+    InvokedEvent invoked = 5;
+    OutputEvent output = 6;
+    ExceptionEvent exception = 7;
+  }
+}
+
+message ProcessLaunchedEvent {
+  string command = 1;
+  string error_message = 2;
+}
+
+message ProcessMonitoredEvent {
+  uint64 process_koid = 1;
+  string error_message = 2;
+}
+
+message StopMonitoringEvent {
+  uint64 process_koid = 1;
+}
+
+message InvokedEvent {
+  uint64 thread_koid = 1;
+  repeated Location frame = 2;
+  string syscall = 3;
+  map<string, fidl_codec.proto.Value> inline_fields = 4;
+  map<string, fidl_codec.proto.Value> outline_fields = 5;
+}
+
+message OutputEvent {
+  uint64 thread_koid = 1;
+  string syscall = 2;
+  sint64 returned_value = 3;
+  uint64 invoked_event_id = 4;
+  map<string, fidl_codec.proto.Value> inline_fields = 5;
+  map<string, fidl_codec.proto.Value> outline_fields = 6;
+}
+
+message ExceptionEvent {
+  uint64 thread_koid = 1;
+  repeated Location frame = 2;
+}
+
+// Defines a location in a source file (used to define a stack frame).
+message Location {
+  string path = 1;
+  uint32 line = 2;
+  uint32 column = 3;
+  uint64 address = 4;
+  string symbol = 5;
+}

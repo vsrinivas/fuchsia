@@ -38,6 +38,7 @@ if (is_host) {
       "port_test.cc",
       "process_test.cc",
       "profile_test.cc",
+      "proto_event_test.cc",
       "resource_test.cc",
       "smc_test.cc",
       "socket_test.cc",
@@ -58,8 +59,10 @@ if (is_host) {
       "//src/developer/debug/zxdb/client:test_support",
       "//src/lib/fidl_codec",
       "//third_party/googletest:gtest",
+      "//third_party/protobuf:protobuf_full",
       "//third_party/rapidjson",
       "//tools/fidlcat/lib:host_lib",
+      "//tools/fidlcat/lib:session_proto",
       "//zircon/public/lib/fidl_base",
       "//zircon/system/public",
     ]

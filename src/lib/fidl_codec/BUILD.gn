@@ -58,7 +58,9 @@ static_library("fidl_codec") {
 }
 
 proto_library("value_proto") {
-  sources = [ "proto/value.proto" ]
+  proto_in_dir = "//"
+
+  sources = [ "//src/lib/fidl_codec/proto/value.proto" ]
 
   generate_python = false
 
