@@ -143,6 +143,10 @@ where
             psocket::ProviderRequest::Socket2 { domain, type_, protocol: _, responder } => {
                 responder_send!(responder, &mut self.socket(domain, type_));
             }
+            psocket::ProviderRequest::GetInterfaceAddresses { responder } => {
+                // TODO(https://fxbug.dev/54162): implement this method.
+                responder_send!(responder, &mut std::iter::empty());
+            }
         }
     }
 

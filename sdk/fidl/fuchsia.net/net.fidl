@@ -33,11 +33,11 @@ struct Endpoint {
     uint16 port;
 };
 
-/// Subnet describes an IP subnetwork, where all host IP addresses share the same most significant
-/// bits.
+// TODO(https://fxbug.dev/54163): rename Subnet to AddressWithPrefix when
+// binding support is ready, so we don't have to recursively fix all users.
+/// An IP address with its subnet prefix length.
 struct Subnet {
-    /// The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
-    /// all bits in the host portion of the address must be zero.
+    /// The Ipv4 or Ipv6 address.
     IpAddress addr;
 
     /// The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix

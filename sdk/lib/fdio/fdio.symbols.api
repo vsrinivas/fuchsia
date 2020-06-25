@@ -75,6 +75,7 @@ fdio_wait_fd
 fdio_watch_directory
 fdio_zxio_create
 fdopendir
+freeifaddrs
 fstat
 fstatat
 fstatfs
@@ -83,6 +84,7 @@ fsync
 ftruncate
 futimens
 getcwd
+getifaddrs
 getpeername
 getsockname
 getsockopt

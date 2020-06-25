@@ -8,5 +8,8 @@ fidl("fuchsia.posix.socket") {
   sdk_category = "partner"
   api = "fuchsia.posix.socket.api"
   sources = [ "socket.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.io" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.net",
+  ]
 }

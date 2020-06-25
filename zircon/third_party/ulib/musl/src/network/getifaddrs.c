@@ -2,15 +2,6 @@
 
 #include "getifaddrs.h"
 
-void freeifaddrs(struct ifaddrs* ifp) {
-  struct ifaddrs* n;
-  while (ifp) {
-    n = ifp->ifa_next;
-    free(ifp);
-    ifp = n;
-  }
-}
-
 static int netlink_msg_to_ifaddr(void* pctx, struct nlmsghdr* h) {
   struct ifaddrs_ctx* ctx = pctx;
   struct ifaddrs_storage *ifs, *ifs0 = NULL;
@@ -121,16 +112,4 @@ static int netlink_msg_to_ifaddr(void* pctx, struct nlmsghdr* h) {
     free(ifs);
   }
   return 0;
-}
-
-int getifaddrs(struct ifaddrs** ifap) {
-  struct ifaddrs_ctx _ctx, *ctx = &_ctx;
-  int r;
-  memset(ctx, 0, sizeof *ctx);
-  r = __rtnetlink_enumerate(AF_UNSPEC, AF_UNSPEC, netlink_msg_to_ifaddr, ctx);
-  if (r == 0)
-    *ifap = &ctx->first->ifa;
-  else
-    freeifaddrs(&ctx->first->ifa);
-  return r;
 }

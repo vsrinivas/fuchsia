@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <errno.h>
+#include <ifaddrs.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -118,3 +119,12 @@ static int stub_sockatmark(int fd) {
   return -1;
 }
 weak_alias(stub_sockatmark, sockatmark);
+
+static int stub_getifaddrs(struct ifaddrs** ifap) {
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_getifaddrs, getifaddrs);
+
+static void stub_freeifaddrs(struct ifaddrs* ifp) {}
+weak_alias(stub_freeifaddrs, freeifaddrs);

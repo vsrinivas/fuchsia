@@ -4,8 +4,10 @@
 
 #include <fcntl.h>
 #include <fuchsia/net/llcpp/fidl.h>
+#include <ifaddrs.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
+#include <net/if.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -503,4 +505,80 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
     return ERRNO(out_code);
   }
   return 0;
+}
+
+// TODO(https://fxbug.dev/30719): set ifa_ifu.ifu_broadaddr and ifa_ifu.ifu_dstaddr.
+//
+// AF_PACKET addresses containing lower-level details about the interfaces are not included in the
+// result list because raw sockets are not supported on Fuchsia.
+__EXPORT
+int getifaddrs(struct ifaddrs** ifap) {
+  fsocket::Provider::SyncClient* provider = nullptr;
+  zx_status_t status = fdio_get_socket_provider(&provider);
+  if (status != ZX_OK) {
+    return ERROR(status);
+  }
+
+  auto response = provider->GetInterfaceAddresses();
+  status = response.status();
+  if (status != ZX_OK) {
+    return ERROR(status);
+  }
+
+  for (const auto& iface : response.Unwrap()->interfaces) {
+    if (!iface.has_name() || !iface.has_addresses()) {
+      continue;
+    }
+
+    const auto& if_name = iface.name();
+    for (const auto& address : iface.addresses()) {
+      auto ifs = static_cast<struct ifaddrs_storage*>(calloc(1, sizeof(struct ifaddrs_storage)));
+      if (ifs == nullptr) {
+        return -1;
+      }
+      const size_t n = std::min(if_name.size(), sizeof(ifs->name));
+      memcpy(ifs->name, if_name.data(), n);
+      ifs->name[n] = 0;
+      ifs->ifa.ifa_name = ifs->name;
+
+      const auto& addr = address.addr;
+      const uint8_t prefix_len = address.prefix_len;
+
+      switch (addr.which()) {
+        case fnet::IpAddress::Tag::kIpv4: {
+          const auto& addr_bytes = addr.ipv4().addr;
+          copy_addr(&ifs->ifa.ifa_addr, AF_INET, &ifs->addr,
+                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(), iface.id());
+          gen_netmask(&ifs->ifa.ifa_netmask, AF_INET, &ifs->netmask, prefix_len);
+          break;
+        }
+        case fnet::IpAddress::Tag::kIpv6: {
+          const auto& addr_bytes = addr.ipv6().addr;
+          copy_addr(&ifs->ifa.ifa_addr, AF_INET6, &ifs->addr,
+                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(), iface.id());
+          gen_netmask(&ifs->ifa.ifa_netmask, AF_INET6, &ifs->netmask, prefix_len);
+          break;
+        }
+      }
+
+      if (iface.has_flags()) {
+        ifs->ifa.ifa_flags = iface.flags();
+      }
+
+      *ifap = &ifs->ifa;
+      ifap = &ifs->ifa.ifa_next;
+    }
+  }
+
+  return 0;
+}
+
+__EXPORT
+void freeifaddrs(struct ifaddrs* ifp) {
+  struct ifaddrs* n;
+  while (ifp) {
+    n = ifp->ifa_next;
+    free(ifp);
+    ifp = n;
+  }
 }

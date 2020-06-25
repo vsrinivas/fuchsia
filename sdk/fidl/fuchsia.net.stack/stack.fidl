@@ -46,6 +46,7 @@ union InterfaceStatus {
     3: AdministrativeStatus administrative;
 };
 
+// TODO(https://fxbug.dev/54163): use `fuchsia.net.InterfaceAddress` instead.
 struct InterfaceAddress {
     /// The IP address of the interface.
     fuchsia.net.IpAddress ip_address;

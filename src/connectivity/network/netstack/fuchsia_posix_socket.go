@@ -11,6 +11,7 @@ import (
 	"net"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,10 +20,13 @@ import (
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/io"
+	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/posix/socket"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -43,6 +47,7 @@ import (
 #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include
 #include <errno.h>
 #include <fcntl.h>
+#include <net/if.h>
 #include <netinet/in.h>
 */
 import "C"
@@ -1274,6 +1279,71 @@ func (sp *providerImpl) InterfaceNameToIndex(_ fidl.Context, name string) (socke
 		}
 	}
 	return socket.ProviderInterfaceNameToIndexResultWithErr(int32(zx.ErrNotFound)), nil
+}
+
+func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceAddresses, error) {
+	nicInfos := sp.ns.stack.NICInfo()
+
+	resultInfos := make([]socket.InterfaceAddresses, 0, len(nicInfos))
+	for id, info := range nicInfos {
+		// Ensure deterministic API response.
+		sort.Slice(info.ProtocolAddresses, func(i, j int) bool {
+			x, y := info.ProtocolAddresses[i], info.ProtocolAddresses[j]
+			if x.Protocol != y.Protocol {
+				return x.Protocol < y.Protocol
+			}
+			ax, ay := x.AddressWithPrefix, y.AddressWithPrefix
+			if ax.Address != ay.Address {
+				return ax.Address < ay.Address
+			}
+			return ax.PrefixLen < ay.PrefixLen
+		})
+
+		addrs := make([]fidlnet.Subnet, 0, len(info.ProtocolAddresses))
+		for _, a := range info.ProtocolAddresses {
+			if a.Protocol != ipv4.ProtocolNumber && a.Protocol != ipv6.ProtocolNumber {
+				continue
+			}
+			addrs = append(addrs, fidlnet.Subnet{
+				Addr:      fidlconv.ToNetIpAddress(a.AddressWithPrefix.Address),
+				PrefixLen: uint8(a.AddressWithPrefix.PrefixLen),
+			})
+		}
+
+		var resultInfo socket.InterfaceAddresses
+		resultInfo.SetId(uint64(id))
+		resultInfo.SetName(info.Name)
+		resultInfo.SetAddresses(addrs)
+
+		// gVisor assumes interfaces are always up, which is not the case on Fuchsia,
+		// so overwrite it with Fuchsia's interface state.
+		ifs := info.Context.(*ifState)
+		var bits uint32
+		flags := info.Flags
+		if flags.Running {
+			bits |= C.IFF_RUNNING
+		}
+		if flags.Promiscuous {
+			bits |= C.IFF_PROMISC
+		}
+		if flags.Loopback {
+			bits |= C.IFF_LOOPBACK
+		}
+		ifs.mu.Lock()
+		if ifs.mu.state == link.StateStarted {
+			bits |= C.IFF_UP
+		}
+		ifs.mu.Unlock()
+		resultInfo.SetFlags(bits)
+
+		resultInfos = append(resultInfos, resultInfo)
+	}
+
+	// Ensure deterministic API response.
+	sort.Slice(resultInfos, func(i, j int) bool {
+		return resultInfos[i].Id < resultInfos[j].Id
+	})
+	return resultInfos, nil
 }
 
 func tcpipErrorToCode(err *tcpip.Error) int32 {
