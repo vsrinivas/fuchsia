@@ -11,6 +11,7 @@ mod test_util;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
+use fidl_fuchsia_net::SocketAddress;
 use fidl_fuchsia_net_name::{
     DhcpDnsServerSource, Dhcpv6DnsServerSource, DnsServerSource, DnsServer_, NdpDnsServerSource,
     StaticDnsServerSource,
@@ -57,7 +58,7 @@ impl DnsServers {
     /// Note, if multiple `DnsServer_`s have the same address but different sources, only
     /// the `DnsServer_` with the most preferred source will be present in the consolidated
     /// list of servers.
-    pub fn consolidated(&self) -> Vec<DnsServer_> {
+    pub fn consolidated(&self) -> Vec<SocketAddress> {
         let Self { default, netstack } = self;
         let mut servers = netstack.clone();
         // Sorting happens before deduplication to ensure that when multiple sources report the same
@@ -68,7 +69,7 @@ impl DnsServers {
         let () = servers.extend(default.clone());
         let mut addresses = HashSet::new();
         let () = servers.retain(move |s| addresses.insert(s.address));
-        servers
+        servers.into_iter().filter_map(|x| x.address).collect()
     }
 
     /// Returns the ordering of [`DnsServer_`]s.
@@ -111,7 +112,12 @@ mod tests {
         };
         assert_eq!(
             servers.consolidated(),
-            vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER]
+            vec![
+                NDP_SOURCE_SOCKADDR,
+                DHCP_SOURCE_SOCKADDR,
+                DHCPV6_SOURCE_SOCKADDR,
+                STATIC_SOURCE_SOCKADDR
+            ]
         );
 
         // Default servers should always have low priority, but if the same server
@@ -130,7 +136,12 @@ mod tests {
         };
         assert_eq!(
             servers.consolidated(),
-            vec![DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER, NDP_SERVER]
+            vec![
+                DHCP_SOURCE_SOCKADDR,
+                DHCPV6_SOURCE_SOCKADDR,
+                STATIC_SOURCE_SOCKADDR,
+                NDP_SOURCE_SOCKADDR
+            ]
         );
 
         // Deduplication and sorting of same address across different sources.
@@ -154,7 +165,12 @@ mod tests {
                 STATIC_SERVER,
             ],
         };
-        let expected = vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER];
+        let expected = vec![
+            NDP_SOURCE_SOCKADDR,
+            DHCP_SOURCE_SOCKADDR,
+            DHCPV6_SOURCE_SOCKADDR,
+            STATIC_SOURCE_SOCKADDR,
+        ];
         assert_eq!(servers.consolidated(), expected);
         let servers = DnsServers {
             default: vec![],
@@ -170,19 +186,24 @@ mod tests {
 
         // NDP is more preferred than DHCPv6 so `DHCPV6_SERVER` should not be in the consolidated
         // list.
-        let ndp_with_dhcpv6_address = || DnsServer_ {
+        let ndp_with_dhcpv6_address = DnsServer_ {
+            address: Some(DHCPV6_SOURCE_SOCKADDR),
             source: Some(DnsServerSource::Ndp(NdpDnsServerSource { source_interface: Some(3) })),
-            ..DHCPV6_SERVER
         };
         let servers = DnsServers {
             default: vec![],
-            netstack: vec![ndp_with_dhcpv6_address(), DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER],
+            netstack: vec![
+                ndp_with_dhcpv6_address.clone(),
+                DHCP_SERVER,
+                DHCPV6_SERVER,
+                STATIC_SERVER,
+            ],
         };
-        let expected = vec![ndp_with_dhcpv6_address(), DHCP_SERVER, STATIC_SERVER];
+        let expected = vec![DHCPV6_SOURCE_SOCKADDR, DHCP_SOURCE_SOCKADDR, STATIC_SOURCE_SOCKADDR];
         assert_eq!(servers.consolidated(), expected);
         let servers = DnsServers {
             default: vec![],
-            netstack: vec![DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER, ndp_with_dhcpv6_address()],
+            netstack: vec![DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER, ndp_with_dhcpv6_address],
         };
         assert_eq!(servers.consolidated(), expected);
     }

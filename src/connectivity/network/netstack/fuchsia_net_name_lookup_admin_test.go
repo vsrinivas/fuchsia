@@ -44,31 +44,20 @@ func TestSetAndGetDefaultServers(t *testing.T) {
 		t.Fatalf("GetDnsServers failed: %s", err)
 	}
 
-	expect := []name.DnsServer{{
-		Address: net.SocketAddressWithIpv4(net.Ipv4SocketAddress{
+	expect := []net.SocketAddress{
+		net.SocketAddressWithIpv4(net.Ipv4SocketAddress{
 			Address: addrv4,
 			Port:    dns.DefaultDNSPort,
 		}),
-		AddressPresent: true,
-		Source: name.DnsServerSource{
-			I_dnsServerSourceTag: name.DnsServerSourceStaticSource,
-		},
-		SourcePresent: true,
-	}, {
-		Address: net.SocketAddressWithIpv6(net.Ipv6SocketAddress{
+		net.SocketAddressWithIpv6(net.Ipv6SocketAddress{
 			Address:   addrv6,
 			Port:      dns.DefaultDNSPort,
 			ZoneIndex: 0,
 		}),
-		AddressPresent: true,
-		Source: name.DnsServerSource{
-			I_dnsServerSourceTag: name.DnsServerSourceStaticSource,
-		},
-		SourcePresent: true,
-	}}
+	}
 
-	if diff := cmp.Diff(servers, expect, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-		t.Fatalf("got unexpected list of servers (-want +got): %s", diff)
+	if diff := cmp.Diff(expect, servers, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		t.Fatalf("DNS servers mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -90,50 +79,24 @@ func TestGetDynamicServers(t *testing.T) {
 		t.Fatalf("GetDnsServers failed: %s", err)
 	}
 
-	expect := []name.DnsServer{
+	expect := []net.SocketAddress{
 		// NDP
-		{
-			Address:        fidlconv.ToNetSocketAddress(ndpServer),
-			AddressPresent: true,
-			Source: name.DnsServerSource{
-				I_dnsServerSourceTag: name.DnsServerSourceNdp,
-				Ndp: name.NdpDnsServerSource{
-					SourceInterface:        1,
-					SourceInterfacePresent: true,
-				},
-			},
-			SourcePresent: true,
-		},
-		// DHCP
-		{
-			Address: net.SocketAddressWithIpv4(net.Ipv4SocketAddress{
-				Address: fidlconv.ToNetIpAddress(dhcpServer).Ipv4,
-				Port:    dns.DefaultDNSPort,
-			}),
-			AddressPresent: true,
-			Source: name.DnsServerSource{
-				I_dnsServerSourceTag: name.DnsServerSourceDhcp,
-				Dhcp: name.DhcpDnsServerSource{
-					SourceInterface:        1,
-					SourceInterfacePresent: true,
-				},
-			},
-			SourcePresent: true,
-		},
-		// STATIC
-		{
-			Address: net.SocketAddressWithIpv4(net.Ipv4SocketAddress{
-				Address: fidlconv.ToNetIpAddress(staticServer).Ipv4,
-				Port:    dns.DefaultDNSPort,
-			}),
-			AddressPresent: true,
-			Source: name.DnsServerSource{
-				I_dnsServerSourceTag: name.DnsServerSourceStaticSource,
-			},
-			SourcePresent: true,
-		}}
+		fidlconv.ToNetSocketAddress(ndpServer),
 
-	if diff := cmp.Diff(result, expect, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-		t.Fatalf("got unexpected list of servers (-want +got): %s", diff)
+		// DHCP
+		net.SocketAddressWithIpv4(net.Ipv4SocketAddress{
+			Address: fidlconv.ToNetIpAddress(dhcpServer).Ipv4,
+			Port:    dns.DefaultDNSPort,
+		}),
+
+		// STATIC
+		net.SocketAddressWithIpv4(net.Ipv4SocketAddress{
+			Address: fidlconv.ToNetIpAddress(staticServer).Ipv4,
+			Port:    dns.DefaultDNSPort,
+		}),
+	}
+
+	if diff := cmp.Diff(expect, result, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		t.Fatalf("DNS servers mismatch (-want +got):\n%s", diff)
 	}
 }

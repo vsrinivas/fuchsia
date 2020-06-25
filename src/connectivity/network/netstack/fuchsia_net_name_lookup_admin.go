@@ -54,16 +54,16 @@ func (dns *nameLookupAdminImpl) SetDefaultDnsServers(_ fidl.Context, servers []n
 // This method does nothing as netstack learns DNS servers itself and configures
 // the in-netstack DNS client directly. We're not bothering with a full implementation
 // here in expectation that dns_resolver will be used for name resolution.
-func (*nameLookupAdminImpl) SetDnsServers(fidl.Context, []name.DnsServer) (name.LookupAdminSetDnsServersResult, error) {
+func (*nameLookupAdminImpl) SetDnsServers(fidl.Context, []net.SocketAddress) (name.LookupAdminSetDnsServersResult, error) {
 	syslog.ErrorTf(tag, "SetDnsServers not implemented")
 	return name.LookupAdminSetDnsServersResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (dns *nameLookupAdminImpl) GetDnsServers(fidl.Context) ([]name.DnsServer, error) {
+func (dns *nameLookupAdminImpl) GetDnsServers(fidl.Context) ([]net.SocketAddress, error) {
 	cache := dns.ns.dnsClient.GetServersCache()
-	servers := make([]name.DnsServer, 0, len(cache))
+	servers := make([]net.SocketAddress, 0, len(cache))
 	for _, s := range cache {
-		servers = append(servers, dnsServerToFidl(s))
+		servers = append(servers, fidlconv.ToNetSocketAddress(s.Address))
 	}
 	return servers, nil
 }

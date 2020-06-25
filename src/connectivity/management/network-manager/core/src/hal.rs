@@ -13,8 +13,7 @@ use {
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcp::{self as fnetdhcp, Server_Marker, Server_Proxy},
     fidl_fuchsia_net_name::{
-        DnsServerWatcherMarker, DnsServerWatcherProxy, DnsServer_, LookupAdminMarker,
-        LookupAdminProxy,
+        DnsServerWatcherMarker, DnsServerWatcherProxy, LookupAdminMarker, LookupAdminProxy,
     },
     fidl_fuchsia_net_stack::{
         self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker,
@@ -992,13 +991,12 @@ impl NetCfg {
     }
 
     /// Sets the DNS resolvers.
-    pub async fn set_dns_resolvers<I>(&mut self, servers: I) -> error::Result<()>
+    pub async fn set_dns_resolvers<'a, I>(&mut self, mut servers: I) -> error::Result<()>
     where
-        I: IntoIterator<Item = DnsServer_>,
-        <I as IntoIterator>::IntoIter: ExactSizeIterator,
+        I: ExactSizeIterator<Item = &'a mut fnet::SocketAddress>,
     {
         self.lookup_admin
-            .set_dns_servers(&mut servers.into_iter())
+            .set_dns_servers(&mut servers)
             .await
             .with_context(|| "failed setting interface state".to_string())
             .and_then(|r| {

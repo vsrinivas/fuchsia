@@ -27,12 +27,13 @@ protocol LookupAdmin {
     ///
     /// + request `servers` The list of servers to use for domain name resolution, in priority
     /// order. An empty list means no servers will be used and name resolution may fail. Each
-    /// `DnsServer` in `servers` must hold a valid unicast socket address.
+    /// `SocketAddress` in `servers` must be a valid unicast socket address. The list of servers
+    /// will be deduplicated.
     /// * error Returns `ZX_ERR_INVALID_ARGS` if any of the provided addresses does not meet the
     /// conditions above.
-    SetDnsServers(vector<DnsServer>:MAX servers) -> () error zx.status;
+    SetDnsServers(vector<fuchsia.net.SocketAddress>:MAX servers) -> () error zx.status;
 
     /// Gets the DNS servers currently in use to resolve name lookups.
     /// - response `servers` The list of servers in use by `LookupAdmin`, in priority order.
-    GetDnsServers() -> (vector<DnsServer>:MAX servers);
+    GetDnsServers() -> (vector<fuchsia.net.SocketAddress>:MAX servers);
 };

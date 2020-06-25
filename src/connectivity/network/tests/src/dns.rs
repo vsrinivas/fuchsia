@@ -175,33 +175,15 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = vec![
-        fidl_fuchsia_net_name::DnsServer_ {
-            address: Some(fidl_fuchsia_net::SocketAddress::Ipv6(
-                fidl_fuchsia_net::Ipv6SocketAddress {
-                    address: NDP_DNS_SERVER,
-                    port: DEFAULT_DNS_PORT,
-                    zone_index: 0,
-                },
-            )),
-            source: Some(fidl_fuchsia_net_name::DnsServerSource::Ndp(
-                fidl_fuchsia_net_name::NdpDnsServerSource {
-                    source_interface: Some(client_iface.id()),
-                },
-            )),
-        },
-        fidl_fuchsia_net_name::DnsServer_ {
-            address: Some(fidl_fuchsia_net::SocketAddress::Ipv4(
-                fidl_fuchsia_net::Ipv4SocketAddress {
-                    address: DHCP_DNS_SERVER,
-                    port: DEFAULT_DNS_PORT,
-                },
-            )),
-            source: Some(fidl_fuchsia_net_name::DnsServerSource::Dhcp(
-                fidl_fuchsia_net_name::DhcpDnsServerSource {
-                    source_interface: Some(client_iface.id()),
-                },
-            )),
-        },
+        fidl_fuchsia_net::SocketAddress::Ipv6(fidl_fuchsia_net::Ipv6SocketAddress {
+            address: NDP_DNS_SERVER,
+            port: DEFAULT_DNS_PORT,
+            zone_index: 0,
+        }),
+        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+            address: DHCP_DNS_SERVER,
+            port: DEFAULT_DNS_PORT,
+        }),
     ];
 
     // Poll LookupAdmin until we get the servers we want or after too many tries.
@@ -219,8 +201,7 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
             }
         }?;
 
-        let servers: Vec<fidl_fuchsia_net_name::DnsServer_> =
-            lookup_admin.get_dns_servers().await.context("Failed to get DNS servers")?;
+        let servers = lookup_admin.get_dns_servers().await.context("Failed to get DNS servers")?;
         println!("attempt {}) Got DNS servers {:?}", i, servers);
         if servers.len() > expect.len() {
             return Err(anyhow::anyhow!(

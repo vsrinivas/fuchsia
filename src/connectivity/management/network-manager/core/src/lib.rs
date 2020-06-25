@@ -26,10 +26,8 @@ use {
     crate::config::InterfaceType,
     crate::lifmgr::{LIFProperties, LIFType},
     crate::portmgr::PortId,
-    fidl_fuchsia_net_name as fname,
-    fidl_fuchsia_net_name_ext::CloneExt as _,
-    fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
-    fidl_fuchsia_router_config as netconfig,
+    fidl_fuchsia_net as fnet, fidl_fuchsia_net_name as fname, fidl_fuchsia_net_stack as stack,
+    fidl_fuchsia_netstack as netstack, fidl_fuchsia_router_config as netconfig,
     std::sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -91,7 +89,7 @@ impl From<netconfig::DnsPolicy> for DnsPolicy {
 #[derive(Debug)]
 struct DnsConfig {
     id: ElementId,
-    servers: Vec<fname::DnsServer_>,
+    servers: Vec<fnet::SocketAddress>,
     domain: Option<String>,
     policy: DnsPolicy,
 }
@@ -106,15 +104,13 @@ impl From<&DnsConfig> for netconfig::DnsResolverConfig {
                 servers: c
                     .servers
                     .iter()
-                    .filter_map(|s| {
-                        s.address.map(|a| match a {
-                            fidl_fuchsia_net::SocketAddress::Ipv4(addr) => {
-                                fidl_fuchsia_net::IpAddress::Ipv4(addr.address)
-                            }
-                            fidl_fuchsia_net::SocketAddress::Ipv6(addr) => {
-                                fidl_fuchsia_net::IpAddress::Ipv6(addr.address)
-                            }
-                        })
+                    .map(|s| match s {
+                        fidl_fuchsia_net::SocketAddress::Ipv4(addr) => {
+                            fidl_fuchsia_net::IpAddress::Ipv4(addr.address)
+                        }
+                        fidl_fuchsia_net::SocketAddress::Ipv6(addr) => {
+                            fidl_fuchsia_net::IpAddress::Ipv6(addr.address)
+                        }
                     })
                     .collect::<Vec<_>>(),
             },
@@ -774,7 +770,7 @@ impl DeviceState {
     /// of the list.
     pub async fn set_dns_resolvers(
         &mut self,
-        servers: Vec<fname::DnsServer_>,
+        mut servers: Vec<fnet::SocketAddress>,
     ) -> error::Result<ElementId> {
         if servers == self.dns_config.servers {
             // No change needed.
@@ -783,7 +779,7 @@ impl DeviceState {
         // Just return the error, nothing to undo.
         //
         // NB: iter().map(...) is used over clone() to avoid allocating a vector.
-        self.hal.set_dns_resolvers(servers.iter().map(|s| (*s).clone())).await?;
+        self.hal.set_dns_resolvers(servers.iter_mut()).await?;
         self.dns_config.id.version = self.version;
         self.dns_config.servers = servers;
         self.version += 1;

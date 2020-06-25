@@ -431,7 +431,7 @@ impl<'a> NetCfg<'a> {
         trace!("updating DNS servers from {:?} to {:?}", source, servers);
 
         let () = self.dns_servers.set_servers_from_source(source, servers);
-        let servers = self.dns_servers.consolidated();
+        let mut servers = self.dns_servers.consolidated();
         trace!("updating LookupAdmin with DNS servers = {:?}", servers);
 
         // Netstack2's LookupAdmin service does not implement
@@ -442,7 +442,7 @@ impl<'a> NetCfg<'a> {
         // a true error.
         let () = self
             .lookup_admin
-            .set_dns_servers(&mut servers.into_iter())
+            .set_dns_servers(&mut servers.iter_mut())
             .await
             .context("set DNS servers request")?
             .map_err(zx::Status::from_raw)

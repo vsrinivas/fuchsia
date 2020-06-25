@@ -33,7 +33,7 @@
 //! * Modifies the router state byt accessinc netcfg.
 //! * Updates local state.
 
-use fidl_fuchsia_net_name as fname;
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_router_config::{
     Id, Lif, Port, RouterAdminRequest, RouterStateGetPortsResponder, RouterStateRequest,
     SecurityFeatures,
@@ -77,35 +77,17 @@ macro_rules! internal_error {
     };
 }
 
-trait FromExt<T> {
-    fn from(f: T) -> Self;
-}
-
-impl FromExt<fidl_fuchsia_net::IpAddress> for fname::DnsServer_ {
-    /// Convert a [`fidl_fuchsia_net::IpAddress`] to a [`fname::DnsServer_`].
-    ///
-    /// The returned `fname::DnsServer_` will have its source set to static.
-    fn from(f: fidl_fuchsia_net::IpAddress) -> fname::DnsServer_ {
-        let socket_addr = match f {
-            fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-                fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
-                    address: addr,
-                    port: DEFAULT_DNS_PORT,
-                })
-            }
-            fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
-                fidl_fuchsia_net::SocketAddress::Ipv6(fidl_fuchsia_net::Ipv6SocketAddress {
-                    address: addr,
-                    port: DEFAULT_DNS_PORT,
-                    zone_index: 0,
-                })
-            }
-        };
-
-        fname::DnsServer_ {
-            address: Some(socket_addr),
-            source: Some(fname::DnsServerSource::StaticSource(fname::StaticDnsServerSource {})),
-        }
+fn dns_sockaddr_from_ip(ip: fnet::IpAddress) -> fnet::SocketAddress {
+    match ip {
+        fnet::IpAddress::Ipv4(addr) => fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+            address: addr,
+            port: DEFAULT_DNS_PORT,
+        }),
+        fnet::IpAddress::Ipv6(addr) => fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+            address: addr,
+            port: DEFAULT_DNS_PORT,
+            zone_index: 0,
+        }),
     }
 }
 
@@ -356,12 +338,7 @@ impl EventLoop {
                 match self
                     .device
                     .set_dns_resolvers(
-                        config
-                            .search
-                            .servers
-                            .into_iter()
-                            .map(<fname::DnsServer_ as FromExt<fidl_fuchsia_net::IpAddress>>::from)
-                            .collect::<Vec<_>>(),
+                        config.search.servers.into_iter().map(dns_sockaddr_from_ip).collect(),
                     )
                     .await
                 {

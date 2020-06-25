@@ -11,7 +11,7 @@ use {
     },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext as net_ext,
-    fidl_fuchsia_net_name::{self as fname, LookupAdminRequest, LookupAdminRequestStream},
+    fidl_fuchsia_net_name::{LookupAdminRequest, LookupAdminRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect,
@@ -80,7 +80,7 @@ impl<'a, T: ResolverLookup> SharedResolverConfigSink<'a, T> {
         let mut name_servers = NameServerConfigGroup::with_capacity(servers.len() * 2);
 
         name_servers.extend(servers.into_iter().flat_map(|server| {
-            let net_ext::SocketAddress(socket_addr) = server.address.into();
+            let net_ext::SocketAddress(socket_addr) = server.into();
             // Every server config gets UDP and TCP versions with
             // preference for UDP.
             std::iter::once(NameServerConfig {
@@ -357,7 +357,7 @@ async fn run_name_lookup<T: ResolverLookup>(
 
 /// Serves `stream` and forwards received configurations to `sink`.
 async fn run_lookup_admin(
-    sink: mpsc::Sender<dns::policy::DnsServersListConfig>,
+    sink: mpsc::Sender<dns::policy::ServerList>,
     policy_state: Arc<dns::policy::ServerConfigState>,
     stream: LookupAdminRequestStream,
 ) -> Result<(), anyhow::Error> {
@@ -372,12 +372,10 @@ async fn run_lookup_admin(
                 }
                 LookupAdminRequest::SetDnsServers { servers, responder } => {
                     let (mut response, ret) = if servers.iter().any(|s| {
-                        // Addresses must be provided, and provided addresses must not be
-                        // an unspecified or multicast address.
-                        s.address.map_or(true, |a| {
-                            let ip = net_ext::SocketAddress::from(a).0.ip();
-                            ip.is_multicast() || ip.is_unspecified()
-                        })
+                        // Addresses must not be an unspecified or multicast address.
+                        let net_ext::SocketAddress(sockaddr) = From::from(*s);
+                        let ip = sockaddr.ip();
+                        ip.is_multicast() || ip.is_unspecified()
                     }) {
                         (Err(zx::Status::INVALID_ARGS.into_raw()), None)
                     } else {
@@ -387,9 +385,7 @@ async fn run_lookup_admin(
                     Ok(ret)
                 }
                 LookupAdminRequest::GetDnsServers { responder } => {
-                    let () = responder.send(
-                        &mut policy_state.consolidate_map(|s| s.clone().into()).into_iter(),
-                    )?;
+                    let () = responder.send(&mut policy_state.consolidate().iter_mut())?;
                     Ok(None)
                 }
             }
@@ -412,7 +408,7 @@ fn create_policy_fut<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     config_state: Arc<dns::policy::ServerConfigState>,
 ) -> (
-    mpsc::Sender<dns::policy::DnsServersListConfig>,
+    mpsc::Sender<dns::policy::ServerList>,
     impl futures::Future<Output = Result<(), anyhow::Error>> + '_,
 ) {
     // Create configuration channel pair. A small buffer in the channel allows
@@ -441,23 +437,10 @@ fn add_config_state_inspect(
         async move {
             let srv = fuchsia_inspect::Inspector::new();
             let server_list = config_state.consolidate();
-            for (i, server) in server_list.iter().enumerate() {
+            for (i, server) in server_list.into_iter().enumerate() {
                 let child = srv.root().create_child(format!("{}", i));
-                let net_ext::SocketAddress(addr) = server.address.into();
+                let net_ext::SocketAddress(addr) = server.into();
                 let () = child.record_string("address", format!("{}", addr));
-                let source = child.create_child("source");
-                let (name, source_interface) = match &server.source {
-                    fname::DnsServerSource::StaticSource(_static_source) => ("static", None),
-                    fname::DnsServerSource::Dhcp(dhcp) => ("DHCP", dhcp.source_interface),
-                    fname::DnsServerSource::Ndp(ndp) => ("NDP", ndp.source_interface),
-                    fname::DnsServerSource::Dhcpv6(dhcpv6) => ("DHCPv6", dhcpv6.source_interface),
-                };
-                let () = source.record_string("type", name);
-                if let Some(source_interface) = source_interface {
-                    let () = source.record_uint("interface", source_interface);
-                }
-
-                let () = child.record(source);
                 let () = srv.root().record(child);
             }
             Ok(srv)
@@ -523,19 +506,19 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::{
+        net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+        str::FromStr,
+        sync::Arc,
+    };
+
+    use fidl_fuchsia_net_name as fname;
 
     use dns::test_util::*;
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::assert_inspect_tree;
     use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip_v4, std_ip_v6};
-    use std::net::SocketAddr;
-    use std::{
-        net::{IpAddr, Ipv4Addr, Ipv6Addr},
-        str::FromStr,
-        sync::Arc,
-    };
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
@@ -544,6 +527,8 @@ mod tests {
         lookup::Ipv4Lookup, lookup::Ipv6Lookup, lookup::Lookup, lookup::ReverseLookup,
         lookup_ip::LookupIp,
     };
+
+    use super::*;
 
     const IPV4_LOOPBACK: fnet::Ipv4Address = fidl_ip_v4!(127.0.0.1);
     const IPV6_LOOPBACK: fnet::Ipv6Address = fidl_ip_v6!(::1);
@@ -821,7 +806,7 @@ mod tests {
         async fn run_config_sink<F, Fut>(&self, f: F)
         where
             Fut: futures::Future<Output = ()>,
-            F: FnOnce(mpsc::Sender<dns::policy::DnsServersListConfig>) -> Fut,
+            F: FnOnce(mpsc::Sender<dns::policy::ServerList>) -> Fut,
         {
             let (sink, policy_fut) =
                 create_policy_fut(&self.shared_resolver, self.config_state.clone());
@@ -963,7 +948,7 @@ mod tests {
         // Set servers.
         env.run_admin(|proxy| async move {
             let () = proxy
-                .set_dns_servers(&mut vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER].into_iter())
+                .set_dns_servers(&mut vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER].iter_mut())
                 .await
                 .expect("Failed to call SetDnsServers")
                 .expect("SetDnsServers error");
@@ -973,7 +958,7 @@ mod tests {
             env.shared_resolver.read().config.name_servers().to_vec(),
             vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER]
                 .into_iter()
-                .map(|s| net_ext::SocketAddress::from(s.address.unwrap()).0)
+                .map(|s| net_ext::SocketAddress::from(s).0)
                 .flat_map(|x| to_server_configs(x).to_vec().into_iter())
                 .collect::<Vec<_>>()
         );
@@ -1023,35 +1008,14 @@ mod tests {
         env.run_admin(|proxy| async move {
             // Attempt to set bad addresses.
 
-            // `None` address not allowed.
-            let status = proxy
-                .set_dns_servers(
-                    &mut vec![fname::DnsServer_ {
-                        address: None,
-                        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
-                            source_interface: Some(1),
-                        })),
-                    }]
-                    .into_iter(),
-                )
-                .await
-                .expect("Failed to call SetDnsServers")
-                .expect_err("SetDnsServers should fail for multicast address");
-            assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
-
             // Multicast not allowed.
             let status = proxy
                 .set_dns_servers(
-                    &mut vec![fname::DnsServer_ {
-                        address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
-                            address: fnet::Ipv4Address { addr: [224, 0, 0, 1] },
-                            port: DEFAULT_PORT,
-                        })),
-                        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
-                            source_interface: Some(1),
-                        })),
-                    }]
-                    .into_iter(),
+                    &mut vec![fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+                        address: fnet::Ipv4Address { addr: [224, 0, 0, 1] },
+                        port: DEFAULT_PORT,
+                    })]
+                    .iter_mut(),
                 )
                 .await
                 .expect("Failed to call SetDnsServers")
@@ -1061,17 +1025,12 @@ mod tests {
             // Unspecified not allowed.
             let status = proxy
                 .set_dns_servers(
-                    &mut vec![fname::DnsServer_ {
-                        address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                            address: fnet::Ipv6Address { addr: [0; 16] },
-                            port: DEFAULT_PORT,
-                            zone_index: 0,
-                        })),
-                        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
-                            source_interface: Some(1),
-                        })),
-                    }]
-                    .into_iter(),
+                    &mut vec![fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+                        address: fnet::Ipv6Address { addr: [0; 16] },
+                        port: DEFAULT_PORT,
+                        zone_index: 0,
+                    })]
+                    .iter_mut(),
                 )
                 .await
                 .expect("Failed to call SetDnsServers")
@@ -1122,30 +1081,15 @@ mod tests {
             servers: {
                 "0": {
                     address: "[2001:4860:4860::4444]:53",
-                    source: {
-                        "type": "NDP",
-                        interface: 2u64
-                    }
                 },
                 "1": {
                     address: "8.8.4.4:53",
-                    source: {
-                        "type": "DHCP",
-                        interface: 1u64
-                    }
                 },
                 "2": {
                     address: "[2002:4860:4860::4444]:53",
-                    source: {
-                        "type": "DHCPv6",
-                        interface: 3u64
-                    }
                 },
                 "3": {
                     address: "8.8.8.8:53",
-                    source: {
-                        "type": "static",
-                    }
                 },
             }
         });

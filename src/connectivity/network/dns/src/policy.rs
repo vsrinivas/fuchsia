@@ -3,93 +3,19 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_name as name;
 use futures::sink::Sink;
 use futures::task::{Context, Poll};
 use futures::SinkExt;
 use parking_lot::Mutex;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::marker::Unpin;
 use std::pin::Pin;
 use std::sync::Arc;
 
-/// Alias for a list of [`Server`].
+/// Alias for a list of [`net::SocketAddress`].
 ///
 /// The servers in the list are in priority order.
-pub type ServerList = Vec<Server>;
-
-/// A DNS server.
-///
-/// `Server` is equivalent to [`name::DnsServer_`] where the `Option` fields are
-/// realized. That gives us more type-safety when dealing with server
-/// configurations, consolidating them into a valid `Server` provided by the
-/// `TryFrom<name::DnsServer_>` impl.
-#[derive(PartialEq, Debug)]
-pub struct Server {
-    /// The socket address where the server can be reached.
-    pub address: net::SocketAddress,
-    /// The configuration source.
-    pub source: name::DnsServerSource,
-}
-
-impl Clone for Server {
-    // NOTE: name::DnsServerSource does not derive `Clone`, we need to implement
-    // it manually.
-    fn clone(&self) -> Self {
-        Self {
-            address: self.address.clone(),
-            source: match &self.source {
-                name::DnsServerSource::StaticSource(_satic_source) => {
-                    name::DnsServerSource::StaticSource(name::StaticDnsServerSource {})
-                }
-                name::DnsServerSource::Dhcp(dhcp) => {
-                    name::DnsServerSource::Dhcp(name::DhcpDnsServerSource {
-                        source_interface: dhcp.source_interface.clone(),
-                    })
-                }
-                name::DnsServerSource::Ndp(ndp) => {
-                    name::DnsServerSource::Ndp(name::NdpDnsServerSource {
-                        source_interface: ndp.source_interface.clone(),
-                    })
-                }
-                name::DnsServerSource::Dhcpv6(dhcpv6) => {
-                    name::DnsServerSource::Dhcpv6(name::Dhcpv6DnsServerSource {
-                        source_interface: dhcpv6.source_interface.clone(),
-                    })
-                }
-            },
-        }
-    }
-}
-
-impl From<Server> for name::DnsServer_ {
-    fn from(s: Server) -> name::DnsServer_ {
-        name::DnsServer_ { address: Some(s.address), source: Some(s.source) }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct MissingAddressError;
-
-impl TryFrom<name::DnsServer_> for Server {
-    type Error = MissingAddressError;
-
-    fn try_from(fidl: name::DnsServer_) -> Result<Self, Self::Error> {
-        let name::DnsServer_ { address, source } = fidl;
-        match address {
-            Some(address) => Ok(Server {
-                address,
-                source: source
-                    .unwrap_or(name::DnsServerSource::StaticSource(name::StaticDnsServerSource {})),
-            }),
-            None => Err(MissingAddressError),
-        }
-    }
-}
-
-/// The list of DNS servers used in [`ServerConfigSink`].
-pub type DnsServersListConfig = Vec<name::DnsServer_>;
+pub type ServerList = Vec<net::SocketAddress>;
 
 /// Holds current [`ServerConfigSink`] state.
 #[derive(Debug)]
@@ -108,31 +34,26 @@ impl ServerConfigState {
     }
 
     /// Sets the servers.
-    fn set_servers(&self, servers: impl IntoIterator<Item = Server>) {
+    fn set_servers(&self, servers: impl IntoIterator<Item = net::SocketAddress>) {
         self.0.lock().servers = servers.into_iter().collect();
     }
 
     /// Consolidates the current configuration into a vector of [`Server`]s in
     /// priority order.
+    ///
+    /// The returned servers will be deduplicated.
     pub fn consolidate(&self) -> ServerList {
-        self.consolidate_map(|s| s.clone())
-    }
-
-    /// Consolidates the current configuration applying a mapping function `f`
-    /// to every item and returns the collected `Vec`.
-    pub fn consolidate_map<T: 'static, F: Fn(&Server) -> T>(&self, f: F) -> Vec<T> {
         let mut set = HashSet::new();
         let inner = self.0.lock();
-        inner.servers.iter().filter(move |s| set.insert(s.address)).map(f).collect()
+        inner.servers.iter().filter(move |s| set.insert(*s)).cloned().collect()
     }
 }
 
 /// A handler for configuring name servers.
 ///
-/// `ServerConfigSink` takes configurations in the form of
-/// [`ServerConfiguration`] and applies a simple policy to consolidate the
-/// configurations into a single list of servers to use when resolving names
-/// through DNS:
+/// `ServerConfigSink` takes configurations in the form of [`ServerList`]
+/// and applies a simple policy to consolidate the configurations into a single
+/// list of servers to use when resolving names through DNS:
 ///   - Any duplicates will be discarded.
 ///
 /// `ServerConfigSink` is instantiated with a [`Sink`] `S` whose `Item` is
@@ -140,8 +61,8 @@ impl ServerConfigState {
 /// sequentially. Every new item received by `S` is a fully assembled
 /// [`ServerList`], it may discard any previous configurations it received.
 ///
-/// `ServerConfigSink` itself is a [`Sink`] that takes [`ServerConfiguration`]
-/// items, consolidates all configurations using the policy described above and
+/// `ServerConfigSink` itself is a [`Sink`] that takes [`ServerList`] items,
+/// consolidates all configurations using the policy described above and
 /// forwards the result to `S`.
 pub struct ServerConfigSink<S> {
     state: Arc<ServerConfigState>,
@@ -166,12 +87,12 @@ impl<S: Sink<ServerList> + Unpin> ServerConfigSink<S> {
 
     /// Shorthand to update the servers.
     ///
-    /// Equivalent to [`Sink::send`] with  [`ServerConfig`].
+    /// Equivalent to [`Sink::send`] with [`ServerList`].
     pub async fn set_servers(
         &mut self,
-        servers: impl IntoIterator<Item = Server>,
+        servers: impl IntoIterator<Item = net::SocketAddress>,
     ) -> Result<(), ServerConfigSinkError<S::Error>> {
-        self.send(servers.into_iter().map(Into::into).collect()).await
+        self.send(servers.into_iter().collect()).await
     }
 
     /// Gets a [`ServerConfigState`] which provides shared access to this
@@ -187,7 +108,7 @@ pub enum ServerConfigSinkError<E> {
     SinkError(E),
 }
 
-impl<S: Sink<ServerList> + Unpin> Sink<DnsServersListConfig> for ServerConfigSink<S> {
+impl<S: Sink<ServerList> + Unpin> Sink<ServerList> for ServerConfigSink<S> {
     type Error = ServerConfigSinkError<S::Error>;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -196,17 +117,12 @@ impl<S: Sink<ServerList> + Unpin> Sink<DnsServersListConfig> for ServerConfigSin
             .map_err(ServerConfigSinkError::SinkError)
     }
 
-    fn start_send(self: Pin<&mut Self>, item: DnsServersListConfig) -> Result<(), Self::Error> {
+    fn start_send(self: Pin<&mut Self>, item: ServerList) -> Result<(), Self::Error> {
         let me = self.get_mut();
-        me.state.set_servers(
-            item.into_iter()
-                .try_fold(Vec::new(), |mut acc, s| {
-                    acc.push(Server::try_from(s)?);
-                    Ok(acc)
-                })
-                .map_err(|MissingAddressError {}| ServerConfigSinkError::InvalidArg)?,
-        );
+        let () = me.state.set_servers(item);
 
+        // Send the conslidated list of servers following the policy (documented
+        // on `ServerConfigSink`) to the configurations sink.
         Pin::new(&mut me.changes_sink)
             .start_send(me.state.consolidate())
             .map_err(ServerConfigSinkError::SinkError)
@@ -227,24 +143,23 @@ impl<S: Sink<ServerList> + Unpin> Sink<DnsServersListConfig> for ServerConfigSin
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_util::*;
-    use fidl_fuchsia_net_name as fname;
-    use fuchsia_async as fasync;
-    use futures::StreamExt;
     use std::convert::TryInto;
 
-    fn to_static_dns_server_list(l: impl IntoIterator<Item = fname::DnsServer_>) -> ServerList {
-        l.into_iter().map(|s| s.try_into().unwrap()).collect()
-    }
+    use fidl_fuchsia_net as fnet;
+    use fuchsia_async as fasync;
+
+    use futures::StreamExt;
+
+    use super::*;
+    use crate::test_util::*;
 
     #[test]
     fn test_consolidate() {
         let policy = ServerConfigSink::new(futures::sink::drain());
 
-        let test = |servers: Vec<fname::DnsServer_>, expected: Vec<fname::DnsServer_>| {
-            policy.state.set_servers(to_static_dns_server_list(servers));
-            assert_eq!(policy.state.consolidate(), to_static_dns_server_list(expected));
+        let test = |servers: Vec<fnet::SocketAddress>, expected: Vec<fnet::SocketAddress>| {
+            policy.state.set_servers(servers);
+            assert_eq!(policy.state.consolidate(), expected);
         };
 
         // Empty inputs become empty output.
@@ -259,7 +174,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_configuration_sink() {
-        let (mut src_snd, src_rcv) = futures::channel::mpsc::channel::<DnsServersListConfig>(1);
+        let (mut src_snd, src_rcv) = futures::channel::mpsc::channel::<ServerList>(1);
         let (dst_snd, mut dst_rcv) = futures::channel::mpsc::channel::<ServerList>(1);
         let policy = ServerConfigSink::new(dst_snd);
 
