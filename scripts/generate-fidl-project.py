@@ -102,24 +102,31 @@ def gen_fidl_project(fuchsia_dir="", generated_sources_path="", fidl_project_pat
     with open(generated_sources_path, 'r') as f:
         artifacts = json.load(f)
 
+    processed = set()
     for artifact in artifacts:
-        if artifact.endswith('.fidl.json'):
-            deps = find_deps(artifact, fuchsia_dir=fuchsia_dir)
-            if deps is None:
-                continue
+        if artifact in processed:
+            continue
 
-            # Get JSON filename out of artifact
-            library_name = os.path.basename(artifact)
-            # Remove .fidl.json suffix
-            library_name = library_name[:-10]
+        if not artifact.endswith('.fidl.json'):
+            continue
 
-            result.append({
-                'name': library_name,
-                'json': f"{fuchsia_dir}/out/default/{artifact}",
-                'files': find_files(library_name, artifact, fuchsia_dir=fuchsia_dir),
-                'deps': deps,
-                'bindings': {},  # TODO
-            })
+        deps = find_deps(artifact, fuchsia_dir=fuchsia_dir)
+        if deps is None:
+            continue
+
+        # Get JSON filename out of artifact
+        library_name = os.path.basename(artifact)
+        # Remove .fidl.json suffix
+        library_name = library_name[:-10]
+
+        processed.add(artifact)
+        result.append({
+            'name': library_name,
+            'json': f"{fuchsia_dir}/out/default/{artifact}",
+            'files': find_files(library_name, artifact, fuchsia_dir=fuchsia_dir),
+            'deps': deps,
+            'bindings': {},  # TODO
+        })
 
     with open(fidl_project_path, 'w') as f:
         json.dump(result, f, indent=4, sort_keys=True)
