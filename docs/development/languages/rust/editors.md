@@ -3,13 +3,20 @@
 As there is no specific editor for Rust development on Fuchsia, `vim` and `VS Code` are the
 most popular options. However, documentation for setting up any editor is welcome in this document.
 
-## Native code completion setup
+## `rust-analyzer` setup {#rust-analyzer}
+
 [rust-analyzer](https://rust-analyzer.github.io/) is a [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
 implementation for Rust. This is the recommended workflow and will work with minimal editor setup.
 
 `rust-analyzer` uses a file in the `out/` directory called `rust-project.json` that is
 generated based on the build graph at `gn gen` time. A symlink to the `rust-project.json` is located
 in the root directory of the Fuchsia tree.
+
+The `rust-project.json` file format is currently unstable. Sometimes this can cause an
+unexpected version mismatch where GN produces a `rust-project.json` that `rust-analyzer` is
+not expecting, causing `rust-analyzer` to not work correctly.
+
+Currently, use [the latest version of `rust-analyzer`][rust-analyzer-latest].
 
 ## Alternative setup with `Cargo.toml` files
 This is a volunteer-maintained workflow that exists because many tools in the Rust ecosystem assume
@@ -79,20 +86,37 @@ for instructions on making it work better with Rust.
 
 ## Visual Studio Code {#visual-studio-code}
 
-### rust-analyzer (Supported workflow)
-To install the rust-analyzer plugin for VSCode, see [VS Code](https://rust-analyzer.github.io/manual.html#vs-code).
+To use `rust-analyzer` with VSCode, use the latest stable version of
+VSCode since `rust-analyzer` frequently depends on recent language server features.
+VSCode can be downloaded from the
+[official VSCode website][vscode-download].
+It is recommended to:
 
-Once you have installed the rust-analyzer plugin, add the following configurations to your `settings.json` file:
+* Keep automatic updates turned on (not available for Linux, see these
+  [update instructions][vscode-update]).
+* If you are working on confidential code,
+  [disable telemetry reporting][vscode-disable-telemetry] as a precaution.
+
+### `rust-analyzer` VSCode extension (supported workflow)
+
+You can install the `rust-analyzer` extension directly
+[from the VSCode marketplace][vscode-rust-analyzer].
+If you notice that `rust-analyzer` is broken, it could be due to a breaking
+change in the `rust-project.json` file. You may need to
+[manually downgrade rust-analyzer][vscode-downgrade]
+to [a currently supported version](#rust-analyzer).
+
+Once you have installed the rust-analyzer extension, add the following
+configurations to your `settings.json` file:
 
 Note: To access the VS Code settings, click the **Code** menu, then **Preferences**, then **Settings**.
 Scroll and click on **Edit in settings.json**.
 
 ```javascript
 {
-  // disable cargo-watch
-  "rust-analyzer.cargo-watch.enable": false,
   // disable cargo check on save
-  "rust-analyzer.cargo-watch.allTargets": false,
+  "rust-analyzer.checkOnSave.enable": false,
+  "rust-analyzer.checkOnSave.allTargets": false,
 }
 ```
 
@@ -279,3 +303,10 @@ as the root of your Sublime project. There are two ways you can do this:
 inside one Sublime window, and works even if you have the broader `fuchsia` folder also open.
 
 You may need to restart Sublime after these steps.
+
+[rust-analyzer-latest]: https://github.com/rust-analyzer/rust-analyzer/releases
+[vscode-download]: https://code.visualstudio.com/Download
+[vscode-update]:  https://vscode-docs.readthedocs.io/en/stable/supporting/howtoupdate/
+[vscode-disable-telemetry]: https://code.visualstudio.com/docs/getstarted/telemetry#_disable-telemetry-reporting
+[vscode-rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
+[vscode-downgrade]: https://code.visualstudio.com/updates/v1_30#_install-previous-versions
