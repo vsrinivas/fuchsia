@@ -72,10 +72,11 @@ class Device : public PciDeviceType,
     }
   };
 
+  // This structure contains all bookkeeping and state for a device's
+  // configured IRQ mode. It is initialized to PCI_IRQ_MODE_DISABLED.
   struct Irqs {
-    pci_irq_mode_t mode;
-    zx::msi msi_allocation;
-    zx_info_msi_t msi_info;
+    pci_irq_mode_t mode;     // The mode currently configured.
+    zx::msi msi_allocation;  // The MSI allocation object for MSI & MSI-X
   };
 
   struct Capabilities {

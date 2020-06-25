@@ -84,6 +84,8 @@ zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
   ZX_DEBUG_ASSERT(!irqs_.msi_allocation);
 
   if (!fbl::is_pow2(irq_cnt) || irq_cnt > caps_.msi->vectors_avail()) {
+    zxlogf(DEBUG, "[%s] EnableMsi: bad irq count = %u, available = %u\n", cfg_->addr(), irq_cnt,
+           caps_.msi->vectors_avail());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -93,16 +95,17 @@ zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
     return st;
   }
 
-  st = msi.get_info(ZX_INFO_MSI, &irqs_.msi_info, sizeof(irqs_.msi_info), nullptr, nullptr);
+  zx_info_msi_t msi_info;
+  st = msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr);
   if (st != ZX_OK) {
     return st;
   }
-  ZX_DEBUG_ASSERT(irqs_.msi_info.num_irq == irq_cnt);
-  ZX_DEBUG_ASSERT(irqs_.msi_info.interrupt_count == 0);
+  ZX_DEBUG_ASSERT(msi_info.num_irq == irq_cnt);
+  ZX_DEBUG_ASSERT(msi_info.interrupt_count == 0);
 
   MsiControlReg ctrl = {.value = cfg_->Read(caps_.msi->ctrl())};
-  cfg_->Write(caps_.msi->tgt_addr(), irqs_.msi_info.target_addr);
-  cfg_->Write(caps_.msi->tgt_data(), irqs_.msi_info.target_data);
+  cfg_->Write(caps_.msi->tgt_addr(), msi_info.target_addr);
+  cfg_->Write(caps_.msi->tgt_data(), msi_info.target_data);
   ctrl.set_mm_enable(MsiCapability::CountToMmc(irq_cnt));
   ctrl.set_enable(1);
   cfg_->Write(caps_.msi->ctrl(), ctrl.value);
@@ -132,7 +135,6 @@ zx_status_t Device::DisableMsi() {
   ctrl.set_enable(0);
   cfg_->Write(caps_.msi->ctrl(), ctrl.value);
 
-  irqs_.msi_info = {};
   irqs_.msi_allocation.reset();
   irqs_.mode = PCI_IRQ_MODE_DISABLED;
   return ZX_OK;

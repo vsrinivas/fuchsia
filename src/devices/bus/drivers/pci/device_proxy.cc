@@ -142,7 +142,17 @@ zx_status_t DeviceProxy::PciEnableBusMaster(bool enable) {
 zx_status_t DeviceProxy::PciResetDevice() { DEVICE_PROXY_UNIMPLEMENTED; }
 
 zx_status_t DeviceProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
-  DEVICE_PROXY_UNIMPLEMENTED;
+  PciRpcMsg req = {};
+  PciRpcMsg resp = {};
+
+  req.irq.which_irq = which_irq;
+  zx_handle_t irq_handle;
+  zx_status_t st = RpcRequest(PCI_OP_MAP_INTERRUPT, &irq_handle, &req, &resp);
+  if (st == ZX_OK) {
+    out_handle->reset(irq_handle);
+  }
+
+  return st;
 }
 
 zx_status_t DeviceProxy::PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {

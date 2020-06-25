@@ -3,11 +3,16 @@
 // found in the LICENSE file.
 
 #include <lib/zx/channel.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/vmo.h>
 #include <string.h>
 
 #include "common.h"
 #include "device.h"
 // TODO(ZX-3927): Stop depending on the types in this file.
+#include <lib/zx/status.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/pci.h>
 
 #define RPC_ENTRY zxlogf(DEBUG, "[%s] %s: entry", cfg_->addr(), __func__)
@@ -86,11 +91,8 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
     case PCI_OP_SET_IRQ_MODE:
       return RpcSetIrqMode(ch);
       break;
-    case PCI_OP_CONNECT_SYSMEM:
-    case PCI_OP_MAX:
-    case PCI_OP_INVALID: {
+    default:
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
-    }
   };
 
   return ZX_OK;
@@ -161,8 +163,8 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   }
 
-  zxlogf(TRACE, "%s Write%u[%#x] <- %#x", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
-         request_.cfg.value);
+  zxlogf(TRACE, "[%s] Write%u[%#x] <- %#x", cfg_->addr(), request_.cfg.width * 8,
+         request_.cfg.offset, request_.cfg.value);
   return RpcReply(ch, ZX_OK);
 }
 
@@ -294,19 +296,53 @@ zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
 zx_status_t Device::RpcQueryIrqMode(const zx::unowned_channel& ch) {
   response_.irq.max_irqs = 0;
   zx_status_t st = QueryIrqMode(request_.irq.mode, &response_.irq.max_irqs);
-  zxlogf(TRACE, "[%s] QueryIrqMode { mode = %u, max_irqs = %u, status = %u }", cfg_->addr(),
-         request_.irq.mode, response_.irq.max_irqs, st);
+  zxlogf(DEBUG, "[%s] QueryIrqMode { mode = %u, max_irqs = %u, status = %s }", cfg_->addr(),
+         request_.irq.mode, response_.irq.max_irqs, zx_status_get_string(st));
   return RpcReply(ch, st);
 }
 
 zx_status_t Device::RpcSetIrqMode(const zx::unowned_channel& ch) {
   zx_status_t st = SetIrqMode(request_.irq.mode, request_.irq.requested_irqs);
-  zxlogf(TRACE, "[%s] SetIrqMode { mode = %u, requested_irqs = %u, status = %u }", cfg_->addr(),
-         request_.irq.mode, request_.irq.requested_irqs, st);
+  zxlogf(DEBUG, "[%s] SetIrqMode { mode = %u, requested_irqs = %u, status = %s }", cfg_->addr(),
+         request_.irq.mode, request_.irq.requested_irqs, zx_status_get_string(st));
   return RpcReply(ch, st);
 }
 
-zx_status_t Device::RpcMapInterrupt(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
+zx_status_t Device::RpcMapInterrupt(const zx::unowned_channel& ch) {
+  fbl::AutoLock dev_lock(&dev_lock_);
+
+  if (irqs_.mode == PCI_IRQ_MODE_DISABLED) {
+    return RpcReply(ch, ZX_ERR_BAD_STATE);
+  }
+
+  if (irqs_.mode == PCI_IRQ_MODE_LEGACY || irqs_.mode == PCI_IRQ_MODE_MSI_X) {
+    return RpcReply(ch, ZX_ERR_NOT_SUPPORTED);
+  }
+
+  zx::status<ddk::MmioView> view_res = cfg_->get_view();
+  if (!view_res.is_ok()) {
+    return RpcReply(ch, view_res.status_value());
+  }
+
+  zx_status_t status;
+  zx_handle_t handle;
+  size_t handle_cnt = 0;
+  switch (irqs_.mode) {
+    case PCI_IRQ_MODE_MSI:
+      status = zx_msi_create(irqs_.msi_allocation.get(), /*options=*/0, request_.irq.which_irq,
+                             view_res->get_vmo()->get(), view_res->get_offset() + caps_.msi->base(),
+                             &handle);
+  }
+
+  if (status == ZX_OK) {
+    handle_cnt++;
+  }
+
+  zxlogf(DEBUG, "[%s] MapInterrupt { irq = %u, status = %s }", cfg_->addr(), request_.irq.which_irq,
+         zx_status_get_string(status));
+  return RpcReply(ch, status, &handle, handle_cnt);
+}
+
 zx_status_t Device::RpcResetDevice(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
 
 }  // namespace pci

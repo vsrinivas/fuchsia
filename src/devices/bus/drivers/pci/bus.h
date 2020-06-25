@@ -55,7 +55,7 @@ class Bus : public PciBusType, public BusDeviceInterface {
 
   zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) __TA_EXCLUDES(devices_lock_) final {
     fbl::AutoLock devices_lock(&devices_lock_);
-    return ZX_ERR_NOT_SUPPORTED;
+    return pciroot().AllocateMsi(count, false, msi);
   }
 
  private:

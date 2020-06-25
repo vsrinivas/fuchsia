@@ -111,8 +111,8 @@ zx_status_t Bus::MapEcam(void) {
     return status;
   }
 
-  status =
-      ddk::MmioBuffer::Create(0, size, zx::vmo(info_.ecam_vmo), ZX_CACHE_POLICY_UNCACHED, &ecam_);
+  status = ddk::MmioBuffer::Create(0, size, zx::vmo(info_.ecam_vmo),
+                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &ecam_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "couldn't map ecam vmo: %d!", status);
     return status;

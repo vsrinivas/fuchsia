@@ -4,9 +4,15 @@
 #include "protocol_test_driver.h"
 
 #include <fuchsia/device/test/c/fidl.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/object.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
+#include <threads.h>
+#include <zircon/errors.h>
 #include <zircon/hw/pci.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/threads.h>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
@@ -435,6 +441,63 @@ TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
   ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
   ASSERT_EQ(max_irqs, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
+  // Setting the same mode twice should work if no IRQs have been allocated off of this one.
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_DISABLED, 0));
+}
+
+const size_t kWaitDeadlineSecs = 5u;
+bool WaitForThreadState(thrd_t thrd, zx_thread_state_t state) {
+  zx_status_t status;
+  zx_handle_t thread_handle = thrd_get_zx_handle(thrd);
+  zx_info_thread_t info = {};
+  zx::time deadline = zx::deadline_after(zx::sec(kWaitDeadlineSecs));
+  while (zx::clock::get_monotonic() < deadline) {
+    status =
+        zx_object_get_info(thread_handle, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+    if (status == ZX_OK && info.state == state) {
+      return true;
+    }
+    zx::nanosleep(zx::deadline_after(zx::usec(100)));
+  }
+  return false;
+}
+
+TEST_F(PciProtocolTests, MapInterrupt) {
+  uint32_t max_irqs;
+  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
+  zx::interrupt interrupt;
+  for (uint32_t int_id = 0; int_id < max_irqs; int_id++) {
+    ASSERT_OK(pci().MapInterrupt(int_id, &interrupt));
+    ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
+
+    // Verify that we can wait on the provided interrupt and that our thread
+    // ends up in the correct state (that it was destroyed out from under it).
+    thrd_t waiter_thrd;
+    auto waiter_entry = [](void* arg) -> int {
+      auto* interrupt = reinterpret_cast<zx::interrupt*>(arg);
+      interrupt->wait(nullptr);
+      return (interrupt->wait(nullptr) == ZX_ERR_CANCELED);
+    };
+    ASSERT_EQ(thrd_create(&waiter_thrd, waiter_entry, &interrupt), thrd_success);
+    ASSERT_TRUE(WaitForThreadState(waiter_thrd, ZX_THREAD_STATE_BLOCKED_INTERRUPT));
+    interrupt.destroy();
+    int result;
+    thrd_join(waiter_thrd, &result);
+    ASSERT_TRUE(result);
+    interrupt.reset();
+  }
+
+  // Invalid ids
+  ASSERT_NOT_OK(pci().MapInterrupt(-1, &interrupt));
+  ASSERT_NOT_OK(pci().MapInterrupt(max_irqs + 1, &interrupt));
+  // Duplicate ids
+  {
+    zx::interrupt int_0, int_0_dup;
+    ASSERT_OK(pci().MapInterrupt(0, &int_0));
+    ASSERT_STATUS(pci().MapInterrupt(0, &int_0_dup), ZX_ERR_ALREADY_BOUND);
+  }
 }
 
 zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
