@@ -1435,6 +1435,10 @@ action("flash_script") {
   ]
 }
 
+if (override_recovery_label != "") {
+  default_image_deps += [ override_recovery_label ]
+}
+
 paver_targets = [
   {
     name = "netboot-script"
