@@ -86,6 +86,8 @@ class WaitQueueState {
  public:
   WaitQueueState() = default;
 
+  ~WaitQueueState();
+
   // Disallow copying.
   WaitQueueState(const WaitQueueState&) = delete;
   WaitQueueState& operator=(const WaitQueueState&) = delete;
@@ -93,10 +95,36 @@ class WaitQueueState {
   bool IsHead() const { return heads_node_.InContainer(); }
   bool InWaitQueue() const { return IsHead() || sublist_node_.InContainer(); }
 
+  zx_status_t BlockedStatus() const TA_REQ(thread_lock) { return blocked_status_; }
+
   void Block(Interruptible interruptible, zx_status_t status) TA_REQ(thread_lock);
 
   void UnblockIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+
+  // Returns whether a reschedule needs to be performed.
+  bool Unsleep(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
   bool UnsleepIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+
+  void UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate)
+      TA_REQ(thread_lock);
+
+  void AssertNoOwnedWaitQueues() const TA_REQ(thread_lock) {
+    DEBUG_ASSERT(owned_wait_queues_.is_empty());
+  }
+
+  void AssertNotBlocked() const TA_REQ(thread_lock) {
+    DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
+    DEBUG_ASSERT(!InWaitQueue());
+  }
+
+ private:
+  // WaitQueues, WaitQueueCollections, and their List types, can
+  // directly manipulate the contents of the per-thread state, for now.
+  friend class OwnedWaitQueue;
+  friend class WaitQueue;
+  friend class WaitQueueCollection;
+  friend struct WaitQueueHeadsTrait;
+  friend struct WaitQueueSublistTrait;
 
   // If blocked, a pointer to the WaitQueue the Thread is on.
   WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
@@ -126,11 +154,6 @@ class WaitQueueState {
 
   // Return code if woken up abnormally from suspend, sleep, or block.
   zx_status_t blocked_status_ = ZX_OK;
-
-  // TODO(54383) More of WaitQueueState should be private than this.
- private:
-  // WaitQueues can directly manipulate the contents of the per-thread state.
-  friend class WaitQueue;
 
   // Dumping routines are allowed to see inside us.
   friend void dump_thread_locked(Thread* t, bool full_dump);

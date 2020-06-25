@@ -130,12 +130,30 @@ void WaitQueueState::UnblockIfInterruptible(Thread* thread, zx_status_t status) 
   }
 }
 
+bool WaitQueueState::Unsleep(Thread* thread, zx_status_t status) {
+  blocked_status_ = status;
+  return Scheduler::Unblock(thread);
+}
+
 bool WaitQueueState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) {
   if (interruptible_ == Interruptible::Yes) {
-    blocked_status_ = status;
-    return Scheduler::Unblock(thread);
+    return Unsleep(thread, status);
   }
   return false;
+}
+
+void WaitQueueState::UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate) {
+  if (blocking_wait_queue_) {
+    WaitQueue::PriorityChanged(thread, priority, propagate);
+  }
+}
+
+WaitQueueState::~WaitQueueState() {
+  DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
+
+  // owned_wait_queues_ is a fbl:: list of unmanaged pointers.  It will debug
+  // assert if it is not empty when it destructs; we do not need to do so
+  // here.
 }
 
 // Default constructor/destructor.
@@ -146,12 +164,6 @@ Thread::~Thread() {
   // list.
   DEBUG_ASSERT(!thread_list_node_.InContainer());
   DEBUG_ASSERT(!migrate_list_node_.InContainer());
-
-  DEBUG_ASSERT(wait_queue_state_.blocking_wait_queue_ == nullptr);
-
-  // owned_wait_queues is a fbl:: list of unmanaged pointers.  It will debug
-  // assert if it is not empty when it destructs; we do not need to do so
-  // here.
 }
 
 void init_thread_struct(Thread* t, const char* name) {
@@ -437,8 +449,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
 
     DEBUG_ASSERT(magic_ == THREAD_MAGIC);
     DEBUG_ASSERT(state_ == THREAD_DEATH);
-    DEBUG_ASSERT(wait_queue_state_.blocking_wait_queue_ == NULL);
-    DEBUG_ASSERT(!wait_queue_state_.InWaitQueue());
+    wait_queue_state_.AssertNotBlocked();
 
     // save the return code
     if (out_retcode) {
@@ -1004,10 +1015,9 @@ static void thread_sleep_handler(Timer* timer, zx_time_t now, void* arg) {
     return;
   }
 
-  t->wait_queue_state_.blocked_status_ = ZX_OK;
-
-  // unblock the thread
-  if (Scheduler::Unblock(t)) {
+  // Unblock the thread, regardless of whether the sleep was interruptible.
+  const bool resched = t->wait_queue_state_.Unsleep(t, ZX_OK);
+  if (resched) {
     Scheduler::Reschedule();
   }
 
@@ -1077,7 +1087,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
   // always cancel the timer, since we may be racing with the timer tick on other cpus
   timer.Cancel();
 
-  return current_thread->wait_queue_state_.blocked_status_;
+  return current_thread->wait_queue_state_.BlockedStatus();
 }
 
 zx_status_t Thread::Current::Sleep(zx_time_t deadline) {
