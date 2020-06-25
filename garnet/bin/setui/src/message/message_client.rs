@@ -4,7 +4,9 @@
 
 use crate::internal::common::Timestamp;
 use crate::message::action_fuse::{ActionFuse, ActionFuseBuilder, ActionFuseHandle};
-use crate::message::base::{Address, Message, MessageClientId, MessageType, Payload, Signature};
+use crate::message::base::{
+    Address, Message, MessageClientId, MessageType, Payload, Signature, Status,
+};
 use crate::message::beacon::BeaconBuilder;
 use crate::message::message_builder::MessageBuilder;
 use crate::message::messenger::Messenger;
@@ -92,6 +94,10 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
             self.messenger.clone(),
         )
         .auto_forwarder(self.forwarder.clone())
+    }
+
+    pub async fn acknowledge(&mut self) {
+        self.message.report_status(Status::Acknowledged).await;
     }
 
     /// Tracks the lifetime of the reply listener, firing the fuse when it

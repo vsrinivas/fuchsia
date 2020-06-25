@@ -202,7 +202,10 @@ impl SwitchboardImpl {
                     // with a listen request.
                     cancel_event = cancel_receptor => {
                         if let Some((setting_type, client)) = cancel_event {
-                            switchboard_clone.lock().await.remove_setting_listener(setting_type, client);
+                            switchboard_clone.lock()
+                            .await
+                            .remove_setting_listener(setting_type, client)
+                            .await;
                         }
 
                     }
@@ -249,22 +252,24 @@ impl SwitchboardImpl {
             self.listeners.insert(setting_type, vec![]);
         }
 
-        self.listeners.entry(setting_type).or_insert(vec![]).push(reply_client);
+        self.listeners.entry(setting_type).or_insert(vec![]).push(reply_client.clone());
 
-        self.notify_registry_listen(setting_type);
+        self.notify_registry_listen(setting_type).await;
+        reply_client.acknowledge().await;
     }
 
-    fn remove_setting_listener(
+    async fn remove_setting_listener(
         &mut self,
         setting_type: SettingType,
-        client: switchboard::message::Client,
+        mut client: switchboard::message::Client,
     ) {
         if let Some(listeners) = self.listeners.get_mut(&setting_type) {
             if let Some(index) = listeners.iter().position(|x| *x == client) {
                 listeners.remove(index);
-                self.notify_registry_listen(setting_type);
+                self.notify_registry_listen(setting_type).await;
             }
         }
+        client.acknowledge().await;
     }
 
     fn process_action_request(
@@ -308,7 +313,7 @@ impl SwitchboardImpl {
         });
     }
 
-    fn notify_registry_listen(&mut self, setting_type: SettingType) {
+    async fn notify_registry_listen(&mut self, setting_type: SettingType) {
         let action_id = self.get_next_action_id();
         let listener_count = self.listeners.get(&setting_type).map_or(0, |x| x.len());
 
@@ -321,7 +326,10 @@ impl SwitchboardImpl {
                 }),
                 Audience::Address(core::Address::Registry),
             )
-            .send();
+            .send()
+            .wait_for_acknowledge()
+            .await
+            .ok();
     }
 
     fn notify_listeners(&self, setting_type: SettingType) {

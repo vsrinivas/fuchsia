@@ -179,7 +179,7 @@ async fn test_notify() {
 
     // Send a listen state and make sure sink is notified.
     {
-        messenger_client
+        assert!(messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: 1,
@@ -189,7 +189,9 @@ async fn test_notify() {
                 Audience::Address(Address::Registry),
             )
             .send()
-            .ack();
+            .wait_for_acknowledge()
+            .await
+            .is_ok());
 
         handler.lock().await.notify();
 

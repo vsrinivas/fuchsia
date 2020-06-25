@@ -58,6 +58,22 @@ impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
         return Err(format_err!("could not retrieve payload"));
     }
 
+    pub async fn wait_for_acknowledge(&mut self) -> Result<(), Error> {
+        while let Some(event) = self.next().await {
+            match event {
+                MessageEvent::Status(Status::Acknowledged) => {
+                    return Ok(());
+                }
+                MessageEvent::Status(Status::Undeliverable) => {
+                    return Err(format_err!("origin message not delivered"));
+                }
+                _ => {}
+            }
+        }
+
+        return Err(format_err!("did not encounter acknowledged status"));
+    }
+
     // Used to consume receptor.
     pub fn ack(self) {}
 }

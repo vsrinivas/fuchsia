@@ -54,6 +54,8 @@ pub enum Status {
     Received,
     // Could not be delivered to the specified target.
     Undeliverable,
+    // Acknowledged by a recipient.
+    Acknowledged,
 }
 
 /// The intended recipients for a message.

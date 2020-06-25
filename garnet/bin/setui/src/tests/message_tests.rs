@@ -27,6 +27,7 @@ enum TestAddress {
 }
 
 /// Ensures the payload matches expected value and invokes an action closure.
+/// If a client_fn is not provided, the message is acknowledged.
 async fn verify_payload<P: Payload + PartialEq + 'static, A: Address + PartialEq + 'static>(
     payload: P,
     receptor: &mut Receptor<P, A>,
@@ -39,6 +40,8 @@ async fn verify_payload<P: Payload + PartialEq + 'static, A: Address + PartialEq
             assert_eq!(payload, incoming_payload);
             if let Some(func) = client_fn {
                 (func)(&mut client).await;
+            } else {
+                client.acknowledge().await;
             }
             return;
         }
@@ -315,6 +318,24 @@ async fn test_beacon_error() {
         &mut messenger_client.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
     )
     .await;
+}
+
+/// Verifies Acknowledge is fully passed back.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_acknowledge() {
+    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+
+    let (_, mut receptor) =
+        messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
+
+    let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    let mut message_receptor =
+        messenger.message(ORIGINAL, Audience::Address(TestAddress::Foo(1))).send();
+
+    verify_payload(ORIGINAL, &mut receptor, None).await;
+
+    assert!(message_receptor.wait_for_acknowledge().await.is_ok());
 }
 
 /// Verifies observers can participate in messaging.

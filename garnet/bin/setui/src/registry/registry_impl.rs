@@ -173,7 +173,7 @@ impl RegistryImpl {
     async fn process_action(
         &mut self,
         action: SettingAction,
-        message_client: core::message::Client,
+        mut message_client: core::message::Client,
     ) {
         match action.data {
             SettingActionData::Request(request) => {
@@ -181,6 +181,9 @@ impl RegistryImpl {
             }
             SettingActionData::Listen(size) => {
                 self.process_listen(action.setting_type, size).await;
+                // Inform client that the request has been processed, regardless
+                // of whether a result was produced.
+                message_client.acknowledge().await;
             }
         }
     }
