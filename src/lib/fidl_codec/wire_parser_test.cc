@@ -316,7 +316,7 @@ std::string HandleToJson(const std::string& key, zx_handle_t value) {
   std::stringstream ss;
   ss << std::hex << std::setfill('0') << std::setw(kUint32Precision) << value << std::dec
      << std::setw(0);
-  return "\"" + key + "\":\"ZX_OBJ_TYPE_CHANNEL:" + ss.str() +
+  return "\"" + key + "\":\"Channel:" + ss.str() +
          "(ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | " +
          "ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT)\"";
 }
@@ -325,7 +325,7 @@ std::string HandleToPretty(const std::string& key, zx_handle_t value) {
   std::stringstream ss;
   ss << std::hex << std::setfill('0') << std::setw(kUint32Precision) << value << std::dec
      << std::setw(0);
-  return key + ": #gre#handle#rst# = #red#ZX_OBJ_TYPE_CHANNEL:" + ss.str() + "#rst#(#blu#" +
+  return key + ": #gre#handle#rst# = #red#Channel:" + ss.str() + "#rst#(#blu#" +
          "ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | " +
          "ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT" + "#rst#)";
 }

@@ -205,6 +205,10 @@ class HandleDescription {
   const std::string& type() const { return type_; }
   int64_t fd() const { return fd_; }
   const std::string& path() const { return path_; }
+  zx_obj_type_t object_type() const { return object_type_; }
+  void set_object_type(zx_obj_type_t object_type) { object_type_ = object_type; }
+  zx_rights_t rights() const { return rights_; }
+  void set_rights(zx_rights_t rights) { rights_ = rights; }
   zx_koid_t koid() const { return koid_; }
   void set_koid(zx_koid_t koid) { koid_ = koid; }
 
@@ -223,6 +227,10 @@ class HandleDescription {
   // Path associated with the handle. We can have both fd and path defined at the
   // same time.
   const std::string path_;
+  // The object type for the handle.
+  zx_obj_type_t object_type_ = ZX_OBJ_TYPE_NONE;
+  // The rights for the handle.
+  zx_rights_t rights_ = 0;
   // The unique id assigned by the kernel to the object referenced by the handle.
   zx_koid_t koid_ = ZX_KOID_INVALID;
 };

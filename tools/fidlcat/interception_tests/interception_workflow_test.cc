@@ -178,9 +178,6 @@ void InterceptionWorkflowTest::PerformTest(const char* syscall_name,
                                            ProcessController* controller,
                                            std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
                                            bool interleaved_test, bool multi_thread) {
-  if (with_handle_info_) {
-    dispatcher->set_with_handle_info();
-  }
   controller->Initialize(session(), std::move(dispatcher), syscall_name);
 
   SimulateSyscall(std::move(syscall1), controller, interleaved_test, multi_thread);

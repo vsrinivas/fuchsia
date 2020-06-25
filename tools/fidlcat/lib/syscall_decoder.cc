@@ -340,8 +340,7 @@ void SyscallDecoder::DecodeInputs() {
     if (dispatcher_->needs_stack_frame()) {
       CopyStackFrame(caller_locations(), &invoked_event_->stack_frame());
     }
-    if (dispatcher_->with_handle_info() &&
-        invoked_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
+    if (invoked_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
                                               &dispatcher_->inference())) {
       fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }
@@ -446,8 +445,7 @@ void SyscallDecoder::DecodeOutputs() {
         ++outline_member;
       }
     }
-    if (dispatcher_->with_handle_info() &&
-        output_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
+    if (output_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
                                              &dispatcher_->inference())) {
       fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }

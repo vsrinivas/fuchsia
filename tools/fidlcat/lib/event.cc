@@ -35,11 +35,14 @@ void Process::LoadHandleInfo(Inference* inference) {
             fidl_codec::semantic::HandleDescription* description =
                 inference->GetHandleDescription(koid_, handle.handle_value);
             if (description != nullptr) {
-              // Associate the koid to the handle only if the handle is currently used by the
-              // monitored process. That is if the handle if referenced by an event.
+              // Associate the koid and the object type to the handle only if the handle is
+              // currently used by the monitored process. That is if the handle if referenced by an
+              // event.
               // That means that we may need an extra load if the handle is already known by the
               // kernel but not yet needed by the monitored process. This way we avoid creating
-              // handle description for handle we don't know the semantic.
+              // handle description for handles we don't know the semantic.
+              description->set_object_type(handle.type);
+              description->set_rights(handle.rights);
               description->set_koid(handle.koid);
             }
             if (handle.related_koid != ZX_HANDLE_INVALID) {

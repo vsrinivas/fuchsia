@@ -1567,9 +1567,6 @@ class SyscallDecoderDispatcher {
 
   const DecodeOptions& decode_options() const { return decode_options_; }
 
-  bool with_handle_info() const { return with_handle_info_; }
-  void set_with_handle_info() { with_handle_info_ = true; }
-
   const std::map<std::string, std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
   const std::map<zx_koid_t, std::unique_ptr<Process>>& processes() const { return processes_; }
@@ -1739,9 +1736,6 @@ class SyscallDecoderDispatcher {
 
   // Decoding options.
   const DecodeOptions& decode_options_;
-
-  // True if we need to load the information about the handles.
-  bool with_handle_info_ = false;
 
   // The definition of all the syscalls we can decode.
   std::map<std::string, std::unique_ptr<Syscall>> syscalls_;

@@ -54,6 +54,53 @@ void ObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer) {
     ObjTypeNameCase(ZX_OBJ_TYPE_SUSPEND_TOKEN);
     ObjTypeNameCase(ZX_OBJ_TYPE_PAGER);
     ObjTypeNameCase(ZX_OBJ_TYPE_EXCEPTION);
+    ObjTypeNameCase(ZX_OBJ_TYPE_CLOCK);
+    ObjTypeNameCase(ZX_OBJ_TYPE_STREAM);
+    ObjTypeNameCase(ZX_OBJ_TYPE_MSI_ALLOCATION);
+    ObjTypeNameCase(ZX_OBJ_TYPE_MSI_INTERRUPT);
+    default:
+      printer << obj_type;
+      return;
+  }
+}
+
+#define ShortObjTypeNameCase(name, text) \
+  case name:                             \
+    printer << text;                     \
+    return
+
+void ShortObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer) {
+  switch (obj_type) {
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_NONE, "None");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_PROCESS, "Process");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_THREAD, "Thread");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_VMO, "Vmo");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_CHANNEL, "Channel");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_EVENT, "Event");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_PORT, "Port");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_INTERRUPT, "Interrupt");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_PCI_DEVICE, "PciDevice");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_LOG, "Log");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_SOCKET, "Socket");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_RESOURCE, "Resource");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_EVENTPAIR, "EventPair");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_JOB, "Job");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_VMAR, "Vmar");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_FIFO, "Fifo");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_GUEST, "Guest");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_VCPU, "Vcpu");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_TIMER, "Timer");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_IOMMU, "IoMmu");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_BTI, "Bti");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_PROFILE, "Profile");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_PMT, "Pmt");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_SUSPEND_TOKEN, "SuspendToken");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_PAGER, "Pager");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_EXCEPTION, "Exception");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_CLOCK, "Clock");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_STREAM, "Stream");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_MSI_ALLOCATION, "MsiAllocation");
+    ShortObjTypeNameCase(ZX_OBJ_TYPE_MSI_INTERRUPT, "MsiInterrupt");
     default:
       printer << obj_type;
       return;
@@ -63,7 +110,7 @@ void ObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer) {
 void DisplayHandle(const zx_handle_info_t& handle, PrettyPrinter& printer) {
   printer << Red;
   if (handle.type != ZX_OBJ_TYPE_NONE) {
-    ObjTypeName(handle.type, printer);
+    ShortObjTypeName(handle.type, printer);
     printer << ':';
   }
   char buffer[kUint32Precision + 1];

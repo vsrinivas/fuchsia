@@ -137,7 +137,7 @@ TEST_F(ProtoValueTest, StringValue) {
 TEST_F(ProtoValueTest, HandleValue) {
   PROTO_TEST(std::make_unique<HandleValue>(zx_handle_info_t{
                  .handle = 0x1234, .type = ZX_OBJ_TYPE_CHANNEL, .rights = ZX_RIGHT_DUPLICATE}),
-             nullptr, false, "ZX_OBJ_TYPE_CHANNEL:00001234(ZX_RIGHT_DUPLICATE)");
+             nullptr, false, "Channel:00001234(ZX_RIGHT_DUPLICATE)");
 }
 
 TEST_F(ProtoValueTest, UnionValue) {

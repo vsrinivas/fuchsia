@@ -17,7 +17,6 @@ std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view 
                                                const zx_handle_t* handles, uint32_t num_handles);
 
 #define HANDLE_INFO_TEST_CONTENT(errno, expected)                                            \
-  with_handle_info_ = true;                                                                  \
   auto loader = GetTestLibraryLoader();                                                      \
   PerformDisplayTest("$plt(zx_channel_write)",                                               \
                      ZxChannelWrite(errno, #errno, kHandle, 0, hello_world.data(),           \

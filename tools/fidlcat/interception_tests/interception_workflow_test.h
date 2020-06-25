@@ -424,7 +424,6 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   // Function which can simulate the fact that the syscall can modify some data.
   std::function<void()> update_data_;
   bool bad_stack_ = false;
-  bool with_handle_info_ = false;
   std::unique_ptr<SyscallDecoderDispatcher> last_decoder_dispatcher_;
 };
 

@@ -22,9 +22,15 @@ FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, uint64_t pr
       dump_messages_(dispatcher->dump_messages()) {}
 
 void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
-  fidl_codec::DisplayHandle(handle, *this);
   const fidl_codec::semantic::HandleDescription* known_handle =
       inference_.GetHandleDescription(process_id_, handle.handle);
+  if ((handle.type == ZX_OBJ_TYPE_NONE) && (known_handle != nullptr)) {
+    zx_handle_info_t tmp = handle;
+    tmp.type = known_handle->object_type();
+    fidl_codec::DisplayHandle(tmp, *this);
+  } else {
+    fidl_codec::DisplayHandle(handle, *this);
+  }
   if (known_handle != nullptr) {
     (*this) << '(';
     known_handle->Display(*this);
