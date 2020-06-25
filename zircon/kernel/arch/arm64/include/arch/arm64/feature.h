@@ -35,6 +35,8 @@ enum arm64_microarch {
 
   CAVIUM_CN88XX,
   CAVIUM_CN99XX,
+
+  QEMU_TCG,
 };
 
 extern uint32_t arm64_features;

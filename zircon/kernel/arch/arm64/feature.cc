@@ -154,6 +154,14 @@ enum arm64_microarch midr_to_microarch(uint32_t midr) {
       default:
         return UNKNOWN;
     }
+  } else if (implementer == 0) {
+    // software implementation
+    switch (partnum) {
+      case 0x51:
+        return QEMU_TCG;
+      default:
+        return UNKNOWN;
+    }
   } else {
     return UNKNOWN;
   }
@@ -217,10 +225,15 @@ static void midr_to_core_string(uint32_t midr, char* str, size_t len) {
     case CAVIUM_CN99XX:
       partnum_str = "Cavium CN99XX";
       break;
-    case UNKNOWN:
-      snprintf(str, len, "Unknown implementer %c partnum 0x%x r%up%u", (char)implementer, partnum,
-               variant, revision);
+    case QEMU_TCG:
+      partnum_str = "QEMU TCG";
+      break;
+    case UNKNOWN: {
+      const char i = (implementer ? (char)implementer : '0');
+      snprintf(str, len, "Unknown implementer %c partnum 0x%x r%up%u", i, partnum, variant,
+               revision);
       return;
+    }
   }
 
   snprintf(str, len, "%s r%up%u", partnum_str, variant, revision);
