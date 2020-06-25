@@ -46,10 +46,7 @@ test_package("audio_pipeline_tests") {
       name = "audio_pipeline_tests"
 
       # This (effectively real-time) test must be run on a true hardware-based target.
-      # By specifying 'extended_hardware_envs' instead of 'hardware_envs', we allow these tests to
-      # run on the VIM2 platform, where our audio driver for the HDMI-based audio output does not
-      # yet generate position notifications.
-      environments = extended_hardware_envs
+      environments = hardware_envs
     },
   ]
 }

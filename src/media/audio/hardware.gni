@@ -5,22 +5,19 @@
 import("//build/testing/environments.gni")
 
 ### Hardware-based test environments ###
-# These should be targeted by tests that MUST run on native audio hardware,
-# and/or CANNOT run on emulated systems that may run slower than real-time.
 
+# These should be targeted by tests that CANNOT run on emulated systems
+# that may run slower than real-time.
 hardware_envs = [
   astro_env,
+  nelson_env,
   sherlock_env,
   nuc_env,
 ]
 
-extended_hardware_envs = [
-  astro_env,
-  sherlock_env,
-  nuc_env,
-]
-
+# These should be targeted by tests that MUST run on native audio hardware.
 built_in_input_hardware_envs = [
   astro_env,
+  nelson_env,
   sherlock_env,
 ]

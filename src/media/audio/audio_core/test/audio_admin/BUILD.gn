@@ -32,7 +32,7 @@ test_package("audio_admin_tests") {
       name = "audio_admin_tests"
 
       # This (effectively real-time) test must be run on real hardware.
-      environments = extended_hardware_envs
+      environments = hardware_envs
     },
   ]
 }
