@@ -44,11 +44,7 @@ struct mp_state mp __CPU_ALIGN_EXCLUSIVE;
 struct mp_sync_context;
 static void mp_sync_task(void* context);
 
-void mp_init(void) {
-  for (list_node& node : mp.ipi_task_list) {
-    list_initialize(&node);
-  }
-}
+void mp_init(void) {}
 
 void mp_prepare_current_cpu_idle_state(bool idle) { arch_prepare_current_cpu_idle_state(idle); }
 
@@ -155,7 +151,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   uint cpu_id = 0;
   while (remaining && cpu_id < num_cpus) {
     if (remaining & 1) {
-      list_add_tail(&mp.ipi_task_list[cpu_id], &sync_tasks[cpu_id].node);
+      mp.ipi_task_list[cpu_id].push_back(&sync_tasks[cpu_id]);
     }
     remaining >>= 1;
     cpu_id++;
@@ -192,7 +188,10 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     if (ints_disabled) {
       // Optimistically check if our task list has work without the lock.
       // mp_mbx_generic_irq will take the lock and check again.
-      if (!list_is_empty(&mp.ipi_task_list[local_cpu])) {
+      bool empty = [local_cpu]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        return mp.ipi_task_list[local_cpu].is_empty();
+      }();
+      if (!empty) {
         bool previous_blocking_disallowed = arch_blocking_disallowed();
         arch_set_blocking_disallowed(true);
         mp_mbx_generic_irq(nullptr);
@@ -210,8 +209,8 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   mp.ipi_task_lock.AcquireIrqSave(irqstate);
   for (uint i = 0; i < num_cpus; ++i) {
     // If a task is still around, it's because the CPU went offline.
-    if (list_in_list(&sync_tasks[i].node)) {
-      list_delete(&sync_tasks[i].node);
+    if (sync_tasks[i].InContainer()) {
+      sync_tasks[i].RemoveFromContainer();
     }
   }
   mp.ipi_task_lock.ReleaseIrqRestore(irqstate);
@@ -399,7 +398,7 @@ interrupt_eoi mp_mbx_generic_irq(void*) {
   while (1) {
     struct mp_ipi_task* task;
     mp.ipi_task_lock.Acquire();
-    task = list_remove_head_type(&mp.ipi_task_list[local_cpu], struct mp_ipi_task, node);
+    task = mp.ipi_task_list[local_cpu].pop_front();
     mp.ipi_task_lock.Release();
     if (task == NULL) {
       break;

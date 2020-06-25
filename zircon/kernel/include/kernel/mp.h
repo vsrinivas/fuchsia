@@ -14,11 +14,10 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <fbl/intrusive_double_list.h>
 #include <kernel/cpu.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
-
-__BEGIN_CDECLS
 
 // NOTE(abdulla): This is located here to break a circular dependency.
 enum interrupt_eoi {
@@ -83,9 +82,8 @@ interrupt_eoi mp_mbx_generic_irq(void*);
 interrupt_eoi mp_mbx_interrupt_irq(void*);
 
 // represents a pending task for some number of CPUs to execute
-struct mp_ipi_task {
-  struct list_node node;
-
+struct mp_ipi_task
+    : fbl::DoublyLinkedListable<mp_ipi_task*, fbl::NodeOptions::AllowRemoveFromContainer> {
   mp_ipi_task_func_t func;
   void* context;
 };
@@ -104,7 +102,7 @@ struct mp_state {
   SpinLock ipi_task_lock;
   // list of outstanding tasks for CPUs to execute.  Should only be
   // accessed with the ipi_task_lock held
-  struct list_node ipi_task_list[SMP_MAX_CPUS] TA_GUARDED(ipi_task_lock);
+  fbl::DoublyLinkedList<mp_ipi_task*> ipi_task_list[SMP_MAX_CPUS] TA_GUARDED(ipi_task_lock);
 
   // lock for serializing CPU hotplug/unplug operations
   DECLARE_LOCK(mp_state, Mutex) hotplug_lock;
@@ -175,7 +173,5 @@ static inline cpu_mask_t mp_get_active_mask(void) {
 static inline int mp_is_cpu_active(cpu_num_t cpu) {
   return mp_get_active_mask() & cpu_num_to_mask(cpu);
 }
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_MP_H_
