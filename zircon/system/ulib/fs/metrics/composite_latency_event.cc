@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fzl/time.h>
+
 #include <fs/metrics/composite_latency_event.h>
 
 namespace fs_metrics {
@@ -65,7 +67,7 @@ CompositeLatencyEvent::CompositeLatencyEvent(Event event,
 CompositeLatencyEvent::~CompositeLatencyEvent() {
   if (cobalt_histogram_ != nullptr && inspect_event_.start().get() > 0) {
     zx::ticks delta = zx::ticks::now() - inspect_event_.start();
-    cobalt_histogram_->Add(delta.get());
+    cobalt_histogram_->Add(fzl::TicksToNs(delta).get());
   }
 }
 

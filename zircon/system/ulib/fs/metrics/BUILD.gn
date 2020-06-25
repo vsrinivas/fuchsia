@@ -73,6 +73,7 @@ zx_library("metrics-composite-latency-event") {
     ":metrics-inspect",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/cobalt-client",
+    "//zircon/system/ulib/fzl",
   ]
 }
 
