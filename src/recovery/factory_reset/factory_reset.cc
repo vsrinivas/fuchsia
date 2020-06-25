@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/encrypted/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
@@ -19,6 +20,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
+#include <zxcrypt/fdio-volume.h>
 
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
@@ -27,57 +29,35 @@
 namespace factory_reset {
 
 const char* kBlockPath = "class/block";
-const int kNumZxcryptSuperblocks = 3;
 
-zx_status_t WriteRandomBlock(int fd, ssize_t block_size) {
-  std::unique_ptr<uint8_t[]> buf(new uint8_t[block_size]);
-  zx_cprng_draw(buf.get(), block_size);
-  ssize_t res;
-  if ((res = write(fd, buf.get(), block_size)) < block_size) {
-    fprintf(stderr, "write(%d, %p, %zu) failed: %s\n ", fd, buf.get(), block_size, strerror(errno));
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
-}
-
-// Determines the block size of the passed in fd.
-zx_status_t FindBlockSize(int fd, ssize_t* block_size) {
-  zx_status_t rc, call_status;
-  fdio_cpp::UnownedFdioCaller caller(fd);
-  if (!caller) {
-    return ZX_ERR_BAD_STATE;
-  }
-  fuchsia_hardware_block_BlockInfo block_info;
-  if ((rc = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status,
-                                                &block_info)) != ZX_OK) {
-    return rc;
-  }
-  if (call_status != ZX_OK) {
-    return call_status;
-  }
-  *block_size = block_info.block_size;
-  return ZX_OK;
-}
-
-zx_status_t ShredBlockDevice(fbl::unique_fd fd, int num_blocks) {
+zx_status_t ShredBlockDevice(fbl::unique_fd fd, fbl::unique_fd devfs_root_fd) {
+  std::unique_ptr<zxcrypt::FdioVolume> volume;
   zx_status_t status;
-  if (lseek(fd.get(), 0, SEEK_SET) != 0) {
-    return ZX_ERR_IO;
-  }
-
-  ssize_t block_size = 0;
-  status = FindBlockSize(fd.get(), &block_size);
+  status = zxcrypt::FdioVolume::Init(std::move(fd), std::move(devfs_root_fd), &volume);
   if (status != ZX_OK) {
+    fprintf(stderr, "Couldn't init FdioVolume: %d (%s)\n", status, zx_status_get_string(status));
     return status;
   }
 
-  for (int i = 0; i < num_blocks; ++i) {
-    if ((status = WriteRandomBlock(fd.get(), block_size)) != ZX_OK) {
-      fprintf(stderr, "Couldn't write to %d block: %d (%s)\n", i, status,
-              zx_status_get_string(status));
-      return status;
-    }
+  // Note: the access to /dev/sys/platform from the manifest is load-bearing
+  // here, because we can only find the related zxcrypt device for a particular
+  // block device via appending "/zxcrypt" to its topological path, and the
+  // canonical topological path sits under sys/platform.
+  zx::channel driver_chan;
+  status = volume->OpenManager(zx::sec(5), driver_chan.reset_and_get_address());
+  if (status != ZX_OK) {
+    fprintf(stderr, "Couldn't open channel to zxcrypt volume manager: %d (%s)\n",
+            status, zx_status_get_string(status));
+    return status;
   }
+
+  zxcrypt::FdioVolumeManager zxc_manager(std::move(driver_chan));
+  status = zxc_manager.Shred();
+  if (status != ZX_OK) {
+    fprintf(stderr, "Couldn't shred volume: %d (%s)\n", status, zx_status_get_string(status));
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -101,7 +81,8 @@ zx_status_t FactoryReset::Shred() const {
     if (!block_fd || detect_disk_format(block_fd.get()) != DISK_FORMAT_ZXCRYPT) {
       continue;
     }
-    zx_status_t status = ShredBlockDevice(std::move(block_fd), kNumZxcryptSuperblocks);
+
+    zx_status_t status = ShredBlockDevice(std::move(block_fd), dev_fd_.duplicate());
     if (status != ZX_OK) {
       closedir(dir);
       return status;
