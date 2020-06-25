@@ -81,25 +81,39 @@ Category                           | [DEPRECATED] C                    | Low-lev
 **abstraction overhead**           | almost zero                       | almost zero                                   | heap allocation, construction, destruction
 **type safe types**                | enums, structs, unions            | enums, structs, unions, handles, protocols    | enums, structs, unions, handles, protocols
 **storage**                        | stack                             | stack, in-place buffer, or heap               | heap
-**lifecycle**                      | manual free (POD)                 | manual free memory; own handles via RAII [1]  | automatic free (RAII)
+**lifecycle**                      | manual free (POD)                 | manual free memory; own handles via RAII [[1]](#footnote1) | automatic free (RAII)
 **receive behavior**               | copy                              | copy or decode in-place                       | decode then move to heap
 **send behavior**                  | copy                              | copy or encode in-place                       | move to buffer then encode
 **calling protocol methods**       | free functions                    | free functions or proxy                       | call through proxies, register callbacks
 **implementing protocol methods**  | manual dispatch or via ops table  | manual dispatch or implement stub interface   | implement stub object, invoke callbacks
 **async client**                   | no                                | yes                                           | yes
-**async server**                   | limited [2]                       | yes (unbounded) [3]                           | yes (unbounded)
-**parallel server dispatch**       | no                                | yes [4]                                       | no
+**async server**                   | limited [[2]](#footnote2)         | yes (unbounded) [[3]](#footnote3)             | yes (unbounded)
+**parallel server dispatch**       | no                                | yes [[4]](#footnote4)                         | no
 **generated code footprint**       | small                             | moderate                                      | large
 
-Notes:
+--------------------------------------------------------------------------------
 
-1. Generated types own all handles stored inline. Out-of-line handles e.g. those
-   behind a pointer indirection are not closed when the containing object of the
-   pointer goes away. In those cases, the bindings provide a
-   `fidl::DecodedMessage` object to manage all handles associated with a call.
-2. The bindings library can dispatch at most one in-flight transaction.
-3. The bindings library defined in [lib/fidl](/zircon/system/ulib/fidl) can dispatch an unbounded number of in-flight transactions via `fidl::BindServer` defined in [lib/fidl/llcpp/server.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h).
-4. The bindings library [lib/fidl](/zircon/system/ulib/fidl) enables parallel
+##### Footnote1
+
+Generated types own all handles stored inline. Out-of-line handles e.g. those
+behind a pointer indirection are not closed when the containing object of the
+pointer goes away. In those cases, the bindings provide a `fidl::DecodedMessage`
+object to manage all handles associated with a call.
+
+##### Footnote2
+
+The bindings library can dispatch at most one in-flight transaction.
+
+##### Footnote3
+
+The bindings library defined in [lib/fidl](/zircon/system/ulib/fidl) can
+dispatch an unbounded number of in-flight transactions via `fidl::BindServer`
+defined in
+[lib/fidl/llcpp/server.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h).
+
+##### Footnote4
+
+The bindings library [lib/fidl](/zircon/system/ulib/fidl) enables parallel
 dispatch using the `EnableNextDispatch()` API defined in
 [lib/fidl/llcpp/async_transaction.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/async_transaction.h).
 
