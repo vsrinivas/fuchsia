@@ -27,8 +27,6 @@ __BEGIN_CDECLS
 // should not be issued repeatedly and rapidly.
 // Warning messages are always displayed by default.
 #define DDK_LOG_WARNING FX_LOG_WARNING
-// Deprecated. Prefer to use `WARNING` instead.
-#define DDK_LOG_WARN FX_LOG_WARNING
 
 // Info messages should provide terse information messages
 // around driver startup, shutdown or state change.  They
@@ -95,7 +93,7 @@ void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const 
 // The kernel commandline option driver.NAME.log may be used to override
 // this.  NAME is specified via ZIRCON_DRIVER_BEGIN/ZIRCON_DRIVER_END
 // macros on each driver's definition.  The levels are the strings "error",
-// "warn", "info", "debug", or "trace".
+// "warning", "info", "debug", or "trace".
 //
 // Example driver.floppydisk.log=trace
 //
