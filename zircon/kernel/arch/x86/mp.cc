@@ -29,7 +29,6 @@
 #include <arch/x86/idle_states.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
-#include <arch/x86/tsc.h>
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
 #include <kernel/event.h>
@@ -212,10 +211,6 @@ void x86_init_percpu(cpu_num_t cpu_num) {
     // Load the read-only IDT setup on arch initialization.
     idt_load(idt_get_readonly());
   }
-
-  // Apply any timestamp counter adjustment to keep a continuous clock across
-  // suspend/resume.
-  x86_tsc_adjust();
 
   /* load the syscall entry point */
   write_msr(X86_MSR_IA32_LSTAR, (uint64_t)&x86_syscall);

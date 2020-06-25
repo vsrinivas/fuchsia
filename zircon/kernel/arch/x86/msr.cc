@@ -22,7 +22,6 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>
-#include <arch/x86/tsc.h>
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
 #include <kernel/event.h>

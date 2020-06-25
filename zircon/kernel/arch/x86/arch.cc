@@ -31,7 +31,6 @@
 #include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/proc_trace.h>
-#include <arch/x86/tsc.h>
 #include <lk/init.h>
 #include <lk/main.h>
 #include <vm/vm.h>
@@ -49,9 +48,7 @@ void* _zbi_base;
 
 void arch_early_init(void) { x86_mmu_early_init(); }
 
-void arch_prevm_init(void) {
-  x86_cpu_feature_init();
-}
+void arch_prevm_init(void) { x86_cpu_feature_init(); }
 
 void arch_init(void) {
   const struct x86_model_info* model = x86_get_model();
@@ -110,7 +107,6 @@ void arch_enter_uspace(iframe_t* iframe) {
 void arch_suspend(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   apic_io_save();
-  x86_tsc_store_adjustment();
 }
 
 void arch_resume(void) {
