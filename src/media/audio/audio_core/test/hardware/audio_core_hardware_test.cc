@@ -199,14 +199,13 @@ void AudioCoreHardwareTest::DisplayReceivedAudio() {
 
 // When capturing from the real built-in microphone, the analog noise floor ensures that there
 // should be at least 1 bit of ongoing broad-spectrum signal (excluding professional-grade
-// products). Thus, if we are accurately capturing the analog noise floor, a long stretch of
-// received 0.0 values should be uncommon. However, if our timing calculations are incorrect, then
-// there could be sections of the capture buffer audio that were not written, and thus would present
-// to us as a consecutive stretch of audio samples with value '0.0'.
+// products). Thus, if we are accurately capturing the analog noise floor, a span of received
+// 0.0 might be common, but certainly not the entire buffer. However, if our timing calculations are
+// incorrect, or if the audio hardware has been incorrectly initialized and input DMA is not
+// operating, then the entire capture buffer might contain audio samples with value '0.0'.
 //
-// In short: to validate our capture-side mix pipeline timing, we will record an audio buffer from
-// the live input device, then ensure that the longest stretch of consecutive '0.0' values received
-// does not exceed a defined threshold.
+// To validate the hardware initialization and our input pipeline (at a VERY coarse level), we
+// record a buffer from the live audio input, checking that we receive at least 1 non-'0.0' value.
 //
 // Note that we do this at the audio input device's native (default) frame_rate and channel_count,
 // to minimize any loss in transparency from frame-rate-conversion or rechannelization.
@@ -220,44 +219,19 @@ TEST_F(AudioCoreHardwareTest, ZeroesInLiveCapture) {
   // Wait for the capture buffer to be returned.
   ExpectCallback();
 
-  uint32_t count_consec_zero_samples = 0;
-  uint32_t longest_stretch_consec_zero_samples = 0;
-  float smallest_value = 1.0f, biggest_value = 0.0f;
+  bool found_nonzero_value = false;
 
   ASSERT_NE(payload_buffer_, nullptr);
   for (auto idx = 0u; idx < received_payload_frames_ * channel_count_; ++idx) {
-    if (payload_buffer_[idx] == 0.0f) {
-      ++count_consec_zero_samples;
-      if (count_consec_zero_samples > longest_stretch_consec_zero_samples) {
-        longest_stretch_consec_zero_samples = count_consec_zero_samples;
-      }
-    } else {
-      biggest_value = std::max(biggest_value, std::abs(payload_buffer_[idx]));
-      smallest_value = std::min(smallest_value, std::abs(payload_buffer_[idx]));
-      // Even if consecutive '0' samples is only a fraction of our limit, print to expose cadences.
-      // In one failure mode we saw, 2-3 frames were consistently 0.0 at 50-ms boundaries.
-      if (count_consec_zero_samples > (kLimitConsecFramesZero * channel_count_ / 2)) {
-        printf("%d '0' samples ending at idx:%d\n", count_consec_zero_samples, idx);
-      }
-      count_consec_zero_samples = 0;
+    if (payload_buffer_[idx] != 0.0f) {
+      found_nonzero_value = true;
+      break;
     }
   }
 
-  if (longest_stretch_consec_zero_samples > kLimitConsecFramesZero * channel_count_) {
-    if (longest_stretch_consec_zero_samples == received_payload_frames_ * channel_count_) {
-      printf(
-          "*** EVERY captured sample was '0'. Microphone is Muted, or input is digital, or this is "
-          "a virtual device, or capture gain is too low? ***\n");
-    }
-
-    EXPECT_LE(longest_stretch_consec_zero_samples, kLimitConsecFramesZero * channel_count_);
-  } else {
-    printf(
-        "Longest stretch of consecutive '0' samples was length %d (limit %d), smallest non-0 value "
-        "%.10f (%.1f bits), biggest value %.5f (%.1f bits)\n",
-        longest_stretch_consec_zero_samples, kLimitConsecFramesZero * channel_count_,
-        smallest_value, std::log2f(smallest_value), biggest_value, std::log2f(biggest_value));
-  }
+  EXPECT_TRUE(found_nonzero_value) << "Mic mute? HW sensitivity too low? Digital input? VAD?";
 }
+
+// TODO(mpuryear): add test case to detect DC offset, using variance from the average value.
 
 }  // namespace media::audio::test

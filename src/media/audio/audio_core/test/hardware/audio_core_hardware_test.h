@@ -15,11 +15,6 @@ namespace media::audio::test {
 
 class AudioCoreHardwareTest : public TestFixture {
  protected:
-  // Once this test is shown to be flake-free in our test environment, lower this to perhaps 2.
-  // If gain is full, and if we are capturing from a real microphone in a normal acoustic
-  // environment (not an anechoic enclosure), then 2 frames is a very reasonable limit.
-  static constexpr uint32_t kLimitConsecFramesZero = 5;
-
   static constexpr float kStreamGainDb = 0.0f;
   static constexpr float kUsageGainDb = 0.0f;
   static constexpr float kDeviceGainDb = 0.0f;
@@ -35,9 +30,6 @@ class AudioCoreHardwareTest : public TestFixture {
   // We'll use just one payload buffer here.
   static constexpr uint32_t kPayloadBufferId = 0;
   static constexpr uint32_t kBufferDurationMsec = 1000;
-
-  static constexpr uint32_t kDefaultFramesPerSecond = 16000;
-  static constexpr uint32_t kDefaultChannelCount = 2;
 
   static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
       fuchsia::media::AudioSampleFormat::FLOAT;
@@ -71,8 +63,8 @@ class AudioCoreHardwareTest : public TestFixture {
   std::unordered_set<uint64_t> capture_device_tokens_;
   bool capture_device_is_default_ = false;
 
-  uint32_t channel_count_ = kDefaultChannelCount;
-  uint32_t frames_per_second_ = kDefaultFramesPerSecond;
+  uint32_t channel_count_;
+  uint32_t frames_per_second_;
 
   fzl::VmoMapper payload_buffer_map_;
   float* payload_buffer_ = nullptr;

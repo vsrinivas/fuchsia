@@ -11,7 +11,6 @@ test_package("audio_core_hardware_tests") {
   tests = [
     {
       name = "audio_core_hardware_tests"
-      disabled = true
 
       # By definition this validates software that requires real audio input hardware.
       environments = built_in_input_hardware_envs
