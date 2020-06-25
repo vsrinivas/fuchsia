@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/tee_manager_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tee.Device"
+        ]
+    }
+}
