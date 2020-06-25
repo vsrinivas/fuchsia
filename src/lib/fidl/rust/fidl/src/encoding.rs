@@ -12,7 +12,6 @@ use {
     fuchsia_zircon_status as zx_status,
     static_assertions::{assert_not_impl_any, assert_obj_safe},
     std::{cell::RefCell, cmp, convert::TryFrom, mem, ptr, str, u32, u64},
-    zerocopy::AsBytes,
 };
 
 thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
@@ -50,6 +49,10 @@ pub fn with_tls_encoded<T, E: From<Error>>(
 
 /// Resize a vector without zeroing added bytes.
 ///
+/// The type `T` must be `Copy`. This is not enforced in the type signature
+/// because it is used in generic contexts where verifying this requires looking
+/// at control flow. See `decode_vector` for an example.
+///
 /// # Safety
 ///
 /// This is unsafe when `new_len > old_len` because it leaves new elements at
@@ -58,9 +61,9 @@ pub fn with_tls_encoded<T, E: From<Error>>(
 /// extends the vector, such as `push`, because this could reallocate the vector
 /// and copy the uninitialized bytes.
 ///
-/// FIDL conformance tests are used to validate that there are no
-/// uninitialized bytes in the output across a range types and values.
-unsafe fn resize_vec_no_zeroing<T: Copy>(buf: &mut Vec<T>, new_len: usize) {
+/// FIDL conformance tests are used to validate that there are no uninitialized
+/// bytes in the output across a range types and values.
+unsafe fn resize_vec_no_zeroing<T>(buf: &mut Vec<T>, new_len: usize) {
     if new_len > buf.capacity() {
         buf.reserve(new_len - buf.len());
     }
@@ -525,6 +528,25 @@ pub trait Layout {
     fn inline_size(context: &Context) -> usize
     where
         Self: Sized;
+
+    /// Returns `slice` viewed as bytes for types that support encoding and
+    /// decoding by simple copy. For all other types, returns `None`.
+    ///
+    /// Simple copying only works for types when (1) the Rust data layout
+    /// matches the FIDL wire format, and (2) no validation is required. This is
+    /// the case for (arrays of) primitive integer types, because both FIDL and
+    /// Rust (we assume) use little-endian byte order, two's complement integer
+    /// representation, and arrays with no padding.
+    ///
+    /// For more information:
+    /// https://doc.rust-lang.org/reference/type-layout.html#primitive-data-layout
+    /// https://doc.rust-lang.org/reference/types/numeric.html
+    fn slice_as_bytes(_slice: &mut [Self]) -> Option<&mut [u8]>
+    where
+        Self: Sized,
+    {
+        None
+    }
 }
 
 /// An object-safe extension of the `Layout` trait.
@@ -581,27 +603,6 @@ pub trait Encodable: LayoutObject {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()>;
-
-    /// Encodes 0 or more objects inline as a FIDL array.
-    ///
-    /// Some types override the default implementation to be more efficient.
-    /// Once Rust specialization stabilizes (RFC 1210), this method could be
-    /// eliminated in favor of specializing Encodable on types like `Vec<u8>`.
-    fn encode_array(
-        slice: &mut [Self],
-        encoder: &mut Encoder<'_>,
-        offset: usize,
-        recursion_depth: usize,
-    ) -> Result<()>
-    where
-        Self: Sized,
-    {
-        let stride = encoder.inline_size_of::<Self>();
-        for (i, item) in slice.iter_mut().enumerate() {
-            item.encode(encoder, offset + i * stride, recursion_depth)?;
-        }
-        Ok(())
-    }
 }
 
 assert_obj_safe!(Encodable);
@@ -617,38 +618,6 @@ pub trait Decodable: Layout {
     /// Decodes an object of this type from the provided buffer and list of handles.
     /// On success, returns `Self`, as well as the yet-unused tails of the data and handle buffers.
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()>;
-
-    /// Decodes 0 or more inline objects as a FIDL array into `slice`.
-    ///
-    /// Some types override the default implementation to be more efficient.
-    /// Once Rust specialization stabilizes (RFC 1210), this method could be
-    /// eliminated in favor of specializing Decodable on types like `Vec<u8>`.
-    fn decode_array(slice: &mut [Self], decoder: &mut Decoder<'_>) -> Result<()>
-    where
-        Self: Sized,
-    {
-        for item in slice {
-            item.decode(decoder)?;
-        }
-        Ok(())
-    }
-
-    /// Decodes `len` inline objects as a FIDL array into `vec`. This is like
-    /// `decode_array`, except the target is a `Vec` rather than a slice.
-    fn decode_array_into_vec(
-        vec: &mut Vec<Self>,
-        decoder: &mut Decoder<'_>,
-        len: usize,
-    ) -> Result<()>
-    where
-        Self: Sized,
-    {
-        vec.clear();
-        for _ in 0..len {
-            vec.push(Self::new_empty());
-        }
-        Self::decode_array(vec, decoder)
-    }
 }
 
 macro_rules! impl_layout {
@@ -677,48 +646,47 @@ macro_rules! impl_layout_forall_T {
     };
 }
 
-// This macro implements Encodable and Decodable for primitive integer types T,
-// with the following optimizations for arrays and vectors:
+// Implements `Layout` for a primitive integer type, overriding `slice_as_bytes`
+// to enable encoding and decoding by simple copy.
+macro_rules! impl_layout_int {
+    ($int_ty:ty) => {
+        impl Layout for $int_ty {
+            fn inline_size(_context: &Context) -> usize {
+                mem::size_of::<$int_ty>()
+            }
+
+            fn inline_align(_context: &Context) -> usize {
+                mem::size_of::<$int_ty>()
+            }
+
+            fn slice_as_bytes(slice: &mut [Self]) -> Option<&mut [u8]> {
+                Some(zerocopy::AsBytes::as_bytes_mut(slice))
+            }
+        }
+    };
+}
+
+// This macro implements Encodable and Decodable for primitive integer types T.
+// It ensures that T, [T; N], and Vec<T> are encoded/decoded by simple copy (via
+// impl_layout_int), and that &[T] is encoded by simple copy (via
+// impl_slice_encoding_by_copy).
 //
-// 1. Encodable::encode_array for T, called from [T; N] and Vec<T> encoding.
-// 2. Decodable::decode_array for T, called from [T; N] and Vec<T> decoding.
-// 3. Encodable::encode for &[T], via impl_slice_encoding_by_copy. This type is
-//    used instead of Vec<T> for vectors of primitives in a borrowed context.
-//
-// Some background on why we need optimization (3): the FIDL type vector<T>
-// becomes &mut dyn ExactSizeIterator<Item = T> (borrowed) or Vec<T> (owned) for
-// most types. The former is a poor fit for vectors of primitives: we cannot
-// optimize encoding from an iterator. For this reason, vectors of primitives
-// are special-cased in fidlgen to use &[T] as the borrowed type.
+// Some background on why we have the &[T] implementation: the FIDL type
+// vector<T> becomes &mut dyn ExactSizeIterator<Item = T> (borrowed) or Vec<T>
+// (owned) for most types. The former is a poor fit for vectors of primitives:
+// we cannot optimize encoding from an iterator. For this reason, vectors of
+// primitives are special-cased in fidlgen to use &[T] as the borrowed type.
 //
 // Caveat: bool uses &mut dyn ExactSizeIterator<Item = bool> because it cannot
 // be optimized. Floats f32 and f64, though they cannot be optimized either, use
 // &[f32] and &[f64].
 // TODO(fxb/54368): Resolve this inconsistency.
 macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
-    impl Layout for $int_ty {
-        fn inline_size(_context: &Context) -> usize { mem::size_of::<$int_ty>() }
-        fn inline_align(_context: &Context) -> usize { mem::size_of::<$int_ty>() }
-    }
+    impl_layout_int!($int_ty);
 
     impl Encodable for $int_ty {
         fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
             encoder.buf[offset..offset+mem::size_of::<Self>()].copy_from_slice(&self.to_le_bytes());
-            Ok(())
-        }
-
-        fn encode_array(slice: &mut [Self], encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
-            // Get a &[u8] view on the slice using zerocopy::AsBytes.
-            //
-            // NOTE: We are assuming the data layout of &[$int_ty] in Rust
-            // on this platform matches the FIDL wire format. In particular:
-            // packed array, little-endian order, two's complement integers.
-            //
-            // For more information:
-            // https://doc.rust-lang.org/reference/type-layout.html#primitive-data-layout
-            // https://doc.rust-lang.org/reference/types/numeric.html
-            let bytes = slice.as_bytes();
-            encoder.buf[offset..offset+bytes.len()].copy_from_slice(bytes);
             Ok(())
         }
     }
@@ -736,33 +704,13 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
                 Err(_) => Err(Error::OutOfRange),
             }
         }
-
-        fn decode_array(slice: &mut [Self], decoder: &mut Decoder<'_>) -> Result<()> {
-            // Get a mutable view of the slice as a byte slice, and copy from
-            // the decoder's buffer. As in `encode_array`, we are assuming the
-            // data layout of &[$int_ty] in Rust matches the FIDL wire format.
-            let bytes = slice.as_bytes_mut();
-            let size = bytes.len();
-            let offset = decoder.next_offset(size);
-            bytes.copy_from_slice(&decoder.buf[offset..offset+size]);
-            Ok(())
-        }
-
-        fn decode_array_into_vec(vec: &mut Vec<Self>, decoder: &mut Decoder<'_>, len: usize) -> Result<()> {
-            // Safety: The uninitialized elements are immediately written by
-            // `decode_array`, which always succeeds.
-            unsafe {
-                resize_vec_no_zeroing(vec, len);
-            }
-            Self::decode_array(vec, decoder)
-        }
     }
 
     impl_slice_encoding_by_copy!($int_ty);
 )* } }
 
 // This is separate from impl_codable_int because floats will require validation
-// in the future (FTP-055), so we can't optimize encode/decode to memcpy.
+// in the future (FTP-055), so we can't encode/decode by simple copy.
 macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
     impl Layout for $float_ty {
         fn inline_size(_context: &Context) -> usize { mem::size_of::<$float_ty>() }
@@ -854,7 +802,7 @@ macro_rules! impl_slice_encoding_by_iter {
     };
 }
 
-// Encodes &[T] as a FIDL vector by memcpy.
+// Encodes &[T] as a FIDL vector by simple copy.
 macro_rules! impl_slice_encoding_by_copy {
     ($prim_ty:ty) => {
         impl_slice_encoding_base!($prim_ty);
@@ -872,9 +820,8 @@ macro_rules! impl_slice_encoding_by_copy {
                 if self.len() == 0 {
                     return Ok(());
                 }
-                // See the comment on `encode_array` in the `impl_codable_int` macro
-                // for information about the assumptions made here.
-                let bytes = self.as_bytes();
+                // Encode by simple copy. See Layout::slice_as_bytes for more info.
+                let bytes = zerocopy::AsBytes::as_bytes(*self);
                 encoder.append_bytes(bytes);
                 Ok(())
             }
@@ -914,7 +861,7 @@ impl Decodable for bool {
     }
 }
 
-impl_layout!(u8, align: 1, size: 1);
+impl_layout_int!(u8);
 impl_slice_encoding_by_copy!(u8);
 
 impl Encodable for u8 {
@@ -925,18 +872,6 @@ impl Encodable for u8 {
         _recursion_depth: usize,
     ) -> Result<()> {
         encoder.buf[offset] = *self;
-        Ok(())
-    }
-
-    fn encode_array(
-        slice: &mut [Self],
-        encoder: &mut Encoder<'_>,
-        offset: usize,
-        _recursion_depth: usize,
-    ) -> Result<()> {
-        // See the comment on `encode_array` in the `impl_codable_int` macro
-        // for information about the assumptions made here.
-        encoder.buf[offset..offset + slice.len()].copy_from_slice(slice);
         Ok(())
     }
 }
@@ -951,31 +886,9 @@ impl Decodable for u8 {
         *self = decoder.buf[offset];
         Ok(())
     }
-
-    fn decode_array(slice: &mut [Self], decoder: &mut Decoder<'_>) -> Result<()> {
-        // See the comment on `decode_array` in the `impl_codable_int` macro
-        // for information about the assumptions made here.
-        let size = slice.len();
-        let offset = decoder.next_offset(size);
-        slice.copy_from_slice(&decoder.buf[offset..offset + size]);
-        Ok(())
-    }
-
-    fn decode_array_into_vec(
-        vec: &mut Vec<Self>,
-        decoder: &mut Decoder<'_>,
-        len: usize,
-    ) -> Result<()> {
-        // Safety: The uninitialized elements are immediately written by
-        // `decode_array`, which always succeeds.
-        unsafe {
-            resize_vec_no_zeroing(vec, len);
-        }
-        Self::decode_array(vec, decoder)
-    }
 }
 
-impl_layout!(i8, align: 1, size: 1);
+impl_layout_int!(i8);
 impl_slice_encoding_by_copy!(i8);
 
 impl Encodable for i8 {
@@ -986,19 +899,6 @@ impl Encodable for i8 {
         _recursion_depth: usize,
     ) -> Result<()> {
         encoder.buf[offset] = *self as u8;
-        Ok(())
-    }
-
-    fn encode_array(
-        slice: &mut [Self],
-        encoder: &mut Encoder<'_>,
-        offset: usize,
-        _recursion_depth: usize,
-    ) -> Result<()> {
-        // See the comment on `encode_array` in the `impl_codable_int` macro
-        // for information about the assumptions made here.
-        let bytes = slice.as_bytes();
-        encoder.buf[offset..offset + bytes.len()].copy_from_slice(bytes);
         Ok(())
     }
 }
@@ -1013,29 +913,46 @@ impl Decodable for i8 {
         *self = decoder.buf[offset] as i8;
         Ok(())
     }
+}
 
-    fn decode_array(slice: &mut [Self], decoder: &mut Decoder<'_>) -> Result<()> {
-        // See the comment on `decode_array` in the `impl_codable_int` macro
-        // for information about the assumptions made here.
-        let bytes = slice.as_bytes_mut();
-        let size = bytes.len();
-        let offset = decoder.next_offset(size);
-        bytes.copy_from_slice(&decoder.buf[offset..offset + size]);
-        Ok(())
-    }
-
-    fn decode_array_into_vec(
-        vec: &mut Vec<Self>,
-        decoder: &mut Decoder<'_>,
-        len: usize,
-    ) -> Result<()> {
-        // Safety: The uninitialized elements are immediately written by
-        // `decode_array`, which always succeeds.
-        unsafe {
-            resize_vec_no_zeroing(vec, len);
+/// Encodes `slice` as a FIDL array.
+fn encode_array<T: Encodable>(
+    slice: &mut [T],
+    encoder: &mut Encoder<'_>,
+    offset: usize,
+    recursion_depth: usize,
+) -> Result<()> {
+    match T::slice_as_bytes(slice) {
+        Some(bytes) => {
+            // Encode by simple copy. See Layout::slice_as_bytes for more info.
+            encoder.buf[offset..offset + bytes.len()].copy_from_slice(bytes);
         }
-        Self::decode_array(vec, decoder)
+        None => {
+            let stride = encoder.inline_size_of::<T>();
+            for (i, item) in slice.iter_mut().enumerate() {
+                item.encode(encoder, offset + i * stride, recursion_depth)?;
+            }
+        }
     }
+    Ok(())
+}
+
+/// Decodes a FIDL array into `slice`.
+fn decode_array<T: Decodable>(slice: &mut [T], decoder: &mut Decoder<'_>) -> Result<()> {
+    match T::slice_as_bytes(slice) {
+        Some(bytes) => {
+            // Decode by simple copy. See Layout::slice_as_bytes for more info.
+            let size = bytes.len();
+            let offset = decoder.next_offset(size);
+            bytes.copy_from_slice(&decoder.buf[offset..offset + size]);
+        }
+        None => {
+            for item in slice {
+                item.decode(decoder)?;
+            }
+        }
+    }
+    Ok(())
 }
 
 macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
@@ -1046,7 +963,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
 
     impl<T: Encodable> Encodable for [T; $len] {
         fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
-            T::encode_array(self, encoder, offset, recursion_depth)
+            encode_array(self, encoder, offset, recursion_depth)
         }
     }
 
@@ -1063,7 +980,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
         }
 
         fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-            T::decode_array(self, decoder)
+            decode_array(self, decoder)
         }
     }
 )* } }
@@ -1104,7 +1021,7 @@ pub fn encode_vector<T: Encodable>(
                 bytes_len,
                 recursion_depth,
                 |encoder, offset, recursion_depth| {
-                    T::encode_array(slice, encoder, offset, recursion_depth)
+                    encode_array(slice, encoder, offset, recursion_depth)
                 },
             )
         }
@@ -1203,9 +1120,9 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String) -> Result<bool>
     })
 }
 
-/// Attempts to decode a vec into `vec`, returning a `bool`
-/// indicating whether or not a vec was present.
-fn decode_vec<T: Decodable>(decoder: &mut Decoder<'_>, vec: &mut Vec<T>) -> Result<bool> {
+/// Attempts to decode a FIDL vector into `vec`, returning a `bool` indicating
+/// whether the vector was present.
+fn decode_vector<T: Decodable>(decoder: &mut Decoder<'_>, vec: &mut Vec<T>) -> Result<bool> {
     let mut len: u64 = 0;
     len.decode(decoder)?;
 
@@ -1223,7 +1140,16 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder<'_>, vec: &mut Vec<T>) -> Resu
     let len = len as usize;
     let bytes_len = len * decoder.inline_size_of::<T>();
     decoder.read_out_of_line(bytes_len, |decoder| {
-        T::decode_array_into_vec(vec, decoder, len)?;
+        if T::slice_as_bytes(vec).is_some() {
+            // Safety: The uninitalized elements are immediately written by
+            // `decode_array`, which always succeeds in the simple copy case.
+            unsafe {
+                resize_vec_no_zeroing(vec, len);
+            }
+        } else {
+            vec.resize_with(len, T::new_empty);
+        }
+        decode_array(vec, decoder)?;
         Ok(true)
     })
 }
@@ -1354,7 +1280,7 @@ impl<T: Decodable> Decodable for Vec<T> {
     }
 
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        if decode_vec(decoder, self)? {
+        if decode_vector(decoder, self)? {
             Ok(())
         } else {
             Err(Error::NotNullable)
@@ -1397,7 +1323,7 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
         let was_some;
         {
             let vec = self.get_or_insert(Vec::new());
-            was_some = decode_vec(decoder, vec)?;
+            was_some = decode_vector(decoder, vec)?;
         }
         if !was_some {
             *self = None
