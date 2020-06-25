@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-
 group("drivers") {
   deps = [
     "cypress",
@@ -30,6 +29,7 @@ group("tests") {
     "hid:tests",
     "hid-buttons:tests",
     "hid-input-report:hid-input-report-test",
+    "hidctl:tests",
     "i2c-hid:tests",
     "virtio:tests",
   ]

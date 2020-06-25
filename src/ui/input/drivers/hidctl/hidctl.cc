@@ -56,9 +56,9 @@ zx_status_t HidCtl::FidlMakeHidDevice(void* ctx, const fuchsia_hardware_hidctl_H
   status = hiddev->DdkAdd("hidctl-dev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "hidctl: could not add hid device: %d", status);
-    hiddev->Shutdown();
     return status;
   }
+  // The device thread will be created in DdkInit.
 
   zxlogf(INFO, "hidctl: created hid device");
   // devmgr owns the memory until release is called
@@ -88,28 +88,44 @@ int hid_device_thread(void* arg) {
 
 HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
                      fbl::Array<const uint8_t> report_desc, zx::socket data)
-    : ddk::Device<HidDevice, ddk::UnbindableDeprecated>(device),
+    : ddk::Device<HidDevice, ddk::Initializable, ddk::UnbindableNew>(device),
       boot_device_(config->boot_device),
       dev_class_(config->dev_class),
       report_desc_(std::move(report_desc)),
       data_(std::move(data)) {
   ZX_DEBUG_ASSERT(data_.is_valid());
+}
+
+void HidDevice::DdkInit(ddk::InitTxn txn) {
   int ret = thrd_create_with_name(&thread_, hid_device_thread, reinterpret_cast<void*>(this),
                                   "hidctl-thread");
   ZX_DEBUG_ASSERT(ret == thrd_success);
+  txn.Reply(ZX_OK);
 }
 
 void HidDevice::DdkRelease() {
   zxlogf(DEBUG, "hidctl: DdkRelease");
-  // Only the thread will call DdkRemoveDeprecated() when the loop exits. This detachs the thread
-  // before it exits, so no need to join.
+  // This function will only be called after the unbind txn is replied to,
+  // and the thread will already be detached at that point, so no need to join.
   delete this;
 }
 
-void HidDevice::DdkUnbindDeprecated() {
+void HidDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(DEBUG, "hidctl: DdkUnbind");
-  Shutdown();
-  // The thread will call DdkRemove when it exits the loop.
+  fbl::AutoLock lock(&lock_);
+  if (data_.is_valid()) {
+    // Prevent further writes to the socket
+    zx_status_t status = data_.shutdown(ZX_SOCKET_SHUTDOWN_READ);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    // Signal the thread to shutdown
+    status = data_.signal(0, HID_SHUTDOWN);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    // The thread will reply to the unbind txn when it exits the loop.
+    unbind_txn_ = std::move(txn);
+  } else {
+    // The thread has already shut down, can reply immediately.
+    txn.Reply();
+  }
 }
 
 zx_status_t HidDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
@@ -242,22 +258,15 @@ int HidDevice::Thread() {
     fbl::AutoLock lock(&lock_);
     data_.reset();
     thrd_detach(thread_);
+    // Check if the device has a pending unbind txn to reply to.
+    if (unbind_txn_) {
+      unbind_txn_->Reply();
+    } else {
+      // Request the device unbinding process to begin.
+      DdkAsyncRemove();
+    }
   }
-  DdkRemoveDeprecated();
-
   return static_cast<int>(status);
-}
-
-void HidDevice::Shutdown() {
-  fbl::AutoLock lock(&lock_);
-  if (data_.is_valid()) {
-    // Prevent further writes to the socket
-    zx_status_t status = data_.shutdown(ZX_SOCKET_SHUTDOWN_READ);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-    // Signal the thread to shutdown
-    status = data_.signal(0, HID_SHUTDOWN);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-  }
 }
 
 zx_status_t HidDevice::Recv(uint8_t* buffer, uint32_t capacity) {

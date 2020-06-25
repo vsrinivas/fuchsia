@@ -11,6 +11,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <optional>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
@@ -34,14 +36,15 @@ class HidCtl : public ddk::Device<HidCtl, ddk::Messageable> {
                                        fidl_txn_t* txn);
 };
 
-class HidDevice : public ddk::Device<HidDevice, ddk::UnbindableDeprecated>,
+class HidDevice : public ddk::Device<HidDevice, ddk::Initializable, ddk::UnbindableNew>,
                   public ddk::HidbusProtocol<HidDevice, ddk::base_protocol> {
  public:
   HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
             fbl::Array<const uint8_t> report_desc, zx::socket data);
 
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkInit(ddk::InitTxn txn);
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);
@@ -57,7 +60,6 @@ class HidDevice : public ddk::Device<HidDevice, ddk::UnbindableDeprecated>,
   zx_status_t HidbusSetProtocol(uint8_t protocol);
 
   int Thread();
-  void Shutdown();
 
  private:
   zx_status_t Recv(uint8_t* buffer, uint32_t capacity);
@@ -69,6 +71,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::UnbindableDeprecated>,
 
   fbl::Mutex lock_;
   ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(lock_);
+  std::optional<ddk::UnbindTxn> unbind_txn_ __TA_GUARDED(lock_);
   zx::socket data_;
   thrd_t thread_;
 };
