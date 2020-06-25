@@ -14,6 +14,7 @@
 
 #include <arch/ops.h>
 #include <kernel/event.h>
+#include <kernel/mutex.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
@@ -30,6 +31,13 @@ namespace {
 // lock dependency graph.
 AutounsignalEvent graph_edge_event;
 
+// Event to wait on the completion of a triggered loop detection pass. This is
+// primarily to bound the async loop detection report when testing.
+Event detection_complete_event;
+
+// Synchronizes the access to the loop detection completion event.
+DECLARE_SINGLETON_MUTEX(DetectionCompleteLock);
+
 // Loop detection thread. Traverses the lock dependency graph to find circular
 // lock dependencies.
 int LockDepThread(void* /*arg*/) {
@@ -42,6 +50,7 @@ int LockDepThread(void* /*arg*/) {
     Thread::Current::SleepRelative(ZX_SEC(2));
 
     lockdep::LoopDetectionPass();
+    detection_complete_event.Signal();
   }
   return 0;
 }
@@ -100,6 +109,14 @@ int CommandLockDep(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 }  // anonymous namespace
+
+// Triggers a loop detection pass and waits for it to complete or timeout.
+zx_status_t TriggerAndWaitForLoopDetection(zx_time_t deadline) {
+  Guard<Mutex> guard{DetectionCompleteLock::Get()};
+  detection_complete_event.Unsignal();
+  lockdep::SystemTriggerLoopDetection();
+  return detection_complete_event.WaitDeadline(deadline, Interruptible::Yes);
+}
 
 STATIC_COMMAND_START
 STATIC_COMMAND("lockdep", "kernel lock diagnostics", &CommandLockDep)

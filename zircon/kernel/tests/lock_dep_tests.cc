@@ -7,6 +7,7 @@
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
+#include <zircon/time.h>
 
 #include <kernel/mutex.h>
 #include <lockdep/guard_multiple.h>
@@ -15,6 +16,9 @@
 #include "tests.h"
 
 #if WITH_LOCK_DEP_TESTS
+
+// Defined in kernel/lib/lockdep.
+zx_status_t TriggerAndWaitForLoopDetection(zx_time_t deadline);
 
 namespace test {
 
@@ -274,6 +278,7 @@ static bool lock_dep_dynamic_analysis_tests() {
   using lockdep::LockFlagsReAcquireFatal;
   using lockdep::LockResult;
   using lockdep::ThreadLockState;
+  using lockdep::kInvalidLockClassId;
   using test::Bar;
   using test::Baz;
   using test::Foo;
@@ -927,7 +932,18 @@ static bool lock_dep_dynamic_analysis_tests() {
       EXPECT_TRUE(guard_a);
       EXPECT_EQ(LockResult::Success, test::GetLastResult());
     }
+
+    // Ensure that the loop detection pass completes before the test ends to
+    // avoid triggering lockdep failures in CQ/CI. Use an infinite timeout and
+    // let test infra kill the test due to timeout instead.
+    zx_status_t status = TriggerAndWaitForLoopDetection(ZX_TIME_INFINITE);
+    EXPECT_EQ(ZX_OK, status);
   }
+
+
+  // Reset the tracking state to ensure that circular dependencies are not
+  // reported outside of the test.
+  test::ResetTrackingState();
 
   END_TEST;
 }

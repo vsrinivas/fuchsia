@@ -182,6 +182,9 @@ class __TA_CAPABILITY("mutex") Lock {
   LockType& capability() __TA_RETURN_CAPABILITY(lock_) { return lock_; }
   const LockType& capability() const __TA_RETURN_CAPABILITY(lock_) { return lock_; }
 
+  // Returns the LockClassId of the lock class this lock belongs to.
+  LockClassId id() const { return id_.value(); }
+
  protected:
   // Initializes the Lock instance with the given LockClassId and passes any
   // additional arguments to the underlying lock constructor.
@@ -193,9 +196,6 @@ class __TA_CAPABILITY("mutex") Lock {
   friend class Guard;
   template <size_t, typename, typename>
   friend class GuardMultiple;
-
-  // Returns the LockClassId of the lock class this lock belongs to.
-  LockClassId id() const { return id_.value(); }
 
   // Value type that stores the LockClassId for this lock when validation is
   // enabled.
@@ -235,8 +235,14 @@ class __TA_CAPABILITY("mutex") Lock<GlobalReference<LockType, Reference>> {
 
   ~Lock() = default;
 
+  // Provides direct access to the underlying lock. Care should be taken when
+  // manipulating the underlying lock. Incorrect manipulation could confuse
+  // the validator, trigger lock assertions, and/or deadlock.
   LockType& lock() { return Reference; }
   const LockType& lock() const { return Reference; }
+
+  // Returns the LockClassId of the lock class this lock belongs to.
+  LockClassId id() const { return id_.value(); }
 
  protected:
   constexpr Lock(LockClassId id) : id_{id} {}
@@ -246,8 +252,6 @@ class __TA_CAPABILITY("mutex") Lock<GlobalReference<LockType, Reference>> {
   friend class Guard;
   template <size_t, typename, typename>
   friend class GuardMultiple;
-
-  LockClassId id() const { return id_.value(); }
 
   struct Value {
     LockClassId value_;
