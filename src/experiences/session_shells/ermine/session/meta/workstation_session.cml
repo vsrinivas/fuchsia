@@ -1,6 +1,6 @@
 {
-    "program": {
-        "binary": "bin/workstation_session",
+    program: {
+        binary: "bin/workstation_session",
     },
     collections: [
         {
@@ -12,51 +12,41 @@
             durability: "transient",
         },
     ],
-    expose: [
+    use: [
+        { runner: "elf" },
         {
-            protocol: [
-                "/svc/fuchsia.session.ElementManager",
-            ],
-            from: "self",
-        },
-    ],
-    "use": [
-        { "runner": "elf" },
-        {
-            "directory": "/dev/class/input-report",
-            "from": "realm",
-            "rights": [ "r*",]
+            directory: "/dev/class/input-report",
+            from: "realm",
+            rights: [ "r*" ],
         },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
         {
-            "protocol": "/svc/fuchsia.sys.Launcher",
-        },
-        {
-            "protocol": "/svc/fuchsia.ui.input2.Keyboard",
-        },
-        {
-            "protocol": "/svc/fuchsia.ui.scenic.Scenic",
-        },
-        {
-            "protocol": "/svc/fuchsia.ui.input.ImeService",
-        },
-        {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
-        {
-            "protocol": "/svc/fuchsia.ui.shortcut.Manager",
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.sys.Launcher",
+                "/svc/fuchsia.ui.focus.FocusChainListenerRegistry",
+                "/svc/fuchsia.ui.input.ImeService",
+                "/svc/fuchsia.ui.input2.Keyboard",
+                "/svc/fuchsia.ui.input3.Keyboard",
+                "/svc/fuchsia.ui.scenic.Scenic",
+                "/svc/fuchsia.ui.shortcut.Manager",
+            ],
         },
     ],
     offer: [
         {
             protocol: "/svc/fuchsia.session.ElementManager",
             from: "self",
-            to: [
-                "#element_launchers",
-            ],
+            to: [ "#element_launchers" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "/svc/fuchsia.session.ElementManager" ],
+            from: "self",
         },
     ],
 }

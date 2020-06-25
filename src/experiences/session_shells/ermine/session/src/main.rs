@@ -125,9 +125,10 @@ async fn main() -> Result<(), Error> {
     let services_fut = expose_services(element_repository.make_server());
     let input_fut = workstation_input_pipeline::handle_input(scene_manager, &pointer_hack_server);
     let element_manager_fut = element_repository.run_with_handler(&mut handler);
+    let focus_fut = input::focus_listening::handle_focus_changes();
 
     //TODO(47080) monitor the futures to see if they complete in an error.
-    let _ = try_join!(services_fut, input_fut, element_manager_fut);
+    let _ = try_join!(services_fut, input_fut, element_manager_fut, focus_fut);
 
     element_repository.shutdown()?;
 
