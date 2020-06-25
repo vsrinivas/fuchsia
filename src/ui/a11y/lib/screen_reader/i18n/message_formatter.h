@@ -28,7 +28,8 @@ class MessageFormatter {
  public:
   // Language is a lower-case two-letter code as defined by ISO-639.
   // |lookup_| must be initialized and holds the icu::MessageFormat patterns.
-  MessageFormatter(std::string language, std::unique_ptr<intl::Lookup> lookup);
+  explicit MessageFormatter(std::string language, std::unique_ptr<intl::Lookup> lookup);
+  virtual ~MessageFormatter() = default;
 
   // Formats a icu::MessageFormat pattern pointed by |id|, optionally using |arg_names| which map to
   // |arg_values|. Returns the formatted string, in UTF-8 when successful. If it fails,
@@ -36,9 +37,13 @@ class MessageFormatter {
   // |arg_names| does not exist in the pattern, the formatting returns an error. For now, no complex
   // error codes are needed, so std::optional is used. If necessary, it is an easy change to
   // introduce custom error codes.
-  std::optional<std::string> FormatStringById(
+  virtual std::optional<std::string> FormatStringById(
       const uint64_t id, const std::vector<std::string>& arg_names = std::vector<std::string>(),
       const std::vector<std::string>& arg_values = std::vector<std::string>());
+
+ protected:
+  // For mocks.
+  MessageFormatter() = default;
 
  private:
   // Language code used to build MessageFormat.

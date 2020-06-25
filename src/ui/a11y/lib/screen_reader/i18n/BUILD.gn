@@ -19,10 +19,11 @@ source_set("i18n") {
     "messages.h",
   ]
 
+  public_deps = [ "//src/lib/intl/lookup/cpp:lib" ]
+
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/intl/lookup/cpp:lib",
     "//third_party/icu",
   ]
 }
