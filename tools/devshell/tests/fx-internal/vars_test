@@ -104,6 +104,7 @@ TEST_fx-getdeviceraw-and-isvaliddevice() {
       ":8122"
       "strut-wind-ahead-turf" "strut-wind-ahead-turf:8111"
       "[::1]:22" "[fe80::7:8%eth0]:222" "[fe80::7:8%eth0]"
+      "[fe80::4607:bff:fe68:41c9%zircon1-4]"
     )
   for valid in "${valids[@]}"; do
     BT_EXPECT is-valid-device "${valid}"
