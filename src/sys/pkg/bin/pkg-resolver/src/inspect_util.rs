@@ -110,7 +110,6 @@ mod test_inspectable_repository_config {
                   },
                   mirrors: {
                     "0": {
-                        blob_key: format!("{:?}", mirror_config.blob_key()),
                         mirror_url: format!("{:?}", mirror_config.mirror_url()),
                         subscribe: format!("{:?}", mirror_config.subscribe()),
                         blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
@@ -151,7 +150,6 @@ mod test_inspectable_repository_config {
                   },
                   mirrors: {
                     "0": {
-                        blob_key: format!("{:?}", mirror_config.blob_key()),
                         mirror_url: format!("{:?}", mirror_config.mirror_url()),
                         subscribe: format!("{:?}", mirror_config.subscribe()),
                         blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())

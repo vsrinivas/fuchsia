@@ -147,7 +147,6 @@ async fn test_resolving_package_updates_inspect_state() {
                         },
                         mirrors: {
                           "0": {
-                            blob_key: format!("{:?}", config.mirrors()[0].blob_key()),
                             mirror_url: format!("{:?}", config.mirrors()[0].mirror_url()),
                             subscribe: format!("{:?}", config.mirrors()[0].subscribe()),
                             blob_mirror_url: format!("{:?}", config.mirrors()[0].blob_mirror_url())

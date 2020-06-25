@@ -8,8 +8,7 @@ use {
     crate::{package::Package, serve::ServedRepositoryBuilder},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_pkg_ext::{
-        MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder,
-        RepositoryKey,
+        MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
     fuchsia_component::client::{launcher, AppBuilder},
     fuchsia_merkle::Hash,
@@ -18,7 +17,6 @@ use {
     serde::Deserialize,
     std::{
         collections::{BTreeMap, BTreeSet},
-        fmt,
         fs::{self, File},
         io::{self, Read, Write},
         path::PathBuf,
@@ -32,30 +30,23 @@ use {
 #[derive(Debug)]
 pub struct RepositoryBuilder<'a> {
     packages: Vec<MaybeOwned<'a, Package>>,
-    encryption_key: Option<BlobEncryptionKey>,
     repodir: Option<PathBuf>,
 }
 
 impl<'a> RepositoryBuilder<'a> {
     /// Creates a new `RepositoryBuilder`.
     pub fn new() -> Self {
-        Self { packages: vec![], encryption_key: None, repodir: None }
+        Self { packages: vec![], repodir: None }
     }
 
     /// Creates a new `RepositoryBuilder` from a template TUF repository dir.
     pub fn from_template_dir(path: impl Into<PathBuf>) -> Self {
-        Self { packages: vec![], encryption_key: None, repodir: Some(path.into()) }
+        Self { packages: vec![], repodir: Some(path.into()) }
     }
 
     /// Adds a package (or a reference to one) to the repository.
     pub fn add_package(mut self, package: impl Into<MaybeOwned<'a, Package>>) -> Self {
         self.packages.push(package.into());
-        self
-    }
-
-    /// Encrypts blobs in the repository with the given key (default is to not encrypt blobs).
-    pub fn set_encryption_key(mut self, key: BlobEncryptionKey) -> Self {
-        self.encryption_key = Some(key);
         self
     }
 
@@ -99,11 +90,6 @@ impl<'a> RepositoryBuilder<'a> {
                 File::open(repodir.path()).context("open /repo")?,
             )?;
 
-        if let Some(ref key) = self.encryption_key {
-            fs::write(indir.path().join("encryption.key"), key.as_bytes())?;
-            pm = pm.arg("-e=/in/encryption.key");
-        }
-
         for package in &self.packages {
             let package = package.as_ref();
             pm = pm.add_dir_to_namespace(
@@ -114,23 +100,7 @@ impl<'a> RepositoryBuilder<'a> {
 
         pm.output(&launcher()?)?.await?.ok()?;
 
-        Ok(Repository { dir: repodir, encryption_key: self.encryption_key })
-    }
-}
-
-/// A repository blob encryption key.
-pub struct BlobEncryptionKey([u8; 32]);
-
-impl BlobEncryptionKey {
-    /// Returns a slice of all bytes in the key.
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.0[..]
-    }
-}
-
-impl fmt::Debug for BlobEncryptionKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("BlobEncryptionKey").field(&hex::encode(self.as_bytes())).finish()
+        Ok(Repository { dir: repodir })
     }
 }
 
@@ -179,7 +149,6 @@ pub(crate) fn iter_packages(
 #[derive(Debug)]
 pub struct Repository {
     dir: TempDir,
-    encryption_key: Option<BlobEncryptionKey>,
 }
 
 impl Repository {
@@ -239,10 +208,7 @@ impl Repository {
             builder = builder.add_root_key(key);
         }
 
-        let mut mirror = MirrorConfigBuilder::new(mirror_url).unwrap().subscribe(subscribe);
-        if let Some(ref key) = self.encryption_key {
-            mirror = mirror.blob_key(RepositoryBlobKey::Aes(key.as_bytes().to_vec()))
-        }
+        let mirror = MirrorConfigBuilder::new(mirror_url).unwrap().subscribe(subscribe);
         builder.add_mirror(mirror.build()).build()
     }
 
@@ -343,33 +309,6 @@ mod tests {
             packages.into_iter().map(|pkg| pkg.path).collect::<Vec<_>>(),
             vec!["fortune/0".to_owned(), "rolldice/0".to_owned()]
         );
-
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_repo_encryption() -> Result<(), Error> {
-        let message = "Hello World!".as_bytes();
-        let repo = RepositoryBuilder::new()
-            .add_package(
-                PackageBuilder::new("tiny")
-                    .add_resource_at("data/message", message)
-                    .build()
-                    .await?,
-            )
-            .set_encryption_key(BlobEncryptionKey([
-                0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd,
-                0xee, 0xff, 0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44,
-                0x33, 0x22, 0x11, 0x00,
-            ]))
-            .build()
-            .await?;
-
-        // No blob in the repo should contain `message`.
-        for blob in repo.iter_blobs()? {
-            let blob = blob?;
-            assert_ne!(repo.read_blob(&blob)?, message);
-        }
 
         Ok(())
     }

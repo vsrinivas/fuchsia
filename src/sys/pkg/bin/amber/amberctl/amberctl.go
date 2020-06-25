@@ -32,6 +32,7 @@ import (
 	"fidl/fuchsia/update"
 
 	"amber/urlscope"
+
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 )
 
@@ -193,11 +194,6 @@ func upgradeSourceConfig(cfg SourceConfig) pkg.RepositoryConfig {
 		MirrorUrlPresent: true,
 		Subscribe:        cfg.Auto,
 		SubscribePresent: true,
-	}
-	if cfg.BlobKey != nil {
-		var blobKey pkg.RepositoryBlobKey
-		blobKey.SetAesKey(cfg.BlobKey.Data[:])
-		mirror.SetBlobKey(blobKey)
 	}
 	repoCfg.SetMirrors([]pkg.MirrorConfig{mirror})
 

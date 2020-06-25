@@ -110,14 +110,6 @@ flexible union RepositoryKeyConfig {
     1: bytes ed25519_key;
 };
 
-/// A key used to decrypt blobs.
-///
-/// The only supported algorithm at the moment is aes.
-flexible union RepositoryBlobKey {
-    /// A raw aes key as binary data.
-    1: bytes aes_key;
-};
-
 /// The configuration necessary to connect to a mirror.
 table MirrorConfig {
     /// The base URL of the TUF metadata on this mirror. Required.
@@ -126,8 +118,7 @@ table MirrorConfig {
     /// Whether or not to automatically monitor the mirror for updates. Required.
     2: bool subscribe;
 
-    /// The private (or symmetric) key used to decrypt blobs fetched from this mirror. Optional.
-    3: RepositoryBlobKey blob_key;
+    3: reserved;
 
     /// The URL where blobs from this mirror should be fetched.  Optional.
     /// Defaults to `mirror_url + "/blobs"`.

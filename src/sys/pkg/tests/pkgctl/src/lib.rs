@@ -12,8 +12,7 @@ use {
         RepositoryManagerRequestStream,
     },
     fidl_fuchsia_pkg_ext::{
-        MirrorConfig, MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig,
-        RepositoryConfigBuilder, RepositoryKey,
+        MirrorConfig, MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
     fidl_fuchsia_pkg_rewrite::EngineRequestStream,
     fidl_fuchsia_space as fidl_space,
@@ -534,10 +533,7 @@ fn make_test_repo_config() -> RepositoryConfig {
     RepositoryConfigBuilder::new(RepoUrl::new("example.com".to_string()).expect("valid url"))
         .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
         .add_mirror(
-            MirrorConfigBuilder::new("http://example.org".parse::<Uri>().unwrap())
-                .unwrap()
-                .blob_key(RepositoryBlobKey::Aes(vec![1u8]))
-                .build(),
+            MirrorConfigBuilder::new("http://example.org".parse::<Uri>().unwrap()).unwrap().build(),
         )
         .update_package_url(
             PkgUrl::parse("fuchsia-pkg://update.example.com/update").expect("valid PkgUrl"),
