@@ -12,7 +12,7 @@ test("usb") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
 }
 

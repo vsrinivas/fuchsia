@@ -10,7 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <unistd.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define USB_TESTER_DEV_DIR "/dev/class/usb-tester"
 #define USB_DEVICE_DEV_DIR "/dev/class/usb-device"
@@ -35,8 +35,7 @@ static zx_status_t check_xhci_root_hubs(DIR* d) {
   return ZX_OK;
 }
 
-static bool usb_root_hubs_test(void) {
-  BEGIN_TEST;
+TEST(UsbTests, usb_root_hubs_test) {
   // TODO(ravoorir): Wait for /dev/class/usb
   // to be created.
   DIR* d = open_usb_device_dir();
@@ -44,20 +43,19 @@ static bool usb_root_hubs_test(void) {
     // TODO(ravoorir): At the moment we cannot restrict a test
     // to only run on hardware(IN-497) and not the qemu instances.
     // We should fail here when running on hardware.
-    unittest_printf_critical(" Root hub creation failed.[SKIPPING]");
-    return true;
+    printf("[SKIPPING] Root hub creation failed.\n");
+    return;
   }
   // TODO(ravoorir): There should be a matrix of hardware that should
   // be accessible from here. Depending on whether the hardware has
   // xhci/ehci, we should check the root hubs.
   zx_status_t status = check_xhci_root_hubs(d);
   if (status != ZX_OK) {
-    unittest_printf_critical(" Root hub creation failed.[SKIPPING]");
+    printf("[SKIPPING] Root hub creation failed.\n");
     closedir(d);
-    return true;
+    return;
   }
   closedir(d);
-  END_TEST;
 }
 
 static zx_status_t open_test_device(zx_handle_t* out_svc) {
@@ -84,13 +82,11 @@ static zx_status_t open_test_device(zx_handle_t* out_svc) {
   return ZX_ERR_NOT_FOUND;
 }
 
-static bool usb_bulk_loopback_test(void) {
-  BEGIN_TEST;
-
+TEST(UsbTests, usb_bulk_loopback_test) {
   zx_handle_t dev_svc;
   if (open_test_device(&dev_svc) != ZX_OK) {
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
+    printf("[SKIPPING]\n");
+    return;
   }
   ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "invalid device service handle");
 
@@ -107,16 +103,13 @@ static bool usb_bulk_loopback_test(void) {
   ASSERT_EQ(status, ZX_OK, "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K");
 
   close(dev_svc);
-  END_TEST;
 }
 
-static bool usb_bulk_scatter_gather_test(void) {
-  BEGIN_TEST;
-
+TEST(UsbTests, usb_bulk_scatter_gather_test) {
   zx_handle_t dev_svc;
   if (open_test_device(&dev_svc) != ZX_OK) {
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
+    printf("[SKIPPING]\n");
+    return;
   }
   ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "invalid device service handle");
 
@@ -150,29 +143,22 @@ static bool usb_bulk_scatter_gather_test(void) {
             "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K with scatter gather IN");
 
   close(dev_svc);
-  END_TEST;
 }
 
-static bool usb_isoch_verify_result(fuchsia_hardware_usb_tester_IsochResult* result) {
-  BEGIN_HELPER;
-
+static void usb_isoch_verify_result(fuchsia_hardware_usb_tester_IsochResult* result) {
   ASSERT_GT(result->num_packets, 0lu, "didn't transfer any isochronous packets");
   // Isochronous transfers aren't guaranteed, so just require a high enough percentage to pass.
   ASSERT_GE(result->num_packets, ISOCH_MIN_PACKETS,
             "num_packets is too low for a reliable result, should request more bytes");
   double percent_passed = ((double)result->num_passed / result->num_packets) * 100;
   ASSERT_GE(percent_passed, ISOCH_MIN_PASS_PERCENT, "not enough isoch transfers succeeded");
-
-  END_HELPER;
 }
 
-static bool usb_isoch_loopback_test(void) {
-  BEGIN_TEST;
-
+TEST(UsbTests, usb_isoch_loopback_test) {
   zx_handle_t dev_svc;
   if (open_test_device(&dev_svc) != ZX_OK) {
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
+    printf("[SKIPPING]\n");
+    return;
   }
   ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
 
@@ -185,28 +171,24 @@ static bool usb_isoch_loopback_test(void) {
   fuchsia_hardware_usb_tester_IsochResult result = {};
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
-  ASSERT_EQ(status, ZX_OK, err_msg1);
-  ASSERT_TRUE(usb_isoch_verify_result(&result), err_msg1);
+  ASSERT_EQ(status, ZX_OK, "%s", err_msg1);
+  ASSERT_NO_FATAL_FAILURES(usb_isoch_verify_result(&result), "%s", err_msg1);
 
   char err_msg2[] = "isoch loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K";
   params.data_pattern = fuchsia_hardware_usb_tester_DataPatternType_RANDOM;
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
-  ASSERT_EQ(status, ZX_OK, err_msg2);
-  ASSERT_TRUE(usb_isoch_verify_result(&result), err_msg2);
+  ASSERT_EQ(status, ZX_OK, "%s", err_msg2);
+  ASSERT_NO_FATAL_FAILURES(usb_isoch_verify_result(&result), "%s", err_msg2);
 
   close(dev_svc);
-
-  END_TEST;
 }
 
-static bool usb_callbacks_opt_out_test(void) {
-  BEGIN_TEST;
-
+TEST(UsbTests, usb_callbacks_opt_out_test) {
   zx_handle_t dev_svc;
   if (open_test_device(&dev_svc) != ZX_OK) {
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
+    printf("[SKIPPING]\n");
+    return;
   }
   ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
 
@@ -228,20 +210,17 @@ static bool usb_callbacks_opt_out_test(void) {
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
   ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_TRUE(usb_isoch_verify_result(&result), "callbacks test failed: 10 reqs per callback");
+  ASSERT_NO_FATAL_FAILURES(usb_isoch_verify_result(&result),
+                           "callbacks test failed: 10 reqs per callback");
 
   close(dev_svc);
-
-  END_TEST;
 }
 
-static bool usb_single_callback_error_test(void) {
-  BEGIN_TEST;
-
+TEST(UsbTests, usb_single_callback_error_test) {
   zx_handle_t dev_svc;
   if (open_test_device(&dev_svc) != ZX_OK) {
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
+    printf("[SKIPPING]\n");
+    return;
   }
   ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
 
@@ -257,21 +236,17 @@ static bool usb_single_callback_error_test(void) {
   fuchsia_hardware_usb_tester_IsochResult result = {};
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
-  ASSERT_EQ(status, ZX_OK, err_msg);
+  ASSERT_EQ(status, ZX_OK, "%s", err_msg);
   // Don't need to verify the transfer results since we only care about callbacks for this test.
 
   close(dev_svc);
-
-  END_TEST;
 }
 
-static bool usb_callbacks_on_error_test(void) {
-  BEGIN_TEST;
-
+TEST(UsbTests, usb_callbacks_on_error_test) {
   zx_handle_t dev_svc;
   if (open_test_device(&dev_svc) != ZX_OK) {
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
+    printf("[SKIPPING]\n");
+    return;
   }
   ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
 
@@ -290,21 +265,17 @@ static bool usb_callbacks_on_error_test(void) {
   fuchsia_hardware_usb_tester_IsochResult result = {};
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
-  ASSERT_EQ(status, ZX_OK, err_msg);
+  ASSERT_EQ(status, ZX_OK, "%s", err_msg);
   // Don't need to verify the transfer results since we only care about callbacks for this test.
 
   close(dev_svc);
-
-  END_TEST;
 }
 
-static bool usb_callbacks_on_multiple_errors_test(void) {
-  BEGIN_TEST;
-
+TEST(UsbTests, usb_callbacks_on_multiple_errors_test) {
   zx_handle_t dev_svc;
   if (open_test_device(&dev_svc) != ZX_OK) {
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
+    printf("[SKIPPING]\n");
+    return;
   }
   ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
 
@@ -328,21 +299,8 @@ static bool usb_callbacks_on_multiple_errors_test(void) {
   fuchsia_hardware_usb_tester_IsochResult result = {};
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
-  ASSERT_EQ(status, ZX_OK, err_msg);
+  ASSERT_EQ(status, ZX_OK, "%s", err_msg);
   // Don't need to verify the transfer results since we only care about callbacks for this test.
 
   close(dev_svc);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(usb_tests)
-RUN_TEST(usb_root_hubs_test)
-RUN_TEST(usb_bulk_loopback_test)
-RUN_TEST(usb_bulk_scatter_gather_test)
-RUN_TEST(usb_isoch_loopback_test)
-RUN_TEST(usb_callbacks_opt_out_test)
-RUN_TEST(usb_single_callback_error_test)
-RUN_TEST(usb_callbacks_on_error_test)
-RUN_TEST(usb_callbacks_on_multiple_errors_test)
-END_TEST_CASE(usb_tests)
