@@ -3,42 +3,17 @@
 // found in the LICENSE file.
 
 use argh::FromArgs;
-use fidl_fuchsia_net_stack::{self as netstack};
+use fidl_fuchsia_logger as logger;
 
-// Same as https://docs.rs/log/0.4.8/log/enum.Level.html
-#[derive(PartialEq, Copy, Clone, Debug)]
-pub enum LogLevelArg {
-    // See syslog/logger.go for numeric definitions.
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-    Fatal,
-}
-
-fn parse_log_level_str(value: &str) -> Result<LogLevelArg, String> {
+fn parse_log_level_str(value: &str) -> Result<logger::LogLevelFilter, String> {
     match &value.to_lowercase()[..] {
-        "trace" => Ok(LogLevelArg::Trace),
-        "debug" => Ok(LogLevelArg::Debug),
-        "info" => Ok(LogLevelArg::Info),
-        "warn" => Ok(LogLevelArg::Warn),
-        "error" => Ok(LogLevelArg::Error),
-        "fatal" => Ok(LogLevelArg::Fatal),
+        "trace" => Ok(logger::LogLevelFilter::Trace),
+        "debug" => Ok(logger::LogLevelFilter::Debug),
+        "info" => Ok(logger::LogLevelFilter::Info),
+        "warn" => Ok(logger::LogLevelFilter::Warn),
+        "error" => Ok(logger::LogLevelFilter::Error),
+        "fatal" => Ok(logger::LogLevelFilter::Fatal),
         _ => Err("invalid log level".to_string()),
-    }
-}
-
-impl ::std::convert::From<LogLevelArg> for netstack::LogLevelFilter {
-    fn from(arg: LogLevelArg) -> Self {
-        match arg {
-            LogLevelArg::Trace => netstack::LogLevelFilter::Trace,
-            LogLevelArg::Debug => netstack::LogLevelFilter::Debug,
-            LogLevelArg::Info => netstack::LogLevelFilter::Info,
-            LogLevelArg::Warn => netstack::LogLevelFilter::Warn,
-            LogLevelArg::Error => netstack::LogLevelFilter::Error,
-            LogLevelArg::Fatal => netstack::LogLevelFilter::Fatal,
-        }
     }
 }
 
@@ -344,7 +319,7 @@ pub enum LogEnum {
 pub struct LogSetLevel {
     #[argh(positional, from_str_fn(parse_log_level_str))]
     /// log level
-    pub log_level: LogLevelArg,
+    pub log_level: logger::LogLevelFilter,
 }
 
 #[derive(FromArgs, Clone, Debug)]

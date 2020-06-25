@@ -6,8 +6,9 @@ library fuchsia.net.stack;
 
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.network;
-using fuchsia.net;
+using fuchsia.logger;
 using fuchsia.net.name;
+using fuchsia.net;
 using fuchsia.posix.socket;
 
 /// A list of IP addresses for an interface.
@@ -236,22 +237,8 @@ protocol Stack {
     -> OnInterfaceStatusChange(InterfaceStatusChange info);
 };
 
-// TODO(crbug.com/fuchsia/34987): Deprecate this protocol.
-/// Note LogLevelFilter and protocol Log is transient,
-/// and is planned to be deprecated by logger.fidl's LogLevelFilter.
-/// This definition is to support syslog/logger.go and Netstack2.
-enum LogLevelFilter : int8 {
-    TRACE = 0x10;
-    DEBUG = 0x20;
-    INFO = 0x30;
-    WARN = 0x40;
-    ERROR = 0x50;
-    FATAL = 0x60;
-};
-
 [Discoverable]
 protocol Log {
     /// Dynamically set a syslog level.
-    /// See syslog/logger.go for level definition.
-    SetLogLevel(LogLevelFilter level) -> () error Error;
+    SetLogLevel(fuchsia.logger.LogLevelFilter level) -> () error Error;
 };

@@ -20,6 +20,7 @@ import (
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/hardware/network"
+	"fidl/fuchsia/logger"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
@@ -478,7 +479,7 @@ type logImpl struct {
 	logger *syslog.Logger
 }
 
-func (li *logImpl) SetLogLevel(_ fidl.Context, level stack.LogLevelFilter) (stack.LogSetLogLevelResult, error) {
+func (li *logImpl) SetLogLevel(_ fidl.Context, level logger.LogLevelFilter) (stack.LogSetLogLevelResult, error) {
 	li.logger.SetSeverity(syslog.LogLevel(level))
 	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetSyslogLevel: %s", level)
 	return stack.LogSetLogLevelResultWithResponse(stack.LogSetLogLevelResponse{}), nil
