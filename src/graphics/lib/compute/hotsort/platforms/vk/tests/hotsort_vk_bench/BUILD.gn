@@ -17,6 +17,8 @@ graphics_compute_vulkan_executable("hotsort-vk-bench") {
   deps = [
     ":hs_amd_gcn3_u32",
     ":hs_amd_gcn3_u64",
+    ":hs_arm_bifrost4_u32",
+    ":hs_arm_bifrost4_u64",
     ":hs_arm_bifrost8_u32",
     ":hs_arm_bifrost8_u64",
     ":hs_google_swiftshader_u32",
@@ -43,6 +45,18 @@ hotsort_target("hs_amd_gcn3_u32") {
 
 hotsort_target("hs_amd_gcn3_u64") {
   gpu_arch = "amd_gcn3"
+  type_dwords = 2
+  glsl_bindings = "0,1,0,0"
+}
+
+hotsort_target("hs_arm_bifrost4_u32") {
+  gpu_arch = "arm_bifrost4"
+  type_dwords = 1
+  glsl_bindings = "0,1,0,0"
+}
+
+hotsort_target("hs_arm_bifrost4_u64") {
+  gpu_arch = "arm_bifrost4"
   type_dwords = 2
   glsl_bindings = "0,1,0,0"
 }
