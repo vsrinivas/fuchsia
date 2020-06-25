@@ -47,7 +47,7 @@ TEST(File, ReadFileToVector) {
   std::string content = "content";
   std::string path = dir.path() + filename;
 
-  EXPECT_TRUE(files::WriteFile(path, content.c_str(), content.size()));
+  EXPECT_TRUE(files::WriteFile(path, content));
 
   std::vector<uint8_t> data;
   EXPECT_TRUE(files::ReadFileToVector(path, &data));
@@ -62,7 +62,7 @@ TEST(File, ReadFileDescriptorToVector) {
   std::string content = "content";
   std::string path = dir.path() + filename;
 
-  EXPECT_TRUE(files::WriteFile(path, content.c_str(), content.size()));
+  EXPECT_TRUE(files::WriteFile(path, content));
 
   auto fd = open(path.c_str(), O_RDONLY);
   EXPECT_GT(fd, 0);
@@ -95,7 +95,7 @@ TEST(File, GetFileSize) {
   EXPECT_EQ(0u, size);
 
   std::string content = "Hello World";
-  ASSERT_TRUE(WriteFile(path, content.data(), content.size()));
+  ASSERT_TRUE(WriteFile(path, content));
   EXPECT_TRUE(GetFileSize(path, &size));
   EXPECT_EQ(content.size(), size);
 }

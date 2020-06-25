@@ -50,6 +50,10 @@ bool ReadFileDescriptor(int fd, T* result) {
 
 }  // namespace
 
+bool WriteFile(const std::string& path, std::string_view data) {
+  return WriteFile(path, data.data(), data.size());
+}
+
 bool WriteFile(const std::string& path, const char* data, ssize_t size) {
   return WriteFileAt(AT_FDCWD, path, data, size);
 }

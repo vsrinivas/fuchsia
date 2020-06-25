@@ -15,6 +15,7 @@ namespace files {
 
 // Writes the given data to the file at the given path. Returns true if the data
 // was successfully written, otherwise returns false.
+bool WriteFile(const std::string& path, std::string_view data);
 bool WriteFile(const std::string& path, const char* data, ssize_t size);
 bool WriteFileAt(int dirfd, const std::string& path, const char* data, ssize_t size);
 
