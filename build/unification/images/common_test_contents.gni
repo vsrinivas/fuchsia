@@ -55,7 +55,6 @@ common_test_contents = [
   "//src/graphics/display/bin/display-factory-test",
   "//src/graphics/display/bin/display-test",
   "//src/media/audio/drivers/alc5663",
-  "//src/media/audio/drivers/astro-tdm-output/test:astro-audio-out-test",
   "//src/media/audio/tools/audio-driver-ctl:test",
   "//src/storage/fshost:block-watcher-test",
   "//src/storage/fshost:fshost-inspect-test",

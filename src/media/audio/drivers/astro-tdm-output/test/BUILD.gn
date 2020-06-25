@@ -4,13 +4,11 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-test("astro-audio-out-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "astro-audio-out-test"
+executable("astro-audio-out-test") {
+  defines = [ "_ALL_SOURCE" ]
+  testonly = true
   sources = [
     "../audio-stream-out.cc",
     "../tas27xx.cc",
@@ -41,4 +39,12 @@ test("astro-audio-out-test") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
   ]
+}
+
+fuchsia_unittest_package("test-package") {
+  executable_name = "astro-audio-out-test"
+  deps = [ ":astro-audio-out-test" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
