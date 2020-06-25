@@ -54,35 +54,32 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
         let (messenger_tx, mut messenger_rx) =
             futures::channel::mpsc::unbounded::<MessengerAction<P, A>>();
 
-        let hub = Arc::new(Mutex::new(MessageHub {
+        let mut hub = MessageHub {
             next_id: 0,
             next_message_client_id: 0,
             messenger_tx: messenger_tx.clone(),
-            action_tx: action_tx,
+            action_tx,
             beacons: HashMap::new(),
             addresses: HashMap::new(),
             brokers: Vec::new(),
-        }));
+        };
 
-        {
-            let hub_clone = hub.clone();
-            // Spawn a separate thread to service messenger-related requests.
-            fasync::spawn(async move {
-                while let Some(action) = messenger_rx.next().await {
-                    hub_clone.lock().await.process_messenger_request(action).await;
+        fasync::spawn(async move {
+            loop {
+                futures::select! {
+                    messenger_action = messenger_rx.next() => {
+                        if let Some(action) = messenger_action {
+                            hub.process_messenger_request(action).await;
+                        }
+                    }
+                    message_action = action_rx.next() => {
+                        if let Some((fingerprint, action, beacon)) = message_action {
+                            hub.process_request(fingerprint, action, beacon).await;
+                        }
+                    }
                 }
-            });
-        }
-
-        {
-            let hub_clone = hub.clone();
-            // Spawn a separate thread to service any request to this instance.
-            fasync::spawn(async move {
-                while let Some((fingerprint, action, beacon)) = action_rx.next().await {
-                    hub_clone.lock().await.process_request(fingerprint, action, beacon).await;
-                }
-            });
-        }
+            }
+        });
 
         MessengerFactory::new(messenger_tx)
     }
