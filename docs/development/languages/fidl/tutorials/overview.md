@@ -31,7 +31,7 @@ at the [HLCPP and LLCPP comparison doc][c-family].
 <!-- xrefs -->
 [fidl-concepts]: /docs/concepts/fidl/overview.md
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
-[hlcpp]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
+[hlcpp]: hlcpp/README.md
 <!-- [llcpp]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
 [rust]: /docs/development/languages/fidl/tutorials/tutorial-rust.md
 [dart]: /docs/development/languages/fidl/tutorials/tutorial-dart.md

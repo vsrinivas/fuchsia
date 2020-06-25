@@ -82,4 +82,4 @@ To use `fidl::InterfacePtrSet`, include `lib/fidl/cpp/interface_ptr_set.h`.
 [server-tut-impl]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md#impl
 [services-tut]: /docs/development/languages/fidl/tutorials/hlcpp/topics/services.md
 [src]: /examples/fidl/hlcpp/multiple_clients
-[overview]: /docs/development/languages/fidl/tutorials/overview.md
+[overview]: /docs/development/languages/fidl/tutorials/hlcpp/README.md

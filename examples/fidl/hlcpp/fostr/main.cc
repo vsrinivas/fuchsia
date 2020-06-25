@@ -1,9 +1,10 @@
 // [START includes]
-#include <fuchsia/examples/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/examples/formatting.h>
+// [END includes]
+
+#include <fuchsia/examples/cpp/fidl.h>
 
 #include <gtest/gtest.h>
-// [END includes]
 
 namespace {
 

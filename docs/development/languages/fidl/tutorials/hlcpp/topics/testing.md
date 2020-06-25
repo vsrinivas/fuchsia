@@ -10,7 +10,7 @@ This tutorial walks through the process of writing a test for the
 `Echo.EchoString` method. This tutorial demonstrates the usage of two
 utilities available for testing FIDL protocols implemented in HLCPP:
 
-* The gtest test loop fixture
+* The `gtest` test loop fixture
 * `sys::testing::ComponentContextProvider`
 * The `fidl_test_base.h` file provided by the HLCPP bindings
 
@@ -111,3 +111,4 @@ You should see the test output indicating a success.
 <!-- xrefs -->
 [test-base]: /docs/reference/fidl/bindings/hlcpp-bindings.md#test-scaffolding
 [server-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md
+[overview]: /docs/development/languages/fidl/tutorials/hlcpp/README.md

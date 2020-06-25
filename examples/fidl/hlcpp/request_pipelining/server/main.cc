@@ -42,7 +42,7 @@ class EchoLauncherImpl : public fuchsia::examples::EchoLauncher {
 
   fidl::BindingSet<fuchsia::examples::Echo, std::unique_ptr<fuchsia::examples::Echo>> bindings_;
 };
-// [START launcher-impl]
+// [END launcher-impl]
 
 // [START main]
 int main(int argc, const char** argv) {

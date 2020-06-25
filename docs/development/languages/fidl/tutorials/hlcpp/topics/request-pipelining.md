@@ -25,7 +25,8 @@ The full example code for this tutorial is located at:
 
 ### The FIDL protocol
 
-To do so, this tutorial implements the `EchoLauncher` protocol:
+To do so, this tutorial implements the `EchoLauncher` protocol from the
+[fuchsia.examples library][examples-fidl]:
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.fidl" region_tag="launcher" %}
@@ -38,9 +39,13 @@ will add that prefix to every response.
 There are two methods that can be used to accomplish this:
 
 * `GetEcho` takes the prefix as a request, and responds with the *client end* of
-  a channel connected to an implementation of the `Echo` protocol.
+  a channel connected to an implementation of the `Echo` protocol. After
+  receiving the client end in the response, the client can start making requests
+  on the `Echo` protocol using the client end.
 * `GetEchoPipelined` takes the *server end* of a channel as one of the request
-  parameters and binds an implementation of `Echo` to it.
+  parameters and binds an implementation of `Echo` to it. The client that
+  made the request is assumed to already hold the client end, and will
+  start making `Echo` requests on that channel after calling `GetEchoPipeliend`.
 
 As the name suggests, the latter uses a pattern called protocol request
   pipelining, and is the preferred approach. We'll be implementing both
@@ -102,16 +107,19 @@ To check that things are correct, try building the server:
 
 1. Configure your GN build to include the server
 
-    fx set core.x64 --with //examples/fidl/hlcpp/request_pipelining/server
+    `fx set core.x64 --with //examples/fidl/hlcpp/request_pipelining/server`
 
 2. Build the code
 
-    fx build
+    `fx build`
 
 ## Implement the client
 
-Most of the client code is covered in the [client tutorial][client-tut], which
-the client uses to connect to the `EchoLauncher` server. After connecting, the
+Most of the client code in `client/main.cc` should be familiar after having
+followed the [client tutorial][client-tut]. The new parts are covered in more
+detail here.
+
+After connecting to the `EchoLauncher` server, the client
 code connects to one instance of `Echo` using `GetEcho` and another using
 `GetEchoPipelined` and then makes an `EchoString` request on each instance.
 
@@ -141,11 +149,11 @@ To check that things are correct, try building the server:
 
 1. Configure your GN build to include the server
 
-    fx set core.x64 --with //examples/fidl/hlcpp/request_pipelining/client
+    `fx set core.x64 --with //examples/fidl/hlcpp/request_pipelining/client`
 
 2. Build the code
 
-    fx build
+    `fx build`
 
 ## Run the example code
 
@@ -184,3 +192,5 @@ protocol requests that may fail, refer to the [FIDL API rubric][rubric]
 [server-tut-main]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md#main
 [client-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/client.md
 [rubric]: /docs/concepts/api/fidl.md#request-pipelining
+[overview]: /docs/development/languages/fidl/tutorials/hlcpp/README.md
+[examples-fidl]: /examples/fidl/fuchsia.examples/

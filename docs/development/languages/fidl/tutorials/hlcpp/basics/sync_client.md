@@ -40,7 +40,7 @@ Next, add the following dependencies:
 and include them in `main.cc`:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="deps" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="includes" %}
 ```
 
 The reason for including these dependencies is explained in the
@@ -141,6 +141,7 @@ You should see the client print output in the QEMU console (or using `fx log`).
 ```
 
 <!-- xrefs -->
+[client-tut-main]: /docs/development/languages/fidl/tutorials/hlcpp/client.md#proxy
 [server-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md
 [server-tut-component]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md#component
 [server-tut-impl]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md#impl
@@ -149,3 +150,4 @@ You should see the client print output in the QEMU console (or using `fx log`).
 [async-client]: /docs/development/languages/fidl/tutorials/hlcpp/basics/client.md
 [proxy]: /docs/reference/fidl/bindings/hlcpp-bindings.md#protocols-client
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
+[environment]: /docs/concepts/components/environments.md

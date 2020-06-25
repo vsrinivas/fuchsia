@@ -4,6 +4,7 @@
 
 import("//src/sys/build/components.gni")
 
+# [START bin]
 executable("bin") {
   testonly = true
   output_name = "fostr_example_test"
@@ -14,6 +15,8 @@ executable("bin") {
     "//third_party/googletest:gtest_main",
   ]
 }
+
+# [END bin]
 
 fuchsia_unittest_package("fostr-example-test") {
   executable_name = "fostr_example_test"

@@ -21,7 +21,7 @@ This document covers how to complete the following tasks:
 If you'd like to follow along and write the code yourself, feel free to delete
 the example code:
 
-    rm -r examples/fidl/hlcpp/unittests
+    rm -r examples/fidl/hlcpp/unittests/*
 
 ## Write a host test
 
@@ -91,7 +91,8 @@ Include the bindings, by adding the following include statement to the top of
 Now, feel free to write some tests and play around with the bindings by
 referring to the generated code or the [HLCPP Bindings Reference][bindings-ref].
 
-Here's some example code to get started:
+Here's some example code to get started. You can add this inside the
+anonymous namespace in `main.cc`:
 
 ```cpp
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="tests" %}

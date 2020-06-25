@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-This tutorial builds on the [Compiling FIDL][compiling] tutorial. For the
+This tutorial builds on the [Compiling FIDL][fidl-intro] tutorial. For the
 full set of FIDL tutorials, refer to the [overview][overview].
 
 ## Overview
@@ -47,7 +47,7 @@ import("//src/sys/build/components.gni")
 # Declare an executable for the server. This produces a binary with the
 # specified output name that can run on Fuchsia.
 executable("bin") {
-  output_name = "fidl_echo_server"
+  output_name = "fidl_echo_hlcpp_server"
   sources = [ "main.cc" ]
 }
 
@@ -61,7 +61,7 @@ Then, there is a component that is set up to simply run the server executable,
 which is described using the component's manifest file:
 
 ```cmx
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/meta/echo_server.cmx" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/server.cmx" %}
 ```
 
 Note that the binary name in the manifest matches the output name of the
@@ -108,7 +108,11 @@ declaration, and the manifest path in `meta/` matches the target name of the
 The full `bin` target declaration should now look like this:
 
 ```
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="bin" %}
+executable("bin") {
+  output_name = "fidl_echo_hlcpp_server"
+  sources = [ "main.cc" ]
+  deps = [ "//examples/fidl/fuchsia.examples" ]
+}
 ```
 
 ### Add an implementation for the protocol {#impl}
@@ -243,6 +247,12 @@ This new code requires the following additional dependencies:
 * `"//sdk/lib/fidl/cpp"`: The FIDL C++ runtime, which contains utility code for
   using the FIDL bindings.
 
+The full `bin` target declaration should now look like this:
+
+```
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="bin" %}
+```
+
 Import the dependencies by including them at the top of `examples/fidl/hlcpp/server/main.cc`:
 
 ```cpp
@@ -261,6 +271,7 @@ keeps waiting for incoming requests. The next step will be to write a client for
 the server.
 
 <!-- xrefs -->
+[fidl-intro]: /docs/development/languages/fidl/tutorials/fidl.md
 [building-components]: /docs/development/components/build.md
 [products]: /docs/concepts/build_system/boards_and_products.md
 [getting-started]: /docs/getting_started.md
