@@ -18,8 +18,8 @@ test("ethernet") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/unittest",
   ]
 }
 
