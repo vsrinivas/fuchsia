@@ -70,24 +70,28 @@ bool zxtest_runner_current_test_has_failures(void) {
   return zxtest::Runner::GetInstance()->CurrentTestHasFailures();
 }
 
-size_t _zxtest_print_int32(int32_t val, char* buffer, size_t buffer_size) {
-  return snprintf(buffer, buffer_size, "%" PRIi32, val);
+size_t _zxtest_print_int(int val, char* buffer, size_t buffer_size) {
+  return snprintf(buffer, buffer_size, "%d", val);
 }
 
-size_t _zxtest_print_uint32(uint32_t val, char* buffer, size_t buffer_size) {
-  return snprintf(buffer, buffer_size, "%" PRIu32, val);
+size_t _zxtest_print_unsigned_int(unsigned int val, char* buffer, size_t buffer_size) {
+  return snprintf(buffer, buffer_size, "%u", val);
 }
 
-size_t _zxtest_print_int64(int64_t val, char* buffer, size_t buffer_size) {
-  return snprintf(buffer, buffer_size, "%" PRIi64, val);
+size_t _zxtest_print_long_long(long long val, char* buffer, size_t buffer_size) {
+  return snprintf(buffer, buffer_size, "%lld", val);
 }
 
-size_t _zxtest_print_uint64(uint64_t val, char* buffer, size_t buffer_size) {
-  return snprintf(buffer, buffer_size, "%" PRIu64, val);
+size_t _zxtest_print_unsigned_long_long(unsigned long long val, char* buffer, size_t buffer_size) {
+  return snprintf(buffer, buffer_size, "%llu", val);
 }
 
 size_t _zxtest_print_double(double val, char* buffer, size_t buffer_size) {
   return snprintf(buffer, buffer_size, "%f", val);
+}
+
+size_t _zxtest_print_long_double(long double val, char* buffer, size_t buffer_size) {
+  return snprintf(buffer, buffer_size, "%Lf", val);
 }
 
 size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size) {

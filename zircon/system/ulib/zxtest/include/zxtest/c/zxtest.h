@@ -65,15 +65,17 @@ bool zxtest_death_statement_execute(zxtest_test_fn_t statement, enum DeathResult
 int zxtest_run_all_tests(int argc, char** argv);
 
 // Internal for generating human readable output in C.
-size_t _zxtest_print_int32(int32_t val, char* buffer, size_t buffer_size);
+size_t _zxtest_print_int(int val, char* buffer, size_t buffer_size);
 
-size_t _zxtest_print_uint32(uint32_t val, char* buffer, size_t buffer_size);
+size_t _zxtest_print_unsigned_int(unsigned int val, char* buffer, size_t buffer_size);
 
-size_t _zxtest_print_int64(int64_t val, char* buffer, size_t buffer_size);
+size_t _zxtest_print_long_long(long long val, char* buffer, size_t buffer_size);
 
-size_t _zxtest_print_uint64(uint64_t val, char* buffer, size_t buffer_size);
+size_t _zxtest_print_unsigned_long_long(unsigned long long val, char* buffer, size_t buffer_size);
 
 size_t _zxtest_print_double(double val, char* buffer, size_t buffer_size);
+
+size_t _zxtest_print_long_double(long double val, char* buffer, size_t buffer_size);
 
 size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size);
 
@@ -122,29 +124,26 @@ __END_CDECLS
   void _ZXTEST_TEST_FN(TestCase, Test)(void)
 
 // Helper function to print variables.
-// clang-format off
-#define _ZXTEST_SPRINT_PRINTER(var, buffer, size)                                                  \
-    _Generic((var),                                                                                \
-            int8_t: _zxtest_print_int32,                                                           \
-            uint8_t: _zxtest_print_int32,                                                          \
-            int16_t: _zxtest_print_int32,                                                          \
-            uint16_t: _zxtest_print_int32,                                                         \
-            int32_t: _zxtest_print_int32,                                                          \
-            uint32_t: _zxtest_print_uint32,                                                        \
-            int64_t: _zxtest_print_int64,                                                          \
-            uint64_t: _zxtest_print_uint64,                                                        \
-            float: _zxtest_print_double,                                                           \
-            double: _zxtest_print_double,                                                          \
-            bool: _zxtest_print_bool,                                                              \
-            const char*: _zxtest_print_str,                                                        \
-            char: _zxtest_print_int32,                                                             \
-            default: _Generic((var),                                                               \
-                              /* On Mac, 'long long' is the same type as int64_t, so the two */    \
-                              /* have to be in different lists of _Generic matches to avoid an */  \
-                              /* error about duplicates. */                                        \
-                              long long: _zxtest_print_int64,                                      \
-                              default: _zxtest_print_ptr))(var, buffer, size)
-// clang-format on
+#define _ZXTEST_SPRINT_PRINTER(var, buffer, size) \
+  _Generic((var),                                                     \
+             char: _zxtest_print_int,                                   \
+             signed char: _zxtest_print_int,                            \
+             short: _zxtest_print_int,                                  \
+             int: _zxtest_print_int,                                    \
+             long: _zxtest_print_long_long,                             \
+             long long: _zxtest_print_long_long,                        \
+             unsigned char: _zxtest_print_unsigned_int,                 \
+             unsigned short: _zxtest_print_unsigned_int,                \
+             unsigned int: _zxtest_print_unsigned_int,                  \
+             unsigned long: _zxtest_print_unsigned_long_long,           \
+             unsigned long long: _zxtest_print_unsigned_long_long,      \
+             float: _zxtest_print_double,                               \
+             double: _zxtest_print_double,                              \
+             long double: _zxtest_print_long_double,                    \
+             bool: _zxtest_print_bool,                                  \
+             const char*: _zxtest_print_str,                            \
+             default: _zxtest_print_ptr) \
+  (var, buffer, size)
 
 #define _ZXTEST_NULLPTR NULL
 
