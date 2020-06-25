@@ -241,13 +241,22 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, voi
                                      uint32_t len, int32_t* fwerr_ptr) {
   struct brcmf_pub* drvr = ifp->drvr;
   zx_status_t err;
+  int32_t fwerr;
   uint32_t buflen;
   drvr->proto_block.lock();
   buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
+
   if (buflen) {
-    err = brcmf_fil_cmd_data(ifp, BRCMF_C_GET_VAR, drvr->proto_buf, buflen, false, fwerr_ptr);
+    err = brcmf_fil_cmd_data(ifp, BRCMF_C_GET_VAR, drvr->proto_buf, buflen, false, &fwerr);
+    if (fwerr_ptr) {
+      *fwerr_ptr = fwerr;
+    }
+
     if (err == ZX_OK) {
       memcpy(data, drvr->proto_buf, len);
+    } else {
+      BRCMF_ERR("unable to retrieve iovar '%s', err=%s, fw_err=%s", name, zx_status_get_string(err),
+                brcmf_fil_get_errstr(fwerr));
     }
   } else {
     err = ZX_ERR_BUFFER_TOO_SMALL;
