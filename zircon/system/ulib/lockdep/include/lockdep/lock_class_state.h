@@ -59,6 +59,9 @@ class LockClassState {
   // Returns true if the given lock class is nestable, false otherwise.
   static bool IsNestable(LockClassId id) { return !!(Get(id)->flags_ & LockFlagsNestable); }
 
+  // Returns true if the given lock class is multi-acquire, false otherwise.
+  static bool IsMultiAcquire(LockClassId id) { return !!(Get(id)->flags_ & LockFlagsMultiAcquire); }
+
   // Returns true if reporting is disabled for the given lock class, false
   // otherwise.
   static bool IsReportingDisabled(LockClassId id) {

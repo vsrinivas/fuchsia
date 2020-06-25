@@ -20,23 +20,27 @@ enum LockFlags : uint8_t {
   // Apply the nestable rules in addition to the common rules for all locks.
   LockFlagsNestable = (1 << 1),
 
+  // Apply the multi-acquire rules in additioon to the common rules for all
+  // locks.
+  LockFlagsMultiAcquire = (1 << 2),
+
   // Do not report validation errors. This flag prevents recursive validation
   // of locks that are acquired by reporting routines.
-  LockFlagsReportingDisabled = (1 << 2),
+  LockFlagsReportingDisabled = (1 << 3),
 
   // There is only one member of this locks class.
-  LockFlagsSingletonLock = (1 << 3),
+  LockFlagsSingletonLock = (1 << 4),
 
   // Abort the program with an error if a lock is improperly acquired more
   // than once in the same context.
-  LockFlagsReAcquireFatal = (1 << 4),
+  LockFlagsReAcquireFatal = (1 << 5),
 
   // Do not add this acquisition to the active list. This may be required for
   // locks that are used to protect context switching logic.
-  LockFlagsActiveListDisabled = (1 << 5),
+  LockFlagsActiveListDisabled = (1 << 6),
 
   // Do not track this lock.
-  LockFlagsTrackingDisabled = (1 << 6),
+  LockFlagsTrackingDisabled = (1 << 7),
 };
 
 // Prevent implicit conversion to int of bitwise-or expressions involving
@@ -53,14 +57,33 @@ constexpr inline LockFlags operator&(LockFlags a, LockFlags b) {
 
 namespace internal {
 
-// Receives optional lock flags in the marcos below.
-constexpr inline LockFlags DefaultLockFlags(LockFlags flags = LockFlagsNone) { return flags; }
+// Receives and validates optional lock flags in the marcos below.
+template <LockFlags flags = LockFlagsNone>
+struct DefaultLockFlags {
+  static constexpr bool IsMultiAcquire = flags & LockFlagsMultiAcquire;
+  static constexpr bool IsNestable = flags & LockFlagsNestable;
+  static constexpr bool IsReAcquireFatal = flags & LockFlagsReAcquireFatal;
 
-// Receives the optional lock flags in the macros below and injects the
-// singleton lock flag.
-constexpr inline LockFlags SingletonLockFlags(LockFlags flags = LockFlagsNone) {
-  return flags | LockFlagsSingletonLock;
-}
+  static_assert(!(IsMultiAcquire && IsNestable),
+                "LockFlagsMultiAcquire and LockFlagsNestable are mutually exclusive!");
+  static_assert(!(IsMultiAcquire && IsReAcquireFatal),
+                "LockFlagsMultiAcquire and LockFlagsReAcquireFatal are mutually exclusive!");
+
+  static constexpr LockFlags value = flags;
+};
+
+// Receives and validates the optional lock flags in the macros below and
+// injects the singleton lock flag.
+template <LockFlags flags = LockFlagsNone>
+struct SingletonLockFlags {
+  static constexpr bool IsMultiAcquire = flags & LockFlagsMultiAcquire;
+  static constexpr bool IsNestable = flags & LockFlagsNestable;
+
+  static_assert(!IsMultiAcquire, "LockFlagsMultiAcquire may not be used with a singleton lock!");
+  static_assert(!IsNestable, "LockFlagsNestable may not be used with a singleton lock!");
+
+  static constexpr LockFlags value = flags | LockFlagsSingletonLock;
+};
 
 }  // namespace internal
 
@@ -88,7 +111,7 @@ class LockDep;
 //  };
 #define LOCK_DEP_INSTRUMENT(containing_type, lock_type, ...) \
   ::lockdep::LockDep<containing_type, lock_type, __LINE__,   \
-                     ::lockdep::internal::DefaultLockFlags(__VA_ARGS__)>
+                     ::lockdep::internal::DefaultLockFlags<__VA_ARGS__>::value>
 
 // Defines a singleton lock with the given name and type. The singleton
 // instance may be retrieved using the static Get() method provided by the base
@@ -113,10 +136,11 @@ class LockDep;
 //      Guard<fbl::Mutex> guard{FooLock::Get()};
 //      // Mutate g_foo ...
 //  }
-#define LOCK_DEP_SINGLETON_LOCK(name, lock_type, ...) \
-  struct name                                         \
-      : ::lockdep::SingletonLockDep<name, lock_type,  \
-                                    ::lockdep::internal::SingletonLockFlags(__VA_ARGS__)> {}
+#define LOCK_DEP_SINGLETON_LOCK(name, lock_type, ...)                                              \
+  struct name                                                                                      \
+      : ::lockdep::SingletonLockDep<name, lock_type,                                               \
+                                    ::lockdep::internal::SingletonLockFlags<__VA_ARGS__>::value> { \
+  }
 
 // Defines a singleton lock with the given name that wraps a raw global lock.
 // The singleton behaves similarly to the version above, except the raw global
@@ -146,7 +170,7 @@ class LockDep;
 #define LOCK_DEP_SINGLETON_LOCK_WRAPPER(name, global_lock, ...)                                \
   struct name : public ::lockdep::SingletonLockDep<                                            \
                     name, ::lockdep::GlobalReference<decltype(global_lock), global_lock>,      \
-                    ::lockdep::internal::SingletonLockFlags(__VA_ARGS__)> {                    \
+                    ::lockdep::internal::SingletonLockFlags<__VA_ARGS__>::value> {             \
     auto& capability() __TA_RETURN_CAPABILITY(global_lock) { return global_lock; }             \
     const auto& capability() const __TA_RETURN_CAPABILITY(global_lock) { return global_lock; } \
   }

@@ -8,12 +8,11 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-#include <fbl/intrusive_double_list.h>
+#include <utility>
 
+#include <fbl/intrusive_double_list.h>
 #include <lockdep/common.h>
 #include <lockdep/lock_class_state.h>
-
-#include <utility>
 
 namespace lockdep {
 
@@ -87,7 +86,8 @@ class ThreadLockState {
 
     // Scans the acquired lock list and performs the following operations:
     //  1. Checks that the given lock class is not already in the list unless
-    //     the lock class is nestable or address ordering is correctly applied.
+    //     the lock class is multi-acquire, or is nestable and external/address
+    //     ordering is correctly applied.
     //  2. Checks that the given lock class is not in the dependency set for
     //     any lock class already in the list.
     //  3. Checks that irq-safe locks are not held when acquiring an irq-unsafe
@@ -97,7 +97,8 @@ class ThreadLockState {
     last_result_ = LockResult::Success;
     for (AcquiredLockEntry& entry : acquired_locks_) {
       if (entry.id() == lock_entry->id()) {
-        if (lock_entry->order() <= entry.order()) {
+        if (!LockClassState::IsMultiAcquire(lock_entry->id()) &&
+            lock_entry->order() <= entry.order()) {
           if (!LockClassState::IsNestable(lock_entry->id()) && lock_entry->order() == 0)
             Report(lock_entry, &entry, LockResult::AlreadyAcquired);
           else

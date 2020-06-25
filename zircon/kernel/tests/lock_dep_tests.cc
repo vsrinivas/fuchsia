@@ -267,8 +267,11 @@ static bool lock_dep_dynamic_analysis_tests() {
 
   using lockdep::Guard;
   using lockdep::GuardMultiple;
+  using lockdep::kInvalidLockClassId;
   using lockdep::LockClassState;
+  using lockdep::LockFlagsMultiAcquire;
   using lockdep::LockFlagsNestable;
+  using lockdep::LockFlagsReAcquireFatal;
   using lockdep::LockResult;
   using lockdep::ThreadLockState;
   using test::Bar;
@@ -735,6 +738,131 @@ static bool lock_dep_dynamic_analysis_tests() {
       Guard<Mutex> guard_a{&value.lock_a};
       EXPECT_TRUE(guard_a);
       EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+    }
+  }
+
+  // Test multi-acquire rule. Re-acquiring the same lock class is allowed,
+  // however, ordering with other locks is still enforced.
+  {
+    Baz<Mutex, LockFlagsMultiAcquire> a;
+    Baz<Mutex, LockFlagsMultiAcquire> b;
+#if 0 || TEST_WILL_NOT_COMPILE
+    // Test mutually exclusive flags fail to compile.
+    Baz<Mutex, LockFlagsMultiAcquire | LockFlagsNestable> c;
+    Baz<Mutex, LockFlagsMultiAcquire | LockFlagsReAcquireFatal> d;
+#endif
+
+    // Use a unique lock class for each of these order tests.
+    Foo before;
+    Bar after;
+    Baz<Mutex> between;
+
+    // Test re-acquiring the same lock class.
+    {
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    // Test ordering with another lock class before this one.
+    {
+      Guard<Mutex> guard_before{&before.lock};
+      EXPECT_TRUE(guard_before);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+    {
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_before{&before.lock};
+      EXPECT_TRUE(guard_before);
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+    }
+    {
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      // Subsequent violations are not reported.
+      Guard<Mutex> guard_before{&before.lock};
+      EXPECT_TRUE(guard_before);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    // Test ordering with another lock class after this one.
+    {
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_after{&after.lock};
+      EXPECT_TRUE(guard_after);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+    {
+      Guard<Mutex> guard_after{&after.lock};
+      EXPECT_TRUE(guard_after);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+    }
+    {
+      Guard<Mutex> guard_after{&after.lock};
+      EXPECT_TRUE(guard_after);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      // Subsequent violations are not reported.
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    // Test ordering with another lock class between this one.
+    {
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_between{&between.lock};
+      EXPECT_TRUE(guard_between);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b);
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+    }
+    {
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> guard_between{&between.lock};
+      EXPECT_TRUE(guard_between);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      // Subsequent violations are not reported.
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
     }
   }
 
