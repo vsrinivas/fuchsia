@@ -107,14 +107,17 @@ table SessionmgrConfig {
 
     9: reserved;
 
-    /// A list of supported services and the URL of the agent known to provide
-    /// that service. Used by the Session Manager to implement
-    /// `ComponentContext` method ConnectToAgentService().
+    /// A list of services mapped to the component URL that serves it.
+    /// Valid components to specify here are agents or the session shell.
+    /// Services listed here are available in the incoming namespaces for
+    /// modules, shells, and agents.
     10: vector<AgentServiceIndexEntry> agent_service_index;
 
     /// A list of agent URLs that will cause the session to be restarted
     /// when they terminate. If an agent is not in this list, sessionmgr will
     /// restart it individually, preserving the session.
+    ///
+    /// The session shell is automatically added to this list.
     11: vector<string:fuchsia.io.MAX_PATH>:MAX restart_session_on_agent_crash;
 };
 
