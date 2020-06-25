@@ -87,7 +87,6 @@ void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
 
   /* Try to set and enable ARP offload feature, this may fail, then it  */
   /* is simply not supported and err 0 will be returned                 */
-  BRCMF_ERR("Calling ARP offload on interface %d with enable: %d", ifp->ifidx, enable);
   err = brcmf_fil_iovar_int_set(ifp, "arp_ol", mode, &fw_err);
   if (err != ZX_OK) {
     BRCMF_DBG(TRACE, "failed to set ARP offload mode to 0x%x, err=%s, fw_err=%s", mode,
