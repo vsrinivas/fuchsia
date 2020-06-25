@@ -19,11 +19,6 @@ constexpr char kInputDevPath[] = "/dev/class/input-report";
 
 }
 
-struct InputReader::DeviceInfo {
-  std::unique_ptr<InputInterpreter> interpreter;
-  std::unique_ptr<async::WaitMethod<InputReader, &InputReader::OnDeviceHandleReady>> waiter;
-};
-
 InputReader::InputReader(fuchsia::ui::input::InputDeviceRegistry* registry, bool ignore_console)
     : registry_(registry), ignore_console_(ignore_console) {
   FX_CHECK(registry_);
@@ -36,11 +31,14 @@ void InputReader::Start() { Start(std::make_unique<FdioDeviceWatcher>(kInputDevP
 void InputReader::Start(std::unique_ptr<DeviceWatcher> device_watcher) {
   device_watcher_ = std::move(device_watcher);
   device_watcher_->Watch([this](zx::channel channel) {
-    auto interpreter = std::make_unique<InputInterpreter>(std::move(channel), registry_,
-                                                          std::to_string(next_interpreter_id_++));
-    if (interpreter->Initialize()) {
-      DeviceAdded(std::move(interpreter));
+    std::unique_ptr<InputInterpreter> interpreter = InputInterpreter::Create(
+        this, std::move(channel), registry_, std::to_string(next_interpreter_id_++));
+    if (!interpreter) {
+      return;
     }
+
+    FX_VLOGS(1) << "Input device " << interpreter->name() << " added ";
+    devices_.emplace(interpreter.get(), std::move(interpreter));
   });
 }
 
@@ -59,48 +57,8 @@ void InputReader::SetOwnershipEvent(zx::event event) {
   FX_DCHECK(status == ZX_OK) << "Status is: " << status;
 }
 
-void InputReader::DeviceRemoved(zx_handle_t handle) {
-  FX_VLOGS(1) << "Input device " << devices_.at(handle)->interpreter->name() << " removed";
-  devices_.erase(handle);
-}
-
-void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
-  FX_DCHECK(interpreter);
-
-  FX_VLOGS(1) << "Input device " << interpreter->name() << " added ";
-  zx_handle_t handle = interpreter->handle();
-
-  auto wait = std::make_unique<async::WaitMethod<InputReader, &InputReader::OnDeviceHandleReady>>(
-      this, handle, ZX_USER_SIGNAL_0);
-
-  zx_status_t status = wait->Begin(async_get_default_dispatcher());
-  FX_CHECK(status == ZX_OK);
-
-  devices_.emplace(handle, new DeviceInfo{std::move(interpreter), std::move(wait)});
-}
-
-void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                      zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "InputReader::OnDeviceHandleReady received an error status code: " << status;
-    return;
-  }
-
-  zx_signals_t pending = signal->observed;
-  FX_DCHECK(pending & ZX_USER_SIGNAL_0);
-
-  bool discard = !(display_owned_ || ignore_console_);
-  bool ret = devices_[wait->object()]->interpreter->Read(discard);
-  if (!ret) {
-    // This will destroy the waiter.
-    DeviceRemoved(wait->object());
-    return;
-  }
-
-  status = wait->Begin(dispatcher);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "InputReader::OnDeviceHandleReady wait failed: " << status;
-  }
+void InputReader::RemoveDevice(InputInterpreter* device) {
+  devices_.erase(device);
 }
 
 void InputReader::OnDisplayHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,

@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "input_reader.h"
+
 namespace ui_input {
 
 // This class takes a zx::channel that connects to a device, and speaks to the
@@ -24,33 +26,37 @@ namespace ui_input {
 // need to be supported, please file a bug.
 class InputInterpreter {
  public:
-  InputInterpreter(zx::channel channel, fuchsia::ui::input::InputDeviceRegistry* registry,
-                   std::string name);
   ~InputInterpreter();
 
-  bool Initialize();
-  bool Read(bool discard);
+  // Creating an InputInterpreter takes a raw, unowned ptr to InputReaderBase. This is safe
+  // because InputReaderBase owns InputInterpreter and will always outlive InputInterpreter.
+  static std::unique_ptr<InputInterpreter> Create(InputReaderBase* base, zx::channel channel,
+                            fuchsia::ui::input::InputDeviceRegistry* registry, std::string name);
 
   const std::string& name() const { return name_; }
-  zx_handle_t handle() { return event_.get(); }
 
  private:
+  InputInterpreter(InputReaderBase* base, fuchsia::ui::input::InputDeviceRegistry* registry,
+                   std::string name);
+
+  void Initialize();
+
   void RegisterDevices();
   void RegisterTouchscreen(const fuchsia::input::report::DeviceDescriptor& descriptor);
   void RegisterConsumerControl(const fuchsia::input::report::DeviceDescriptor& descriptor);
   void RegisterMouse(const fuchsia::input::report::DeviceDescriptor& descriptor);
 
+  void ReadReports(fuchsia::input::report::InputReportsReader_ReadInputReports_Result result);
   void DispatchReport(const fuchsia::ui::input::InputDevicePtr& device,
                       fuchsia::ui::input::InputReport report);
   void DispatchTouchReport(const fuchsia::input::report::InputReport& report);
   void DispatchMouseReport(const fuchsia::input::report::InputReport& report);
   void DispatchConsumerControlReport(const fuchsia::input::report::InputReport& report);
 
-  fuchsia::input::report::InputDevice_SyncProxy device_;
+  InputReaderBase* base_;
+  fuchsia::input::report::InputDevicePtr device_;
+  fuchsia::input::report::InputReportsReaderPtr reader_;
   fuchsia::ui::input::InputDeviceRegistry* registry_;
-  zx::channel channel_;
-
-  zx::event event_;
 
   std::string name_;
   fuchsia::ui::input::InputDevicePtr touch_ptr_;

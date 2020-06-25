@@ -37,10 +37,10 @@ uint32_t SetMouseButton(uint32_t prev_buttons, uint8_t button_id) {
 
 }  // namespace
 
-InputInterpreter::InputInterpreter(zx::channel channel,
+InputInterpreter::InputInterpreter(InputReaderBase* base,
                                    fuchsia::ui::input::InputDeviceRegistry* registry,
                                    std::string name)
-    : device_(std::move(channel)), registry_(registry), name_(name) {}
+    : base_(base), registry_(registry), name_(name) {}
 
 InputInterpreter::~InputInterpreter() {}
 
@@ -51,17 +51,29 @@ void InputInterpreter::DispatchReport(const fuchsia::ui::input::InputDevicePtr& 
   device->DispatchReport(std::move(report));
 }
 
-bool InputInterpreter::Initialize() {
-  // Get the event.
-  zx_status_t out_status;
-  zx_status_t status = device_.GetReportsEvent(&out_status, &event_);
-  if ((status != ZX_OK) || (out_status != ZX_OK)) {
-    return false;
+std::unique_ptr<InputInterpreter> InputInterpreter::Create(InputReaderBase* base, zx::channel channel,
+                                     fuchsia::ui::input::InputDeviceRegistry* registry,
+                                     std::string name) {
+  // Using `new` to access a non-public constructor.
+  auto interpreter = std::unique_ptr<InputInterpreter>(new InputInterpreter(base, registry, name));
+  zx_status_t status = interpreter->device_.Bind(std::move(channel));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "InputInterpreter::Create: Bind error: " << status;
+    return nullptr;
   }
+  interpreter->Initialize();
+  return interpreter;
+}
+
+void InputInterpreter::Initialize() {
+  device_.set_error_handler([this](zx_status_t status) {
+    if (status != ZX_ERR_PEER_CLOSED) {
+      FX_LOGS(ERROR) << "InputInterpreter: Device error: " << status;
+    }
+    base_->RemoveDevice(this);
+  });
 
   RegisterDevices();
-
-  return true;
 }
 
 void InputInterpreter::RegisterConsumerControl(
@@ -163,26 +175,35 @@ void InputInterpreter::RegisterTouchscreen(
 
 void InputInterpreter::RegisterDevices() {
   fuchsia::input::report::DeviceDescriptor descriptor;
-  zx_status_t status = device_.GetDescriptor(&descriptor);
-  if (status != ZX_OK) {
-    return;
-  }
-
-  if (descriptor.has_touch() && descriptor.touch().has_input()) {
-    if (descriptor.touch().input().has_touch_type() &&
-        (descriptor.touch().input().touch_type() ==
-         fuchsia::input::report::TouchType::TOUCHSCREEN)) {
-      RegisterTouchscreen(descriptor);
+  device_->GetDescriptor([this](fuchsia::input::report::DeviceDescriptor descriptor) {
+    if (descriptor.has_touch() && descriptor.touch().has_input()) {
+      if (descriptor.touch().input().has_touch_type() &&
+          (descriptor.touch().input().touch_type() ==
+           fuchsia::input::report::TouchType::TOUCHSCREEN)) {
+        RegisterTouchscreen(descriptor);
+      }
     }
-  }
 
-  if (descriptor.has_mouse() && descriptor.mouse().has_input()) {
-    RegisterMouse(descriptor);
-  }
+    if (descriptor.has_mouse() && descriptor.mouse().has_input()) {
+      RegisterMouse(descriptor);
+    }
 
-  if (descriptor.has_consumer_control() && descriptor.consumer_control().has_input()) {
-    RegisterConsumerControl(descriptor);
-  }
+    if (descriptor.has_consumer_control() && descriptor.consumer_control().has_input()) {
+      RegisterConsumerControl(descriptor);
+    }
+
+    // Now that devices are registered we can start reading requests.
+    device_->GetInputReportsReader(reader_.NewRequest());
+    reader_.set_error_handler([this](zx_status_t status) {
+      if (status != ZX_ERR_PEER_CLOSED) {
+        FX_LOGS(ERROR) << "InputInterpreter: Reader error: " << status;
+      }
+      base_->RemoveDevice(this);
+    });
+
+    // Kick off the first Read, which will queue up the rest of the reads.
+    reader_->ReadInputReports([this](auto result) { ReadReports(std::move(result)); });
+  });
 }
 
 void InputInterpreter::DispatchTouchReport(const fuchsia::input::report::InputReport& report) {
@@ -266,34 +287,35 @@ void InputInterpreter::DispatchConsumerControlReport(
   DispatchReport(consumer_control_ptr_, std::move(input_report));
 }
 
-bool InputInterpreter::Read(bool discard) {
+void InputInterpreter::ReadReports(
+    fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
   TRACE_DURATION("input", "input_report_reader Read");
-  std::vector<fuchsia::input::report::InputReport> reports;
-  zx_status_t status = device_.GetReports(&reports);
-  if (status != ZX_OK) {
-    return false;
-  }
-  if (discard) {
-    return true;
+
+  if (result.is_err()) {
+    FX_LOGS(INFO) << "InputInterpreter: ReadInputReports received status code: " << result.err();
+    base_->RemoveDevice(this);
+    return;
   }
 
-  for (const auto& report : reports) {
-    if (report.has_trace_id()) {
-      TRACE_FLOW_END("input", "input_report", report.trace_id());
-    }
-    if (report.has_touch()) {
-      DispatchTouchReport(report);
-    }
-    if (report.has_consumer_control()) {
-      DispatchConsumerControlReport(report);
-    }
-    if (report.has_mouse()) {
-      DispatchMouseReport(report);
+  if (base_->ActiveInput()) {
+    for (const auto& report : result.response().reports) {
+      if (report.has_trace_id()) {
+        TRACE_FLOW_END("input", "input_report", report.trace_id());
+      }
+      if (report.has_touch()) {
+        DispatchTouchReport(report);
+      }
+      if (report.has_consumer_control()) {
+        DispatchConsumerControlReport(report);
+      }
+      if (report.has_mouse()) {
+        DispatchMouseReport(report);
+      }
     }
   }
 
-  // Create reports and call DispatchReport
-  return true;
+  // Queue ourselves up again for another read.
+  reader_->ReadInputReports([this](auto result) { ReadReports(std::move(result)); });
 }
 
 }  // namespace ui_input
