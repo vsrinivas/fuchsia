@@ -6,8 +6,8 @@ use {
     crate::client::{bss::BssInfo, Status as SmeStatus},
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_inspect::{
-        HistogramProperty, IntLinearHistogramProperty, IntProperty, LinearHistogramParams, Node,
-        Property, StringProperty, UintProperty,
+        BoolProperty, HistogramProperty, IntLinearHistogramProperty, IntProperty,
+        LinearHistogramParams, Node, Property, StringProperty, UintProperty,
     },
     fuchsia_inspect_contrib::nodes::{BoundedListNode, NodeExt, TimeProperty},
     fuchsia_zircon as zx,
@@ -16,7 +16,11 @@ use {
         hmac::hmac,
     },
     parking_lot::Mutex,
-    wlan_common::{format::MacFmt, ie::wsc, mac::MacAddr},
+    wlan_common::{
+        format::MacFmt,
+        ie::{self, wsc},
+        mac::MacAddr,
+    },
     wlan_inspect::iface_mgr::IfaceTree,
 };
 
@@ -224,6 +228,8 @@ pub struct BssInfoNode {
     snr_db: IntProperty,
     channel: UintProperty,
     protection: StringProperty,
+    _is_wmm_assoc: BoolProperty,
+    _wmm_param: Option<BssWmmParamNode>,
     wsc: Option<BssWscNode>,
 }
 
@@ -237,6 +243,11 @@ impl BssInfoNode {
         let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
         let channel = node.create_uint("channel", bss_info.channel as u64);
         let protection = node.create_string("protection", format!("{}", bss_info.protection));
+        let is_wmm_assoc = node.create_bool("is_wmm_assoc", bss_info.wmm_param.is_some());
+        let wmm_param = bss_info
+            .wmm_param
+            .as_ref()
+            .map(|p| BssWmmParamNode::new(node.create_child("wmm_param"), &p));
         Self {
             node,
             bssid,
@@ -247,6 +258,8 @@ impl BssInfoNode {
             snr_db,
             channel,
             protection,
+            _is_wmm_assoc: is_wmm_assoc,
+            _wmm_param: wmm_param,
             wsc: None,
         }
     }
@@ -268,6 +281,76 @@ impl BssInfoNode {
             None => {
                 self.wsc.take();
             }
+        }
+    }
+}
+
+pub struct BssWmmParamNode {
+    _node: Node,
+    _wmm_info: BssWmmInfoNode,
+    _ac_be: BssWmmAcParamsNode,
+    _ac_bk: BssWmmAcParamsNode,
+    _ac_vi: BssWmmAcParamsNode,
+    _ac_vo: BssWmmAcParamsNode,
+}
+
+impl BssWmmParamNode {
+    fn new(node: Node, wmm_param: &ie::WmmParam) -> Self {
+        let wmm_info =
+            BssWmmInfoNode::new(node.create_child("wmm_info"), wmm_param.wmm_info.ap_wmm_info());
+        let ac_be = BssWmmAcParamsNode::new(node.create_child("ac_be"), wmm_param.ac_be_params);
+        let ac_bk = BssWmmAcParamsNode::new(node.create_child("ac_bk"), wmm_param.ac_bk_params);
+        let ac_vi = BssWmmAcParamsNode::new(node.create_child("ac_vi"), wmm_param.ac_vi_params);
+        let ac_vo = BssWmmAcParamsNode::new(node.create_child("ac_vo"), wmm_param.ac_vo_params);
+        Self {
+            _node: node,
+            _wmm_info: wmm_info,
+            _ac_be: ac_be,
+            _ac_bk: ac_bk,
+            _ac_vi: ac_vi,
+            _ac_vo: ac_vo,
+        }
+    }
+}
+
+pub struct BssWmmInfoNode {
+    _node: Node,
+    _param_set_count: UintProperty,
+    _uapsd: BoolProperty,
+}
+
+impl BssWmmInfoNode {
+    fn new(node: Node, info: ie::ApWmmInfo) -> Self {
+        let param_set_count =
+            node.create_uint("param_set_count", info.parameter_set_count() as u64);
+        let uapsd = node.create_bool("uapsd", info.uapsd());
+        Self { _node: node, _param_set_count: param_set_count, _uapsd: uapsd }
+    }
+}
+
+pub struct BssWmmAcParamsNode {
+    _node: Node,
+    _aifsn: UintProperty,
+    _acm: BoolProperty,
+    _ecw_min: UintProperty,
+    _ecw_max: UintProperty,
+    _txop_limit: UintProperty,
+}
+
+impl BssWmmAcParamsNode {
+    fn new(node: Node, ac_params: ie::WmmAcParams) -> Self {
+        let aifsn = node.create_uint("aifsn", ac_params.aci_aifsn.aifsn() as u64);
+        let acm = node.create_bool("acm", ac_params.aci_aifsn.acm());
+        let ecw_min = node.create_uint("ecw_min", ac_params.ecw_min_max.ecw_min() as u64);
+        let ecw_max = node.create_uint("ecw_max", ac_params.ecw_min_max.ecw_max() as u64);
+        let txop_limit = node.create_uint("txop_limit", ac_params.txop_limit as u64);
+        Self {
+            _node: node,
+            _aifsn: aifsn,
+            _acm: acm,
+            _ecw_min: ecw_min,
+            _ecw_max: ecw_max,
+            _txop_limit: txop_limit,
         }
     }
 }

@@ -102,6 +102,7 @@ pub struct Associated {
     chan: Channel,
     cap: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
+    wmm_param: Option<ie::WmmParam>,
 }
 
 statemachine!(
@@ -238,6 +239,18 @@ impl Associating {
         state_change_msg: &mut Option<String>,
         context: &mut Context,
     ) -> Result<Associated, Idle> {
+        let wmm_param =
+            conf.wmm_param.as_ref().and_then(|p| match ie::parse_wmm_param(&p.bytes[..]) {
+                Ok(param) => Some(*param),
+                Err(e) => {
+                    warn!(
+                        "Fail parsing assoc conf WMM param. Bytes: {:?}. Error: {}",
+                        &p.bytes[..],
+                        e
+                    );
+                    None
+                }
+            });
         let link_state = match conf.result_code {
             fidl_mlme::AssociateResultCodes::Success => {
                 context.info.report_assoc_success(context.att_id);
@@ -293,7 +306,7 @@ impl Associating {
                 return Err(Idle { cfg: self.cfg });
             }
         };
-        state_change_msg.replace("successful auth".to_string());
+        state_change_msg.replace("successful assoc".to_string());
         Ok(Associated {
             cfg: self.cfg,
             last_rssi: self.cmd.bss.rssi_dbm,
@@ -304,6 +317,7 @@ impl Associating {
             chan: self.chan,
             cap: self.cap,
             protection_ie: self.protection_ie,
+            wmm_param,
         })
     }
 
@@ -754,7 +768,9 @@ impl ClientState {
                 }
                 LinkState::LinkUp { .. } => Status {
                     connected_to: {
-                        let mut bss = associated.cfg.convert_bss_description(&associated.bss);
+                        let mut bss = associated
+                            .cfg
+                            .convert_bss_description(&associated.bss, associated.wmm_param);
                         bss.rx_dbm = associated.last_rssi;
                         bss.snr_db = associated.last_snr;
                         Some(bss)
@@ -889,7 +905,8 @@ mod tests {
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
         expect_stream_empty, fake_negotiated_channel_and_capabilities,
         fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
-        fake_wpa1_bss_description, mock_supplicant, MockSupplicant, MockSupplicantController,
+        fake_wmm_param, fake_wpa1_bss_description, mock_supplicant, MockSupplicant,
+        MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
@@ -1805,6 +1822,27 @@ mod tests {
     }
 
     #[test]
+    fn fill_wmm_ie_associating() {
+        let mut h = TestHelper::new();
+        let (cmd, _receiver) = connect_command_one();
+        let resp = fidl_mlme::AssociateConfirm {
+            result_code: fidl_mlme::AssociateResultCodes::Success,
+            association_id: 1,
+            cap_info: 0,
+            rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
+            ht_cap: cmd.bss.ht_cap.clone(),
+            vht_cap: cmd.bss.vht_cap.clone(),
+            wmm_param: Some(Box::new(fake_wmm_param())),
+        };
+
+        let state = associating_state(cmd);
+        let state = state.on_mlme_event(MlmeEvent::AssociateConf { resp }, &mut h.context);
+        assert_variant!(state, ClientState::Associated(state) => {
+            assert!(state.wmm_param.is_some());
+        });
+    }
+
+    #[test]
     fn status_returns_last_rssi_snr() {
         let mut h = TestHelper::new();
 
@@ -2166,6 +2204,7 @@ mod tests {
             chan: fake_channel(),
             cap: None,
             protection_ie: None,
+            wmm_param: None,
         })
         .into()
     }
@@ -2187,6 +2226,7 @@ mod tests {
             chan: fake_channel(),
             cap: None,
             protection_ie: None,
+            wmm_param: None,
         })
         .into()
     }
@@ -2215,6 +2255,7 @@ mod tests {
             chan: fake_channel(),
             cap: None,
             protection_ie: None,
+            wmm_param: None,
         })
         .into()
     }

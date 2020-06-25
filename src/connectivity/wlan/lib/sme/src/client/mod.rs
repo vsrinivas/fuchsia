@@ -418,7 +418,7 @@ impl super::Station for ClientSme {
                         let result = result.map(|bss_list| {
                             bss_list
                                 .iter()
-                                .map(|bss| self.cfg.convert_bss_description(&bss))
+                                .map(|bss| self.cfg.convert_bss_description(&bss, None))
                                 .collect()
                         });
                         for responder in tokens {
@@ -1258,7 +1258,6 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
             assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
         });
-
     }
 
     fn assert_connect_result(

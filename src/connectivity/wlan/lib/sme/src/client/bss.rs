@@ -9,7 +9,7 @@ use {
     std::{cmp::Ordering, collections::HashSet},
     wlan_common::{
         bss::{BssDescriptionExt, Protection},
-        ie::{rsn::rsne, wsc},
+        ie::{self, rsn::rsne, wsc},
     },
 };
 
@@ -22,7 +22,11 @@ impl ClientConfig {
     }
 
     /// Converts a given BssDescription into a BssInfo.
-    pub fn convert_bss_description(&self, bss: &BssDescription) -> BssInfo {
+    pub fn convert_bss_description(
+        &self,
+        bss: &BssDescription,
+        wmm_param: Option<ie::WmmParam>,
+    ) -> BssInfo {
         let mut probe_resp_wsc = None;
         match bss.find_wsc_ie() {
             Some(ie) => match wsc::parse_probe_resp_wsc(ie) {
@@ -46,6 +50,7 @@ impl ClientConfig {
             protection: bss.get_protection(),
             compatible: self.is_bss_compatible(bss),
             probe_resp_wsc,
+            wmm_param,
         }
     }
 
@@ -102,6 +107,7 @@ pub struct BssInfo {
     pub protection: Protection,
     pub compatible: bool,
     pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
+    pub wmm_param: Option<ie::WmmParam>,
 }
 
 fn get_rx_dbm(bss: &BssDescription) -> i8 {
@@ -117,9 +123,11 @@ fn get_rx_dbm(bss: &BssDescription) -> i8 {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::client::test_utils::fake_bss_with_bssid,
+        super::*,
+        crate::client::test_utils::{fake_bss_with_bssid, fake_wmm_param},
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
         std::cmp::Ordering,
+        wlan_common::ie,
     };
 
     enum ProtectionCfg {
@@ -244,7 +252,7 @@ mod tests {
     fn convert_bss() {
         let cfg = ClientConfig::default();
         assert_eq!(
-            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2)),
+            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2), None),
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
@@ -254,11 +262,29 @@ mod tests {
                 protection: Protection::Wpa2Personal,
                 compatible: true,
                 probe_resp_wsc: None,
+                wmm_param: None,
+            }
+        );
+
+        let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
+            .expect("expect WMM param to be parseable");
+        assert_eq!(
+            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2), Some(wmm_param)),
+            BssInfo {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rx_dbm: -5,
+                snr_db: 0,
+                channel: 1,
+                protection: Protection::Wpa2Personal,
+                compatible: true,
+                probe_resp_wsc: None,
+                wmm_param: Some(wmm_param),
             }
         );
 
         assert_eq!(
-            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)),
+            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep), None),
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
@@ -268,12 +294,13 @@ mod tests {
                 protection: Protection::Wep,
                 compatible: false,
                 probe_resp_wsc: None,
+                wmm_param: None,
             }
         );
 
         let cfg = ClientConfig::from_config(Config::default().with_wep());
         assert_eq!(
-            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)),
+            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep), None),
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
@@ -283,6 +310,7 @@ mod tests {
                 protection: Protection::Wep,
                 compatible: true,
                 probe_resp_wsc: None,
+                wmm_param: None,
             }
         );
     }

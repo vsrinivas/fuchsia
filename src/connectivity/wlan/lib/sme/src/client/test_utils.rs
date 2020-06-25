@@ -127,6 +127,7 @@ pub fn fake_bss_info() -> BssInfo {
         protection: Protection::Wpa2Personal,
         compatible: true,
         probe_resp_wsc: None,
+        wmm_param: None,
     }
 }
 
@@ -147,6 +148,21 @@ pub fn fake_scan_request() -> fidl_mlme::ScanRequest {
         max_channel_time: 50,
         ssid_list: None,
     }
+}
+
+pub fn fake_wmm_param() -> fidl_mlme::WmmParameter {
+    #[rustfmt::skip]
+    let wmm_param = fidl_mlme::WmmParameter {
+        bytes: [
+            0x80, // Qos Info - U-ASPD enabled
+            0x00, // reserved
+            0x03, 0xa4, 0x00, 0x00, // Best effort AC params
+            0x27, 0xa4, 0x00, 0x00, // Background AC params
+            0x42, 0x43, 0x5e, 0x00, // Video AC params
+            0x62, 0x32, 0x2f, 0x00, // Voice AC params
+        ]
+    };
+    wmm_param
 }
 
 pub fn expect_info_event(info_stream: &mut InfoStream, expected_event: InfoEvent) {
