@@ -228,7 +228,7 @@ int As370Gpio::Thread() {
       return thrd_success;
     }
     if (packet.key >= gpio_mmios_.size()) {
-      zxlogf(WARN, "%s received interrupt from invalid port", __FUNCTION__);
+      zxlogf(WARNING, "%s received interrupt from invalid port", __FUNCTION__);
       continue;
     }
 

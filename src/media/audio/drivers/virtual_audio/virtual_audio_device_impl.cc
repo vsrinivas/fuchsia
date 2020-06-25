@@ -233,12 +233,12 @@ void VirtualAudioDeviceImpl::ResetConfiguration() { Init(); };
 // Create a virtual audio device using the currently-specified configuration.
 void VirtualAudioDeviceImpl::Add() {
   if (!owner_->enabled()) {
-    zxlogf(WARN, "%s: Disabled, cannot add stream", __func__);
+    zxlogf(WARNING, "%s: Disabled, cannot add stream", __func__);
     return;
   }
 
   if (stream_ != nullptr) {
-    zxlogf(WARN, "%s: %p already has stream %p", __func__, this, stream_.get());
+    zxlogf(WARNING, "%s: %p already has stream %p", __func__, this, stream_.get());
     return;
   }
 
@@ -259,13 +259,13 @@ void VirtualAudioDeviceImpl::Add() {
 // Remove the associated virtual audio device.
 void VirtualAudioDeviceImpl::Remove() {
   if (!owner_->enabled()) {
-    zxlogf(WARN, "%s: Disabled, no streams for removal", __func__);
+    zxlogf(WARNING, "%s: Disabled, no streams for removal", __func__);
     ZX_DEBUG_ASSERT(stream_ == nullptr);
     return;
   }
 
   if (stream_ == nullptr) {
-    zxlogf(WARN, "%s: %p has no stream to remove", __func__, this);
+    zxlogf(WARNING, "%s: %p has no stream to remove", __func__, this);
     return;
   }
 
@@ -278,7 +278,7 @@ void VirtualAudioDeviceImpl::Remove() {
 void VirtualAudioDeviceImpl::GetFormat(
     fuchsia::virtualaudio::Device::GetFormatCallback format_callback) {
   if (stream_ == nullptr) {
-    zxlogf(WARN, "%s: %p has no stream for this request", __func__, this);
+    zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;
   }
 
@@ -301,7 +301,7 @@ void VirtualAudioDeviceImpl::NotifySetFormat(uint32_t frames_per_second, uint32_
 
 void VirtualAudioDeviceImpl::GetGain(fuchsia::virtualaudio::Device::GetGainCallback gain_callback) {
   if (stream_ == nullptr) {
-    zxlogf(WARN, "%s: %p has no stream for this request", __func__, this);
+    zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;
   }
 
@@ -323,7 +323,7 @@ void VirtualAudioDeviceImpl::NotifySetGain(bool current_mute, bool current_agc,
 void VirtualAudioDeviceImpl::GetBuffer(
     fuchsia::virtualaudio::Device::GetBufferCallback buffer_callback) {
   if (stream_ == nullptr) {
-    zxlogf(WARN, "%s: %p has no stream for this request", __func__, this);
+    zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;
   }
 
@@ -387,7 +387,7 @@ void VirtualAudioDeviceImpl::NotifyStop(zx_time_t stop_time, uint32_t ring_buffe
 void VirtualAudioDeviceImpl::GetPosition(
     fuchsia::virtualaudio::Device::GetPositionCallback position_callback) {
   if (stream_ == nullptr) {
-    zxlogf(WARN, "%s: %p has no stream for this request", __func__, this);
+    zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;
   }
 
@@ -411,7 +411,7 @@ void VirtualAudioDeviceImpl::NotifyPosition(zx_time_t monotonic_time,
 // Change the plug state on-the-fly for this active virtual audio device.
 void VirtualAudioDeviceImpl::ChangePlugState(zx_time_t plug_change_time, bool plugged) {
   if (!owner_->enabled()) {
-    zxlogf(WARN, "%s: Disabled, cannot change plug state", __func__);
+    zxlogf(WARNING, "%s: Disabled, cannot change plug state", __func__);
     return;
   }
 
@@ -420,7 +420,7 @@ void VirtualAudioDeviceImpl::ChangePlugState(zx_time_t plug_change_time, bool pl
   plugged_ = plugged;
 
   if (stream_ == nullptr) {
-    zxlogf(WARN, "%s: %p has no stream; cannot change dynamic plug state", __func__, this);
+    zxlogf(WARNING, "%s: %p has no stream; cannot change dynamic plug state", __func__, this);
     return;
   }
 

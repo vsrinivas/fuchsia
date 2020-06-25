@@ -482,7 +482,7 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
         // TODO(36184): Returning error will cause blank screen if scenic requests
         // color correction. For now, lets pretend we support it, until a proper
         // fix is done (either from scenic or from core display)
-        zxlogf(WARN, "%s: Color Correction not support. No error reported", __func__);
+        zxlogf(WARNING, "%s: Color Correction not support. No error reported", __func__);
       }
 
       if (display_configs[i]->layer_list[0]->type != LAYER_TYPE_PRIMARY) {

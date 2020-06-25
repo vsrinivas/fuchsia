@@ -916,7 +916,7 @@ int MtkSdmmc::IrqThread() {
     } else if (msdc_int.transfer_complete()) {
       req_->status = ZX_OK;
     } else {
-      zxlogf(WARN, "%s: Received unexpected interrupt, MSDC_INT=%08x", __FILE__,
+      zxlogf(WARNING, "%s: Received unexpected interrupt, MSDC_INT=%08x", __FILE__,
              msdc_int.reg_value());
       continue;
     }

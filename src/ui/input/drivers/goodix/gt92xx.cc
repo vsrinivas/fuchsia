@@ -197,12 +197,12 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
         device_get_deadline_profile(goodix_dev->zxdev(), capacity.get(), deadline.get(),
                                     period.get(), "gt92xx-thread", profile.reset_and_get_address());
     if (status != ZX_OK) {
-      zxlogf(WARN, "Gt92xxDevice::Create: Failed to get deadline profile: %s",
+      zxlogf(WARNING, "Gt92xxDevice::Create: Failed to get deadline profile: %s",
              zx_status_get_string(status));
     } else {
       status = zx_object_set_profile(thrd_get_zx_handle(goodix_dev->thread_), profile.get(), 0);
       if (status != ZX_OK) {
-        zxlogf(WARN,
+        zxlogf(WARNING,
                "Gt92xxDevice::Create: Failed to apply deadline profile to dispatch thread: %s",
                zx_status_get_string(status));
       }

@@ -20,7 +20,7 @@
 #define clr_bits(v, a) writel(readl(a) & (uint32_t) ~(v), (a))
 
 #define UFS_ERROR(fmt, ...) zxlogf(ERROR, "[%s:%d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define UFS_WARN(fmt, ...) zxlogf(WARN, "[%s:%d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define UFS_WARN(fmt, ...) zxlogf(WARNING, "[%s:%d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define UFS_INFO(fmt, ...) zxlogf(INFO, "[%s:%d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 // Uncomment below line for more logs
 // #define UFS_DEBUG

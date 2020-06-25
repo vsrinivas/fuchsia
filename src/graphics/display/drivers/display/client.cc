@@ -864,7 +864,7 @@ void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _co
   // Make sure we are not releasing an active capture.
   if (current_capture_image_ == image_id) {
     // we have an active capture. Release it when capture is completed
-    zxlogf(WARN, "Capture is active. Will release after capture is complete");
+    zxlogf(WARNING, "Capture is active. Will release after capture is complete");
     pending_capture_release_image_ = current_capture_image_;
   } else {
     // release image now
@@ -1145,19 +1145,19 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     fbl::AllocChecker ac;
     auto config = fbl::make_unique_checked<DisplayConfig>(&ac);
     if (!ac.check()) {
-      zxlogf(WARN, "Out of memory when processing hotplug");
+      zxlogf(WARNING, "Out of memory when processing hotplug");
       continue;
     }
 
     config->id = displays_added[i];
 
     if (!controller_->GetSupportedPixelFormats(config->id, &config->pixel_formats_)) {
-      zxlogf(WARN, "Failed to get pixel formats when processing hotplug");
+      zxlogf(WARNING, "Failed to get pixel formats when processing hotplug");
       continue;
     }
 
     if (!controller_->GetCursorInfo(config->id, &config->cursor_infos_)) {
-      zxlogf(WARN, "Failed to get cursor info when processing hotplug");
+      zxlogf(WARNING, "Failed to get cursor info when processing hotplug");
       continue;
     }
 
@@ -1165,7 +1165,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     const display_params_t* params;
     if (!controller_->GetPanelConfig(config->id, &edid_timings, &params)) {
       // This can only happen if the display was already disconnected.
-      zxlogf(WARN, "No config when adding display");
+      zxlogf(WARNING, "No config when adding display");
       continue;
     }
     actual_added_count++;
@@ -1480,7 +1480,7 @@ void ClientProxy::SetOwnership(bool is_owner) {
   fbl::AllocChecker ac;
   auto task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
-    zxlogf(WARN, "Failed to allocate set ownership task");
+    zxlogf(WARNING, "Failed to allocate set ownership task");
     return;
   }
   task->set_handler([this, client_handler = &handler_, is_owner](
@@ -1513,7 +1513,7 @@ void ClientProxy::ReapplyConfig() {
   fbl::AllocChecker ac;
   auto task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
-    zxlogf(WARN, "Failed to reapply config");
+    zxlogf(WARNING, "Failed to reapply config");
     return;
   }
 
@@ -1622,7 +1622,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
         chn_oom_print_freq_ = 0;
       }
     } else {
-      zxlogf(WARN, "Failed to send vsync event %d", status);
+      zxlogf(WARNING, "Failed to send vsync event %d", status);
     }
   });
 

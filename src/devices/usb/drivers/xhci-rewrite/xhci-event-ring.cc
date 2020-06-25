@@ -284,7 +284,7 @@ zx_status_t Interrupter::IrqThread() {
   async_loop_.emplace(&config);
   async_executor_.emplace(async_loop_->dispatcher());
   if (zx_object_set_profile(zx_thread_self(), hci_->get_profile().get(), 0) != ZX_OK) {
-    zxlogf(WARN,
+    zxlogf(WARNING,
            "No scheduler profile available to apply to the high priority XHCI completer.  "
            "Service will be best effort.\n");
   }

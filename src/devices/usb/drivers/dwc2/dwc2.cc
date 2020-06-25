@@ -645,7 +645,7 @@ zx_status_t Dwc2::InitController() {
 
   auto gsnpsid = GSNPSID::Get().ReadFrom(mmio).reg_value();
   if (gsnpsid != 0x4f54400a && gsnpsid != 0x4f54330a) {
-    zxlogf(WARN,
+    zxlogf(WARNING,
            "DWC2 driver has not been tested with IP version 0x%08x. "
            "The IP has quirks, so things may not work as expected\n",
            gsnpsid);

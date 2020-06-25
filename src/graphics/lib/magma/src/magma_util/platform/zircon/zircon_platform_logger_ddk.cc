@@ -22,7 +22,7 @@ static void log_cstr(PlatformLogger::LogLevel level, const char* cstr) {
       zxlogf(ERROR, fmt, cstr);
       return;
     case PlatformLogger::LOG_WARNING:
-      zxlogf(WARN, fmt, cstr);
+      zxlogf(WARNING, fmt, cstr);
       return;
     case PlatformLogger::LOG_INFO:
       zxlogf(INFO, fmt, cstr);

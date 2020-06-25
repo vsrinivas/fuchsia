@@ -35,8 +35,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 
-#include <ddk/debug.h>
 #include <stdbool.h>
+
+#include <ddk/debug.h>
 
 #include "iwl-modparams.h"
 
@@ -52,7 +53,7 @@ struct device;
 
 #define __iwl_err(dev, rfkill_prefix, only_trace, fmt, ...) \
   zxlogf(ERROR, "iwlwifi: " fmt, ##__VA_ARGS__)
-#define __iwl_warn(dev, fmt, args...) zxlogf(WARN, "iwlwifi: " fmt, ##args)
+#define __iwl_warn(dev, fmt, args...) zxlogf(WARNING, "iwlwifi: " fmt, ##args)
 #define __iwl_info(dev, fmt, args...) zxlogf(INFO, "iwlwifi: " fmt, ##args)
 #define __iwl_crit(dev, fmt, args...) zxlogf(ERROR, "iwlwifi: " fmt, ##args)
 

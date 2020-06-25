@@ -380,7 +380,7 @@ void Alc5663Device::Shutdown() {
   // TODO(dgreenway): Power down the device.
   zx_status_t status = WriteRegister(&client_, ResetAndDeviceIdReg{});
   if (status != ZX_OK) {
-    zxlogf(WARN, "alc5663: Failed to reset the device during shutdown.");
+    zxlogf(WARNING, "alc5663: Failed to reset the device during shutdown.");
   }
 }
 

@@ -354,7 +354,7 @@ zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
       }
       return ZX_OK;
     }
-    zxlogf(WARN, "skipblock: Failed to read block %d, copy %d, with status %s",
+    zxlogf(WARNING, "skipblock: Failed to read block %d, copy %d, with status %s",
            op_context.current_block, copy, zx_status_get_string(op_context.status));
   }
   zxlogf(ERROR, "skipblock: Failed to read any copies of block %d", op.block);

@@ -86,7 +86,7 @@ void Vim2Audio::OnDisplayAdded(const vim2_display_t* display, uint64_t display_i
   }
 
   if (!display->p) {
-    zxlogf(WARN, "HDMI parameters are not set up.  Cannot enable audio!");
+    zxlogf(WARNING, "HDMI parameters are not set up.  Cannot enable audio!");
     return;
   }
 
@@ -161,7 +161,7 @@ void vim2_audio_shutdown(vim2_audio_t** inout_audio) {
 
 void vim2_audio_on_display_added(const vim2_display_t* display, uint64_t display_id) {
   if (!display->audio) {
-    zxlogf(WARN, "Failed to add audio stream; missing Vim2Audio instance!");
+    zxlogf(WARNING, "Failed to add audio stream; missing Vim2Audio instance!");
     return;
   }
 
@@ -171,7 +171,7 @@ void vim2_audio_on_display_added(const vim2_display_t* display, uint64_t display
 
 void vim2_audio_on_display_removed(const vim2_display_t* display, uint64_t display_id) {
   if (!display->audio) {
-    zxlogf(WARN, "Failed to add audio stream; missing Vim2Audio instance!");
+    zxlogf(WARNING, "Failed to add audio stream; missing Vim2Audio instance!");
     return;
   }
 

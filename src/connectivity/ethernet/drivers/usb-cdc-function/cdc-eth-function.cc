@@ -236,7 +236,7 @@ static zx_status_t cdc_generate_mac_address(zx_device_t* parent, usb_cdc_t* cdc)
   auto status = device_get_metadata(parent, DEVICE_METADATA_MAC_ADDRESS, &cdc->mac_addr,
                                     sizeof(cdc->mac_addr), &actual);
   if (status != ZX_OK || actual != sizeof(cdc->mac_addr)) {
-    zxlogf(WARN, "CDC: MAC address metadata not found. Generating random address");
+    zxlogf(WARNING, "CDC: MAC address metadata not found. Generating random address");
 
     zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr));
     cdc->mac_addr[0] = 0x02;

@@ -111,7 +111,7 @@ zx_status_t BlockDevice::Bind() {
 
   // Get the optional bad block protocol.
   if (device_get_protocol(parent(), ZX_PROTOCOL_BAD_BLOCK, &bad_block_) != ZX_OK) {
-    zxlogf(WARN, "FTL: Parent device '%s': does not support bad_block protocol",
+    zxlogf(WARNING, "FTL: Parent device '%s': does not support bad_block protocol",
            device_get_name(parent()));
   }
 
@@ -279,8 +279,7 @@ bool BlockDevice::InitFtl() {
 
   Volume::Stats stats;
   if (volume_->GetStats(&stats) == ZX_OK) {
-    zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%", stats.wear_count,
-           stats.garbage_level);
+    zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%", stats.wear_count, stats.garbage_level);
     wear_count_ = inspector_.GetRoot().CreateUint("wear_count", stats.wear_count);
   }
 

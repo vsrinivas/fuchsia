@@ -300,7 +300,7 @@ void SherlockAudioStreamOut::ProcessRingNotification() {
   resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = aml_audio_->GetRingPosition();
   if (resp.ring_buffer_pos >= rb_size_) {
-    zxlogf(WARN, "Ring buffer position 0x%X beyond ring buffer size 0x%X", resp.ring_buffer_pos,
+    zxlogf(WARNING, "Ring buffer position 0x%X beyond ring buffer size 0x%X", resp.ring_buffer_pos,
            rb_size_);
     resp.ring_buffer_pos = 0;
   }

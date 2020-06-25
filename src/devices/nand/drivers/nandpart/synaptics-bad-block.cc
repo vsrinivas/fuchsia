@@ -189,7 +189,7 @@ zx_status_t SynapticsBadBlock::MarkBlockBad(uint32_t block) {
       bbt_version_++;
     } else {
       if (status != ZX_OK) {
-        zxlogf(WARN, "%s: Only one good bad block table block left", __func__);
+        zxlogf(WARNING, "%s: Only one good bad block table block left", __func__);
       }
 
       break;

@@ -111,45 +111,45 @@ ACPI_STATUS acpi_sub_init(void) {
   // of the ACPICA developer's reference.
   ACPI_STATUS status = AcpiInitializeSubsystem();
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI");
+    zxlogf(WARNING, "Could not initialize ACPI");
     return status;
   }
 
   status = AcpiInitializeTables(NULL, ACPI_MAX_INIT_TABLES, FALSE);
   if (status == AE_NOT_FOUND) {
-    zxlogf(WARN, "Could not find ACPI tables");
+    zxlogf(WARNING, "Could not find ACPI tables");
     return status;
   } else if (status == AE_NO_MEMORY) {
-    zxlogf(WARN, "Could not initialize ACPI tables");
+    zxlogf(WARNING, "Could not initialize ACPI tables");
     return status;
   } else if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI tables for unknown reason");
+    zxlogf(WARNING, "Could not initialize ACPI tables for unknown reason");
     return status;
   }
 
   status = AcpiLoadTables();
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not load ACPI tables: %d", status);
+    zxlogf(WARNING, "Could not load ACPI tables: %d", status);
     return status;
   }
 
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not enable ACPI");
+    zxlogf(WARNING, "Could not enable ACPI");
     return status;
   }
 
   status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI objects");
+    zxlogf(WARNING, "Could not initialize ACPI objects");
     return status;
   }
 
   status = set_apic_irq_mode();
   if (status == AE_NOT_FOUND) {
-    zxlogf(WARN, "Could not find ACPI IRQ mode switch");
+    zxlogf(WARNING, "Could not find ACPI IRQ mode switch");
   } else if (status != AE_OK) {
-    zxlogf(WARN, "Failed to set APIC IRQ mode");
+    zxlogf(WARNING, "Failed to set APIC IRQ mode");
     return status;
   }
 
@@ -157,7 +157,7 @@ ACPI_STATUS acpi_sub_init(void) {
 
   status = AcpiUpdateAllGpes();
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI GPEs");
+    zxlogf(WARNING, "Could not initialize ACPI GPEs");
     return status;
   }
 

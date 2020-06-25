@@ -373,7 +373,7 @@ zx_status_t Tcs3400Device::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t Tcs3400Device::InitGain(uint8_t gain) {
   if (!(gain == 1 || gain == 4 || gain == 16 || gain == 64)) {
-    zxlogf(WARN, "%s Invalid gain (%u) using gain = 1", __FILE__, gain);
+    zxlogf(WARNING, "%s Invalid gain (%u) using gain = 1", __FILE__, gain);
     gain = 1;
   }
 
@@ -414,7 +414,7 @@ zx_status_t Tcs3400Device::InitMetadata() {
     atime_ = static_cast<uint8_t>(256 - (parameters.integration_time_ms * 10 / 24));
   } else {
     atime_ = 1;
-    zxlogf(WARN, "%s Invalid integration time (%u) using atime = %u", __FILE__,
+    zxlogf(WARNING, "%s Invalid integration time (%u) using atime = %u", __FILE__,
            parameters.integration_time_ms, atime_);
   }
 

@@ -211,7 +211,7 @@ void VirtualAudioStream::HandleFormatRequests() {
     }
 
     if (frames_per_second == 0) {
-      zxlogf(WARN, "Format is not set - should not be calling GetFormat");
+      zxlogf(WARNING, "Format is not set - should not be calling GetFormat");
       return;
     }
 
@@ -234,7 +234,7 @@ void VirtualAudioStream::HandleBufferRequests() {
 
     if (fbl::AutoLock lock(&wakeup_queue_lock_); !buffer_queue_.empty()) {
       if (!ring_buffer_vmo_.is_valid()) {
-        zxlogf(WARN, "Buffer is not set - should not be retrieving ring buffer");
+        zxlogf(WARNING, "Buffer is not set - should not be retrieving ring buffer");
         return;
       }
       status = ring_buffer_vmo_.duplicate(
@@ -283,7 +283,7 @@ void VirtualAudioStream::HandlePositionRequests() {
     }
 
     if (start_time.get() == 0) {
-      zxlogf(WARN, "Stream is not started -- should not be calling GetPosition");
+      zxlogf(WARNING, "Stream is not started -- should not be calling GetPosition");
       return;
     }
 

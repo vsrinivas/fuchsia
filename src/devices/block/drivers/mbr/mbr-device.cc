@@ -252,7 +252,7 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
            i + 1, entry.type, entry.start_sector_lba, entry.num_sectors);
 
     if (!MbrDevice::SupportsPartitionType(entry.type)) {
-      zxlogf(WARN, "mbr: Not mounting partition %d, unsupported type 0x%02x", i, entry.type);
+      zxlogf(WARNING, "mbr: Not mounting partition %d, unsupported type 0x%02x", i, entry.type);
       continue;
     }
 

@@ -8,12 +8,12 @@
 #ifdef NETDEV_DDK
 #include <ddk/debug.h>
 #define LOG_ERROR(msg) zxlogf(ERROR, msg "")
-#define LOG_WARN(msg) zxlogf(WARN, msg "")
+#define LOG_WARN(msg) zxlogf(WARNING, msg "")
 #define LOG_INFO(msg) zxlogf(INFO, msg "")
 #define LOG_TRACE(msg) zxlogf(DEBUG, msg "")
 
 #define LOGF_ERROR(fmt, ...) zxlogf(ERROR, fmt "", ##__VA_ARGS__)
-#define LOGF_WARN(fmt, ...) zxlogf(WARN, fmt "", ##__VA_ARGS__)
+#define LOGF_WARN(fmt, ...) zxlogf(WARNING, fmt "", ##__VA_ARGS__)
 #define LOGF_INFO(fmt, ...) zxlogf(INFO, fmt "", ##__VA_ARGS__)
 #define LOGF_TRACE(fmt, ...) zxlogf(DEBUG, fmt "", ##__VA_ARGS__)
 

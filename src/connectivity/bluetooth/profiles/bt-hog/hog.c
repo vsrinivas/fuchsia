@@ -364,7 +364,7 @@ static inline void hogd_debug_log_uuid(const uint8_t value[16],
 static void hogd_connect(void* ctx, const bt_gatt_status_t* status,
                          const bt_gatt_chr_t* characteristics, size_t len) {
   if (!BT_HOG_STATUS_OK(status)) {
-    zxlogf(WARN,
+    zxlogf(WARNING,
            "bt_hog driver has failed to enumerate service characteristics "
            "(ERROR: %i ATT_ECODE: %i)\n",
            status->status, status->att_ecode);

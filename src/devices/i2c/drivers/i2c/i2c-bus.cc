@@ -57,12 +57,12 @@ zx_status_t I2cBus::Start() {
     status = device_get_deadline_profile(parent_, capacity.get(), deadline.get(), period.get(),
                                          name, bus_profile.reset_and_get_address());
     if (status != ZX_OK) {
-      zxlogf(WARN, "I2cBus::Start: Failed to get deadline profile: %s",
+      zxlogf(WARNING, "I2cBus::Start: Failed to get deadline profile: %s",
              zx_status_get_string(status));
     } else {
       status = zx_object_set_profile(thrd_get_zx_handle(thread_), bus_profile.get(), 0);
       if (status != ZX_OK) {
-        zxlogf(WARN, "I2cBus::Start: Failed to apply deadline profile to bus thread: %s",
+        zxlogf(WARNING, "I2cBus::Start: Failed to apply deadline profile to bus thread: %s",
                zx_status_get_string(status));
       }
     }
@@ -158,12 +158,12 @@ void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count
         device_get_deadline_profile(device, capacity.get(), deadline.get(), period.get(),
                                     "I2cBus Dispatcher", profile.reset_and_get_address());
     if (status != ZX_OK) {
-      zxlogf(WARN, "I2cBus::Transact: Failed to get deadline profile: %s",
+      zxlogf(WARNING, "I2cBus::Transact: Failed to get deadline profile: %s",
              zx_status_get_string(status));
     } else {
       status = zx::thread::self()->set_profile(profile, 0);
       if (status != ZX_OK) {
-        zxlogf(WARN, "I2cBus::Transact: Failed to apply deadline profile to dispatch thread: %s",
+        zxlogf(WARNING, "I2cBus::Transact: Failed to apply deadline profile to dispatch thread: %s",
                zx_status_get_string(status));
       }
     }

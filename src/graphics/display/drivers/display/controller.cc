@@ -117,7 +117,7 @@ void Controller::PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) {
         fbl::AllocChecker ac;
         info->edid_timings.push_back(*timing, &ac);
         if (!ac.check()) {
-          zxlogf(WARN, "Edid skip allocation failed");
+          zxlogf(WARNING, "Edid skip allocation failed");
           break;
         }
       }
@@ -404,7 +404,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
           added_ids[final_added_success_count++] = added_ptr[i]->id;
           added_ptr[i]->init_done = true;
         } else {
-          zxlogf(WARN, "Ignoring display with no compatible edid timings");
+          zxlogf(WARNING, "Ignoring display with no compatible edid timings");
         }
       }
 
@@ -951,7 +951,7 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   // optional display controller capture protocol client
   dc_capture_ = ddk::DisplayCaptureImplProtocolClient(parent_);
   if (!dc_capture_.is_valid()) {
-    zxlogf(WARN, "Display Capture not supported by this platform");
+    zxlogf(WARNING, "Display Capture not supported by this platform");
   }
 
   i2c_ = ddk::I2cImplProtocolClient(parent_);

@@ -381,7 +381,7 @@ zx_status_t ScsiDevice::Init() {
   {
     fbl::AutoLock lock(&lock_);
     if (config_.max_channel > 1) {
-      zxlogf(WARN, "config_.max_channel %d not expected.", config_.max_channel);
+      zxlogf(WARNING, "config_.max_channel %d not expected.", config_.max_channel);
     }
   }
 

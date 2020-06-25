@@ -211,7 +211,7 @@ int UsbXhci::CompleterThread(void* arg) {
     if (xhci->profile_handle.is_valid()) {
       zx_object_set_profile(zx_thread_self(), xhci->profile_handle.get(), 0);
     } else {
-      zxlogf(WARN,
+      zxlogf(WARNING,
              "No scheduler profile available to apply to the high priority XHCI completer.  "
              "Service will be best effort.\n");
     }
@@ -306,7 +306,7 @@ zx_status_t UsbXhci::FinishBind() {
       "src/devices/usb/drivers/xhci/usb-xhci", xhci_->profile_handle.reset_and_get_address());
 
   if (status != ZX_OK) {
-    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)",
+    zxlogf(WARNING, "Failed to obtain scheduler profile for high priority completer (res %d)",
            status);
   }
 

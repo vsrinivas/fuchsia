@@ -184,11 +184,12 @@ zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
         device_get_deadline_profile(ft_dev->zxdev(), capacity.get(), deadline.get(), period.get(),
                                     "focaltouch-thread", profile.reset_and_get_address());
     if (status != ZX_OK) {
-      zxlogf(WARN, "focaltouch: Failed to get deadline profile: %s", zx_status_get_string(status));
+      zxlogf(WARNING, "focaltouch: Failed to get deadline profile: %s",
+             zx_status_get_string(status));
     } else {
       status = zx_object_set_profile(thrd_get_zx_handle(ft_dev->thread_), profile.get(), 0);
       if (status != ZX_OK) {
-        zxlogf(WARN, "focaltouch: Failed to apply deadline profile to device thread: %s",
+        zxlogf(WARNING, "focaltouch: Failed to apply deadline profile to device thread: %s",
                zx_status_get_string(status));
       }
     }

@@ -412,7 +412,7 @@ void EthernetDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* ne
   if (!desc) {
     tx_failed_descriptor_alloc_++;
     if (tx_failed_descriptor_alloc_ == 1 || (tx_failed_descriptor_alloc_ % kFailureWarnRate) == 0) {
-      zxlogf(WARN, "transmit dropping packet; out of descriptors, %lu pending (%lu times)",
+      zxlogf(WARNING, "transmit dropping packet; out of descriptors, %lu pending (%lu times)",
              unkicked_, tx_failed_descriptor_alloc_);
     }
     tx_.Kick();

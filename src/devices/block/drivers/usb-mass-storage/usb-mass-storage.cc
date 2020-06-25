@@ -608,7 +608,7 @@ zx_status_t UsbMassStorageDevice::Read(UmsBlockDevice* dev, Transaction* txn) {
           SendCbw(params.lun, static_cast<uint32_t>(length), USB_DIR_IN, sizeof(command), &command);
     }
     if (status != ZX_OK) {
-      zxlogf(WARN, "UMS: SendCbw during read failed with status %d\n", status);
+      zxlogf(WARNING, "UMS: SendCbw during read failed with status %d\n", status);
       return status;
     }
     status = DataTransfer(txn, vmo_offset, length, bulk_in_addr_);
@@ -741,7 +741,7 @@ zx_status_t UsbMassStorageDevice::AddBlockDevice(fbl::RefPtr<UmsBlockDevice> dev
   status = ModeSense(lun, 0x08, cache_sense, sizeof(cache_sense));
   params = dev->GetBlockDeviceParameters();
   if (status != ZX_OK) {
-    zxlogf(WARN, "CacheSense failed: %d", status);
+    zxlogf(WARNING, "CacheSense failed: %d", status);
     params.cache_enabled = true;
   } else {
     params.cache_enabled = cache_sense[6] & (1 << 2);

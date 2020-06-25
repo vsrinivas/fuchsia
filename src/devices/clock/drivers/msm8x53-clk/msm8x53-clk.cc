@@ -131,7 +131,7 @@ zx_status_t Msm8x53Clk::ClockImplSetRate(uint32_t id, uint64_t hz) {
       return RcgClockSetRate(index, hz);
     }
     default:
-      zxlogf(WARN, "msm_clk: unsupported clock type: %u", (uint16_t)clock_type);
+      zxlogf(WARNING, "msm_clk: unsupported clock type: %u", (uint16_t)clock_type);
   }
 
   return ZX_ERR_NOT_SUPPORTED;
@@ -354,7 +354,7 @@ zx_status_t Msm8x53Clk::RcgClockSetRate(uint32_t index, uint64_t rate) {
 
   if (table == nullptr) {
     // This clock frequency is not supported.
-    zxlogf(WARN, "unsupported clock frequency, clk = %u, rate = %lu", index, rate);
+    zxlogf(WARNING, "unsupported clock frequency, clk = %u, rate = %lu", index, rate);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -393,7 +393,7 @@ zx_status_t Msm8x53Clk::LatchRcgConfig(const MsmClkRcg& clk) {
     zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
   }
 
-  zxlogf(WARN, "Failed to latch RCG config");
+  zxlogf(WARNING, "Failed to latch RCG config");
   return ZX_ERR_TIMED_OUT;
 }
 

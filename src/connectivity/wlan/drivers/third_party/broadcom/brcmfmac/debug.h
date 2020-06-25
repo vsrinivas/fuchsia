@@ -28,7 +28,7 @@
 // Some convenience macros for error and debug printing.
 #define BRCMF_ERR(fmt, ...) zxlogf(ERROR, "(%s): " fmt, __func__, ##__VA_ARGS__)
 
-#define BRCMF_WARN(fmt, ...) zxlogf(WARN, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define BRCMF_WARN(fmt, ...) zxlogf(WARNING, "(%s): " fmt, __func__, ##__VA_ARGS__)
 
 #define BRCMF_INFO(fmt, ...) zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__)
 

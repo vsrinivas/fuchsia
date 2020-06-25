@@ -120,7 +120,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     // says it is 200 MHz. Correct it so that the bus clock can be set properly.
     ddk::ClockProtocolClient clock(fragments[FRAGMENT_SD0_CLOCK]);
     if (clock.is_valid() && (status = clock.SetRate(kVs680CoreClockFreqHz)) != ZX_OK) {
-      zxlogf(WARN, "%s: Failed to set core clock frequency: %d", __FILE__, status);
+      zxlogf(WARNING, "%s: Failed to set core clock frequency: %d", __FILE__, status);
     }
   } else {
     pdev = ddk::PDev(parent);

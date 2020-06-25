@@ -458,7 +458,7 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
   // default to 48K.
   if (rate_ndx >= std::size(RATE_LUT)) {
     constexpr uint32_t DEFAULT_RATE_NDX = 1;
-    zxlogf(WARN, "Failed to find requested frame rate (%u) in LUT!  Defaulting to 48000",
+    zxlogf(WARNING, "Failed to find requested frame rate (%u) in LUT!  Defaulting to 48000",
            frame_rate);
     static_assert(DEFAULT_RATE_NDX < std::size(RATE_LUT), "Invalid default rate index!");
     rate_ndx = DEFAULT_RATE_NDX;
@@ -524,7 +524,7 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
       break;
 
     default:
-      zxlogf(WARN, "Unsupported format (0x%08x), defaulting to PCM16", fmt);
+      zxlogf(WARNING, "Unsupported format (0x%08x), defaulting to PCM16", fmt);
       __FALLTHROUGH;
     case AUDIO_SAMPLE_FORMAT_16BIT:
       mctrl |= AIU_958_MCTRL_16BIT_MODE;

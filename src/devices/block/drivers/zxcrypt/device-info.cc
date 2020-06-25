@@ -63,7 +63,7 @@ DeviceInfo::~DeviceInfo() {
   base = nullptr;
   zx_status_t rc = zx::vmar::root_self()->unmap(address, Volume::kBufferSize);
   if (rc != ZX_OK) {
-    zxlogf(WARN, "failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s", Volume::kBufferSize,
+    zxlogf(WARNING, "failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s", Volume::kBufferSize,
            address, zx_status_get_string(rc));
   }
 }

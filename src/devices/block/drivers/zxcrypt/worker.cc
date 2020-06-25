@@ -193,7 +193,7 @@ zx_status_t Worker::Stop() {
   thrd_join(thrd_, &rc);
 
   if (rc != ZX_OK) {
-    zxlogf(WARN, "worker exited with error: %s", zx_status_get_string(rc));
+    zxlogf(WARNING, "worker exited with error: %s", zx_status_get_string(rc));
     return rc;
   }
 

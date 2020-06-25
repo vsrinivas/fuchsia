@@ -133,8 +133,7 @@ zx_status_t Device::QueueUsbRequestHandler(const uint8_t* ip, size_t length, usb
 
   ssize_t bytes_copied = usb_request_copy_to(req, ip, ip_length, 0);
   if (bytes_copied < 0) {
-    zxlogf(ERROR, "qmi-usb-transport: failed to copy data into send txn (error %zd)",
-           bytes_copied);
+    zxlogf(ERROR, "qmi-usb-transport: failed to copy data into send txn (error %zd)", bytes_copied);
     return ZX_ERR_IO;
   }
 
@@ -482,7 +481,7 @@ void Device::UsbCdcIntHander(uint16_t packet_size) {
                           USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, QMI_INTERFACE_NUM, ZX_TIME_INFINITE,
                           buffer, packet_size, nullptr);
   if (!qmi_channel_) {
-    zxlogf(WARN, "qmi-usb-transport: recieving USB CDC frames without a channel");
+    zxlogf(WARNING, "qmi-usb-transport: recieving USB CDC frames without a channel");
     return;
   }
   status = zx_channel_write(qmi_channel_, 0, buffer, sizeof(buffer), nullptr, 0);
@@ -852,8 +851,8 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
   if (bulk_in_addr == 0 || bulk_out_addr == 0 || intr_addr == 0) {
     zxlogf(ERROR, "qmi-usb-transport: failed to find one of the usb endpoints");
-    zxlogf(ERROR, "qmi-usb-transport: bulkIn:%u, bulkOut:%u, intr:%u", bulk_in_addr,
-           bulk_out_addr, intr_addr);
+    zxlogf(ERROR, "qmi-usb-transport: bulkIn:%u, bulkOut:%u, intr:%u", bulk_in_addr, bulk_out_addr,
+           intr_addr);
     status = ZX_ERR_INTERNAL;
     QmiBindFailedErr(status, int_buf);
     return status;

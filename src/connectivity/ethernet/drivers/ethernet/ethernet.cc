@@ -141,7 +141,7 @@ void EthDev::RecvLocked(const void* data, size_t len, uint32_t extra) {
           // TODO(bbosak): Printing this warning
           // can result in more dropped packets.
           // Find a better way to log this.
-          zxlogf(WARN,
+          zxlogf(WARNING,
                  "eth [%s]: warning: no rx buffers available, frame dropped "
                  "(%u time%s)\n",
                  name_, fail_receive_read_, fail_receive_read_ > 1 ? "s" : "");
@@ -980,7 +980,7 @@ zx_status_t EthDev0::AddDevice() {
   // Make sure device starts with expected settings.
   if ((status = mac_.SetParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0)) != ZX_OK) {
     // Log the error, but continue, as this is not critical.
-    zxlogf(WARN, "eth: bind: device '%s': unable to disable promiscuous mode: %s",
+    zxlogf(WARNING, "eth: bind: device '%s': unable to disable promiscuous mode: %s",
            device_get_name(parent_), zx_status_get_string(status));
   }
 
