@@ -64,8 +64,7 @@ impl CustomInterfaceInfo {
         let mut ipv6_addresses = Vec::new();
 
         for address_info in &info.properties.addresses {
-            let _address: IpAddress = address_info.ip_address;
-            match address_info.ip_address {
+            match address_info.addr {
                 IpAddress::Ipv4(ip) => ipv4_addresses.push(ip.addr.to_vec()),
                 IpAddress::Ipv6(ip) => ipv6_addresses.push(ip.addr.to_vec()),
             };

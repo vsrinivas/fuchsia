@@ -22,7 +22,6 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/dhcp"
-	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -266,8 +265,8 @@ func (ni *netstackImpl) StartRouteTableTransaction(_ fidl.Context, req netstack.
 
 // Add address to the given network interface.
 func (ni *netstackImpl) SetInterfaceAddress(_ fidl.Context, nicid uint32, address fidlnet.IpAddress, prefixLen uint8) (netstack.NetErr, error) {
-	protocolAddr := toProtocolAddr(stack.InterfaceAddress{
-		IpAddress: address,
+	protocolAddr := toProtocolAddr(fidlnet.Subnet{
+		Addr:      address,
 		PrefixLen: prefixLen,
 	})
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
@@ -285,8 +284,8 @@ func (ni *netstackImpl) SetInterfaceAddress(_ fidl.Context, nicid uint32, addres
 }
 
 func (ni *netstackImpl) RemoveInterfaceAddress(_ fidl.Context, nicid uint32, address fidlnet.IpAddress, prefixLen uint8) (netstack.NetErr, error) {
-	protocolAddr := toProtocolAddr(stack.InterfaceAddress{
-		IpAddress: address,
+	protocolAddr := toProtocolAddr(fidlnet.Subnet{
+		Addr:      address,
 		PrefixLen: prefixLen,
 	})
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {

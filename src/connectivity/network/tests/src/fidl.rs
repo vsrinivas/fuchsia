@@ -154,7 +154,7 @@ async fn add_del_interface_address() -> Result {
         })
         .ok_or(anyhow::format_err!("failed to find loopback"))?;
     let mut interface_address =
-        fidl_fuchsia_net_stack::InterfaceAddress { ip_address: fidl_ip!(1.1.1.1), prefix_len: 32 };
+        fidl_fuchsia_net::Subnet { addr: fidl_ip!(1.1.1.1), prefix_len: 32 };
     let res = stack
         .add_interface_address(loopback.id, &mut interface_address)
         .await
@@ -202,8 +202,7 @@ async fn add_remove_interface_address_errors() -> Result {
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let mut interface_address =
-        fidl_fuchsia_net_stack::InterfaceAddress { ip_address: fidl_ip!(0.0.0.0), prefix_len: 0 };
+    let mut interface_address = fidl_fuchsia_net::Subnet { addr: fidl_ip!(0.0.0.0), prefix_len: 0 };
 
     // Don't crash on interface not found.
 
@@ -217,7 +216,7 @@ async fn add_remove_interface_address_errors() -> Result {
     let error = netstack
         .remove_interface_address(
             std::convert::TryInto::try_into(max_id + 1).expect("should fit"),
-            &mut interface_address.ip_address,
+            &mut interface_address.addr,
             interface_address.prefix_len,
         )
         .await
@@ -242,7 +241,7 @@ async fn add_remove_interface_address_errors() -> Result {
     let error = netstack
         .remove_interface_address(
             std::convert::TryInto::try_into(max_id).expect("should fit"),
-            &mut interface_address.ip_address,
+            &mut interface_address.addr,
             interface_address.prefix_len,
         )
         .await
@@ -519,11 +518,8 @@ async fn test_close_data_race<E: Endpoint>(name: &str) -> Result {
 
     // NOTE: We only run this test with IPv4 sockets since we only care about
     // exciting the tx path, the domain is irrelevant.
-    const DEVICE_ADDRESS: fidl_fuchsia_net_stack::InterfaceAddress =
-        fidl_fuchsia_net_stack::InterfaceAddress {
-            ip_address: fidl_ip!(192.168.0.2),
-            prefix_len: 24,
-        };
+    const DEVICE_ADDRESS: fidl_fuchsia_net::Subnet =
+        fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.2), prefix_len: 24 };
     // We're going to send data over a UDP socket to a multicast address so we
     // skip ARP resolution.
     const MCAST_ADDR: std::net::IpAddr = std_ip!(224.0.0.1);
@@ -560,7 +556,7 @@ async fn test_close_data_race<E: Endpoint>(name: &str) -> Result {
                 anyhow::anyhow!("netstack stream ended unexpectedly while waiting for interface up")
             })?;
         // Create a socket and start sending data on it nonstop.
-        let fidl_fuchsia_net_ext::IpAddress(bind_addr) = DEVICE_ADDRESS.ip_address.into();
+        let fidl_fuchsia_net_ext::IpAddress(bind_addr) = DEVICE_ADDRESS.addr.into();
         let sock = fuchsia_async::net::UdpSocket::bind_in_env(
             &env,
             std::net::SocketAddr::new(bind_addr, 0),

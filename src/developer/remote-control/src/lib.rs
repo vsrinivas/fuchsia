@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
     fidl_fuchsia_diagnostics::Selector,
-    fidl_fuchsia_io as io, fidl_fuchsia_net_stack as fnetstack,
+    fidl_fuchsia_io as io, fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
     fidl_fuchsia_test_manager as ftest_manager, fuchsia_zircon as zx,
     futures::prelude::*,
     std::rc::Rc,
@@ -181,7 +181,7 @@ impl RemoteControlService {
         let result = ilist
             .iter_mut()
             .flat_map(|int| int.properties.addresses.drain(..))
-            .collect::<Vec<fnetstack::InterfaceAddress>>();
+            .collect::<Vec<fnet::Subnet>>();
 
         let nodename = match self.name_provider_proxy.get_device_name().await {
             Ok(result) => match result {
@@ -281,14 +281,14 @@ mod tests {
                                 features: 0,
                                 mac: Some(Box::new(MacAddress { octets: [1, 2, 3, 4, 5, 6] })),
                                 addresses: vec![
-                                    fnetstack::InterfaceAddress {
-                                        ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                                    fnet::Subnet {
+                                        addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
                                             addr: IPV4_ADDR,
                                         }),
                                         prefix_len: 4,
                                     },
-                                    fnetstack::InterfaceAddress {
-                                        ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                                    fnet::Subnet {
+                                        addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                                             addr: IPV6_ADDR,
                                         }),
                                         prefix_len: 6,
@@ -339,11 +339,11 @@ mod tests {
 
         let v4 = &addrs[0];
         assert_eq!(v4.prefix_len, 4);
-        assert_eq!(v4.ip_address, fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_ADDR }));
+        assert_eq!(v4.addr, fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_ADDR }));
 
         let v6 = &addrs[1];
         assert_eq!(v6.prefix_len, 6);
-        assert_eq!(v6.ip_address, fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }));
+        assert_eq!(v6.addr, fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }));
 
         Ok(())
     }

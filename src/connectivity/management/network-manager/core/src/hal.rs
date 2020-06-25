@@ -210,12 +210,12 @@ impl From<&InterfaceInfo> for Interface {
                 .properties
                 .addresses
                 .iter()
-                .filter_map(|a| match a.ip_address {
+                .filter_map(|a| match a.addr {
                     // Only return interfaces with an IPv4 address
                     // TODO(dpradilla) support interfaces with multiple IPs? (is there
                     // a use case given this context?)
                     fnet::IpAddress::Ipv4(_) => {
-                        if address_is_valid_unicast(&LifIpAddr::from(&a.ip_address).address) {
+                        if address_is_valid_unicast(&LifIpAddr::from(&a.addr).address) {
                             Some(InterfaceAddress::Unknown(LifIpAddr::from(a)))
                         } else {
                             None
@@ -228,7 +228,7 @@ impl From<&InterfaceInfo> for Interface {
                 .properties
                 .addresses
                 .iter()
-                .filter_map(|a| match a.ip_address {
+                .filter_map(|a| match a.addr {
                     // Only return Ipv6 addresses
                     fnet::IpAddress::Ipv6(_) => Some(LifIpAddr::from(a)),
                     _ => None,
@@ -591,7 +591,7 @@ impl NetCfg {
                 .properties
                 .addresses
                 .into_iter()
-                .filter_map(|if_addr| match if_addr.ip_address {
+                .filter_map(|addr| match addr.addr {
                     fnet::IpAddress::Ipv4(addr) => Some(addr),
                     fnet::IpAddress::Ipv6(_) => None,
                 })
@@ -666,7 +666,7 @@ impl NetCfg {
                 .properties
                 .addresses
                 .into_iter()
-                .filter_map(|if_addr| match if_addr.ip_address {
+                .filter_map(|if_addr| match if_addr.addr {
                     fnet::IpAddress::Ipv4(addr) => Some((addr.addr, if_addr.prefix_len)),
                     fnet::IpAddress::Ipv6(_) => None,
                 })
@@ -1068,7 +1068,7 @@ mod tests {
         std::net::Ipv4Addr,
     };
 
-    fn interface_info_with_addrs(addrs: Vec<stack::InterfaceAddress>) -> InterfaceInfo {
+    fn interface_info_with_addrs(addrs: Vec<fnet::Subnet>) -> InterfaceInfo {
         InterfaceInfo {
             id: 42,
             properties: stack::InterfaceProperties {
@@ -1098,38 +1098,38 @@ mod tests {
         }
     }
 
-    fn sample_addresses() -> Vec<stack::InterfaceAddress> {
+    fn sample_addresses() -> Vec<fnet::Subnet> {
         vec![
             // Unspecified addresses are skipped.
-            stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
                 prefix_len: 24,
             },
             // Multicast addresses are skipped.
-            stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [224, 0, 0, 5] }),
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [224, 0, 0, 5] }),
                 prefix_len: 24,
             },
             // Loopback addresses are skipped.
-            stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [127, 0, 0, 1] }),
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [127, 0, 0, 1] }),
                 prefix_len: 24,
             },
             // IPv6 addresses are skipped.
-            stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
                 }),
                 prefix_len: 8,
             },
             // First valid address, should be picked.
-            stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [4, 3, 2, 1] }),
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [4, 3, 2, 1] }),
                 prefix_len: 24,
             },
             // A valid address is already available, so this address should be skipped.
-            stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
                 prefix_len: 24,
             },
         ]
@@ -1423,29 +1423,25 @@ mod tests {
                 properties: stack::InterfaceProperties {
                     topopath: "test/interface/info".to_string(),
                     addresses: vec![
-                        stack::InterfaceAddress {
-                            ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                        fnet::Subnet {
+                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                                 addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
                             }),
                             prefix_len: 8,
                         },
-                        stack::InterfaceAddress {
-                            ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                        fnet::Subnet {
+                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                                 addr: [1, 1, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
                             }),
                             prefix_len: 64,
                         },
-                        stack::InterfaceAddress {
-                            ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
-                                addr: [4, 3, 2, 1],
-                            }),
+                        fnet::Subnet {
+                            addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [4, 3, 2, 1] }),
                             prefix_len: 23,
                         },
                         // A valid address is already available, so this address should be skipped.
-                        stack::InterfaceAddress {
-                            ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
-                                addr: [1, 2, 3, 4],
-                            }),
+                        fnet::Subnet {
+                            addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
                             prefix_len: 27,
                         },
                     ],
@@ -1697,8 +1693,8 @@ mod tests {
                             features: 0,
                             administrative_status: stack::AdministrativeStatus::Enabled,
                             physical_status: stack::PhysicalStatus::Up,
-                            addresses: vec![stack::InterfaceAddress {
-                                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addresses: vec![fnet::Subnet {
+                                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
                                     addr: [192, 168, 42, 1],
                                 }),
                                 prefix_len: 24,

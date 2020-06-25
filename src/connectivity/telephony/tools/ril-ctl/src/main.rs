@@ -17,9 +17,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet},
-    fidl_fuchsia_net_stack::{
-        ForwardingDestination, ForwardingEntry, InterfaceAddress, StackMarker,
-    },
+    fidl_fuchsia_net_stack::{ForwardingDestination, ForwardingEntry, StackMarker},
     fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netstack::NetstackMarker,
     fidl_fuchsia_telephony_manager::ManagerMarker,
@@ -72,10 +70,10 @@ fn u32_to_ip_str(ip: u32) -> String {
 }
 
 // only supports ipv4 now
-fn u32_to_netaddr(ip: u32, mask: u32) -> Result<InterfaceAddress, Error> {
+fn u32_to_netaddr(ip: u32, mask: u32) -> Result<Subnet, Error> {
     let cidr = u32_to_cidr(mask)?;
-    Ok(InterfaceAddress {
-        ip_address: IpAddress::Ipv4(Ipv4Address {
+    Ok(Subnet {
+        addr: IpAddress::Ipv4(Ipv4Address {
             addr: [
                 ((ip >> 24) & 0xFF) as u8,
                 ((ip >> 16) & 0xFF) as u8,

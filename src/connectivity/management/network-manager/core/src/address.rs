@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_net as fnet,
-    fidl_fuchsia_net_stack::{self as stack},
-    fidl_fuchsia_router_config as netconfig,
+    fidl_fuchsia_net as fnet, fidl_fuchsia_router_config as netconfig,
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr},
 };
 
@@ -29,24 +27,9 @@ impl From<&fnet::IpAddress> for LifIpAddr {
     }
 }
 
-impl From<&stack::InterfaceAddress> for LifIpAddr {
-    fn from(addr: &stack::InterfaceAddress) -> Self {
-        LifIpAddr { address: to_ip_addr(addr.ip_address), prefix: addr.prefix_len }
-    }
-}
-
 impl From<&fnet::Subnet> for LifIpAddr {
-    fn from(s: &fnet::Subnet) -> Self {
-        match *s {
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }),
-                prefix_len: prefix,
-            } => LifIpAddr { address: addr.into(), prefix },
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }),
-                prefix_len: prefix,
-            } => LifIpAddr { address: addr.into(), prefix },
-        }
+    fn from(&fnet::Subnet { addr, prefix_len }: &fnet::Subnet) -> Self {
+        LifIpAddr { address: to_ip_addr(addr), prefix: prefix_len }
     }
 }
 
@@ -80,34 +63,11 @@ impl From<&LifIpAddr> for fnet::Subnet {
     fn from(addr: &LifIpAddr) -> Self {
         match addr.address {
             IpAddr::V4(a) => fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
-                    addr: (u32::from_be_bytes(a.octets()) >> (32 - addr.prefix)
-                        << (32 - addr.prefix))
-                        .to_be_bytes(),
-                }),
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() }),
                 prefix_len: addr.prefix,
             },
             IpAddr::V6(a) => fnet::Subnet {
-                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                    addr: (u128::from_be_bytes(a.octets()) >> (128 - addr.prefix)
-                        << (128 - addr.prefix))
-                        .to_be_bytes(),
-                }),
-                prefix_len: addr.prefix,
-            },
-        }
-    }
-}
-
-impl From<&LifIpAddr> for stack::InterfaceAddress {
-    fn from(addr: &LifIpAddr) -> Self {
-        match addr.address {
-            IpAddr::V4(a) => stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() }),
-                prefix_len: addr.prefix,
-            },
-            IpAddr::V6(a) => stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() }),
+                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() }),
                 prefix_len: addr.prefix,
             },
         }

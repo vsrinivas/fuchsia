@@ -14,8 +14,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::{
         IdentifyHostError, RemoteControlMarker, RemoteControlProxy,
     },
-    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
-    fidl_fuchsia_net_stack::InterfaceAddress,
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::lock::{Mutex, MutexGuard},
@@ -362,11 +361,11 @@ impl From<bridge::TargetAddrInfo> for TargetAddr {
     }
 }
 
-impl From<InterfaceAddress> for TargetAddr {
-    fn from(i: InterfaceAddress) -> Self {
+impl From<Subnet> for TargetAddr {
+    fn from(i: Subnet) -> Self {
         // TODO(awdavies): Figure out if it's possible to get the scope_id from
         // this address.
-        match i.ip_address {
+        match i.addr {
             IpAddress::Ipv4(ip4) => SocketAddr::from((ip4.addr, 0)).into(),
             IpAddress::Ipv6(ip6) => SocketAddr::from((ip6.addr, 0)).into(),
         }
@@ -656,8 +655,8 @@ mod test {
                                 .context("sending testing error response")
                                 .unwrap();
                         } else {
-                            let result: Vec<InterfaceAddress> = vec![InterfaceAddress {
-                                ip_address: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
+                            let result: Vec<Subnet> = vec![Subnet {
+                                addr: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
                                 prefix_len: 24,
                             }];
                             let nodename = if nodename_response.len() == 0 {

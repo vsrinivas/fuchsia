@@ -6,7 +6,6 @@ use std::fmt::Debug;
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_sys as sys;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
@@ -449,8 +448,8 @@ async fn add_address_for_dad<
     fail_dad_fn: FN,
 ) -> Result {
     let () = iface
-        .add_ip_addr(net_stack::InterfaceAddress {
-            ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+        .add_ip_addr(net::Subnet {
+            addr: net::IpAddress::Ipv6(net::Ipv6Address {
                 addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
             }),
             prefix_len: 64,
@@ -523,8 +522,8 @@ async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
         .fuse()
         .await;
 
-        let addr = net_stack::InterfaceAddress {
-            ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+        let addr = net::Subnet {
+            addr: net::IpAddress::Ipv6(net::Ipv6Address {
                 addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
             }),
             prefix_len: 64,

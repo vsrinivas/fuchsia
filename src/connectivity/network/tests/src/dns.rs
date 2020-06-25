@@ -107,10 +107,7 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
         .join_network::<E, _>(
             &network,
             "server-ep",
-            InterfaceConfig::StaticIp(fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: SERVER_IP,
-                prefix_len: 24,
-            }),
+            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet { addr: SERVER_IP, prefix_len: 24 }),
         )
         .await
         .context("failed to configure server networking")?;

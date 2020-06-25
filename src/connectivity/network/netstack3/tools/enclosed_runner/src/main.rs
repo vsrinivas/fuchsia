@@ -78,17 +78,6 @@ fn mask_with_prefix(mut ip: net::IpAddress, prefix: u8) -> net::IpAddress {
     ip
 }
 
-fn copy_ip(ip: &net::IpAddress) -> net::IpAddress {
-    match ip {
-        net::IpAddress::Ipv4(addr) => {
-            net::IpAddress::Ipv4(net::Ipv4Address { addr: addr.addr.clone() })
-        }
-        net::IpAddress::Ipv6(addr) => {
-            net::IpAddress::Ipv6(net::Ipv6Address { addr: addr.addr.clone() })
-        }
-    }
-}
-
 impl Netstack {
     fn new(env: &NestedEnvironment) -> Result<Self, Error> {
         Ok(Self { stack: env.connect_to_service::<StackMarker>()? })
@@ -121,8 +110,7 @@ impl Netstack {
         ip_address: net::IpAddress,
         prefix_len: u8,
     ) -> Result<(), Error> {
-        let mut fidl_addr =
-            netstack::InterfaceAddress { ip_address: copy_ip(&ip_address), prefix_len };
+        let mut fidl_addr = net::Subnet { addr: ip_address.clone(), prefix_len };
         let () = self
             .stack
             .add_interface_address(id, &mut fidl_addr)

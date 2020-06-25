@@ -182,17 +182,12 @@ async fn do_if(cmd: opts::IfEnum, stack: &StackProxy) -> Result<(), Error> {
         IfEnum::Addr(IfAddr { addr_cmd }) => match addr_cmd {
             IfAddrEnum::Add(IfAddrAdd { id, addr, prefix }) => {
                 let parsed_addr = net_ext::IpAddress::from_str(&addr)?.into();
-                let mut fidl_addr =
-                    netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len: prefix };
+                let mut fidl_addr = net::Subnet { addr: parsed_addr, prefix_len: prefix };
                 let () = stack_fidl!(
                     stack.add_interface_address(id, &mut fidl_addr),
                     "error adding interface address"
                 )?;
-                info!(
-                    "Address {} added to interface {}",
-                    pretty::InterfaceAddress::from(fidl_addr),
-                    id
-                );
+                info!("Address {} added to interface {}", net_ext::Subnet::from(fidl_addr), id);
             }
             IfAddrEnum::Del(IfAddrDel { id, addr, prefix }) => {
                 let parsed_addr = net_ext::IpAddress::from_str(&addr)?.into();
@@ -200,17 +195,12 @@ async fn do_if(cmd: opts::IfEnum, stack: &StackProxy) -> Result<(), Error> {
                     net::IpAddress::Ipv4(_) => 32,
                     net::IpAddress::Ipv6(_) => 128,
                 });
-                let mut fidl_addr =
-                    netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len };
+                let mut fidl_addr = net::Subnet { addr: parsed_addr, prefix_len };
                 let () = stack_fidl!(
                     stack.del_interface_address(id, &mut fidl_addr),
                     "error deleting interface address"
                 )?;
-                info!(
-                    "Address {} deleted from interface {}",
-                    pretty::InterfaceAddress::from(fidl_addr),
-                    id
-                );
+                info!("Address {} deleted from interface {}", net_ext::Subnet::from(fidl_addr), id);
             }
         },
     }
@@ -498,7 +488,7 @@ mod tests {
     async fn test_if_del_addr() {
         async fn next_request(
             requests: &mut StackRequestStream,
-        ) -> (u64, InterfaceAddress, StackDelInterfaceAddressResponder) {
+        ) -> (u64, net::Subnet, StackDelInterfaceAddressResponder) {
             requests
                 .try_next()
                 .await
@@ -517,8 +507,8 @@ mod tests {
             assert_eq!(id, 1);
             assert_eq!(
                 addr,
-                InterfaceAddress {
-                    ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] }),
+                net::Subnet {
+                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] }),
                     prefix_len: 32
                 }
             );
@@ -529,8 +519,8 @@ mod tests {
             assert_eq!(id, 2);
             assert_eq!(
                 addr,
-                InterfaceAddress {
-                    ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+                net::Subnet {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: [0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
                     }),
                     prefix_len: 128

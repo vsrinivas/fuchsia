@@ -50,13 +50,13 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 		physicalStatus = stack.PhysicalStatusUp
 	}
 
-	addrs := make([]stack.InterfaceAddress, 0, len(nicInfo.ProtocolAddresses))
+	addrs := make([]net.Subnet, 0, len(nicInfo.ProtocolAddresses))
 	for _, a := range nicInfo.ProtocolAddresses {
 		if a.Protocol != ipv4.ProtocolNumber && a.Protocol != ipv6.ProtocolNumber {
 			continue
 		}
-		addrs = append(addrs, stack.InterfaceAddress{
-			IpAddress: fidlconv.ToNetIpAddress(a.AddressWithPrefix.Address),
+		addrs = append(addrs, net.Subnet{
+			Addr:      fidlconv.ToNetIpAddress(a.AddressWithPrefix.Address),
 			PrefixLen: uint8(a.AddressWithPrefix.PrefixLen),
 		})
 	}
@@ -222,27 +222,27 @@ func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResul
 	return result
 }
 
-func toProtocolAddr(ifAddr stack.InterfaceAddress) tcpip.ProtocolAddress {
+func toProtocolAddr(ifAddr net.Subnet) tcpip.ProtocolAddress {
 	protocolAddr := tcpip.ProtocolAddress{
 		AddressWithPrefix: tcpip.AddressWithPrefix{
 			PrefixLen: int(ifAddr.PrefixLen),
 		},
 	}
 
-	switch typ := ifAddr.IpAddress.Which(); typ {
+	switch typ := ifAddr.Addr.Which(); typ {
 	case net.IpAddressIpv4:
 		protocolAddr.Protocol = ipv4.ProtocolNumber
-		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.IpAddress.Ipv4.Addr[:])
+		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.Addr.Ipv4.Addr[:])
 	case net.IpAddressIpv6:
 		protocolAddr.Protocol = ipv6.ProtocolNumber
-		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.IpAddress.Ipv6.Addr[:])
+		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.Addr.Ipv6.Addr[:])
 	default:
 		panic(fmt.Sprintf("unknown IpAddress type %d", typ))
 	}
 	return protocolAddr
 }
 
-func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackAddInterfaceAddressResult {
+func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAddInterfaceAddressResult {
 	var result stack.StackAddInterfaceAddressResult
 
 	protocolAddr := toProtocolAddr(ifAddr)
@@ -267,7 +267,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) s
 	return result
 }
 
-func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackDelInterfaceAddressResult {
+func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressResult {
 	var result stack.StackDelInterfaceAddressResult
 
 	protocolAddr := toProtocolAddr(ifAddr)
@@ -403,11 +403,11 @@ func (ni *stackImpl) DisableInterface(_ fidl.Context, id uint64) (stack.StackDis
 	return ni.ns.disableInterface(id), nil
 }
 
-func (ni *stackImpl) AddInterfaceAddress(_ fidl.Context, id uint64, addr stack.InterfaceAddress) (stack.StackAddInterfaceAddressResult, error) {
+func (ni *stackImpl) AddInterfaceAddress(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackAddInterfaceAddressResult, error) {
 	return ni.ns.addInterfaceAddr(id, addr), nil
 }
 
-func (ni *stackImpl) DelInterfaceAddress(_ fidl.Context, id uint64, addr stack.InterfaceAddress) (stack.StackDelInterfaceAddressResult, error) {
+func (ni *stackImpl) DelInterfaceAddress(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackDelInterfaceAddressResult, error) {
 	return ni.ns.delInterfaceAddr(id, addr), nil
 }
 

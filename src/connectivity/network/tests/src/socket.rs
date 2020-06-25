@@ -73,10 +73,7 @@ async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
         .join_network::<E, _>(
             &net,
             "client",
-            InterfaceConfig::StaticIp(fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: CLIENT_IP,
-                prefix_len: 24,
-            }),
+            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet { addr: CLIENT_IP, prefix_len: 24 }),
         )
         .await
         .context("client failed to join network")?;
@@ -87,10 +84,7 @@ async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
         .join_network::<E, _>(
             &net,
             "server",
-            InterfaceConfig::StaticIp(fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: SERVER_IP,
-                prefix_len: 24,
-            }),
+            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet { addr: SERVER_IP, prefix_len: 24 }),
         )
         .await
         .context("server failed to join network")?;
@@ -102,7 +96,7 @@ async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
 async fn install_ip_device(
     env: &TestEnvironment<'_>,
     device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
-    addrs: &mut [fidl_fuchsia_net_stack::InterfaceAddress],
+    addrs: &mut [fidl_fuchsia_net::Subnet],
 ) -> Result<u64> {
     let stack = env.connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()?;
     let netstack = env.connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()?;
@@ -142,7 +136,7 @@ async fn install_ip_device(
                             .iter()
                             .map(|a| &a.addr)
                             .chain(std::iter::once(&iface.addr));
-                        addrs.iter().all(|want| iface_addrs.clone().any(|a| *a == want.ip_address))
+                        addrs.iter().all(|want| iface_addrs.clone().any(|a| *a == want.addr))
                     })
                     .unwrap_or(false),
             )
@@ -228,26 +222,14 @@ async fn test_ip_endpoints_socket() -> Result {
     const V4_PREFIX_LEN: u8 = 24;
     const V6_PREFIX_LEN: u8 = 120;
     // Addresses must be in the same subnet.
-    const SERVER_ADDR_V4: fidl_fuchsia_net_stack::InterfaceAddress =
-        fidl_fuchsia_net_stack::InterfaceAddress {
-            ip_address: fidl_ip!(192.168.0.1),
-            prefix_len: V4_PREFIX_LEN,
-        };
-    const SERVER_ADDR_V6: fidl_fuchsia_net_stack::InterfaceAddress =
-        fidl_fuchsia_net_stack::InterfaceAddress {
-            ip_address: fidl_ip!(2001::1),
-            prefix_len: V6_PREFIX_LEN,
-        };
-    const CLIENT_ADDR_V4: fidl_fuchsia_net_stack::InterfaceAddress =
-        fidl_fuchsia_net_stack::InterfaceAddress {
-            ip_address: fidl_ip!(192.168.0.2),
-            prefix_len: V4_PREFIX_LEN,
-        };
-    const CLIENT_ADDR_V6: fidl_fuchsia_net_stack::InterfaceAddress =
-        fidl_fuchsia_net_stack::InterfaceAddress {
-            ip_address: fidl_ip!(2001::2),
-            prefix_len: V6_PREFIX_LEN,
-        };;
+    const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet =
+        fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: V4_PREFIX_LEN };
+    const SERVER_ADDR_V6: fidl_fuchsia_net::Subnet =
+        fidl_fuchsia_net::Subnet { addr: fidl_ip!(2001::1), prefix_len: V6_PREFIX_LEN };
+    const CLIENT_ADDR_V4: fidl_fuchsia_net::Subnet =
+        fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.2), prefix_len: V4_PREFIX_LEN };
+    const CLIENT_ADDR_V6: fidl_fuchsia_net::Subnet =
+        fidl_fuchsia_net::Subnet { addr: fidl_ip!(2001::2), prefix_len: V6_PREFIX_LEN };;
 
     // We install both devices in parallel because a DevicePair will only have
     // its link signal set to up once both sides have sessions attached. This
@@ -263,14 +245,12 @@ async fn test_ip_endpoints_socket() -> Result {
     .context("setup failed")?;
 
     // Run socket test for both IPv4 and IPv6.
-    let () =
-        run_udp_socket_test(&server, SERVER_ADDR_V4.ip_address, &client, CLIENT_ADDR_V4.ip_address)
-            .await
-            .context("v4 socket test failed")?;
-    let () =
-        run_udp_socket_test(&server, SERVER_ADDR_V6.ip_address, &client, CLIENT_ADDR_V6.ip_address)
-            .await
-            .context("v6 socket test failed")?;
+    let () = run_udp_socket_test(&server, SERVER_ADDR_V4.addr, &client, CLIENT_ADDR_V4.addr)
+        .await
+        .context("v4 socket test failed")?;
+    let () = run_udp_socket_test(&server, SERVER_ADDR_V6.addr, &client, CLIENT_ADDR_V6.addr)
+        .await
+        .context("v6 socket test failed")?;
 
     Ok(())
 }
@@ -321,12 +301,12 @@ async fn test_ip_endpoint_packets() -> Result {
         &env,
         device,
         &mut [
-            fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(ALICE_ADDR_V4),
+            fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv4(ALICE_ADDR_V4),
                 prefix_len: PREFIX_V4,
             },
-            fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: fidl_fuchsia_net::IpAddress::Ipv6(ALICE_ADDR_V6),
+            fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv6(ALICE_ADDR_V6),
                 prefix_len: PREFIX_V6,
             },
         ],

@@ -12,7 +12,7 @@ using fuchsia.net;
 using fuchsia.posix.socket;
 
 /// A list of IP addresses for an interface.
-using interface_address_list = vector<InterfaceAddress>:255;
+using interface_address_list = vector<fuchsia.net.Subnet>:MAX;
 
 /// A path to a device node.
 using device_path = string:255;
@@ -45,15 +45,6 @@ union InterfaceStatus {
     1: PresenceStatus presence;
     2: PhysicalStatus physical;
     3: AdministrativeStatus administrative;
-};
-
-// TODO(https://fxbug.dev/54163): use `fuchsia.net.InterfaceAddress` instead.
-struct InterfaceAddress {
-    /// The IP address of the interface.
-    fuchsia.net.IpAddress ip_address;
-
-    /// The length of the network portion of the interface IP address.
-    uint8 prefix_len;
 };
 
 struct InterfaceInfo {
@@ -196,11 +187,11 @@ protocol Stack {
 
     /// Add an address to the interface. If the interface already has an address of a given type that
     /// does not allow duplicates, this method will return an error.
-    AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> () error Error;
+    AddInterfaceAddress(uint64 id, fuchsia.net.Subnet addr) -> () error Error;
 
     /// Remove the address from the interface. If the address is not assigned to the interface, an
     /// error is returned.
-    DelInterfaceAddress(uint64 id, InterfaceAddress addr) -> () error Error;
+    DelInterfaceAddress(uint64 id, fuchsia.net.Subnet addr) -> () error Error;
 
     /// List all the entries in the forwarding table for the network stack.
     // TODO(fxbug.dev/38528): This is unbounded for now, until we change the API to allow for

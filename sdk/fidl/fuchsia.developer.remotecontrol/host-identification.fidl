@@ -5,10 +5,10 @@
 library fuchsia.developer.remotecontrol;
 
 using fuchsia.device;
-using fuchsia.net.stack;
+using fuchsia.net;
 
 table IdentifyHostResponse {
-    1: vector<fuchsia.net.stack.InterfaceAddress>:255 addresses;
+    1: vector<fuchsia.net.Subnet>:MAX addresses;
     2: string:fuchsia.device.DEVICE_NAME_MAX nodename;
 };
 

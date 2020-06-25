@@ -5,6 +5,7 @@
 use std::convert::TryInto as _;
 use std::path::{Path, PathBuf};
 
+use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_filter;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
@@ -444,7 +445,7 @@ impl TestSandbox {
 /// Interface configuration used by [`TestEnvironment::join_network`].
 pub enum InterfaceConfig {
     /// Interface is configured with a static address.
-    StaticIp(fidl_fuchsia_net_stack::InterfaceAddress),
+    StaticIp(net::Subnet),
     /// Interface is configured to use DHCP to obtain an address.
     Dhcp,
     /// No address configuration is performed.
@@ -762,7 +763,7 @@ impl<'a> TestInterface<'a> {
     /// Add interface address.
     ///
     /// Equivalent to `stack.add_interface_address(test_interface.id(), &mut addr)`.
-    pub async fn add_ip_addr(&self, mut addr: net_stack::InterfaceAddress) -> Result<()> {
+    pub async fn add_ip_addr(&self, mut addr: net::Subnet) -> Result<()> {
         self.stack.add_interface_address(self.id, &mut addr).await.squash_result().with_context(
             || {
                 format!(
@@ -784,7 +785,7 @@ impl<'a> TestInterface<'a> {
     }
 
     /// Gets the interface's addresses.
-    pub async fn get_addrs(&self) -> Result<Vec<net_stack::InterfaceAddress>> {
+    pub async fn get_addrs(&self) -> Result<Vec<net::Subnet>> {
         Ok(self.get_info().await?.properties.addresses)
     }
 

@@ -1355,45 +1355,4 @@ mod tests {
             LifIpAddr { address: "fe80::fcb6:5b27:fd2c:f12".parse().unwrap(), prefix: 64 }
         );
     }
-
-    fn build_lif_subnet(
-        lifip_addr: &str,
-        expected_addr: &str,
-        prefix_len: u8,
-    ) -> (LifIpAddr, fnet::Subnet) {
-        let lifip = LifIpAddr { address: lifip_addr.parse().unwrap(), prefix: prefix_len };
-
-        let ip = expected_addr.parse().unwrap();
-        let expected_subnet = fnet::Subnet {
-            addr: fnet::IpAddress::Ipv4(Ipv4Address {
-                addr: match ip {
-                    std::net::IpAddr::V4(v4addr) => v4addr.octets(),
-                    std::net::IpAddr::V6(_) => panic!("unexpected ipv6 address"),
-                },
-            }),
-            prefix_len,
-        };
-        (lifip, expected_subnet)
-    }
-
-    #[test]
-    fn test_fidl_subnet_math() {
-        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.10.10", 32);
-        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
-
-        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.10.0", 24);
-        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
-
-        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.0.0", 16);
-        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
-
-        let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.0.0.0", 8);
-        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
-
-        let (lifip, expected_subnet) = build_lif_subnet("169.254.127.254", "169.254.124.0", 22);
-        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
-
-        let (lifip, expected_subnet) = build_lif_subnet("16.25.12.25", "16.16.0.0", 12);
-        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
-    }
 }

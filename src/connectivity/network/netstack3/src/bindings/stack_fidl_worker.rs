@@ -12,7 +12,7 @@ use super::{
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack::{
-    self as fidl_net_stack, AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo,
+    self as fidl_net_stack, AdministrativeStatus, ForwardingEntry, InterfaceInfo,
     InterfaceProperties, PhysicalStatus, StackRequest, StackRequestStream,
 };
 use fuchsia_async as fasync;
@@ -301,7 +301,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
     fn fidl_add_interface_address(
         mut self,
         id: u64,
-        addr: InterfaceAddress,
+        addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         let device_info =
             self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
@@ -320,15 +320,14 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
     fn fidl_del_interface_address(
         mut self,
         id: u64,
-        addr: InterfaceAddress,
+        addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         let device_info =
             self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
         // TODO(gongt): Since addresses can't be added to inactive interfaces
         // they can't be deleted either; return BadState for now.
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
-        let addr: SpecifiedAddr<_> =
-            addr.ip_address.try_into_core().map_err(IntoFidl::into_fidl)?;
+        let addr: SpecifiedAddr<_> = addr.addr.try_into_core().map_err(IntoFidl::into_fidl)?;
 
         del_ip_addr(&mut self.ctx, device_id, addr.into()).map_err(IntoFidl::into_fidl)
     }

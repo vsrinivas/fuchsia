@@ -6,9 +6,9 @@ use {
     anyhow::Error,
     fidl_fuchsia_net::{
         IpAddress::{Ipv4, Ipv6},
-        Ipv4Address, Ipv6Address,
+        Ipv4Address, Ipv6Address, Subnet,
     },
-    fidl_fuchsia_net_stack::{InterfaceAddress, StackProxy},
+    fidl_fuchsia_net_stack::StackProxy,
     net_types::ip::{Ipv4Addr, Ipv6Addr},
 };
 
@@ -32,9 +32,9 @@ fn valid_ip_filter<A: net_types::ip::IpAddress>(addr: &A) -> bool {
     !(addr.is_linklocal() || !addr.is_specified() || addr.is_multicast() || addr.is_loopback())
 }
 
-pub fn dhcp_ip_filter(ip_addr: InterfaceAddress) -> bool {
+pub fn dhcp_ip_filter(ip_addr: Subnet) -> bool {
     fuchsia_syslog::fx_log_info!("checking validity of ip address: {:?}", ip_addr);
-    match ip_addr.ip_address {
+    match ip_addr.addr {
         Ipv4(Ipv4Address { addr }) => valid_ip_filter(&Ipv4Addr::new(addr)),
         Ipv6(Ipv6Address { addr }) => valid_ip_filter(&Ipv6Addr::new(addr)),
     }
@@ -63,10 +63,8 @@ mod tests {
     /// implementation, only empty vectors or all zeros are considered to be invalid or unset.
     #[test]
     fn test_single_ipv4_addr_ok() {
-        let ipv4_addr = InterfaceAddress {
-            ip_address: Ipv4(Ipv4Address { addr: TEST_IPV4_ADDR_VALID }),
-            prefix_len: 0,
-        };
+        let ipv4_addr =
+            Subnet { addr: Ipv4(Ipv4Address { addr: TEST_IPV4_ADDR_VALID }), prefix_len: 0 };
         assert!(dhcp_ip_filter(ipv4_addr));
     }
 
@@ -74,10 +72,8 @@ mod tests {
     /// implementation, only empty vectors or all zeros are considered to be invalid or unset.
     #[test]
     fn test_single_ipv6_addr_ok() {
-        let ipv6_addr = InterfaceAddress {
-            ip_address: Ipv6(Ipv6Address { addr: TEST_IPV6_ADDR_VALID }),
-            prefix_len: 0,
-        };
+        let ipv6_addr =
+            Subnet { addr: Ipv6(Ipv6Address { addr: TEST_IPV6_ADDR_VALID }), prefix_len: 0 };
         assert!(dhcp_ip_filter(ipv6_addr));
     }
 
@@ -85,10 +81,8 @@ mod tests {
     /// chacked.
     #[test]
     fn test_single_ipv4_addr_all_zeros_invalid() {
-        let ipv4_addr = InterfaceAddress {
-            ip_address: Ipv4(Ipv4Address { addr: TEST_IPV4_ALL_ZEROS }),
-            prefix_len: 0,
-        };
+        let ipv4_addr =
+            Subnet { addr: Ipv4(Ipv4Address { addr: TEST_IPV4_ALL_ZEROS }), prefix_len: 0 };
         assert_eq!(dhcp_ip_filter(ipv4_addr), false);
     }
 
@@ -96,28 +90,22 @@ mod tests {
     /// checked.
     #[test]
     fn test_single_ipv6_addr_all_zeros_invalid() {
-        let ipv6_addr = InterfaceAddress {
-            ip_address: Ipv6(Ipv6Address { addr: TEST_IPV6_ALL_ZEROS }),
-            prefix_len: 0,
-        };
+        let ipv6_addr =
+            Subnet { addr: Ipv6(Ipv6Address { addr: TEST_IPV6_ALL_ZEROS }), prefix_len: 0 };
         assert_eq!(dhcp_ip_filter(ipv6_addr), false);
     }
 
     #[test]
     fn test_single_ipv6_addr_link_local_invalid() {
-        let ipv6_addr = InterfaceAddress {
-            ip_address: Ipv6(Ipv6Address { addr: TEST_IPV6_LINK_LOCAL }),
-            prefix_len: 0,
-        };
+        let ipv6_addr =
+            Subnet { addr: Ipv6(Ipv6Address { addr: TEST_IPV6_LINK_LOCAL }), prefix_len: 0 };
         assert_eq!(dhcp_ip_filter(ipv6_addr), false);
     }
 
     #[test]
     fn test_single_ipv6_addr_multicast_invalid() {
-        let ipv6_addr = InterfaceAddress {
-            ip_address: Ipv6(Ipv6Address { addr: TEST_IPV6_MULTICAST }),
-            prefix_len: 0,
-        };
+        let ipv6_addr =
+            Subnet { addr: Ipv6(Ipv6Address { addr: TEST_IPV6_MULTICAST }), prefix_len: 0 };
         assert_eq!(dhcp_ip_filter(ipv6_addr), false);
     }
 
@@ -138,10 +126,7 @@ mod tests {
         ip_list: Vec<fidl_fuchsia_net::IpAddress>,
     ) -> fidl_fuchsia_net_stack::InterfaceInfo {
         use fidl_fuchsia_net_stack::*;
-        let addresses = ip_list
-            .into_iter()
-            .map(|ip| InterfaceAddress { prefix_len: 0, ip_address: ip })
-            .collect();
+        let addresses = ip_list.into_iter().map(|addr| Subnet { addr, prefix_len: 0 }).collect();
         InterfaceInfo {
             id: 0,
             properties: InterfaceProperties {

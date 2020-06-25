@@ -105,7 +105,7 @@ pub async fn verify_v6_dns_servers(
         .properties
         .addresses
         .into_iter()
-        .find_map(|addr: fstack::InterfaceAddress| match addr.ip_address {
+        .find_map(|addr: fnet::Subnet| match addr.addr {
             fnet::IpAddress::Ipv4(_addr) => None,
             fnet::IpAddress::Ipv6(addr) => {
                 // Only use link-local addresses.

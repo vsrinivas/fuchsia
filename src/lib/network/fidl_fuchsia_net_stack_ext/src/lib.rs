@@ -7,26 +7,6 @@ pub use self::error::{FidlReturn, NetstackError};
 
 use fidl_fuchsia_net_stack as fidl;
 
-pub struct InterfaceAddress {
-    ip_address: fidl_fuchsia_net_ext::IpAddress,
-    prefix_len: u8,
-}
-
-impl From<fidl::InterfaceAddress> for InterfaceAddress {
-    fn from(interface_address: fidl::InterfaceAddress) -> Self {
-        let fidl::InterfaceAddress { ip_address, prefix_len } = interface_address;
-        let ip_address = ip_address.into();
-        Self { ip_address, prefix_len }
-    }
-}
-
-impl std::fmt::Display for InterfaceAddress {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let Self { ip_address, prefix_len } = self;
-        write!(f, "{}/{}", ip_address, prefix_len)
-    }
-}
-
 pub enum ForwardingDestination {
     DeviceId(u64),
     NextHop(fidl_fuchsia_net_ext::IpAddress),
@@ -129,7 +109,7 @@ pub struct InterfaceProperties {
     pub features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
     pub administrative_status: AdministrativeStatus,
     pub physical_status: PhysicalStatus,
-    pub addresses: Vec<InterfaceAddress>,
+    pub addresses: Vec<fidl_fuchsia_net_ext::Subnet>,
 }
 
 impl From<fidl::InterfaceProperties> for InterfaceProperties {
@@ -239,18 +219,16 @@ fn test_display_interfaceinfo() {
                     administrative_status: AdministrativeStatus::ENABLED,
                     physical_status: PhysicalStatus::UP,
                     addresses: vec![
-                        InterfaceAddress {
-                            ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
-                                std::net::Ipv4Addr::new(255, 255, 255, 0),
-                            ),),
-                            prefix_len: 4,
-                        },
-                        InterfaceAddress {
-                            ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
-                                std::net::Ipv4Addr::new(255, 255, 255, 1),
-                            ),),
+                        fidl_fuchsia_net::Subnet {
+                            addr: net_declare::fidl_ip!(255.255.255.0),
                             prefix_len: 4,
                         }
+                        .into(),
+                        fidl_fuchsia_net::Subnet {
+                            addr: net_declare::fidl_ip!(255.255.255.1),
+                            prefix_len: 4,
+                        }
+                        .into()
                     ],
                 }
             }

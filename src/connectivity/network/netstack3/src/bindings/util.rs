@@ -214,22 +214,20 @@ impl TryIntoFidl<fidl_net::IpAddress> for SpecifiedAddr<IpAddr> {
     }
 }
 
-impl TryFromFidl<fidl_net_stack::InterfaceAddress> for AddrSubnetEither {
+impl TryFromFidl<fidl_net::Subnet> for AddrSubnetEither {
     type Error = AddrSubnetError;
 
-    fn try_from_fidl(
-        fidl: fidl_net_stack::InterfaceAddress,
-    ) -> Result<AddrSubnetEither, AddrSubnetError> {
-        AddrSubnetEither::new(fidl.ip_address.into_core(), fidl.prefix_len)
+    fn try_from_fidl(fidl: fidl_net::Subnet) -> Result<AddrSubnetEither, AddrSubnetError> {
+        AddrSubnetEither::new(fidl.addr.into_core(), fidl.prefix_len)
     }
 }
 
-impl TryIntoFidl<fidl_net_stack::InterfaceAddress> for AddrSubnetEither {
+impl TryIntoFidl<fidl_net::Subnet> for AddrSubnetEither {
     type Error = Never;
 
-    fn try_into_fidl(self) -> Result<fidl_net_stack::InterfaceAddress, Never> {
+    fn try_into_fidl(self) -> Result<fidl_net::Subnet, Never> {
         let (addr, prefix) = self.into_addr_prefix();
-        Ok(fidl_net_stack::InterfaceAddress { ip_address: addr.into_fidl(), prefix_len: prefix })
+        Ok(fidl_net::Subnet { addr: addr.into_fidl(), prefix_len: prefix })
     }
 }
 
@@ -554,11 +552,11 @@ mod tests {
     fn create_addr_subnet(
         addr: (IpAddr, fidl_net::IpAddress),
         prefix: u8,
-    ) -> (AddrSubnetEither, fidl_net_stack::InterfaceAddress) {
+    ) -> (AddrSubnetEither, fidl_net::Subnet) {
         let (core, fidl) = addr;
         (
             AddrSubnetEither::new(core, prefix).unwrap(),
-            fidl_net_stack::InterfaceAddress { ip_address: fidl, prefix_len: prefix },
+            fidl_net::Subnet { addr: fidl, prefix_len: prefix },
         )
     }
 

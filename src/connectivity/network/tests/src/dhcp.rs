@@ -24,7 +24,7 @@ struct DhcpTestEndpoint<'a> {
     env: DhcpTestEnv,
     /// static_addr is the static address configured on the endpoint before any
     /// server or client is started.
-    static_addr: Option<fidl_fuchsia_net_stack::InterfaceAddress>,
+    static_addr: Option<fidl_fuchsia_net::Subnet>,
     /// want_addr is the address expected after a successfull address acquisition
     /// from a DHCP client.
     want_addr: Option<(fidl_fuchsia_net::IpAddress, fidl_fuchsia_net::IpAddress)>,
@@ -48,8 +48,8 @@ async fn acquire_dhcp<E: Endpoint>(name: &str) -> Result {
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                        ip_address: fidl_ip!(192.168.0.1),
+                    static_addr: Some(fidl_fuchsia_net::Subnet {
+                        addr: fidl_ip!(192.168.0.1),
                         prefix_len: 24,
                     }),
                     want_addr: None,
@@ -78,8 +78,8 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>(name: &str) -> Result
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                        ip_address: fidl_ip!(192.168.0.1),
+                    static_addr: Some(fidl_fuchsia_net::Subnet {
+                        addr: fidl_ip!(192.168.0.1),
                         prefix_len: 24,
                     }),
                     want_addr: None,
@@ -109,8 +109,8 @@ async fn acquire_dhcp_with_multiple_network<E: Endpoint>(name: &str) -> Result {
                     DhcpTestEndpoint {
                         name: "server-ep1",
                         env: DhcpTestEnv::Server,
-                        static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                            ip_address: fidl_ip!(192.168.0.1),
+                        static_addr: Some(fidl_fuchsia_net::Subnet {
+                            addr: fidl_ip!(192.168.0.1),
                             prefix_len: 24,
                         }),
                         want_addr: None,
@@ -129,8 +129,8 @@ async fn acquire_dhcp_with_multiple_network<E: Endpoint>(name: &str) -> Result {
                     DhcpTestEndpoint {
                         name: "server-ep2",
                         env: DhcpTestEnv::Server,
-                        static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                            ip_address: fidl_ip!(192.168.1.1),
+                        static_addr: Some(fidl_fuchsia_net::Subnet {
+                            addr: fidl_ip!(192.168.1.1),
                             prefix_len: 24,
                         }),
                         want_addr: None,
@@ -205,8 +205,8 @@ async fn test_dhcp<E: Endpoint>(
                             // NOTE: InterfaceAddress does not currently
                             // implement Clone, it probably will at some point
                             // as FIDL bindings evolve.
-                            InterfaceConfig::StaticIp(fidl_fuchsia_net_stack::InterfaceAddress {
-                                ip_address: addr.ip_address,
+                            InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                                addr: addr.addr,
                                 prefix_len: addr.prefix_len,
                             })
                         }

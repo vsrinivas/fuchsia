@@ -731,7 +731,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 	ns := newNetstack(t)
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
-	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
+	ifAddr := fidlnet.Subnet{Addr: addr, PrefixLen: 32}
 	for _, test := range []struct {
 		name     string
 		features uint32
@@ -891,7 +891,7 @@ func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcp
 	addrs := make([]tcpip.AddressWithPrefix, 0, len(info.Properties.Addresses))
 	for _, a := range info.Properties.Addresses {
 		addrs = append(addrs, tcpip.AddressWithPrefix{
-			Address:   fidlconv.ToTCPIPAddress(a.IpAddress),
+			Address:   fidlconv.ToTCPIPAddress(a.Addr),
 			PrefixLen: int(a.PrefixLen),
 		})
 	}
@@ -992,8 +992,8 @@ func TestListInterfaceAddresses(t *testing.T) {
 	t.Run("Add", func(t *testing.T) {
 		for _, addr := range testAddresses {
 			t.Run(addr.String(), func(t *testing.T) {
-				ifAddr := stack.InterfaceAddress{
-					IpAddress: fidlconv.ToNetIpAddress(addr.Address),
+				ifAddr := fidlnet.Subnet{
+					Addr:      fidlconv.ToNetIpAddress(addr.Address),
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
@@ -1016,8 +1016,8 @@ func TestListInterfaceAddresses(t *testing.T) {
 	t.Run("Remove", func(t *testing.T) {
 		for _, addr := range testAddresses {
 			t.Run(addr.String(), func(t *testing.T) {
-				ifAddr := stack.InterfaceAddress{
-					IpAddress: fidlconv.ToNetIpAddress(addr.Address),
+				ifAddr := fidlnet.Subnet{
+					Addr:      fidlconv.ToNetIpAddress(addr.Address),
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
@@ -1058,8 +1058,8 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 
 	// Add address.
 	addr := tcpip.AddressWithPrefix{"\x01\x01\x01\x01", 8}
-	ifAddr := stack.InterfaceAddress{
-		IpAddress: fidlconv.ToNetIpAddress(addr.Address),
+	ifAddr := fidlnet.Subnet{
+		Addr:      fidlconv.ToNetIpAddress(addr.Address),
 		PrefixLen: uint8(addr.PrefixLen),
 	}
 
