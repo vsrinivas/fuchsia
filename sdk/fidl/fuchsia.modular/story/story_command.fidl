@@ -31,9 +31,8 @@ union StoryCommand {
     /// Brings focus to a mod.
     5: FocusMod focus_mod;
 
-    /// Updates the kind_of_proto_story option in a story.
-    /// DEPRECATED. This command is a no-op.
-    6: SetKindOfProtoStoryOption set_kind_of_proto_story_option;
+    // Deprecated operation: set_kind_of_proto_story_option.
+    6: reserved;
 };
 
 struct SetFocusState {
@@ -111,9 +110,4 @@ struct FocusMod {
     ///
     // TODO(MF-148): Remove
     string? mod_name_transitional;
-};
-
-/// Updates the kind_of_proto_story option in a story.
-struct SetKindOfProtoStoryOption {
-    bool value;
 };

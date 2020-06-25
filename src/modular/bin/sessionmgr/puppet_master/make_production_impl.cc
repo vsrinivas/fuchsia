@@ -36,8 +36,6 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
                           new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
                           new RemoveModCommandRunner());
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
-                          new NoOpCommandRunner());
 
   auto executor =
       std::make_unique<DispatchStoryCommandExecutor>(session_storage, std::move(command_runners));

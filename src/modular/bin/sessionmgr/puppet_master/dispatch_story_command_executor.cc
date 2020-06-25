@@ -139,9 +139,7 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
           {fuchsia::modular::StoryCommand::Tag::kFocusMod, "StoryCommand::FocusMod"},
           {fuchsia::modular::StoryCommand::Tag::kRemoveMod, "StoryCommand::RemoveMod"},
           {fuchsia::modular::StoryCommand::Tag::kSetLinkValue, "StoryCommand::SetLinkValue"},
-          {fuchsia::modular::StoryCommand::Tag::kSetFocusState, "StoryCommand::SetFocusState"},
-          {fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
-           "StoryCommand::SetKindOfProtoStoryOption"}} {
+          {fuchsia::modular::StoryCommand::Tag::kSetFocusState, "StoryCommand::SetFocusState"}} {
   FX_DCHECK(session_storage_ != nullptr);
 }
 
