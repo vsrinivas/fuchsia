@@ -10,11 +10,15 @@
 
 #include <fbl/mutex.h>
 
+#include "reports_reader.h"
+
 namespace fake_input_report_device {
 
 // Creates a fake device that vends fuchsia.input.report FIDL.
 // This device needs to be fidl::Bind to a thread in order to start
 // receiving requests.
+// If this class is bound on a seperate thread, that thread must be joined before
+// this class is destructed.
 // Calling `SetReport` and `SetDescriptor` will change the behavior of
 // the device when the client goes to read the report or the descriptor.
 class FakeInputDevice final : public fuchsia::input::report::InputDevice {
@@ -36,10 +40,7 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
 
   // The overriden FIDL function calls.
   void GetInputReportsReader(
-      ::fidl::InterfaceRequest<fuchsia::input::report::InputReportsReader> reader) override {
-    reader.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
+      fidl::InterfaceRequest<fuchsia::input::report::InputReportsReader> reader) override;
   void GetReportsEvent(GetReportsEventCallback callback) override;
   void GetReports(GetReportsCallback callback) override;
   void GetDescriptor(GetDescriptorCallback callback) override;
@@ -56,14 +57,21 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
   }
 
  private:
-  // This lock makes the class thread-safe, which is important because setting the
-  // reports and handling the FIDL calls happen on seperate threads.
+  friend class FakeInputReportsReader;
+
+  // This is used by the InputReportsReader to read the reports and send them to the client.
+  std::vector<fuchsia::input::report::InputReport> ReadReports();
+
   fidl::Binding<fuchsia::input::report::InputDevice> binding_;
+
+  // This lock makes the class thread-safe, which is important because setting the
+  // reports and handling the FIDL calls can happen on seperate threads.
   fbl::Mutex lock_;
 
   zx::event reports_event_ __TA_GUARDED(lock_);
   std::vector<fuchsia::input::report::InputReport> reports_ __TA_GUARDED(lock_);
   fuchsia::input::report::DeviceDescriptorPtr descriptor_ __TA_GUARDED(lock_);
+  std::optional<FakeInputReportsReader> reader_ __TA_GUARDED(lock_);
 };
 
 }  // namespace fake_input_report_device

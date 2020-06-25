@@ -402,8 +402,7 @@ TEST_F(HidDevTest, ReadInputReportsSecondClientFails) {
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
     auto result = sync_client.GetInputReportsReader(std::move(token_server));
     ASSERT_OK(result.status());
-    reader =
-        llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
   }
 
   // Try and get a second Reader which will fail since we have the first.

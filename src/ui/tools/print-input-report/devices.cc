@@ -181,35 +181,35 @@ void PrintConsumerControlDesc(Printer* printer,
 
 int PrintInputReport(Printer* printer, fuchsia_input_report::InputDevice::SyncClient* client,
                      size_t num_reads) {
-  // Get the reports event.
-  auto result = client->GetReportsEvent();
-  if (result.status() != ZX_OK) {
-    printer->Print("GetReportsEvent FIDL call returned %s\n",
-                   zx_status_get_string(result.status()));
-    return 1;
-  }
-  zx_status_t status = result->status;
-  if (status != ZX_OK) {
-    printer->Print("GetReportsEvent FIDL call returned %s\n", zx_status_get_string(result->status));
-    return 1;
-  }
-  zx::event event = std::move(result->event);
+  zx_status_t status;
 
-  while (num_reads--) {
-    // Wait on the event to be readable.
-    status = event.wait_one(DEV_STATE_READABLE, zx::time::infinite(), nullptr);
+  // Get the InputReportsReader.
+  llcpp::fuchsia::input::report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    status = zx::channel::create(0, &token_server, &token_client);
     if (status != ZX_OK) {
       return 1;
     }
+    auto result = client->GetInputReportsReader(std::move(token_server));
+    if (result.status() != ZX_OK) {
+      return 1;
+    }
+    reader = llcpp::fuchsia::input::report::InputReportsReader::SyncClient(std::move(token_client));
+  }
 
-    // Get the report.
-    fuchsia_input_report::InputDevice::ResultOf::GetReports result = client->GetReports();
+  while (num_reads--) {
+    // Get the reports.
+    auto result = reader.ReadInputReports();
     if (result.status() != ZX_OK) {
       printer->Print("GetReports FIDL call returned %s\n", zx_status_get_string(result.status()));
       return 1;
     }
+    if (result->result.is_err()) {
+      return 1;
+    }
 
-    auto& reports = result->reports;
+    auto& reports = result->result.response().reports;
     TRACE_DURATION("input", "print-input-report ReadReports");
     for (auto& report : reports) {
       printer->SetIndent(0);
