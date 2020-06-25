@@ -457,10 +457,14 @@ FidlMessageValue::FidlMessageValue(fidl_codec::DecodedMessage* message, std::str
       method_(message->method()),
       bytes_(bytes, bytes + num_bytes),
       handles_(handles, handles + num_handles),
-      decoded_request_(std::move(message->decoded_request())),
-      request_errors_(message->request_error_stream().str()),
-      decoded_response_(std::move(message->decoded_response())),
-      response_errors_(message->response_error_stream().str()) {}
+      decoded_request_((unknown_direction_ || is_request_) ? std::move(message->decoded_request())
+                                                           : nullptr),
+      request_errors_((unknown_direction_ || is_request_) ? message->request_error_stream().str()
+                                                          : ""),
+      decoded_response_(
+          (unknown_direction_ || !is_request_) ? std::move(message->decoded_response()) : nullptr),
+      response_errors_((unknown_direction_ || !is_request_) ? message->response_error_stream().str()
+                                                            : "") {}
 
 bool FidlMessageValue::NeedsToLoadHandleInfo(zx_koid_t pid,
                                              semantic::HandleSemantic* handle_semantic) const {

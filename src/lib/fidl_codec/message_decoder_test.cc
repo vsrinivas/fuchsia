@@ -83,6 +83,12 @@ class MessageDecoderTest : public ::testing::Test {
         &decoded_message, error_stream.str(), message.bytes().data(), message.bytes().size(),
         nullptr, 0);
 
+    if (!result->unknown_direction()) {
+      // When the direction is known, only one of request/response must be set.
+      ASSERT_TRUE((result->decoded_request() == nullptr) ||
+                  (result->decoded_response() == nullptr));
+    }
+
     std::stringstream output;
     PrettyPrinter printer(output, decoder()->colors(), /*pretty_print=*/true, /*line_header=*/"",
                           /*max_line_size=*/kColumns,
