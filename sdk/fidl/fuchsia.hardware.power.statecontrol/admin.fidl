@@ -33,7 +33,6 @@ const uint32 MAX_SYSTEM_POWER_STATES = 7;
 /// The maxium number of seconds the server will wait for responses from all RebootMethodsWatchers
 /// before changing the system power state.
 // TODO(52274): Track how long it takes to persist the reboot reason and adjust this value.
-[Deprecated = "won't be used once power_manager serves Admin"]
 const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
 
 /// Provides administration services for the device manager service and the device tree it controls.
@@ -88,6 +87,8 @@ protocol RebootMethodsWatcherRegister {
 
 /// Allows components to be notified when Reboot related methods are called. Watchers will be given
 /// 'MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS' to return before the system power state is changed.
+/// The channel will be used once to send a notification to the watcher. Once the watcher responds
+/// or the timeout expires, the channel will be closed by the client of RebootMethodsWatcher.
 protocol RebootMethodsWatcher {
     OnReboot(RebootReason reason) -> ();
 };
