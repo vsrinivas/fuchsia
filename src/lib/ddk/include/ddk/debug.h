@@ -26,6 +26,8 @@ __BEGIN_CDECLS
 // may be indicative of an impending problem.  As with errors they
 // should not be issued repeatedly and rapidly.
 // Warning messages are always displayed by default.
+#define DDK_LOG_WARNING FX_LOG_WARNING
+// Deprecated. Prefer to use `WARNING` instead.
 #define DDK_LOG_WARN FX_LOG_WARNING
 
 // Info messages should provide terse information messages

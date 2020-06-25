@@ -73,7 +73,7 @@ static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
   if (!strcasecmp(flag, "error")) {
     return FX_LOG_ERROR;
   }
-  if (!strcasecmp(flag, "warn")) {
+  if (!strcasecmp(flag, "warning") || !strcasecmp(flag, "warn")) {
     return FX_LOG_WARNING;
   }
   if (!strcasecmp(flag, "info")) {
