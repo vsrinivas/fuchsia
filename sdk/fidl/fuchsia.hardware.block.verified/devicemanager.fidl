@@ -1,0 +1,138 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.block.verified;
+
+using zx;
+
+/// Hash function to use in the Merkle tree that verifies content.  At present,
+/// the only supported value for this field is SHA256.
+enum HashFunction : uint8 {
+    SHA256 = 0x01;
+};
+
+/// The block size this device is expected to see in its backing storage, which
+/// impacts hash tree layout and total available data size.  At present, the only
+/// supported block size is blocks of 4096 bytes.
+enum BlockSize : uint8 {
+    /// Blocks of 4096 bytes each
+    SIZE_4096 = 0x01;
+};
+
+/// Properties of the device that must be decided upon in advance by the client.
+/// A Config must be presented to the device whenver the user wants to open it
+/// in any mode.
+/// `block_size` affects how much or little data we authenticate as a unit, which
+/// affects the number of hashes that fit into a block, which affects the
+/// number of blocks needed to store integrity information, which affects overall
+/// on-disk layout.
+table Config {
+    /// Which hash function to use throughout the Merkle tree and when generating
+    /// a Seal over the superblock.
+    1: HashFunction hash_function;
+
+    /// Size of each block in the Merkle tree.
+    2: BlockSize block_size;
+};
+
+/// A cryptographic seal of the superblock generated with the SHA256 hash function
+struct Sha256Seal {
+    /// SHA256 hash of superblock
+    array<uint8>:32 superblock_hash;
+};
+
+/// Data representing a cryptographic seal of the contents of the device.
+/// This currently contains the hash of the superblock, and the superblock
+/// contains the expected dimensions of the device and the root hash of the
+/// integrity information Merkle tree
+union Seal {
+    1: Sha256Seal sha256;
+};
+
+/// An interface to the block-verified driver, as bound to a single block
+/// device with a block-verified-formatted superblock.  When bound, the device
+/// starts out in `closed` mode.  Before use, block-verified devices must first
+/// be placed into either `authoring` mode, by calling `OpenForWrite`, or into
+/// `verified-read` mode, by calling `OpenForVerifiedRead`.
+///
+/// This protocol allows the caller to make requests to open the device in
+/// either mode, as well as a way to seal a device and receive a cryptographic
+/// representation of the contents of the device which, if presented to
+/// `OpenForVerifiedRead`, ensures any contents read from the `verified` child
+/// device will match those last written while in `authoring` mode.
+protocol DeviceManager {
+    /// Requests that the driver format the underlying block device as described
+    /// by the parameters in `config`, and enter `authoring` mode.
+    /// If `config` has any unpopulated fields, or those fields contain enum
+    /// values that are not known to this version of the driver, this method
+    /// will return `ZX_ERR_INVALID_ARGS`.
+    /// If the device was not in `closed` mode at the time of the call, this
+    /// method will return `ZX_ERR_BAD_STATE`.
+    /// If the underlying block device returns an error, this method will return
+    /// that same error code.
+    /// On success, the driver will enter `authoring` mode, expose a child
+    /// device named `mutable` which speaks the `fuchsia.hardware.block`
+    /// protocol in the device tree, then return.
+    OpenForWrite(Config config) -> () error zx.status;
+
+    /// Requests that the device in `authoring` mode:
+    /// * unbind the child device named `mutable`
+    /// * regenerate the integrity data necessary to provide the guarantees
+    ///   expected by `OpenForVerifiedRead`
+    /// * flush all writes to the underlying block device
+    /// * switch to `closed` mode
+    /// * return a `Seal` that can be used to ensure that any data read in the
+    ///   future from this device matches that which was written prior to this
+    ///   particular call of `CloseAndGenerateSeal`.
+    ///
+    /// If the device was not in "authoring" mode at the time of the call, this
+    /// function will return `ZX_ERR_BAD_STATE` and have no visible side effects.
+    ///
+    /// If the underlying block device returns a failure while regenerating
+    /// integrity data or flushing writes, the device will enter the `failed` mode
+    /// and this call will propagate that error.
+    ///
+    /// On success, the returned `seal` will contain a hash of the device
+    /// superblock that should be stored in tamper-proof storage, so it can be
+    /// retrieved and presented in a future `OpenForVerifiedRead` call.
+    CloseAndGenerateSeal() -> (Seal seal) error zx.status;
+
+    /// Requests that the device verify that the provided `config` matches the
+    /// one on disk, and that the given `seal` covers the content of the
+    /// superblock.  If all match as expected, then the device will bind a child
+    /// device named `verified` which speaks the `fuchsia.hardware.block`
+    /// protocol and enter the `verified-read` mode.  Reads issued to the
+    /// `verified` block device will either successfully return the same content
+    /// as the `mutable` block device would have returned at the time the volume
+    /// was authored, or return a failure.  That is to say: modifying the
+    /// underlying storage will cause the `verified` device to return read
+    /// failures for any modified blocks as `ZX_ERR_IO_DATA_INTEGRITY` rather
+    /// than data other than what was present at the time `CloseAndGenerateSeal`
+    /// was called.
+    ///
+    /// * Returns `ZX_ERR_BAD_STATE` if the device was not in the `closed`
+    ///   state at the time of the call
+    /// * Returns `ZX_ERR_INVALID_ARGS` if `config` lacks either `hash_function` or `block_size`
+    /// * Returns `ZX_ERR_INVALID_ARGS` if `seal` is of an unrecognized variant
+    /// * Returns `ZX_ERR_IO_DATA_INTEGRITY` if the `seal` provided is inconsistent with
+    ///   the superblock, or if the properties in `config` are inconsistent with the
+    ///   configuration data stored in the superblock on the underlying block device.
+    /// * Returns the underlying I/O error code if the underlying block device
+    ///   returns an error.
+    ///
+    /// On success, the device binds a child device `verified`, enters
+    /// `verified-read` mode, and returns from this call.
+    OpenForVerifiedRead(Config config, Seal seal) -> () error zx.status;
+
+    /// Requests that the device in either `authoring` mode or `verified-read` mode
+    /// unbind any child devices and return to `closed` mode.
+    /// Returns `ZX_ERR_BAD_STATE` if the device is not in `authoring` or
+    /// `verified-read` mode at the time of the call.
+    /// On success, the device does the following:
+    /// * If the device was in `authoring` mode, removes the child `mutable` device
+    /// * If the device was in `verified-read` mode, removes the child `verified` device
+    /// * Enters `closed` mode.
+    /// * Returns from this call
+    Close() -> () error zx.status;
+};
