@@ -1038,6 +1038,56 @@ TEST_F(VmoClone2TestCase, ResizeMultipleProgressive) {
   ASSERT_EQ(VmoCommittedBytes(clone2), kImplClone2Cost);
 }
 
+// This is a regression test for bug 53710 and checks that when a COW child is resized its
+// parent_limit_ is correctly updated when the resize goes over the range of its sibling.
+TEST_F(VmoClone2TestCase, ResizeOverSiblingRange) {
+  zx::vmo vmo;
+
+  ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(4, &vmo));
+
+  // Create an intermediate hidden parent, this ensures that when the child is resized the pages in
+  // the range cannot simply be freed, as there is still a child of the root that needs them.
+  zx::vmo intermediate;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE * 4, &intermediate));
+
+  // Create the sibling as a one page hole. This means that vmo has its range divided into 3 pieces
+  // Private view of the parent | Shared view with sibling | Private view of the parent
+  zx::vmo sibling;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE, ZX_PAGE_SIZE * 2,
+                             ZX_PAGE_SIZE, &sibling));
+
+  // Resize the vmo such that there is a gap between the end of our range, and the start of the
+  // siblings view. This gap means the resize operation has to process three distinct ranges. Two
+  // ranges where only we see the parent, and one range in the middle where we both see the parent.
+  // For the ranges where only we see the parent this resize should get propagated to our parents
+  // parents and pages in that range get marked now being uniaccessible to our parents sibling
+  // (that is the intermediate vmo). Although marked as uniaccessible, migrating them is done lazily
+  // once intermediate uses them.
+  ASSERT_OK(vmo.set_size(PAGE_SIZE));
+
+  // Now set the vmos size back to what it was. The result should be identical to if we had started
+  // with a clone of size 1, and then grown it to size 4. That is, all the 'new' pages should be
+  // zero and we should *not* see through to our parent.
+  ASSERT_OK(vmo.set_size(PAGE_SIZE * 4));
+  // The part we didn't resize over should be original value.
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 1, 0 * ZX_PAGE_SIZE));
+  // Rest should be zero.
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 0, 1 * ZX_PAGE_SIZE));
+  // For regression of 53710 only the previous read causes issues as it is the gap between our
+  // temporary reduced size and our siblings start that becomes the window we can incorrectly
+  // retain access to. Nevertheless, for completeness we might as well validate the rest of the
+  // pages as well. This is also true for the write tests below as well.
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 0, 2 * ZX_PAGE_SIZE));
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 0, 3 * ZX_PAGE_SIZE));
+
+  // Writing to the newly visible pages should just fork off a new zero page, and we should *not*
+  // attempt to the pages from the root, as they are uniaccessible to intermediate. If we fork
+  // uniaccessible pages in the root we will trip an assertion in the kernel.
+  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 2, 1 * ZX_PAGE_SIZE));
+  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 3, 2 * ZX_PAGE_SIZE));
+  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 4, 3 * ZX_PAGE_SIZE));
+}
+
 // Tests the basic operation of the ZX_VMO_ZERO_CHILDREN signal.
 TEST_F(VmoClone2TestCase, Children) {
   zx::vmo vmo;

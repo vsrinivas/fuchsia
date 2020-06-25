@@ -28,6 +28,9 @@
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
 
+// Forward declare this so VmObjectPaged helpers can accept references.
+class BatchPQRemove;
+
 // the main VM object type, holding a list of pages
 class VmObjectPaged final : public VmObject {
  public:
@@ -311,13 +314,13 @@ class VmObjectPaged final : public VmObject {
   //
   // This function recursively invokes itself for regions of the parent vmo which are
   // not accessible by the sibling vmo.
-  void ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, list_node_t* free_list)
+  void ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, BatchPQRemove* page_remover)
       TA_REQ(lock_);
 
   // Helper function for ReleaseCowParentPagesLocked that processes pages which are visible
-  // to both children as well as updates parent_(offset_)limit_.
-  void ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end, list_node_t* free_list)
-      TA_REQ(lock_);
+  // to at least this VMO, and possibly its sibling, as well as updates parent_(offset_)limit_.
+  void ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end, bool sibling_visible,
+                                         BatchPQRemove* page_remover) TA_REQ(lock_);
 
   // Updates the parent limits of all children so that they will never be able to
   // see above |new_size| in this vmo, even if the vmo is enlarged in the future.
@@ -406,14 +409,24 @@ class VmObjectPaged final : public VmObject {
   // is only useful for hidden vmos, where it is used by ::ReleaseCowPagesParentLocked
   // together with parent_limit_ to reduce how often page split bits need to be set. It is
   // effectively a summary of the parent_offset_ values of all descendants - unlike
-  // parent_limit_, this value does not directly impact page lookup.
+  // parent_limit_, this value does not directly impact page lookup. See partial_cow_release_ flag
+  // for more details on usage of this limit.
   uint64_t parent_start_limit_ TA_GUARDED(lock_) = 0;
   const uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
   uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
 
   // Flag which is true if there was a call to ::ReleaseCowParentPagesLocked which was
   // not able to update the parent limits. When this is not set, it is sometimes
-  // possible for ::MergeContentWithChildLocked to do significantly less work.
+  // possible for ::MergeContentWithChildLocked to do significantly less work. This flag acts as a
+  // proxy then for how precise the parent_limit_ and parent_start_limit_ are. It is always an
+  // absolute guarantee that descendants cannot see outside of the limits, but when this flag is
+  // true there is a possibility that there is a sub range inside the limits that they also cannot
+  // see.
+  // Imagine a two siblings that see the parent range [0x1000-0x2000) and [0x3000-0x4000)
+  // respectively. The parent can have the start_limit of 0x1000 and limit of 0x4000, but without
+  // additional allocations it cannot track the free region 0x2000-0x3000, and so
+  // partial_cow_release_ must be set to indicate in the future we need to do more expensive
+  // processing to check for such free regions.
   bool partial_cow_release_ TA_GUARDED(lock_) = false;
 
   // parent pointer (may be null)
