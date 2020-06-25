@@ -10,8 +10,6 @@ group("command_runners") {
     ":command_runner",
     ":focus_mod_command_runner",
     ":focus_mod_command_runner_unittest",
-    ":no_op_command_runner",
-    ":no_op_command_runner_unittest",
     ":remove_mod_command_runner",
     ":remove_mod_command_runner_unittest",
     ":set_focus_state_command_runner",
@@ -29,32 +27,6 @@ source_set("command_runner") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//src/modular/bin/sessionmgr/storage",
-  ]
-}
-
-source_set("no_op_command_runner") {
-  sources = [
-    "no_op_command_runner.cc",
-    "no_op_command_runner.h",
-  ]
-
-  public_deps = [
-    ":command_runner",
-    "//sdk/fidl/fuchsia.modular",
-  ]
-}
-
-executable("no_op_command_runner_unittest") {
-  testonly = true
-
-  sources = [ "no_op_command_runner_unittest.cc" ]
-
-  deps = [
-    ":no_op_command_runner",
-    "//garnet/public/lib/gtest",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/testing:test_with_session_storage",
   ]
 }
 

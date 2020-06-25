@@ -4,8 +4,6 @@
 
 library fuchsia.modular;
 
-using fuchsia.mem;
-
 /// StoryCommands are POD structures that describe the set of operations that
 /// can be performed on a story by components outside the modular framework. All commands are:
 ///
@@ -24,9 +22,8 @@ union StoryCommand {
     /// Removes an existing Mod.
     3: RemoveMod remove_mod;
 
-    /// Sets the value of a Link.
-    /// DEPRECATED. This command is a no-op.
-    4: SetLinkValue set_link_value;
+    // Deprecated operation: set_link_value.
+    4: reserved;
 
     /// Brings focus to a mod.
     5: FocusMod focus_mod;
@@ -86,12 +83,6 @@ struct RemoveMod {
     ///
     // TODO(MF-148): Remove
     string? mod_name_transitional;
-};
-
-/// Sets the value of link at `path` to `value`.
-struct SetLinkValue {
-    LinkPath path;
-    fuchsia.mem.Buffer? value;
 };
 
 /// Instructs the session shell to focus the mod under `mod_name`.

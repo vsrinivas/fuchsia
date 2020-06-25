@@ -8,7 +8,6 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/add_mod_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/focus_mod_command_runner.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/no_op_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/remove_mod_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
@@ -30,8 +29,6 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetFocusState,
                           new SetFocusStateCommandRunner(std::move(focus_provider)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod, new AddModCommandRunner());
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
-                          new NoOpCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
                           new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
