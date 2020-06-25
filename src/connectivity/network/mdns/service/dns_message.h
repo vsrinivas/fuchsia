@@ -203,31 +203,53 @@ struct DnsQuestion {
 // Additional data for type 'A' resource records.
 struct DnsResourceDataA {
   DnsV4Address address_;
+
+  bool operator==(const DnsResourceDataA& other) const {
+    return address_.address_ == other.address_.address_;
+  }
 };
 
 // Additional data for type 'NS' resource records.
 struct DnsResourceDataNs {
   DnsName name_server_domain_name_;
+
+  bool operator==(const DnsResourceDataNs& other) const {
+    return name_server_domain_name_.dotted_string_ == other.name_server_domain_name_.dotted_string_;
+  }
 };
 
 // Additional data for type 'CNAME' resource records.
 struct DnsResourceDataCName {
   DnsName canonical_name_;
+
+  bool operator==(const DnsResourceDataCName& other) const {
+    return canonical_name_.dotted_string_ == other.canonical_name_.dotted_string_;
+  }
 };
 
 // Additional data for type 'PTR' resource records.
 struct DnsResourceDataPtr {
   DnsName pointer_domain_name_;
+
+  bool operator==(const DnsResourceDataPtr& other) const {
+    return pointer_domain_name_.dotted_string_ == other.pointer_domain_name_.dotted_string_;
+  }
 };
 
 // Additional data for type 'TXT' resource records.
 struct DnsResourceDataTxt {
   std::vector<std::string> strings_;
+
+  bool operator==(const DnsResourceDataTxt& other) const { return strings_ == other.strings_; }
 };
 
 // Additional data for type 'AAAA' resource records.
 struct DnsResourceDataAaaa {
   DnsV6Address address_;
+
+  bool operator==(const DnsResourceDataAaaa& other) const {
+    return address_.address_ == other.address_.address_;
+  }
 };
 
 // Additional data for type 'SRV' resource records.
@@ -236,17 +258,28 @@ struct DnsResourceDataSrv {
   uint16_t weight_ = 0;
   inet::IpPort port_;
   DnsName target_;
+
+  bool operator==(const DnsResourceDataSrv& other) const {
+    return priority_ == other.priority_ && weight_ == other.weight_ && port_ == other.port_ &&
+           target_.dotted_string_ == other.target_.dotted_string_;
+  }
 };
 
 // Additional data for type 'OPT' resource records.
 struct DnsResourceDataOpt {
   std::vector<uint8_t> options_;
+
+  bool operator==(const DnsResourceDataOpt& other) const { return options_ == other.options_; }
 };
 
 // Additional data for type 'NSEC' resource records.
 struct DnsResourceDataNSec {
   DnsName next_domain_;
   std::vector<uint8_t> bits_;
+
+  bool operator==(const DnsResourceDataNSec& other) const {
+    return next_domain_.dotted_string_ == other.next_domain_.dotted_string_ && bits_ == other.bits_;
+  }
 };
 
 // DNS resource record.
@@ -260,6 +293,37 @@ struct DnsResource {
   ~DnsResource();
 
   DnsResource& operator=(const DnsResource& other);
+
+  bool operator==(const DnsResource& other) const {
+    if (name_.dotted_string_ != other.name_.dotted_string_ || type_ != other.type_ ||
+        class_ != other.class_ || cache_flush_ != other.cache_flush_ ||
+        time_to_live_ != other.time_to_live_) {
+      return false;
+    }
+
+    switch (type_) {
+      case mdns::DnsType::kA:
+        return a_ == other.a_;
+      case mdns::DnsType::kNs:
+        return ns_ == other.ns_;
+      case mdns::DnsType::kCName:
+        return cname_ == other.cname_;
+      case mdns::DnsType::kPtr:
+        return ptr_ == other.ptr_;
+      case mdns::DnsType::kTxt:
+        return txt_ == other.txt_;
+      case mdns::DnsType::kAaaa:
+        return aaaa_ == other.aaaa_;
+      case mdns::DnsType::kSrv:
+        return srv_ == other.srv_;
+      case mdns::DnsType::kOpt:
+        return opt_ == other.opt_;
+      case mdns::DnsType::kNSec:
+        return nsec_ == other.nsec_;
+      default:
+        return true;
+    }
+  }
 
   DnsName name_;
   DnsType type_ = DnsType::kInvalid;
@@ -296,5 +360,121 @@ struct DnsMessage {
 };
 
 }  // namespace mdns
+
+template <>
+struct std::hash<mdns::DnsResourceDataA> {
+  std::size_t operator()(const mdns::DnsResourceDataA& value) const noexcept {
+    return std::hash<inet::IpAddress>{}(value.address_.address_);
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataNs> {
+  std::size_t operator()(const mdns::DnsResourceDataNs& value) const noexcept {
+    return std::hash<std::string>{}(value.name_server_domain_name_.dotted_string_);
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataCName> {
+  std::size_t operator()(const mdns::DnsResourceDataCName& value) const noexcept {
+    return std::hash<std::string>{}(value.canonical_name_.dotted_string_);
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataPtr> {
+  std::size_t operator()(const mdns::DnsResourceDataPtr& value) const noexcept {
+    return std::hash<std::string>{}(value.pointer_domain_name_.dotted_string_);
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataTxt> {
+  std::size_t operator()(const mdns::DnsResourceDataTxt& value) const noexcept {
+    size_t result = 0;
+    for (auto& s : value.strings_) {
+      result = (result << 1) ^ std::hash<std::string>{}(s);
+    }
+
+    return result;
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataAaaa> {
+  std::size_t operator()(const mdns::DnsResourceDataAaaa& value) const noexcept {
+    return std::hash<inet::IpAddress>{}(value.address_.address_);
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataSrv> {
+  std::size_t operator()(const mdns::DnsResourceDataSrv& value) const noexcept {
+    size_t result = value.priority_;
+    result = (result << 1) ^ value.weight_;
+    result = (result << 1) ^ value.port_.as_uint16_t();
+    result = (result << 1) ^ std::hash<std::string>{}(value.target_.dotted_string_);
+    return result;
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataOpt> {
+  std::size_t operator()(const mdns::DnsResourceDataOpt& value) const noexcept {
+    size_t result = 0;
+    for (auto& option : value.options_) {
+      result = (result << 1) ^ option;
+    }
+
+    return result;
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResourceDataNSec> {
+  std::size_t operator()(const mdns::DnsResourceDataNSec& value) const noexcept {
+    size_t result = std::hash<std::string>{}(value.next_domain_.dotted_string_);
+    for (auto& bit : value.bits_) {
+      result = (result << 1) ^ bit;
+    }
+
+    return result;
+  }
+};
+
+template <>
+struct std::hash<mdns::DnsResource> {
+  std::size_t operator()(const mdns::DnsResource& resource) const noexcept {
+    size_t result = std::hash<std::string>{}(resource.name_.dotted_string_);
+    result = (result << 1) ^ static_cast<uint16_t>(resource.type_);
+    result = (result << 1) ^ static_cast<uint16_t>(resource.class_);
+    result = (result << 1) ^ std::hash<bool>{}(resource.cache_flush_);
+    result = (result << 1) ^ std::hash<uint32_t>{}(resource.time_to_live_);
+
+    switch (resource.type_) {
+      case mdns::DnsType::kA:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataA>{}(resource.a_);
+      case mdns::DnsType::kNs:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataNs>{}(resource.ns_);
+      case mdns::DnsType::kCName:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataCName>{}(resource.cname_);
+      case mdns::DnsType::kPtr:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataPtr>{}(resource.ptr_);
+      case mdns::DnsType::kTxt:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataTxt>{}(resource.txt_);
+      case mdns::DnsType::kAaaa:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataAaaa>{}(resource.aaaa_);
+      case mdns::DnsType::kSrv:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataSrv>{}(resource.srv_);
+      case mdns::DnsType::kOpt:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataOpt>{}(resource.opt_);
+      case mdns::DnsType::kNSec:
+        return (result << 1) ^ std::hash<mdns::DnsResourceDataNSec>{}(resource.nsec_);
+      default:
+        return result;
+    }
+  }
+};
 
 #endif  // SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_DNS_MESSAGE_H_

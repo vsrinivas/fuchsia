@@ -14,6 +14,7 @@
 #include <queue>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "src/connectivity/network/mdns/service/dns_message.h"
@@ -208,6 +209,64 @@ class Mdns : public MdnsAgent::Host {
     }
   };
 
+  struct ResourceHash {
+    std::size_t operator()(std::shared_ptr<DnsResource> resource) const noexcept {
+      return resource ? std::hash<DnsResource>{}(*resource) : 0;
+    }
+  };
+
+  struct ResourceEqual {
+    bool operator()(std::shared_ptr<DnsResource> a, std::shared_ptr<DnsResource> b) const noexcept {
+      return a ? (b ? *a == *b: false) : !b;
+    }
+  };
+
+  class DnsMessageBuilder {
+   public:
+    void AddQuestion(std::shared_ptr<DnsQuestion> question) { questions_.push_back(question); }
+
+    void AddResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section) {
+      switch (section) {
+        case MdnsResourceSection::kAnswer:
+          answers_.insert(resource);
+          break;
+        case MdnsResourceSection::kAuthority:
+          authorities_.insert(resource);
+          break;
+        case MdnsResourceSection::kAdditional:
+          additionals_.insert(resource);
+          break;
+        case MdnsResourceSection::kExpired:
+          FX_DCHECK(false);
+          break;
+      }
+    }
+
+    void Build(DnsMessage& message_out) {
+      if (questions_.empty()) {
+        message_out.header_.SetResponse(true);
+        message_out.header_.SetAuthoritativeAnswer(true);
+      } else {
+        message_out.questions_ = std::move(questions_);
+      }
+
+      message_out.answers_ =
+          std::vector<std::shared_ptr<DnsResource>>(answers_.begin(), answers_.end());
+      message_out.authorities_ =
+          std::vector<std::shared_ptr<DnsResource>>(authorities_.begin(), authorities_.end());
+      message_out.additionals_ =
+          std::vector<std::shared_ptr<DnsResource>>(additionals_.begin(), additionals_.end());
+
+      message_out.UpdateCounts();
+    }
+
+   private:
+    std::vector<std::shared_ptr<DnsQuestion>> questions_;
+    std::unordered_set<std::shared_ptr<DnsResource>, ResourceHash, ResourceEqual> answers_;
+    std::unordered_set<std::shared_ptr<DnsResource>, ResourceHash, ResourceEqual> authorities_;
+    std::unordered_set<std::shared_ptr<DnsResource>, ResourceHash, ResourceEqual> additionals_;
+  };
+
   // Starts the address probe or transitions to ready state, depending on
   // |perform_address_probe|. This method is called the first time a transceiver
   // becomes ready.
@@ -282,8 +341,8 @@ class Mdns : public MdnsAgent::Host {
   State state_ = State::kNotStarted;
   std::priority_queue<TaskQueueEntry> task_queue_;
   zx::time posted_task_time_ = zx::time::infinite();
-  std::unordered_map<ReplyAddress, DnsMessage, ReplyAddressHash>
-      outbound_messages_by_reply_address_;
+  std::unordered_map<ReplyAddress, DnsMessageBuilder, ReplyAddressHash>
+      outbound_message_builders_by_reply_address_;
   std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;
   std::unordered_map<const MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
   std::unordered_map<std::string, std::shared_ptr<InstanceRequestor>>

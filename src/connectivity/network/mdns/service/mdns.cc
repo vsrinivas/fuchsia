@@ -256,8 +256,7 @@ void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
   FX_DCHECK(question);
-  DnsMessage& message = outbound_messages_by_reply_address_[addresses_->multicast_reply()];
-  message.questions_.push_back(question);
+  outbound_message_builders_by_reply_address_[addresses_->multicast_reply()].AddQuestion(question);
 }
 
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
@@ -277,22 +276,7 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSecti
     return;
   }
 
-  DnsMessage& message = outbound_messages_by_reply_address_[reply_address];
-
-  switch (section) {
-    case MdnsResourceSection::kAnswer:
-      message.answers_.push_back(resource);
-      break;
-    case MdnsResourceSection::kAuthority:
-      message.authorities_.push_back(resource);
-      break;
-    case MdnsResourceSection::kAdditional:
-      message.additionals_.push_back(resource);
-      break;
-    case MdnsResourceSection::kExpired:
-      FX_DCHECK(false);
-      break;
-  }
+  outbound_message_builders_by_reply_address_[reply_address].AddResource(resource, section);
 }
 
 void Mdns::SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) {
@@ -376,16 +360,9 @@ bool Mdns::AddInstanceResponder(const std::string& service_name, const std::stri
 }
 
 void Mdns::SendMessages() {
-  for (auto& pair : outbound_messages_by_reply_address_) {
-    const ReplyAddress& reply_address = pair.first;
-    DnsMessage& message = pair.second;
-
-    message.UpdateCounts();
-
-    if (message.questions_.empty()) {
-      message.header_.SetResponse(true);
-      message.header_.SetAuthoritativeAnswer(true);
-    }
+  for (auto& [reply_address, builder] : outbound_message_builders_by_reply_address_) {
+    DnsMessage message;
+    builder.Build(message);
 
 #ifdef MDNS_TRACE
     if (verbose_) {
@@ -400,7 +377,7 @@ void Mdns::SendMessages() {
     transceiver_.SendMessage(&message, reply_address);
   }
 
-  outbound_messages_by_reply_address_.clear();
+  outbound_message_builders_by_reply_address_.clear();
 }
 
 void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
