@@ -5,9 +5,6 @@
 library fuchsia.developer.remotecontrol;
 
 using fuchsia.diagnostics as diagnostics;
-using fuchsia.url;
-using fuchsia.test as test;
-using fuchsia.test.manager as test_manager;
 using zx;
 
 const uint16 MAX_NUM_MATCHES = 250;
@@ -25,13 +22,6 @@ enum RebootType {
 [Discoverable]
 protocol RemoteControl {
     IdentifyHost() -> (IdentifyHostResponse response) error IdentifyHostError;
-
-    // Enumerate the test cases available in a test suite.
-    LaunchSuite(
-        fuchsia.url.Url test_url,
-        request<test.Suite> suite,
-        request<test_manager.SuiteController> controller) -> ()
-        error test_manager.LaunchError;
 
     // Connects a channel to a service, given a selector and a channel iff the selector
     // matches exactly one service on the system.

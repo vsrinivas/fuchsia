@@ -13,9 +13,6 @@ fidl("fuchsia.developer.bridge") {
   public_deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol",
     "//sdk/fidl/fuchsia.net",
-    "//sdk/fidl/fuchsia.test",
-    "//sdk/fidl/fuchsia.test.manager",
-    "//sdk/fidl/fuchsia.url",
   ]
 
   # XXX(awdavies): Figure out whether or not to fuzz.

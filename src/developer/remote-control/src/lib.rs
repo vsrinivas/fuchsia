@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_io as io, fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
-    fidl_fuchsia_test_manager as ftest_manager, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::prelude::*,
     std::rc::Rc,
 };
@@ -21,22 +21,20 @@ const SELECT_TRUNCATION_HACK: usize = 20;
 
 pub struct RemoteControlService {
     netstack_proxy: fnetstack::StackProxy,
-    harness_proxy: ftest_manager::HarnessProxy,
     name_provider_proxy: fdevice::NameProviderProxy,
 }
 
 impl RemoteControlService {
     pub fn new() -> Result<Self, Error> {
-        let (netstack_proxy, harness_proxy, name_provider_proxy) = Self::construct_proxies()?;
-        return Ok(Self::new_with_proxies(netstack_proxy, harness_proxy, name_provider_proxy));
+        let (netstack_proxy, name_provider_proxy) = Self::construct_proxies()?;
+        return Ok(Self::new_with_proxies(netstack_proxy, name_provider_proxy));
     }
 
     pub fn new_with_proxies(
         netstack_proxy: fnetstack::StackProxy,
-        harness_proxy: ftest_manager::HarnessProxy,
         name_provider_proxy: fdevice::NameProviderProxy,
     ) -> Self {
-        return Self { netstack_proxy, harness_proxy, name_provider_proxy };
+        return Self { netstack_proxy, name_provider_proxy };
     }
 
     pub async fn serve_stream(
@@ -55,39 +53,19 @@ impl RemoteControlService {
                 rcs::RemoteControlRequest::Select { selector, responder } => {
                     responder.send(&mut self.clone().select(selector).await)?;
                 }
-                rcs::RemoteControlRequest::LaunchSuite {
-                    test_url,
-                    suite,
-                    controller,
-                    responder,
-                } => {
-                    log::info!("launching test suite {}", test_url);
-                    let mut response = self
-                        .harness_proxy
-                        .launch_suite(&test_url, ftest_manager::LaunchOptions {}, suite, controller)
-                        .await
-                        .context("launch_test call failed")?;
-                    responder.send(&mut response).context("sending LaunchSuite response")?;
-                }
             }
         }
         Ok(())
     }
 
-    fn construct_proxies() -> Result<
-        (fnetstack::StackProxy, ftest_manager::HarnessProxy, fdevice::NameProviderProxy),
-        Error,
-    > {
+    fn construct_proxies() -> Result<(fnetstack::StackProxy, fdevice::NameProviderProxy), Error> {
         let netstack_proxy =
             fuchsia_component::client::connect_to_service::<fnetstack::StackMarker>()
                 .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
-        let harness_proxy =
-            fuchsia_component::client::connect_to_service::<ftest_manager::HarnessMarker>()
-                .map_err(|s| format_err!("Failed to connect to Harness service: {}", s))?;
         let name_provider_proxy =
             fuchsia_component::client::connect_to_service::<fdevice::NameProviderMarker>()
                 .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
-        return Ok((netstack_proxy, harness_proxy, name_provider_proxy));
+        return Ok((netstack_proxy, name_provider_proxy));
     }
 
     async fn connect_with_matcher(
@@ -246,21 +224,6 @@ mod tests {
         proxy
     }
 
-    fn setup_fake_harness_service() -> ftest_manager::HarnessProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<ftest_manager::HarnessMarker>().unwrap();
-
-        fasync::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
-                match req {
-                    _ => assert!(false),
-                }
-            }
-        });
-
-        proxy
-    }
-
     fn setup_fake_netstack_service() -> fnetstack::StackProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::StackMarker>().unwrap();
@@ -309,7 +272,6 @@ mod tests {
     fn make_rcs() -> Rc<RemoteControlService> {
         Rc::new(RemoteControlService::new_with_proxies(
             setup_fake_netstack_service(),
-            setup_fake_harness_service(),
             setup_fake_name_provider_service(),
         ))
     }
