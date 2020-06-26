@@ -51,6 +51,8 @@ void MdnsTransceiver::Stop() {
   }
 }
 
+bool MdnsTransceiver::HasInterfaces() { return !interface_transceivers_by_address_.empty(); }
+
 MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(const inet::IpAddress& address) {
   auto iter = interface_transceivers_by_address_.find(address);
   return iter == interface_transceivers_by_address_.end() ? nullptr : iter->second.get();

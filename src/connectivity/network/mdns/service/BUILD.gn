@@ -127,11 +127,13 @@ test("mdns_test") {
     "test/dns_reading_test.cc",
     "test/instance_responder_test.cc",
     "test/interface_transceiver_test.cc",
+    "test/mdns_unit_tests.cc",
   ]
 
   deps = [
     ":source_set",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -16,6 +16,7 @@
 
 #include "src/connectivity/network/mdns/service/config.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
+#include "src/connectivity/network/mdns/service/mdns_transceiver.h"
 
 namespace mdns {
 
@@ -219,7 +220,8 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   BindingSet<fuchsia::net::mdns::Resolver> resolver_bindings_;
   BindingSet<fuchsia::net::mdns::Subscriber> subscriber_bindings_;
   BindingSet<fuchsia::net::mdns::Publisher> publisher_bindings_;
-  mdns::Mdns mdns_;
+  Mdns mdns_;
+  MdnsTransceiver transceiver_;
   size_t next_subscriber_id_ = 0;
   std::unordered_map<size_t, std::unique_ptr<Subscriber>> subscribers_by_id_;
   std::unordered_map<std::string, std::unique_ptr<Mdns::Publisher>>

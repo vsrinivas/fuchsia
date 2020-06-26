@@ -13,43 +13,36 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
 
 namespace mdns {
 
 // Sends and receives mDNS messages on any number of interfaces.
-class MdnsTransceiver {
+class MdnsTransceiver : public Mdns::Transceiver {
  public:
-  using InboundMessageCallback =
-      fit::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
-
   MdnsTransceiver();
 
   ~MdnsTransceiver();
 
-  // Starts the transceiver.
+  //  Mdns::Transceiver implementation.
   void Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
-             fit::closure link_change_callback, InboundMessageCallback inbound_message_callback);
+             fit::closure link_change_callback,
+             InboundMessageCallback inbound_message_callback) override;
 
-  // Stops the transceiver.
-  void Stop();
+  void Stop() override;
 
-  // Determines if this transceiver has interfaces.
-  bool has_interfaces() { return !interface_transceivers_by_address_.empty(); }
+  bool HasInterfaces() override;
 
-  // Sends a message to the specified address. A V6 interface will send to
-  // |MdnsAddresses::V6Multicast| if |reply_address.socket_address()| is
-  // |MdnsAddresses::V4Multicast|.
-  void SendMessage(DnsMessage* message, const ReplyAddress& reply_address);
+  void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) override;
+
+  void LogTraffic() override;
 
   // Returns the interface transceiver with address |address| if it exists,
   // nullptr if not.
   // TODO(fxbug.dev/49875): move this back to private after multi-network test
   // is rewritten in Rust.
   MdnsInterfaceTransceiver* GetInterfaceTransceiver(const inet::IpAddress& address);
-
-  // Writes log messages describing lifetime traffic.
-  void LogTraffic();
 
  private:
   // Handles |OnInterfaceChanged| events from |Netstack|.

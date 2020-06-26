@@ -19,7 +19,6 @@
 
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
-#include "src/connectivity/network/mdns/service/mdns_transceiver.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {
@@ -32,6 +31,34 @@ class ResourceRenewer;
 // Implements mDNS.
 class Mdns : public MdnsAgent::Host {
  public:
+  // Abstract base class for message transceiver.
+  class Transceiver {
+   public:
+    using InboundMessageCallback =
+        fit::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
+
+    virtual ~Transceiver() {}
+
+    // Starts the transceiver.
+    virtual void Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
+                       fit::closure link_change_callback,
+                       InboundMessageCallback inbound_message_callback) = 0;
+
+    // Stops the transceiver.
+    virtual void Stop() = 0;
+
+    // Determines if this transceiver has interfaces.
+    virtual bool HasInterfaces() = 0;
+
+    // Sends a message to the specified address. A V6 interface will send to
+    // |MdnsAddresses::V6Multicast| if |reply_address.socket_address()| is
+    // |MdnsAddresses::V4Multicast|.
+    virtual void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) = 0;
+
+    // Writes log messages describing lifetime traffic.
+    virtual void LogTraffic() = 0;
+  };
+
   // Describes an initial instance publication or query response.
   struct Publication {
     static std::unique_ptr<Publication> Create(
@@ -84,7 +111,7 @@ class Mdns : public MdnsAgent::Host {
    private:
     void Connect(std::shared_ptr<InstanceRequestor> instance_requestor);
 
-    std::shared_ptr<InstanceRequestor> instance_subscriber_;
+    std::shared_ptr<InstanceRequestor> instance_requestor_;
 
     friend class Mdns;
   };
@@ -138,7 +165,8 @@ class Mdns : public MdnsAgent::Host {
       fit::function<void(const std::string& host_name, const inet::IpAddress& v4_address,
                          const inet::IpAddress& v6_address)>;
 
-  Mdns();
+  // |transceiver| must live as long as this |Mdns| object.
+  Mdns(Transceiver& transceiver);
 
   virtual ~Mdns() override;
 
@@ -217,7 +245,7 @@ class Mdns : public MdnsAgent::Host {
 
   struct ResourceEqual {
     bool operator()(std::shared_ptr<DnsResource> a, std::shared_ptr<DnsResource> b) const noexcept {
-      return a ? (b ? *a == *b: false) : !b;
+      return a ? (b ? *a == *b : false) : !b;
     }
   };
 
@@ -331,7 +359,7 @@ class Mdns : public MdnsAgent::Host {
   void PostTask();
 
   async_dispatcher_t* dispatcher_;
-  MdnsTransceiver transceiver_;
+  Transceiver& transceiver_;
   std::string original_host_name_;
   const MdnsAddresses* addresses_;
   fit::closure ready_callback_;
@@ -346,7 +374,7 @@ class Mdns : public MdnsAgent::Host {
   std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;
   std::unordered_map<const MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
   std::unordered_map<std::string, std::shared_ptr<InstanceRequestor>>
-      instance_subscribers_by_service_name_;
+      instance_requestors_by_service_name_;
   std::unordered_map<std::string, std::shared_ptr<InstanceResponder>>
       instance_publishers_by_instance_full_name_;
   std::shared_ptr<DnsResource> address_placeholder_;

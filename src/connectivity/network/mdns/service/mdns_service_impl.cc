@@ -63,7 +63,8 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
     : component_context_(component_context),
       resolver_bindings_(this, "Resolver"),
       subscriber_bindings_(this, "Subscriber"),
-      publisher_bindings_(this, "Publisher") {
+      publisher_bindings_(this, "Publisher"),
+      mdns_(transceiver_) {
   component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Resolver>(fit::bind_member(
       &resolver_bindings_, &BindingSet<fuchsia::net::mdns::Resolver>::OnBindRequest));
   component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Subscriber>(fit::bind_member(

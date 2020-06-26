@@ -82,9 +82,7 @@ void InstanceRequestor::ReceiveResource(const DnsResource& resource, MdnsResourc
 
 void InstanceRequestor::EndOfMessage() {
   // Report updates.
-  for (auto& pair : instance_infos_by_full_name_) {
-    InstanceInfo& instance_info = pair.second;
-
+  for (auto& [_, instance_info] : instance_infos_by_full_name_) {
     if (instance_info.target_.empty()) {
       // We haven't yet seen an SRV record for this instance.
       continue;
@@ -146,9 +144,7 @@ void InstanceRequestor::EndOfMessage() {
 void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
   bool updates_happened = false;
 
-  for (auto& pair : instance_infos_by_full_name_) {
-    InstanceInfo& instance_info = pair.second;
-
+  for (auto& [_, instance_info] : instance_infos_by_full_name_) {
     if (instance_info.target_.empty()) {
       // We haven't yet seen an SRV record for this instance.
       continue;
@@ -205,9 +201,10 @@ void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
   }
 
   if (instance_infos_by_full_name_.find(instance_full_name) == instance_infos_by_full_name_.end()) {
-    auto pair = instance_infos_by_full_name_.emplace(instance_full_name, InstanceInfo{});
-    FX_DCHECK(pair.second);
-    pair.first->second.instance_name_ = instance_name;
+    auto [iter, inserted] =
+        instance_infos_by_full_name_.emplace(instance_full_name, InstanceInfo{});
+    FX_DCHECK(inserted);
+    iter->second.instance_name_ = instance_name;
   }
 
   Renew(resource);

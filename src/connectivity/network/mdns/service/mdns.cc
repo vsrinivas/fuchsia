@@ -27,7 +27,8 @@
 
 namespace mdns {
 
-Mdns::Mdns() : dispatcher_(async_get_default_dispatcher()) {}
+Mdns::Mdns(Transceiver& transceiver)
+    : dispatcher_(async_get_default_dispatcher()), transceiver_(transceiver) {}
 
 Mdns::~Mdns() {}
 
@@ -65,7 +66,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
         // changes that cause two hosts with the same name to be on the same
         // subnet. To improve matters, we need to be prepared to change a host
         // name we've been using for awhile.
-        if (state_ == State::kWaitingForInterfaces && transceiver_.has_interfaces()) {
+        if (state_ == State::kWaitingForInterfaces && transceiver_.HasInterfaces()) {
           OnInterfacesStarted(original_host_name_, perform_address_probe);
         }
       },
@@ -101,8 +102,8 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
 
         resource_renewer_->EndOfMessage();
         DPROHIBIT_AGENT_REMOVAL();
-        for (auto& pair : agents_) {
-          pair.second->EndOfMessage();
+        for (auto& [_, agent] : agents_) {
+          agent->EndOfMessage();
         }
         DALLOW_AGENT_REMOVAL();
 
@@ -111,7 +112,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
 
   // The interface monitor may have already found interfaces. In that case,
   // start the address probe in case we don't get any link change notifications.
-  if (state_ == State::kWaitingForInterfaces && transceiver_.has_interfaces()) {
+  if (state_ == State::kWaitingForInterfaces && transceiver_.HasInterfaces()) {
     OnInterfacesStarted(original_host_name_, perform_address_probe);
   }
 }
@@ -138,14 +139,14 @@ void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subsc
 
   std::shared_ptr<InstanceRequestor> agent;
 
-  auto iter = instance_subscribers_by_service_name_.find(service_name);
-  if (iter == instance_subscribers_by_service_name_.end()) {
+  auto iter = instance_requestors_by_service_name_.find(service_name);
+  if (iter == instance_requestors_by_service_name_.end()) {
     agent = std::make_shared<InstanceRequestor>(this, service_name);
     subscriber->Connect(agent);
     // Add the subscriber before calling AddAgent (which starts the agent), so the subscriber will
     // be notified of the first query.
     agent->AddSubscriber(subscriber);
-    instance_subscribers_by_service_name_.emplace(service_name, agent);
+    instance_requestors_by_service_name_.emplace(service_name, agent);
     AddAgent(agent);
   } else {
     agent = iter->second;
@@ -268,8 +269,8 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSecti
     // separately so we don't create an empty outbound message.
     prohibit_agent_removal_ = true;
 
-    for (auto& pair : agents_) {
-      pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
+    for (auto& [_, agent] : agents_) {
+      agent->ReceiveResource(*resource, MdnsResourceSection::kExpired);
     }
 
     prohibit_agent_removal_ = false;
@@ -303,6 +304,7 @@ void Mdns::RemoveAgent(const MdnsAgent* agent, const std::string& published_inst
     temp.pop();
   }
 
+  // TODO(55116): Need to remove instance requestors from |instance_requestors_by_service_name_|.
   if (!published_instance_full_name.empty()) {
     instance_publishers_by_instance_full_name_.erase(published_instance_full_name);
   }
@@ -343,6 +345,8 @@ bool Mdns::AddInstanceResponder(const std::string& service_name, const std::stri
                                          [this, instance_full_name, agent](bool successful) {
                                            if (!successful) {
                                              agent->ReportSuccess(false);
+                                             // TODO(dalesat): Remove the agent from
+                                             // instance_publishers_by_instance_full_name_
                                              return;
                                            }
 
@@ -384,8 +388,8 @@ void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& repl
                            const ReplyAddress& sender_address) {
   // Renewer doesn't need questions.
   DPROHIBIT_AGENT_REMOVAL();
-  for (auto& pair : agents_) {
-    pair.second->ReceiveQuestion(question, reply_address, sender_address);
+  for (auto& [_, agent] : agents_) {
+    agent->ReceiveQuestion(question, reply_address, sender_address);
   }
 
   DALLOW_AGENT_REMOVAL();
@@ -395,8 +399,8 @@ void Mdns::ReceiveResource(const DnsResource& resource, MdnsResourceSection sect
   // Renewer is always first.
   resource_renewer_->ReceiveResource(resource, section);
   DPROHIBIT_AGENT_REMOVAL();
-  for (auto& pair : agents_) {
-    pair.second->ReceiveResource(resource, section);
+  for (auto& [_, agent] : agents_) {
+    agent->ReceiveResource(resource, section);
   }
 
   DALLOW_AGENT_REMOVAL();
@@ -464,13 +468,13 @@ Mdns::Subscriber::~Subscriber() { Unsubscribe(); }
 
 void Mdns::Subscriber::Connect(std::shared_ptr<InstanceRequestor> instance_requestor) {
   FX_DCHECK(instance_requestor);
-  instance_subscriber_ = instance_requestor;
+  instance_requestor_ = instance_requestor;
 }
 
 void Mdns::Subscriber::Unsubscribe() {
-  if (instance_subscriber_) {
-    instance_subscriber_->RemoveSubscriber(this);
-    instance_subscriber_ = nullptr;
+  if (instance_requestor_) {
+    instance_requestor_->RemoveSubscriber(this);
+    instance_requestor_ = nullptr;
   }
 }
 
