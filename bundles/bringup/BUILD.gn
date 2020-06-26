@@ -113,6 +113,7 @@ group("tests") {
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-test-package",
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-with-static-engine-test-package",
     "//zircon/system/ulib/utf_conversion/test:utf-conversion-package",
+    "//zircon/system/ulib/zbitl/test:zbitl-test-package",
     "//zircon/system/ulib/zircon-crypto/test:zircon-crypto-package",
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-package",
     "//zircon/system/ulib/zx/test:zx-package",

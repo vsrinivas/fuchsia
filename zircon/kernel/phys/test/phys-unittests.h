@@ -15,5 +15,6 @@ bool popcount_tests();
 bool printf_tests();
 bool string_view_tests();
 bool unittest_tests();
+bool zbitl_tests();
 
 #endif  // ZIRCON_KERNEL_PHYS_TEST_PHYS_UNITTESTS_H_

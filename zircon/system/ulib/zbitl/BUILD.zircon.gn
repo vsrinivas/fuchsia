@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("zbitl") {
+  host = true
+  kernel = true
+  static = true
+
+  # TODO: revist the following two specifications after the zircon-to-fuchsia
+  # build migration. They seem currently required in order to export the host
+  # compilation of this library to the fuchsia build.
+  sdk = "source"
+  sdk_headers = []
+
+  sources = [ "checking.cc" ]
+  deps = [
+    "$zx/system/ulib/zxc",
+    "$zx/third_party/ulib/cksum",
+  ]
+  public_deps = [
+    # <lib/zbitl/view.h> has #include <lib/cksum.h>.
+    "$zx/third_party/ulib/cksum:headers",
+
+    # <lib/zbitl/view.h> has #include <lib/fitx/result.h>.
+    "$zx/system/ulib/zxc:headers",
+  ]
+
+  if (is_kernel) {
+    # The zbitl headers use various ktl-approved standard C++ headers.
+    deps += [
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+    ]
+    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+  }
+}

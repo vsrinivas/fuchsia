@@ -25,12 +25,14 @@ source_set("phys") {
     "printf_tests.cc",
     "string_view_tests.cc",
     "unittest_tests.cc",
+    "zbitl_tests.cc",
   ]
   deps = [
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/libc",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zbitl",
   ]
 
   if (toolchain.environment == "kernel") {

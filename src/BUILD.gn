@@ -80,5 +80,6 @@ group("zircon_host_tests") {
   deps = [
     "//build/unification/tests:host",
     "//zircon/kernel/lib/heap/cmpctmalloc/tests($host_toolchain)",
+    "//zircon/system/ulib/zbitl/test($host_toolchain)",
   ]
 }

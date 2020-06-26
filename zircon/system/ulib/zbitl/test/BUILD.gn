@@ -1,0 +1,51 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":zbitl-test-package",
+    ":zbitl-unittests",
+  ]
+}
+
+test("zbitl-unittests") {
+  sources = [
+    "checking-tests.cc",
+    "view-tests.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/zbitl",
+    "//zircon/public/lib/zxtest",
+  ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+}
+
+unittest_package("zbitl-test-package") {
+  package_name = "zbitl-tests"
+  deps = [ ":zbitl-unittests" ]
+
+  tests = [
+    {
+      name = "zbitl-unittests"
+    },
+  ]
+}
