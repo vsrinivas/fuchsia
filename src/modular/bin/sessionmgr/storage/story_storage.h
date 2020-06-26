@@ -13,8 +13,6 @@
 
 #include "src/modular/lib/async/cpp/future.h"
 
-using fuchsia::modular::LinkPath;
-using fuchsia::modular::LinkPathPtr;
 using fuchsia::modular::ModuleData;
 using fuchsia::modular::ModuleDataPtr;
 
@@ -24,7 +22,6 @@ namespace modular {
 //
 // * Manage the persistence of metadata about what mods are part of a single
 //   story.
-// * Manage the persistence of link values in a single story.
 class StoryStorage {
  public:
   // Constructs a new StoryStorage with self-contained storage.

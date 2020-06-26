@@ -60,7 +60,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
 
   StoryStorage* const story_storage_;  // Not owned.
   modular::AddModParams add_mod_params_;
-  fuchsia::modular::CreateModuleParameterMapInfoPtr parameter_info_;
   fuchsia::modular::ModuleData out_module_data_;
   fuchsia::modular::ExecuteResult out_result_;
   // Used when creating the map info to execute an operation as soon as it
