@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::wlan::types::{
-    ClientStateSummary, ConnectionState, DisconnectStatus, MacRole, NetworkIdentifier,
-    NetworkState, QueryIfaceResponse, SecurityType, WlanClientState,
-};
+use crate::wlan::types::{ClientStatusResponse, MacRole, QueryIfaceResponse};
 use anyhow::{Context as _, Error};
 use connectivity_testing::wlan_service_util;
 use fidl_fuchsia_wlan_device;
@@ -99,7 +96,7 @@ impl WlanFacade {
             .context("Disconnect: Failed to disconnect ifaces")
     }
 
-    pub async fn status(&self) -> Result<ClientStateSummary, Error> {
+    pub async fn status(&self) -> Result<ClientStatusResponse, Error> {
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
@@ -107,33 +104,7 @@ impl WlanFacade {
 
         let rsp = sme_proxy.status().await.context("failed to get status from sme_proxy")?;
 
-        // Create dummy ClientStateSummary
-        let mut connection_state = ConnectionState::Disconnected;
-        let mut network_id = NetworkIdentifier { ssid: vec![], type_: SecurityType::None };
-
-        match rsp.connected_to {
-            Some(ref bss) => {
-                network_id.ssid = bss.ssid.as_slice().to_vec();
-                connection_state = ConnectionState::Connected;
-            }
-            _ => {}
-        }
-
-        let network_state = NetworkState {
-            id: Some(network_id),
-            state: Some(connection_state),
-            status: Some(DisconnectStatus::ConnectionFailed),
-        };
-
-        let mut networks = Vec::new();
-        networks.push(network_state);
-
-        let client_state_summary = ClientStateSummary {
-            state: Some(WlanClientState::ConnectionsEnabled),
-            networks: Some(networks),
-        };
-
-        Ok(client_state_summary)
+        Ok(ClientStatusResponse::from(rsp))
     }
 
     pub async fn query_iface(&self, iface_id: u16) -> Result<QueryIfaceResponse, Error> {

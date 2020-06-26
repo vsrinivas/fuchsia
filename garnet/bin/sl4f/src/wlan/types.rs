@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_wlan_sme as fidl_sme;
 use serde::{Deserialize, Serialize};
 
 /// Enums and structs for wlan client status.
@@ -63,6 +64,80 @@ pub struct ClientStateSummary {
 
     /// Active connections, connection attempts or failed connections.
     pub networks: Option<Vec<NetworkState>>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Protection {
+    Unknown,
+    Open,
+    Wep,
+    Wpa1,
+    Wpa1Wpa2Personal,
+    Wpa2Personal,
+    Wpa2Wpa3Personal,
+    Wpa3Personal,
+    Wpa2Enterprise,
+    Wpa3Enterprise,
+}
+
+impl From<fidl_sme::Protection> for Protection {
+    fn from(protection: fidl_sme::Protection) -> Self {
+        match protection {
+            fidl_sme::Protection::Unknown => Protection::Unknown,
+            fidl_sme::Protection::Open => Protection::Open,
+            fidl_sme::Protection::Wep => Protection::Wep,
+            fidl_sme::Protection::Wpa1 => Protection::Wpa1,
+            fidl_sme::Protection::Wpa1Wpa2Personal => Protection::Wpa1Wpa2Personal,
+            fidl_sme::Protection::Wpa2Personal => Protection::Wpa2Personal,
+            fidl_sme::Protection::Wpa2Wpa3Personal => Protection::Wpa2Wpa3Personal,
+            fidl_sme::Protection::Wpa3Personal => Protection::Wpa3Personal,
+            fidl_sme::Protection::Wpa2Enterprise => Protection::Wpa2Enterprise,
+            fidl_sme::Protection::Wpa3Enterprise => Protection::Wpa3Enterprise,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BssInfo {
+    pub bssid: [u8; 6],
+    pub ssid: Vec<u8>,
+    pub rx_dbm: i8,
+    pub snr_db: i8,
+    pub channel: u8,
+    pub protection: Protection,
+    pub compatible: bool,
+}
+
+impl From<fidl_sme::BssInfo> for BssInfo {
+    fn from(bss_info: fidl_sme::BssInfo) -> Self {
+        BssInfo {
+            bssid: bss_info.bssid,
+            ssid: bss_info.ssid,
+            rx_dbm: bss_info.rx_dbm,
+            snr_db: bss_info.snr_db,
+            channel: bss_info.channel,
+            protection: Protection::from(bss_info.protection),
+            compatible: bss_info.compatible,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ClientStatusResponse {
+    pub connected_to: Option<BssInfo>,
+    pub connecting_to_ssid: Vec<u8>,
+}
+
+impl From<fidl_sme::ClientStatusResponse> for ClientStatusResponse {
+    fn from(status: fidl_sme::ClientStatusResponse) -> Self {
+        ClientStatusResponse {
+            connected_to: match status.connected_to {
+                None => None,
+                Some(connected_to) => Some(BssInfo::from(*connected_to)),
+            },
+            connecting_to_ssid: status.connecting_to_ssid,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
