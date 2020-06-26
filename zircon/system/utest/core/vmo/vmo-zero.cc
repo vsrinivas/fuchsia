@@ -422,4 +422,44 @@ TEST(VmoZeroTestcase, ZeroFreesAndAllocates) {
   EXPECT_OK(child.op_range(ZX_VMO_OP_ZERO, 0, PAGE_SIZE * 2, NULL, 0));
 }
 
+// Tests that if a hidden parent ends up with markers then when its children perform resize
+// operations markers that are still visible to the sibling are not removed from the parent.
+TEST(VmoZeroTestCase, ResizeOverHiddenMarkers) {
+  zx::vmo vmo;
+
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE * 4, ZX_VMO_RESIZABLE, &vmo));
+
+  // Commit the second last page with non-zero data so we can place a marker over it in a child
+  // later.
+  VmoWrite(vmo, 1, PAGE_SIZE * 2);
+
+  // Create an intermediate hidden parent, this ensures that when the child is resized the pages in
+  // the range cannot simply be freed, as there is still a child of the root that needs them.
+  zx::vmo intermediate;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE * 4, &intermediate));
+
+  // Now zero that second last page slot. As our parent has a page here a marker has to get inserted
+  // to prevent seeing back to the parent. We explicitly do not zero the first or last page as in
+  // those cases the parent limits could be updated instead.
+  ASSERT_OK(vmo.op_range(ZX_VMO_OP_ZERO, PAGE_SIZE * 2, PAGE_SIZE, nullptr, 0));
+
+  // Create a sibling over this zero page.
+  zx::vmo sibling;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, PAGE_SIZE * 2, ZX_PAGE_SIZE, &sibling));
+
+  // The sibling should see the zeros.
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(sibling, 0, 0));
+
+  // Finally resize the VMO such that only our sibling sees the range in the parent that contains
+  // that zero marker. In doing this resize the marker should not be freed.
+  ASSERT_OK(vmo.set_size(PAGE_SIZE));
+
+  // Check that the sibling still correctly sees zero.
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(sibling, 0, 0));
+
+  // Writing to the sibling should commit a fresh zero page due to the marker, and should not
+  // attempt to refork the page from the root.
+  VmoWrite(sibling, 1, 0);
+}
+
 }  // namespace vmo_test

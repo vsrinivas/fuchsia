@@ -2615,7 +2615,12 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
       [skip_split_bits, sibling_visible, page_remover, left = this == &parent->left_child_locked()](
           VmPageOrMarker* page_or_mark, uint64_t offset) {
         if (page_or_mark->IsMarker()) {
-          *page_or_mark = VmPageOrMarker::Empty();
+          // If this marker is in a range still visible to the sibling then we just leave it, no
+          // split bits or anything to be updated. If the sibling cannot see it, then we can clear
+          // it.
+          if (!sibling_visible) {
+            *page_or_mark = VmPageOrMarker::Empty();
+          }
           return;
         }
         vm_page* page = page_or_mark->Page();
