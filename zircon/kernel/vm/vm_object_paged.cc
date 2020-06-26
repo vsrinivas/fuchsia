@@ -1921,15 +1921,8 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   // Convince the static analysis that we now do actually hold lock_.
   AssertHeld(lock_);
 
-  if (is_slice()) {
-    uint64_t parent_offset;
-    VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
-    AssertHeld(parent->lock_);
-    return parent->CommitRangeInternal(offset + parent_offset, len, pin, guard.take());
-  }
-
-  // If a pin is requested the entire range must exist and be valid, otherwise we can commit a
-  // partial range.
+  // If a pin is requested the entire range must exist and be valid,
+  // otherwise we can commit a partial range.
   uint64_t new_len = len;
   if (pin) {
     // verify that the range is within the object
@@ -1945,6 +1938,29 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   // was in range, just zero length
   if (new_len == 0) {
     return ZX_OK;
+  }
+
+  // Child slices of VMOs are currently not resizable, nor can they be made
+  // from resizable parents.  If this ever changes, the logic surrounding what
+  // to do if a VMO gets resized during a Commit or Pin operation will need to
+  // be revisited.  Right now, we can just rely on the fact that the initial
+  // vetting/trimming of the offset and length of the operation will never
+  // change if the operation is being executed against a child slice.
+  DEBUG_ASSERT(!is_resizable() || !is_slice());
+
+  if (is_slice()) {
+    uint64_t parent_offset;
+    VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
+    AssertHeld(parent->lock_);
+
+    // PagedParentOfSliceLocked will walk all of the way up the VMO hierarchy
+    // until it hits a non-slice VMO.  This guarantees that we should only ever
+    // recurse once instead of an unbound number of times.  DEBUG_ASSERT this so
+    // that we don't actually end up with unbound recursion just in case the
+    // property changes.
+    DEBUG_ASSERT(!parent->is_slice());
+
+    return parent->CommitRangeInternal(offset + parent_offset, new_len, pin, guard.take());
   }
 
   // compute a page aligned end to do our searches in to make sure we cover all the pages
@@ -2002,7 +2018,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     if (retry) {
       // If there was a page request that couldn't be fulfilled, we need wait on the
       // request and retry the commit. Note that when we retry the loop, offset is
-      // updated past the portion of the vmo that we successfully commited.
+      // updated past the portion of the vmo that we successfully committed.
       zx_status_t status = ZX_OK;
       guard.CallUnlocked([&page_request, &status]() mutable { status = page_request.Wait(); });
       if (status != ZX_OK) {

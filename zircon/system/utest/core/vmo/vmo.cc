@@ -1348,4 +1348,116 @@ TEST(VmoTestCase, UncachedContiguous) {
   EXPECT_EQ(contig_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED), ZX_ERR_BAD_STATE);
 }
 
+static constexpr uint64_t PAGES(size_t n) { return PAGE_SIZE * n; }
+
+// Test various pinning operations.  In particular, we would like to test
+//
+// ++ Pinning of normal VMOs, contiguous VMOs, and RAM backed physical VMOs.
+// ++ Pinning of child-slices of VMOs.
+// ++ Attempting to overpin regions section of VMOs, particularly overpin
+//    operations which do not fit in a target child-slice, but _would_ fit within
+//    the main parent VMO.  See bug 53547 for details.
+TEST(VmoTestCase, PinTests) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  constexpr size_t kTestPages = 6;
+
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::iommu iommu;
+  zx::bti bti;
+  zx_iommu_desc_dummy_t desc;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+  enum class VmoFlavor { Normal, Contig, Physical };
+  constexpr std::array FLAVORS = {VmoFlavor::Normal, VmoFlavor::Contig, VmoFlavor::Physical};
+
+  for (auto flavor : FLAVORS) {
+    struct Level {
+      Level(size_t offset_pages, size_t size_pages)
+          : offset(offset_pages * PAGE_SIZE), size(size_pages * PAGE_SIZE) {}
+
+      zx::vmo vmo;
+      const size_t offset;
+      const size_t size;
+      size_t size_past_end = 0;
+    };
+
+    std::array levels = {
+        Level{0, kTestPages},
+        Level{1, kTestPages - 2},
+        Level{1, kTestPages - 4},
+    };
+
+    // Create the root level of the child-slice hierarchy based on the flavor we
+    // are currently testing.
+    switch (flavor) {
+      case VmoFlavor::Normal:
+        ASSERT_OK(zx::vmo::create(levels[0].size, 0, &levels[0].vmo));
+        break;
+
+      case VmoFlavor::Contig:
+        ASSERT_OK(zx::vmo::create_contiguous(bti, levels[0].size, 0, &levels[0].vmo));
+        break;
+
+      case VmoFlavor::Physical:
+        if (auto res = vmo_test::GetTestPhysVmo(levels[0].size); !res.is_ok()) {
+          ASSERT_OK(res.error_value());
+        } else {
+          levels[0].vmo = std::move(res->vmo);
+          ASSERT_EQ(levels[0].size, res->size);
+        }
+        break;
+    }
+
+    // Now that we have our root, create each of our child slice levels.  Each
+    // level will be offset by level[i].offset bytes into level[i - 1].vmo.
+    for (size_t i = 1; i < levels.size(); ++i) {
+      auto &child = levels[i];
+      auto &parent = levels[i - 1];
+      ASSERT_OK(parent.vmo.create_child(ZX_VMO_CHILD_SLICE, child.offset, child.size, &child.vmo));
+
+      // Compute the amount of space past this end of this child slice which
+      // still exists in the root VMO.
+      ASSERT_LE(child.size + child.offset, parent.size);
+      child.size_past_end = parent.size_past_end + (parent.size - (child.size + child.offset));
+    }
+
+    // OK, now we should be ready to test each of the levels.
+    for (const auto &level : levels) {
+      // Make sure that we test ranges which have starting and ending points
+      // entirely inside of the VMO, in the region after the VMO but inside the
+      // root VMO, and entirely outside of even the root VMO.
+      size_t root_end = level.size + level.size_past_end;
+      for (size_t start = 0; start <= root_end; start += PAGE_SIZE) {
+        for (size_t end = start + PAGE_SIZE; end <= (root_end + PAGE_SIZE); end += PAGE_SIZE) {
+          zx::pmt pmt;
+          uint64_t paddrs[kTestPages];
+          size_t size = end - start;
+          size_t expected_addrs = std::min(size / PAGE_SIZE, std::size(paddrs));
+
+          zx_status_t expected_status =
+              ((start >= level.size) || (end > level.size)) ? ZX_ERR_OUT_OF_RANGE : ZX_OK;
+          EXPECT_STATUS(
+              bti.pin(ZX_BTI_PERM_READ, level.vmo, start, size, paddrs, expected_addrs, &pmt),
+              expected_status,
+              "Op was pin offset 0x%zx size 0x%zx in VMO (offset 0x%zx size 0x%zx spe 0x%zx)",
+              start, size, level.offset, level.size, level.size_past_end);
+
+          if (pmt.is_valid()) {
+            pmt.unpin();
+            pmt.reset();
+          }
+        }
+      }
+    }
+  }
+}
+
 }  // namespace

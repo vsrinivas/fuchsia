@@ -106,7 +106,11 @@ struct PhysVmo {
   size_t size = 0;
   zx::vmo vmo;
 };
-zx::status<PhysVmo> GetTestPhysVmo();
+
+// Create and return a physical VMO from the reserved regions of RAM.  |size|
+// indicates the desired size of the VMO, or 0 to fetch the entire reserved
+// region of RAM, whatever its size might be.
+zx::status<PhysVmo> GetTestPhysVmo(size_t size = 0);
 
 }  // namespace vmo_test
 

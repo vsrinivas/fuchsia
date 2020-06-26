@@ -14,7 +14,7 @@ extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace vmo_test {
 
-zx::status<PhysVmo> GetTestPhysVmo() {
+zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
   // We cannot create any physical VMOs without the root resource.
   if (!get_root_resource) {
     return zx::error_status(ZX_ERR_NOT_SUPPORTED);
@@ -61,6 +61,13 @@ zx::status<PhysVmo> GetTestPhysVmo() {
   EXPECT_EQ(reserved_ram_info_end, end);
   if (reserved_ram_info_end != end) {
     return zx::error_status(ZX_ERR_BAD_STATE);
+  }
+
+  if (size > 0) {
+    if (size > ret.size) {
+      return zx::error_status(ZX_ERR_INVALID_ARGS);
+    }
+    ret.size = size;
   }
 
   // Go ahead and create the VMO itself.
