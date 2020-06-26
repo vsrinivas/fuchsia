@@ -156,7 +156,7 @@ mod test {
     };
 
     fn setup_fake_launcher_service(mut stream: LauncherRequestStream) {
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     LauncherRequest::CreateComponent {
@@ -190,7 +190,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 println!("got a thing {:?}", req);
                 match req {
@@ -221,16 +221,14 @@ mod test {
         proxy
     }
 
-    #[test]
-    fn test_run_component() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_component() -> Result<(), Error> {
         let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx".to_string();
         let args = vec!["test1".to_string(), "test2".to_string()];
         let run_cmd = RunComponentCommand { url, args };
-        hoist::run(async move {
-            let remote_proxy = setup_fake_remote_server();
-            let _response =
-                run_component(remote_proxy, run_cmd).await.expect("getting tests should not fail");
-        });
+        let remote_proxy = setup_fake_remote_server();
+        let _response =
+            run_component(remote_proxy, run_cmd).await.expect("getting tests should not fail");
         Ok(())
     }
 }

@@ -6,10 +6,10 @@ use {
     crate::target,
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
+    fuchsia_async::Task,
     futures::channel::mpsc,
     futures::lock::Mutex,
     futures::prelude::*,
-    overnet_core::Task,
     std::cmp::Eq,
     std::fmt::Debug,
     std::hash::Hash,
@@ -94,7 +94,7 @@ struct DispatcherInner<T: EventTrait + 'static> {
 /// at which point processing ends.
 struct Dispatcher<T: EventTrait + 'static> {
     inner: Weak<DispatcherInner<T>>,
-    _task: Task,
+    _task: Task<()>,
 }
 
 impl<T: EventTrait + 'static> Dispatcher<T> {
@@ -177,7 +177,7 @@ pub struct Queue<T: EventTrait + 'static> {
 
     // Arc<_> so that the client can drop multiple of these clients without
     // having the underlying task dropped/canceled.
-    _processor_task: Arc<Task>,
+    _processor_task: Arc<Task<()>>,
 }
 
 struct Processor<T: 'static + EventTrait> {
@@ -319,46 +319,40 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_receive_two_handlers() {
-        hoist::run(async move {
-            let (tx_from_callback, mut rx_from_callback) = mpsc::unbounded::<bool>();
-            let fake_events = Arc::new(FakeEventStruct {});
-            let queue = Queue::new(&fake_events);
-            let ((), ()) = futures::join!(
-                queue.add_handler(TestHookFirst { callbacks_done: tx_from_callback.clone() }),
-                queue.add_handler(TestHookSecond { callbacks_done: tx_from_callback }),
-            );
-            queue.push(5).await.unwrap();
-            assert!(rx_from_callback.next().await.unwrap());
-            assert!(rx_from_callback.next().await.unwrap());
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_receive_two_handlers() {
+        let (tx_from_callback, mut rx_from_callback) = mpsc::unbounded::<bool>();
+        let fake_events = Arc::new(FakeEventStruct {});
+        let queue = Queue::new(&fake_events);
+        let ((), ()) = futures::join!(
+            queue.add_handler(TestHookFirst { callbacks_done: tx_from_callback.clone() }),
+            queue.add_handler(TestHookSecond { callbacks_done: tx_from_callback }),
+        );
+        queue.push(5).await.unwrap();
+        assert!(rx_from_callback.next().await.unwrap());
+        assert!(rx_from_callback.next().await.unwrap());
     }
 
-    #[test]
-    fn test_wait_for_event_once_async() {
-        hoist::run(async move {
-            let fake_events = Arc::new(FakeEventStruct {});
-            let queue = Queue::new(&fake_events);
-            let ((), result) = futures::join!(
-                queue.wait_for_async(|e| async move {
-                    assert_eq!(e, 5);
-                    true
-                }),
-                queue.push(5)
-            );
-            result.unwrap();
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_wait_for_event_once_async() {
+        let fake_events = Arc::new(FakeEventStruct {});
+        let queue = Queue::new(&fake_events);
+        let ((), result) = futures::join!(
+            queue.wait_for_async(|e| async move {
+                assert_eq!(e, 5);
+                true
+            }),
+            queue.push(5)
+        );
+        result.unwrap();
     }
 
-    #[test]
-    fn test_wait_for_event_once() {
-        hoist::run(async move {
-            let fake_events = Arc::new(FakeEventStruct {});
-            let queue = Queue::new(&fake_events);
-            let ((), result) = futures::join!(queue.wait_for(|e| e == 5), queue.push(5),);
-            result.unwrap();
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_wait_for_event_once() {
+        let fake_events = Arc::new(FakeEventStruct {});
+        let queue = Queue::new(&fake_events);
+        let ((), result) = futures::join!(queue.wait_for(|e| e == 5), queue.push(5),);
+        result.unwrap();
     }
 
     struct FakeEventSynthesizer {}
@@ -370,18 +364,16 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_wait_for_event_synthetic() {
-        hoist::run(async move {
-            let fake_events = Arc::new(FakeEventSynthesizer {});
-            let queue = Queue::new(&fake_events);
-            let ((), (), (), ()) = futures::join!(
-                queue.wait_for(|e| e == 7),
-                queue.wait_for(|e| e == 6),
-                queue.wait_for(|e| e == 2),
-                queue.wait_for(|e| e == 3)
-            );
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_wait_for_event_synthetic() {
+        let fake_events = Arc::new(FakeEventSynthesizer {});
+        let queue = Queue::new(&fake_events);
+        let ((), (), (), ()) = futures::join!(
+            queue.wait_for(|e| e == 7),
+            queue.wait_for(|e| e == 6),
+            queue.wait_for(|e| e == 2),
+            queue.wait_for(|e| e == 3)
+        );
     }
 
     // This is mostly here to fool the compiler, as for whatever reason invoking
@@ -390,15 +382,13 @@ mod test {
         es.synthesize_events().await
     }
 
-    #[test]
-    fn event_synthesis_dropped_state() {
-        hoist::run(async move {
-            let fake_events = Arc::new(FakeEventSynthesizer {});
-            let weak = Arc::downgrade(&fake_events);
-            std::mem::drop(fake_events);
-            let vec = test_event_synth_func(weak).await;
-            assert_eq!(vec.len(), 0);
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_synthesis_dropped_state() {
+        let fake_events = Arc::new(FakeEventSynthesizer {});
+        let weak = Arc::downgrade(&fake_events);
+        std::mem::drop(fake_events);
+        let vec = test_event_synth_func(weak).await;
+        assert_eq!(vec.len(), 0);
     }
 
     #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -443,42 +433,36 @@ mod test {
         }
     }
 
-    #[test]
-    fn event_failure_drops_handler_synth_events() {
-        hoist::run(async move {
-            let fake_events = Arc::new(EventFailerState {});
-            let queue = Queue::new(&fake_events);
-            let (handler, mut handler_dropped_rx) = EventFailer::new();
-            queue.add_handler(handler).await;
-            assert!(handler_dropped_rx.next().await.unwrap());
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_failure_drops_handler_synth_events() {
+        let fake_events = Arc::new(EventFailerState {});
+        let queue = Queue::new(&fake_events);
+        let (handler, mut handler_dropped_rx) = EventFailer::new();
+        queue.add_handler(handler).await;
+        assert!(handler_dropped_rx.next().await.unwrap());
     }
 
-    #[test]
-    fn event_failure_drops_handler() {
-        hoist::run(async move {
-            let fake_events = Arc::new(FakeEventStruct {});
-            let queue = Queue::new(&fake_events);
-            let (handler, mut handler_dropped_rx) = EventFailer::new();
-            let (handler2, mut handler_dropped_rx2) = EventFailer::new();
-            let ((), ()) = futures::join!(queue.add_handler(handler), queue.add_handler(handler2));
-            queue.push(EventFailerInput::Fail).await.unwrap();
-            assert!(handler_dropped_rx.next().await.unwrap());
-            assert!(handler_dropped_rx2.next().await.unwrap());
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_failure_drops_handler() {
+        let fake_events = Arc::new(FakeEventStruct {});
+        let queue = Queue::new(&fake_events);
+        let (handler, mut handler_dropped_rx) = EventFailer::new();
+        let (handler2, mut handler_dropped_rx2) = EventFailer::new();
+        let ((), ()) = futures::join!(queue.add_handler(handler), queue.add_handler(handler2));
+        queue.push(EventFailerInput::Fail).await.unwrap();
+        assert!(handler_dropped_rx.next().await.unwrap());
+        assert!(handler_dropped_rx2.next().await.unwrap());
     }
 
-    #[test]
-    fn event_done_drops_handler() {
-        hoist::run(async move {
-            let fake_events = Arc::new(FakeEventStruct {});
-            let queue = Queue::new(&fake_events);
-            let (handler, mut handler_dropped_rx) = EventFailer::new();
-            let (handler2, mut handler_dropped_rx2) = EventFailer::new();
-            let ((), ()) = futures::join!(queue.add_handler(handler), queue.add_handler(handler2));
-            queue.push(EventFailerInput::Complete).await.unwrap();
-            assert!(handler_dropped_rx.next().await.unwrap());
-            assert!(handler_dropped_rx2.next().await.unwrap());
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_done_drops_handler() {
+        let fake_events = Arc::new(FakeEventStruct {});
+        let queue = Queue::new(&fake_events);
+        let (handler, mut handler_dropped_rx) = EventFailer::new();
+        let (handler2, mut handler_dropped_rx2) = EventFailer::new();
+        let ((), ()) = futures::join!(queue.add_handler(handler), queue.add_handler(handler2));
+        queue.push(EventFailerInput::Complete).await.unwrap();
+        assert!(handler_dropped_rx.next().await.unwrap());
+        assert!(handler_dropped_rx2.next().await.unwrap());
     }
 }

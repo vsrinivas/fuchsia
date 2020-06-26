@@ -6,9 +6,9 @@ use crate::{
     future_help::{Observable, Observer, PollMutex},
     labels::{NodeId, NodeLinkId},
     link::LinkStatus,
-    runtime::{wait_for, Task},
 };
 use anyhow::Error;
+use fuchsia_async::{Task, Timer};
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use std::{
     collections::HashMap,
@@ -81,7 +81,7 @@ pub async fn run_link_status_updater(
                 .collect();
             log::trace!("[{:?}] new status is {:?}", my_node_id, new_status);
             observable.push(new_status).await;
-            wait_for(Duration::from_millis(300)).await;
+            Timer::new(Duration::from_millis(300)).await;
         }
     });
     while let Some(incoming) = receiver.next().await {

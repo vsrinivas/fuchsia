@@ -295,53 +295,46 @@ mod test {
         ))
     }
 
-    #[test]
-    fn test_host_pipe_start_and_stop_normal_operation() {
-        hoist::run(async move {
-            let target = Arc::new(Target::new("floop"));
-            let mut conn = HostPipeConnection::new_with_cmd(
-                target,
-                start_child_normal_operation,
-                Duration::default(),
-                Duration::default(),
-            )
-            .unwrap();
-            assert!(conn.stop().is_ok());
-            assert!(conn.closed);
-            assert!(conn.stop().is_ok());
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_host_pipe_start_and_stop_normal_operation() {
+        let target = Arc::new(Target::new("floop"));
+        let mut conn = HostPipeConnection::new_with_cmd(
+            target,
+            start_child_normal_operation,
+            Duration::default(),
+            Duration::default(),
+        )
+        .unwrap();
+        assert!(conn.stop().is_ok());
+        assert!(conn.closed);
+        assert!(conn.stop().is_ok());
     }
 
-    #[test]
-    fn test_host_pipe_start_and_stop_internal_failure() {
-        // TODO(awdavies): Verify the error matches.
-        hoist::run(async move {
-            let target = Arc::new(Target::new("boop"));
-            let mut conn = HostPipeConnection::new_with_cmd(
-                target,
-                start_child_internal_failure,
-                Duration::default(),
-                Duration::default(),
-            )
-            .unwrap();
-            assert!(conn.stop().is_err());
-            assert!(conn.closed);
-            assert!(conn.stop().is_ok());
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_host_pipe_start_and_stop_internal_failure() {
+        let target = Arc::new(Target::new("boop"));
+        let mut conn = HostPipeConnection::new_with_cmd(
+            target,
+            start_child_internal_failure,
+            Duration::default(),
+            Duration::default(),
+        )
+        .unwrap();
+        assert!(conn.stop().is_err());
+        assert!(conn.closed);
+        assert!(conn.stop().is_ok());
     }
 
-    #[test]
-    fn test_host_pipe_start_and_stop_cmd_fail() {
-        hoist::run(async move {
-            let target = Arc::new(Target::new("blorp"));
-            let mut conn = HostPipeConnection::new_with_cmd(
-                target,
-                start_child_cmd_fails,
-                Duration::default(),
-                Duration::default(),
-            )
-            .unwrap();
-            assert!(conn.stop().is_ok());
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_host_pipe_start_and_stop_cmd_fail() {
+        let target = Arc::new(Target::new("blorp"));
+        let mut conn = HostPipeConnection::new_with_cmd(
+            target,
+            start_child_cmd_fails,
+            Duration::default(),
+            Duration::default(),
+        )
+        .unwrap();
+        assert!(conn.stop().is_ok());
     }
 }

@@ -62,8 +62,8 @@ impl<'a, T> PollMutex<'a, T> {
 mod poll_mutex_test {
 
     use super::PollMutex;
-    use crate::runtime::{run, wait_for};
     use anyhow::{format_err, Error};
+    use fuchsia_async::Timer;
     use futures::{
         channel::oneshot,
         future::{poll_fn, try_join},
@@ -76,50 +76,46 @@ mod poll_mutex_test {
         time::Duration,
     };
 
-    #[test]
-    fn basics() {
-        run(async move {
-            let mutex = Mutex::new(42);
-            let mut ctx = Context::from_waker(noop_waker_ref());
-            let mut poll_mutex = PollMutex::new(&mutex);
-            assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
-            assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
-            assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
-            let mutex_guard = mutex.lock().await;
-            assert_matches!(poll_mutex.poll(&mut ctx), Poll::Pending);
-            assert_matches!(poll_mutex.poll(&mut ctx), Poll::Pending);
-            drop(mutex_guard);
-            assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
-        })
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn basics() {
+        let mutex = Mutex::new(42);
+        let mut ctx = Context::from_waker(noop_waker_ref());
+        let mut poll_mutex = PollMutex::new(&mutex);
+        assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
+        assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
+        assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
+        let mutex_guard = mutex.lock().await;
+        assert_matches!(poll_mutex.poll(&mut ctx), Poll::Pending);
+        assert_matches!(poll_mutex.poll(&mut ctx), Poll::Pending);
+        drop(mutex_guard);
+        assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
     }
 
-    #[test]
-    fn wakes_up() -> Result<(), Error> {
-        run(async move {
-            let mutex = Mutex::new(42u8);
-            let (tx_saw_first_pending, rx_saw_first_pending) = oneshot::channel();
-            let mut poll_mutex = PollMutex::new(&mutex);
-            let mutex_guard = mutex.lock().await;
-            try_join(
-                async move {
-                    assert_matches!(
-                        poll_mutex.poll(&mut Context::from_waker(noop_waker_ref())),
-                        Poll::Pending
-                    );
-                    tx_saw_first_pending.send(()).map_err(|_| format_err!("cancelled"))?;
-                    assert_eq!(*poll_fn(|ctx| poll_mutex.poll(ctx)).await, 42);
-                    Ok(())
-                },
-                async move {
-                    rx_saw_first_pending.await?;
-                    wait_for(Duration::from_millis(300)).await;
-                    drop(mutex_guard);
-                    Ok(())
-                },
-            )
-            .await
-            .map(|_| ())
-        })
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn wakes_up() -> Result<(), Error> {
+        let mutex = Mutex::new(42u8);
+        let (tx_saw_first_pending, rx_saw_first_pending) = oneshot::channel();
+        let mut poll_mutex = PollMutex::new(&mutex);
+        let mutex_guard = mutex.lock().await;
+        try_join(
+            async move {
+                assert_matches!(
+                    poll_mutex.poll(&mut Context::from_waker(noop_waker_ref())),
+                    Poll::Pending
+                );
+                tx_saw_first_pending.send(()).map_err(|_| format_err!("cancelled"))?;
+                assert_eq!(*poll_fn(|ctx| poll_mutex.poll(ctx)).await, 42);
+                Ok(())
+            },
+            async move {
+                rx_saw_first_pending.await?;
+                Timer::new(Duration::from_millis(300)).await;
+                drop(mutex_guard);
+                Ok(())
+            },
+        )
+        .await
+        .map(|_| ())
     }
 }
 
@@ -308,21 +304,18 @@ impl<T: Clone + std::fmt::Debug> futures::Stream for Observer<T> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::router::test_util::run;
 
-    #[test]
-    fn observable_basics() {
-        run(async move {
-            let observable = Observable::new(1);
-            let mut observer = observable.new_observer();
-            assert_eq!(observer.next().await, Some(1));
-            observable.push(2).await;
-            assert_eq!(observer.next().await, Some(2));
-            observable.push(3).await;
-            observable.push(4).await;
-            assert_eq!(observer.next().await, Some(4));
-            drop(observable);
-            assert_eq!(observer.next().await, None);
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn observable_basics() {
+        let observable = Observable::new(1);
+        let mut observer = observable.new_observer();
+        assert_eq!(observer.next().await, Some(1));
+        observable.push(2).await;
+        assert_eq!(observer.next().await, Some(2));
+        observable.push(3).await;
+        observable.push(4).await;
+        assert_eq!(observer.next().await, Some(4));
+        drop(observable);
+        assert_eq!(observer.next().await, None);
     }
 }

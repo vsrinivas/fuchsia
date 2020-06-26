@@ -173,7 +173,7 @@ impl TestContext {
         let (tx, rx) = std::sync::mpsc::channel();
         let j = std::thread::spawn(move || tx.send(f()));
         let r = (|| -> Result<(), Error> {
-            rx.recv_timeout(Duration::from_secs(10))
+            rx.recv_timeout(Duration::from_secs(120))
                 .context("receiving completion notificiation")?
                 .context("running test code")?;
             j.join()

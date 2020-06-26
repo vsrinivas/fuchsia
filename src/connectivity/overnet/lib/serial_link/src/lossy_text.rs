@@ -189,25 +189,30 @@ mod test {
     use futures::prelude::*;
     use overnet_core::{new_deframer, new_framer};
 
-    #[test]
-    fn simple_frame_lossy_text() {
-        overnet_core::run(futures::stream::iter(1..280).for_each_concurrent(None, |n| async move {
-            let test: Vec<_> = std::iter::repeat(b'a').take(n).collect();
-            let (mut framer_writer, mut framer_reader) =
-                new_framer(LossyText::new(Duration::from_millis(100)), 1024);
-            framer_writer.write(FrameType::Overnet, &test).await.unwrap();
-            let (mut deframer_writer, mut deframer_reader) =
-                new_deframer(LossyText::new(Duration::from_millis(100)));
-            let encoded = framer_reader.read().await.unwrap();
-            println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
-            deframer_writer.write(&encoded).await.unwrap();
-            assert_eq!(deframer_reader.read().await.unwrap(), (Some(FrameType::Overnet), test));
-            let test: Vec<_> = std::iter::repeat(b'b').take(n).collect();
-            framer_writer.write(FrameType::Overnet, &test).await.unwrap();
-            let encoded = framer_reader.read().await.unwrap();
-            println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
-            deframer_writer.write(&encoded).await.unwrap();
-            assert_eq!(deframer_reader.read().await.unwrap(), (Some(FrameType::Overnet), test));
-        }))
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn simple_frame_lossy_text() {
+        // Try to encode and decode a packet of a variety of different packet sizes.
+        // 280 is chosen arbitrarily - it's a short runtime, but hits all of the edge cases we'd
+        // be worried about.
+        futures::stream::iter(1..280)
+            .for_each_concurrent(None, |n| async move {
+                let test: Vec<_> = std::iter::repeat(b'a').take(n).collect();
+                let (mut framer_writer, mut framer_reader) =
+                    new_framer(LossyText::new(Duration::from_millis(100)), 1024);
+                framer_writer.write(FrameType::Overnet, &test).await.unwrap();
+                let (mut deframer_writer, mut deframer_reader) =
+                    new_deframer(LossyText::new(Duration::from_millis(100)));
+                let encoded = framer_reader.read().await.unwrap();
+                println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
+                deframer_writer.write(&encoded).await.unwrap();
+                assert_eq!(deframer_reader.read().await.unwrap(), (Some(FrameType::Overnet), test));
+                let test: Vec<_> = std::iter::repeat(b'b').take(n).collect();
+                framer_writer.write(FrameType::Overnet, &test).await.unwrap();
+                let encoded = framer_reader.read().await.unwrap();
+                println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
+                deframer_writer.write(&encoded).await.unwrap();
+                assert_eq!(deframer_reader.read().await.unwrap(), (Some(FrameType::Overnet), test));
+            })
+            .await
     }
 }

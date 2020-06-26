@@ -143,8 +143,8 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // main
 
-async fn async_main() -> Result<(), Error> {
-    std::env::set_var("RUST_BACKTRACE", "full");
+#[fuchsia_async::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let app: OvernetEcho = argh::from_env();
 
     match app.subcommand {
@@ -156,8 +156,4 @@ async fn async_main() -> Result<(), Error> {
             r
         }
     }
-}
-
-fn main() -> Result<(), Error> {
-    hoist::run(async_main())
 }

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::runtime::blocking;
 use anyhow::Error;
 
 /// Tracks the set of certificates that are needed to secure a Router
@@ -21,15 +20,12 @@ pub(crate) async fn quiche_config_from_security_context(
     let node_cert = sec_ctx.node_cert().to_string();
     let node_private_key = sec_ctx.node_private_key().to_string();
     let root_cert = sec_ctx.root_cert().to_string();
-    blocking(async move {
-        let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)?;
-        config.load_cert_chain_from_pem_file(&node_cert)?;
-        config.load_priv_key_from_pem_file(&node_private_key)?;
-        config.load_verify_locations_from_file(&root_cert)?;
-        config.verify_peer(false);
-        Ok(config)
-    })
-    .await
+    let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)?;
+    config.load_cert_chain_from_pem_file(&node_cert)?;
+    config.load_priv_key_from_pem_file(&node_private_key)?;
+    config.load_verify_locations_from_file(&root_cert)?;
+    config.verify_peer(false);
+    Ok(config)
 }
 
 /// SecurityContext implementation that just lists files to read for the various pieces.

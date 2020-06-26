@@ -6,9 +6,9 @@
 
 use crate::future_help::{LockInner, PollMutex, PollWeakMutex};
 use crate::labels::{Endpoint, NodeId};
-use crate::runtime::{maybe_wait_until, Task};
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::StreamId;
+use fuchsia_async::{Task, Timer};
 use futures::{
     future::{poll_fn, Either},
     lock::{Mutex, MutexLockFuture},
@@ -294,11 +294,17 @@ impl AsyncConnection {
     }
 }
 
+// TODO: merge this loop with the one in quic_link (and maybe the one in ping_tracker too).
 async fn run_timers(inner: Weak<AsyncConnectionInner>) -> Result<(), Error> {
     let mut timeout_lock = PollWeakMutex::new(inner.clone());
+    // TODO: we shouldn't need this: we should just sleep forever if we get a timeout of None.
+    const A_VERY_LONG_TIME: Duration = Duration::from_secs(10000);
+    let timer_for_timeout = move |timeout: Option<Instant>| {
+        Timer::new(timeout.unwrap_or_else(move || Instant::now() + A_VERY_LONG_TIME))
+    };
 
     let mut current_timeout = None;
-    let mut timeout_fut = maybe_wait_until(current_timeout);
+    let mut timeout_fut = timer_for_timeout(current_timeout);
     loop {
         let poll_timeout = |ctx: &mut Context<'_>| -> Poll<Option<Option<Instant>>> {
             timeout_lock.poll_fn(ctx, |ctx, io| io.wait_for_new_timeout(ctx, current_timeout))
@@ -307,11 +313,11 @@ async fn run_timers(inner: Weak<AsyncConnectionInner>) -> Result<(), Error> {
             Either::Left((Some(timeout), _)) => {
                 log::trace!("new timeout: {:?} old timeout: {:?}", timeout, current_timeout);
                 current_timeout = timeout;
-                timeout_fut = maybe_wait_until(current_timeout);
+                timeout_fut = timer_for_timeout(current_timeout);
             }
             Either::Left((None, _)) => return Ok(()),
             Either::Right(_) => {
-                timeout_fut = maybe_wait_until(None);
+                timeout_fut = Timer::new(A_VERY_LONG_TIME);
                 timeout_lock
                     .with_lock(|io| {
                         io.conn.on_timeout();

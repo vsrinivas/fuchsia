@@ -194,15 +194,10 @@ async fn exec_server(args: Command) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // main
 
-async fn async_main() -> Result<(), Error> {
-    std::env::set_var("RUST_BACKTRACE", "full");
-
+#[fuchsia_async::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     match argh::from_env::<TestArgs>().subcommand {
         Subcommand::Server(server_args) => exec_server(server_args.into()).await,
         Subcommand::Client(client_args) => exec_client(client_args.into()).await,
     }
-}
-
-fn main() -> Result<(), Error> {
-    hoist::run(async_main())
 }

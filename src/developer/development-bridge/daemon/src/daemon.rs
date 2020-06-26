@@ -16,8 +16,8 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
+    fuchsia_async::spawn,
     futures::prelude::*,
-    hoist::spawn,
     std::sync::Arc,
     std::time::Duration,
 };
@@ -398,114 +398,101 @@ mod test {
         proxy
     }
 
-    #[test]
-    fn test_echo() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_echo() {
         let echo = "test-echo";
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        hoist::run(async move {
-            let _ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
-            let echoed = daemon_proxy.echo_string(echo).await.unwrap();
-            assert_eq!(echoed, echo);
-        });
+        let _ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
+        let echoed = daemon_proxy.echo_string(echo).await.unwrap();
+        assert_eq!(echoed, echo);
     }
 
-    #[test]
-    fn test_getting_rcs_multiple_targets_mdns_with_no_selector_should_err() -> Result<(), Error> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        hoist::run(async move {
-            let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-            ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-            if let Ok(_) = daemon_proxy.get_remote_control("", remote_server_end).await.unwrap() {
-                panic!("failure expected for multiple targets");
-            }
-        });
-        Ok(())
-    }
-
-    #[test]
-    fn test_getting_rcs_multiple_targets_mdns_with_correct_selector_should_not_err(
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_getting_rcs_multiple_targets_mdns_with_no_selector_should_err(
     ) -> Result<(), Error> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        hoist::run(async move {
-            let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-            ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-            if let Err(_) =
-                daemon_proxy.get_remote_control("foobar", remote_server_end).await.unwrap()
-            {
-                panic!("failure unexpected for multiple targets with a matching selector");
-            }
-        });
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        if let Ok(_) = daemon_proxy.get_remote_control("", remote_server_end).await.unwrap() {
+            panic!("failure expected for multiple targets");
+        }
         Ok(())
     }
 
-    #[test]
-    fn test_getting_rcs_multiple_targets_mdns_with_incorrect_selector_should_err(
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_getting_rcs_multiple_targets_mdns_with_correct_selector_should_not_err(
     ) -> Result<(), Error> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        hoist::run(async move {
-            let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-            ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-            if let Ok(_) =
-                daemon_proxy.get_remote_control("rando", remote_server_end).await.unwrap()
-            {
-                panic!("failure expected for multiple targets with a mismatched selector");
-            }
-        });
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        if let Err(_) = daemon_proxy.get_remote_control("foobar", remote_server_end).await.unwrap()
+        {
+            panic!("failure unexpected for multiple targets with a matching selector");
+        }
         Ok(())
     }
 
-    #[test]
-    fn test_list_targets_mdns_discovery() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_getting_rcs_multiple_targets_mdns_with_incorrect_selector_should_err(
+    ) -> Result<(), Error> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        hoist::run(async move {
-            let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-            ctrl.send_mdns_discovery_event(Target::new("baz")).await;
-            ctrl.send_mdns_discovery_event(Target::new("quux")).await;
-            let res = daemon_proxy.list_targets("").await.unwrap();
-
-            // Daemon server contains one fake target plus these two.
-            assert_eq!(res.len(), 3);
-
-            let has_nodename = |v: &Vec<bridge::Target>, s: &str| {
-                v.iter().any(|x| x.nodename.as_ref().unwrap() == s)
-            };
-            assert!(has_nodename(&res, "foobar"));
-            assert!(has_nodename(&res, "baz"));
-            assert!(has_nodename(&res, "quux"));
-
-            let res = daemon_proxy.list_targets("mlorp").await.unwrap();
-            assert!(!has_nodename(&res, "foobar"));
-            assert!(!has_nodename(&res, "baz"));
-            assert!(!has_nodename(&res, "quux"));
-
-            let res = daemon_proxy.list_targets("foobar").await.unwrap();
-            assert!(has_nodename(&res, "foobar"));
-            assert!(!has_nodename(&res, "baz"));
-            assert!(!has_nodename(&res, "quux"));
-
-            let res = daemon_proxy.list_targets("baz").await.unwrap();
-            assert!(!has_nodename(&res, "foobar"));
-            assert!(has_nodename(&res, "baz"));
-            assert!(!has_nodename(&res, "quux"));
-
-            let res = daemon_proxy.list_targets("quux").await.unwrap();
-            assert!(!has_nodename(&res, "foobar"));
-            assert!(!has_nodename(&res, "baz"));
-            assert!(has_nodename(&res, "quux"));
-        });
+        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        if let Ok(_) = daemon_proxy.get_remote_control("rando", remote_server_end).await.unwrap() {
+            panic!("failure expected for multiple targets with a mismatched selector");
+        }
         Ok(())
     }
 
-    #[test]
-    fn test_quit() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_targets_mdns_discovery() -> Result<(), Error> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("baz")).await;
+        ctrl.send_mdns_discovery_event(Target::new("quux")).await;
+        let res = daemon_proxy.list_targets("").await.unwrap();
+
+        // Daemon server contains one fake target plus these two.
+        assert_eq!(res.len(), 3);
+
+        let has_nodename =
+            |v: &Vec<bridge::Target>, s: &str| v.iter().any(|x| x.nodename.as_ref().unwrap() == s);
+        assert!(has_nodename(&res, "foobar"));
+        assert!(has_nodename(&res, "baz"));
+        assert!(has_nodename(&res, "quux"));
+
+        let res = daemon_proxy.list_targets("mlorp").await.unwrap();
+        assert!(!has_nodename(&res, "foobar"));
+        assert!(!has_nodename(&res, "baz"));
+        assert!(!has_nodename(&res, "quux"));
+
+        let res = daemon_proxy.list_targets("foobar").await.unwrap();
+        assert!(has_nodename(&res, "foobar"));
+        assert!(!has_nodename(&res, "baz"));
+        assert!(!has_nodename(&res, "quux"));
+
+        let res = daemon_proxy.list_targets("baz").await.unwrap();
+        assert!(!has_nodename(&res, "foobar"));
+        assert!(has_nodename(&res, "baz"));
+        assert!(!has_nodename(&res, "quux"));
+
+        let res = daemon_proxy.list_targets("quux").await.unwrap();
+        assert!(!has_nodename(&res, "foobar"));
+        assert!(!has_nodename(&res, "baz"));
+        assert!(has_nodename(&res, "quux"));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_quit() -> Result<(), Error> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 
@@ -513,14 +500,12 @@ mod test {
             std::fs::remove_file(SOCKET).unwrap();
         }
 
-        hoist::run(async move {
-            let mut _ctrl = spawn_daemon_server_with_fake_target("florp", stream).await;
-            let r = daemon_proxy.quit().await.unwrap();
+        let mut _ctrl = spawn_daemon_server_with_fake_target("florp", stream).await;
+        let r = daemon_proxy.quit().await.unwrap();
 
-            assert!(r);
+        assert!(r);
 
-            assert!(!std::path::Path::new(SOCKET).is_file());
-        });
+        assert!(!std::path::Path::new(SOCKET).is_file());
 
         Ok(())
     }

@@ -3,64 +3,41 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::{
         DiagnosticMarker, DiagnosticProxy, LinkDiagnosticInfo, NodeDescription, NodeId,
         PeerConnectionDiagnosticInfo, ProbeResult, ProbeSelector,
     },
-    futures::{
-        future::{select, Either},
-        prelude::*,
-    },
+    fuchsia_async::TimeoutExt,
+    futures::prelude::*,
     std::{collections::HashMap, time::Duration},
     structopt::StructOpt,
 };
 
-const PROBE_TIMEOUT: Duration = Duration::from_millis(500);
+const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 const LIST_PEERS_TIMEOUT: Duration = Duration::from_millis(500);
-
-async fn timeout_after<R>(
-    fut: impl Unpin + Future<Output = Result<R, Error>>,
-    dur: Duration,
-    timeout_result: Error,
-) -> Result<R, Error> {
-    let (tx, rx) = futures::channel::oneshot::channel();
-    std::thread::spawn(move || {
-        std::thread::sleep(dur);
-        let _ = tx.send(timeout_result);
-    });
-    match select(fut, rx).await {
-        Either::Left((r, _)) => r,
-        Either::Right((Ok(r), _)) => Err(r),
-        Either::Right((_, _)) => Err(anyhow::format_err!("Canceled timeout")),
-    }
-}
 
 async fn probe_node(
     mut node_id: NodeId,
     probe_bits: ProbeSelector,
 ) -> Result<(NodeId, ProbeResult), Error> {
-    timeout_after(
-        async move {
-            let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            hoist::connect_as_service_consumer()?.connect_to_service(
-                &mut node_id,
-                DiagnosticMarker::NAME,
-                s,
-            )?;
-            let probe_result = DiagnosticProxy::new(
-                fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?,
-            )
-            .probe(probe_bits)
-            .await?;
-            Ok((node_id, probe_result))
-        }
-        .boxed(),
-        PROBE_TIMEOUT,
-        anyhow::format_err!("Probe timed out"),
-    )
+    async move {
+        let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
+        hoist::connect_as_service_consumer()?.connect_to_service(
+            &mut node_id,
+            DiagnosticMarker::NAME,
+            s,
+        )?;
+        let probe_result = DiagnosticProxy::new(
+            fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?,
+        )
+        .probe(probe_bits)
+        .await?;
+        Ok((node_id, probe_result))
+    }
+    .on_timeout(PROBE_TIMEOUT, || Err(format_err!("probe {:?} timed out", node_id)))
     .await
 }
 
@@ -71,12 +48,11 @@ async fn list_peers() -> Result<(NodeId, Vec<NodeId>), Error> {
     let mut peers = svc.list_peers().await?;
     // Now loop until we see an error
     loop {
-        match timeout_after(
-            async { Ok(svc.list_peers().await?) }.boxed(),
-            LIST_PEERS_TIMEOUT,
-            anyhow::format_err!("Timeout"),
-        )
-        .await
+        match svc
+            .list_peers()
+            .map_err(Into::into)
+            .on_timeout(LIST_PEERS_TIMEOUT, || Err(format_err!("list peers timed out")))
+            .await
         {
             Ok(r) => peers = r,
             Err(_) => break,
@@ -110,7 +86,15 @@ async fn probe(
     let (own_id, peers) = list_peers().await?;
     let mut futures: futures::stream::FuturesUnordered<_> =
         peers.into_iter().map(|peer| probe_node(peer, probe_bits)).collect();
-    while let Some((node_id, result)) = futures.try_next().await? {
+    loop {
+        let (node_id, result) = match futures.try_next().await {
+            Ok(Some((node_id, result))) => (node_id, result),
+            Ok(None) => break,
+            Err(e) => {
+                log::warn!("Error probing node: {:?}", e);
+                continue;
+            }
+        };
         if let Some(node_description) = result.node_description {
             if let Some(ref mut descriptions) = descriptions {
                 descriptions.insert(node_id, node_description);

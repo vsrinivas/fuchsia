@@ -138,7 +138,7 @@ impl TestCaseProcessor {
         let f = Self::process_run_event(test_case_name, listener, log_fut, sender);
 
         let (remote, remote_handle) = f.remote_handle();
-        hoist::spawn(remote);
+        fuchsia_async::spawn(remote);
 
         TestCaseProcessor { f: Some(remote_handle.boxed()) }
     }
@@ -205,7 +205,7 @@ impl TestCaseProcessor {
         };
 
         let (remote, remote_handle) = f.remote_handle();
-        hoist::spawn(remote);
+        fuchsia_async::spawn(remote);
         Some(remote_handle.boxed())
     }
 
@@ -403,49 +403,46 @@ mod tests {
     use super::*;
     use fidl::HandleBased;
 
-    #[test]
-    fn collect_logs() {
-        hoist::run(async move {
-            let (sock_server, sock_client) = fidl::Socket::create(fidl::SocketOpts::STREAM)
-                .expect("Failed while creating socket");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn collect_logs() {
+        let (sock_server, sock_client) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("Failed while creating socket");
 
-            let name = "test_name";
+        let name = "test_name";
 
-            let (sender, mut recv) = mpsc::channel(1);
+        let (sender, mut recv) = mpsc::channel(1);
 
-            let fut =
-                TestCaseProcessor::collect_and_send_logs(name.to_string(), sock_client, sender)
-                    .expect("future should not be None");
+        let fut = TestCaseProcessor::collect_and_send_logs(name.to_string(), sock_client, sender)
+            .expect("future should not be None");
 
-            sock_server.write(b"test message 1").expect("Can't write msg to socket");
-            sock_server.write(b"test message 2").expect("Can't write msg to socket");
-            sock_server.write(b"test message 3").expect("Can't write msg to socket");
+        sock_server.write(b"test message 1").expect("Can't write msg to socket");
+        sock_server.write(b"test message 2").expect("Can't write msg to socket");
+        sock_server.write(b"test message 3").expect("Can't write msg to socket");
 
-            let mut msg = recv.next().await;
+        let mut msg = recv.next().await;
 
-            assert_eq!(
-                msg,
-                Some(TestEvent::log_message(&name, "test message 1test message 2test message 3"))
-            );
+        assert_eq!(
+            msg,
+            Some(TestEvent::log_message(&name, "test message 1test message 2test message 3"))
+        );
 
-            // can receive messages multiple times
-            sock_server.write(b"test message 4").expect("Can't write msg to socket");
-            msg = recv.next().await;
+        // can receive messages multiple times
+        sock_server.write(b"test message 4").expect("Can't write msg to socket");
+        msg = recv.next().await;
 
-            assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 4")));
+        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 4")));
 
-            // messages can be read after socket server is closed.
-            sock_server.write(b"test message 5").expect("Can't write msg to socket");
-            sock_server.into_handle(); // this will drop this handle and close it.
-            fut.await.expect("log collection should not fail");
+        // messages can be read after socket server is closed.
+        sock_server.write(b"test message 5").expect("Can't write msg to socket");
+        sock_server.into_handle(); // this will drop this handle and close it.
+        fut.await.expect("log collection should not fail");
 
-            msg = recv.next().await;
+        msg = recv.next().await;
 
-            assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 5")));
+        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 5")));
 
-            // socket was closed, this should return None
-            msg = recv.next().await;
-            assert_eq!(msg, None);
-        });
+        // socket was closed, this should return None
+        msg = recv.next().await;
+        assert_eq!(msg, None);
     }
 }

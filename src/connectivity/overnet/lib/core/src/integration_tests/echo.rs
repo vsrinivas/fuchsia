@@ -9,10 +9,7 @@
 
 use {
     super::Overnet,
-    crate::{
-        router::test_util::{run, run_repeatedly},
-        Task,
-    },
+    crate::router::test_util::{run, run_repeatedly},
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_examples_echo as echo,
@@ -20,6 +17,7 @@ use {
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
         ServicePublisherProxyInterface,
     },
+    fuchsia_async::Task,
     futures::prelude::*,
     std::sync::Arc,
 };

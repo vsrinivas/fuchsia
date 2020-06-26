@@ -116,7 +116,7 @@ core/test
     fn setup_fake_remote_server() -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     RemoteControlRequest::Select { selector: _, responder } => {
@@ -136,30 +136,24 @@ core/test
         proxy
     }
 
-    #[test]
-    fn test_select_invalid_selector() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_select_invalid_selector() -> Result<(), Error> {
         let mut output = String::new();
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_server();
-            let _response =
-                select(remote_proxy, writer, "a:b:").await.expect("select should not fail");
-            assert!(output.contains(SELECTOR_FORMAT_HELP));
-        });
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let remote_proxy = setup_fake_remote_server();
+        let _response = select(remote_proxy, writer, "a:b:").await.expect("select should not fail");
+        assert!(output.contains(SELECTOR_FORMAT_HELP));
         Ok(())
     }
 
-    #[test]
-    fn test_select_formats_rcs_response() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_select_formats_rcs_response() -> Result<(), Error> {
         let mut output = String::new();
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_server();
-            let _response = select(remote_proxy, writer, "a:valid:selector")
-                .await
-                .expect("select should not fail");
-            assert_eq!(output, DEFAULT_MATCH_STR)
-        });
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let remote_proxy = setup_fake_remote_server();
+        let _response =
+            select(remote_proxy, writer, "a:valid:selector").await.expect("select should not fail");
+        assert_eq!(output, DEFAULT_MATCH_STR);
         Ok(())
     }
 

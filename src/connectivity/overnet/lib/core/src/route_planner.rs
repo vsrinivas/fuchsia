@@ -7,9 +7,9 @@ use crate::{
     labels::{NodeId, NodeLinkId},
     link::LinkStatus,
     router::Router,
-    runtime::wait_for,
 };
 use anyhow::{bail, format_err, Error};
+use fuchsia_async::Timer;
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use std::{
     collections::{BTreeMap, BinaryHeap},
@@ -241,7 +241,7 @@ pub(crate) async fn run_route_planner(
                 let node_table = poll_fn(&mut poll_version).await;
                 get_router()?.update_routes(node_table.build_routes(), "new_routes").await?;
                 drop(node_table);
-                wait_for(Duration::from_millis(100)).await;
+                Timer::new(Duration::from_millis(100)).await;
             }
         },
     )

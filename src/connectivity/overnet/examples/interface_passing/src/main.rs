@@ -139,7 +139,8 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // main
 
-async fn async_main() -> Result<(), Error> {
+#[fuchsia_async::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let args = app().get_matches();
 
     match args.subcommand() {
@@ -151,8 +152,4 @@ async fn async_main() -> Result<(), Error> {
         }
         (_, _) => unimplemented!(),
     }
-}
-
-fn main() -> Result<(), Error> {
-    hoist::run(async_main())
 }

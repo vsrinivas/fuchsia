@@ -81,7 +81,7 @@ fn get_log_name(subcommand: &Subcommand) -> &'static str {
     }
 }
 
-async fn async_main() -> Result<(), Error> {
+async fn run() -> Result<(), Error> {
     let app: Ffx = argh::from_env();
     setup_logger(get_log_name(&app.subcommand)).await;
     match app.subcommand {
@@ -115,17 +115,16 @@ async fn async_main() -> Result<(), Error> {
     }
 }
 
-fn main() {
-    hoist::run(async move {
-        match async_main().await {
-            Ok(_) => std::process::exit(0),
-            Err(err) => {
-                eprintln!("BUG: An internal command error occurred.\nError:\n\t{}\nCause:", err);
-                err.chain().skip(1).for_each(|cause| eprintln!("\t{}", cause));
-                std::process::exit(1);
-            }
+#[fuchsia_async::run_singlethreaded]
+async fn main() {
+    match run().await {
+        Ok(_) => std::process::exit(0),
+        Err(err) => {
+            eprintln!("BUG: An internal command error occurred.\nError:\n\t{}\nCause:", err);
+            err.chain().skip(1).for_each(|cause| eprintln!("\t{}", cause));
+            std::process::exit(1);
         }
-    })
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -25,6 +25,7 @@ rustc_binary("bin") {
     "//src/connectivity/overnet/examples/socket_passing/service:socket_passing-rustc",
     "//src/connectivity/overnet/lib/hoist",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",

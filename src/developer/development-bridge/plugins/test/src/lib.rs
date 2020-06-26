@@ -222,7 +222,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<HarnessMarker>().unwrap();
 
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     HarnessRequest::LaunchSuite {
@@ -244,7 +244,7 @@ mod test {
     }
 
     fn spawn_fake_suite_server(mut stream: SuiteRequestStream, num_tests: usize) {
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     SuiteRequest::GetTests { iterator, control_handle: _ } => {
@@ -288,7 +288,7 @@ mod test {
 
     fn spawn_fake_iterator_server(values: Vec<String>, mut stream: CaseIteratorRequestStream) {
         let mut iter = values.into_iter().map(|name| Case { name: Some(name) });
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(CaseIteratorRequest::GetNext { responder })) = stream.try_next().await
             {
                 responder.send(&mut iter.by_ref().take(50)).unwrap();
@@ -296,70 +296,63 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_list_tests() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_tests() {
         let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/dummy-package#meta/echo_test_realm.cm".to_string();
         let num_tests = 50;
         let test = Regex::new(r"Test [0-9+]").expect("test regex");
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
-            let _response = get_tests(harness_proxy, writer, &url)
-                .await
-                .expect("getting tests should not fail");
-            assert_eq!(num_tests, test.find_iter(&output).count());
-        });
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
+        let _response =
+            get_tests(harness_proxy, writer, &url).await.expect("getting tests should not fail");
+        assert_eq!(num_tests, test.find_iter(&output).count());
     }
 
-    fn test_run(
+    async fn test_run(
         num_tests: usize,
         expected_run: usize,
         selector: Option<String>,
     ) -> Result<(), Error> {
         let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/dummy-package#meta/echo_test_realm.cm".to_string();
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
-            let _response = run_tests(harness_proxy, writer, &url, &selector)
-                .await
-                .expect("run tests should not fail");
-            let test_running = Regex::new(r"RUNNING").expect("test regex");
-            assert_eq!(expected_run, test_running.find_iter(&output).count());
-            let test_passed = Regex::new(r"PASSED").expect("test regex");
-            assert_eq!(expected_run, test_passed.find_iter(&output).count());
-        });
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
+        let _response = run_tests(harness_proxy, writer, &url, &selector)
+            .await
+            .expect("run tests should not fail");
+        let test_running = Regex::new(r"RUNNING").expect("test regex");
+        assert_eq!(expected_run, test_running.find_iter(&output).count());
+        let test_passed = Regex::new(r"PASSED").expect("test regex");
+        assert_eq!(expected_run, test_passed.find_iter(&output).count());
         Ok(())
     }
 
-    #[test]
-    fn test_run_tests() -> Result<(), Error> {
-        test_run(100, 100, None)
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_tests() -> Result<(), Error> {
+        test_run(100, 100, None).await
     }
 
-    #[test]
-    fn test_run_tests_with_selector() -> Result<(), Error> {
-        test_run(100, 19, Some("6".to_string()))
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_tests_with_selector() -> Result<(), Error> {
+        test_run(100, 19, Some("6".to_string())).await
     }
 
-    #[test]
-    fn test_run_tests_with_unmatched_selector() -> Result<(), Error> {
-        test_run(100, 0, Some("Echo".to_string()))
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_tests_with_unmatched_selector() -> Result<(), Error> {
+        test_run(100, 0, Some("Echo".to_string())).await
     }
 
-    #[test]
-    fn test_run_tests_with_invalid_selector() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_tests_with_invalid_selector() -> Result<(), Error> {
         let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/dummy-package#meta/echo_test_realm.cm".to_string();
         let selector = Some("[".to_string());
         let num_tests = 1;
-        hoist::run(async move {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
-            let response = run_tests(harness_proxy, &mut writer, &url, &selector).await;
-            assert!(response.is_err());
-        });
+        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
+        let response = run_tests(harness_proxy, &mut writer, &url, &selector).await;
+        assert!(response.is_err());
         Ok(())
     }
 }

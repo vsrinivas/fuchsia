@@ -14,11 +14,12 @@ mod triangle;
 use {
     crate::{
         log_errors, new_quic_link, Endpoint, LinkReceiver, LinkSender, ListPeersContext, NodeId,
-        QuicReceiver, Router, RouterOptions, SecurityContext, Task,
+        QuicReceiver, Router, RouterOptions, SecurityContext,
     },
     anyhow::Error,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
+    fuchsia_async::Task,
     futures::prelude::*,
     parking_lot::Mutex,
     std::collections::VecDeque,
@@ -69,7 +70,8 @@ impl std::fmt::Debug for dyn NewLinkRunner {
 pub struct Overnet {
     tx: Mutex<futures::channel::mpsc::UnboundedSender<OvernetCommand>>,
     node_id: NodeId,
-    _task: Task,
+    // Main loop for the Overnet instance - once the object is dropped, the loop can stop.
+    _task: Task<()>,
 }
 
 pub fn test_security_context() -> impl SecurityContext {

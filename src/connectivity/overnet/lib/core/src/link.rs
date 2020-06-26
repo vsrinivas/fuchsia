@@ -12,10 +12,10 @@ use crate::{
     peer::Peer,
     ping_tracker::{PingSender, PingTracker},
     router::Router,
-    runtime::Task,
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::{LinkDiagnosticInfo, LinkMetrics};
+use fuchsia_async::Task;
 use futures::{
     future::poll_fn,
     lock::{Mutex, MutexGuard},
@@ -75,7 +75,8 @@ struct LinkStats {
 struct LinkRunner {
     ping_tracker: PingTracker,
     router: Arc<Router>,
-    _task: Task,
+    // Maintenance tasks for the link - once the link is dropped, these should stop.
+    _task: Task<()>,
 }
 
 /// Routing data gor a link

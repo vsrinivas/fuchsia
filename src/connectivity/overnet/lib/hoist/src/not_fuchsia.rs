@@ -13,10 +13,11 @@ use {
         ServicePublisherMarker, ServicePublisherRequest,
     },
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
+    fuchsia_async::{Task, Timer},
     futures::prelude::*,
     overnet_core::{
-        log_errors, new_deframer, new_framer, wait_for, DeframerWriter, FrameType, FramerReader,
-        ListPeersContext, LosslessBinary, Router, RouterOptions, SecurityContext, Task,
+        log_errors, new_deframer, new_framer, DeframerWriter, FrameType, FramerReader,
+        ListPeersContext, LosslessBinary, Router, RouterOptions, SecurityContext,
     },
     std::{
         sync::atomic::{AtomicU64, Ordering},
@@ -33,20 +34,12 @@ pub const ASCENDD_CLIENT_CONNECTION_STRING: &str = "ASCENDD_CLIENT_CONNECTION_ST
 pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "ASCENDD_SERVER_CONNECTION_STRING";
 pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
 
-pub fn run<R: Send + 'static>(f: impl Future<Output = R> + Send + 'static) -> R {
-    overnet_core::run(f)
-}
-
-pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
-    Task::spawn(f).detach()
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings
 
 struct Overnet {
     proxy: HostOvernetProxy,
-    _task: Task,
+    _task: Task<()>,
 }
 
 fn start_overnet() -> Result<Overnet, Error> {
@@ -196,7 +189,7 @@ where
             }
             Err(e) => {
                 log::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
-                wait_for(backoff).await;
+                Timer::new(backoff).await;
                 backoff = std::cmp::min(backoff * 2, max_backoff);
             }
         }

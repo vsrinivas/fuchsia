@@ -100,7 +100,7 @@ mod test {
     };
 
     fn setup_fake_daemon_service(mut stream: DaemonRequestStream) {
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::EchoString { value, responder } => {
@@ -118,7 +118,7 @@ mod test {
     fn setup_fake_remote_server(connect_chan: bool) -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
@@ -144,45 +144,36 @@ mod test {
         proxy
     }
 
-    #[test]
-    fn test_knock_invalid_selector() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_knock_invalid_selector() -> Result<(), Error> {
         let mut output = String::new();
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_server(false);
-            let _response =
-                knock(remote_proxy, writer, "a:b:").await.expect("knock should not fail");
-            assert!(output.contains(SELECTOR_FORMAT_HELP));
-        });
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let remote_proxy = setup_fake_remote_server(false);
+        let _response = knock(remote_proxy, writer, "a:b:").await.expect("knock should not fail");
+        assert!(output.contains(SELECTOR_FORMAT_HELP));
         Ok(())
     }
 
-    #[test]
-    fn test_knock_working_service() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_knock_working_service() -> Result<(), Error> {
         let mut output = String::new();
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_server(true);
-            let _response =
-                knock(remote_proxy, writer, "*:*:*").await.expect("knock should not fail");
-            assert!(output.contains("Success"));
-            assert!(output.contains("core/test:out:fuchsia.myservice"));
-        });
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let remote_proxy = setup_fake_remote_server(true);
+        let _response = knock(remote_proxy, writer, "*:*:*").await.expect("knock should not fail");
+        assert!(output.contains("Success"));
+        assert!(output.contains("core/test:out:fuchsia.myservice"));
         Ok(())
     }
 
-    #[test]
-    fn test_knock_no_service_connected() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_knock_no_service_connected() -> Result<(), Error> {
         let mut output = String::new();
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_server(false);
-            let _response =
-                knock(remote_proxy, writer, "*:*:*").await.expect("knock should not fail");
-            assert!(!output.contains("Success"));
-            assert!(output.contains("Failure"));
-            assert!(output.contains("core/test:out:fuchsia.myservice"));
-        });
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let remote_proxy = setup_fake_remote_server(false);
+        let _response = knock(remote_proxy, writer, "*:*:*").await.expect("knock should not fail");
+        assert!(!output.contains("Success"));
+        assert!(output.contains("Failure"));
+        assert!(output.contains("core/test:out:fuchsia.myservice"));
         Ok(())
     }
 }

@@ -160,46 +160,37 @@ mod test {
         (Instant::now(), setup_build_dirs(tests), RwLock::new(HashMap::new()))
     }
 
-    #[test]
-    fn test_config_one_at_a_time() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_config_one_at_a_time() {
         let tests = 10;
         let (now, build_dirs, cache) = setup(tests);
-        hoist::run(async move {
-            for x in 0..tests {
-                load_and_test(now, x, x + 1, &build_dirs[x], &cache).await;
-            }
-        });
+        for x in 0..tests {
+            load_and_test(now, x, x + 1, &build_dirs[x], &cache).await;
+        }
     }
 
-    #[test]
-    fn test_config_many_at_a_time() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_config_many_at_a_time() {
         let tests = 25;
         let (now, build_dirs, cache) = setup(tests);
-        hoist::run(async move {
-            let futures = build_dirs.iter().map(|x| load(now, &x, &cache));
-            let result = join_all(futures).await;
-            assert_eq!(tests, result.len());
-            {
-                let read_guard = cache.read().await;
-                assert_eq!(tests, (*read_guard).len());
-            }
-        });
+        let futures = build_dirs.iter().map(|x| load(now, &x, &cache));
+        let result = join_all(futures).await;
+        assert_eq!(tests, result.len());
+        let read_guard = cache.read().await;
+        assert_eq!(tests, (*read_guard).len());
     }
 
-    #[test]
-    fn test_config_timeout() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_config_timeout() {
         let tests = 1;
         let (now, build_dirs, cache) = setup(tests);
-        hoist::run(async move {
-            load_and_test(now, 0, 1, &build_dirs[0], &cache).await;
-            let timeout =
-                now.checked_add(CONFIG_CACHE_TIMEOUT).expect("timeout should not overflow");
-            let after_timeout = timeout
-                .checked_add(Duration::from_millis(1))
-                .expect("after timeout should not overflow");
-            load_and_test(timeout, 1, 1, &build_dirs[0], &cache).await;
-            load_and_test(after_timeout, 1, 1, &build_dirs[0], &cache).await;
-        });
+        load_and_test(now, 0, 1, &build_dirs[0], &cache).await;
+        let timeout = now.checked_add(CONFIG_CACHE_TIMEOUT).expect("timeout should not overflow");
+        let after_timeout = timeout
+            .checked_add(Duration::from_millis(1))
+            .expect("after timeout should not overflow");
+        load_and_test(timeout, 1, 1, &build_dirs[0], &cache).await;
+        load_and_test(after_timeout, 1, 1, &build_dirs[0], &cache).await;
     }
 
     #[test]

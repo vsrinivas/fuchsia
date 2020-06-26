@@ -12,6 +12,7 @@ ffx_plugin("ffx_run_component") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/lib/selectors",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:async-std",
     "//third_party/rust_crates:signal-hook",
   ]

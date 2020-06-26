@@ -12,6 +12,7 @@ ffx_plugin("ffx_test") {
   deps = [
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/fuchsia-async",
     "//src/lib/test_executor/rust:test_executor",
     "//third_party/rust_crates:regex",
   ]

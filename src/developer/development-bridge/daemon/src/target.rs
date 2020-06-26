@@ -18,6 +18,7 @@ use {
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
+    fuchsia_async::Timer,
     futures::future,
     futures::lock::{Mutex, MutexGuard},
     futures::prelude::*,
@@ -27,7 +28,7 @@ use {
     std::net::{IpAddr, SocketAddr},
     std::sync::atomic::{AtomicBool, Ordering},
     std::sync::Arc,
-    std::time::{Duration, Instant},
+    std::time::Duration,
 };
 
 #[async_trait]
@@ -239,7 +240,7 @@ impl Target {
                 Some(_) => return Ok(state_guard),
                 None => {
                     std::mem::drop(state_guard);
-                    overnet_core::wait_until(Instant::now() + retry_delay).await;
+                    Timer::new(retry_delay).await;
                 }
             }
         }
@@ -637,44 +638,40 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_target_collection_insert_new() {
-        hoist::run(async move {
-            let tc = TargetCollection::new();
-            let nodename = String::from("what");
-            let t = Target::new_with_time(&nodename, fake_now());
-            tc.merge_insert(t.clone()).await;
-            assert_eq!(&*tc.get(nodename.clone().into()).await.unwrap(), &t.clone());
-            match tc.get("oihaoih".into()).await {
-                Some(_) => panic!("string lookup should return Nobne"),
-                _ => (),
-            }
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_collection_insert_new() {
+        let tc = TargetCollection::new();
+        let nodename = String::from("what");
+        let t = Target::new_with_time(&nodename, fake_now());
+        tc.merge_insert(t.clone()).await;
+        assert_eq!(&*tc.get(nodename.clone().into()).await.unwrap(), &t.clone());
+        match tc.get("oihaoih".into()).await {
+            Some(_) => panic!("string lookup should return Nobne"),
+            _ => (),
+        }
     }
 
-    #[test]
-    fn test_target_collection_merge() {
-        hoist::run(async move {
-            let tc = TargetCollection::new();
-            let nodename = String::from("bananas");
-            let t1 = Target::new_with_time(&nodename, fake_now());
-            let t2 = Target::new_with_time(&nodename, fake_elapsed());
-            let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-            let a2 = IpAddr::V6(Ipv6Addr::new(
-                0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
-            ));
-            t1.addrs_insert((a1.clone(), 1).into()).await;
-            t2.addrs_insert((a2.clone(), 1).into()).await;
-            tc.merge_insert(t2.clone()).await;
-            tc.merge_insert(t1.clone()).await;
-            let merged_target = tc.get(nodename.clone().into()).await.unwrap();
-            assert_ne!(&*merged_target, &t1);
-            assert_ne!(&*merged_target, &t2);
-            assert_eq!(merged_target.addrs().await.len(), 2);
-            assert_eq!(*merged_target.last_response.read().await, fake_elapsed());
-            assert!(merged_target.addrs().await.contains(&(a1, 1).into()));
-            assert!(merged_target.addrs().await.contains(&(a2, 1).into()));
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_collection_merge() {
+        let tc = TargetCollection::new();
+        let nodename = String::from("bananas");
+        let t1 = Target::new_with_time(&nodename, fake_now());
+        let t2 = Target::new_with_time(&nodename, fake_elapsed());
+        let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let a2 = IpAddr::V6(Ipv6Addr::new(
+            0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
+        ));
+        t1.addrs_insert((a1.clone(), 1).into()).await;
+        t2.addrs_insert((a2.clone(), 1).into()).await;
+        tc.merge_insert(t2.clone()).await;
+        tc.merge_insert(t1.clone()).await;
+        let merged_target = tc.get(nodename.clone().into()).await.unwrap();
+        assert_ne!(&*merged_target, &t1);
+        assert_ne!(&*merged_target, &t2);
+        assert_eq!(merged_target.addrs().await.len(), 2);
+        assert_eq!(*merged_target.last_response.read().await, fake_elapsed());
+        assert!(merged_target.addrs().await.contains(&(a1, 1).into()));
+        assert!(merged_target.addrs().await.contains(&(a2, 1).into()));
     }
 
     fn setup_fake_remote_control_service(
@@ -684,7 +681,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     rcs::RemoteControlRequest::IdentifyHost { responder } => {
@@ -720,189 +717,162 @@ mod test {
         proxy
     }
 
-    #[test]
-    fn test_target_from_rcs_connection_internal_err() {
-        // TODO(awdavies): Do some form of PartialEq implementation for
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_from_rcs_connection_internal_err() {
         // the RCSConnectionError enum to avoid the nested matches.
-        hoist::run(async move {
-            let conn = RCSConnection::new_with_proxy(
-                setup_fake_remote_control_service(true, "foo".to_owned()),
-                &NodeId { id: 123 },
-            );
-            match Target::from_rcs_connection(conn).await {
-                Ok(_) => assert!(false),
-                Err(e) => match e {
-                    RCSConnectionError::RemoteControlError(rce) => match rce {
-                        rcs::IdentifyHostError::ListInterfacesFailed => (),
-                        _ => assert!(false),
-                    },
+        let conn = RCSConnection::new_with_proxy(
+            setup_fake_remote_control_service(true, "foo".to_owned()),
+            &NodeId { id: 123 },
+        );
+        match Target::from_rcs_connection(conn).await {
+            Ok(_) => assert!(false),
+            Err(e) => match e {
+                RCSConnectionError::RemoteControlError(rce) => match rce {
+                    rcs::IdentifyHostError::ListInterfacesFailed => (),
                     _ => assert!(false),
                 },
-            }
-        });
+                _ => assert!(false),
+            },
+        }
     }
 
-    #[test]
-    fn test_target_from_rcs_connection_nodename_none() {
-        hoist::run(async move {
-            let conn = RCSConnection::new_with_proxy(
-                setup_fake_remote_control_service(false, "".to_owned()),
-                &NodeId { id: 123456 },
-            );
-            match Target::from_rcs_connection(conn).await {
-                Ok(_) => assert!(false),
-                Err(e) => match e {
-                    RCSConnectionError::TargetError(_) => (),
-                    _ => assert!(false),
-                },
-            }
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_from_rcs_connection_nodename_none() {
+        let conn = RCSConnection::new_with_proxy(
+            setup_fake_remote_control_service(false, "".to_owned()),
+            &NodeId { id: 123456 },
+        );
+        match Target::from_rcs_connection(conn).await {
+            Ok(_) => assert!(false),
+            Err(e) => match e {
+                RCSConnectionError::TargetError(_) => (),
+                _ => assert!(false),
+            },
+        }
     }
 
-    #[test]
-    fn test_target_from_rcs_connection_no_err() {
-        hoist::run(async move {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_from_rcs_connection_no_err() {
+        let conn = RCSConnection::new_with_proxy(
+            setup_fake_remote_control_service(false, "foo".to_owned()),
+            &NodeId { id: 1234 },
+        );
+        match Target::from_rcs_connection(conn).await {
+            Ok(t) => {
+                assert_eq!(t.nodename, "foo");
+                assert_eq!(t.state.lock().await.rcs.as_ref().unwrap().overnet_id.id, 1234u64);
+                // For now there shouldn't be any addresses put in here, as
+                // there's not a consistent way to convert them yet.
+                assert_eq!(t.addrs().await.len(), 0);
+            }
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_query_matches_nodename() {
+        let query = TargetQuery::from("foo");
+        let target = Arc::new(Target::new("foo"));
+        assert!(query.matches(&target).await);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_by_overnet_id() {
+        const ID: u64 = 12345;
+        let conn = RCSConnection::new_with_proxy(
+            setup_fake_remote_control_service(false, "foo".to_owned()),
+            &NodeId { id: ID },
+        );
+        let t = Target::from_rcs_connection(conn).await.unwrap();
+        let tc = TargetCollection::new();
+        tc.merge_insert(t.clone()).await;
+        assert_eq!(*tc.get(ID.into()).await.unwrap(), t);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_by_addr() {
+        let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
+        let t = Target::new("foo");
+        t.addrs_insert(addr.clone()).await;
+        let tc = TargetCollection::new();
+        tc.merge_insert(t.clone()).await;
+        assert_eq!(*tc.get(addr.into()).await.unwrap(), t);
+        assert_eq!(*tc.get("192.168.0.1".into()).await.unwrap(), t);
+        assert!(tc.get("fe80::dead:beef:beef:beef".into()).await.is_none());
+
+        let addr: TargetAddr =
+            (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
+        let t = Target::new("fooberdoober");
+        t.addrs_insert(addr.clone()).await;
+        tc.merge_insert(t.clone()).await;
+        assert_eq!(*tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
+        assert_eq!(*tc.get(addr.clone().into()).await.unwrap(), t);
+        assert_eq!(*tc.get("fooberdoober".into()).await.unwrap(), t);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_wait_for_rcs() {
+        let t = Arc::new(Target::new("foo"));
+        assert!(t.wait_for_state_with_rcs(1, Duration::from_millis(1)).await.is_err());
+        assert!(t.wait_for_state_with_rcs(10, Duration::from_millis(1)).await.is_err());
+        let t_clone = t.clone();
+        fuchsia_async::spawn(async move {
+            let mut state = t_clone.state.lock().await;
             let conn = RCSConnection::new_with_proxy(
                 setup_fake_remote_control_service(false, "foo".to_owned()),
-                &NodeId { id: 1234 },
+                &NodeId { id: 5u64 },
             );
-            match Target::from_rcs_connection(conn).await {
-                Ok(t) => {
-                    assert_eq!(t.nodename, "foo");
-                    assert_eq!(t.state.lock().await.rcs.as_ref().unwrap().overnet_id.id, 1234u64);
-                    // For now there shouldn't be any addresses put in here, as
-                    // there's not a consistent way to convert them yet.
-                    assert_eq!(t.addrs().await.len(), 0);
-                }
-                Err(_) => assert!(false),
-            }
+            t_clone.host_pipe_loop_started.store(true, Ordering::Relaxed);
+            state.rcs = Some(conn);
         });
+        // Adds a few hundred thousands as this is a race test.
+        t.wait_for_state_with_rcs(500000, Duration::from_millis(1)).await.unwrap();
     }
 
-    #[test]
-    fn test_target_query_matches_nodename() {
-        hoist::run(async move {
-            let query = TargetQuery::from("foo");
-            let target = Arc::new(Target::new("foo"));
-            assert!(query.matches(&target).await);
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_disconnect_no_process() {
+        let t = Target::new("fooberdoober");
+        t.disconnect().await.unwrap();
     }
 
-    #[test]
-    fn test_target_by_overnet_id() {
-        hoist::run(async move {
-            const ID: u64 = 12345;
-            let conn = RCSConnection::new_with_proxy(
-                setup_fake_remote_control_service(false, "foo".to_owned()),
-                &NodeId { id: ID },
-            );
-            let t = Target::from_rcs_connection(conn).await.unwrap();
-            let tc = TargetCollection::new();
-            tc.merge_insert(t.clone()).await;
-            assert_eq!(*tc.get(ID.into()).await.unwrap(), t);
-        });
-    }
-
-    #[test]
-    fn test_target_by_addr() {
-        hoist::run(async move {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_disconnect_multiple_invocations() {
+        let t = Arc::new(Target::new("flabbadoobiedoo"));
+        {
             let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
-            let t = Target::new("foo");
-            t.addrs_insert(addr.clone()).await;
-            let tc = TargetCollection::new();
-            tc.merge_insert(t.clone()).await;
-            assert_eq!(*tc.get(addr.into()).await.unwrap(), t);
-            assert_eq!(*tc.get("192.168.0.1".into()).await.unwrap(), t);
-            assert!(tc.get("fe80::dead:beef:beef:beef".into()).await.is_none());
-
-            let addr: TargetAddr =
-                (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
-            let t = Target::new("fooberdoober");
-            t.addrs_insert(addr.clone()).await;
-            tc.merge_insert(t.clone()).await;
-            assert_eq!(*tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
-            assert_eq!(*tc.get(addr.clone().into()).await.unwrap(), t);
-            assert_eq!(*tc.get("fooberdoober".into()).await.unwrap(), t);
-        });
+            t.addrs_insert(addr).await;
+        }
+        // Assures multiple "simultaneous" invocations to start the target
+        // doesn't put it into a bad state that would hang.
+        let _: ((), (), ()) = futures::join!(
+            Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
+            Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
+            Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
+        );
+        t.disconnect().await.unwrap();
     }
 
-    #[test]
-    fn test_wait_for_rcs() {
-        hoist::run(async move {
-            let t = Arc::new(Target::new("foo"));
-            assert!(t.wait_for_state_with_rcs(1, Duration::from_millis(1)).await.is_err());
-            assert!(t.wait_for_state_with_rcs(10, Duration::from_millis(1)).await.is_err());
-            let t_clone = t.clone();
-            hoist::spawn(async move {
-                let mut state = t_clone.state.lock().await;
-                let conn = RCSConnection::new_with_proxy(
-                    setup_fake_remote_control_service(false, "foo".to_owned()),
-                    &NodeId { id: 5u64 },
-                );
-                t_clone.host_pipe_loop_started.store(true, Ordering::Relaxed);
-                state.rcs = Some(conn);
-            });
-            // Adds a few hundred thousands as this is a race test.
-            t.wait_for_state_with_rcs(500000, Duration::from_millis(1)).await.unwrap();
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_run_host_pipe_failure_sets_loop_false() {
+        let t = Arc::new(Target::new("bonanza"));
+        Target::run_host_pipe_with_allocator(t.clone(), |_| {
+            Result::<onet::HostPipeConnection, Error>::Err(anyhow!("testing error to check state"))
+        })
+        .await;
+        assert!(!t.host_pipe_loop_started.load(Ordering::SeqCst));
     }
 
-    #[test]
-    fn test_target_disconnect_no_process() {
-        hoist::run(async move {
-            let t = Target::new("fooberdoober");
-            t.disconnect().await.unwrap();
-        });
-    }
-
-    #[test]
-    fn test_target_disconnect_multiple_invocations() {
-        hoist::run(async move {
-            let t = Arc::new(Target::new("flabbadoobiedoo"));
-            {
-                let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
-                t.addrs_insert(addr).await;
-            }
-            // Assures multiple "simultaneous" invocations to start the target
-            // doesn't put it into a bad state that would hang.
-            let _: ((), (), ()) = futures::join!(
-                Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
-                Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
-                Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
-            );
-            t.disconnect().await.unwrap();
-        });
-    }
-
-    #[test]
-    fn test_target_run_host_pipe_failure_sets_loop_false() {
-        hoist::run(async move {
-            let t = Arc::new(Target::new("bonanza"));
-            Target::run_host_pipe_with_allocator(t.clone(), |_| {
-                Result::<onet::HostPipeConnection, Error>::Err(anyhow!(
-                    "testing error to check state"
-                ))
-            })
-            .await;
-            assert!(!t.host_pipe_loop_started.load(Ordering::SeqCst));
-        });
-    }
-
-    #[test]
-    fn test_target_run_host_pipe_skips_if_started() {
-        hoist::run(async move {
-            let t = Arc::new(Target::new("bloop"));
-            t.host_pipe_loop_started.store(true, Ordering::Relaxed);
-            // The error returned in this function should be skipped leaving
-            // the loop state set to true.
-            Target::run_host_pipe_with_allocator(t.clone(), |_| {
-                Result::<onet::HostPipeConnection, Error>::Err(anyhow!(
-                    "testing error to check state"
-                ))
-            })
-            .await;
-            assert!(t.host_pipe_loop_started.load(Ordering::SeqCst));
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_run_host_pipe_skips_if_started() {
+        let t = Arc::new(Target::new("bloop"));
+        t.host_pipe_loop_started.store(true, Ordering::Relaxed);
+        // The error returned in this function should be skipped leaving
+        // the loop state set to true.
+        Target::run_host_pipe_with_allocator(t.clone(), |_| {
+            Result::<onet::HostPipeConnection, Error>::Err(anyhow!("testing error to check state"))
+        })
+        .await;
+        assert!(t.host_pipe_loop_started.load(Ordering::SeqCst));
     }
 
     struct RcsStateTest {
@@ -911,111 +881,101 @@ mod test {
         expected: bridge::RemoteControlState,
     }
 
-    #[test]
-    fn test_target_rcs_states() {
-        hoist::run(async move {
-            for test in vec![
-                RcsStateTest {
-                    loop_started: true,
-                    rcs_is_some: false,
-                    expected: bridge::RemoteControlState::Down,
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_rcs_states() {
+        for test in vec![
+            RcsStateTest {
+                loop_started: true,
+                rcs_is_some: false,
+                expected: bridge::RemoteControlState::Down,
+            },
+            RcsStateTest {
+                loop_started: true,
+                rcs_is_some: true,
+                expected: bridge::RemoteControlState::Up,
+            },
+            RcsStateTest {
+                loop_started: false,
+                rcs_is_some: true,
+                expected: bridge::RemoteControlState::Unknown,
+            },
+            RcsStateTest {
+                loop_started: false,
+                rcs_is_some: false,
+                expected: bridge::RemoteControlState::Unknown,
+            },
+        ] {
+            let t = Target::new("schlabbadoo");
+            t.host_pipe_loop_started.store(test.loop_started, Ordering::Relaxed);
+            *t.state.lock().await = TargetState {
+                rcs: if test.rcs_is_some {
+                    Some(RCSConnection::new_with_proxy(
+                        setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
+                        &NodeId { id: 123 },
+                    ))
+                } else {
+                    None
                 },
-                RcsStateTest {
-                    loop_started: true,
-                    rcs_is_some: true,
-                    expected: bridge::RemoteControlState::Up,
-                },
-                RcsStateTest {
-                    loop_started: false,
-                    rcs_is_some: true,
-                    expected: bridge::RemoteControlState::Unknown,
-                },
-                RcsStateTest {
-                    loop_started: false,
-                    rcs_is_some: false,
-                    expected: bridge::RemoteControlState::Unknown,
-                },
-            ] {
-                let t = Target::new("schlabbadoo");
-                t.host_pipe_loop_started.store(test.loop_started, Ordering::Relaxed);
-                *t.state.lock().await = TargetState {
-                    rcs: if test.rcs_is_some {
-                        Some(RCSConnection::new_with_proxy(
-                            setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
-                            &NodeId { id: 123 },
-                        ))
-                    } else {
-                        None
-                    },
-                };
-                assert_eq!(t.rcs_state().await, test.expected);
-            }
-        });
+            };
+            assert_eq!(t.rcs_state().await, test.expected);
+        }
     }
 
-    #[test]
-    fn test_target_to_fidl_target() {
-        hoist::run(async move {
-            let t = Arc::new(Target::new("cragdune-the-impaler"));
-            let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-            let a2 = IpAddr::V6(Ipv6Addr::new(
-                0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
-            ));
-            t.addrs_insert((a1, 1).into()).await;
-            t.addrs_insert((a2, 1).into()).await;
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_to_fidl_target() {
+        let t = Arc::new(Target::new("cragdune-the-impaler"));
+        let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let a2 = IpAddr::V6(Ipv6Addr::new(
+            0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
+        ));
+        t.addrs_insert((a1, 1).into()).await;
+        t.addrs_insert((a2, 1).into()).await;
 
-            let t_conv = t.clone().to_fidl_target().await;
-            assert_eq!(t.nodename, t_conv.nodename.unwrap().to_string());
-            let addrs = t.addrs().await;
-            let conv_addrs = t_conv.addresses.unwrap();
-            assert_eq!(addrs.len(), conv_addrs.len());
+        let t_conv = t.clone().to_fidl_target().await;
+        assert_eq!(t.nodename, t_conv.nodename.unwrap().to_string());
+        let addrs = t.addrs().await;
+        let conv_addrs = t_conv.addresses.unwrap();
+        assert_eq!(addrs.len(), conv_addrs.len());
 
-            // Will crash if any addresses are missing.
-            for address in conv_addrs {
-                let _ = addrs.get(&TargetAddr::from(address)).unwrap();
-            }
-        });
+        // Will crash if any addresses are missing.
+        for address in conv_addrs {
+            let _ = addrs.get(&TargetAddr::from(address)).unwrap();
+        }
     }
 
-    #[test]
-    fn test_target_event_synthesis() {
-        hoist::run(async move {
-            let t = Target::new("clopperdoop");
-            let vec = t.synthesize_events().await;
-            assert_eq!(vec.len(), 1);
-            assert_eq!(&vec[0], &DaemonEvent::NewTarget("clopperdoop".to_string()));
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_event_synthesis() {
+        let t = Target::new("clopperdoop");
+        let vec = t.synthesize_events().await;
+        assert_eq!(vec.len(), 1);
+        assert_eq!(&vec[0], &DaemonEvent::NewTarget("clopperdoop".to_string()));
     }
 
-    #[test]
-    fn test_target_collection_event_synthesis() {
-        hoist::run(async move {
-            let t = Target::new("clam-chowder-is-tasty");
-            let t2 = Target::new("this-is-a-crunchy-falafel");
-            let t3 = Target::new("i-should-probably-eat-lunch");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_collection_event_synthesis() {
+        let t = Target::new("clam-chowder-is-tasty");
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t3 = Target::new("i-should-probably-eat-lunch");
 
-            let tc = TargetCollection::new();
-            tc.merge_insert(t).await;
-            tc.merge_insert(t2).await;
-            tc.merge_insert(t3).await;
+        let tc = TargetCollection::new();
+        tc.merge_insert(t).await;
+        tc.merge_insert(t2).await;
+        tc.merge_insert(t3).await;
 
-            let events = tc.synthesize_events().await;
-            assert_eq!(events.len(), 3);
-            assert!(
-                events
-                    .iter()
-                    .any(|e| e
-                        == &events::DaemonEvent::NewTarget("clam-chowder-is-tasty".to_string()))
-            );
-            assert!(events
+        let events = tc.synthesize_events().await;
+        assert_eq!(events.len(), 3);
+        assert!(events
+            .iter()
+            .any(|e| e == &events::DaemonEvent::NewTarget("clam-chowder-is-tasty".to_string())));
+        assert!(
+            events
                 .iter()
                 .any(|e| e
-                    == &events::DaemonEvent::NewTarget("this-is-a-crunchy-falafel".to_string())));
-            assert!(events
-                .iter()
-                .any(|e| e
-                    == &events::DaemonEvent::NewTarget("i-should-probably-eat-lunch".to_string())));
-        });
+                    == &events::DaemonEvent::NewTarget("this-is-a-crunchy-falafel".to_string()))
+        );
+        assert!(events.iter().any(
+            |e| e == &events::DaemonEvent::NewTarget("i-should-probably-eat-lunch".to_string())
+        ));
     }
 
     struct EventPusher {
@@ -1041,25 +1001,23 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_target_collection_events() {
-        hoist::run(async move {
-            let t = Target::new("clam-chowder-is-tasty");
-            let t2 = Target::new("this-is-a-crunchy-falafel");
-            let t3 = Target::new("i-should-probably-eat-lunch");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_collection_events() {
+        let t = Target::new("clam-chowder-is-tasty");
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t3 = Target::new("i-should-probably-eat-lunch");
 
-            let tc = Arc::new(TargetCollection::new());
-            let queue = events::Queue::new(&tc);
-            let (handler, rx) = EventPusher::new();
-            queue.add_handler(handler).await;
-            tc.set_event_queue(queue).await;
-            tc.merge_insert(t).await;
-            tc.merge_insert(t2).await;
-            tc.merge_insert(t3).await;
-            let results = rx.take(3).collect::<Vec<_>>().await;
-            assert!(results.iter().any(|e| e == &"clam-chowder-is-tasty".to_string()));
-            assert!(results.iter().any(|e| e == &"this-is-a-crunchy-falafel".to_string()));
-            assert!(results.iter().any(|e| e == &"i-should-probably-eat-lunch".to_string()));
-        });
+        let tc = Arc::new(TargetCollection::new());
+        let queue = events::Queue::new(&tc);
+        let (handler, rx) = EventPusher::new();
+        queue.add_handler(handler).await;
+        tc.set_event_queue(queue).await;
+        tc.merge_insert(t).await;
+        tc.merge_insert(t2).await;
+        tc.merge_insert(t3).await;
+        let results = rx.take(3).collect::<Vec<_>>().await;
+        assert!(results.iter().any(|e| e == &"clam-chowder-is-tasty".to_string()));
+        assert!(results.iter().any(|e| e == &"this-is-a-crunchy-falafel".to_string()));
+        assert!(results.iter().any(|e| e == &"i-should-probably-eat-lunch".to_string()));
     }
 }

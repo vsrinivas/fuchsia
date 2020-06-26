@@ -5,9 +5,9 @@
 use crate::future_help::{log_errors, LockInner, PollMutex};
 use crate::labels::Endpoint;
 use crate::link::{LinkReceiver, LinkSender};
-use crate::runtime::{maybe_wait_until, Task};
 use crate::security_context::quiche_config_from_security_context;
 use anyhow::Error;
+use fuchsia_async::{Task, Timer};
 use futures::future::{poll_fn, Either};
 use futures::lock::{Mutex, MutexGuard, MutexLockFuture};
 use futures::ready;
@@ -125,7 +125,8 @@ pub struct QuicSender {
 /// Receive half for QUIC links
 pub struct QuicReceiver {
     quic: Arc<Mutex<Quic>>,
-    _task: Task,
+    // Processing loop for the link - once there's no receiver this can stop
+    _task: Task<()>,
 }
 
 impl LockInner for QuicSender {
@@ -350,9 +351,13 @@ async fn quic_to_link(link: LinkReceiver, quic: Arc<Mutex<Quic>>) -> Result<(), 
 
 async fn check_timers(quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
     let mut poll_mutex = PollMutex::new(&*quic);
+    const A_VERY_LONG_TIME: Duration = Duration::from_secs(10000);
+    let timer_for_timeout = move |timeout: Option<Instant>| {
+        Timer::new(timeout.unwrap_or_else(|| Instant::now() + A_VERY_LONG_TIME))
+    };
 
     let mut current_timeout = None;
-    let mut timeout_fut = maybe_wait_until(current_timeout);
+    let mut timeout_fut = timer_for_timeout(current_timeout);
     loop {
         log::trace!("timeout: {:?}", current_timeout);
         let poll_timeout = |ctx: &mut Context<'_>| -> Poll<Option<Instant>> {
@@ -361,10 +366,10 @@ async fn check_timers(quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
         match futures::future::select(poll_fn(poll_timeout), &mut timeout_fut).await {
             Either::Left((timeout, _)) => {
                 current_timeout = timeout;
-                timeout_fut = maybe_wait_until(current_timeout);
+                timeout_fut = timer_for_timeout(current_timeout);
             }
             Either::Right(_) => {
-                timeout_fut = maybe_wait_until(None);
+                timeout_fut = Timer::new(A_VERY_LONG_TIME);
                 let mut q = poll_mutex.lock().await;
                 q.connection.on_timeout();
                 q.maybe_wakeup_established();

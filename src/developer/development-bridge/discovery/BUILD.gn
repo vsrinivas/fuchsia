@@ -13,6 +13,7 @@ ffx_plugin("ffx_knock") {
   deps = [
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
     "//src/diagnostics/lib/selectors",
+    "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
   ]
 }
@@ -23,5 +24,8 @@ ffx_plugin("ffx_select") {
   with_unit_tests = true
   args_source_root = "./src/args_select.rs"
   source_root = "./src/lib_select.rs"
-  deps = [ "//src/diagnostics/lib/selectors" ]
+  deps = [
+    "//src/diagnostics/lib/selectors",
+    "//src/lib/fuchsia-async",
+  ]
 }

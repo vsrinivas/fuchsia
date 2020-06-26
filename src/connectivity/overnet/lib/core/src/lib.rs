@@ -29,7 +29,6 @@ mod proxyable_handle;
 mod quic_link;
 mod route_planner;
 mod router;
-mod runtime;
 mod security_context;
 mod service_map;
 mod socket_link;
@@ -43,7 +42,6 @@ pub use labels::{Endpoint, NodeId, NodeLinkId};
 pub use link::{LinkReceiver, LinkSender};
 pub use quic_link::{new_quic_link, QuicReceiver, QuicSender};
 pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
-pub use runtime::{run, wait_for, wait_until, FutureExt, Task, Timeout, TimeoutError};
 pub use security_context::{SecurityContext, SimpleSecurityContext};
 pub use stream_framer::*;
 

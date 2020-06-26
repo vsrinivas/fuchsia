@@ -33,7 +33,6 @@ use crate::{
     route_planner::{
         routing_update_channel, run_route_planner, RemoteRoutingUpdate, RemoteRoutingUpdateSender,
     },
-    runtime::{FutureExt, Task},
     security_context::{quiche_config_from_security_context, SecurityContext},
     service_map::{ListablePeer, ServiceMap},
     socket_link::run_socket_link,
@@ -45,6 +44,7 @@ use fidl_fuchsia_overnet_protocol::{
     ChannelHandle, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, SocketHandle, SocketType,
     StreamId, StreamRef, ZirconHandle,
 };
+use fuchsia_async::{Task, TimeoutExt};
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use rand::Rng;
 use std::{
@@ -112,7 +112,7 @@ pub(crate) enum LinkSource {
     RoutingUpdate,
 }
 
-struct Questioning(NodeId, Task);
+struct Questioning(NodeId, Task<()>);
 
 pub(crate) struct CurrentLink {
     link: Weak<LinkRouting>,
@@ -285,7 +285,10 @@ impl PeerMaps {
                             peer,
                             timeout
                         );
-                        peer_client.ping().timeout_after(timeout).await??;
+                        peer_client
+                            .ping()
+                            .on_timeout(timeout, || Err(format_err!("ping timeout")))
+                            .await?;
                         log::trace!(
                             "{:?} question peer {:?}: pinged successfully",
                             my_node_id,
@@ -600,13 +603,13 @@ pub struct Router {
     routing_update_sender: RemoteRoutingUpdateSender,
     proxied_streams: Mutex<HashMap<HandleKey, ProxiedHandle>>,
     pending_transfers: Mutex<PendingTransferMap>,
-    task: Mutex<Option<Task>>,
+    task: Mutex<Option<Task<()>>>,
 }
 
 struct ProxiedHandle {
     remove_sender: futures::channel::oneshot::Sender<RemoveFromProxyTable>,
     original_paired: HandleKey,
-    proxy_task: Task,
+    proxy_task: Task<()>,
 }
 
 /// Generate a new random node id
@@ -1304,7 +1307,13 @@ pub mod test_util {
         R: Send + 'static,
     {
         init();
-        crate::runtime::run(async move { f.timeout_after(TEST_TIMEOUT).await.unwrap() })
+        fuchsia_async::Executor::new()
+            .unwrap()
+            .run(
+                async move { Ok(f.await) }.on_timeout(TEST_TIMEOUT, || Err(format_err!("timeout"))),
+                4,
+            )
+            .unwrap()
     }
 
     #[allow(dead_code)]
@@ -1316,17 +1325,23 @@ pub mod test_util {
         Fut: Future<Output = Result<(), Error>> + Send + 'static,
     {
         init();
-        if let Err(e) = crate::runtime::run(async move {
-            futures::stream::iter(0..count)
-                .map(Ok)
-                .try_for_each_concurrent(100, move |i| {
-                    let run = i + 1;
-                    let f = f(run);
-                    async move { Ok(f.timeout_after(TEST_TIMEOUT).await??) }
+        const CONCURRENCY: usize = 10; // Pretty arbitrary: not too high, not too low for our test environments
+        if let Err(e) = fuchsia_async::Executor::new()?.run(
+            async move {
+                futures::stream::iter(0..count)
+                    .map(Ok)
+                    .try_for_each_concurrent(CONCURRENCY, move |i| {
+                        let run = i + 1;
+                        let f = f(run);
+                        async move {
+                            Ok(f.on_timeout(TEST_TIMEOUT, || Err(format_err!("timeout"))).await?)
+                        }
                         .map_err(move |e: Error| e.context(format!("run {}", run)))
-                })
-                .await
-        }) {
+                    })
+                    .await
+            },
+            CONCURRENCY,
+        ) {
             log::info!("ERROR: {:?}", e);
             Err(e)
         } else {

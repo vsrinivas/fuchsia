@@ -55,39 +55,33 @@ mod test {
         std::net::{IpAddr, Ipv4Addr},
     };
 
-    #[test]
-    fn test_empty_command_vec_produces_error() {
-        hoist::run(async move {
-            let result = build_ssh_command(HashSet::new(), vec![]).await;
-            assert!(result.is_err(), "empty command vec should produce an error");
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_empty_command_vec_produces_error() {
+        let result = build_ssh_command(HashSet::new(), vec![]).await;
+        assert!(result.is_err(), "empty command vec should produce an error");
     }
 
-    #[test]
-    fn test_no_ips_produces_error() {
-        hoist::run(async move {
-            let result = build_ssh_command(HashSet::new(), vec!["ls"]).await;
-            assert!(result.is_err(), "target with no IP's should produce an error");
-        });
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_no_ips_produces_error() {
+        let result = build_ssh_command(HashSet::new(), vec!["ls"]).await;
+        assert!(result.is_err(), "target with no IP's should produce an error");
     }
 
-    #[test]
-    fn test_valid_inputs() {
-        hoist::run(async move {
-            let key_path = std::env::current_exe().unwrap();
-            let key_path = key_path.to_str().take().unwrap();
-            std::env::set_var("FUCHSIA_SSH_PORT", "1234");
-            std::env::set_var("FUCHSIA_SSH_KEY", key_path);
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_valid_inputs() {
+        let key_path = std::env::current_exe().unwrap();
+        let key_path = key_path.to_str().take().unwrap();
+        std::env::set_var("FUCHSIA_SSH_PORT", "1234");
+        std::env::set_var("FUCHSIA_SSH_KEY", key_path);
 
-            let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1));
-            let mut addrs = HashSet::new();
-            addrs.insert(TargetAddr::from((ip, 0)));
+        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1));
+        let mut addrs = HashSet::new();
+        addrs.insert(TargetAddr::from((ip, 0)));
 
-            let result = build_ssh_command(addrs, vec!["ls"]).await.unwrap();
-            let dbgstr = format!("{:?}", result);
+        let result = build_ssh_command(addrs, vec!["ls"]).await.unwrap();
+        let dbgstr = format!("{:?}", result);
 
-            assert!(dbgstr.contains(&format!("\"-p\" \"1234\" \"-i\" \"{}\"", key_path)), dbgstr);
-            assert!(dbgstr.contains(&ip.to_string()), dbgstr);
-        });
+        assert!(dbgstr.contains(&format!("\"-p\" \"1234\" \"-i\" \"{}\"", key_path)), dbgstr);
+        assert!(dbgstr.contains(&ip.to_string()), dbgstr);
     }
 }

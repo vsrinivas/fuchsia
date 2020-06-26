@@ -13,6 +13,7 @@ rustc_library("hoist") {
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
@@ -21,7 +22,6 @@ rustc_library("hoist") {
   non_rust_deps = [ "//third_party/boringssl" ]
   if (is_fuchsia) {
     deps += [
-      "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-component",
       "//src/lib/syslog/rust:syslog",
     ]

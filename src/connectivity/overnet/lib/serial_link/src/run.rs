@@ -6,10 +6,11 @@ use crate::fragment_io::{new_fragment_io, FragmentReader, FragmentWriter};
 use crate::lossy_text::LossyText;
 use anyhow::{bail, ensure, format_err, Error};
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
+use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use overnet_core::{
     decode_fidl, encode_fidl, new_deframer, new_framer, DeframerWriter, FrameType, FramerReader,
-    FutureExt as _, LinkReceiver, LinkSender, NodeId, Router, TimeoutError,
+    LinkReceiver, LinkSender, NodeId, Router,
 };
 use rand::Rng;
 use std::sync::{Arc, Weak};
@@ -130,6 +131,8 @@ enum ReadGreetingError {
     Deframing(#[from] anyhow::Error),
     #[error("no key in greeting")]
     NoKey,
+    #[error("timeout")]
+    Timeout,
 }
 
 fn parse_greeting(
@@ -195,11 +198,20 @@ async fn drain<OutputSink: AsyncWrite + Unpin>(
     fragment_reader: &mut StreamSplitter<OutputSink>,
     drain_time: Duration,
 ) -> Result<(), Error> {
+    enum DrainError {
+        FromRead(Error),
+        Timeout,
+    };
     loop {
-        match fragment_reader.read().timeout_after(drain_time).await {
-            Err(TimeoutError) => return Ok(()),
-            Ok(Ok(_)) => continue,
-            Ok(Err(e)) => return Err(e.into()),
+        match fragment_reader
+            .read()
+            .map_err(DrainError::FromRead)
+            .on_timeout(drain_time, || Err(DrainError::Timeout))
+            .await
+        {
+            Err(DrainError::Timeout) => return Ok(()),
+            Ok(_) => continue,
+            Err(DrainError::FromRead(e)) => return Err(e),
         }
     }
 }
@@ -247,8 +259,8 @@ async fn main<OutputSink: AsyncWrite + Unpin>(
             let key = rand::thread_rng().gen();
             send_greeting(tag, fragment_writer, my_node_id, key).await?;
             let (peer_node_id, read_key) = read_greeting(tag, fragment_reader)
-                .timeout_after(Duration::from_secs(10))
-                .await??;
+                .on_timeout(Duration::from_secs(10), || Err(ReadGreetingError::Timeout))
+                .await?;
             ensure!(key == read_key, "connection key mismatch");
             peer_node_id
         }
@@ -274,9 +286,10 @@ mod test {
     use super::Role;
     use crate::report_skipped::ReportSkipped;
     use crate::test_util::{init, test_security_context, DodgyPipe};
-    use anyhow::Error;
+    use anyhow::{format_err, Error};
+    use fuchsia_async::{Task, TimeoutExt};
     use futures::prelude::*;
-    use overnet_core::{FutureExt as _, NodeId, Router, RouterOptions, Task};
+    use overnet_core::{NodeId, Router, RouterOptions};
     use std::sync::Arc;
     use std::time::Duration;
 
@@ -286,11 +299,11 @@ mod test {
         Ok(())
     }
 
-    fn end2end(repeat: u64, failures_per_64kib: u16) -> Result<(), Error> {
+    async fn end2end(repeat: u64, failures_per_64kib: u16) -> Result<(), Error> {
         init();
-        overnet_core::run(futures::stream::iter(0..repeat).map(Ok).try_for_each_concurrent(
-            10,
-            move |i| async move {
+        futures::stream::iter(0..repeat)
+            .map(Ok)
+            .try_for_each_concurrent(10, move |i| async move {
                 let rtr_client = Router::new(
                     RouterOptions::new().set_node_id((100 * i + 1).into()),
                     test_security_context(),
@@ -325,23 +338,24 @@ mod test {
                     await_peer(rtr_server.clone(), rtr_client.node_id()),
                 )
                 .map_ok(drop)
-                .timeout_after(Duration::from_secs(120))
-                .await?
-            },
-        ))
+                .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
+                .await
+            })
+            .map_ok(drop)
+            .await
     }
 
-    #[test]
-    fn reliable() -> Result<(), Error> {
-        end2end(1, 0)
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn reliable() -> Result<(), Error> {
+        end2end(1, 0).await
     }
 
-    #[test]
-    fn mostly_reliable() -> Result<(), Error> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn mostly_reliable() -> Result<(), Error> {
         #[cfg(target_os = "fuchsia")]
         const RUN_COUNT: u64 = 1;
         #[cfg(not(target_os = "fuchsia"))]
         const RUN_COUNT: u64 = 100;
-        end2end(RUN_COUNT, 1)
+        end2end(RUN_COUNT, 1).await
     }
 }

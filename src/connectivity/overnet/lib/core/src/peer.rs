@@ -11,7 +11,6 @@ use crate::{
     link::LinkStatus,
     route_planner::RemoteRoutingUpdate,
     router::{FoundTransfer, LinkSource, Router},
-    runtime::{wait_for, FutureExt, Task},
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl::{Channel, HandleBased};
@@ -21,6 +20,7 @@ use fidl_fuchsia_overnet_protocol::{
     OpenTransfer, PeerConnectionDiagnosticInfo, PeerDescription, PeerMessage, PeerReply, StreamId,
     UpdateLinkStatus, ZirconHandle,
 };
+use fuchsia_async::{Task, TimeoutExt, Timer};
 use futures::{
     channel::{mpsc, oneshot},
     lock::Mutex,
@@ -78,7 +78,7 @@ pub(crate) struct Peer {
     commands: Option<mpsc::Sender<ClientPeerCommand>>,
     conn_stats: Arc<PeerConnStats>,
     channel_proxy_stats: Arc<MessageStats>,
-    _task: Task,
+    _task: Task<()>,
     shutdown: AtomicBool,
 }
 
@@ -350,8 +350,8 @@ async fn client_handshake(
     log::trace!("[{:?} clipeer:{:?}] send fidl header", my_node_id, peer_node_id);
     conn_stream_writer
         .send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false)
-        .timeout_after(Duration::from_secs(60))
-        .await??;
+        .on_timeout(Duration::from_secs(60), || Err(format_err!("timeout")))
+        .await?;
     async move {
         log::trace!("[{:?} clipeer:{:?}] send config request", my_node_id, peer_node_id);
         // Send config request
@@ -377,8 +377,8 @@ async fn client_handshake(
 
         Ok((conn_stream_writer, conn_stream_reader))
     }
-    .timeout_after(Duration::from_secs(20))
-    .await?
+    .on_timeout(Duration::from_secs(20), || Err(format_err!("timeout")))
+    .await
 }
 
 async fn client_conn_stream(
@@ -500,7 +500,7 @@ async fn client_conn_stream(
                 receiver.await?;
 
                 log::trace!("[{:?} clipeer:{:?}] SEND_LINKS SLEEPY TIME", my_node_id, peer_node_id);
-                wait_for(Duration::from_secs(1)).await;
+                Timer::new(Duration::from_secs(1)).await;
             }
             log::trace!("[{:?} clipeer:{:?}] SEND_LINKS END", my_node_id, peer_node_id);
             Ok(())

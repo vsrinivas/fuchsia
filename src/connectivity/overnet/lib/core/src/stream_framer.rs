@@ -5,15 +5,14 @@
 //! Handles framing/deframing of stream links
 
 use crate::future_help::PollMutex;
-use crate::runtime::{wait_for, Task};
 use anyhow::{format_err, Error};
 use byteorder::WriteBytesExt;
 use crc::crc32;
+use fuchsia_async::{Task, Timer};
 use futures::future::poll_fn;
 use futures::lock::Mutex;
-use futures::{prelude::*, ready};
-use std::future::Future;
-use std::pin::Pin;
+use futures::prelude::*;
+use futures::ready;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
@@ -258,20 +257,12 @@ struct Deframer<Fmt: Format> {
     id: u64,
 }
 
-struct TimeoutFut(Option<Pin<Box<dyn Send + Future<Output = ()>>>>);
-
-impl std::fmt::Debug for TimeoutFut {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.as_ref().map(|_| "timeout").fmt(f)
-    }
-}
-
 #[derive(Debug)]
 enum Incoming {
     Parsing {
         unparsed: BVec,
         waiting_read: Option<Waker>,
-        timeout: TimeoutFut,
+        timeout: Option<Timer>,
     },
     Queuing {
         unframed: Option<BVec>,
@@ -318,9 +309,7 @@ pub fn new_deframer<Fmt: Format>(fmt: Fmt) -> (DeframerWriter<Fmt>, DeframerRead
         incoming: Mutex::new(Incoming::Parsing {
             unparsed: BVec(Vec::new()),
             waiting_read: None,
-            timeout: TimeoutFut(
-                fmt.deframe_timeout(false).map(|how_long| wait_for(how_long).boxed()),
-            ),
+            timeout: fmt.deframe_timeout(false).map(Timer::new),
         }),
         fmt,
         id: generate_node_id().0,
@@ -368,8 +357,8 @@ fn deframe_step<Fmt: Format>(
     }
 }
 
-fn make_timeout<Fmt: Format>(fmt: &Fmt, unparsed_len: usize) -> TimeoutFut {
-    TimeoutFut(fmt.deframe_timeout(unparsed_len > 0).map(|how_long| wait_for(how_long).boxed()))
+fn make_timeout<Fmt: Format>(fmt: &Fmt, unparsed_len: usize) -> Option<Timer> {
+    fmt.deframe_timeout(unparsed_len > 0).map(Timer::new)
 }
 
 impl<Fmt: Format> DeframerWriter<Fmt> {
@@ -462,24 +451,24 @@ impl<Fmt: Format> DeframerReader<Fmt> {
                     Poll::Ready(Ok((Some(frame_type), bytes)))
                 }
                 Incoming::Queuing { unframed: None, framed: None, .. } => unreachable!(),
-                Incoming::Parsing { unparsed, timeout: TimeoutFut(None), waiting_read: _ } => {
+                Incoming::Parsing { unparsed, timeout: None, waiting_read: _ } => {
                     *incoming = Incoming::Parsing {
                         unparsed,
                         waiting_read: Some(ctx.waker().clone()),
-                        timeout: TimeoutFut(None),
+                        timeout: None,
                     };
                     Poll::Pending
                 }
                 Incoming::Parsing {
                     unparsed: BVec(mut unparsed),
-                    timeout: TimeoutFut(Some(mut timeout)),
+                    timeout: Some(mut timeout),
                     waiting_read,
-                } => match timeout.as_mut().poll(ctx) {
+                } => match timeout.poll_unpin(ctx) {
                     Poll::Pending => {
                         *incoming = Incoming::Parsing {
                             unparsed: BVec(unparsed),
                             waiting_read: Some(ctx.waker().clone()),
-                            timeout: TimeoutFut(Some(timeout)),
+                            timeout: Some(timeout),
                         };
                         Poll::Pending
                     }

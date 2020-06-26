@@ -8,17 +8,11 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_overnet::{MeshControllerMarker, ServiceConsumerMarker, ServicePublisherMarker},
     fuchsia_component,
-    futures::prelude::*,
 };
 
 pub use fidl_fuchsia_overnet::{
     MeshControllerProxyInterface, ServiceConsumerProxyInterface, ServicePublisherProxyInterface,
 };
-pub use fuchsia_async::spawn_local as spawn;
-
-pub fn run<R>(future: impl Future<Output = R> + 'static) -> R {
-    fuchsia_async::Executor::new().unwrap().run_singlethreaded(future)
-}
 
 pub fn connect_as_service_consumer() -> Result<impl ServiceConsumerProxyInterface, Error> {
     Ok(fuchsia_component::client::connect_to_service::<ServiceConsumerMarker>()

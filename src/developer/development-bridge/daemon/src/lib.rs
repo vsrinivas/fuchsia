@@ -12,8 +12,8 @@ use {
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
     fidl_fuchsia_overnet_protocol::NodeId,
+    fuchsia_async::spawn,
     futures::prelude::*,
-    hoist::spawn,
 };
 
 mod daemon;

@@ -71,7 +71,7 @@ mod test {
         mut stream: AdminRequestStream,
         state_ptr: Arc<Mutex<Option<PowerCtlSubcommand>>>,
     ) {
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } => {
@@ -109,7 +109,7 @@ mod test {
         let state_ptr = Arc::new(Mutex::new(None));
         let ptr_clone = state_ptr.clone();
 
-        hoist::spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
@@ -144,35 +144,23 @@ mod test {
         assert_eq!(*state_ptr.try_lock().unwrap(), Some(state));
     }
 
-    #[test]
-    fn test_reboot() -> Result<(), Error> {
-        hoist::run(async move {
-            run_powerctl_test(PowerCtlSubcommand::Reboot(RebootCommand {})).await;
-        });
-        Ok(())
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_reboot() -> Result<(), Error> {
+        Ok(run_powerctl_test(PowerCtlSubcommand::Reboot(RebootCommand {})).await)
     }
 
-    #[test]
-    fn test_bootloader() -> Result<(), Error> {
-        hoist::run(async move {
-            run_powerctl_test(PowerCtlSubcommand::Bootloader(BootloaderCommand {})).await;
-        });
-        Ok(())
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_bootloader() -> Result<(), Error> {
+        Ok(run_powerctl_test(PowerCtlSubcommand::Bootloader(BootloaderCommand {})).await)
     }
 
-    #[test]
-    fn test_recovery() -> Result<(), Error> {
-        hoist::run(async move {
-            run_powerctl_test(PowerCtlSubcommand::Recovery(RecoveryCommand {})).await;
-        });
-        Ok(())
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_recovery() -> Result<(), Error> {
+        Ok(run_powerctl_test(PowerCtlSubcommand::Recovery(RecoveryCommand {})).await)
     }
 
-    #[test]
-    fn test_poweroff() -> Result<(), Error> {
-        hoist::run(async move {
-            run_powerctl_test(PowerCtlSubcommand::Poweroff(PoweroffCommand {})).await;
-        });
-        Ok(())
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_poweroff() -> Result<(), Error> {
+        Ok(run_powerctl_test(PowerCtlSubcommand::Poweroff(PoweroffCommand {})).await)
     }
 }

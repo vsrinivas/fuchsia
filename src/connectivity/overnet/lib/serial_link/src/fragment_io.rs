@@ -7,10 +7,11 @@
 use crate::lossy_text::LossyText;
 use crate::reassembler::Reassembler;
 use anyhow::{format_err, Error};
+use fuchsia_async::TimeoutExt;
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::prelude::*;
-use overnet_core::{DeframerReader, FrameType, FramerWriter, FutureExt as _, TimeoutError};
+use overnet_core::{DeframerReader, FrameType, FramerWriter};
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -149,15 +150,21 @@ async fn fragment_sender(
         fragment.push(msg_id);
         fragment.push(fragment_id);
 
+        enum RxError {
+            Timeout,
+            Canceled,
+        }
+
         'retry_fragment: for _ in 0..10 {
             framer_writer.lock().await.write(FrameType::Overnet, &fragment).await?;
-            match (&mut rx_ack).timeout_after(Duration::from_millis(100)).await {
-                Ok(Ok(())) => continue 'next_fragment,
-                Err(TimeoutError) => continue 'retry_fragment,
-                Ok(Err(e)) => {
-                    ack_set.lock().await.remove(&tag);
-                    return Err(e.into());
-                }
+            match (&mut rx_ack)
+                .map_err(|_| RxError::Canceled)
+                .on_timeout(Duration::from_millis(100), || Err(RxError::Timeout))
+                .await
+            {
+                Ok(()) => continue 'next_fragment,
+                Err(RxError::Timeout) => continue 'retry_fragment,
+                Err(RxError::Canceled) => break 'retry_fragment,
             }
         }
 
@@ -196,12 +203,11 @@ mod test {
     use super::{new_fragment_io, FragmentReader, FragmentWriter};
     use crate::lossy_text::LossyText;
     use crate::test_util::{init, DodgyPipe};
-    use anyhow::Error;
+    use anyhow::{format_err, Error};
+    use fuchsia_async::TimeoutExt;
     use futures::future::{try_join, try_join4};
     use futures::prelude::*;
-    use overnet_core::{
-        new_deframer, new_framer, DeframerWriter, FrameType, FramerReader, FutureExt as _,
-    };
+    use overnet_core::{new_deframer, new_framer, DeframerWriter, FrameType, FramerReader};
     use std::collections::HashSet;
     use std::time::Duration;
 
@@ -236,7 +242,7 @@ mod test {
         }
     }
 
-    fn run_test(
+    async fn run_test(
         name: &'static str,
         repeat: u64,
         failures_per_64kib: u16,
@@ -244,9 +250,9 @@ mod test {
         messages: &'static [&[u8]],
     ) -> Result<(), Error> {
         init();
-        overnet_core::run(futures::stream::iter(0..repeat).map(Ok).try_for_each_concurrent(
-            10,
-            move |i| async move {
+        futures::stream::iter(0..repeat)
+            .map(Ok)
+            .try_for_each_concurrent(10, move |i| async move {
                 const INCOMING_BYTE_TIMEOUT: std::time::Duration =
                     std::time::Duration::from_millis(100);
                 let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
@@ -272,16 +278,16 @@ mod test {
                     },
                     async move {
                         one_test(name, i, frame_type, &messages, &mut c_tx, &mut s_rx)
-                            .timeout_after(Duration::from_secs(120))
-                            .await??;
+                            .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
+                            .await?;
                         drop(support_handle);
                         Ok(())
                     },
                 )
                 .map_ok(drop)
                 .await
-            },
-        ))
+            })
+            .await
     }
 
     async fn one_test(
@@ -336,23 +342,23 @@ mod test {
 
     const LONG_PACKET: &'static [u8; 8192] = std::include_bytes!("long_packet.bin");
 
-    #[test]
-    fn hello() -> Result<(), Error> {
-        run_test("hello", 1, 0, FrameType::OvernetHello, &[b"hello world"])
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn hello() -> Result<(), Error> {
+        run_test("hello", 1, 0, FrameType::OvernetHello, &[b"hello world"]).await
     }
 
-    #[test]
-    fn simple() -> Result<(), Error> {
-        run_test("hello", 1, 0, FrameType::Overnet, &[b"hello world"])
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn simple() -> Result<(), Error> {
+        run_test("hello", 1, 0, FrameType::Overnet, &[b"hello world"]).await
     }
 
-    #[test]
-    fn long() -> Result<(), Error> {
-        run_test("hello", 1, 0, FrameType::Overnet, &[LONG_PACKET])
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn long() -> Result<(), Error> {
+        run_test("hello", 1, 0, FrameType::Overnet, &[LONG_PACKET]).await
     }
 
-    #[test]
-    fn long_flaky() -> Result<(), Error> {
-        run_test("hello", 100, 10, FrameType::Overnet, &[LONG_PACKET])
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn long_flaky() -> Result<(), Error> {
+        run_test("hello", 100, 10, FrameType::Overnet, &[LONG_PACKET]).await
     }
 }

@@ -10,7 +10,7 @@ use {
     super::Overnet,
     crate::{
         router::test_util::{run, run_repeatedly},
-        NodeId, Task,
+        NodeId,
     },
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
@@ -20,6 +20,7 @@ use {
         ServicePublisherProxyInterface,
     },
     fidl_fuchsia_overnet_triangletests as triangle,
+    fuchsia_async::Task,
     futures::prelude::*,
     std::sync::Arc,
 };

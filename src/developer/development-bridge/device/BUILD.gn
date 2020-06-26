@@ -12,5 +12,6 @@ ffx_plugin("ffx_powerctl") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//src/diagnostics/lib/selectors",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
   ]
 }

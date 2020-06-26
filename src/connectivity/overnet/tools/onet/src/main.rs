@@ -25,7 +25,8 @@ async fn ls_peers() -> Result<(), Error> {
     Ok(())
 }
 
-async fn async_main() -> Result<(), Error> {
+#[fuchsia_async::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     match Command::from_args() {
         Command::ListPeers => ls_peers().await,
         Command::HostPipe => host_pipe::host_pipe().await,
@@ -34,12 +35,4 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
     }
-}
-
-fn main() {
-    hoist::run(async move {
-        if let Err(e) = async_main().await {
-            log::warn!("Error: {}", e)
-        }
-    });
 }

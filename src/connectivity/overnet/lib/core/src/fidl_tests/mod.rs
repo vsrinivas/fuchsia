@@ -9,9 +9,9 @@ use crate::labels::NodeId;
 use crate::link::{LinkReceiver, LinkSender};
 use crate::router::test_util::{run, test_security_context};
 use crate::router::{Router, RouterOptions};
-use crate::runtime::Task;
 use anyhow::Error;
 use fidl::HandleBased;
+use fuchsia_async::Task;
 use fuchsia_zircon_status as zx_status;
 use futures::prelude::*;
 use std::sync::{
