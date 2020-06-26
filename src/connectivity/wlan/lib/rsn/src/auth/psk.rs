@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::Error, anyhow::ensure, std::num::NonZeroU32};
+use {
+    crate::Error,
+    anyhow::ensure,
+    std::{num::NonZeroU32, str},
+};
 
 // PBKDF2-HMAC-SHA1 is considered insecure but required for PSK computation.
 #[allow(deprecated)]
@@ -17,15 +21,30 @@ pub fn compute(passphrase: &[u8], ssid: &[u8]) -> Result<Psk, anyhow::Error> {
     // IEEE Std 802.11-2016, 9.4.2.2
     ensure!(ssid.len() <= 32, Error::InvalidSsidLen(ssid.len()));
 
-    // IEEE Std 802.11-2016, J.4.1
+    // IEEE Std 802.11-2016, J.4.1 provides a reference implementation that describes the
+    // passphrase as:
+    //
+    //   ... sequence of between 8 and 63 ASCII-encoded characters ... Each character in the
+    //   pass-phrase has an encoding in the range 32 to 126 (decimal).
+    //
+    // However, the standard does not seem to specify this encoding or otherwise state that it is a
+    // requirement. In practice, devices accept UTF-8 encoded passphrases, which is far less
+    // restrictive than a subset of ASCII. This code attempts to parse the passphrase as UTF-8 and
+    // emits an error if this is not possible. Note that this also accepts the ASCII encoding
+    // suggested by J.4.1.
+    let _utf8 = str::from_utf8(passphrase)
+        .map_err(|error| Error::InvalidPassphraseEncoding(error.valid_up_to()))?;
+
+    // IEEE Std 802.11-2016, J.4.1 suggests a passphrase length of [8, 64). However, J.4.1 also
+    // suggests ASCII encoding and this code expects UTF-8 encoded passphrases. This implicitly
+    // supports the ASCII encodings described in J.4.1. However, the length of the byte sequence no
+    // longer represents the number of encoded characters, so non-ASCII passphrases may appear to
+    // have arbitrary character limits. Note that the character count can be obtained via
+    // `_utf8.chars().count()`.
     ensure!(
         passphrase.len() >= 8 && passphrase.len() <= 63,
         Error::InvalidPassphraseLen(passphrase.len())
     );
-
-    for c in passphrase {
-        ensure!(*c >= 32 && *c <= 126, Error::InvalidPassphraseChar(*c));
-    }
 
     // Compute PSK: IEEE Std 802.11-2016, J.4.1
     let size = 256 / 8;
@@ -93,29 +112,19 @@ mod tests {
     }
 
     #[test]
-    fn test_psk_invalid_char_password() {
-        let result = compute("Invalid Char \x1F".as_bytes(), "Some SSID".as_bytes());
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn test_psk_ascii_bounds_password() {
         let result = compute("\x20ASCII Bound Test \x7E".as_bytes(), "Some SSID".as_bytes());
         assert!(result.is_ok());
     }
 
     #[test]
-    fn test_psk_invalid_unicode_char_password() {
-        let result = compute("refuse unicode \u{00DF} chars".as_bytes(), "Some SSID".as_bytes());
-        assert!(result.is_err());
+    fn test_psk_non_ascii_password() {
+        assert!(compute("パスワード".as_bytes(), "Some SSID".as_bytes()).is_ok());
     }
 
     #[test]
-    fn test_psk_unicode_valid_length_password() {
-        // Five characters but 10 bytes.
-        let result =
-            compute("\u{00DF}\u{00DF}\u{00DF}\u{00DF}\u{00DF}".as_bytes(), "Some SSID".as_bytes());
-        assert!(result.is_err());
+    fn test_psk_invalid_encoding_password() {
+        assert!(compute(&[0xFFu8; 32], "Some SSID".as_bytes()).is_err());
     }
 
     #[test]

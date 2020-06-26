@@ -197,8 +197,8 @@ pub enum Error {
     InvalidSsidLen(usize),
     #[error("invalid passphrase length: {}", _0)]
     InvalidPassphraseLen(usize),
-    #[error("passphrase contains invalid character: {:x}", _0)]
-    InvalidPassphraseChar(u8),
+    #[error("passphrase is not valid UTF-8; failed to parse after byte at index: {:x}", _0)]
+    InvalidPassphraseEncoding(usize),
     #[error("the config `{:?}` is incompatible with the auth method `{:?}`", _0, _1)]
     IncompatibleConfig(auth::Config, String),
     #[error("invalid bit size; must be a multiple of 8 but was {}", _0)]
