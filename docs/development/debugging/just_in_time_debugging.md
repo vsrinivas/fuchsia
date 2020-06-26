@@ -122,7 +122,7 @@ Within zxdb you can also do `help process-limbo` to get more information about h
 The Process Limbo presents itself as a FIDL service, which is what the Process Limbo CLI tool and
 zxdb use. The FIDL protocol is defined in `zircon/system/fidl/fuchsia-exception/process_limbo.fidl`.
 
-A good example about how to use the API is the Process Limbo CLI tool itself: `src/developer/exception_broker/limbo_client/limbo_client.cc`.
+A good example about how to use the API is the Process Limbo CLI tool itself: `src/developer/forensics/exceptions/limbo_client/limbo_client.cc`.
 
 ## Implementation
 

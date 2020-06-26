@@ -1,0 +1,82 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//src/sys/build/components.gni")
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_package("exceptions") {
+  deps = [ ":component" ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("component") {
+  component_name = "exceptions"
+
+  manifest = "meta/exceptions.cmx"
+
+  deps = [ ":exe" ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("exe") {
+  output_name = "exceptions"
+
+  sources = [ "main.cc" ]
+
+  deps = [ ":lib" ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("lib") {
+  sources = [
+    "crash_report_builder.cc",
+    "crash_report_builder.h",
+    "crash_report_generation.cc",
+    "crash_report_generation.h",
+    "exception_broker.cc",
+    "exception_broker.h",
+    "json_utils.cc",
+    "json_utils.h",
+    "process_limbo_manager.cc",
+    "process_limbo_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.exception",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.sys.internal",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//third_party/crashpad/minidump",
+    "//third_party/crashpad/snapshot",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/crashpad/util",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+###############################################################################
+# CONFIGS
+###############################################################################
+config_data("enable_jitd_on_startup") {
+  for_pkg = "exceptions"
+
+  sources = [ "configs/jitd_on_startup.json" ]
+
+  outputs = [ "enable_jitd_on_startup.json" ]
+}

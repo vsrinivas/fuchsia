@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_BUILDER_H_
-#define SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_BUILDER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORT_BUILDER_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORT_BUILDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/zx/vmo.h>
@@ -36,4 +36,4 @@ class CrashReportBuilder {
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_BUILDER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORT_BUILDER_H_

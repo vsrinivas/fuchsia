@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/exception_broker/limbo_client/limbo_client.h"
+#include "src/developer/forensics/exceptions/limbo_client/limbo_client.h"
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -15,7 +15,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/exception_broker/limbo_client/options.h"
+#include "src/developer/forensics/exceptions/limbo_client/options.h"
 
 namespace forensics {
 namespace exceptions {

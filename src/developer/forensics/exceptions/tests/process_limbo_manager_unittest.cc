@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/exception_broker/process_limbo_manager.h"
+#include "src/developer/forensics/exceptions/process_limbo_manager.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -12,8 +12,8 @@
 #include <gtest/gtest.h>
 
 #include "fuchsia/exception/cpp/fidl.h"
-#include "src/developer/exception_broker/exception_broker.h"
-#include "src/developer/exception_broker/tests/crasher_wrapper.h"
+#include "src/developer/forensics/exceptions/exception_broker.h"
+#include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace forensics {

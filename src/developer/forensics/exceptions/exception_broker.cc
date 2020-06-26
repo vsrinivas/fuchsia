@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/exception_broker/exception_broker.h"
+#include "src/developer/forensics/exceptions/exception_broker.h"
 
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
@@ -11,8 +11,8 @@
 #include <third_party/crashpad/util/file/string_file.h>
 
 #include "fuchsia/exception/cpp/fidl.h"
-#include "src/developer/exception_broker/crash_report_generation.h"
-#include "src/developer/exception_broker/json_utils.h"
+#include "src/developer/forensics/exceptions/crash_report_generation.h"
+#include "src/developer/forensics/exceptions/json_utils.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"

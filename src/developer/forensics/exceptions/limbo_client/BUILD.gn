@@ -1,0 +1,74 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+source_set("lib") {
+  sources = [
+    "limbo_client.cc",
+    "limbo_client.h",
+    "options.cc",
+    "options.h",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.exception" ]
+}
+
+executable("exe") {
+  output_name = "limbo_client"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("limbo_client") {
+  manifest = "meta/limbo_client.cmx"
+
+  deps = [ ":exe" ]
+}
+
+fuchsia_package("limbo-client") {
+  deps = [ ":limbo_client" ]
+}
+
+# Tests --------------------------------------------------------------------------------------------
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":limbo_client_unittest" ]
+}
+
+executable("limbo_client_unittest") {
+  testonly = true
+
+  sources = [
+    "limbo_client_unittest.cc",
+    "unittest_main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.exception",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}

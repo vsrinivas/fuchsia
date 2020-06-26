@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/exception_broker"
+        "binary": "bin/exceptions"
     },
     "sandbox": {
         "features": [

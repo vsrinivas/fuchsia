@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_EXCEPTION_BROKER_PROCESS_LIMBO_MANAGER_H_
-#define SRC_DEVELOPER_EXCEPTION_BROKER_PROCESS_LIMBO_MANAGER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_PROCESS_LIMBO_MANAGER_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_PROCESS_LIMBO_MANAGER_H_
 
 #include <fuchsia/exception/cpp/fidl.h>
 
@@ -121,4 +121,4 @@ class ProcessLimboHandler : public fuchsia::exception::ProcessLimbo {
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_EXCEPTION_BROKER_PROCESS_LIMBO_MANAGER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_PROCESS_LIMBO_MANAGER_H_

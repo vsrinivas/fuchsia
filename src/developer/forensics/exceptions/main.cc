@@ -8,7 +8,7 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/exception_broker/exception_broker.h"
+#include "src/developer/forensics/exceptions/exception_broker.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
 namespace {

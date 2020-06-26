@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_LIMBO_CLIENT_H_
-#define SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_LIMBO_CLIENT_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_LIMBO_CLIENT_LIMBO_CLIENT_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_LIMBO_CLIENT_LIMBO_CLIENT_H_
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -49,4 +49,4 @@ class LimboClient {
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_LIMBO_CLIENT_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_LIMBO_CLIENT_LIMBO_CLIENT_H_

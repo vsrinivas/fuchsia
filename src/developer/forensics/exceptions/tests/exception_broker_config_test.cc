@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/exception_broker/exception_broker.h"
+#include "src/developer/forensics/exceptions/exception_broker.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace forensics {

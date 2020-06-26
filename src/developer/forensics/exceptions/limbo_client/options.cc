@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/exception_broker/limbo_client/options.h"
+#include "src/developer/forensics/exceptions/limbo_client/options.h"
 
 #include <zircon/exception.h>
 #include <zircon/status.h>
 
-#include "src/developer/exception_broker/limbo_client/limbo_client.h"
+#include "src/developer/forensics/exceptions/limbo_client/limbo_client.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {

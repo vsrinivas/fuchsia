@@ -10,9 +10,9 @@ group("forensics") {
     "bugreport",
     "crash_reports:crash-reports",
     "crasher",
+    "exceptions",
     "feedback_data:feedback_agent",
     "last_reboot:last-reboot",
-    "//src/developer/exception_broker",
   ]
 }
 
@@ -22,10 +22,10 @@ group("tests") {
   deps = [
     "bugreport/tests",
     "crash_reports/tests",
+    "exceptions/tests",
     "feedback_data/tests",
     "last_reboot/tests",
     "utils/tests",
-    "//src/developer/exception_broker/tests",
   ]
 }
 

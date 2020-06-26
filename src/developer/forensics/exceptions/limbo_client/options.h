@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_OPTIONS_H_
-#define SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_OPTIONS_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_LIMBO_CLIENT_OPTIONS_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_LIMBO_CLIENT_OPTIONS_H_
 
 #include <zircon/status.h>
 
@@ -22,4 +22,4 @@ OptionFunction ParseArgs(int argc, const char* argv[], std::ostream&);
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_OPTIONS_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_LIMBO_CLIENT_OPTIONS_H_

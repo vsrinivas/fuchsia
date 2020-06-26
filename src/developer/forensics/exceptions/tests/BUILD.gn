@@ -13,7 +13,7 @@ group("tests") {
     ":exception-broker-tests",
 
     # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/exception_broker",
+    "//src/developer/forensics/exceptions",
     "//src/developer/forensics/testing/fakes:fake-crash-reporter",
   ]
 }
@@ -63,7 +63,7 @@ test_package("exception-broker-tests") {
     ":exception_broker_config_test",
     ":exception_broker_integration_test",
     ":exception_broker_unittest",
-    "//src/developer/exception_broker/limbo_client:tests",
+    "//src/developer/forensics/exceptions/limbo_client:tests",
   ]
 
   resources = [
@@ -110,7 +110,7 @@ executable("exception_broker_unittest") {
     ":test_lib",
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/exception_broker:lib",
+    "//src/developer/forensics/exceptions:lib",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/lib/fxl",
@@ -127,7 +127,7 @@ executable("exception_broker_integration_test") {
 
   deps = [
     ":test_lib",
-    "//src/developer/exception_broker:lib",
+    "//src/developer/forensics/exceptions:lib",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
@@ -142,7 +142,7 @@ executable("exception_broker_config_test") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/exception_broker:lib",
+    "//src/developer/forensics/exceptions:lib",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",

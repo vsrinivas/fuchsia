@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_
-#define SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_BROKER_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_BROKER_H_
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
@@ -12,8 +12,8 @@
 
 #include <optional>
 
-#include "src/developer/exception_broker/crash_report_builder.h"
-#include "src/developer/exception_broker/process_limbo_manager.h"
+#include "src/developer/forensics/exceptions/crash_report_builder.h"
+#include "src/developer/forensics/exceptions/process_limbo_manager.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace forensics {
@@ -75,4 +75,4 @@ class ExceptionBroker : public fuchsia::exception::Handler {
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_BROKER_H_

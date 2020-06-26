@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/exception_broker/tests/crasher_wrapper.h"
+#include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 
 #include <lib/fdio/spawn.h>
 #include <lib/syslog/cpp/macros.h>

@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_GENERATION_H_
-#define SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_GENERATION_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORT_GENERATION_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORT_GENERATION_H_
 
 #include <lib/zx/exception.h>
 #include <lib/zx/vmo.h>
@@ -22,4 +22,4 @@ zx::vmo GenerateMinidumpVMO(const zx::exception& exception, std::string* process
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_GENERATION_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_CRASH_REPORT_GENERATION_H_

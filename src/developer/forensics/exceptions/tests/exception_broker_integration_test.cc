@@ -8,8 +8,8 @@
 #include <gtest/gtest.h>
 
 #include "fuchsia/exception/cpp/fidl.h"
-#include "src/developer/exception_broker/exception_broker.h"
-#include "src/developer/exception_broker/tests/crasher_wrapper.h"
+#include "src/developer/forensics/exceptions/exception_broker.h"
+#include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace forensics {

@@ -10,8 +10,8 @@
 
 #include <iostream>
 
-#include "src/developer/exception_broker/limbo_client/limbo_client.h"
-#include "src/developer/exception_broker/limbo_client/options.h"
+#include "src/developer/forensics/exceptions/limbo_client/limbo_client.h"
+#include "src/developer/forensics/exceptions/limbo_client/options.h"
 
 namespace {
 
