@@ -41,7 +41,7 @@ size_t pmm_num_arenas();
 //
 // The objects will be sorted in ascending order by arena base address.
 //
-// Returns ZX_ERR_OUT_OF_RANGE if |count| is 0 or |i| and |count| specificy an invalid range.
+// Returns ZX_ERR_OUT_OF_RANGE if |count| is 0 or |i| and |count| specify an invalid range.
 //
 // Returns ZX_ERR_BUFFER_TOO_SMALL if the buffer is too small.
 zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffer,
@@ -53,7 +53,7 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
 // the caller can handle allocation failures with a delayed page_request_t request.
 #define PMM_ALLOC_DELAY_OK (1 << 1)
 
-// Debugging flag that can be used to induce artifical delayed page allocation by randomly
+// Debugging flag that can be used to induce artificial delayed page allocation by randomly
 // rejecting some fraction of the synchronous allocations which have PMM_ALLOC_DELAY_OK set.
 #define RANDOM_DELAYED_ALLOC 0
 
@@ -139,8 +139,8 @@ typedef void (*mem_avail_state_updated_callback_t)(void* context, uint8_t cur_st
 //
 // Invocations of |mem_avail_state_updated_callback| are fully serialized, but they occur on
 // arbitrary threads when pages are being freed. As this likely occurs under important locks, the
-// callback itself should not perform memory reclaimation; instead it should communicate the memory
-// level to a seperate thread that is responsible for reclaiming memory. Furthermore, the callback
+// callback itself should not perform memory reclamation; instead it should communicate the memory
+// level to a separate thread that is responsible for reclaiming memory. Furthermore, the callback
 // is immediately invoked during the execution of this function with the index of the initial memory
 // state.
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,

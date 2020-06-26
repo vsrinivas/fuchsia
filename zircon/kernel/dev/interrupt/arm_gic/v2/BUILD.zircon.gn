@@ -23,6 +23,7 @@ zx_library("v2") {
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktrace",
     "$zx/kernel/lib/pow2_range_allocator",
+    "$zx/kernel/lib/root_resource_filter",
     "$zx/kernel/lib/topology",
   ]
 }

@@ -72,6 +72,7 @@ zx_library("object") {
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/ktrace",
+    "$zx/kernel/lib/root_resource_filter",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zxc",

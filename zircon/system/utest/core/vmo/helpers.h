@@ -7,6 +7,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/zx/bti.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
@@ -17,6 +18,13 @@ namespace vmo_test {
 static inline void VmoWrite(const zx::vmo& vmo, uint32_t data, uint64_t offset = 0) {
   zx_status_t status = vmo.write(static_cast<void*>(&data), offset, sizeof(data));
   ASSERT_OK(status, "write failed");
+}
+
+static inline uint32_t VmoRead(const zx::vmo& vmo, uint64_t offset = 0) {
+  uint32_t val = 0;
+  zx_status_t status = vmo.read(&val, offset, sizeof(val));
+  EXPECT_OK(status, "read failed");
+  return val;
 }
 
 static inline void VmoCheck(const zx::vmo& vmo, uint32_t expected, uint64_t offset = 0) {
@@ -89,6 +97,16 @@ class Mapping {
   uint64_t addr_ = 0;
   size_t len_ = 0;
 };
+
+// A simple struct and function which can be used to attempt to fetch a VMO
+// created using zx_vmo_create_physical from a region which should have been
+// reserved using the kernel.ram.reserve command line arguments.
+struct PhysVmo {
+  uintptr_t addr = 0;
+  size_t size = 0;
+  zx::vmo vmo;
+};
+zx::status<PhysVmo> GetTestPhysVmo();
 
 }  // namespace vmo_test
 

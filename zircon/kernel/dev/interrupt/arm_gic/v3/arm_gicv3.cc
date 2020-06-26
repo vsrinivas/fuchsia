@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <lib/ktrace.h>
+#include <lib/root_resource_filter.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
@@ -508,7 +509,7 @@ static const struct pdev_interrupt_ops gic_ops = {
     .msi_register_handler = gic_msi_register_handler,
 };
 
-static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
+static void arm_gic_v3_init_early(const void* driver_data, uint32_t length) {
   ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
   auto driver = static_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
   ASSERT(driver->mmio_phys);
@@ -562,4 +563,28 @@ static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
   LTRACE_EXIT;
 }
 
-LK_PDEV_INIT(arm_gic_v3_init, KDRV_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY)
+void arm_gic_v3_init_deny_regions(const void* driver_data, uint32_t length) {
+  // Place the physical address of the GICv3 registers on the MMIO deny list.
+  // Users will not be able to create MMIO resources which permit mapping of the
+  // GIC registers, even if they have access to the root resource.
+  //
+  // Unlike GICv2, only the distributor and re-distributor registers are memory
+  // mapped. There is one block of distributor registers for the system, and
+  // one block of redistributor registers for each CPU.
+  ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
+  auto driver = static_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
+  ASSERT(driver->mmio_phys);
+
+  root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicd_offset, GICD_REG_SIZE,
+                                       ZX_RSRC_KIND_MMIO);
+  for (uint i = 0; i < arch_max_num_cpus(); i++) {
+    root_resource_filter_add_deny_region(
+        driver->mmio_phys + driver->gicr_offset + (driver->gicr_stride * i), GICR_REG_SIZE,
+        ZX_RSRC_KIND_MMIO);
+  }
+}
+
+LK_PDEV_INIT(arm_gic_v3_init_early, KDRV_ARM_GIC_V3, arm_gic_v3_init_early,
+             LK_INIT_LEVEL_PLATFORM_EARLY)
+LK_PDEV_INIT(arm_gic_v3_init, KDRV_ARM_GIC_V3, arm_gic_v3_init_deny_regions,
+             LK_INIT_LEVEL_PLATFORM + 1)

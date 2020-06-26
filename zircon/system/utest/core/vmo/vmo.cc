@@ -1048,53 +1048,29 @@ TEST(VmoTestCase, Cache) {
 }
 
 TEST(VmoTestCase, PhysicalSlice) {
-  if (!get_root_resource) {
-    printf("Root resource not available, skipping\n");
-    return;
-  }
-  const size_t size = PAGE_SIZE * 2;
-
-  // To get physical pages in physmap for the physical_vmo, we create a
-  // contiguous vmo.  This needs to last until after we're done testing
-  // with the physical_vmo.
-  zx::vmo contig_vmo;
-  zx::pmt pmt;
-  zx::iommu iommu;
-  zx::bti bti;
-
-  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
-  auto unpin_pmt = fit::defer([&pmt] {
-    if (pmt) {
-      EXPECT_OK(pmt.unpin());
+  vmo_test::PhysVmo phys;
+  if (auto res = vmo_test::GetTestPhysVmo(); !res.is_ok()) {
+    if (res.error_value() == ZX_ERR_NOT_SUPPORTED) {
+      printf("Root resource not available, skipping\n");
     }
-  });
+    return;
+  } else {
+    phys = std::move(res.value());
+  }
 
-  zx::unowned_resource root_res(get_root_resource());
-
-  zx_iommu_desc_dummy_t desc;
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-
-  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-
-  EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &contig_vmo));
-
-  zx_paddr_t phys_addr;
-  EXPECT_OK(
-      bti.pin(ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, contig_vmo, 0, size, &phys_addr, 1, &pmt));
-
-  zx::vmo physical_vmo;
-  EXPECT_OK(zx::vmo::create_physical(*root_res, phys_addr, size, &physical_vmo));
+  const size_t size = PAGE_SIZE * 2;
+  ASSERT_GE(phys.size, size);
 
   // Switch to a cached policy as we are operating on real memory and do not need to be uncached.
-  EXPECT_OK(physical_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+  EXPECT_OK(phys.vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
 
   // Create a slice of the second page.
   zx::vmo slice_vmo;
-  EXPECT_OK(physical_vmo.create_child(ZX_VMO_CHILD_SLICE, size / 2, size / 2, &slice_vmo));
+  EXPECT_OK(phys.vmo.create_child(ZX_VMO_CHILD_SLICE, size / 2, size / 2, &slice_vmo));
 
   // Map both VMOs in so we can access them.
   uintptr_t parent_vaddr;
-  EXPECT_OK(zx::vmar::root_self()->map(0, physical_vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  EXPECT_OK(zx::vmar::root_self()->map(0, phys.vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                                        &parent_vaddr));
   uintptr_t slice_vaddr;
   EXPECT_OK(zx::vmar::root_self()->map(0, slice_vmo, 0, size / 2,
@@ -1122,103 +1098,67 @@ TEST(VmoTestCase, PhysicalSlice) {
 }
 
 TEST(VmoTestCase, CacheOp) {
-  {  // scope unpin_pmt so ~unpin_pmt is before END_TEST
-    const size_t size = 0x8000;
-    zx_handle_t normal_vmo = ZX_HANDLE_INVALID;
-    zx_handle_t physical_vmo = ZX_HANDLE_INVALID;
+  constexpr size_t normal_size = 0x8000;
+  zx_handle_t normal_vmo = ZX_HANDLE_INVALID;
 
-    // To get physical pages in physmap for the physical_vmo, we create a
-    // contiguous vmo.  This needs to last until after we're done testing
-    // with the physical_vmo.
-    zx::vmo contig_vmo;
-    zx::bti bti;
-    zx::pmt pmt;
+  EXPECT_OK(zx_vmo_create(normal_size, 0, &normal_vmo), "creation for cache op (normal vmo)");
 
-    auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
-    auto unpin_pmt = fit::defer([&pmt] {
-      if (pmt) {
-        EXPECT_OK(pmt.unpin());
-      }
-    });
+  vmo_test::PhysVmo phys;
+  if (auto res = vmo_test::GetTestPhysVmo(); res.is_ok()) {
+    phys = std::move(res.value());
+    // Go ahead and set the cache policy; we don't want the op_range calls
+    // below to potentially skip running any code.
+    EXPECT_OK(phys.vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED), "zx_vmo_set_cache_policy");
+    ASSERT_GE(phys.size, normal_size);
+  }
 
-    EXPECT_OK(zx_vmo_create(size, 0, &normal_vmo), "creation for cache op (normal vmo)");
-
-    // Create physical_vmo if we can.
-    if (get_root_resource) {
-      // Please do not use get_root_resource() in new code. See ZX-1467.
-      zx::unowned_resource root_res(get_root_resource());
-
-      zx::iommu iommu;
-
-      zx_iommu_desc_dummy_t desc;
-      EXPECT_EQ(zx_iommu_create((*root_res).get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                                iommu.reset_and_get_address()),
-                ZX_OK);
-
-      EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-
-      // There's a chance this will flake if we're unable to get size
-      // bytes that are physically contiguous.
-      EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &contig_vmo));
-
-      zx_paddr_t phys_addr;
-      EXPECT_OK(zx_bti_pin(bti.get(), ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, contig_vmo.get(), 0,
-                           size, &phys_addr, 1, pmt.reset_and_get_address()));
-
-      EXPECT_EQ(ZX_OK, zx_vmo_create_physical((*root_res).get(), phys_addr, size, &physical_vmo),
-                "creation for cache op (physical vmo)");
-
-      // Go ahead and set the cache policy; we don't want the op_range calls
-      // below to potentially skip running any code.
-      EXPECT_OK(zx_vmo_set_cache_policy(physical_vmo, ZX_CACHE_POLICY_CACHED),
-                "zx_vmo_set_cache_policy");
+  auto test_vmo = [](zx_handle_t vmo, size_t size) {
+    if (vmo == ZX_HANDLE_INVALID) {
+      return;
     }
 
-    auto test_vmo = [](zx_handle_t vmo) {
-      if (vmo == ZX_HANDLE_INVALID) {
-        return;
-      }
+    auto test_op = [vmo, size](uint32_t op) {
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 0, 1, nullptr, 0), "0 1");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 0, 1, nullptr, 0), "0 1");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 1, 1, nullptr, 0), "1 1");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 0, size, nullptr, 0), "0 size");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 1, size - 1, nullptr, 0), "1 size-1");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 1, nullptr, 0), "0x5200 1");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 0x800, nullptr, 0), "0x5200 0x800");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 0x1000, nullptr, 0), "0x5200 0x1000");
+      EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 0x1200, nullptr, 0), "0x5200 0x1200");
 
-      auto test_op = [vmo](uint32_t op) {
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 0, 1, nullptr, 0), "0 1");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 0, 1, nullptr, 0), "0 1");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 1, 1, nullptr, 0), "1 1");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 0, size, nullptr, 0), "0 size");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 1, size - 1, nullptr, 0), "1 size-1");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 1, nullptr, 0), "0x5200 1");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 0x800, nullptr, 0), "0x5200 0x800");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 0x1000, nullptr, 0), "0x5200 0x1000");
-        EXPECT_OK(zx_vmo_op_range(vmo, op, 0x5200, 0x1200, nullptr, 0), "0x5200 0x1200");
-
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_op_range(vmo, op, 0, 0, nullptr, 0), "0 0");
-        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, 1, size, nullptr, 0), "0 size");
-        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, size, 1, nullptr, 0), "size 1");
-        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, size + 1, 1, nullptr, 0),
-                  "size+1 1");
-        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX - 1, 1, nullptr, 0),
-                  "UINT64_MAX-1 1");
-        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX, 1, nullptr, 0),
-                  "UINT64_MAX 1");
-        EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX, UINT64_MAX, nullptr, 0),
-                  "UINT64_MAX UINT64_MAX");
-      };
-
-      test_op(ZX_VMO_OP_CACHE_SYNC);
-      test_op(ZX_VMO_OP_CACHE_CLEAN);
-      test_op(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE);
-      test_op(ZX_VMO_OP_CACHE_INVALIDATE);
+      EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_op_range(vmo, op, 0, 0, nullptr, 0), "0 0");
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, 1, size, nullptr, 0), "0 size");
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, size, 1, nullptr, 0), "size 1");
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, size + 1, 1, nullptr, 0), "size+1 1");
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX - 1, 1, nullptr, 0),
+                "UINT64_MAX-1 1");
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX, 1, nullptr, 0),
+                "UINT64_MAX 1");
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, zx_vmo_op_range(vmo, op, UINT64_MAX, UINT64_MAX, nullptr, 0),
+                "UINT64_MAX UINT64_MAX");
     };
 
-    ZX_DEBUG_ASSERT(normal_vmo != ZX_HANDLE_INVALID);
-    ZX_DEBUG_ASSERT(physical_vmo != ZX_HANDLE_INVALID || !get_root_resource);
+    test_op(ZX_VMO_OP_CACHE_SYNC);
+    test_op(ZX_VMO_OP_CACHE_CLEAN);
+    test_op(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE);
+    test_op(ZX_VMO_OP_CACHE_INVALIDATE);
+  };
 
-    test_vmo(normal_vmo);
-    test_vmo(physical_vmo);
+  ASSERT_NE(ZX_HANDLE_INVALID, normal_vmo);
+  test_vmo(normal_vmo, normal_size);
 
-    EXPECT_OK(zx_handle_close(normal_vmo), "close handle (normal vmo)");
-    // Closing ZX_HANDLE_INVALID is not an error.
-    EXPECT_OK(zx_handle_close(physical_vmo), "close handle (physical vmo)");
-  }  // ~unpin_pmt before END_TEST
+  // No need for a test ASSERT/EXPECT here.  If we have access to the root
+  // resource, but could not create a physical VMO to test with, then
+  // GetTestPhysVmo has already signaled a test failure for us.
+  if (phys.vmo.is_valid()) {
+    test_vmo(phys.vmo.get(), phys.size);
+  }
+
+  EXPECT_OK(zx_handle_close(normal_vmo), "close handle (normal vmo)");
+  // Closing ZX_HANDLE_INVALID is not an error.
+  EXPECT_OK(zx_handle_close(phys.vmo.release()), "close handle (physical vmo)");
 }
 
 TEST(VmoTestCase, CacheFlush) {

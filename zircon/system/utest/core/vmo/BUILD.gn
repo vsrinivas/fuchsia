@@ -19,6 +19,7 @@ source_set("vmo") {
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   sources = [
+    "helpers.cc",
     "vmo-clone.cc",
 
     # TODO(stevensd): Rename once the clone flag names are cleaned up
@@ -32,6 +33,7 @@ source_set("vmo") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]

@@ -6,6 +6,7 @@
 #include <align.h>
 #include <assert.h>
 #include <err.h>
+#include <lib/root_resource_filter.h>
 #include <trace.h>
 #include <zircon/types.h>
 
@@ -126,10 +127,15 @@ void apic_io_init(struct io_apic_descriptor* io_apic_descs, unsigned int num_io_
     struct io_apic* apic = &io_apics[i];
     paddr_t paddr = apic->desc.paddr;
     void* vaddr = paddr_to_physmap(paddr);
+    paddr_t paddr_page_base = ROUNDDOWN(paddr, PAGE_SIZE);
+
+    // Make sure that user mode cannot ever gain access to these registers using
+    // zx_vmo_alloc_physical and the root resource.
+    root_resource_filter_add_deny_region(paddr_page_base, PAGE_SIZE, ZX_RSRC_KIND_MMIO);
+
     // If the window isn't mapped yet (multiple IO APICs can be in the
     // same page), map it in.
     if (vaddr == nullptr) {
-      paddr_t paddr_page_base = ROUNDDOWN(paddr, PAGE_SIZE);
       ASSERT(paddr + IO_APIC_WINDOW_SIZE <= paddr_page_base + PAGE_SIZE);
       zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
           "ioapic",

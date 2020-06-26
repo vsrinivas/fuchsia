@@ -7,6 +7,7 @@
 #include "object/resource.h"
 
 #include <align.h>
+#include <lib/root_resource_filter.h>
 #include <trace.h>
 #include <zircon/syscalls/resource.h>
 
@@ -43,8 +44,24 @@ zx_status_t validate_resource(zx_handle_t handle, uint32_t kind) {
 
 zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, uint32_t kind,
                                      uintptr_t base, size_t size) {
-  // Root gets access to everything and has no region to match against
+  // Root gets access to almost everything, but there are still resource ranges
+  // it is not permitted to mint. For example:
+  //
+  // 1) All of physical RAM is off limits (with limited platform specific
+  //    exceptions). It exists on the CPU accessible physical bus (so, the
+  //    domain controlled by ZX_RSRC_KIND_MMIO) and user mode program should not
+  //    be able to request access to physical RAM by address, they should be
+  //    forced to go through the PMM using VMO creation instead.
+  // 2) Any MMIO accessible interrupt controller registers.
+  // 3) Any MMIO accessible IOMMU registers.
+  //
+  // Enforce that policy here by disallowing resource minting for any request
+  // which touches any disallowed ranges.
+  //
   if (resource->get_kind() == ZX_RSRC_KIND_ROOT) {
+    if (!root_resource_filter_can_access_region(base, size, kind)) {
+      return ZX_ERR_ACCESS_DENIED;
+    }
     return ZX_OK;
   }
 
@@ -63,6 +80,14 @@ zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, u
   }
   LTRACEF("req [base %#lx size %#lx] and resource [base %#lx size %#lx]\n", base, size, rbase,
           rsize);
+
+  // All resources need to track their lineage back to the root resource,
+  // and the root resource is specifically prohibited from producing ranges
+  // which intersect anything in the deny list. Since all resource ranges
+  // need to be a subset of their parent, it should be impossible for a
+  // resource object to exist with a range which intersects anything in the
+  // deny list. Check that with a debug assert here.
+  ZX_DEBUG_ASSERT(root_resource_filter_can_access_region(rbase, rsize, kind));
 
   // Check for intersection and make sure the requested base+size fits within
   // the resource's address space  allocation.

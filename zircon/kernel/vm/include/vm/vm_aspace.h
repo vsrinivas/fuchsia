@@ -247,11 +247,11 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 void DumpAllAspaces(bool verbose);
 
 // hack to convert from vmm_aspace_t to VmAspace
-static VmAspace* vmm_aspace_to_obj(vmm_aspace_t* aspace) {
+static inline VmAspace* vmm_aspace_to_obj(vmm_aspace_t* aspace) {
   return reinterpret_cast<VmAspace*>(aspace);
 }
 
-static const VmAspace* vmm_aspace_to_obj(const vmm_aspace_t* aspace) {
+static inline const VmAspace* vmm_aspace_to_obj(const vmm_aspace_t* aspace) {
   return reinterpret_cast<const VmAspace*>(aspace);
 }
 

@@ -89,6 +89,10 @@ static unsigned pixel_format_fixup(unsigned pf) {
 
 static bool early_console_disabled;
 
+const zbi_header_t* platform_get_zbi(void) {
+  return reinterpret_cast<zbi_header_t*>(X86_PHYS_TO_VIRT(_zbi_base));
+}
+
 zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
   switch (hdr->type) {
     case ZBI_TYPE_PLATFORM_ID:

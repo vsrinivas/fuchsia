@@ -85,6 +85,7 @@ if (toolchain.environment == "kernel") {
       "$zx/kernel/lib/fbl",
       "$zx/kernel/lib/instrumentation/test:tests",
       "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/root_resource_filter",
       "$zx/kernel/lib/unittest",
       "$zx/kernel/lib/zxc",
       "$zx/kernel/object",

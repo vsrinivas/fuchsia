@@ -19,5 +19,6 @@ zx_library("v3") {
     "$zx/kernel/dev/pdev/interrupt",
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktrace",
+    "$zx/kernel/lib/root_resource_filter",
   ]
 }

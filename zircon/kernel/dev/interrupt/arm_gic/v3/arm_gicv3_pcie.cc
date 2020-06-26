@@ -23,7 +23,9 @@ static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
   __UNUSED const dcfg_arm_gicv3_driver_t* driver =
       reinterpret_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
 
-  // When GICv3 MSI support is added, initialize here
+  // When GICv3 MSI support is added, add a handler to register the deny
+  // regions. Add all MMIO regions which contain GIC registers to the
+  // system-wide deny list using root_resource_filter_add_deny_region.
 
   // Initialize the PCI platform, claiming no MSI support
   static NoMsiPciePlatformInterface platform_pcie_support;
@@ -31,7 +33,7 @@ static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
   zx_status_t res = PcieBusDriver::InitializeDriver(platform_pcie_support);
   if (res != ZX_OK) {
     TRACEF(
-        "Failed to initialize PCI bus driver (res %d).  "
+        "Failed to initialize PCI bus driver (res %d). "
         "PCI will be non-functional.\n",
         res);
   }

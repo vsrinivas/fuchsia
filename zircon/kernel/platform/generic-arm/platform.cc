@@ -80,6 +80,8 @@ static size_t mexec_zbi_length = 0;
 
 static constexpr bool kProcessZbiEarly = true;
 
+const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
+
 static void halt_other_cpus(void) {
   static ktl::atomic<int> halted;
 

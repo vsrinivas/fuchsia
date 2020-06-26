@@ -15,6 +15,12 @@ extern uint64_t arm_gicv2_gicc_offset;
 extern uint64_t arm_gicv2_gich_offset;
 extern uint64_t arm_gicv2_gicv_offset;
 
+#define GICC_REG_SIZE (0x2000)
+#define GICD_REG_SIZE (0x1000)
+#define GICH_REG_SIZE (0x1000)
+#define GICV_REG_SIZE (0x2000)
+#define GICV2M_FRAME_REG_SIZE (0x1000)
+
 #define GICREG(gic, reg) (*REG32(arm_gicv2_gic_base + (reg)))
 #define GICD_OFFSET arm_gicv2_gicd_offset
 #define GICC_OFFSET arm_gicv2_gicc_offset

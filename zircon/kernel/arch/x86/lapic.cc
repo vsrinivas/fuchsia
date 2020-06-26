@@ -10,6 +10,7 @@
 #include <err.h>
 #include <lib/arch/intrin.h>
 #include <lib/console.h>
+#include <lib/root_resource_filter.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/types.h>
@@ -137,6 +138,10 @@ void apic_vm_init(void) {
     }
     ASSERT(apic_virt_base != nullptr);
   }
+
+  // Whether we chose to map the old MMIO region or not, make sure we put the
+  // registers on the system-wide MMIO deny list.
+  root_resource_filter_add_deny_region(APIC_PHYS_BASE, PAGE_SIZE, ZX_RSRC_KIND_MMIO);
 }
 
 // Initializes the current processor's local APIC.  Should be called after

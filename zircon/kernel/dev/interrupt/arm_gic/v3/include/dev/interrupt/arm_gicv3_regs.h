@@ -24,6 +24,9 @@ extern uint64_t arm_gicv3_gicr_stride;
 #define GICR_OFFSET arm_gicv3_gicr_offset
 #define GICR_STRIDE arm_gicv3_gicr_stride
 
+#define GICD_REG_SIZE (0x10000)
+#define GICR_REG_SIZE (0x1000)
+
 #define ICC_CTLR_EL1 "S3_0_C12_C12_4"
 #define ICC_PMR_EL1 "S3_0_C4_C6_0"
 #define ICC_IAR1_EL1 "S3_0_C12_C12_0"

@@ -8,6 +8,7 @@
 
 #include <align.h>
 #include <err.h>
+#include <lib/root_resource_filter.h>
 #include <platform.h>
 #include <trace.h>
 #include <zircon/time.h>
@@ -51,6 +52,11 @@ zx_status_t IommuImpl::Create(ktl::unique_ptr<const uint8_t[]> desc_bytes, size_
 
   auto desc = reinterpret_cast<const zx_iommu_desc_intel_t*>(desc_bytes.get());
   const uint64_t register_base = desc->register_base;
+
+  // Add the IOMMU registers to the system wide MMIO deny list. User mode code
+  // may not gain access to these registers under any circumstances, even when
+  // it has access to the root resource.
+  root_resource_filter_add_deny_region(register_base, PAGE_SIZE, ZX_RSRC_KIND_MMIO);
 
   auto kernel_aspace = VmAspace::kernel_aspace();
   void* vaddr;

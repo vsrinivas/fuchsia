@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+zx_library("root_resource_filter") {
+  kernel = true
+  sources = [ "root_resource_filter.cc" ]
+  deps = [
+    "$zx/kernel/lib/cmdline",
+    "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/crypto",
+    "$zx/kernel/lib/debuglog",
+    "$zx/kernel/lib/init",
+    "$zx/system/ulib/region-alloc",
+    "$zx/system/ulib/zbi",
+  ]
+}

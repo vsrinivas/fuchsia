@@ -1394,59 +1394,97 @@ TEST_F(VmoClone2TestCase, PinClonePages) {
     return;
   }
 
+  // Create the dummy IOMMU and fake BTI we will need for this test.
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
+  constexpr size_t kPageCount = 4;
+  constexpr size_t kVmoSize = kPageCount * PAGE_SIZE;
+  constexpr uint32_t kTestPattern = 0x73570f00;
+
+  // Create a VMO.
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
 
-  VmoWrite(vmo, 1);
+  // Write a test pattern to each of these pages.  This should force them to
+  // become committed.
+  for (size_t i = 0; i < kPageCount; ++i) {
+    VmoWrite(vmo, static_cast<uint32_t>(kTestPattern + i), PAGE_SIZE * i);
+  }
 
+  // Make a COW clone of this VMO.
   zx::vmo clone;
-  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &clone));
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, kVmoSize, &clone));
 
-  zx::pmt pmt;
-  zx_paddr_t addr;
-  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, clone, 0, ZX_PAGE_SIZE, &addr, 1, &pmt));
+  // Confirm that we see the test pattern that we wrote to our parent.  At this
+  // point in time, we should be sharing pages.
+  for (size_t i = 0; i < kPageCount; ++i) {
+    const uint32_t expected = static_cast<uint32_t>(kTestPattern + i);
+    uint32_t observed = VmoRead(vmo, PAGE_SIZE * i);
+    EXPECT_EQ(expected, observed);
+  }
 
-  auto unpin = fbl::MakeAutoCall([&pmt]() { pmt.unpin(); });
+  // OK, now pin both of the VMOs.  After pinning, the VMOs should not longer be
+  // sharing any physical pages (even though they were sharing pages up until
+  // now).
+  zx::pmt parent_pmt, clone_pmt;
+  auto unpin = fbl::MakeAutoCall([&parent_pmt, &clone_pmt]() {
+    if (parent_pmt.is_valid()) {
+      parent_pmt.unpin();
+    }
 
-  // Write directly to the pinned page (as if we were hardware).
-  zx::vmo pseudo_hardware;
-  ASSERT_OK(zx::vmo::create_physical(RootResource(), addr, ZX_PAGE_SIZE, &pseudo_hardware));
+    if (clone_pmt.is_valid()) {
+      clone_pmt.unpin();
+    }
+  });
 
-  Mapping m;
-  m.Init(pseudo_hardware, ZX_PAGE_SIZE);
-  ASSERT_OK(
-      zx_cache_flush(m.ptr(), sizeof(*m.ptr()), ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+  zx_paddr_t parent_paddrs[kPageCount] = {0};
+  zx_paddr_t clone_paddrs[kPageCount] = {0};
 
-  ASSERT_EQ(*m.ptr(), 1);
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, kVmoSize, parent_paddrs, std::size(parent_paddrs),
+                    &parent_pmt));
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, clone, 0, kVmoSize, clone_paddrs, std::size(clone_paddrs),
+                    &clone_pmt));
 
-  // Writes should show up in the clone.
-  *m.ptr() = 2;
-  ASSERT_OK(
-      zx_cache_flush(m.ptr(), sizeof(*m.ptr()), ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 2));
+  for (size_t i = 0; i < std::size(parent_paddrs); ++i) {
+    for (size_t j = 0; j < std::size(clone_paddrs); ++j) {
+      EXPECT_NE(parent_paddrs[i], clone_paddrs[j]);
+    }
+  }
 
-  // The 'hardware' write shouldn't have affected the original vmo.
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 1));
+  // Verify that the test pattern is still present in each of the VMOs, even
+  // though they are now backed by different pages.
+  for (size_t i = 0; i < kPageCount; ++i) {
+    const uint32_t expected = static_cast<uint32_t>(kTestPattern + i);
+    uint32_t observed = VmoRead(vmo, PAGE_SIZE * i);
+    EXPECT_EQ(expected, observed);
+
+    observed = VmoRead(clone, PAGE_SIZE * i);
+    EXPECT_EQ(expected, observed);
+  }
+
+  // Everything went great.  Simply unwind and let our various deferred actions
+  // clean up and do final sanity checks for us.
 }
 
 // Tests that clones based on physical vmos can't be created.
 TEST_F(VmoClone2TestCase, NoPhysical) {
-  if (!RootResource()) {
-    printf("Root resource not available, skipping\n");
+  vmo_test::PhysVmo phys;
+  if (auto res = vmo_test::GetTestPhysVmo(); !res.is_ok()) {
+    if (res.error_value() == ZX_ERR_NOT_SUPPORTED) {
+      printf("Root resource not available, skipping\n");
+    }
     return;
+  } else {
+    phys = std::move(res.value());
   }
 
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create_physical(RootResource(), 0, ZX_PAGE_SIZE, &vmo));
-
   zx::vmo clone;
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &clone),
+  ASSERT_EQ(phys.vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &clone),
             ZX_ERR_NOT_SUPPORTED);
 }
 

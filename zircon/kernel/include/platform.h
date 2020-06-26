@@ -108,6 +108,9 @@ bool platform_early_console_enabled(void);
 void platform_set_hw_reboot_reason(zbi_hw_reboot_reason_t reason);
 zbi_hw_reboot_reason_t platform_hw_reboot_reason(void);
 
+// Fetch the pointer to the ZBI as discovered by the platform.
+const zbi_header_t* platform_get_zbi(void);
+
 __END_CDECLS
 
 #ifdef __cplusplus

@@ -13,6 +13,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/ktrace.h>
+#include <lib/root_resource_filter.h>
 #include <lib/system-topology.h>
 #include <sys/types.h>
 #include <trace.h>
@@ -211,15 +212,15 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector) {
   return ZX_OK;
 }
 
-static zx_status_t gic_deactivate_interrupt(unsigned int vector){
-    if (vector >= max_irqs) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+static zx_status_t gic_deactivate_interrupt(unsigned int vector) {
+  if (vector >= max_irqs) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    uint32_t reg = 1 << (vector % 32);
-    GICREG(0, GICD_ICACTIVER(vector / 32)) = reg;
+  uint32_t reg = 1 << (vector % 32);
+  GICREG(0, GICD_ICACTIVER(vector / 32)) = reg;
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 static zx_status_t gic_configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
@@ -440,7 +441,7 @@ static const struct pdev_interrupt_ops gic_ops = {
     .msi_register_handler = arm_gicv2m_msi_register_handler,
 };
 
-static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
+static void arm_gic_v2_init_early(const void* driver_data, uint32_t length) {
   ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
   auto driver = static_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
   ASSERT(driver->mmio_phys);
@@ -489,4 +490,33 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
   gicv2_hw_interface_register();
 }
 
-LK_PDEV_INIT(arm_gic_v2_init, KDRV_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY)
+static void arm_gic_v2_init_deny_regions(const void* driver_data, uint32_t length) {
+  // Place the physical address of the GICv2 registers on the MMIO deny list.
+  // Users will not be able to create MMIO resources which permit mapping of the
+  // GIC registers, even if they have access to the root resource.
+  ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
+  auto driver = static_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
+  ASSERT(driver->mmio_phys);
+
+  root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicc_offset, GICC_REG_SIZE,
+                                       ZX_RSRC_KIND_MMIO);
+  root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicd_offset, GICD_REG_SIZE,
+                                       ZX_RSRC_KIND_MMIO);
+  if (driver->gich_offset) {
+    root_resource_filter_add_deny_region(driver->mmio_phys + driver->gich_offset, GICH_REG_SIZE,
+                                         ZX_RSRC_KIND_MMIO);
+  }
+  if (driver->gicv_offset) {
+    root_resource_filter_add_deny_region(driver->mmio_phys + driver->gich_offset, GICV_REG_SIZE,
+                                         ZX_RSRC_KIND_MMIO);
+  }
+  if (driver->msi_frame_phys) {
+    root_resource_filter_add_deny_region(driver->msi_frame_phys, GICV2M_FRAME_REG_SIZE,
+                                         ZX_RSRC_KIND_MMIO);
+  }
+}
+
+LK_PDEV_INIT(arm_gic_v2_init_early, KDRV_ARM_GIC_V2, arm_gic_v2_init_early,
+             LK_INIT_LEVEL_PLATFORM_EARLY)
+LK_PDEV_INIT(arm_gic_v2_init, KDRV_ARM_GIC_V2, arm_gic_v2_init_deny_regions,
+             LK_INIT_LEVEL_PLATFORM + 1)
