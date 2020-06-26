@@ -29,7 +29,9 @@ class AnnotationViewInterface {
 
   // Draws four rectangles corresponding to the top, bottom, left, and right edges the specified
   // bounding box.
-  virtual void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) = 0;
+  virtual void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
+                             const std::array<float, 3>& scale_vector,
+                             const std::array<float, 3>& translation_vector) = 0;
 
   // Hides annotation view contents by detaching the subtree containing the annotations from the
   // view.
@@ -67,7 +69,9 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener, public Annot
 
   // Draws four rectangles corresponding to the top, bottom, left, and right edges the specified
   // bounding box.
-  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) override;
+  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
+                     const std::array<float, 3>& scale_vector,
+                     const std::array<float, 3>& translation_vector) override;
 
   // Hides annotation view contents by detaching the subtree containing the annotations from the
   // view.
@@ -76,7 +80,7 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener, public Annot
   zx_koid_t koid() { return client_view_koid_; }
 
   // Width of the four rectangles that constitute the boundaries of the highlight.
-  static constexpr float kHighlightEdgeThickness = 0.01f;
+  static constexpr float kHighlightEdgeThickness = 5.f;
 
   // IDs for resources common to all annotation views.
   static constexpr uint32_t kAnnotationViewId = 1;

@@ -78,7 +78,9 @@ void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref)
   });
 }
 
-void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) {
+void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
+                                   const std::array<float, 3>& scale_vector,
+                                   const std::array<float, 3>& translation_vector) {
   if (!state_.tree_initialized) {
     FX_LOGS(INFO) << "Annotation view tree is not initialized.";
     return;
@@ -117,6 +119,9 @@ void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding
   DrawHighlightEdge(&cmds, kHighlightBottomEdgeNodeId, bounding_box_width + kHighlightEdgeThickness,
                     kHighlightEdgeThickness, bounding_box_center_x, bounding_box.min.y,
                     annotation_elevation);
+
+  PushCommand(&cmds, scenic::NewSetTranslationCmd(kContentNodeId, translation_vector));
+  PushCommand(&cmds, scenic::NewSetScaleCmd(kContentNodeId, scale_vector));
 
   // If state_.has_annotations is false, then either the top-level content node has not yet been
   // attached to the annotation view node after initialization, OR it has been detached after a view

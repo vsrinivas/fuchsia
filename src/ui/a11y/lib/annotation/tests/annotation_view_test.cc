@@ -36,9 +36,13 @@ struct ViewAttributes {
 struct EntityNodeAttributes {
   uint32_t id;
   uint32_t parent_id;
+  std::array<float, 3> scale_vector;
+  std::array<float, 3> translation_vector;
   std::set<uint32_t> children;
   bool operator==(const EntityNodeAttributes& rhs) const {
-    return this->id == rhs.id && this->parent_id == rhs.parent_id && this->children == rhs.children;
+    return this->id == rhs.id && this->parent_id == rhs.parent_id &&
+           this->scale_vector == rhs.scale_vector &&
+           this->translation_vector == rhs.translation_vector && this->children == rhs.children;
   }
 };
 
@@ -172,12 +176,26 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
   }
 
   void ApplySetTranslationCommand(const fuchsia::ui::gfx::SetTranslationCmd& command) {
-    const uint32_t parent_id = command.id;
-    const uint32_t rectangle_id = rectangle_nodes_[parent_id].rectangle_id;
-    const auto& translation = command.value.value;
-    rectangles_[rectangle_id].center_x = translation.x;
-    rectangles_[rectangle_id].center_y = translation.y;
-    rectangles_[rectangle_id].elevation = translation.z;
+    if (command.id == AnnotationView::kContentNodeId) {
+      entity_nodes_[command.id].translation_vector[0] = command.value.value.x;
+      entity_nodes_[command.id].translation_vector[1] = command.value.value.y;
+      entity_nodes_[command.id].translation_vector[2] = command.value.value.z;
+    } else {
+      const uint32_t parent_id = command.id;
+      const uint32_t rectangle_id = rectangle_nodes_[parent_id].rectangle_id;
+      const auto& translation = command.value.value;
+      rectangles_[rectangle_id].center_x = translation.x;
+      rectangles_[rectangle_id].center_y = translation.y;
+      rectangles_[rectangle_id].elevation = translation.z;
+    }
+  }
+
+  void ApplySetScaleCommand(const fuchsia::ui::gfx::SetScaleCmd& command) {
+    if (entity_nodes_.find(command.id) != entity_nodes_.end()) {
+      entity_nodes_[command.id].scale_vector[0] = command.value.value.x;
+      entity_nodes_[command.id].scale_vector[1] = command.value.value.y;
+      entity_nodes_[command.id].scale_vector[2] = command.value.value.z;
+    }
   }
 
   void ApplyDetachCommand(const fuchsia::ui::gfx::DetachCmd& command) {
@@ -223,6 +241,10 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 
         case fuchsia::ui::gfx::Command::Tag::kSetTranslation:
           ApplySetTranslationCommand(gfx_command.set_translation());
+          break;
+
+        case fuchsia::ui::gfx::Command::Tag::kSetScale:
+          ApplySetScaleCommand(gfx_command.set_scale());
           break;
 
         case fuchsia::ui::gfx::Command::Tag::kDetach:
@@ -432,6 +454,8 @@ TEST_F(AnnotationViewTest, TestInit) {
   ExpectEntityNode(
       {AnnotationView::kContentNodeId,
        0u,
+       {}, /* scale vector */
+       {}, /* translation vector */
        {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
         AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
 
@@ -454,7 +478,7 @@ TEST_F(AnnotationViewTest, TestDrawHighlight) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
 
-  annotation_view_->DrawHighlight(bounding_box);
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
 
   RunLoopUntilIdle();
 
@@ -489,6 +513,8 @@ TEST_F(AnnotationViewTest, TestDrawHighlight) {
   ExpectEntityNode(
       {AnnotationView::kContentNodeId,
        AnnotationView::kAnnotationViewId,
+       {1, 1, 1}, /* scale vector */
+       {0, 0, 0}, /* translation vector */
        {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
         AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
 }
@@ -497,7 +523,7 @@ TEST_F(AnnotationViewTest, TestDetachViewContents) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
 
-  annotation_view_->DrawHighlight(bounding_box);
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
 
   RunLoopUntilIdle();
 
@@ -506,6 +532,8 @@ TEST_F(AnnotationViewTest, TestDetachViewContents) {
   ExpectEntityNode(
       {AnnotationView::kContentNodeId,
        AnnotationView::kAnnotationViewId,
+       {1, 1, 1}, /* scale vector */
+       {0, 0, 0}, /* translation vector */
        {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
         AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
 
@@ -518,6 +546,8 @@ TEST_F(AnnotationViewTest, TestDetachViewContents) {
   ExpectEntityNode(
       {AnnotationView::kContentNodeId,
        0u,
+       {1, 1, 1}, /* scale vector */
+       {0, 0, 0}, /* translation vector */
        {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
         AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
 }
@@ -526,7 +556,7 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedEvent) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
 
-  annotation_view_->DrawHighlight(bounding_box);
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
 
   RunLoopUntilIdle();
 
@@ -542,7 +572,7 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedEvent) {
 TEST_F(AnnotationViewTest, TestViewDetachAndReattachEvents) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  annotation_view_->DrawHighlight(bounding_box);
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
 
   // ViewAttachedToSceneEvent() should have no effect before any highlights are drawn.
   mock_session_->SendViewDetachedFromSceneEvent();

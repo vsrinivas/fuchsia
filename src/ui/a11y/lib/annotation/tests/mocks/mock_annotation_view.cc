@@ -19,11 +19,19 @@ void MockAnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_
   initialize_view_called_ = true;
 }
 
-void MockAnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) {
+void MockAnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
+                                       const std::array<float, 3>& scale_vector,
+                                       const std::array<float, 3>& translation_vector) {
   current_highlight_ = std::make_optional<fuchsia::ui::gfx::BoundingBox>(bounding_box);
+  current_scale_ = std::make_optional<std::array<float, 3>>(scale_vector);
+  current_translation_ = std::make_optional<std::array<float, 3>>(translation_vector);
 }
 
-void MockAnnotationView::DetachViewContents() { current_highlight_ = std::nullopt; }
+void MockAnnotationView::DetachViewContents() {
+  current_highlight_ = std::nullopt;
+  current_scale_ = std::nullopt;
+  current_translation_ = std::nullopt;
+}
 
 void MockAnnotationView::SimulateViewPropertyChange() { view_properties_changed_callback_(); }
 
@@ -35,6 +43,14 @@ bool MockAnnotationView::IsInitialized() { return initialize_view_called_; }
 
 const std::optional<fuchsia::ui::gfx::BoundingBox>& MockAnnotationView::GetCurrentHighlight() {
   return current_highlight_;
+}
+
+const std::optional<std::array<float, 3>> MockAnnotationView::GetScaleVector() {
+  return current_scale_;
+}
+
+const std::optional<std::array<float, 3>> MockAnnotationView::GetTranslationVector() {
+  return current_translation_;
 }
 
 std::unique_ptr<a11y::AnnotationViewInterface>

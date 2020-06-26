@@ -29,7 +29,9 @@ class MockAnnotationView : public a11y::AnnotationViewInterface {
   void InitializeView(fuchsia::ui::views::ViewRef client_view_ref) override;
 
   // |AnnotationViewInterface|
-  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) override;
+  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
+                     const std::array<float, 3>& scale_vector,
+                     const std::array<float, 3>& translation_vector) override;
 
   // |AnnotationViewInterface|
   void DetachViewContents() override;
@@ -40,6 +42,8 @@ class MockAnnotationView : public a11y::AnnotationViewInterface {
 
   bool IsInitialized();
   const std::optional<fuchsia::ui::gfx::BoundingBox>& GetCurrentHighlight();
+  const std::optional<std::array<float, 3>> GetScaleVector();
+  const std::optional<std::array<float, 3>> GetTranslationVector();
 
  private:
   ViewPropertiesChangedCallback view_properties_changed_callback_;
@@ -48,6 +52,8 @@ class MockAnnotationView : public a11y::AnnotationViewInterface {
 
   bool initialize_view_called_ = false;
   std::optional<fuchsia::ui::gfx::BoundingBox> current_highlight_;
+  std::optional<std::array<float, 3>> current_scale_;
+  std::optional<std::array<float, 3>> current_translation_;
 };
 
 class MockAnnotationViewFactory : public a11y::AnnotationViewFactoryInterface {
