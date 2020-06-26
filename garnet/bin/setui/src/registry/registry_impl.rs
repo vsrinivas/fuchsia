@@ -25,6 +25,7 @@ use std::sync::Arc;
 struct ControllerState {
     signature: handler::message::Signature,
     active_requests: HashSet<u64>,
+    has_active_listener: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -40,7 +41,7 @@ enum ActiveControllerRequest {
 impl ControllerState {
     /// Creates a ControllerState struct with a handler [signature].
     pub fn create(signature: handler::message::Signature) -> ControllerState {
-        Self { signature, active_requests: HashSet::new() }
+        Self { signature, active_requests: HashSet::new(), has_active_listener: false }
     }
 
     /// Marks a request with [id] as active.
@@ -65,9 +66,6 @@ pub struct RegistryImpl {
     /// it needs to be modified inside an fasync thread, and Self can't be passed
     /// into the fasync thread.
     active_controllers: HashMap<SettingType, ControllerState>,
-
-    /// The current types being listened in on.
-    active_listeners: Vec<SettingType>,
 
     /// Handler factory.
     handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
@@ -111,7 +109,6 @@ impl RegistryImpl {
         // reference the registry in the async tasks below.
         // TODO (fxb/53819): Remove the Arc(Mutex).
         let registry = Arc::new(Mutex::new(Self {
-            active_listeners: Vec::new(),
             handler_factory,
             messenger_client: registry_messenger_client,
             active_controllers: HashMap::new(),
@@ -226,22 +223,18 @@ impl RegistryImpl {
         }
 
         let handler_signature = optional_handler_signature.unwrap();
-        let listening = self.active_listeners.contains(&setting_type);
+        let controller_state = self.active_controllers.get_mut(&setting_type);
+        let listening = controller_state.as_ref().map(|ac| ac.has_active_listener).unwrap_or(false);
 
         let mut new_state = None;
         if size == 0 && listening {
-            // FIXME: use `Vec::remove_item` upon stabilization
-            // TODO (fxb/52696): Explore adding active listeners into ControllerState instead of
-            // having it in a vector.
-            let listener_to_remove =
-                self.active_listeners.iter().enumerate().find(|(_i, elem)| **elem == setting_type);
-            if let Some((i, _elem)) = listener_to_remove {
-                self.active_listeners.remove(i);
-            }
+            // The only way for listening to be true is if `controller_state` was `Some(_)`, so
+            // the call to `unwrap` here is safe.
+            let mut controller_state = controller_state.unwrap();
+            controller_state.has_active_listener = false;
             new_state = Some(State::EndListen);
 
-            let controller_state = self.active_controllers.get(&setting_type);
-            if controller_state.is_some() && controller_state.unwrap().pending_requests_empty() {
+            if controller_state.pending_requests_empty() {
                 self.active_controllers.remove(&setting_type);
             }
             self.active_controller_sender
@@ -251,7 +244,9 @@ impl RegistryImpl {
                 ))
                 .ok();
         } else if size > 0 && !listening {
-            self.active_listeners.push(setting_type);
+            if let Some(controller_state) = controller_state {
+                controller_state.has_active_listener = true;
+            }
             new_state = Some(State::Listen);
         }
 
@@ -270,7 +265,12 @@ impl RegistryImpl {
     /// setting type.
     fn notify(&self, setting_type: SettingType) {
         // Only return updates for types actively listened on.
-        if self.active_listeners.contains(&setting_type) {
+        let listening = self
+            .active_controllers
+            .get(&setting_type)
+            .map(|ac| ac.has_active_listener)
+            .unwrap_or(false);
+        if listening {
             self.messenger_client
                 .message(
                     core::Payload::Event(SettingEvent::Changed(setting_type)),
@@ -383,9 +383,7 @@ impl RegistryImpl {
         }
         let mut controller_state = self.active_controllers.get(&setting_type).unwrap().clone();
         controller_state.remove_active_request(id);
-        if controller_state.pending_requests_empty()
-            && !self.active_listeners.contains(&setting_type)
-        {
+        if controller_state.pending_requests_empty() && !controller_state.has_active_listener {
             self.active_controllers.remove(&setting_type);
         } else {
             self.active_controllers.insert(setting_type, controller_state.clone());
@@ -400,14 +398,12 @@ impl RegistryImpl {
         signature: handler::message::Signature,
     ) {
         // We don't need to look through for entries in active_controllers with empty
-        // active_requests. In remove_active_request, if active_listeners was already
-        // empty and active_requests were empty, its entry will be removed from
+        // active_requests. In remove_active_request, if has_active_listeners was already
+        // false and active_requests were empty, its entry will be removed from
         // active_controllers. In process_listen, if the listener count hits 0 and
         // there are no pending requests, the entry will be removed from
         // active_controllers.
-        if self.active_controllers.contains_key(&setting_type)
-            || self.active_listeners.contains(&setting_type)
-        {
+        if self.active_controllers.contains_key(&setting_type) {
             // Controller state not ready to tear down.
             return;
         }
