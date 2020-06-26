@@ -10,6 +10,13 @@ import sys
 from sdk_common import Atom
 
 
+def sort_atoms(atoms):
+  def key(ad):
+    return (ad['meta'], ad['type'])
+
+  return sorted(({'meta': a.metadata, 'type': a.type,} for a in atoms),
+                key=key)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -40,10 +47,7 @@ def main():
             'target': [args.target_arch,],
         },
         'id': args.id,
-        'parts': sorted([{
-            'meta': a.metadata,
-            'type': a.type,
-        } for a in atoms]),
+        'parts': sort_atoms(atoms),
         'schema_version': args.schema_version,
     }
 

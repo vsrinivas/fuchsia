@@ -32,7 +32,7 @@ def main():
             return 1
     manifest = {
         'ids': [],
-        'atoms': map(lambda a: a.json, sorted(list(atoms))),
+        'atoms': [a.json for a in sorted(list(atoms))],
     }
     with open(os.path.abspath(args.out), 'w') as out:
         json.dump(

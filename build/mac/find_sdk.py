@@ -19,7 +19,7 @@ import sys
 
 def parse_version(version_str):
     """'10.6' => [10, 6]"""
-    return map(int, re.findall(r'(\d+)', version_str))
+    return list(map(int, re.findall(r'(\d+)', version_str)))
 
 
 def main():
@@ -40,14 +40,15 @@ def main():
     # 'xcrun' always returns the latest available SDK
     version = subprocess.check_output(
         ['xcrun', '--sdk', 'macosx', '--show-sdk-version']).strip()
+    version = version.decode()
     if parse_version(version) < parse_version(args.min_sdk_version):
         raise Exception(
             'SDK version %s is before minimum version %s' %
             (version, args.min_sdk_version))
     if args.print_sdk_path:
-        print subprocess.check_output(
-            ['xcrun', '--sdk', 'macosx', '--show-sdk-path']).strip()
-    print version
+        print(subprocess.check_output(
+            ['xcrun', '--sdk', 'macosx', '--show-sdk-path']).decode().strip())
+    print(version)
 
     return 0
 

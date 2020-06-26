@@ -7,7 +7,12 @@ import argparse
 import json
 import os
 import sys
-from urlparse import urlparse
+
+try:
+  # Python 3
+  from urllib.parse import urlparse
+except ImportError:
+  from urlparse import urlparse
 
 from sdk_common import Atom
 
@@ -58,11 +63,11 @@ def main():
         for file in atom.files:
             add(file.destination, file.source)
 
-    for dest, source in args.mappings.iteritems():
+    for dest, source in args.mappings.items():
         add(dest, source)
 
     with open(args.output, 'w') as output_file:
-        for mapping in sorted(all_files.iteritems()):
+        for mapping in sorted(all_files.items()):
             output_file.write('%s=%s\n' % mapping)
 
 

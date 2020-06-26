@@ -39,8 +39,7 @@ def main():
     shutil.rmtree(args.out_dir, True)
 
     with open(args.manifest, 'r') as manifest_file:
-        mappings = map(
-            lambda l: l.strip().split('=', 1), manifest_file.readlines())
+        mappings = [l.strip().split('=', 1) for l in manifest_file.readlines()]
 
     for dest, source in mappings:
         destination = os.path.join(args.out_dir, dest)

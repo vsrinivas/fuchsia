@@ -33,23 +33,25 @@ def main():
     with open(args.manifest, 'r') as manifest_file:
         manifest = json.load(manifest_file)
 
-    ids = map(lambda a: a['id'], manifest['atoms'])
+    ids = [a['id'] for a in manifest['atoms']]
 
     # Ignore images which are very architecture-dependent.
     # TODO(DX-981): remove this exception when obsolete.
-    ids = filter(
-        lambda i: not (i.startswith('sdk://images')), ids)
+    ids = [i for i in ids if not (i.startswith('sdk://images'))]
 
     with open(args.updated, 'w') as updated_file:
         updated_file.write('\n'.join(ids))
 
     with open(args.reference, 'r') as reference_file:
-        old_ids = map(lambda l: l.strip(), reference_file.readlines())
+        old_ids = [l.strip() for l in reference_file.readlines()]
 
     # tools/arm64 should not exist on mac hosts
     # TODO(fxb/42999): remove when SDK transition is complete.
     if platform.mac_ver()[0]:
-        old_ids = filter(lambda i: not i.startswith('sdk://tools/arm64'), old_ids)
+        old_ids = [i for i in old_ids if not i.startswith('sdk://tools/arm64')]
+
+    ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), ids)
+    old_ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), old_ids)
 
     ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), ids)
     old_ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), old_ids)

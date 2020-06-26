@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import collections
+import functools
 import json
 
 
@@ -17,6 +18,7 @@ class File(object):
         return '{%s <-- %s}' % (self.destination, self.source)
 
 
+@functools.total_ordering
 class Atom(object):
     '''Wrapper class for atom data, adding convenience methods.'''
 
@@ -42,8 +44,8 @@ class Atom(object):
     def __ne__(self, other):
         return not __eq__(self, other)
 
-    def __cmp__(self, other):
-        return cmp(self.id, other.id)
+    def __lt__(self, other):
+        return self.id < other.id
 
 
 def gather_dependencies(manifests):
@@ -56,7 +58,7 @@ def gather_dependencies(manifests):
         with open(dep, 'r') as dep_file:
             dep_manifest = json.load(dep_file)
             direct_deps.update(dep_manifest['ids'])
-            atoms.update(map(lambda a: Atom(a), dep_manifest['atoms']))
+            atoms.update([Atom(a) for a in dep_manifest['atoms']])
     return (direct_deps, atoms)
 
 
@@ -66,7 +68,7 @@ def detect_collisions(atoms):
     for atom in atoms:
         mappings[atom.id].append(atom)
     has_collisions = False
-    for id, group in mappings.iteritems():
+    for id, group in mappings.items():
         if len(group) == 1:
             continue
         has_collisions = True

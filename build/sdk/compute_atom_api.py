@@ -30,7 +30,7 @@ def main():
     api = {}
     for destination, source in args.file:
         with open(source, 'r') as source_file:
-            hash = hashlib.md5(source_file.read()).hexdigest()
+            hash = hashlib.md5(source_file.read().encode('utf-8')).hexdigest()
         api[destination] = hash
 
     with open(args.output, 'w') as output_file:
