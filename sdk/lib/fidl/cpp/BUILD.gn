@@ -233,6 +233,7 @@ source_set("test_sources") {
     "//sdk/lib/fidl/cpp/test",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
