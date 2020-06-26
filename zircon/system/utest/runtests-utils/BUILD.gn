@@ -33,6 +33,8 @@ test("runtests-utils") {
   ]
   deps = [
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/runtests-utils",
     "//zircon/system/ulib/unittest",
