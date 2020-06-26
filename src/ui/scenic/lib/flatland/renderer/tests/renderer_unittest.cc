@@ -435,21 +435,22 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
       renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
 
   // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_collection =
-      CreateClientPointerWithConstraints(sysmem_allocator_.get(), std::move(tokens.local_token),
-                                         /*image_count*/ 1,
-                                         /*width*/ 60,
-                                         /*height*/ 40);
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  auto client_collection = CreateClientPointerWithConstraints(
+      sysmem_allocator_.get(), std::move(tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ 60,
+      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
 
   auto target_id = renderer.RegisterRenderTargetCollection(sysmem_allocator_.get(),
                                                            std::move(target_tokens.dup_token));
 
   // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateClientPointerWithConstraints(sysmem_allocator_.get(),
-                                                          std::move(target_tokens.local_token),
-                                                          /*image_count*/ 1,
-                                                          /*width*/ 60,
-                                                          /*height*/ 40);
+  auto client_target = CreateClientPointerWithConstraints(
+      sysmem_allocator_.get(), std::move(target_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ 60,
+      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
 
   // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.
@@ -580,21 +581,22 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
 
   // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_collection =
-      CreateClientPointerWithConstraints(sysmem_allocator_.get(), std::move(tokens.local_token),
-                                         /*image_count*/ 2,
-                                         /*width*/ 60,
-                                         /*height*/ 40);
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  auto client_collection = CreateClientPointerWithConstraints(
+      sysmem_allocator_.get(), std::move(tokens.local_token),
+      /*image_count*/ 2,
+      /*width*/ 60,
+      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
 
   auto target_id = renderer.RegisterRenderTargetCollection(sysmem_allocator_.get(),
                                                            std::move(target_tokens.dup_token));
 
   // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateClientPointerWithConstraints(sysmem_allocator_.get(),
-                                                          std::move(target_tokens.local_token),
-                                                          /*image_count*/ 1,
-                                                          /*width*/ 60,
-                                                          /*height*/ 40);
+  auto client_target = CreateClientPointerWithConstraints(
+      sysmem_allocator_.get(), std::move(target_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ 60,
+      /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
 
   // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.

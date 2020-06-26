@@ -32,19 +32,41 @@ inline SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_a
   return {std::move(local_token), std::move(dup_token)};
 }
 
+constexpr fuchsia::sysmem::BufferUsage kNoneUsage = {.none = fuchsia::sysmem::noneUsage};
+
+constexpr std::pair<fuchsia::sysmem::BufferUsage, fuchsia::sysmem::BufferMemoryConstraints>
+GetUsageAndMemoryConstraintsForCpuWriteOften() {
+  // TODO(55193): The default memory constraints set by Sysmem only allows using
+  // CPU domain for buffers with CPU usage, while Mali driver asks for only
+  // RAM and Inaccessible domains for buffer allocation, which caused failure in
+  // sysmem allocation. So here we add RAM domain support to clients in order
+  // to get buffer allocated correctly.
+  constexpr fuchsia::sysmem::BufferMemoryConstraints kCpuConstraints = {
+      .ram_domain_supported = true,
+      .cpu_domain_supported = true,
+  };
+  constexpr fuchsia::sysmem::BufferUsage kCpuWriteUsage = {.cpu =
+                                                               fuchsia::sysmem::cpuUsageWriteOften};
+  return std::make_pair(kCpuWriteUsage, kCpuConstraints);
+}
+
 inline void SetClientConstraintsAndWaitForAllocated(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
-    uint32_t width = 64, uint32_t height = 32) {
+    uint32_t width = 64, uint32_t height = 32, fuchsia::sysmem::BufferUsage usage = kNoneUsage,
+    std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints = std::nullopt) {
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   zx_status_t status =
       sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
   EXPECT_EQ(status, ZX_OK);
   fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.cpu_domain_supported = true;
-  constraints.buffer_memory_constraints.ram_domain_supported = true;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+  if (memory_constraints) {
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints = std::move(*memory_constraints);
+  } else {
+    constraints.has_buffer_memory_constraints = false;
+  }
+  constraints.usage = usage;
   constraints.min_buffer_count = image_count;
 
   constraints.image_format_constraints_count = 1;
@@ -81,16 +103,20 @@ inline void SetClientConstraintsAndWaitForAllocated(
 inline fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
-    uint32_t width = 64, uint32_t height = 32) {
+    uint32_t width = 64, uint32_t height = 32, fuchsia::sysmem::BufferUsage usage = kNoneUsage,
+    std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints = std::nullopt) {
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   zx_status_t status =
       sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
   EXPECT_EQ(status, ZX_OK);
   fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.cpu_domain_supported = true;
-  constraints.buffer_memory_constraints.ram_domain_supported = true;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+  if (memory_constraints) {
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints = std::move(*memory_constraints);
+  } else {
+    constraints.has_buffer_memory_constraints = false;
+  }
+  constraints.usage = usage;
   constraints.min_buffer_count = image_count;
 
   constraints.image_format_constraints_count = 1;
