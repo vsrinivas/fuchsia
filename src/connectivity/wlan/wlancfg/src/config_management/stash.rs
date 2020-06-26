@@ -25,8 +25,6 @@ pub struct Stash {
     root: StashNode,
 }
 
-/// TODO(nmccracken) Remove this attribute when the stash is used by SavedNetworksManager.
-#[allow(dead_code)]
 impl Stash {
     /// Initialize new Stash with the ID provided by the Saved Networks Manager. The ID will
     /// identify stored values as being part of the same persistent storage.

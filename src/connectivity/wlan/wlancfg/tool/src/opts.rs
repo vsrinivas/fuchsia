@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(deprecated)] // Necessary for AsciiExt usage from clap args_enum macro
-
+#[allow(deprecated)] // Necessary for AsciiExt usage from clap args_enum macro
 use clap::arg_enum;
 use eui48::MacAddress;
 use fidl_fuchsia_wlan_common as wlan_common;
