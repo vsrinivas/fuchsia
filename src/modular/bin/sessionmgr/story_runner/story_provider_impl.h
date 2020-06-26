@@ -49,8 +49,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     const ComponentContextInfo& component_context_info,
                     fuchsia::modular::FocusProviderPtr focus_provider,
                     AgentServicesFactory* agent_services_factory,
-                    PresentationProvider* presentation_provider,
-                    inspect::Node* root_node);
+                    PresentationProvider* presentation_provider, inspect::Node* root_node);
 
   ~StoryProviderImpl() override;
 
@@ -88,7 +87,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // Called by StoryControllerImpl.
   std::unique_ptr<AsyncHolderBase> StartStoryShell(
-      fidl::StringPtr story_id, fuchsia::ui::views::ViewToken view_token,
+      std::string story_id, fuchsia::ui::views::ViewToken view_token,
       fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request);
 
   // Called by StoryControllerImpl.
@@ -104,18 +103,18 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // Called by StoryControllerImpl. Sends, using AttachView(), a token for the
   // view of the story identified by |story_id| to the current session shell.
-  void AttachView(fidl::StringPtr story_id, fuchsia::ui::views::ViewHolderToken view_holder_token);
+  void AttachView(std::string story_id, fuchsia::ui::views::ViewHolderToken view_holder_token);
 
   // Called by StoryControllerImpl. Notifies, using DetachView(), the current
   // session shell that the view of the story identified by |story_id| is about
   // to close.
-  void DetachView(fidl::StringPtr story_id, fit::function<void()> done);
+  void DetachView(std::string story_id, fit::function<void()> done);
 
   // Called by StoryControllerImpl. Sends request to
   // fuchsia::modular::SessionShell through PresentationProvider.
-  void GetPresentation(fidl::StringPtr story_id,
+  void GetPresentation(std::string story_id,
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
-  void WatchVisualState(fidl::StringPtr story_id,
+  void WatchVisualState(std::string story_id,
                         fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher);
 
   // Converts a StoryInfo2 to StoryInfo.
@@ -142,13 +141,12 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 
   // Called by *session_storage_.
-  void OnStoryStorageDeleted(fidl::StringPtr story_id);
-  void OnStoryStorageUpdated(fidl::StringPtr story_id,
+  void OnStoryStorageDeleted(std::string story_id);
+  void OnStoryStorageUpdated(std::string story_id,
                              fuchsia::modular::internal::StoryData story_data);
 
-  // Called indirectly through observation of loaded StoryModels. Calls
-  // NotifyStoryWatchers().
-  void NotifyStoryStateChange(fidl::StringPtr story_id);
+  // Called indirectly through observation of loaded StoryModels. Calls NotifyStoryWatchers().
+  void NotifyStoryStateChange(std::string story_id);
 
   void NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
                            fuchsia::modular::StoryState story_state,
@@ -215,7 +213,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
     inspect::IntProperty last_focus_time_inspect_property;
     std::map<const std::string, inspect::StringProperty> annotation_inspect_properties;
 
-    void InitializeInspect(fidl::StringPtr story_id, inspect::Node* session_inspect_node);
+    void InitializeInspect(std::string story_id, inspect::Node* session_inspect_node);
     void ResetInspect();
   };
   std::map<std::string, StoryRuntimeContainer> story_runtime_containers_;

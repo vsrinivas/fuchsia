@@ -31,8 +31,7 @@ class StoryCommandExecutor {
   //
   // On success fuchsia::modular::ExecuteResult.status will be set to
   // fuchsia::modular::ExecuteStatus.OK.
-  void ExecuteCommands(fidl::StringPtr story_id,
-                       std::vector<fuchsia::modular::StoryCommand> commands,
+  void ExecuteCommands(std::string story_id, std::vector<fuchsia::modular::StoryCommand> commands,
                        fit::function<void(fuchsia::modular::ExecuteResult)> done);
 
   using ListenerCallback =
@@ -48,7 +47,7 @@ class StoryCommandExecutor {
 
  private:
   virtual void ExecuteCommandsInternal(
-      fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
+      std::string story_id, std::vector<fuchsia::modular::StoryCommand> commands,
       fit::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
 
   std::list<ListenerCallback> listeners_;

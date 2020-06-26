@@ -10,7 +10,7 @@
 
 namespace modular {
 
-StoryShellContextImpl::StoryShellContextImpl(fidl::StringPtr story_id,
+StoryShellContextImpl::StoryShellContextImpl(std::string story_id,
                                              StoryProviderImpl* const story_provider_impl)
     : story_id_(story_id), story_provider_impl_(story_provider_impl) {}
 

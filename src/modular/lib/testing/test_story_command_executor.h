@@ -23,25 +23,25 @@ class TestStoryCommandExecutor : public modular::StoryCommandExecutor {
   // Change the default return status and optional error message to be returned from
   // |StoryController|->Execute()
   void SetExecuteReturnResult(fuchsia::modular::ExecuteStatus status,
-                              fidl::StringPtr error_message);
+                              std::optional<std::string> error_message);
 
   // Reset execute_count to 0, and clear the last_story_id and last_commands vector.
   void Reset();
 
   int execute_count() const { return execute_count_; }
-  fidl::StringPtr last_story_id() const { return last_story_id_; }
+  std::optional<std::string> last_story_id() const { return last_story_id_; }
   const std::vector<fuchsia::modular::StoryCommand>& last_commands() const {
     return last_commands_;
   }
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommandsInternal(fidl::StringPtr story_id,
+  void ExecuteCommandsInternal(std::string story_id,
                                std::vector<fuchsia::modular::StoryCommand> commands,
                                fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
   int execute_count_{0};
-  fidl::StringPtr last_story_id_;
+  std::optional<std::string> last_story_id_;
   std::vector<fuchsia::modular::StoryCommand> last_commands_;
   fuchsia::modular::ExecuteResult result_;
   std::shared_ptr<modular::StoryStorage> story_storage_;

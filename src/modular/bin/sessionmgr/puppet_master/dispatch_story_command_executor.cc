@@ -18,7 +18,7 @@ namespace {
 class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
   RunStoryCommandCall(const char* const command_name, CommandRunner* const runner,
-                      StoryStorage* const story_storage, fidl::StringPtr story_id,
+                      StoryStorage* const story_storage, std::string story_id,
                       fuchsia::modular::StoryCommand command, ResultCall done)
       : Operation(command_name, std::move(done), ""),
         command_(std::move(command)),
@@ -35,7 +35,7 @@ class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
 
   fuchsia::modular::StoryCommand command_;
   StoryStorage* const story_storage_;
-  const fidl::StringPtr story_id_;
+  const std::string story_id_;
   CommandRunner* runner_;
 };
 
@@ -44,7 +44,7 @@ class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
 class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
     : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  ExecuteStoryCommandsCall(DispatchStoryCommandExecutor* const executor, fidl::StringPtr story_id,
+  ExecuteStoryCommandsCall(DispatchStoryCommandExecutor* const executor, std::string story_id,
                            std::vector<fuchsia::modular::StoryCommand> commands, ResultCall done)
       : Operation("ExecuteStoryCommandsCall", std::move(done)),
         executor_(executor),
@@ -120,7 +120,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
   }
 
   DispatchStoryCommandExecutor* const executor_;
-  const fidl::StringPtr story_id_;
+  const std::string story_id_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
   std::shared_ptr<StoryStorage> story_storage_;
@@ -145,7 +145,7 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
 DispatchStoryCommandExecutor::~DispatchStoryCommandExecutor() {}
 
 void DispatchStoryCommandExecutor::ExecuteCommandsInternal(
-    fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
+    std::string story_id, std::vector<fuchsia::modular::StoryCommand> commands,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   operation_queues_[story_id].Add(std::make_unique<ExecuteStoryCommandsCall>(
       this, std::move(story_id), std::move(commands), std::move(done)));

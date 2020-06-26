@@ -54,7 +54,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   std::string story_name_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
-  fidl::StringPtr story_id_;
+  std::string story_id_;
 };
 
 class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_Annotate_Result> {

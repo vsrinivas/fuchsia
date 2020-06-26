@@ -29,20 +29,19 @@ std::string SessionStorage::CreateStory(std::string story_name,
     story_data.mutable_story_info()->set_last_focus_time(0);
     story_data.mutable_story_info()->set_annotations(std::move(annotations));
 
-    fidl::StringPtr story_name_for_callback = story_name;
     fuchsia::modular::internal::StoryData callback_data;
     story_data.Clone(&callback_data);
     story_data_backing_store_[story_name] = std::move(story_data);
 
     if (on_story_updated_) {
-      on_story_updated_(std::move(story_name_for_callback), std::move(callback_data));
+      on_story_updated_(story_name, std::move(callback_data));
     }
   }
 
   return story_name;
 }
 
-void SessionStorage::DeleteStory(fidl::StringPtr story_name) {
+void SessionStorage::DeleteStory(std::string story_name) {
   auto it = story_data_backing_store_.find(story_name);
   if (it == story_data_backing_store_.end()) {
     return;
@@ -53,11 +52,9 @@ void SessionStorage::DeleteStory(fidl::StringPtr story_name) {
   if (on_story_deleted_) {
     on_story_deleted_(story_name);
   }
-
-  return;
 }
 
-void SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name, const int64_t ts) {
+void SessionStorage::UpdateLastFocusedTimestamp(std::string story_name, const int64_t ts) {
   auto it = story_data_backing_store_.find(story_name);
   FX_DCHECK(it != story_data_backing_store_.end())
       << "SessionStorage::UpdateLastFocusedTimestamp was called on story " << story_name
@@ -72,7 +69,7 @@ void SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name, cons
   }
 }
 
-fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(fidl::StringPtr story_name) {
+fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(std::string story_name) {
   fuchsia::modular::internal::StoryDataPtr value{};
   auto it = story_data_backing_store_.find(story_name);
   if (it != story_data_backing_store_.end()) {
@@ -94,7 +91,7 @@ std::vector<fuchsia::modular::internal::StoryData> SessionStorage::GetAllStoryDa
 }
 
 std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnotations(
-    fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
+    std::string story_name, std::vector<fuchsia::modular::Annotation> annotations) {
   // Ensure the story exists.
   auto it = story_data_backing_store_.find(story_name);
   if (it == story_data_backing_store_.end()) {
@@ -138,7 +135,7 @@ std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnot
   return std::nullopt;
 }
 
-std::shared_ptr<StoryStorage> SessionStorage::GetStoryStorage(fidl::StringPtr story_name) {
+std::shared_ptr<StoryStorage> SessionStorage::GetStoryStorage(std::string story_name) {
   std::shared_ptr<StoryStorage> value(nullptr);
   auto data_it = story_data_backing_store_.find(story_name);
   if (data_it != story_data_backing_store_.end()) {

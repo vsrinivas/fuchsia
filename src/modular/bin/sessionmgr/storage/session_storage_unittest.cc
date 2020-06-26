@@ -180,38 +180,38 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
   auto storage = CreateStorage();
 
   bool updated{};
-  fidl::StringPtr updated_story_name;
+  std::string updated_story_name;
   fuchsia::modular::internal::StoryData updated_story_data;
   storage->set_on_story_updated(
-      [&](fidl::StringPtr story_name, fuchsia::modular::internal::StoryData story_data) {
+      [&](std::string story_name, fuchsia::modular::internal::StoryData story_data) {
         updated_story_name = std::move(story_name);
         updated_story_data = std::move(story_data);
         updated = true;
       });
 
   bool deleted{};
-  fidl::StringPtr deleted_story_name;
-  storage->set_on_story_deleted([&](fidl::StringPtr story_name) {
+  std::string deleted_story_name;
+  storage->set_on_story_deleted([&](std::string story_name) {
     deleted_story_name = std::move(story_name);
     deleted = true;
   });
 
   auto created_story_name = storage->CreateStory("story", {});
   RunLoopUntil([&] { return updated; });
-  EXPECT_EQ(created_story_name, updated_story_name.value());
+  EXPECT_EQ(created_story_name, updated_story_name);
   EXPECT_EQ(created_story_name, updated_story_data.story_info().id());
 
   // Update something and see a new notification.
   updated = false;
   storage->UpdateLastFocusedTimestamp(created_story_name, 42);
   RunLoopUntil([&] { return updated; });
-  EXPECT_EQ(created_story_name, updated_story_name.value());
+  EXPECT_EQ(created_story_name, updated_story_name);
   EXPECT_EQ(42, updated_story_data.story_info().last_focus_time());
 
   // Delete the story and expect to see a notification.
   storage->DeleteStory(created_story_name);
   RunLoopUntil([&] { return deleted; });
-  EXPECT_EQ(created_story_name, deleted_story_name.value());
+  EXPECT_EQ(created_story_name, deleted_story_name);
 
   // Once a story is already deleted, do not expect another
   // notification.

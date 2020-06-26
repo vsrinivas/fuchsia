@@ -24,7 +24,7 @@ StoryCommandExecutor::StoryCommandExecutor() : weak_factory_(this) {}
 StoryCommandExecutor::~StoryCommandExecutor() = default;
 
 void StoryCommandExecutor::ExecuteCommands(
-    fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
+    std::string story_id, std::vector<fuchsia::modular::StoryCommand> commands,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   // TODO(thatguy): Cloning the commands here is unforunate. We will want to
   // create a shared datastructure at some point, such as a

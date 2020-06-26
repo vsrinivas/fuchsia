@@ -28,7 +28,7 @@ class DispatchStoryCommandExecutor : public StoryCommandExecutor {
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommandsInternal(fidl::StringPtr story_id,
+  void ExecuteCommandsInternal(std::string story_id,
                                std::vector<fuchsia::modular::StoryCommand> commands,
                                fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
@@ -42,7 +42,7 @@ class DispatchStoryCommandExecutor : public StoryCommandExecutor {
   // human-readable string.
   const std::map<fuchsia::modular::StoryCommand::Tag, const char*> story_command_tag_strings_;
 
-  std::map<fidl::StringPtr, OperationQueue> operation_queues_;
+  std::map<std::string, OperationQueue> operation_queues_;
 };
 
 }  // namespace modular

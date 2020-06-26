@@ -81,7 +81,7 @@ class PuppetMasterTest : public modular_testing::TestWithSessionStorage {
 
     // Instruct our test executor to return an OK status, and since we're going to
     // AddMod, give the executor a StoryStorage.
-    executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+    executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
     executor_.SetStoryStorage(GetStoryStorage(session_storage_.get(), story_name));
   }
 
@@ -114,7 +114,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
   fuchsia::modular::ExecuteResult result;
   bool done{false};
   // Instruct our test executor to return an OK status.
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
   story->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
     done = true;
@@ -145,7 +145,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor_IfWeCloseStoryChannel) {
   fuchsia::modular::ExecuteResult result;
   bool callback_called{false};
   // Instruct our test executor to return an OK status.
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
   story->Execute([&](fuchsia::modular::ExecuteResult r) { callback_called = true; });
   story.Unbind();
   RunLoopUntil([&]() { return executor_.execute_count() > 0; });
@@ -162,7 +162,7 @@ TEST_F(PuppetMasterTest, MultipleExecuteCalls) {
 
   std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
   bool done{false};
   story->Execute([&](fuchsia::modular::ExecuteResult r) { done = true; });
   RunLoopUntil([&]() { return done; });
@@ -194,7 +194,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   RunLoopUntilIdle();
 
   fuchsia::modular::ExecuteResult result;
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
   bool done{false};
   story1->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
@@ -206,7 +206,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   ASSERT_EQ(1u, executor_.last_commands().size());
   EXPECT_EQ("one", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
 
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
   done = false;
   story2->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
@@ -241,7 +241,7 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   RunLoopUntilIdle();
 
   fuchsia::modular::ExecuteResult result;
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
   bool done{false};
   story1->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
@@ -253,7 +253,7 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   ASSERT_EQ(1u, executor_.last_commands().size());
   EXPECT_EQ("one", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
 
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
   done = false;
   story2->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);

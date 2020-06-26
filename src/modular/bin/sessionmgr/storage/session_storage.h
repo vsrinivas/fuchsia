@@ -29,7 +29,7 @@ class SessionStorage {
   //
   // a) The story being deleted on another device.
   // b) The story having been deleted locally with DeleteStory().
-  void set_on_story_deleted(fit::function<void(fidl::StringPtr story_id)> callback) {
+  void set_on_story_deleted(fit::function<void(std::string story_id)> callback) {
     on_story_deleted_ = std::move(callback);
   }
 
@@ -39,9 +39,9 @@ class SessionStorage {
   //
   // The update could be the result of a local modification (ie, through
   // Update*()) or a modification on another device.
-  void set_on_story_updated(fit::function<void(fidl::StringPtr story_id,
-                                               fuchsia::modular::internal::StoryData story_data)>
-                                callback) {
+  void set_on_story_updated(
+      fit::function<void(std::string story_id, fuchsia::modular::internal::StoryData story_data)>
+          callback) {
     on_story_updated_ = std::move(callback);
   }
 
@@ -50,15 +50,15 @@ class SessionStorage {
                           std::vector<fuchsia::modular::Annotation> annotations);
 
   // Deletes the |story_id| from the list of known stories.
-  void DeleteStory(fidl::StringPtr story_id);
+  void DeleteStory(std::string story_id);
 
   // Sets the last focused timestamp for |story_id| to |ts|. Completes the
   // returned Future when done.
-  void UpdateLastFocusedTimestamp(fidl::StringPtr story_id, int64_t ts);
+  void UpdateLastFocusedTimestamp(std::string story_id, int64_t ts);
 
   // Returns a StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.
-  fuchsia::modular::internal::StoryDataPtr GetStoryData(fidl::StringPtr story_id);
+  fuchsia::modular::internal::StoryDataPtr GetStoryData(std::string story_id);
 
   // Returns a vector of StoryData for all stories in this session.
   std::vector<fuchsia::modular::internal::StoryData> GetAllStoryData();
@@ -75,24 +75,24 @@ class SessionStorage {
   //  * AnnotationError::VALUE_TOO_BIG - one of the annotations had a buffer value that
   //    exceeded the size limit
   std::optional<fuchsia::modular::AnnotationError> MergeStoryAnnotations(
-      fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations);
+      std::string story_name, std::vector<fuchsia::modular::Annotation> annotations);
 
   // Gets the StoryStorage for the story with the given |story_id| to perform
   // operations on the story such as adding modules, updating links, etc.
-  std::shared_ptr<StoryStorage> GetStoryStorage(fidl::StringPtr story_id);
+  std::shared_ptr<StoryStorage> GetStoryStorage(std::string story_id);
 
  private:
-  fit::function<void(fidl::StringPtr story_id)> on_story_deleted_;
-  fit::function<void(fidl::StringPtr story_id, fuchsia::modular::internal::StoryData story_data)>
+  fit::function<void(std::string story_id)> on_story_deleted_;
+  fit::function<void(std::string story_id, fuchsia::modular::internal::StoryData story_data)>
       on_story_updated_;
 
   // In-memory map from story_id to the corresponding StoryData.  This was
   // previously stored in the ledger.
-  std::map<fidl::StringPtr, fuchsia::modular::internal::StoryData> story_data_backing_store_;
+  std::map<std::string, fuchsia::modular::internal::StoryData> story_data_backing_store_;
 
   // In-memory map from story_id to the corresponding StoryData.  This was
   // previously stored in the ledger.
-  std::map<fidl::StringPtr, std::shared_ptr<StoryStorage>> story_storage_backing_store_;
+  std::map<std::string, std::shared_ptr<StoryStorage>> story_storage_backing_store_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionStorage);
 };

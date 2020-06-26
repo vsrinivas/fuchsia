@@ -17,18 +17,18 @@ using fuchsia::modular::StoryCommand;
 
 class TestStoryCommandExecutor : public StoryCommandExecutor {
  public:
-  void SetExecuteReturnResult(ExecuteStatus status, fidl::StringPtr error_message) {
+  void SetExecuteReturnResult(ExecuteStatus status, std::optional<std::string> error_message) {
     result_.status = status;
-    result_.error_message = error_message;
+    result_.error_message = error_message.value_or(nullptr);
   }
 
   int execute_count{0};
-  fidl::StringPtr last_story_id;
+  std::optional<std::string> last_story_id;
   std::vector<StoryCommand> last_commands;
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommandsInternal(fidl::StringPtr story_id, std::vector<StoryCommand> commands,
+  void ExecuteCommandsInternal(std::string story_id, std::vector<StoryCommand> commands,
                                fit::function<void(ExecuteResult)> done) override {
     ++execute_count;
     last_story_id = story_id;
