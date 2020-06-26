@@ -253,7 +253,7 @@ void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceC
     return;
   }
 
-  device_remove_deprecated(intf->second->zxdev());
+  device_async_remove(intf->second->zxdev());
   // Remove the device from our map. We do NOT free the memory, since the devhost owns it and will
   // call release when it's safe to free the memory.
   ifaces_.erase(req.id);
