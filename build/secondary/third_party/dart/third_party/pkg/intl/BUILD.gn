@@ -4,12 +4,21 @@
 
 import("//build/dart/dart_library.gni")
 
+# TODO(fxb/54344): remove this file
 dart_library("intl") {
-  package_name = "intl"
+  # Rename this to allow for a soft transition to the intl package
+  # which is in third_party/dart-pkg/pub. This name will allow the
+  # build files in other repos to still reference this target while
+  # pulling in the other intl package into the .packages file. Once
+  # all references to this target are removed this file can be removed.
+  package_name = "intl2"
 
   sources = []
 
-  deps = [ "//third_party/dart-pkg/pub/path" ]
+  deps = [
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/path",
+  ]
 
   disable_analysis = true
 }

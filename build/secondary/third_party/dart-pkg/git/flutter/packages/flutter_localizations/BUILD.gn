@@ -14,6 +14,6 @@ dart_library("flutter_localizations") {
 
   deps = [
     "../flutter",
-    "//third_party/dart/third_party/pkg/intl",
+    "//third_party/dart-pkg/pub/intl",
   ]
 }
