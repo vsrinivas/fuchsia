@@ -20,7 +20,7 @@ void main() {
 
   test('tests harvester --once exits cleanly', () async {
     expect(
-        await sl4f.Launch(sl4fDriver)
+        await sl4f.Component(sl4fDriver)
             .launch('system_monitor_harvester', ['--once', '--local']),
         'Success');
   }, timeout: Timeout(Duration(seconds: 60)));

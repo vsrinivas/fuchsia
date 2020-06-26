@@ -120,7 +120,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      if (body['method'] == 'component_search_facade.Search') {
+      if (body['method'] == 'component_facade.Search') {
         req.response.write(jsonEncode({
           'id': body['id'],
           'result': 'NotFound',
@@ -148,7 +148,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      if (body['method'] == 'component_search_facade.Search') {
+      if (body['method'] == 'component_facade.Search') {
         req.response.write(jsonEncode({
           'id': body['id'],
           'result': 'NotFound',
@@ -191,7 +191,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'component_search_facade.Search');
+      expect(body['method'], 'component_facade.Search');
       expect(body['params']['name'], 'basemgr.cmx');
       req.response.write(jsonEncode({
         'id': body['id'],
@@ -210,7 +210,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'component_search_facade.Search');
+      expect(body['method'], 'component_facade.Search');
       expect(body['params']['name'], 'basemgr.cmx');
       req.response.write(jsonEncode({
         'id': body['id'],
@@ -247,7 +247,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      if (body['method'] == 'component_search_facade.Search') {
+      if (body['method'] == 'component_facade.Search') {
         req.response.write(jsonEncode({
           'id': body['id'],
           'result': searchCount == 0 ? 'NotFound' : 'Success',

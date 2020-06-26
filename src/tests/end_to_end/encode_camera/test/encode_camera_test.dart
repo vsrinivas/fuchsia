@@ -40,7 +40,7 @@ void main() {
       final traceSession =
           await performance.initializeTracing(categories: _defaultCategories);
 
-      await sl4f.Launch(sl4fDriver).launch(
+      await sl4f.Component(sl4fDriver).launch(
           'fuchsia-pkg://fuchsia.com/encode-camera#meta/encode_camera.cmx',
           ['--duration=20']);
       await Future.delayed(Duration(seconds: 5));

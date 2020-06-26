@@ -6,7 +6,7 @@ import 'dart:convert';
 
 import 'package:logging/logging.dart';
 
-import 'component_search.dart';
+import 'component.dart';
 import 'sl4f_client.dart';
 
 final _log = Logger('modular');
@@ -21,7 +21,7 @@ class Modular {
   final ModularRequestFn _request;
 
   /// The handle to a component search query issuer.
-  final ComponentSearch _componentSearch;
+  final Component _component;
 
   bool _controlsBasemgr = false;
 
@@ -29,9 +29,9 @@ class Modular {
   /// shut it down when [shutdown] is called.
   bool get controlsBasemgr => _controlsBasemgr;
 
-  Modular(Sl4f sl4f, {ComponentSearch componentSearch})
+  Modular(Sl4f sl4f, {Component component})
       : _request = sl4f.request,
-        _componentSearch = componentSearch ?? ComponentSearch(sl4f);
+        _component = component ?? Component(sl4f);
 
   /// Restarts a Modular session.
   ///
@@ -76,7 +76,7 @@ class Modular {
   }
 
   /// Whether basemgr is running on the DUT.
-  Future<bool> get isRunning => _componentSearch.search('basemgr.cmx');
+  Future<bool> get isRunning => _component.search('basemgr.cmx');
 
   /// Starts basemgr if it isn't running yet.
   ///
