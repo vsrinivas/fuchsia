@@ -38,7 +38,7 @@ flutter_app("simple_browser") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/html_unescape",
     "//third_party/dart-pkg/pub/http",
-    "//third_party/dart/third_party/pkg/intl",
+    "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
@@ -86,9 +86,7 @@ dart_fuchsia_test("simple_browser_target_test") {
     },
   ]
 
-  sources = [
-    "simple_browser_target_test.dart",
-  ]
+  sources = [ "simple_browser_target_test.dart" ]
 
   deps = [
     ":simple_browser_dart_library",
@@ -102,11 +100,7 @@ dart_fuchsia_test("simple_browser_target_test") {
 config_data("web_engine_config") {
   for_pkg = "web_engine"
 
-  outputs = [
-    "config.json",
-  ]
+  outputs = [ "config.json" ]
 
-  sources = [
-    "config/web_engine.json",
-  ]
+  sources = [ "config/web_engine.json" ]
 }

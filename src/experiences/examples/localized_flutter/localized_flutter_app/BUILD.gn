@@ -15,7 +15,7 @@ flutter_app("localized_flutter_app") {
     "//src/experiences/examples/localized_flutter/localized_flutter_localization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
-    "//third_party/dart/third_party/pkg/intl",
+    "//third_party/dart-pkg/pub/intl",
   ]
 
   meta = [
@@ -27,11 +27,7 @@ flutter_app("localized_flutter_app") {
 }
 
 flutter_test("localized_flutter_app_unittests") {
-  sources = [
-    "sample_test.dart",
-  ]
+  sources = [ "sample_test.dart" ]
 
-  deps = [
-    "//third_party/dart-pkg/pub/test",
-  ]
+  deps = [ "//third_party/dart-pkg/pub/test" ]
 }

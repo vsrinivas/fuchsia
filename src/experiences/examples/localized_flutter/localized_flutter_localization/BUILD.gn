@@ -21,7 +21,5 @@ dart_library("localized_flutter_localization") {
     "messages_sr.dart",
   ]
 
-  deps = [
-    "//third_party/dart/third_party/pkg/intl",
-  ]
+  deps = [ "//third_party/dart-pkg/pub/intl" ]
 }

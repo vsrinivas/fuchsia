@@ -32,7 +32,7 @@ dart_library("internationalization") {
   deps = [
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
-    "//third_party/dart/third_party/pkg/intl",
+    "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_internationalization_flutter",
   ]
 }
