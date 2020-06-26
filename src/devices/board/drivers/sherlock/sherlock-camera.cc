@@ -139,6 +139,11 @@ constexpr pbus_mmio_t isp_mmios[] = {
         .base = T931_ISP_BASE,
         .length = T931_ISP_LENGTH,
     },
+    // ISP Global Register Space
+    {
+        .base = T931_ISP_BASE,
+        .length = T931_ISP_GLOBAL_REGS_LENGTH,
+    },
 };
 
 // IRQ for ISP
