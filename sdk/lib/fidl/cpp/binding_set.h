@@ -31,8 +31,7 @@ class BindingSet final {
  public:
   using Binding = ::fidl::Binding<Interface, ImplPtr>;
   using StorageType = std::vector<std::unique_ptr<Binding>>;
-  // TODO(FIDL-761) Use fit::function here instead of std::function.
-  using ErrorHandler = std::function<void(zx_status_t)>;
+  using ErrorHandler = fit::function<void(zx_status_t)>;
 
   using iterator = typename StorageType::iterator;
 
@@ -67,7 +66,7 @@ class BindingSet final {
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
     binding->set_error_handler(
-        [binding, capture_handler = std::move(handler), this](zx_status_t status) {
+        [binding, capture_handler = std::move(handler), this](zx_status_t status) mutable {
           // Subtle behavior: it is necessary to std::move into a local
           // variable because the closure is deleted when RemoveOnError
           // is called.
