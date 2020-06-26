@@ -49,8 +49,12 @@ class CodecPacket {
   void SetIsNew(bool is_new);
   bool is_new() const;
 
-  [[nodiscard]]
-  zx_status_t CacheFlush() const;
+  void SetKeyFrame(bool key_frame);
+  void ClearKeyFrame();
+  bool has_key_frame() const;
+  bool key_frame() const;
+
+  [[nodiscard]] zx_status_t CacheFlush() const;
 
  private:
   // The public section is for the core codec to call - the private section is
@@ -106,6 +110,10 @@ class CodecPacket {
   // internal recycle call or equivalent for new packets, while others don't
   // (such as amlogic-video).
   bool is_new_ = true;
+
+  // Set to true if this packet is part of a key frame.
+  bool key_frame_ = false;
+  bool key_frame_is_set_ = false;
 
   CodecPacket() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecPacket);

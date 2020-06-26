@@ -542,18 +542,18 @@ ChunkInputStream::ControlFlow CodecAdapterAacEncoder::ProcessInputBlock(
   if (input_block.non_padding_len > 0) {
     auto output_sink_status = output_sink_->NextOutputBlock(
         stream_->output_buffer_size, input_block.timestamp_ish,
-        [this, &input_block, &encode_result](
-            OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
+        [this, &input_block,
+         &encode_result](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
           ZX_DEBUG_ASSERT(output_block.len == stream_->output_buffer_size);
 
           auto result = Encode(input_block, output_block);
           if (result.is_error()) {
             events_->onCoreCodecFailCodec("Encoding failed: %d", result.error());
-            return {0, OutputSink::kError};
+            return {.len = 0, .status = OutputSink::kError};
           }
 
           encode_result = result.take_value();
-          return {encode_result.bytes_written, OutputSink::kSuccess};
+          return {.len = encode_result.bytes_written, .status = OutputSink::kSuccess};
         });
     if (output_sink_status != OutputSink::kOk) {
       ReportOutputSinkError(output_sink_status);
@@ -570,15 +570,14 @@ ChunkInputStream::ControlFlow CodecAdapterAacEncoder::ProcessInputBlock(
   while (input_block.is_end_of_stream && !encode_result.is_end_of_stream) {
     auto output_sink_status = output_sink_->NextOutputBlock(
         stream_->output_buffer_size, flush_timestamp(),
-        [this, &encode_result](
-            OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
+        [this, &encode_result](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
           auto result = Flush(output_block);
           if (result.is_error()) {
             events_->onCoreCodecFailCodec("Flushing encoder failed: %d", result.error());
-            return {0, OutputSink::kError};
+            return {.len = 0, .status = OutputSink::kError};
           }
           encode_result = result.take_value();
-          return {encode_result.bytes_written, OutputSink::kSuccess};
+          return {.len = encode_result.bytes_written, .status = OutputSink::kSuccess};
         });
     if (output_sink_status != OutputSink::kOk) {
       ReportOutputSinkError(output_sink_status);

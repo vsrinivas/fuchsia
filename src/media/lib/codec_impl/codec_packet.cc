@@ -72,6 +72,14 @@ void CodecPacket::SetIsNew(bool is_new) { is_new_ = is_new; }
 
 bool CodecPacket::is_new() const { return is_new_; }
 
+void CodecPacket::SetKeyFrame(bool key_frame) {
+  key_frame_ = key_frame;
+  key_frame_is_set_ = true;
+}
+void CodecPacket::ClearKeyFrame() { key_frame_is_set_ = true; }
+bool CodecPacket::has_key_frame() const { return key_frame_is_set_; }
+bool CodecPacket::key_frame() const { return key_frame_; }
+
 zx_status_t CodecPacket::CacheFlush() const {
   return buffer()->CacheFlush(start_offset_, valid_length_bytes_);
 }

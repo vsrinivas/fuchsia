@@ -22,6 +22,8 @@ TEST(OutputSink, Basic) {
       for (size_t i = 0; i < output_packet->valid_length_bytes(); ++i) {
         EXPECT_EQ(input[i], (total_read + i) % 256);
       }
+      EXPECT_TRUE(output_packet->has_key_frame());
+      EXPECT_TRUE(output_packet->key_frame());
       total_read += output_packet->valid_length_bytes();
       recycle(output_packet);
       return OutputSink::kSuccess;
@@ -66,8 +68,8 @@ TEST(OutputSink, Basic) {
     for (auto write_size : write_sizes) {
       auto status = under_test.NextOutputBlock(
           write_size, /*timestamp=*/std::nullopt,
-          [write_size, &total_written](OutputSink::OutputBlock output_block) mutable
-          -> std::pair<size_t, OutputSink::UserStatus> {
+          [write_size, &total_written](
+              OutputSink::OutputBlock output_block) mutable -> OutputSink::OutputResult {
             EXPECT_NE(output_block.data, nullptr);
             EXPECT_NE(output_block.buffer, nullptr);
             EXPECT_EQ(output_block.len, write_size);
@@ -75,7 +77,11 @@ TEST(OutputSink, Basic) {
               output_block.data[i] = (total_written + i) % 256;
             }
             total_written += write_size;
-            return {write_size, OutputSink::kSuccess};
+            return {
+                .len = write_size,
+                .status = OutputSink::kSuccess,
+                .key_frame = true,
+            };
           });
       EXPECT_EQ(status, OutputSink::kOk);
     }
@@ -105,9 +111,8 @@ TEST(OutputSink, ReportsSendError) {
 
   auto status = under_test.NextOutputBlock(
       10, /*timestamp=*/
-      std::nullopt,
-      [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-        return {10u, OutputSink::kSuccess};
+      std::nullopt, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+        return {.len = 10u, .status = OutputSink::kSuccess};
       });
   EXPECT_EQ(status, OutputSink::kOk);
   EXPECT_EQ(under_test.Flush(), OutputSink::kUserError);
@@ -125,9 +130,8 @@ TEST(OutputSink, ReportsBuffersTooSmallError) {
 
   auto status = under_test.NextOutputBlock(
       10, /*timestamp=*/
-      std::nullopt,
-      [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-        return {10u, OutputSink::kSuccess};
+      std::nullopt, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+        return {.len = 10u, .status = OutputSink::kSuccess};
       });
   EXPECT_EQ(status, OutputSink::kBuffersTooSmall);
 }
@@ -149,9 +153,8 @@ TEST(OutputSink, ReportsBuffersTooSmallAtRequestTime) {
   {
     auto status = under_test.NextOutputBlock(
         2, /*timestamp=*/
-        std::nullopt,
-        [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-          return {2u, OutputSink::kSuccess};
+        std::nullopt, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+          return {.len = 2u, .status = OutputSink::kSuccess};
         });
     EXPECT_EQ(status, OutputSink::kOk);
   }
@@ -159,9 +162,8 @@ TEST(OutputSink, ReportsBuffersTooSmallAtRequestTime) {
   {
     auto status = under_test.NextOutputBlock(
         2, /*timestamp=*/
-        std::nullopt,
-        [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-          return {2u, OutputSink::kSuccess};
+        std::nullopt, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+          return {.len = 2u, .status = OutputSink::kSuccess};
         });
     EXPECT_EQ(status, OutputSink::kBuffersTooSmall);
   }
@@ -174,9 +176,8 @@ TEST(OutputSink, StopsAllWaits) {
   under_test.StopAllWaits();
   auto status = under_test.NextOutputBlock(
       1, /*timestamp=*/
-      std::nullopt,
-      [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-        return {1u, OutputSink::kSuccess};
+      std::nullopt, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+        return {.len = 1u, .status = OutputSink::kSuccess};
       });
   EXPECT_EQ(status, OutputSink::kUserTerminatedWait);
 }
@@ -199,9 +200,8 @@ TEST(OutputSink, TimestampsPropagate) {
 
   auto status = under_test.NextOutputBlock(
       1, /*timestamp=*/
-      {kExpectedTimestamp},
-      [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-        return {1u, OutputSink::kSuccess};
+      {kExpectedTimestamp}, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+        return {.len = 1u, .status = OutputSink::kSuccess};
       });
   EXPECT_EQ(status, OutputSink::kOk);
 
@@ -223,9 +223,8 @@ TEST(OutputSink, BlocksResize) {
   under_test.AddOutputPacket(packets.ptr(0));
 
   auto status = under_test.NextOutputBlock(
-      100, std::nullopt,
-      [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-        return {50u, OutputSink::kSuccess};
+      100, std::nullopt, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+        return {.len = 50u, .status = OutputSink::kSuccess};
       });
   EXPECT_EQ(status, OutputSink::kOk);
 
@@ -247,9 +246,8 @@ TEST(OutputSink, RespectsWriteError) {
   under_test.AddOutputPacket(packets.ptr(0));
 
   auto status = under_test.NextOutputBlock(
-      100, std::nullopt,
-      [](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
-        return {0, OutputSink::kError};
+      100, std::nullopt, [](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
+        return {.len = 0, .status = OutputSink::kError};
       });
   EXPECT_EQ(status, OutputSink::kUserError);
 

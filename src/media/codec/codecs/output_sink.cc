@@ -26,9 +26,9 @@ void OutputSink::AddOutputBuffer(const CodecBuffer* output_buffer) {
   buffer_count_++;
 }
 
-OutputSink::Status OutputSink::NextOutputBlock(
-    size_t write_size, std::optional<uint64_t> timestamp_ish,
-    fit::function<std::pair<size_t, UserStatus>(OutputBlock)> output_block_writer) {
+OutputSink::Status OutputSink::NextOutputBlock(size_t write_size,
+                                               std::optional<uint64_t> timestamp_ish,
+                                               Writer output_block_writer) {
   ZX_DEBUG_ASSERT(thrd_current() == writer_thread_);
   ZX_DEBUG_ASSERT(write_size > 0);
 
@@ -54,12 +54,13 @@ OutputSink::Status OutputSink::NextOutputBlock(
       .buffer = current_packet_->buffer(),
   };
 
-  auto [bytes_written, write_status] = output_block_writer(output_block);
+  auto [bytes_written, write_status, key_frame] = output_block_writer(output_block);
   if (write_status != kSuccess) {
     return kUserError;
   }
 
   current_packet_->SetValidLengthBytes(current_packet_->valid_length_bytes() + bytes_written);
+  current_packet_->SetKeyFrame(key_frame);
   return kOk;
 }
 

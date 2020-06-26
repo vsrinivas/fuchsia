@@ -146,9 +146,9 @@ CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
     Unbind();
   });
 
-  initial_input_format_details_ = IsDecoder() ? &decoder_params().input_details()
-                                              : IsEncoder() ? &encoder_params().input_details()
-                                                            : &decryptor_params().input_details();
+  initial_input_format_details_ = IsDecoder()   ? &decoder_params().input_details()
+                                  : IsEncoder() ? &encoder_params().input_details()
+                                                : &decryptor_params().input_details();
 }
 
 CodecImpl::~CodecImpl() {
@@ -3804,6 +3804,9 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected
     p.set_valid_length_bytes(packet->valid_length_bytes());
     if (has_timestamp_ish) {
       p.set_timestamp_ish(packet->timestamp_ish());
+    }
+    if (packet->has_key_frame()) {
+      p.set_key_frame(packet->key_frame());
     }
     p.set_start_access_unit(true);
     p.set_known_end_access_unit(true);

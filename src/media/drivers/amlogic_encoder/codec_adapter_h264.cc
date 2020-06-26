@@ -574,17 +574,16 @@ void CodecAdapterH264::ProcessInput() {
     // output chunk size passed in here.
     (void)output_sink_->NextOutputBlock(
         kOutputBufferMinSizeBytes, std::nullopt,
-        [this,
-         &item](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
+        [this, &item](OutputSink::OutputBlock output_block) -> OutputSink::OutputResult {
           if (device_->SetInputBuffer(item.packet()->buffer()) != ZX_OK) {
             events_->onCoreCodecFailCodec("Failed to setup input buffer");
-            return {0, OutputSink::kError};
+            return {.len = 0, .status = OutputSink::kError};
           }
 
           // input frames are expected to start at buffer offset 0
           if (item.packet()->start_offset()) {
             events_->onCoreCodecFailCodec("Input has offset");
-            return {0, OutputSink::kError};
+            return {.len = 0, .status = OutputSink::kError};
           }
 
           device_->SetOutputBuffer(output_block.buffer);
@@ -595,10 +594,10 @@ void CodecAdapterH264::ProcessInput() {
             ENCODE_ERROR("Encoding failed: %d", status);
             events_->onCoreCodecFailCodec("Encoding failed: %d", status);
             // TODO(afoxley) soft reset?
-            return {0, OutputSink::kError};
+            return {.len = 0, .status = OutputSink::kError};
           }
 
-          return {output_len, OutputSink::kSuccess};
+          return {.len = output_len, .status = OutputSink::kSuccess};
         });
 
     // force one packet per buffer
