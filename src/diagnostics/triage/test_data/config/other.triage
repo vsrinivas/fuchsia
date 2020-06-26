@@ -5,6 +5,7 @@
     eval: {},
     act: {
         act1: {
+            type: "Warning",
             trigger: "sample::c1",
             print: "yes on A!",
         },

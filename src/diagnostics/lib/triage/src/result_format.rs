@@ -51,6 +51,25 @@ impl<'a> ActionResultFormatter<'a> {
         output
     }
 
+    pub fn to_gauges(&self) -> Option<String> {
+        if self.action_results.iter().all(|results| results.get_gauges().is_empty()) {
+            return None;
+        }
+
+        let mut output = String::new();
+
+        let header = Self::make_underline("Gauges");
+        output.push_str(&format!("{}", header));
+
+        for results in self.action_results.iter() {
+            for gauge in results.get_gauges().iter() {
+                output.push_str(&format!("{}\n", gauge));
+            }
+        }
+
+        Some(output)
+    }
+
     fn make_underline(content: &str) -> String {
         let mut output = String::new();
         output.push_str(&format!("{}\n", content));

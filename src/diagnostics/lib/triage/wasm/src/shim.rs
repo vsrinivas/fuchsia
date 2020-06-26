@@ -109,6 +109,7 @@ mod test {
                 },
                 act: {
                   disk_full: {
+                    type: "Warning",
                     trigger: "disk98",
                     print: "Disk is >98% full"
                   }

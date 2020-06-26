@@ -13,10 +13,12 @@
     },
     act: {
         disk_full: {
+            type: "Warning",
             trigger: "disk98",
             print: "Disk is >98% full",
         },
         disk_full_old: {
+            type: "Warning",
             trigger: "disk98_old",
             print: "Disk is >98% full",
         },

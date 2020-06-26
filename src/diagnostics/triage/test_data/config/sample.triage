@@ -14,18 +14,22 @@
     },
     act: {
         act2: {
+            type: "Warning",
             trigger: "c2",
             print: "yes on A!",
         },
         some_disk: {
+            type: "Warning",
             trigger: "tiny",
             print: "Used some of disk",
         },
         more_disk: {
+            type: "Warning",
             trigger: "small",
             print: "Used more of the disk",
         },
         unhealthy: {
+            type: "Warning",
             trigger: "not_healthy",
             print: "foo is not healthy",
         },

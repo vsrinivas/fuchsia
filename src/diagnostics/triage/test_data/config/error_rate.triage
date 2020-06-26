@@ -8,6 +8,7 @@
     },
     act: {
         error_rate_too_high: {
+            type: "Warning",
             trigger: "error_rate > 0.9",
             print: "Error rate for app.cmx is too high",
         },

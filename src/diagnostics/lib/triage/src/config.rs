@@ -21,6 +21,7 @@ use std::{fs, path::Path};
 
 pub(crate) mod parse;
 
+#[cfg(not(target_arch = "wasm32"))]
 const INSPECT_FILENAME: &str = "inspect.json";
 
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
@@ -203,14 +204,14 @@ pub fn filter_actions(
         ActionTagDirective::AllowAll => actions,
         ActionTagDirective::Include(tags) => actions
             .into_iter()
-            .filter(|(_, a)| match &a.tag {
+            .filter(|(_, a)| match &a.get_tag() {
                 Some(tag) => tags.contains(tag),
                 None => false,
             })
             .collect(),
         ActionTagDirective::Exclude(tags) => actions
             .into_iter()
-            .filter(|(_, a)| match &a.tag {
+            .filter(|(_, a)| match &a.get_tag() {
                 Some(tag) => !tags.contains(tag),
                 None => true,
             })
@@ -220,7 +221,11 @@ pub fn filter_actions(
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::act::Action, anyhow::Error};
+    use {
+        super::*,
+        crate::act::{Action, Warning},
+        anyhow::Error,
+    };
 
     // initialize() will be tested in the integration test: "fx triage --test"
     // TODO(cphoenix) - set up dirs under test/ and test initialize() here.
@@ -292,11 +297,11 @@ mod test {
             {
                 let mut m =  ActionsSchema::new();
                 $(
-                    let action = Action {
+                    let action = Action::Warning(Warning {
                         trigger: Metric::Eval($trigger.to_string()),
                         print: $print.to_string(),
                         tag: $tag
-                    };
+                    });
                     m.insert($key.to_string(), action);
                 )+
                 m
@@ -310,12 +315,19 @@ mod test {
             let a = $result.get(&$key.to_string());
             assert!(a.is_some());
             let a = a.unwrap();
-            if let Metric::Eval(trigger_eval) = &a.trigger {
-                assert_eq!(trigger_eval, $trigger);
-            } else {
-                assert!(false, "Trigger {:?} was not an expression to Eval", a.trigger);
+            match a {
+                Action::Warning(a) => {
+                    if let Metric::Eval(trigger_eval) = &a.trigger {
+                        assert_eq!(trigger_eval, $trigger);
+                    } else {
+                        assert!(false, "Trigger {:?} was not an expression to Eval", a.trigger);
+                    }
+                    assert_eq!(a.print, $print.to_string());
+                }
+                _ => {
+                    assert!(false);
+                }
             }
-            assert_eq!(a.print, $print.to_string());
         };
     }
 

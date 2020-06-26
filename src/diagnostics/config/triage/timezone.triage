@@ -7,6 +7,7 @@
     },
     act: {
         no_timezone: {
+            type: "Warning",
             trigger: "not_healthy",
             print: "Device does not have a set timezone",
         },

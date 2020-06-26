@@ -4,7 +4,7 @@
 
 use {
     super::{
-        act::Actions,
+        act::{Action, Actions},
         config::ParseResult,
         metrics::{fetch::InspectFetcher, MetricState, MetricValue},
     },
@@ -68,14 +68,21 @@ fn check_failure(
                 println!("Action {} not found in trial {}", action_name, trial_name);
                 return true;
             }
-            Some(action) => match metric_state.metric_value(namespace, &action.trigger) {
-                MetricValue::Bool(actual) if actual == expected => return false,
-                other => {
-                    println!(
+            Some(action) => match action {
+                Action::Warning(properties) => {
+                    match metric_state.metric_value(namespace, &properties.trigger) {
+                        MetricValue::Bool(actual) if actual == expected => return false,
+                        other => {
+                            println!(
                         "Test {} failed: trigger '{}' of action {} returned {:?}, expected {}",
-                        trial_name, action.trigger, action_name, other, expected
+                        trial_name, properties.trigger, action_name, other, expected
                     );
-                    return true;
+                            return true;
+                        }
+                    }
+                }
+                _ => {
+                    return false;
                 }
             },
         },
@@ -84,7 +91,12 @@ fn check_failure(
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::act::Action, crate::metrics::Metric, anyhow::Error};
+    use {
+        super::*,
+        crate::act::{Action, Warning},
+        crate::metrics::Metric,
+        anyhow::Error,
+    };
 
     macro_rules! build_map {($($tuple:expr),*) => ({
         let mut map = HashMap::new();
@@ -119,19 +131,19 @@ mod test {
             build_map!(
                 (
                     "fires",
-                    Action {
+                    Action::Warning(Warning {
                         trigger: Metric::Eval("true".to_string()),
                         print: "good".to_string(),
                         tag: None
-                    }
+                    })
                 ),
                 (
                     "inert",
-                    Action {
+                    Action::Warning(Warning {
                         trigger: Metric::Eval("false".to_string()),
                         print: "what?!?".to_string(),
                         tag: None
-                    }
+                    })
                 )
             )
         ));

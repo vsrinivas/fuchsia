@@ -5,10 +5,12 @@
     },
     act: {
         unhealthy: {
+            type: "Warning",
             trigger: "status != 'OK'",
             print: "Stash server is experiencing errors",
         },
         should_be_secure: {
+            type: "Warning",
             trigger: "Not(is_secure)",
             print: "The secure stash should be running in secure mode",
         },

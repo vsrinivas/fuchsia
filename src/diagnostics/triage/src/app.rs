@@ -62,7 +62,10 @@ impl RunResult {
     pub fn write_report(&self, dest: &mut dyn std::io::Write) -> Result<(), Error> {
         let results_formatter = ActionResultFormatter::new(self.action_results.iter().collect());
         let output = match self.output_format {
-            OutputFormat::Text => results_formatter.to_warnings(),
+            OutputFormat::Text => match results_formatter.to_gauges() {
+                Some(gauges) => format!("{}\n{}", gauges, results_formatter.to_warnings()),
+                None => results_formatter.to_warnings(),
+            },
         };
         dest.write_fmt(format_args!("{}\n", output)).context("failed to write to destination")?;
         Ok(())
@@ -112,6 +115,22 @@ mod tests {
 
         let output = String::from_utf8(dest)?;
         assert_eq!("Warnings for target foo\n-----------------------\nfail\n\n", output);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_output_text_with_gauges() -> Result<(), Error> {
+        let mut action_result = make_action_result!("foo", "a" => true);
+        action_result.add_gauge("gauge".to_string());
+        let action_results = vec![action_result];
+        let run_result = RunResult::new(OutputFormat::Text, action_results);
+
+        let mut dest = vec![];
+        run_result.write_report(&mut dest)?;
+
+        let output = String::from_utf8(dest)?;
+        assert_eq!("Gauges\n------\ngauge\n\nNo actions were triggered. All targets OK.\n", output);
 
         Ok(())
     }
