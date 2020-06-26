@@ -26,7 +26,7 @@
 
 void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // create a default stack frame on the stack
-  vaddr_t stack_top = t->stack_.top();
+  vaddr_t stack_top = t->stack().top();
 
   // make sure the top of the stack is 16 byte aligned for ABI compliance
   DEBUG_ASSERT(IS_ALIGNED(stack_top, 16));
@@ -59,8 +59,8 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // set the stack pointer
   t->arch().sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
-  DEBUG_ASSERT(IS_ALIGNED(t->stack_.unsafe_top(), 16));
-  t->arch().unsafe_sp = t->stack_.unsafe_top();
+  DEBUG_ASSERT(IS_ALIGNED(t->stack().unsafe_top(), 16));
+  t->arch().unsafe_sp = t->stack().unsafe_top();
 #endif
 
   // initialize the fs, gs and kernel bases to 0.
@@ -255,7 +255,7 @@ static void x86_debug_restore_state(Thread* thread) {
 __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(Thread* oldthread,
                                                                             Thread* newthread) {
   // set the tss SP0 value to point at the top of our stack
-  x86_set_tss_sp(newthread->stack_.top());
+  x86_set_tss_sp(newthread->stack().top());
 
   if (likely(!oldthread->IsUserStateSavedLocked())) {
     x86_extended_register_context_switch(oldthread, newthread);

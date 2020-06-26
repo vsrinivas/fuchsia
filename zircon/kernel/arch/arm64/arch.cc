@@ -103,7 +103,7 @@ uint64_t arm64_get_boot_el() { return arch_boot_el >> 2; }
 zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
   // Allocate a stack, indexed by CPU num so that |arm64_secondary_entry| can find it.
   DEBUG_ASSERT_MSG(cpu_num > 0 && cpu_num < SMP_MAX_CPUS, "cpu_num: %u", cpu_num);
-  KernelStack* stack = &_init_thread[cpu_num - 1].stack_;
+  KernelStack* stack = &_init_thread[cpu_num - 1].stack();
   DEBUG_ASSERT(stack->base() == 0);
   zx_status_t status = stack->Init();
   if (status != ZX_OK) {
@@ -152,7 +152,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
 
 zx_status_t arm64_free_secondary_stack(uint cpu_num) {
   DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
-  return _init_thread[cpu_num - 1].stack_.Teardown();
+  return _init_thread[cpu_num - 1].stack().Teardown();
 }
 
 static void arm64_cpu_early_init() {
@@ -275,11 +275,11 @@ void arch_enter_uspace(iframe_t* iframe) {
 
   LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR
           ", 0, %#" PRIxPTR ")\n",
-          iframe->r[0], iframe->r[1], iframe->spsr, ct->stack_.top(), iframe->usp, iframe->elr);
+          iframe->r[0], iframe->r[1], iframe->spsr, ct->stack().top(), iframe->usp, iframe->elr);
 
   arch_disable_ints();
 
-  arm64_uspace_entry(iframe, ct->stack_.top());
+  arm64_uspace_entry(iframe, ct->stack().top());
   __UNREACHABLE;
 }
 
@@ -293,7 +293,7 @@ extern "C" void arm64_secondary_entry() {
   }
 
   uint cpu = arch_curr_cpu_num();
-  thread_secondary_cpu_init_early(&_init_thread[cpu - 1]);
+  _init_thread[cpu - 1].SecondaryCpuInitEarly();
   // Run early secondary cpu init routines up to the threading level.
   lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
 

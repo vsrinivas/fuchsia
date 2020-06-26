@@ -91,11 +91,11 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     }
     init_thread_struct(thread, "");
 
-    status = thread->stack_.Init();
+    status = thread->stack().Init();
     if (status != ZX_OK) {
       goto cleanup_all;
     }
-    bootstrap_data->per_cpu[i].kstack_base = thread->stack_.base();
+    bootstrap_data->per_cpu[i].kstack_base = thread->stack().base();
     bootstrap_data->per_cpu[i].thread = thread;
   }
 

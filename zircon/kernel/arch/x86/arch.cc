@@ -149,7 +149,7 @@ void arch_resume(void) {
   /* run early secondary cpu init routines up to the threading level */
   lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
 
-  thread_secondary_cpu_init_early(thread);
+  thread->SecondaryCpuInitEarly();
   // The thread stacks and struct are from a single allocation, free it
   // when we exit into the scheduler.
   thread->flags_ |= THREAD_FLAG_FREE_STRUCT;
@@ -200,8 +200,8 @@ __NO_SAFESTACK __NO_RETURN void x86_secondary_entry(volatile int* aps_still_boot
 
 #if __has_feature(safe_stack)
   // Set up the initial unsafe stack pointer.
-  DEBUG_ASSERT(IS_ALIGNED(thread->stack_.unsafe_top(), 16));
-  x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, thread->stack_.unsafe_top());
+  DEBUG_ASSERT(IS_ALIGNED(thread->stack().unsafe_top(), 16));
+  x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, thread->stack().unsafe_top());
 #endif
 
   x86_init_percpu((uint)cpu_num);

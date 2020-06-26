@@ -84,7 +84,6 @@ Thread::MigrateList Thread::migrate_list_;
 SpinLock thread_lock __CPU_ALIGN_EXCLUSIVE;
 
 // local routines
-static void thread_exit_locked(Thread* current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend();
 
 const char* ToString(enum thread_state state) {
@@ -515,8 +514,9 @@ static void thread_free_dpc(Dpc* dpc) {
   free_thread_resources(t);
 }
 
-__NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
-    TA_REQ(thread_lock) {
+__NO_RETURN void Thread::Current::ExitLocked(int retcode) TA_REQ(thread_lock) {
+  Thread* current_thread = Thread::Current::Get();
+
   // create a dpc on the stack to queue up a free.
   // must be put at top scope in this function to force the compiler to keep it from
   // reusing the stack before the function exits
@@ -606,7 +606,7 @@ void Thread::Current::Exit(int retcode) {
   }
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-  thread_exit_locked(current_thread, retcode);
+  Thread::Current::ExitLocked(retcode);
 }
 
 // kill a thread
@@ -1313,19 +1313,19 @@ void Thread::Current::BecomeIdle() {
  *
  * Prior to calling, |t->stack| must be properly constructed. See |vm_allocate_kstack|.
  */
-void thread_secondary_cpu_init_early(Thread* t) {
+void Thread::SecondaryCpuInitEarly() {
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(t->stack_.base() != 0);
+  DEBUG_ASSERT(stack_.base() != 0);
 
-  // Save |t|'s stack because |thread_construct_first| will zero out the whole struct.
-  KernelStack stack = ktl::move(t->stack_);
+  // Save |this|'s stack because |thread_construct_first| will zero out the whole struct.
+  KernelStack stack = ktl::move(stack_);
 
   char name[16];
   snprintf(name, sizeof(name), "cpu_init %u", arch_curr_cpu_num());
-  thread_construct_first(t, name);
+  thread_construct_first(this, name);
 
   // Restore the stack.
-  t->stack_ = ktl::move(stack);
+  stack_ = ktl::move(stack);
 }
 
 /**
@@ -1437,7 +1437,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
             t->scheduler_state().remaining_time_slice());
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
-    t->stack_.DumpInfo(INFO);
+    t->stack().DumpInfo(INFO);
     dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry_, t->arg_, t->flags_,
             (t->flags_ & THREAD_FLAG_DETACHED) ? "Dt" : "",
             (t->flags_ & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
@@ -1539,8 +1539,8 @@ typedef struct thread_backtrace {
 } thread_backtrace_t;
 
 static zx_status_t thread_read_stack(Thread* t, void* ptr, void* out, size_t sz) {
-  if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack_.base()) ||
-      (reinterpret_cast<vaddr_t>(ptr) > (t->stack_.top() - sizeof(void*)))) {
+  if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack().base()) ||
+      (reinterpret_cast<vaddr_t>(ptr) > (t->stack().top() - sizeof(void*)))) {
     return ZX_ERR_NOT_FOUND;
   }
   memcpy(out, ptr, sz);

@@ -426,6 +426,9 @@ struct Thread {
   void SetCurrent();
   void SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread);
 
+  // Internal initialization routines. Eventually, these should be private.
+  void SecondaryCpuInitEarly();
+
   // Called to mark a thread as schedulable.
   void Resume();
   zx_status_t Suspend();
@@ -526,6 +529,7 @@ struct Thread {
     static void Preempt();
     static void Reschedule();
     static void Exit(int retcode) __NO_RETURN;
+    static void ExitLocked(int retcode) TA_REQ(thread_lock) __NO_RETURN;
     static void BecomeIdle() __NO_RETURN;
 
     // Wait until the deadline has occurred.
@@ -746,6 +750,9 @@ struct Thread {
 
   arch_thread& arch() { return arch_; }
 
+  KernelStack& stack() { return stack_; }
+  const KernelStack& stack() const { return stack_; }
+
   const char* name() const { return name_; }
   // This may truncate |name|, so that it (including a trailing NUL
   // byte) fit in ZX_MAX_NAME_LEN bytes.
@@ -819,9 +826,9 @@ struct Thread {
   // Architecture-specific stuff.
   struct arch_thread arch_;
 
- public:
   KernelStack stack_;
 
+ public:
   // entry point
   thread_start_routine entry_;
   void* arg_;
@@ -917,7 +924,6 @@ void init_thread_struct(Thread* t, const char* name);
 
 // Other thread-system bringup functions.
 void thread_init_early();
-void thread_secondary_cpu_init_early(Thread* t);
 void thread_secondary_cpu_entry() __NO_RETURN;
 void thread_construct_first(Thread* t, const char* name);
 
