@@ -17,7 +17,6 @@ declare_args() {
 config("zircon-migrated") {
   compiler_flags = [
     "-O2",
-    "-no-canonical-prefixes",
   ]
 
   cflags = compiler_flags + [
@@ -66,7 +65,6 @@ config("zircon-library") {
   if (!debug_zircon_libraries_more) {
     compiler_flags += [
       "-O2",
-      "-no-canonical-prefixes",
     ]
   }
 
