@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/listnode.h>
-#include <zxtest/zxtest.h>
+#include "src/lib/listnode/listnode.h"
 
-namespace {
+#include <zxtest/zxtest.h>
 
 typedef struct list_elem {
   int value;
   list_node_t node;
 } list_elem_t;
 
-void expect_list_sorted(list_node_t* list, int count) {
-  EXPECT_EQ(list_length(list), static_cast<unsigned int>(count));
+static void expect_list_sorted(list_node_t* list, int count) {
+  EXPECT_EQ(list_length(list), (size_t)count);
   int index = 0;
   list_elem_t* entry = NULL;
   list_for_every_entry (list, entry, list_elem_t, node) {
@@ -26,7 +25,7 @@ void expect_list_sorted(list_node_t* list, int count) {
   }
 }
 
-TEST(ListnodeTests, initialize_empty_list) {
+TEST(ListnodeCTests, initialize_empty_list) {
   list_node_t list = LIST_INITIAL_CLEARED_VALUE;
   EXPECT_FALSE(list_in_list(&list));
 
@@ -55,7 +54,7 @@ TEST(ListnodeTests, initialize_empty_list) {
   EXPECT_NULL(list_prev_wrap_type(&list, &list, list_elem_t, node));
 }
 
-TEST(ListnodeTests, element_add_remove) {
+TEST(ListnodeCTests, element_add_remove) {
   list_elem_t first_set[5] = {
       {-1, {}}, {2, {}}, {3, {}}, {4, {}}, {-1, {}},
   };
@@ -92,7 +91,7 @@ TEST(ListnodeTests, element_add_remove) {
   EXPECT_TRUE(list_is_empty(&list));
 }
 
-TEST(ListnodeTests, list_splice_split) {
+TEST(ListnodeCTests, list_splice_split) {
   list_elem_t first_set[3] = {
       {0, {}},
       {3, {}},
@@ -140,5 +139,3 @@ TEST(ListnodeTests, list_splice_split) {
   // The second list should be sorted now.
   expect_list_sorted(&second_list, 6);
 }
-
-}  // namespace

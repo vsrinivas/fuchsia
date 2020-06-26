@@ -149,7 +149,7 @@ group("migrated-tests") {
 
     #------------------
     #------------------
-    "//zircon/system/utest/util",
+    "//src/lib/listnode:listnode-tests",
 
     #------------------
   ]

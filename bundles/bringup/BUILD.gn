@@ -30,6 +30,7 @@ group("tests") {
     "//src/graphics/drivers/virtio:virtio-gpu-test-package",
     "//src/lib/ddk/test:ddk-unittest-package",
     "//src/lib/ddktl/test:ddktl-unittest-package",
+    "//src/lib/listnode:listnode-package",
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",
     "//src/media/audio/drivers/sherlock-tdm-output/test:sherlock-audio-out-test-package",
@@ -159,6 +160,5 @@ group("tests") {
     "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-ftdi-package",
     "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-hid-package",
     "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-test-package",
-    "//zircon/system/utest/util:util-package",
   ]
 }
