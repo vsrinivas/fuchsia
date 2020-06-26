@@ -37,6 +37,7 @@ using MemoryTest = flatland::RendererTest;
 // Creates a buffer collection with multiple vmos and tries to import each of those
 // vmos into GPU memory.
 VK_TEST_F(MemoryTest, SimpleTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   const uint32_t kImageCount = 5U;
 
   auto escher = GetEscher();
@@ -134,6 +135,7 @@ VK_TEST_F(MemoryTest, OutOfBoundsTest) {
 // from the image using the GPUDownloader and making sure the value matches what
 // was written to the initial buffer.
 VK_TEST_F(MemoryTest, ImageReadWriteTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   const uint32_t kImageCount = 1U;
 
   auto escher = GetEscher();

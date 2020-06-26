@@ -66,19 +66,24 @@ class EscherEnvironment : public ::testing::Environment {
 };
 
 // Checks if the global Escher environment uses SwiftShader as its physical
-// device. This is used in macro SKIP_TEST_IF_ESCHER_USES_SWIFTSHADER().
+// device. This is used in macro SKIP_TEST_IF_ESCHER_USES_DEVICE().
 bool GlobalEscherUsesSwiftShader();
 
-// Skip the test if Escher uses SwiftShader ICD.
-// TODO(49863): This is a workaround since some tests doesn't work on
-// SwiftShader ICD. We should remove this macro after these issues are
-// resolved.
-#define SKIP_TEST_IF_ESCHER_USES_SWIFTSHADER()                                           \
-  do {                                                                                   \
-    if (escher::test::GlobalEscherUsesSwiftShader()) {                                   \
-      FX_LOGS(WARNING) << "This test doesn't work on SwiftShader device; Test skipped."; \
-      GTEST_SKIP();                                                                      \
-    }                                                                                    \
+// Checks if the global Escher environment uses an Virtual GPU as its physical
+// device (for example, on FEMU). This is used in macro
+// SKIP_TEST_IF_ESCHER_USES_DEVICE().
+bool GlobalEscherUsesVirtualGpu();
+
+// Skip the test if Escher uses a specific device or a specific type of device.
+// TODO(49863), TODO(54086): This is a workaround since some tests doesn't work
+// on SwiftShader ICD and FEMU. We should remove this macro after these issues
+// are resolved.
+#define SKIP_TEST_IF_ESCHER_USES_DEVICE(DeviceType)                                          \
+  do {                                                                                       \
+    if (escher::test::GlobalEscherUses##DeviceType()) {                                      \
+      FX_LOGS(WARNING) << "This test doesn't work on " #DeviceType " device; Test skipped."; \
+      GTEST_SKIP();                                                                          \
+    }                                                                                        \
   } while (0)
 
 // Execute the statements only if Escher doesn't use SwiftShader ICD.

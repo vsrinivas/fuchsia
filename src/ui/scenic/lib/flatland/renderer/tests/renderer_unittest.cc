@@ -400,6 +400,7 @@ VK_TEST_F(VulkanRendererTest, MulithtreadingTest) {
 }
 
 VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
@@ -420,6 +421,7 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
 // ----------------
 // ----------------
 VK_TEST_F(VulkanRendererTest, RenderTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
@@ -566,6 +568,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 // TODO(52632): Transparency is currently hardcoded in the renderer to be on. This test will
 // break if that is changed to be hardcoded to false before we expose it in the API.
 VK_TEST_F(VulkanRendererTest, TransparencyTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());

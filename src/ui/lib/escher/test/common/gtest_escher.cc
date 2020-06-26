@@ -49,6 +49,12 @@ Escher* GetEscher() {
   return EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
 }
 
+bool GlobalEscherUsesVirtualGpu() {
+  vk::PhysicalDevice physical_device =
+      EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanDevice()->vk_physical_device();
+  return physical_device.getProperties().deviceType == vk::PhysicalDeviceType::eVirtualGpu;
+}
+
 bool GlobalEscherUsesSwiftShader() {
   vk::PhysicalDevice physical_device =
       EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanDevice()->vk_physical_device();
