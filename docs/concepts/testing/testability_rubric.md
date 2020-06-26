@@ -21,8 +21,7 @@ The exact contents of the doc may change over time.
 ### Your goals as a Testability reviewer
 
 *   **Determine if the change is tested.** Apply Testability-Review+1 if you
-    agree that it’s tested, and consider applying Testability-1 along with a
-    note for what’s missing if it’s not.
+    agree that it’s tested, and reply with a note for what’s missing if it’s not.
 *   Focus on whether the change is tested, not necessarily on what the change
     actually does. For instance you may apply Testability+1 if the change is
     well tested and at the same time Code-Review-1 if you would not like to see
