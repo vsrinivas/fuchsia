@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import StringIO
+import io
 import argparse
 import functools
 import json
@@ -13,6 +13,7 @@ import sys
 import tarfile
 import time
 import zipfile
+from functools import reduce
 
 
 def generate_script(images, board_name, type, additional_bootserver_arguments):
@@ -36,7 +37,7 @@ set -x
     if additional_bootserver_arguments:
         cmd += [additional_bootserver_arguments]
 
-    for switch, path in sorted(switches.iteritems()):
+    for switch, path in sorted(switches.items()):
         cmd += [switch, path]
     cmd.append('"$@"')
     script += ' '.join(cmd) + '\n'
@@ -81,7 +82,7 @@ class TarArchiver(object):
         info = self._sanitize_tarinfo(executable, tarfile.TarInfo(name))
         info.size = len(contents)
         info.mtime = time.time()
-        self._archive.addfile(info, StringIO.StringIO(contents))
+        self._archive.addfile(info, io.BytesIO(contents))
 
 
 # Produces a deflated zip archive.
@@ -90,7 +91,7 @@ class ZipArchiver(object):
 
     def __init__(self, outfile):
         self._archive = zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED)
-        self._archive.comment = 'Fuchsia build archive'
+        self._archive.comment = 'Fuchsia build archive'.encode()
 
     def __enter__(self):
         return self
@@ -181,7 +182,7 @@ def write_archive(outfile, images, board_name, additional_bootserver_arguments):
         for path, image in path_images:
             archiver.add_path(path, image['path'], is_executable(image))
         for contents, image in content_images:
-            archiver.add_contents(contents, image['path'], is_executable(image))
+            archiver.add_contents(contents.encode(), image['path'], is_executable(image))
 
 
 def main():

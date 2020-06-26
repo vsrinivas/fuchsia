@@ -191,9 +191,9 @@ __all__ = ['binary_info', 'find_variant', 'variant']
 def test_main(build_dir, filenames):
     for filename in filenames:
         info = binary_info(filename)
-        print info
-        print '  Driver: %r' % is_driver(info)
-        print '  %r' % (find_variant(info, None, build_dir),)
+        print(info)
+        print('  Driver: %r' % is_driver(info))
+        print('  %r' % (find_variant(info, None, build_dir),))
 
 
 # For manual testing.

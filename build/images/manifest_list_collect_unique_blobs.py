@@ -37,7 +37,7 @@ with open(infile) as listfile:
           raise
 
 with open(outfile, "w") as f:
-  for id, src in files.items():
+  for id, src in list(files.items()):
     f.write(id + "=")
     f.write(os.path.relpath(src, outdir))
     f.write("\n")

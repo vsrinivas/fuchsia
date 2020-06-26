@@ -163,12 +163,12 @@ class input_action_base(argparse.Action):
                 return (
                     not include_source or matches(entry.source, include_source))
 
-            unselected += filter(lambda entry: not included(entry), selected)
-            selected = filter(included, selected)
+            unselected += [entry for entry in selected if not included(entry)]
+            selected = list(filter(included, selected))
 
         if getattr(namespace, 'contents', False):
-            selected = map(contents_entry, selected)
-            unselected = map(contents_entry, unselected)
+            selected = list(map(contents_entry, selected))
+            unselected = list(map(contents_entry, unselected))
 
         sep = getattr(namespace, 'separator', '=')
         rewrites = [
@@ -372,7 +372,7 @@ def main():
     for output_filename, output_set in zip(args.output, output_sets):
         if args.copy_contentaddr:
             created_dirs = set()
-            for target, source in output_set.iteritems():
+            for target, source in output_set.items():
                 target_path = os.path.join(output_filename, target)
                 if os.path.exists(target_path):
                     continue
@@ -388,7 +388,7 @@ def main():
                     ''.join(
                         sorted(
                             line + '\n' for line in (
-                                output_set.itervalues() if args.
+                                iter(output_set.values()) if args.
                                 unique else output_set))))
     if args.stamp:
         with open(args.stamp, 'w') as file:

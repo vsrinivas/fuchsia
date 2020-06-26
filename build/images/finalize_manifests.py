@@ -251,16 +251,16 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
         else:
             nonbinaries.append(entry)
 
-    for binary in unexamined_binaries.itervalues():
+    for binary in unexamined_binaries.values():
         add_binary(binary)
-    for target in unexamined_binaries.iterkeys():
+    for target in unexamined_binaries.keys():
         assert target in binaries, (
             "Target %s missing from %s" % (target, binaries.keys()))
 
     matched_binaries = set()
     for input_binary in input_binaries:
         matches = fnmatch.filter(
-            aux_binaries.iterkeys(), input_binary.target_pattern)
+            iter(aux_binaries.keys()), input_binary.target_pattern)
         assert matches, (
             "--input-binary='%s' did not match any binaries" %
             input_binary.target_pattern)
@@ -273,7 +273,7 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
                     aux_binaries[target], input_binary.output_group),
                 auxiliary=True)
 
-    return binaries.itervalues(), nonbinaries
+    return iter(binaries.values()), nonbinaries
 
 
 # Take an iterable of binary_entry, and return list of binary_entry (all
@@ -359,7 +359,7 @@ def strip_binary_manifest(
             entry, info, debug = make_debug_file(entry, info)
         stripped_manifest.append(binary_entry(entry, info))
         if debug is None:
-            print 'WARNING: no debug file found for %s' % info.filename
+            print('WARNING: no debug file found for %s' % info.filename)
             continue
         assert not debug.stripped, "'%s' is stripped" % debug.filename
         assert info == debug._replace(

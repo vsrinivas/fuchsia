@@ -61,7 +61,7 @@ class elf_note(namedtuple('elf_note', [
         return (self.name, self.type)
 
     def is_build_id(self):
-        return self.ident() == (b'GNU\0', NT_GNU_BUILD_ID)
+        return self.ident() == ('GNU\0', NT_GNU_BUILD_ID)
 
     def build_id_hex(self):
         if self.is_build_id():
@@ -203,7 +203,7 @@ def gen_elf():
 
     # All the accessors for a format (class, byte-order) form one elf,
     # e.g. use elf.Ehdr and elf.Phdr.
-    elf = namedtuple('elf', elf_types.keys())
+    elf = namedtuple('elf', list(elf_types.keys()))
 
     def gen_accessors(is64, struct_byte_order):
 
@@ -410,7 +410,10 @@ def get_elf_info(filename, match_notes=False):
                 while pos < phdr.p_offset + phdr.p_filesz:
                     nhdr = elf.Nhdr.read(file, pos)
                     pos += elf.Nhdr.size
-                    name = file[pos:pos + nhdr.n_namesz]
+                    # TODO(fxbug.dev/55190) PT_NOTE is expected to be valid
+                    # 7-bit ASCII or UTF-8. Remove this when clients no longer
+                    # depend on that behavior.
+                    name = str(file[pos:pos + nhdr.n_namesz].decode())
                     pos += round_up_to(nhdr.n_namesz)
                     # PT_DESC is not always string-ish, just copy the bytes.
                     if IS_PYTHON3:
@@ -441,7 +444,7 @@ def get_elf_info(filename, match_notes=False):
                 "%s: Unterminated string at %#x" % (filename, start))
             if start == end:
                 break
-            yield file[start:end]
+            yield file[start:end].decode()
             start = end + 1
 
     def extract_C_string(start):
@@ -474,9 +477,9 @@ def get_elf_info(filename, match_notes=False):
         # PT_INTERP points directly to a string in the file.
         for interp in (phdr for phdr in phdrs if phdr.p_type == PT_INTERP):
             interp = file[interp.p_offset:interp.p_offset + interp.p_filesz]
-            if interp[-1:] == '\0':
+            if interp[-1:] == b'\0':
                 interp = interp[:-1]
-            return interp
+            return interp.decode()
         return None
 
     def get_dynamic():
@@ -504,7 +507,7 @@ def get_elf_info(filename, match_notes=False):
                 if dt.d_tag == tag)
 
         if dyn is None:
-            return None, set()
+          return None, set()
 
         # DT_STRTAB points to the string table's vaddr (.dynstr).
         strtab_vaddr = dyn_get(dyn, DT_STRTAB)
@@ -527,7 +530,7 @@ def get_elf_info(filename, match_notes=False):
     def get_stripped():
         return all(
             (shdr.sh_flags & SHF_ALLOC) != 0 or
-            (shdr.sh_type != SHT_SYMTAB and not name.startswith(b'.debug_'))
+            (shdr.sh_type != SHT_SYMTAB and not name.startswith('.debug_'))
             for shdr, name in gen_sections())
 
     def get_memory_size():

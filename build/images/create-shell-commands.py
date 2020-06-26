@@ -49,7 +49,7 @@ def main():
         commands[name] = path
 
     with open(args.output_manifest, 'w') as output:
-        for name, path in commands.items():
+        for name, path in list(commands.items()):
             output.write('bin/%s=%s\n' % (name, path))
 
 

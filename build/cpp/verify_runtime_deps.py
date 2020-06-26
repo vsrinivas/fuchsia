@@ -55,7 +55,7 @@ def main():
         return os.path.normpath(os.path.join(args.root_build_dir, dep.strip()))
 
     with open(args.runtime_deps_file, 'r') as runtime_deps_file:
-        runtime_files = map(normalize_dep, runtime_deps_file.readlines())
+        runtime_files = list(map(normalize_dep, runtime_deps_file.readlines()))
 
     # Read the list of package dependencies for the library's SDK incarnation.
     with open(args.manifest, 'r') as manifest_file:
@@ -66,7 +66,7 @@ def main():
         return next(a for a in manifest['atoms'] if a['id'] == id)
 
     atom = find_atom(atom_id)
-    deps = map(lambda a: find_atom(a), atom['deps'])
+    deps = [find_atom(a) for a in atom['deps']]
     deps += [atom]
 
     # Check whether all runtime files are available for packaging.
