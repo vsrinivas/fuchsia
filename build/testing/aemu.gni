@@ -7,11 +7,7 @@
 # evaluate flakiness and performance without known failures.
 # As tests are fixed remove them from this list and set `aemu_env` in their
 # list of test environments to ensure they do not regress.
-# TODO(nmulcahey): File bugs.
 aemu_known_failures = [
-  "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_examples_test.cmx",
-  "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_renderer_tests.cmx",
-  "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_unittests.cmx",
+  # TODO(54086): Remove this line after fixing the test on AEMU.
   "fuchsia-pkg://fuchsia.com/scenic_tests#meta/flatland_renderer_unittests.cmx",
-  "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_unittests.cmx",
 ]
