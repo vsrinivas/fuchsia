@@ -11,6 +11,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 class IdentityEncoder : public Encoder {
  public:
@@ -23,6 +24,7 @@ class IdentityEncoder : public Encoder {
   virtual void Reset(){};
 };
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

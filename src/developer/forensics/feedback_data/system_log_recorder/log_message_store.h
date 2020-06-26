@@ -14,6 +14,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 // Thread-safe store of log messages.
 //
@@ -81,6 +82,7 @@ class LogMessageStore {
   std::unique_ptr<Encoder> encoder_;
 };
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

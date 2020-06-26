@@ -8,6 +8,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 std::string IdentityDecoder::Decode(const fsl::SizedVmo& vmo) {
   std::string output;
@@ -15,5 +16,6 @@ std::string IdentityDecoder::Decode(const fsl::SizedVmo& vmo) {
   return output;
 }
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics

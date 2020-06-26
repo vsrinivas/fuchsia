@@ -11,6 +11,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 // Decodes data previously encoded via an Encoder.
 //
@@ -26,6 +27,7 @@ class Decoder {
   virtual void Reset() = 0;
 };
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

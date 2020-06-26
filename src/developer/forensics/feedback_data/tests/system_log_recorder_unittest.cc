@@ -30,6 +30,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 namespace {
 
 using stubs::BuildLogMessage;
@@ -602,5 +603,6 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 }
 
 }  // namespace
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics

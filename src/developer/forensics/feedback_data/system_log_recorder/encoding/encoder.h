@@ -9,6 +9,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 // Encodes data, taking into account what it has already encoded so far until it gets reset.
 class Encoder {
@@ -21,6 +22,7 @@ class Encoder {
   virtual void Reset() = 0;
 };
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

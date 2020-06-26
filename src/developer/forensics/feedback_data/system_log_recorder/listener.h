@@ -16,6 +16,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 // Listens to incoming logs and immediately adds them to a store.
 class SystemLogListener : public fuchsia::logger::LogListenerSafe {
@@ -37,6 +38,7 @@ class SystemLogListener : public fuchsia::logger::LogListenerSafe {
   fuchsia::logger::LogPtr logger_;
 };
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

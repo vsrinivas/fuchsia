@@ -10,6 +10,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 SystemLogRecorder::SystemLogRecorder(async_dispatcher_t* write_dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
@@ -33,5 +34,6 @@ void SystemLogRecorder::PeriodicWriteTask() {
       write_dispatcher_, [this] { PeriodicWriteTask(); }, write_period_);
 }
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics

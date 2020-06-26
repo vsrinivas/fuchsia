@@ -15,6 +15,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 class SystemLogRecorder {
  public:
@@ -41,6 +42,7 @@ class SystemLogRecorder {
   SystemLogWriter writer_;
 };
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

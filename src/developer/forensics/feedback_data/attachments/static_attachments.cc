@@ -44,8 +44,8 @@ AttachmentValue ReadAttachmentValueFromFilepath(const AttachmentKey& key,
 
 void CreatePreviousLogsFile() {
   // We read the set of /cache files into a single /tmp file.
-  ProductionDecoder decoder;
-  if (Concatenate(kCurrentLogsFilePaths, &decoder, kPreviousLogsFilePath)) {
+  system_log_recorder::ProductionDecoder decoder;
+  if (system_log_recorder::Concatenate(kCurrentLogsFilePaths, &decoder, kPreviousLogsFilePath)) {
     FX_LOGS(INFO) << "Found logs from previous boot cycle, available at " << kPreviousLogsFilePath;
 
     // Clean up the /cache files now that they have been concatenated into a single /tmp file.

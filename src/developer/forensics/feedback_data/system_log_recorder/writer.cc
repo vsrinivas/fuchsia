@@ -11,6 +11,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 SystemLogWriter::SystemLogWriter(const std::vector<const std::string>& file_paths,
                                  LogMessageStore* store)
@@ -60,5 +61,6 @@ void SystemLogWriter::RotateFilePaths() {
   }
 }
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics

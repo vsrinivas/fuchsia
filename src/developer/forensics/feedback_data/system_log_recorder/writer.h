@@ -12,6 +12,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 // Consumes the full content of a store on request, writing it to a rotating set of files.
 class SystemLogWriter {
@@ -34,6 +35,7 @@ class SystemLogWriter {
   LogMessageStore* store_;
 };
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

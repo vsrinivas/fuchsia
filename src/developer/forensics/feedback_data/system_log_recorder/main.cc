@@ -20,7 +20,7 @@ constexpr zx::duration kWritePeriod = zx::sec(1);
 constexpr size_t kMaxWriteSizeInBytes = 16 * 1024;
 
 int main(int argc, const char** argv) {
-  using namespace ::forensics::feedback_data;
+  using namespace ::forensics::feedback_data::system_log_recorder;
 
   syslog::SetTags({"feedback"});
 
@@ -35,14 +35,15 @@ int main(int argc, const char** argv) {
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  SystemLogRecorder recorder(write_loop.dispatcher(), context->svc(),
-                             SystemLogRecorder::WriteParameters{
-                                 .period = kWritePeriod,
-                                 .max_write_size_bytes = kMaxWriteSizeInBytes,
-                                 .log_file_paths = kCurrentLogsFilePaths,
-                                 .total_log_size_bytes = kPersistentLogsMaxSizeInKb * 1024,
-                             },
-                             std::unique_ptr<Encoder>(new ProductionEncoder()));
+  SystemLogRecorder recorder(
+      write_loop.dispatcher(), context->svc(),
+      SystemLogRecorder::WriteParameters{
+          .period = kWritePeriod,
+          .max_write_size_bytes = kMaxWriteSizeInBytes,
+          .log_file_paths = ::forensics::feedback_data::kCurrentLogsFilePaths,
+          .total_log_size_bytes = ::forensics::feedback_data::kPersistentLogsMaxSizeInKb * 1024,
+      },
+      std::unique_ptr<Encoder>(new ProductionEncoder()));
   recorder.Start();
 
   main_loop.Run();

@@ -15,6 +15,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 namespace {
 
@@ -56,5 +57,6 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
   return true;
 }
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics

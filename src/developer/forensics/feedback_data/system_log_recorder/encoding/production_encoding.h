@@ -10,11 +10,13 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 // Set the encoder - decoder pair for encoding log messages in production.
 using ProductionDecoder = IdentityDecoder;
 using ProductionEncoder = IdentityEncoder;
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
 

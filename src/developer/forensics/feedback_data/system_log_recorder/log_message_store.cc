@@ -13,6 +13,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 namespace {
 
 const std::string kDroppedFormatStr = "!!! DROPPED %lu MESSAGES !!!\n";
@@ -129,5 +130,6 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
   return str;
 }
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics

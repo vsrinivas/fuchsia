@@ -9,6 +9,7 @@
 
 namespace forensics {
 namespace feedback_data {
+namespace system_log_recorder {
 
 SystemLogListener::SystemLogListener(std::shared_ptr<sys::ServiceDirectory> services,
                                      LogMessageStore* store)
@@ -54,5 +55,6 @@ void SystemLogListener::Done() {
   logger_->ListenSafe(std::move(log_listener), /*options=*/nullptr);
 }
 
+}  // namespace system_log_recorder
 }  // namespace feedback_data
 }  // namespace forensics
