@@ -11,9 +11,11 @@ import (
 	"go.fuchsia.dev/fuchsia/scripts/check-licenses/lib"
 )
 
+const configFile = "tools/check-licenses/config/config.json"
+
 func main() {
 	var config lib.Config
-	configJson := flag.String("config", "tools/check-licenses/config/config.json", "Location of config.json")
+	configJson := flag.String("config", configFile, "Location of config.json")
 	if err := config.Init(configJson); err != nil {
 		fmt.Println(err.Error())
 		return

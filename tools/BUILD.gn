@@ -79,6 +79,7 @@ group("tests") {
     "//tools/bootserver_old/tests($host_toolchain)",
     "//tools/botanist:tests($host_toolchain)",
     "//tools/build:tests($host_toolchain)",
+    "//tools/check-licenses:tests",
     "//tools/component_id_index:tests($host_toolchain)",
     "//tools/create:tests($host_toolchain)",
     "//tools/debug:tests($host_toolchain)",
