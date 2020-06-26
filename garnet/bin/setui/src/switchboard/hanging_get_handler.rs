@@ -533,7 +533,7 @@ mod tests {
     }
 
     /// Ensures errors are gracefully handed back by the hanging_get
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_error_resolution() {
         let switchboard_messenger_factory = switchboard::message::create_hub();
         let _ = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
@@ -566,7 +566,7 @@ mod tests {
         assert_eq!(exit_rx.next().await, Some(()));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_change_after_watch() {
         let switchboard_messenger_factory = switchboard::message::create_hub();
 
@@ -608,7 +608,7 @@ mod tests {
         verify_id(hanging_get_listener.next().await.unwrap(), ID2);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_after_change() {
         let switchboard_messenger_factory = switchboard::message::create_hub();
         let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
@@ -725,7 +725,7 @@ mod tests {
         verify_id(hanging_get_listener.next().await.unwrap(), ID2 + 3.0);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_with_change_function_multiple() {
         let switchboard_messenger_factory = switchboard::message::create_hub();
         let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())

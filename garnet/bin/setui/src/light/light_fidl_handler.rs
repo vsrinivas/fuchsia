@@ -103,8 +103,8 @@ mod tests {
 
     use super::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_response_to_vector_empty() {
+    #[test]
+    fn test_response_to_vector_empty() {
         let response: LightGroupSet = SettingResponse::into(SettingResponse::Light(LightInfo {
             light_groups: Default::default(),
         }));
@@ -112,8 +112,8 @@ mod tests {
         assert_eq!(response, vec![]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_response_to_vector() {
+    #[test]
+    fn test_response_to_vector() {
         let light_group_1 = LightGroup {
             name: Some("test".to_string()),
             enabled: Some(true),

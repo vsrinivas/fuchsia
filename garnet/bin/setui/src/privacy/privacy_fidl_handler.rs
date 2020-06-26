@@ -103,15 +103,15 @@ async fn process_request_2(
 mod tests {
     use super::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_request_from_settings_empty() {
+    #[test]
+    fn test_request_from_settings_empty() {
         let request = SettingRequest::from(PrivacySettings::empty());
 
         assert_eq!(request, SettingRequest::SetUserDataSharingConsent(None));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_request_from_settings() {
+    #[test]
+    fn test_request_from_settings() {
         const USER_DATA_SHARING_CONSENT: bool = true;
 
         let mut privacy_settings = PrivacySettings::empty();

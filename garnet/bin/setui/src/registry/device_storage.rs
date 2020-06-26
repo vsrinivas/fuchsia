@@ -306,7 +306,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_get() {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
@@ -336,7 +336,7 @@ mod tests {
         assert_eq!(result.value, VALUE1);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_get_default() {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
@@ -361,7 +361,7 @@ mod tests {
     }
 
     // For an invalid stash value, the get() method should return the default value.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_invalid_stash() {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
@@ -386,7 +386,7 @@ mod tests {
         assert_eq!(result.value, VALUE0);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_write() {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
@@ -414,7 +414,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_with_flush() {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
@@ -444,7 +444,7 @@ mod tests {
         storage.write(&TestStruct { value: VALUE2 }, true).await.expect("writing shouldn't fail");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_in_memory_storage() {
         let factory = InMemoryStorageFactory::create();
 

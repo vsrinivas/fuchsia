@@ -43,7 +43,7 @@ async fn create_a11y_test_env_with_failures(
         .unwrap()
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_accessibility_set_all() {
     const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
     const TEST_COLOR: ColorRgba = ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };
@@ -109,7 +109,7 @@ async fn test_accessibility_set_all() {
     assert_eq!(settings, expected_settings);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_accessibility_set_captions() {
     const CHANGED_FONT_STYLE: CaptionFontStyle = CaptionFontStyle {
         family: Some(CaptionFontFamily::Casual),
@@ -185,7 +185,7 @@ async fn test_accessibility_set_captions() {
     assert_eq!(settings, expected_settings);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let accessibility_proxy =
         create_a11y_test_env_with_failures(InMemoryStorageFactory::create()).await;
@@ -193,7 +193,7 @@ async fn test_channel_failure_watch() {
     assert_eq!(result, Some(Err(Error::Failed)));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let accessibility_proxy =
         create_a11y_test_env_with_failures(InMemoryStorageFactory::create()).await;
@@ -205,7 +205,7 @@ async fn test_channel_failure_watch2() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_simultaneous_watch() {
     const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
     const TEST_COLOR: ColorRgba = ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };

@@ -211,7 +211,7 @@ async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32) {
 
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
 // with the correct ids.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_sounds() {
     let (service_registry, fake_services) = create_services().await;
     let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
@@ -233,7 +233,7 @@ async fn test_sounds() {
 
 // Test to ensure that when the volume is increased while already at max volume, the earcon for
 // max volume plays.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_max_volume_sound_on_press() {
     let (service_registry, fake_services) = create_services().await;
     let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
@@ -265,7 +265,7 @@ async fn test_max_volume_sound_on_press() {
 }
 
 // Test to ensure that when the volume is changed on multiple channels, the sound only plays once.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_earcons_on_multiple_channel_change() {
     let (service_registry, fake_services) = create_services().await;
     let (env, ..) = create_environment(

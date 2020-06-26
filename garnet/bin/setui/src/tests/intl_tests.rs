@@ -88,7 +88,7 @@ async fn create_intl_test_env_with_failures(
         .unwrap()
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
@@ -128,7 +128,7 @@ async fn test_intl_e2e() {
     assert_eq!(retrieved_struct, intl_settings.clone().into());
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
@@ -170,7 +170,7 @@ async fn test_intl_e2e_set_twice() {
     assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
@@ -210,7 +210,7 @@ async fn test_intl_e2e_idempotent_set() {
     assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_invalid_timezone() {
     const INITIAL_TIME_ZONE: &'static str = "GMT";
 
@@ -238,14 +238,14 @@ async fn test_intl_invalid_timezone() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = intl_service.watch().await.ok();
     assert_eq!(result, Some(Err(Error::Failed)));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = intl_service.watch2().await;
@@ -256,7 +256,7 @@ async fn test_channel_failure_watch2() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_simultaneous_watch() {
     let intl_service = create_test_intl_env(InMemoryStorageFactory::create()).await;
 

@@ -79,15 +79,15 @@ async fn process_request(
 mod tests {
     use super::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_request_from_settings_empty() {
+    #[test]
+    fn test_request_from_settings_empty() {
         let request = SettingRequest::from(NightModeSettings::empty());
         let night_mode_info = NightModeInfo::empty();
         assert_eq!(request, SettingRequest::SetNightModeInfo(night_mode_info));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_request_from_settings() {
+    #[test]
+    fn test_request_from_settings() {
         const NIGHT_MODE_ENABLED: bool = true;
 
         let mut night_mode_settings = NightModeSettings::empty();

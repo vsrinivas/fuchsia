@@ -76,7 +76,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 /// Tests to ensure that when the bluetooth connections change, the SoundPlayer receives requests to play the sounds
 /// with the correct ids.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_sounds() {
     const PEER_ID_1: PeerId = PeerId { value: 1 };
     const PEER_ID_2: PeerId = PeerId { value: 2 };
@@ -137,7 +137,7 @@ async fn test_sounds() {
 }
 
 // Test that the bluetooth earcons aren't played for oobe connections.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_oobe_connection() {
     const PEER_ID_1: PeerId = PeerId { value: 1 };
     const PEER_ID_2: PeerId = PeerId { value: 2 };

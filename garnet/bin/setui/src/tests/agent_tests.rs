@@ -156,7 +156,7 @@ impl TestAgent {
 }
 
 /// Ensures creating environment properly invokes the right lifespans.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_environment_startup() {
     let startup_agent_id = 1;
     let (startup_tx, mut startup_rx) =
@@ -215,7 +215,7 @@ async fn create_authority() -> AuthorityImpl {
 
 /// Ensures that agents are executed in sequential order and the
 /// completion ack only is sent when all agents have completed.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let mut authority = create_authority().await;
@@ -259,7 +259,7 @@ async fn test_sequential() {
 
 /// Ensures that in simultaneous execution agents are not blocked on each other
 /// and the completion ack waits for all to complete.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let mut authority = create_authority().await;
@@ -299,7 +299,7 @@ async fn test_simultaneous() {
 }
 
 /// Checks that errors returned from an agent stop execution of a lifecycle.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let mut authority = create_authority().await;
@@ -352,7 +352,7 @@ async fn test_err_handling() {
 
 /// Checks to see if available components are passed properly from
 /// execute_lifespan.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let mut authority = create_authority().await;

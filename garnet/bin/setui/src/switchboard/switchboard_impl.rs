@@ -409,7 +409,7 @@ mod tests {
         panic!("expected Payload::Action");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
         let messenger_factory = core::message::create_hub();
         let switchboard_factory = switchboard::message::create_hub();

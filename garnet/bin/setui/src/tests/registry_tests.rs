@@ -154,7 +154,7 @@ impl SettingHandlerFactory for FakeFactory {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_notify() {
     let messenger_factory = create_hub();
     let handler_messenger_factory = handler::message::create_hub();

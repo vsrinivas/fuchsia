@@ -90,7 +90,7 @@ async fn verify_restore_handling(
     assert_eq!(*counter.lock().await, 1);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_restore() {
     // Should succeed when the restore command is handled.
     verify_restore_handling(Box::new(|| Ok(None)), true).await;

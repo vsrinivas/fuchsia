@@ -113,7 +113,7 @@ mod tests {
     use futures::prelude::*;
     use testing::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_read_sensor() {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<SensorMarker>().unwrap();

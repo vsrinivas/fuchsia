@@ -13,7 +13,7 @@ use {
 const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
 const CONTEXT_ID: u64 = 0;
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_do_not_disturb() {
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory

@@ -106,7 +106,7 @@ async fn create_display_test_env_with_failures(
 
 /// Tests that the FIDL calls for manual brightness result in appropriate
 /// commands sent to the switchboard.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_manual_brightness() {
     let display_proxy = setup_display_env().await;
 
@@ -125,7 +125,7 @@ async fn test_manual_brightness() {
 
 /// Tests that the FIDL calls for auto brightness result in appropriate
 /// commands sent to the switchboard.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_auto_brightness() {
     let display_proxy = setup_display_env().await;
 
@@ -140,7 +140,7 @@ async fn test_auto_brightness() {
 
 /// Tests that the FIDL calls for light mode result in appropriate
 /// commands sent to the switchboard.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_light_mode() {
     let display_proxy = setup_display_env().await;
 
@@ -173,7 +173,7 @@ async fn test_light_mode() {
 }
 
 /// Makes sure that a failing display stream doesn't cause a failure for a different interface.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore() {
     // Ensure auto-brightness value is restored correctly.
     validate_restore(0.7, true, LowLightMode::Enable).await;
@@ -223,7 +223,7 @@ async fn validate_restore(
 }
 
 /// Makes sure that a failing display stream doesn't cause a failure for a different interface.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_display_failure() {
     let service_gen = |service_name: &str,
                        channel: zx::Channel|
@@ -287,7 +287,7 @@ async fn test_display_failure() {
     let _settings = intl_service.watch2().await.expect("watch completed");
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let display_proxy =
         create_display_test_env_with_failures(InMemoryStorageFactory::create()).await;
@@ -295,7 +295,7 @@ async fn test_channel_failure_watch() {
     assert_eq!(result, Some(Err(Error::Failed)));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let display_proxy =
         create_display_test_env_with_failures(InMemoryStorageFactory::create()).await;

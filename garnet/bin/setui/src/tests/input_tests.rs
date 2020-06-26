@@ -117,7 +117,7 @@ async fn create_environment(
 }
 
 // Test that a watch is executed correctly.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_watch() {
     let (service_registry, _) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
@@ -127,7 +127,7 @@ async fn test_watch() {
 }
 
 // Test that a set then watch is executed correctly.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_set_watch() {
     let (service_registry, fake_services) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
@@ -145,7 +145,7 @@ async fn test_set_watch() {
 }
 
 // Test to ensure mic input change events are received.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_input() {
     let (service_registry, fake_services) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
@@ -157,7 +157,7 @@ async fn test_input() {
 
 // Test that when either hardware or software is muted, the service
 // reports as muted.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_mute_combinations() {
     let (service_registry, fake_services) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
@@ -183,7 +183,7 @@ async fn test_mute_combinations() {
 }
 
 // Test that the input settings are restored correctly.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_restore() {
     let (service_registry, _) = create_services().await;
     let storage_factory = InMemoryStorageFactory::create();
@@ -210,7 +210,7 @@ async fn test_restore() {
 }
 
 // Test to ensure mic input change events are received.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_input_registry() {
     let service_registry = ServiceRegistry::create();
     let (env, _) = create_environment(service_registry).await;
@@ -219,15 +219,15 @@ async fn test_bringup_without_input_registry() {
 }
 
 // Test that cloning works.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_input_info_copy() {
+#[test]
+fn test_input_info_copy() {
     let input_info = DEFAULT_INPUT_INFO;
     let copy_input_info = input_info.clone();
     assert_eq!(input_info, copy_input_info);
 }
 
 // Test that the values in the persistent store are restored at the start.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_persisted_values_applied_at_start() {
     let (service_registry, _) = create_services().await;
     let storage_factory = InMemoryStorageFactory::create();
@@ -254,7 +254,7 @@ async fn test_persisted_values_applied_at_start() {
 }
 
 // Test that a failure results in the correct epitaph.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let input_proxy = create_input_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = input_proxy.watch().await;
@@ -265,7 +265,7 @@ async fn test_channel_failure_watch() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_media_buttons() {
     let service_registry = ServiceRegistry::create();
     let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
@@ -295,7 +295,7 @@ async fn test_media_buttons() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_device_listener_failure() {
     let service_registry = ServiceRegistry::create();
     let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));

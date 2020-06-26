@@ -11,7 +11,7 @@ use {
 const ENV_NAME: &str = "settings_service_night_mode_test_environment";
 const CONTEXT_ID: u64 = 0;
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_night_mode() {
     let initial_value = NightModeInfo { night_mode_enabled: None };
     let changed_value = NightModeInfo { night_mode_enabled: Some(true) };

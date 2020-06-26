@@ -118,7 +118,7 @@ impl<C: Control + Sync + Send + 'static, S: Storage> controller::Handle for Data
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_spawn() {
     // Exercises successful spawn of a simple controller.
     verify_handler::<SucceedControl>(true).await;
@@ -130,7 +130,7 @@ async fn test_spawn() {
     verify_data_handler::<FailControl>(true).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_write_notify() {
     let factory = message::create_hub();
     let (handler_messenger, handler_receptor) =
@@ -311,7 +311,7 @@ impl controller::Handle for BlankController {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_event_propagation() {
     let factory = message::create_hub();
     let setting_type = SettingType::Unknown;
@@ -422,13 +422,13 @@ async fn verify_controller_state(state: State, n: u8) {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 // Test that the setting handler calls ChangeState(State::Startup) on controller.
 async fn test_startup_state() {
     verify_controller_state(State::Startup, 1).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 // Test that the setting handler calls ChangeState(State::Teardown) on controller.
 async fn test_teardown_state() {
     verify_controller_state(State::Teardown, 1).await;
@@ -459,7 +459,7 @@ impl controller::Handle for StubController {
 
 /// Ensures that the correct unimplemented error is returned when the controller
 /// doesn't properly handle a given command.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
         let factory = message::create_hub();

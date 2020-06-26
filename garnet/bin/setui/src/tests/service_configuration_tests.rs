@@ -15,7 +15,7 @@ pub fn get_test_settings_types() -> HashSet<SettingType> {
     return vec![SettingType::Accessibility, SettingType::Privacy].into_iter().collect();
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_no_configuration_provided() {
     let factory = InMemoryStorageFactory::create();
 
@@ -39,7 +39,7 @@ async fn test_no_configuration_provided() {
     service.watch2().await.expect("watch completed");
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_default_configuration_provided() {
     let factory = InMemoryStorageFactory::create();
 

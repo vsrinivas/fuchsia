@@ -33,7 +33,7 @@ async fn create_system_test_env_with_failures() -> SystemProxy {
         .unwrap()
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_system() {
     const STARTING_LOGIN_MODE: fidl_fuchsia_settings::LoginOverride =
         fidl_fuchsia_settings::LoginOverride::AutologinGuest;
@@ -110,7 +110,7 @@ async fn test_system() {
         .verify_action_sequence(vec![Action::Reboot]));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_failed_reboot() {
     const STARTING_LOGIN_MODE: fidl_fuchsia_settings::LoginOverride =
         fidl_fuchsia_settings::LoginOverride::AutologinGuest;
@@ -194,14 +194,14 @@ async fn test_failed_reboot() {
     assert!(hardware_power_statecontrol_service_handle.lock().await.verify_action_sequence(vec![]));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let system_service = create_system_test_env_with_failures().await;
     let result = system_service.watch().await.ok();
     assert_eq!(result, Some(Err(SettingsError::Failed)));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let system_service = create_system_test_env_with_failures().await;
     let result = system_service.watch2().await;
@@ -212,7 +212,7 @@ async fn test_channel_failure_watch2() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_simultaneous_watch() {
     let factory = InMemoryStorageFactory::create();
 

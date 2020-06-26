@@ -64,8 +64,8 @@ pub mod testing {
         value: u32,
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_load_valid_config_data() {
+    #[test]
+    fn test_load_valid_config_data() {
         let mut setting = DefaultSetting::new(
             TestConfigData { value: 3 },
             Some("/config/data/fake_config_data.json".to_string()),
@@ -74,8 +74,8 @@ pub mod testing {
         assert_eq!(setting.get_default_value().value, 10);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_load_invalid_config_data() {
+    #[test]
+    fn test_load_invalid_config_data() {
         let mut setting = DefaultSetting::new(
             TestConfigData { value: 3 },
             Some("/config/data/fake_invalid_config_data.json".to_string()),
@@ -84,8 +84,8 @@ pub mod testing {
         assert_eq!(setting.get_default_value().value, 3);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_load_invalid_config_file_path() {
+    #[test]
+    fn test_load_invalid_config_file_path() {
         let mut setting =
             DefaultSetting::new(TestConfigData { value: 3 }, Some("nuthatch".to_string()));
 

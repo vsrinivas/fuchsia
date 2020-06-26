@@ -48,7 +48,7 @@ async fn create_test_privacy_env(
     (privacy_service, store)
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_privacy() {
     let initial_value = PrivacyInfo { user_data_sharing_consent: None };
     let changed_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
@@ -76,14 +76,14 @@ async fn test_privacy() {
     assert_eq!(settings.user_data_sharing_consent, changed_value.user_data_sharing_consent);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let privacy_service = create_privacy_test_env_with_failures().await;
     let result = privacy_service.watch().await.ok();
     assert_eq!(result, Some(Err(Error::Failed)));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let privacy_service = create_privacy_test_env_with_failures().await;
     let result = privacy_service.watch2().await;
@@ -94,7 +94,7 @@ async fn test_channel_failure_watch2() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_simultaneous_watch() {
     let factory = InMemoryStorageFactory::create();
     let (privacy_service, _) = create_test_privacy_env(factory).await;

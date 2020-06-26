@@ -18,7 +18,7 @@ use {
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_light_sensor() {
     let service_gen = |service_name: &str,
                        channel: zx::Channel|

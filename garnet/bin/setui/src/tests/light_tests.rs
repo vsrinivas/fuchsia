@@ -14,7 +14,7 @@ use crate::EnvironmentBuilder;
 const ENV_NAME: &str = "settings_service_light_test_environment";
 const CONTEXT_ID: u64 = 0;
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_light() {
     let light_name = "test";
     let mut changed_value = LightInfo { light_groups: Default::default() };

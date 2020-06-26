@@ -91,8 +91,8 @@ mod tests {
 
     use super::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_request_from_settings_empty() {
+    #[test]
+    fn test_request_from_settings_empty() {
         let request = SettingRequest::from(IntlSettings::empty());
 
         assert_eq!(
@@ -106,8 +106,8 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_request_from_settings() {
+    #[test]
+    fn test_request_from_settings() {
         const TIME_ZONE_ID: &'static str = "PDT";
 
         let intl_settings = IntlSettings {

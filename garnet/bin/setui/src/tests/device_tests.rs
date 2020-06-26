@@ -12,7 +12,7 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 
 /// Tests that the FIDL calls for the device service result in appropriate commands
 /// sent to the switchboard.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_device() {
     let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .settings(&[SettingType::Device])

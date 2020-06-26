@@ -20,7 +20,7 @@ const ENV_NAME: &str = "settings_service_setup_test_environment";
 const CONTEXT_ID: u64 = 0;
 
 // Ensures the default value returned is WiFi.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_setup_default() {
     let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .settings(&[SettingType::Setup, SettingType::Power])
@@ -40,7 +40,7 @@ async fn test_setup_default() {
 
 // Setup doesn't rely on any service yet. In the future this test will be
 // updated to verify restart request is made on interface change.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_setup_with_reboot() {
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory
@@ -115,7 +115,7 @@ async fn test_setup_with_reboot() {
         .verify_action_sequence([Action::Reboot].to_vec()));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_setup_no_reboot() {
     let service_registry = ServiceRegistry::create();
     let hardware_power_statecontrol_service_handle =

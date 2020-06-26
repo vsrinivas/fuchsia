@@ -70,7 +70,7 @@ static ORIGINAL: TestMessage = TestMessage::Foo;
 static REPLY: TestMessage = TestMessage::Bar;
 
 /// Tests message client creation results in unique ids.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_message_client_equality() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
     let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
@@ -88,7 +88,7 @@ async fn test_message_client_equality() {
 }
 
 /// Tests messenger creation and address space collision.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_creation() {
     let messenger_factory = MessageHub::<u64, u64>::create();
     let address = 1;
@@ -100,7 +100,7 @@ async fn test_messenger_creation() {
 }
 
 /// Tests messenger creation and address space collision.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_deletion() {
     let messenger_factory = MessageHub::<u64, u64>::create();
     let address = 1;
@@ -131,7 +131,7 @@ async fn test_messenger_deletion() {
 
 /// Tests basic functionality of the MessageHub, ensuring messages and replies
 /// are properly delivered.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_end_to_end_messaging() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
@@ -160,7 +160,7 @@ async fn test_end_to_end_messaging() {
 
 /// Tests forwarding behavior, making sure a message is forwarded in the case
 /// the client does nothing with it.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_implicit_forward() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
@@ -194,7 +194,7 @@ async fn test_implicit_forward() {
 /// Exercises the observation functionality. Makes sure a broker who has
 /// indicated they would like to participate in a message path receives the
 /// reply.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_observe_addressable() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
@@ -246,7 +246,7 @@ async fn test_observe_addressable() {
 
 /// Tests the broadcast functionality. Ensures all non-sending, addressable
 /// messengers receive a broadcast message.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_broadcast() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
@@ -264,7 +264,7 @@ async fn test_broadcast() {
 }
 
 /// Verifies delivery statuses are properly relayed back to the original sender.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_delivery_status() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
     let known_receiver_address = TestAddress::Foo(2);
@@ -293,7 +293,7 @@ async fn test_delivery_status() {
 }
 
 /// Verifies beacon returns error when receptor goes out of scope.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_beacon_error() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
@@ -339,7 +339,7 @@ async fn test_acknowledge() {
 }
 
 /// Verifies observers can participate in messaging.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_behavior() {
     // Run tests twice to ensure no one instance leads to a deadlock.
     for _ in 0..2 {
@@ -399,7 +399,7 @@ async fn verify_messenger_behavior(messenger_type: MessengerType<TestAddress>) {
 }
 
 /// Ensures unbound messengers operate properly
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_unbound_messenger() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
@@ -429,7 +429,7 @@ async fn test_unbound_messenger() {
 }
 
 /// Ensures next_payload returns the correct values.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_next_payload() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
     let (unbound_messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
@@ -455,7 +455,7 @@ async fn test_next_payload() {
 }
 
 /// Exercises basic action fuse behavior.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_action_fuse() {
     // Channel to send the message from the fuse.
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
@@ -472,7 +472,7 @@ async fn test_action_fuse() {
 }
 
 /// Exercises chained action fuse behavior
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_chained_action_fuse() {
     // Channel to send the message from the fuse.
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
@@ -501,7 +501,7 @@ async fn test_chained_action_fuse() {
 }
 
 /// Exercises timestamp value.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_message_timestamp() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
@@ -533,7 +533,7 @@ async fn test_message_timestamp() {
 }
 
 /// Verifies that the proper signal is fired when a receptor disappears.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_bind_to_recipient() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();

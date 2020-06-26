@@ -151,7 +151,7 @@ async fn create_environment(
     (env, store)
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_audio() {
     let (service_registry, fake_services) = create_services().await;
     let (env, store) = create_environment(service_registry).await;
@@ -182,7 +182,7 @@ async fn test_audio() {
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_overwritten() {
     let (service_registry, fake_services) = create_services().await;
     let (env, store) = create_environment(service_registry).await;
@@ -227,7 +227,7 @@ async fn test_volume_overwritten() {
 }
 
 // Tests that the volume level gets rounded to two decimal places.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_rounding() {
     let (service_registry, fake_services) = create_services().await;
 
@@ -269,7 +269,7 @@ async fn test_volume_rounding() {
 }
 
 // Test to ensure mic input change events are received.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_audio_input() {
     let (service_registry, fake_services) = create_services().await;
 
@@ -289,7 +289,7 @@ async fn test_audio_input() {
 }
 
 /// Test that the audio settings are restored correctly.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_restore() {
     let (service_registry, fake_services) = create_services().await;
     let storage_factory = InMemoryStorageFactory::create();
@@ -324,7 +324,7 @@ async fn test_volume_restore() {
 
 // Test to ensure mic input change events are received.
 // TODO(fxb/41006): Add a request.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_input_registry() {
     let service_registry = ServiceRegistry::create();
     let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
@@ -337,7 +337,7 @@ async fn test_bringup_without_input_registry() {
 }
 
 // Ensure that we won't crash if audio core fails.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_audio_core() {
     let service_registry = ServiceRegistry::create();
     let input_registry_service_handle = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
@@ -355,14 +355,14 @@ async fn test_bringup_without_audio_core() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_audio_info_copy() {
+#[test]
+fn test_audio_info_copy() {
     let audio_info = default_audio_info();
     let copy_audio_info = audio_info.clone();
     assert_eq!(audio_info, copy_audio_info);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_persisted_values_applied_at_start() {
     let (service_registry, fake_services) = create_services().await;
     let storage_factory = InMemoryStorageFactory::create();
@@ -439,14 +439,14 @@ async fn test_persisted_values_applied_at_start() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = audio_proxy.watch().await.ok();
     assert_eq!(result, Some(Err(Error::Failed)));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = audio_proxy.watch2().await;
@@ -457,7 +457,7 @@ async fn test_channel_failure_watch2() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_simultaneous_watch() {
     let (service_registry, _) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
