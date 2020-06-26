@@ -3,18 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::common_utils::common::macros::with_line,
+    crate::{common_utils::common::macros::with_line, wlan_policy::types::ClientStateSummary},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::macros::*,
+    futures::TryStreamExt,
     parking_lot::RwLock,
-    std::{collections::HashSet, fmt::Debug},
+    std::{
+        collections::HashSet,
+        fmt::{self, Debug},
+    },
 };
 
-#[derive(Debug)]
 struct InnerWlanPolicyFacade {
     controller: Option<fidl_policy::ClientControllerProxy>,
+    update_listener: Option<fidl_policy::ClientStateUpdatesRequestStream>,
 }
 
 #[derive(Debug)]
@@ -22,9 +26,27 @@ pub struct WlanPolicyFacade {
     inner: RwLock<InnerWlanPolicyFacade>,
 }
 
+impl Debug for InnerWlanPolicyFacade {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let update_listener = if self.update_listener.is_some() {
+            "Some(ClientStateUpdatesRequestStream)"
+        } else {
+            "None"
+        }
+        .to_string();
+
+        f.debug_struct("InnerWlanPolicyFacade")
+            .field("controller", &self.controller)
+            .field("update_listener", &update_listener)
+            .finish()
+    }
+}
+
 impl WlanPolicyFacade {
     pub fn new() -> Result<WlanPolicyFacade, Error> {
-        Ok(Self { inner: RwLock::new(InnerWlanPolicyFacade { controller: None }) })
+        Ok(Self {
+            inner: RwLock::new(InnerWlanPolicyFacade { controller: None, update_listener: None }),
+        })
     }
 
     /// Client controller needs to be created once per server before the client controller API
@@ -36,25 +58,45 @@ impl WlanPolicyFacade {
         if let Some(controller) = inner.controller.as_ref() {
             fx_log_info!(tag: &with_line!(tag), "Current client controller: {:?}", controller);
         } else {
-            //get controller
+            // Get controller
             fx_log_info!(tag: &with_line!(tag), "Setting new client controller");
-            let controller = Self::init_client_controller().map_err(|e| {
+            let (controller, update_stream) = Self::init_client_controller().map_err(|e| {
                 fx_log_info!(tag: &with_line!(tag), "Error getting client controller: {}", e);
                 format_err!("Error getting client,controller: {}", e)
             })?;
             inner.controller = Some(controller);
+            // Do not set value if it has already been set by getting updates.
+            if inner.update_listener.is_none() {
+                inner.update_listener = Some(update_stream);
+            }
         }
         Ok(())
     }
 
-    fn init_client_controller() -> Result<fidl_fuchsia_wlan_policy::ClientControllerProxy, Error> {
+    /// This also returns the stream for listener updates that is created in the process of
+    /// creating the client controller.
+    fn init_client_controller() -> Result<
+        (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream),
+        Error,
+    > {
         let provider = connect_to_service::<fidl_policy::ClientProviderMarker>()?;
         let (controller, req) =
             fidl::endpoints::create_proxy::<fidl_policy::ClientControllerMarker>()?;
-        let (update_sink, _update_stream) =
+        let (update_sink, update_stream) =
             fidl::endpoints::create_request_stream::<fidl_policy::ClientStateUpdatesMarker>()?;
         provider.get_controller(req, update_sink)?;
-        Ok(controller)
+        Ok((controller, update_stream))
+    }
+
+    /// Creates a listener update stream for getting status updates. This might be used to set the
+    /// facade's listener update stream if it wasn't set by creating the client controller.
+    fn init_listener() -> Result<fidl_policy::ClientStateUpdatesRequestStream, Error> {
+        let listener = connect_to_service::<fidl_policy::ClientListenerMarker>()?;
+        let (client_end, server_end) =
+            fidl::endpoints::create_endpoints::<fidl_policy::ClientStateUpdatesMarker>().unwrap();
+        listener.get_listener(client_end)?;
+        let server_stream = server_end.into_stream()?;
+        Ok(server_stream)
     }
 
     /// Request a scan and return the list of network names found, or an error if one occurs.
@@ -166,6 +208,37 @@ impl WlanPolicyFacade {
             Ok(())
         } else {
             bail!("{:?}", req_status);
+        }
+    }
+
+    /// Wait for and return a client update. If this is the first update gotten from the facade,
+    /// it will get an immedate status. After that, it will wait for a change and return a status
+    /// when there has been a change since the last call to get_update. This call will hang if
+    /// if there are no updates.
+    pub async fn get_update(&self) -> Result<ClientStateSummary, Error> {
+        // Initialize the update listener if it has not been initialized.
+        let mut inner_guard = self.inner.write();
+        if inner_guard.update_listener.is_none() {
+            inner_guard.update_listener = Some(Self::init_listener()?);
+        }
+
+        // Listener should be set above if not already set.
+        let update_listener = inner_guard
+            .update_listener
+            .as_mut()
+            .ok_or(format_err!("failed to set update listener of facade"))?;
+
+        if let Some(update_request) = update_listener.try_next().await? {
+            let update = update_request.into_on_client_state_update();
+            let (update, responder) = match update {
+                Some((update, responder)) => (update, responder),
+                None => return Err(format_err!("Client provider produced invalid update.")),
+            };
+            // Ack the update.
+            responder.send().map_err(|e| format_err!("failed to ack update: {}", e))?;
+            Ok(update.into())
+        } else {
+            Err(format_err!("update listener's next update is None"))
         }
     }
 

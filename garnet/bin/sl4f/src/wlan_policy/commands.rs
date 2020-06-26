@@ -77,6 +77,11 @@ impl Facade for WlanPolicyFacade {
                 to_value(result)
                     .map_err(|e| format_err!("error initializing client controller: {}", e))
             }
+            "get_update" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "getting client update");
+                let result = self.get_update().await?;
+                to_value(result).map_err(|e| format_err!("error handling listener update: {}", e))
+            }
             _ => return Err(format_err!("unsupported command!")),
         }
     }
