@@ -20,15 +20,21 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
   FakeEthertapMiscParent() : ddk::Device<FakeEthertapMiscParent>(fake_ddk::kFakeParent) {}
 
   ~FakeEthertapMiscParent() {
-    for (auto& child : child_devices_) {
-      sync_completion_wait(&child.completion, ZX_TIME_INFINITE);
-    }
+    WaitForChildRemoval();
     if (tap_ctl_) {
       tap_ctl_->DdkRelease();
     }
-    for (auto& child : child_devices_) {
-      child.device->DdkRelease();
+    if (child_device_) {
+      child_device_->device->DdkRelease();
     }
+  }
+
+  // Returns immediately if this was called previously.
+  zx_status_t WaitForChildRemoval() {
+    if (child_device_) {
+      return sync_completion_wait(&child_device_->completion, ZX_TIME_INFINITE);
+    }
+    return ZX_OK;
   }
 
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
@@ -36,9 +42,16 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
     if (parent == fake_ddk::kFakeParent) {
       tap_ctl_ = static_cast<eth::TapCtl*>(args->ctx);
     } else if (parent == tap_ctl_->zxdev()) {
-      auto& dev = child_devices_.emplace_back();
-      dev.name = args->name;
-      dev.device = static_cast<eth::TapDevice*>(args->ctx);
+      if (child_device_) {
+        ADD_FAILURE("Unexpected additional child device added");
+        return ZX_ERR_INTERNAL;
+      }
+      child_device_ = ChildDevice();
+      child_device_->name = args->name;
+      child_device_->device = static_cast<eth::TapDevice*>(args->ctx);
+      // Set the device's unbind hook that fake_ddk::Bind::DeviceAsyncRemove will call.
+      unbind_op_ = args->ops->unbind;
+      op_ctx_ = args->ctx;
     } else {
       ADD_FAILURE("Unrecognized parent");
     }
@@ -47,17 +60,15 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
   }
 
   zx_status_t DeviceRemove(zx_device_t* device) override {
-    for (auto& x : child_devices_) {
-      if (reinterpret_cast<zx_device_t*>(x.device) == device) {
-        sync_completion_signal(&x.completion);
-      }
+    if (child_device_ && reinterpret_cast<zx_device_t*>(child_device_->device) == device) {
+      sync_completion_signal(&child_device_->completion);
     }
     return ZX_OK;
   }
 
   eth::TapCtl* tap_ctl() { return tap_ctl_; }
 
-  eth::TapDevice* tap_device(size_t idx) { return child_devices_[idx].device; }
+  eth::TapDevice* tap_device() { return child_device_->device; }
 
   void DdkRelease() {}
 
@@ -65,10 +76,8 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
     if (device == tap_ctl_->zxdev()) {
       return "tapctl";
     }
-    for (auto& x : child_devices_) {
-      if (x.device->zxdev() == device) {
-        return x.name.c_str();
-      }
+    if (child_device_ && child_device_->device->zxdev() == device) {
+      return child_device_->name.c_str();
     }
     return "";
   }
@@ -81,7 +90,7 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
   };
 
   eth::TapCtl* tap_ctl_;
-  std::vector<ChildDevice> child_devices_;
+  std::optional<ChildDevice> child_device_;
 };
 
 class EthertapTests : public zxtest::Test {
@@ -116,7 +125,7 @@ TEST_F(EthertapTests, TestLongNameMatches) {
   ASSERT_OK(fuchsia_hardware_ethertap_TapControlOpenDevice(messenger_.local().get(), long_name, len,
                                                            &config, tap.release(), &status));
   ASSERT_OK(status);
-  ASSERT_STR_EQ(long_name, ddk_.tap_device(0)->name());
+  ASSERT_STR_EQ(long_name, ddk_.tap_device()->name());
 }
 
 TEST_F(EthertapTests, TestShortNameMatches) {
@@ -131,5 +140,24 @@ TEST_F(EthertapTests, TestShortNameMatches) {
   ASSERT_OK(fuchsia_hardware_ethertap_TapControlOpenDevice(messenger_.local().get(), short_name,
                                                            len, &config, tap.release(), &status));
   ASSERT_OK(status);
-  ASSERT_STR_EQ(short_name, ddk_.tap_device(0)->name());
+  ASSERT_STR_EQ(short_name, ddk_.tap_device()->name());
+}
+
+// This tests triggering the unbind hook via DdkAsyncRemove and verifying the unbind reply occurs.
+TEST_F(EthertapTests, UnbindSignalsWorkerThread) {
+  ASSERT_OK(eth::TapCtl::Create(nullptr, fake_ddk::kFakeParent));
+  SetupTapCtlMessenger();
+  fuchsia_hardware_ethertap_Config config = {0, 0, 1500, {1, 2, 3, 4, 5, 6}};
+  zx::channel tap, req;
+  ASSERT_OK(zx::channel::create(0, &tap, &req));
+  zx_status_t status;
+  ASSERT_OK(fuchsia_hardware_ethertap_TapControlOpenDevice(messenger_.local().get(), "",
+                                                           0, &config, tap.release(), &status));
+  ASSERT_OK(status);
+
+  // This should run the device unbind hook, which signals the worker thread to reply to the
+  // unbind txn and exit.
+  ddk_.tap_device()->DdkAsyncRemove();
+  // |DeviceRemove| should be called after the unbind txn is replied to.
+  ASSERT_OK(ddk_.WaitForChildRemoval());
 }

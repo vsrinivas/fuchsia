@@ -121,7 +121,7 @@ static const fuchsia_hardware_ethertap_TapDevice_ops_t tap_device_ops_ = {
 
 TapDevice::TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap_Config* config,
                      zx::channel server)
-    : ddk::Device<TapDevice, ddk::UnbindableDeprecated>(device),
+    : ddk::Device<TapDevice, ddk::UnbindableNew>(device),
       options_(config->options),
       features_(config->features | ETHERNET_FEATURE_SYNTH),
       mtu_(config->mtu),
@@ -142,12 +142,18 @@ void TapDevice::DdkRelease() {
   delete this;
 }
 
-void TapDevice::DdkUnbindDeprecated() {
+void TapDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ethertap_trace("DdkUnbind\n");
   fbl::AutoLock lock(&lock_);
+  if (dead_) {
+    // If the worker thread is already dead, we can reply to the unbind immediately.
+    txn.Reply();
+    return;
+  }
+  unbind_txn_ = std::move(txn);
   zx_status_t status = channel_.signal(0, TAP_SHUTDOWN);
   ZX_DEBUG_ASSERT(status == ZX_OK);
-  // When the thread exits after the channel is closed, it will call DdkRemove.
+  // When the thread exits after the channel is closed, it will reply to the unbind txn.
 }
 
 zx_status_t TapDevice::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
@@ -409,8 +415,14 @@ int TapDevice::Thread() {
     dead_ = true;
     zxlogf(INFO, "ethertap: device '%s' destroyed", name());
     channel_.reset();
+    // Check if the unbind hook is expecting a response.
+    if (unbind_txn_) {
+      unbind_txn_->Reply();
+    } else {
+      // Schedule unbinding to begin.
+      DdkAsyncRemove();
+    }
   }
-  DdkRemoveDeprecated();
 
   return static_cast<int>(status);
 }

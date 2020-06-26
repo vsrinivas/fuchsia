@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
+#include <optional>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -30,14 +31,14 @@ class TapCtl : public ddk::Device<TapCtl, ddk::Messageable> {
                          zx::channel device);
 };
 
-class TapDevice : public ddk::Device<TapDevice, ddk::UnbindableDeprecated>,
+class TapDevice : public ddk::Device<TapDevice, ddk::UnbindableNew>,
                   public ddk::EthernetImplProtocol<TapDevice, ddk::base_protocol> {
  public:
   TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap_Config* config,
             zx::channel server);
 
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
   void EthernetImplStop();
@@ -64,8 +65,9 @@ class TapDevice : public ddk::Device<TapDevice, ddk::UnbindableDeprecated>,
   uint8_t mac_[6] = {};
 
   fbl::Mutex lock_;
-  bool dead_ = false;
+  bool dead_ __TA_GUARDED(lock_) = false;
   ddk::EthernetIfcProtocolClient ethernet_client_ __TA_GUARDED(lock_);
+  std::optional<ddk::UnbindTxn> unbind_txn_ __TA_GUARDED(lock_);
 
   // Only accessed from Thread, so not locked.
   bool online_ = false;
