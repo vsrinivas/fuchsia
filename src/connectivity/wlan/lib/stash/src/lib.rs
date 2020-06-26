@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Allow unused until library is used.
-#![allow(unused)]
-
 ///! High level node abstraction on top of Fuchsia's Stash service.
 ///! Allows to insert structured, hierarchical data into a Stash backed
 ///! store.
 use {
-    anyhow::Error,
+    anyhow::{format_err, Error},
     fidl_fuchsia_stash as fidl_stash,
     std::collections::{HashMap, HashSet},
 };
@@ -85,13 +82,15 @@ impl StashNode {
 
     /// Deletes an entire node and all its fields and children.
     /// No-op if the Node is not yet backed by Stash.
-    pub fn delete(&mut self) {
-        self.stash.delete_prefix(&self.key);
+    pub fn delete(&mut self) -> Result<(), Error> {
+        self.stash.delete_prefix(&self.key)?;
+        Ok(())
     }
 
     /// Deletes a specific field of the node. No-op if the field doesn't exist.
-    pub fn delete_field(&mut self, field: &str) {
-        self.stash.delete_value(&format!("{}{}", self.key, field));
+    pub fn delete_field(&mut self, field: &str) -> Result<(), Error> {
+        self.stash.delete_value(&format!("{}{}", self.key, field))?;
+        Ok(())
     }
 
     fn write_val(&mut self, field: &str, mut value: fidl_stash::Value) -> Result<(), Error> {
@@ -114,11 +113,10 @@ impl StashNode {
         self.write_val(field, fidl_stash::Value::Floatval(f))
     }
 
-    /// Commits all changes made to Stash.
+    /// Flushes all changes made to Stash. Blocks until stash completes the flush.
     /// Note that this applies to the entire tree, not just changes made under this node.
-    pub fn commit(&mut self) -> Result<(), Error> {
-        self.stash.commit()?;
-        Ok(())
+    pub async fn flush(&mut self) -> Result<(), Error> {
+        self.stash.flush().await?.map_err(|e| format_err!("failed to flush changes: {:?}", e))
     }
 
     /// Returns an unordered set of all of the node's direct child nodes.
@@ -238,7 +236,7 @@ mod tests {
 
         // Write a field.
         root.write_str("test", "Foobar".to_string()).expect("error writing field");
-        root.commit().expect("error commiting");
+        root.flush().await.expect("error flushing");
 
         // Read a single fields and all fields.
         assert_eq!(Some("Foobar".to_string()), root.read_str("test").await);
@@ -255,16 +253,16 @@ mod tests {
 
         // Write a field.
         root.write_str("test", "FoobarOne".to_string()).expect("error writing field");
-        root.commit().expect("error commiting");
+        root.flush().await.expect("error flushing");
 
         // Overwrite the same field.
         root.write_str("test", "FoobarTwo".to_string()).expect("error writing field");
-        root.commit().expect("error commiting");
+        root.flush().await.expect("error flushing");
         assert_eq!(Some("FoobarTwo".to_string()), root.read_str("test").await);
 
         // Overwrite the same field with a different type.
         root.write_int("test", 1337).expect("error writing field");
-        root.commit().expect("error commiting");
+        root.flush().await.expect("error flushing");
         assert_eq!(None, root.read_str("test").await);
         assert_eq!(Some(1337), root.read_int("test").await);
     }
@@ -277,7 +275,7 @@ mod tests {
 
         let mut child = root.child("child");
         child.write_str("test", "Foobar".to_string()).expect("error writing field");
-        child.commit().expect("error commiting");
+        child.flush().await.expect("error flushing");
 
         // Root should have no fields.
         let fields = root.fields().await.expect("error reading fields");
@@ -295,12 +293,12 @@ mod tests {
 
         root.write_str("same_key", "Value Root".to_string()).expect("error writing field");
         root.write_str("root", "Foobar Root".to_string()).expect("error writing field");
-        root.commit().expect("error commiting");
+        root.flush().await.expect("error flushing");
 
         let mut child = root.child("child");
         child.write_str("same_key", "Value Child".to_string()).expect("error writing field");
         child.write_str("child", "Foobar Child".to_string()).expect("error writing field");
-        child.commit().expect("error commiting");
+        child.flush().await.expect("error flushing");
 
         assert_eq!(Some("Value Root".to_string()), root.read_str("same_key").await);
         assert_eq!(Some("Foobar Root".to_string()), root.read_str("root").await);
@@ -316,15 +314,15 @@ mod tests {
 
         root.write_str("same_key", "Value Root".to_string()).expect("error writing field");
         root.write_str("root", "Foobar Root".to_string()).expect("error writing field");
-        root.commit().expect("error commiting");
+        root.flush().await.expect("error flushing");
 
         let mut child = root.child("child");
         child.write_str("same_key", "Value Child".to_string()).expect("error writing field");
         child.write_str("child", "Foobar Child".to_string()).expect("error writing field");
-        child.commit().expect("error commiting");
+        child.flush().await.expect("error flushing");
 
-        child.delete();
-        child.commit().expect("error commiting");
+        child.delete().expect("failed to delete");
+        child.flush().await.expect("error flushing");
 
         assert_eq!(Some("Value Root".to_string()), root.read_str("same_key").await);
         assert_eq!(Some("Foobar Root".to_string()), root.read_str("root").await);
@@ -342,10 +340,10 @@ mod tests {
 
         root.write_str("same_key", "Value Root".to_string()).expect("error writing field");
         root.write_str("root", "Foobar Root".to_string()).expect("error writing field");
-        root.commit().expect("error commiting");
+        root.flush().await.expect("error flushing");
 
-        root.delete_field("same_key");
-        root.commit().expect("error commiting");
+        root.delete_field("same_key").expect("failed to delete");
+        root.flush().await.expect("error flushing");
 
         assert_eq!(None, root.read_str("same_key").await);
         assert_eq!(Some("Foobar Root".to_string()), root.read_str("root").await);
@@ -364,8 +362,8 @@ mod tests {
         let children = root.children().await.expect("error fetching children");
         assert!(children.is_empty());
 
-        child_a.write_int("an int", 42);
-        child_a.commit().expect("error committing");
+        child_a.write_int("an int", 42).expect("failed to write value");
+        child_a.flush().await.expect("error flushting");
 
         // Child should now be available to query.
         let children = root.children().await.expect("error fetching children");

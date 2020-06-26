@@ -305,6 +305,7 @@ async fn handle_client_request_connect(
 ) -> Result<oneshot::Receiver<()>, RequestError> {
     let network_config = saved_networks
         .lookup(NetworkIdentifier::new(network.ssid.clone(), network.type_.into()))
+        .await
         .pop()
         .ok_or_else(|| {
             RequestError::new().with_cause(format_err!(
@@ -346,7 +347,7 @@ async fn handle_client_request_save_network(
     let credential = Credential::try_from(
         network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
     )?;
-    saved_networks.store(NetworkIdentifier::from(net_id.clone()), credential.clone())?;
+    saved_networks.store(NetworkIdentifier::from(net_id.clone()), credential.clone()).await?;
 
     // Attempt to connect to the new network if there is an idle client interface.
     let connect_req = client_fsm::ConnectRequest { network: net_id, credential: credential };
@@ -375,7 +376,7 @@ async fn handle_client_request_remove_network(
     let credential = Credential::try_from(
         network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
     )?;
-    saved_networks.remove(net_id.clone(), credential.clone())?;
+    saved_networks.remove(net_id.clone(), credential.clone()).await?;
 
     match iface_manager.lock().await.disconnect(fidl_policy::NetworkIdentifier::from(net_id)).await
     {
@@ -391,7 +392,7 @@ async fn handle_client_request_get_networks(
     iterator: fidl::endpoints::ServerEnd<fidl_policy::NetworkConfigIteratorMarker>,
 ) -> Result<(), fidl::Error> {
     // make sufficiently small batches of networks to send and convert configs to FIDL values
-    let network_configs = saved_networks.get_networks();
+    let network_configs = saved_networks.get_networks().await;
     let chunks = network_configs.chunks(MAX_CONFIGS_PER_RESPONSE);
     let fidl_chunks = chunks.into_iter().map(|chunk| {
         chunk
@@ -452,7 +453,7 @@ pub(crate) async fn connect_to_best_network(
 ) {
     let mut iface_manager = iface_manager.lock().await;
     // See if any known networks are in range and connect if one is.
-    if let Some((network_id, credential)) = selector.get_best_network(&vec![]) {
+    if let Some((network_id, credential)) = selector.get_best_network(&vec![]).await {
         info!("Saved network automatically selected for connection");
         let connect_req =
             client_fsm::ConnectRequest { network: network_id, credential: credential };
@@ -531,8 +532,10 @@ mod tests {
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream},
+        fidl_fuchsia_stash as fidl_stash,
         futures::{channel::mpsc, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
+        rand::{distributions::Alphanumeric, thread_rng, Rng},
         tempfile::TempDir,
         wlan_common::assert_variant,
     };
@@ -655,12 +658,17 @@ mod tests {
             NetworkIdentifier::new(b"foobar-protected".to_vec(), SecurityType::Wpa2);
         let network_id_psk = NetworkIdentifier::new(b"foobar-psk".to_vec(), SecurityType::Wpa2);
 
-        saved_networks.store(network_id_none, Credential::None).expect("error saving network");
+        saved_networks
+            .store(network_id_none, Credential::None)
+            .await
+            .expect("error saving network");
         saved_networks
             .store(network_id_password, Credential::Password(b"supersecure".to_vec()))
+            .await
             .expect("error saving network");
         saved_networks
             .store(network_id_psk, Credential::Psk(vec![64; PSK_BYTE_LEN].to_vec()))
+            .await
             .expect("error saving network foobar-psk");
 
         saved_networks
@@ -727,8 +735,49 @@ mod tests {
         }
     }
 
+    /// Move stash requests forward so that a save request can progress.
+    fn process_stash_write(
+        mut exec: &mut fasync::Executor,
+        mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue{..})))
+        );
+        process_stash_flush(&mut exec, &mut stash_server);
+    }
+
+    /// Move stash requests forward so that a remove request can progress.
+    fn process_stash_remove(
+        mut exec: &mut fasync::Executor,
+        mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::DeletePrefix{..})))
+        );
+        process_stash_flush(&mut exec, &mut stash_server);
+    }
+
+    fn process_stash_flush(
+        exec: &mut fasync::Executor,
+        stash_server: &mut fidl_stash::StoreAccessorRequestStream,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::Flush{responder}))) => {
+                responder.send(&mut Ok(())).expect("failed to send stash response");
+            }
+        );
+    }
+
+    fn rand_string() -> String {
+        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
+    }
+
     #[test]
     fn connect_request_unknown_network() {
+        let ssid = b"foobar-unknown".to_vec();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let test_values = test_setup("connect_request_unknown_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
@@ -749,7 +798,7 @@ mod tests {
 
         // Issue connect request.
         let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
-            ssid: b"foobar-unknown".to_vec(),
+            ssid: ssid.clone(),
             type_: fidl_policy::SecurityType::None,
         });
         pin_mut!(connect_fut);
@@ -762,12 +811,11 @@ mod tests {
             Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
         );
 
-        // unknown network should not have been saved by saved networks manager
-        // since we did not successfully connect
-        assert!(test_values
-            .saved_networks
-            .lookup(NetworkIdentifier::new(b"foobar-unknown".to_vec(), SecurityType::None))
-            .is_empty());
+        // Unknown network should not have been saved by saved networks manager
+        // since we did not successfully connect.
+        let lookup_fut =
+            test_values.saved_networks.lookup(NetworkIdentifier::new(ssid, SecurityType::None));
+        assert!(exec.run_singlethreaded(lookup_fut).is_empty());
     }
 
     #[test]
@@ -1134,16 +1182,12 @@ mod tests {
     #[test]
     fn save_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "save_network";
         let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks_fut =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
-        pin_mut!(saved_networks_fut);
-        let saved_networks = Arc::new(
-            exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
-        );
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks = Arc::new(saved_networks);
         let network_selector =
             Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
 
@@ -1182,34 +1226,35 @@ mod tests {
         let mut save_fut = controller.save_network(network_config);
 
         // Run server_provider forward so that it will process the save network request
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Progress forward the save and process request to stash, and also verify that the save
+        // network request is not completed until stash responds.
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        // Allow save network to complete running after calls to stash
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Check that the the response says we succeeded.
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(result) => {
-            let save_result = result.expect("Failed to get save network response");
-            assert_eq!(save_result, Ok(()));
-        });
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
 
         // Check that the value was actually saved in the saved networks manager.
         let target_id = NetworkIdentifier::from(network_id);
         let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false, false)
             .expect("Failed to create network config");
-        assert_eq!(saved_networks.lookup(target_id), vec![target_config]);
+        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
     }
 
     #[test]
     fn save_network_with_disconnected_iface() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "save_network_with_disconnected_iface";
         let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks_fut =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
-        pin_mut!(saved_networks_fut);
-        let saved_networks = Arc::new(
-            exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
-        );
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks = Arc::new(saved_networks);
         let network_selector =
             Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
 
@@ -1259,7 +1304,10 @@ mod tests {
         };
         let mut save_fut = controller.save_network(network_config);
 
-        // Run server_provider forward so that it will process the save network request
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        // Process save network request and requests to stash
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Check that the the response says we succeeded.
@@ -1272,7 +1320,7 @@ mod tests {
         let target_id = NetworkIdentifier::from(network_id);
         let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false, false)
             .expect("Failed to create network config");
-        assert_eq!(saved_networks.lookup(target_id), vec![target_config]);
+        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
     }
 
     #[test]
@@ -1288,8 +1336,7 @@ mod tests {
             SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
         pin_mut!(saved_networks_fut);
         let _saved_networks = Arc::new(
-            exec.run_singlethreaded(&mut saved_networks_fut)
-                .expect("Failed to create a KnownEssStore"),
+            exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
         );
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
         let network_selector =
@@ -1343,37 +1390,31 @@ mod tests {
 
         // Check that the value was was not saved in saved networks manager.
         let target_id = NetworkIdentifier::from(bad_network_id);
-        assert_eq!(saved_networks.lookup(target_id), vec![]);
+        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![]);
     }
 
     #[test]
     fn test_remove_not_connected() {
         let is_connected = false;
-        let stash_id = line!().to_string();
-        test_remove_a_network(is_connected, stash_id);
+        test_remove_a_network(is_connected);
     }
 
     #[test]
     fn test_remove_connected() {
         let is_connected = true;
-        let stash_id = line!().to_string();
-        test_remove_a_network(is_connected, stash_id);
+        test_remove_a_network(is_connected);
     }
 
-    fn test_remove_a_network(is_connected: bool, stash_id: impl AsRef<str>) {
+    fn test_remove_a_network(is_connected: bool) {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
 
         // Need to create this here so that the temp files will be in scope here.
-        let saved_networks_fut =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
-        pin_mut!(saved_networks_fut);
-        let saved_networks = Arc::new(
-            exec.run_singlethreaded(&mut saved_networks_fut)
-                .expect("Failed to create a KnownEssStore"),
-        );
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks = Arc::new(saved_networks);
         let network_selector =
             Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1406,9 +1447,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
 
+        // Save the network directly.
         let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let credential = Credential::None;
-        saved_networks.store(network_id.clone(), credential.clone()).expect("failed to store");
+        let save_fut = saved_networks.store(network_id.clone(), credential.clone());
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(())));
 
         // If testing a connected network, first connect to it in order to test that we will
         // disconnect.
@@ -1429,10 +1475,13 @@ mod tests {
         };
         let mut remove_fut = controller.remove_network(network_config);
 
-        // Run server_provider forward so that it will process the remove request
+        // Process the remove request on the server side and handle requests to stash on the way.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        process_stash_remove(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
-        assert!(saved_networks.lookup(network_id).is_empty());
+        assert!(exec.run_singlethreaded(saved_networks.lookup(network_id)).is_empty());
     }
 
     #[test]
@@ -1538,7 +1587,8 @@ mod tests {
 
         // Save the networks specified for this test.
         for (net_id, credential) in saved_configs {
-            saved_networks.store(net_id, credential).expect("failed to store network");
+            exec.run_singlethreaded(saved_networks.store(net_id, credential))
+                .expect("failed to store network");
         }
 
         // Request a new controller.
@@ -1555,10 +1605,10 @@ mod tests {
         // results plus one response of an empty vector indicating the end of results.
         let mut saved_networks_results = vec![];
         for i in 0..expected_num_sends {
-            let mut get_saved_fut = iter.get_next();
+            let get_saved_fut = iter.get_next();
             assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
             let results = exec
-                .run_singlethreaded(&mut get_saved_fut)
+                .run_singlethreaded(get_saved_fut)
                 .expect("Failed to get next chunk of saved networks results");
             // the size of received chunk should either be max chunk size or whatever is left
             // to receive in the last chunk
@@ -1569,10 +1619,10 @@ mod tests {
             }
             saved_networks_results.extend(results);
         }
-        let mut get_saved_end_fut = iter.get_next();
+        let get_saved_end_fut = iter.get_next();
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         let results = exec
-            .run_singlethreaded(&mut get_saved_end_fut)
+            .run_singlethreaded(get_saved_end_fut)
             .expect("Failed to get next chunk of saved networks results");
         assert!(results.is_empty());
 
@@ -1857,13 +1907,14 @@ mod tests {
     // Gets a saved network config with a particular SSID, security type, and credential.
     // If there are more than one configs saved for the same SSID, security type, and credential,
     // the function will panic.
-    fn get_config(
+    async fn get_config(
         saved_networks: Arc<SavedNetworksManager>,
         id: NetworkIdentifier,
         cred: Credential,
     ) -> Option<NetworkConfig> {
         let mut cfgs = saved_networks
             .lookup(id)
+            .await
             .into_iter()
             .filter(|cfg| cfg.credential == cred)
             .collect::<Vec<_>>();
@@ -1894,6 +1945,7 @@ mod tests {
 
         saved_networks
             .store(network_id.clone(), Credential::Password(b"password".to_vec()))
+            .await
             .expect("Failed to store network config");
 
         assert_eq!(
@@ -1903,6 +1955,7 @@ mod tests {
                 network_id,
                 Credential::Password(b"password".to_vec())
             )
+            .await
         );
         assert_eq!(
             None,
@@ -1911,6 +1964,7 @@ mod tests {
                 NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2),
                 Credential::Password(b"not-saved".to_vec())
             )
+            .await
         );
     }
 
@@ -1937,11 +1991,11 @@ mod tests {
         // we have seen it in a scan result.
         let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None);
         let credential = Credential::None;
-        test_values.saved_networks.record_connect_result(
+        exec.run_singlethreaded(test_values.saved_networks.record_connect_result(
             network_id,
             &credential,
             fidl_sme::ConnectResultCode::Success,
-        );
+        ));
 
         let selector =
             Arc::new(network_selection::NetworkSelector::new(test_values.saved_networks));

@@ -53,9 +53,9 @@ impl NetworkSelector {
     }
 
     /// Insert all saved networks into a hashmap with this module's internal data representation
-    fn load_saved_networks(&self) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
+    async fn load_saved_networks(&self) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
         let mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData> = HashMap::new();
-        for saved_network in self.saved_network_manager.get_networks().iter() {
+        for saved_network in self.saved_network_manager.get_networks().await.iter() {
             let recent_failure_count = saved_network
                 .perf_stats
                 .failure_list
@@ -120,11 +120,11 @@ impl NetworkSelector {
     /// Only networks that are both saved and visible in the most recent scan results are eligible
     /// for consideration. Among those, the "best" network based on compatibility and quality (e.g.
     /// RSSI, recent failures) is selected.
-    pub fn get_best_network(
+    pub async fn get_best_network(
         &self,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<(types::NetworkIdentifier, Credential)> {
-        let networks = self.augment_networks_with_scan_data(self.load_saved_networks());
+        let networks = self.augment_networks_with_scan_data(self.load_saved_networks().await);
         find_best_network(&networks, ignore_list)
     }
 }
@@ -190,25 +190,23 @@ mod tests {
         saved_network_manager: Arc<SavedNetworksManager>,
     }
 
-    fn test_setup(exec: &mut fasync::Executor) -> TestValues {
+    async fn test_setup() -> TestValues {
         set_logger_for_test();
 
         // setup modules
-        let saved_network_manager =
-            Arc::new(exec.run_singlethreaded(SavedNetworksManager::new_for_test()).unwrap());
+        let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
         let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_network_manager)));
 
         TestValues { network_selector, saved_network_manager }
     }
 
-    #[test]
-    fn saved_networks_are_loaded() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+    #[fasync::run_singlethreaded(test)]
+    async fn saved_networks_are_loaded() {
+        let test_values = test_setup().await;
         let network_selector = test_values.network_selector;
 
         // check there are 0 saved networks to start with
-        let networks = network_selector.load_saved_networks();
+        let networks = network_selector.load_saved_networks().await;
         assert_eq!(networks.len(), 0);
 
         // create some identifiers
@@ -227,25 +225,34 @@ mod tests {
         test_values
             .saved_network_manager
             .store(test_id_1.clone().into(), credential_1.clone())
+            .await
             .unwrap();
+
         test_values
             .saved_network_manager
             .store(test_id_2.clone().into(), credential_2.clone())
+            .await
             .unwrap();
 
         // mark the first one as having connected
-        test_values.saved_network_manager.record_connect_result(
-            test_id_1.clone().into(),
-            &credential_1.clone(),
-            fidl_sme::ConnectResultCode::Success,
-        );
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                test_id_1.clone().into(),
+                &credential_1.clone(),
+                fidl_sme::ConnectResultCode::Success,
+            )
+            .await;
 
         // mark the second one as having a failure
-        test_values.saved_network_manager.record_connect_result(
-            test_id_2.clone().into(),
-            &credential_2.clone(),
-            fidl_sme::ConnectResultCode::BadCredentials,
-        );
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                test_id_2.clone().into(),
+                &credential_2.clone(),
+                fidl_sme::ConnectResultCode::BadCredentials,
+            )
+            .await;
 
         // check these networks were loaded
         let mut expected_hashmap = HashMap::new();
@@ -269,14 +276,13 @@ mod tests {
                 recent_failure_count: 1,
             },
         );
-        let networks = network_selector.load_saved_networks();
+        let networks = network_selector.load_saved_networks().await;
         assert_eq!(networks, expected_hashmap);
     }
 
-    #[test]
-    fn scan_results_are_stored() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+    #[fasync::run_singlethreaded(test)]
+    async fn scan_results_are_stored() {
+        let test_values = test_setup().await;
         let network_selector = test_values.network_selector;
 
         // check there are 0 scan results to start with
@@ -338,10 +344,9 @@ mod tests {
         assert_eq!(*guard, mock_scan_results);
     }
 
-    #[test]
-    fn scan_results_used_to_augment_hashmap() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+    #[fasync::run_singlethreaded(test)]
+    async fn scan_results_used_to_augment_hashmap() {
+        let test_values = test_setup().await;
         let network_selector = test_values.network_selector;
 
         // create some identifiers
@@ -747,10 +752,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn get_best_network_end_to_end() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+    #[fasync::run_singlethreaded(test)]
+    async fn get_best_network_end_to_end() {
+        let test_values = test_setup().await;
         let network_selector = test_values.network_selector;
 
         // create some identifiers
@@ -769,23 +773,31 @@ mod tests {
         test_values
             .saved_network_manager
             .store(test_id_1.clone().into(), credential_1.clone())
+            .await
             .unwrap();
         test_values
             .saved_network_manager
             .store(test_id_2.clone().into(), credential_2.clone())
+            .await
             .unwrap();
 
         // mark them as having connected
-        test_values.saved_network_manager.record_connect_result(
-            test_id_1.clone().into(),
-            &credential_1.clone(),
-            fidl_sme::ConnectResultCode::Success,
-        );
-        test_values.saved_network_manager.record_connect_result(
-            test_id_2.clone().into(),
-            &credential_2.clone(),
-            fidl_sme::ConnectResultCode::Success,
-        );
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                test_id_1.clone().into(),
+                &credential_1.clone(),
+                fidl_sme::ConnectResultCode::Success,
+            )
+            .await;
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                test_id_2.clone().into(),
+                &credential_2.clone(),
+                fidl_sme::ConnectResultCode::Success,
+            )
+            .await;
 
         // provide some new scan results
         let mock_scan_results = vec![
@@ -828,13 +840,13 @@ mod tests {
 
         // Check that we pick a network
         assert_eq!(
-            network_selector.get_best_network(&vec![]).unwrap(),
+            network_selector.get_best_network(&vec![]).await.unwrap(),
             (test_id_1.clone(), credential_1.clone())
         );
 
         // Ignore that network, check that we pick the other one
         assert_eq!(
-            network_selector.get_best_network(&vec![test_id_1.clone()]).unwrap(),
+            network_selector.get_best_network(&vec![test_id_1.clone()]).await.unwrap(),
             (test_id_2.clone(), credential_2.clone())
         );
     }

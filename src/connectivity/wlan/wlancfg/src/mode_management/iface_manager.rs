@@ -965,9 +965,7 @@ mod tests {
         // Update the saved networks with knowledge of the test SSID and credentials.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         // Ask the IfaceManager to connect.
@@ -999,9 +997,7 @@ mod tests {
         // Add credentials for the test network to the saved networks.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {
@@ -1069,9 +1065,7 @@ mod tests {
         // Update the saved networks with knowledge of the test SSID and credentials.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         // Ask the IfaceManager to connect and make sure that it fails.
@@ -1100,9 +1094,7 @@ mod tests {
         // Update the saved networks with knowledge of the test SSID and credentials.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         // Ask the IfaceManager to connect and make sure that it fails.
@@ -1124,9 +1116,7 @@ mod tests {
 
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {
@@ -1160,9 +1150,7 @@ mod tests {
         // Create a PhyManager with knowledge of a single client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {
@@ -1248,9 +1236,7 @@ mod tests {
         // Create a PhyManager with a single, known client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {
@@ -1287,9 +1273,7 @@ mod tests {
         // Create a PhyManager with one known client.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {
@@ -1343,9 +1327,7 @@ mod tests {
         // Create a PhyManager with a single, known client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {
@@ -1374,9 +1356,7 @@ mod tests {
         // Create a PhyManager with a single, known client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {
@@ -1404,9 +1384,7 @@ mod tests {
         // Create a PhyManager with a single, known client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa2);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        test_values
-            .saved_networks
-            .store(network_id, credential)
+        exec.run_singlethreaded(test_values.saved_networks.store(network_id, credential))
             .expect("failed to store a network password");
 
         {

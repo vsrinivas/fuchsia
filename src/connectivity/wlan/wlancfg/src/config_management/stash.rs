@@ -40,9 +40,15 @@ impl Stash {
         Ok(Stash { root })
     }
 
+    /// Initialize new Stash with a provided proxy in order to mock stash in unit tests.
+    #[cfg(test)]
+    pub fn new_with_stash(proxy: fidl_stash::StoreAccessorProxy) -> Self {
+        Stash { root: StashNode::root(proxy) }
+    }
+
     /// Update the network configs of a given network identifier to persistent storage, deleting
     /// the key entirely if the new list of configs is empty.
-    pub fn write(
+    pub async fn write(
         &self,
         id: &NetworkIdentifier,
         network_configs: &[NetworkConfig],
@@ -55,7 +61,7 @@ impl Stash {
 
         // If configs to update is empty, we essentially delete the network ID's configs.
         if network_configs.is_empty() {
-            id_node.delete();
+            id_node.delete()?;
         } else {
             // use a different number to separate each child network config
             let mut config_index = 0;
@@ -65,7 +71,7 @@ impl Stash {
                 config_index += 1;
             }
         }
-        id_node.commit()
+        id_node.flush().await.map_err(|e| format_err!("failed to flush changes: {}", e))
     }
 
     /// Make string value of NetworkIdentifier that will be the key for a config in the stash.
@@ -146,9 +152,9 @@ impl Stash {
 
     /// Remove all saved values from the stash. It will delete everything under the root node,
     /// and anything else in the same stash but not under the root node would be ignored.
-    pub fn clear(&mut self) -> Result<(), Error> {
-        self.root.delete();
-        self.root.commit()?;
+    pub async fn clear(&mut self) -> Result<(), Error> {
+        self.root.delete()?;
+        self.root.flush().await?;
         Ok(())
     }
 }
@@ -193,7 +199,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn write_and_read() {
-        let stash = new_stash("write_and_read");
+        let stash = new_stash("write_and_read").await;
         let cfg_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         let cfg = NetworkConfig::new(
             cfg_id.clone(),
@@ -204,7 +210,7 @@ mod tests {
         .expect("Failed to create network config");
 
         // Save a network config to the stash
-        stash.write(&cfg_id, &vec![cfg.clone()]).expect("Failed writing to stash");
+        stash.write(&cfg_id, &vec![cfg.clone()]).await.expect("Failed writing to stash");
 
         // Expect to read the same value back with the same key
         let cfgs_from_stash = stash.load().await.expect("Failed reading from stash");
@@ -219,7 +225,10 @@ mod tests {
             false,
         )
         .expect("Failed to create network config");
-        stash.write(&cfg_id, &vec![cfg.clone(), cfg_2.clone()]).expect("Failed writing to stash");
+        stash
+            .write(&cfg_id, &vec![cfg.clone(), cfg_2.clone()])
+            .await
+            .expect("Failed writing to stash");
 
         // Expect to read the saved value back with the same key
         let cfgs_from_stash = stash.load().await.expect("Failed reading from stash");
@@ -232,7 +241,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn write_read_security_types() {
-        let stash = new_stash("write_read_security_types");
+        let stash = new_stash("write_read_security_types").await;
         let password = Credential::Password(b"config-password".to_vec());
 
         // create and write configs with each security type
@@ -247,11 +256,11 @@ mod tests {
         let cfg_wpa2 = new_config(net_id_wpa2.clone(), password.clone());
         let cfg_wpa3 = new_config(net_id_wpa3.clone(), password.clone());
 
-        stash.write(&net_id_open, &vec![cfg_open.clone()]).expect("failed to write config");
-        stash.write(&net_id_wep, &vec![cfg_wep.clone()]).expect("failed to write config");
-        stash.write(&net_id_wpa, &vec![cfg_wpa.clone()]).expect("failed to write config");
-        stash.write(&net_id_wpa2, &vec![cfg_wpa2.clone()]).expect("failed to write config");
-        stash.write(&net_id_wpa3, &vec![cfg_wpa3.clone()]).expect("failed to write config");
+        stash.write(&net_id_open, &vec![cfg_open.clone()]).await.expect("failed to write config");
+        stash.write(&net_id_wep, &vec![cfg_wep.clone()]).await.expect("failed to write config");
+        stash.write(&net_id_wpa, &vec![cfg_wpa.clone()]).await.expect("failed to write config");
+        stash.write(&net_id_wpa2, &vec![cfg_wpa2.clone()]).await.expect("failed to write config");
+        stash.write(&net_id_wpa3, &vec![cfg_wpa3.clone()]).await.expect("failed to write config");
 
         // load stash and expect each config that we wrote
         let configs = stash.load().await.expect("failed loading from stash");
@@ -264,7 +273,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn write_read_credentials() {
-        let stash = new_stash("write_read_credentials");
+        let stash = new_stash("write_read_credentials").await;
 
         let net_id_none = network_id("bar-none", SecurityType::None);
         let net_id_password = network_id("bar-password", SecurityType::Wpa2);
@@ -279,9 +288,9 @@ mod tests {
         let cfg_psk = new_config(net_id_psk.clone(), psk);
 
         // write each config to stash, then check that we see them when we load
-        stash.write(&net_id_none, &vec![cfg_none.clone()]).expect("failed to write");
-        stash.write(&net_id_password, &vec![cfg_password.clone()]).expect("failed to write");
-        stash.write(&net_id_psk, &vec![cfg_psk.clone()]).expect("failed to write");
+        stash.write(&net_id_none, &vec![cfg_none.clone()]).await.expect("failed to write");
+        stash.write(&net_id_password, &vec![cfg_password.clone()]).await.expect("failed to write");
+        stash.write(&net_id_psk, &vec![cfg_psk.clone()]).await.expect("failed to write");
 
         let configs = stash.load().await.expect("failed loading from stash");
         assert_eq!(Some(&vec![cfg_none]), configs.get(&net_id_none));
@@ -292,7 +301,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn write_persists() {
         let stash_id = "write_persists";
-        let stash = new_stash(stash_id);
+        let stash = new_stash(stash_id).await;
         let cfg_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         let cfg = NetworkConfig::new(
             cfg_id.clone(),
@@ -303,7 +312,7 @@ mod tests {
         .expect("Failed to create network config");
 
         // Save a network config to the stash
-        stash.write(&cfg_id, &vec![cfg.clone()]).expect("Failed writing to stash");
+        stash.write(&cfg_id, &vec![cfg.clone()]).await.expect("Failed writing to stash");
 
         //create the stash again with same id
         let stash = Stash::new_with_id(stash_id).expect("Failed to create new stash");
@@ -316,7 +325,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn load_stash() {
-        let store = new_stash("load_stash");
+        let store = new_stash("load_stash").await;
         let foo_net_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         let cfg_foo = NetworkConfig::new(
             foo_net_id.clone(),
@@ -335,8 +344,14 @@ mod tests {
         .expect("Failed to create network config");
 
         // Store two networks in our stash.
-        store.write(&foo_net_id, &vec![cfg_foo.clone()]).expect("Failed to save config to stash");
-        store.write(&bar_net_id, &vec![cfg_bar.clone()]).expect("Failed to save config to stash");
+        store
+            .write(&foo_net_id, &vec![cfg_foo.clone()])
+            .await
+            .expect("Failed to save config to stash");
+        store
+            .write(&bar_net_id, &vec![cfg_bar.clone()])
+            .await
+            .expect("Failed to save config to stash");
 
         // load should give us a hashmap with the two networks we saved
         let mut expected_cfgs = HashMap::new();
@@ -347,7 +362,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn load_stash_ignore_bad_values() {
-        let stash = new_stash("load_stash_ignore_bad_values");
+        let stash = new_stash("load_stash_ignore_bad_values").await;
 
         // write bad value directly to StashNode
         let some_net_id = network_id("foo", SecurityType::Wpa2);
@@ -365,7 +380,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn clear_stash() {
         let stash_id = "clear_stash";
-        let mut stash = new_stash(stash_id);
+        let mut stash = new_stash(stash_id).await;
 
         // add some configs to the stash
         let net_id_foo = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
@@ -384,8 +399,8 @@ mod tests {
             false,
         )
         .expect("Failed to create network config");
-        stash.write(&net_id_foo, &vec![cfg_foo.clone()]).expect("Failed to write to stash");
-        stash.write(&net_id_bar, &vec![cfg_bar.clone()]).expect("Failed to write to stash");
+        stash.write(&net_id_foo, &vec![cfg_foo.clone()]).await.expect("Failed to write to stash");
+        stash.write(&net_id_bar, &vec![cfg_bar.clone()]).await.expect("Failed to write to stash");
 
         // verify that the configs are found in stash
         let configs_from_stash = stash.load().await.expect("Failed to read");
@@ -394,7 +409,7 @@ mod tests {
         assert_eq!(Some(&vec![cfg_bar.clone()]), configs_from_stash.get(&net_id_bar));
 
         // clear the stash
-        stash.clear().expect("Failed to clear stash");
+        stash.clear().await.expect("Failed to clear stash");
         // verify that the configs are no longer in the stash
         let configs_from_stash = stash.load().await.expect("Failed to read");
         assert_eq!(0, configs_from_stash.len());
@@ -406,23 +421,23 @@ mod tests {
     }
 
     // creates a new stash with the given ID and clears the values saved in the stash
-    fn new_stash(stash_id: &str) -> Stash {
+    async fn new_stash(stash_id: &str) -> Stash {
         let mut stash = Stash::new_with_id(stash_id).expect("Failed to create new stash");
-        stash.root.delete();
-        stash.root.commit().expect("Failed to commit clearing stash");
+        stash.root.delete().expect("failed to clear stash");
+        stash.root.flush().await.expect("Failed to commit clearing stash");
         stash
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn write_to_correct_stash_node() {
-        let stash = new_stash("write_to_correct_stash_node");
+        let stash = new_stash("write_to_correct_stash_node").await;
 
         let net_id = network_id("foo", SecurityType::Wpa2);
         let credential = Credential::Password(b"password".to_vec());
         let network_config = new_config(net_id.clone(), credential.clone());
 
         // write to stash and check that the right thing is written under the right StashNode
-        stash.write(&net_id, &vec![network_config]).expect("failed to write to stash");
+        stash.write(&net_id, &vec![network_config]).await.expect("failed to write to stash");
         let net_id_str =
             Stash::serialize_key(&net_id).expect("failed to serialize network identifier");
         let expected_node = stash.root.child(&net_id_str).child(&format!("{}", 0));

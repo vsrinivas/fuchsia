@@ -13,8 +13,8 @@ use {
     crate::legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     anyhow::format_err,
     fidl_fuchsia_wlan_sme as fidl_sme,
+    futures::lock::Mutex,
     log::{error, info},
-    parking_lot::Mutex,
     std::{
         clone::Clone,
         collections::{hash_map::Entry, HashMap},
@@ -26,7 +26,8 @@ use {
 /// The Saved Network Manager keeps track of saved networks and provides thread-safe access to
 /// saved networks. Networks are saved by NetworkConfig and accessed by their NetworkIdentifier
 /// (SSID and security protocol). Network configs are saved in-memory, and part of each network
-/// data is saved persistently.
+/// data is saved persistently. Futures aware locks are used in order to wait for the stash flush
+/// operations to complete when data changes.
 pub struct SavedNetworksManager {
     saved_networks: Mutex<NetworkConfigMap>,
     stash: Mutex<Stash>,
@@ -92,6 +93,39 @@ impl SavedNetworksManager {
         Self::new_with_stash_or_paths(stash_id, Path::new(&path), Path::new(&tmp_path)).await
     }
 
+    /// Creates a new SavedNetworksManager and hands back the other end of the stash proxy used.
+    /// This should be used when a test does something that will interact with stash and uses the
+    /// executor to step through futures.
+    #[cfg(test)]
+    pub async fn new_and_stash_server(
+        legacy_path: impl AsRef<Path>,
+        legacy_tmp_path: impl AsRef<Path>,
+    ) -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
+        use rand::{distributions::Alphanumeric, thread_rng, Rng};
+        let id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
+        use fidl::endpoints::create_proxy;
+        let (store_client, _stash_server) = create_proxy::<fidl_fuchsia_stash::StoreMarker>()
+            .expect("failed to create stash proxy");
+        store_client.identify(id.as_ref()).expect("failed to identify client to store");
+        let (store, accessor_server) = create_proxy::<fidl_fuchsia_stash::StoreAccessorMarker>()
+            .expect("failed to create accessor proxy");
+        let stash = Stash::new_with_stash(store);
+        let legacy_store = KnownEssStore::new_with_paths(
+            legacy_path.as_ref().to_path_buf(),
+            legacy_tmp_path.as_ref().to_path_buf(),
+        )
+        .expect("failed to create legacy store");
+
+        (
+            Self {
+                saved_networks: Mutex::new(NetworkConfigMap::new()),
+                stash: Mutex::new(stash),
+                legacy_store,
+            },
+            accessor_server.into_stream().expect("failed to create stash request stream"),
+        )
+    }
+
     /// Read from the old persistent storage of network configs, then write them into the new
     /// storage, both in the hashmap and the stash that stores them persistently.
     async fn migrate_legacy(
@@ -103,7 +137,7 @@ impl SavedNetworksManager {
         match Self::load_from_path(&legacy_storage_path) {
             Ok(legacy_saved_networks) => {
                 for (net_id, configs) in legacy_saved_networks {
-                    stash.write(&net_id, &configs)?;
+                    stash.write(&net_id, &configs).await?;
                     saved_networks.insert(net_id, configs);
                 }
             }
@@ -169,14 +203,14 @@ impl SavedNetworksManager {
 
     /// Attempt to remove the NetworkConfig described by the specified NetworkIdentifier and
     /// Credential. Return true if a NetworkConfig is remove and false otherwise.
-    pub fn remove(
+    pub async fn remove(
         &self,
         network_id: NetworkIdentifier,
         credential: Credential,
     ) -> Result<bool, NetworkConfigError> {
         // Find any matching NetworkConfig and remove it.
-        let mut guard = self.saved_networks.lock();
-        if let Some(network_configs) = guard.get_mut(&network_id) {
+        let mut saved_networks = self.saved_networks.lock().await;
+        if let Some(network_configs) = saved_networks.get_mut(&network_id) {
             let original_len = network_configs.len();
             // Keep the configs that don't match provided NetworkIdentifier and Credential.
             network_configs.retain(|cfg| cfg.credential != credential);
@@ -184,7 +218,9 @@ impl SavedNetworksManager {
             if original_len != network_configs.len() {
                 self.stash
                     .lock()
+                    .await
                     .write(&network_id, &network_configs)
+                    .await
                     .map_err(|_| NetworkConfigError::StashWriteError)?;
                 self.legacy_store
                     .remove(network_id.ssid, credential.into_bytes())
@@ -196,32 +232,32 @@ impl SavedNetworksManager {
     }
 
     /// Clear the in memory storage and the persistent storage. Also clear the legacy storage.
-    pub fn clear(&self) -> Result<(), anyhow::Error> {
-        self.saved_networks.lock().clear();
-        self.stash.lock().clear()?;
+    pub async fn clear(&self) -> Result<(), anyhow::Error> {
+        self.saved_networks.lock().await.clear();
+        self.stash.lock().await.clear().await?;
         self.legacy_store.clear()
     }
 
     /// Get the count of networks in store, including multiple values with same SSID
-    pub fn known_network_count(&self) -> usize {
-        self.saved_networks.lock().values().into_iter().flatten().count()
+    pub async fn known_network_count(&self) -> usize {
+        self.saved_networks.lock().await.values().into_iter().flatten().count()
     }
 
     /// Return a list of network configs that match the given SSID.
-    pub fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
-        self.saved_networks.lock().entry(id).or_default().iter().map(Clone::clone).collect()
+    pub async fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
+        self.saved_networks.lock().await.entry(id).or_default().iter().map(Clone::clone).collect()
     }
 
     /// Save a network by SSID and password. If the SSID and password have been saved together
     /// before, do not modify the saved config. Update the legacy storage to keep it consistent
     /// with what it did before the new version.
-    pub fn store(
+    pub async fn store(
         &self,
         network_id: NetworkIdentifier,
         credential: Credential,
     ) -> Result<(), NetworkConfigError> {
-        let mut guard = self.saved_networks.lock();
-        let network_entry = guard.entry(network_id.clone());
+        let mut saved_networks = self.saved_networks.lock().await;
+        let network_entry = saved_networks.entry(network_id.clone());
         if let Entry::Occupied(network_configs) = &network_entry {
             if network_configs.get().iter().any(|cfg| cfg.credential == credential) {
                 info!(
@@ -238,8 +274,11 @@ impl SavedNetworksManager {
         network_configs.push(network_config);
         self.stash
             .lock()
+            .await
             .write(&network_id, &network_configs)
+            .await
             .map_err(|_| NetworkConfigError::StashWriteError)?;
+
         // Write saved networks to the legacy store only if they are WPA2 or Open, as legacy store
         // does not support more types. Do not write PSK to legacy storage.
         if let Credential::Psk(_) = credential {
@@ -258,13 +297,14 @@ impl SavedNetworksManager {
 
     /// Update the specified saved network with the result of an attempted connect.  If the
     /// specified network is not saved, this function does not save it.
-    pub fn record_connect_result(
+    pub async fn record_connect_result(
         &self,
         id: NetworkIdentifier,
         credential: &Credential,
         connect_result: fidl_sme::ConnectResultCode,
     ) {
-        if let Some(networks) = self.saved_networks.lock().get_mut(&id) {
+        let mut saved_networks = self.saved_networks.lock().await;
+        if let Some(networks) = saved_networks.get_mut(&id) {
             for network in networks.iter_mut() {
                 if &network.credential == credential {
                     match connect_result {
@@ -272,11 +312,13 @@ impl SavedNetworksManager {
                             if !network.has_ever_connected {
                                 network.has_ever_connected = true;
                                 // Update persistent storage since a config has changed.
-                                self.stash.lock().write(&id, &networks).unwrap_or_else(|_| {
-                                    info!(
+                                self.stash.lock().await.write(&id, &networks).await.unwrap_or_else(
+                                    |_| {
+                                        info!(
                                         "Failed recording successful connect in persistent storage"
                                     );
-                                });
+                                    },
+                                );
                             }
                         }
                         fidl_sme::ConnectResultCode::BadCredentials => {
@@ -301,9 +343,15 @@ impl SavedNetworksManager {
     }
 
     // Return a list of every network config that has been saved.
-    pub fn get_networks(&self) -> Vec<NetworkConfig> {
-        let guard = self.saved_networks.lock();
-        guard.values().into_iter().map(|cfgs| cfgs.clone()).flatten().collect()
+    pub async fn get_networks(&self) -> Vec<NetworkConfig> {
+        self.saved_networks
+            .lock()
+            .await
+            .values()
+            .into_iter()
+            .map(|cfgs| cfgs.clone())
+            .flatten()
+            .collect()
     }
 }
 
@@ -337,9 +385,13 @@ mod tests {
     use {
         super::*,
         crate::config_management::PerformanceStats,
-        fuchsia_async as fasync,
+        fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
+        futures::{task::Poll, TryStreamExt},
+        pin_utils::pin_mut,
+        rand::{distributions::Alphanumeric, thread_rng, Rng},
         std::{io::Write, mem, time::SystemTime},
         tempfile::TempDir,
+        wlan_common::assert_variant,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -354,40 +406,45 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id_foo = NetworkIdentifier::new("foo", SecurityType::Wpa2);
 
-        assert!(saved_networks.lookup(network_id_foo.clone()).is_empty());
-        assert_eq!(0, saved_networks.known_network_count());
+        assert!(saved_networks.lookup(network_id_foo.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.known_network_count().await);
 
         // Store a network and verify it was stored.
         saved_networks
             .store(network_id_foo.clone(), Credential::Password(b"qwertyuio".to_vec()))
+            .await
             .expect("storing 'foo' failed");
         assert_eq!(
             vec![network_config("foo", "qwertyuio")],
-            saved_networks.lookup(network_id_foo.clone())
+            saved_networks.lookup(network_id_foo.clone()).await
         );
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(1, saved_networks.known_network_count().await);
 
         // Store another network with the same SSID.
         saved_networks
             .store(network_id_foo.clone(), Credential::Password(b"12345678".to_vec()))
+            .await
             .expect("storing 'foo' a second time failed");
 
         // There should only be one saved "foo" network because MAX_CONFIGS_PER_SSID is 1.
         // When this constant becomes greater than 1, both network configs should be found
         assert_eq!(
             vec![network_config("foo", "12345678")],
-            saved_networks.lookup(network_id_foo.clone())
+            saved_networks.lookup(network_id_foo.clone()).await
         );
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(1, saved_networks.known_network_count().await);
 
         // Store another network and verify.
         let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
         let psk = Credential::Psk(vec![1; 32]);
         let config_baz = NetworkConfig::new(network_id_baz.clone(), psk.clone(), false, false)
             .expect("failed to create network config");
-        saved_networks.store(network_id_baz.clone(), psk).expect("storing 'baz' with PSK failed");
-        assert_eq!(vec![config_baz.clone()], saved_networks.lookup(network_id_baz.clone()));
-        assert_eq!(2, saved_networks.known_network_count());
+        saved_networks
+            .store(network_id_baz.clone(), psk)
+            .await
+            .expect("storing 'baz' with PSK failed");
+        assert_eq!(vec![config_baz.clone()], saved_networks.lookup(network_id_baz.clone()).await);
+        assert_eq!(2, saved_networks.known_network_count().await);
 
         // Saved networks should persist when we create a saved networks manager with the same ID.
         let saved_networks =
@@ -396,10 +453,10 @@ mod tests {
                 .expect("failed to create saved networks store");
         assert_eq!(
             vec![network_config("foo", "12345678")],
-            saved_networks.lookup(network_id_foo.clone())
+            saved_networks.lookup(network_id_foo.clone()).await
         );
-        assert_eq!(vec![config_baz], saved_networks.lookup(network_id_baz));
-        assert_eq!(2, saved_networks.known_network_count());
+        assert_eq!(vec![config_baz], saved_networks.lookup(network_id_baz).await);
+        assert_eq!(2, saved_networks.known_network_count().await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -416,13 +473,15 @@ mod tests {
 
         saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
+            .await
             .expect("storing 'foo' failed");
         saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
+            .await
             .expect("storing 'foo' a second time failed");
         let expected_cfgs = vec![network_config("foo", "qwertyuio")];
-        assert_eq!(expected_cfgs, saved_networks.lookup(network_id));
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(expected_cfgs, saved_networks.lookup(network_id).await);
+        assert_eq!(1, saved_networks.known_network_count().await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -443,11 +502,12 @@ mod tests {
             password.push(i as u8);
             saved_networks
                 .store(network_id.clone(), Credential::Password(password))
+                .await
                 .expect("Failed to saved network");
         }
 
         // since none have been connected to yet, we don't care which config was removed
-        assert_eq!(MAX_CONFIGS_PER_SSID, saved_networks.lookup(network_id).len());
+        assert_eq!(MAX_CONFIGS_PER_SSID, saved_networks.lookup(network_id).await.len());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -460,16 +520,19 @@ mod tests {
 
         let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         let credential = Credential::Password(b"qwertyuio".to_vec());
-        assert!(saved_networks.lookup(network_id.clone()).is_empty());
-        assert_eq!(0, saved_networks.known_network_count());
+        assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.known_network_count().await);
 
         // Store a network and verify it was stored.
-        saved_networks.store(network_id.clone(), credential.clone()).expect("storing 'foo' failed");
+        saved_networks
+            .store(network_id.clone(), credential.clone())
+            .await
+            .expect("storing 'foo' failed");
         assert_eq!(
             vec![network_config("foo", "qwertyuio")],
-            saved_networks.lookup(network_id.clone())
+            saved_networks.lookup(network_id.clone()).await
         );
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(1, saved_networks.known_network_count().await);
 
         // Remove a network with the same NetworkIdentifier but differenct credential and verify
         // that the saved network is unaffected.
@@ -477,23 +540,28 @@ mod tests {
             false,
             saved_networks
                 .remove(network_id.clone(), Credential::Password(b"diff-password".to_vec()))
+                .await
                 .expect("removing 'foo' failed")
         );
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(1, saved_networks.known_network_count().await);
 
         // Remove the network and check it is gone
         assert_eq!(
             true,
             saved_networks
                 .remove(network_id.clone(), credential.clone())
+                .await
                 .expect("removing 'foo' failed")
         );
-        assert_eq!(0, saved_networks.known_network_count());
+        assert_eq!(0, saved_networks.known_network_count().await);
 
         // If we try to remove the network again, we won't get an error and nothing happens
         assert_eq!(
             false,
-            saved_networks.remove(network_id.clone(), credential).expect("removing 'foo' failed")
+            saved_networks
+                .remove(network_id.clone(), credential)
+                .await
+                .expect("removing 'foo' failed")
         );
 
         // Check that removal persists.
@@ -501,8 +569,8 @@ mod tests {
             SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
                 .await
                 .expect("Failed to create SavedNetworksManager");
-        assert_eq!(0, saved_networks.known_network_count());
-        assert!(saved_networks.lookup(network_id.clone()).is_empty());
+        assert_eq!(0, saved_networks.known_network_count().await);
+        assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -518,31 +586,38 @@ mod tests {
         let credential = Credential::Password(b"password".to_vec());
 
         // If connect and network hasn't been saved, we should not save the network.
-        saved_networks.record_connect_result(
-            network_id.clone(),
-            &credential,
-            fidl_sme::ConnectResultCode::Success,
-        );
-        assert!(saved_networks.lookup(network_id.clone()).is_empty());
-        assert_eq!(0, saved_networks.known_network_count());
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Success,
+            )
+            .await;
+        assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.known_network_count().await);
 
         // Save the network and record a successful connection.
-        saved_networks.store(network_id.clone(), credential.clone()).expect("Failed save network");
+        saved_networks
+            .store(network_id.clone(), credential.clone())
+            .await
+            .expect("Failed save network");
 
         let config = network_config("bar", "password");
-        assert_eq!(vec![config], saved_networks.lookup(network_id.clone()));
+        assert_eq!(vec![config], saved_networks.lookup(network_id.clone()).await);
 
-        saved_networks.record_connect_result(
-            network_id.clone(),
-            &credential,
-            fidl_sme::ConnectResultCode::Success,
-        );
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Success,
+            )
+            .await;
 
         // The network should be saved with the connection recorded.
         let mut config = network_config("bar", "password");
         config.has_ever_connected = true;
-        assert_eq!(vec![config], saved_networks.lookup(network_id));
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(vec![config], saved_networks.lookup(network_id).await);
+        assert_eq!(1, saved_networks.known_network_count().await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -557,26 +632,36 @@ mod tests {
         let before_recording = SystemTime::now();
 
         // Verify that recording connect result does not save the network.
-        saved_networks.record_connect_result(
-            network_id.clone(),
-            &credential,
-            fidl_sme::ConnectResultCode::Failed,
-        );
-        assert!(saved_networks.lookup(network_id.clone()).is_empty());
-        assert_eq!(0, saved_networks.known_network_count());
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Failed,
+            )
+            .await;
+        assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.known_network_count().await);
 
         // Record that the connect failed.
-        saved_networks.store(network_id.clone(), credential.clone()).expect("Failed save network");
-        saved_networks.record_connect_result(
-            network_id.clone(),
-            &credential,
-            fidl_sme::ConnectResultCode::BadCredentials,
-        );
+        saved_networks
+            .store(network_id.clone(), credential.clone())
+            .await
+            .expect("Failed save network");
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::BadCredentials,
+            )
+            .await;
 
         // Check that the failure was recorded correctly.
-        assert_eq!(1, saved_networks.known_network_count());
-        let saved_config =
-            saved_networks.lookup(network_id).pop().expect("Failed to get saved network config");
+        assert_eq!(1, saved_networks.known_network_count().await);
+        let saved_config = saved_networks
+            .lookup(network_id)
+            .await
+            .pop()
+            .expect("Failed to get saved network config");
         let mut connect_failures =
             saved_config.perf_stats.failure_list.get_recent(before_recording);
         assert_eq!(1, connect_failures.len());
@@ -596,26 +681,36 @@ mod tests {
         let before_recording = SystemTime::now();
 
         // Verify that recording connect result does not save the network.
-        saved_networks.record_connect_result(
-            network_id.clone(),
-            &credential,
-            fidl_sme::ConnectResultCode::Canceled,
-        );
-        assert!(saved_networks.lookup(network_id.clone()).is_empty());
-        assert_eq!(0, saved_networks.known_network_count());
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Canceled,
+            )
+            .await;
+        assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.known_network_count().await);
 
         // Record that the connect was canceled.
-        saved_networks.store(network_id.clone(), credential.clone()).expect("Failed save network");
-        saved_networks.record_connect_result(
-            network_id.clone(),
-            &credential,
-            fidl_sme::ConnectResultCode::Canceled,
-        );
+        saved_networks
+            .store(network_id.clone(), credential.clone())
+            .await
+            .expect("Failed save network");
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Canceled,
+            )
+            .await;
 
         // Check that there are no failures recorded for this saved network.
-        assert_eq!(1, saved_networks.known_network_count());
-        let saved_config =
-            saved_networks.lookup(network_id).pop().expect("Failed to get saved network config");
+        assert_eq!(1, saved_networks.known_network_count().await);
+        let saved_config = saved_networks
+            .lookup(network_id)
+            .await
+            .pop()
+            .expect("Failed to get saved network config");
         let connect_failures = saved_config.perf_stats.failure_list.get_recent(before_recording);
         assert_eq!(0, connect_failures.len());
     }
@@ -669,13 +764,17 @@ mod tests {
 
         saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
+            .await
             .expect("storing 'foo' failed");
         assert!(path.exists());
-        assert_eq!(vec![network_config("foo", "qwertyuio")], saved_networks.lookup(network_id));
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(
+            vec![network_config("foo", "qwertyuio")],
+            saved_networks.lookup(network_id).await
+        );
+        assert_eq!(1, saved_networks.known_network_count().await);
 
-        saved_networks.clear().expect("clearing store failed");
-        assert_eq!(0, saved_networks.known_network_count());
+        saved_networks.clear().await.expect("clearing store failed");
+        assert_eq!(0, saved_networks.known_network_count().await);
 
         // Load store from stash to verify it is also gone from persistent storage
         let saved_networks =
@@ -683,7 +782,7 @@ mod tests {
                 .await
                 .expect("failed to create saved networks manager");
 
-        assert_eq!(0, saved_networks.known_network_count());
+        assert_eq!(0, saved_networks.known_network_count().await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -706,10 +805,11 @@ mod tests {
         // KnownEssStore deletes the file if it can't read it, as in this case.
         assert!(!path.exists());
         // Writing an entry should not create the file yet because networks configs don't persist.
-        assert_eq!(0, saved_networks.known_network_count());
+        assert_eq!(0, saved_networks.known_network_count().await);
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
+            .await
             .expect("storing 'foo' failed");
 
         // There should be a file here again since we stored a network, so one will be created.
@@ -741,7 +841,7 @@ mod tests {
         assert!(path.exists());
 
         // Network bar should have been read into the saved networks manager because it is valid
-        assert_eq!(1, saved_networks.known_network_count());
+        assert_eq!(1, saved_networks.known_network_count().await);
         let bar_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
         let bar_config = NetworkConfig::new(
             bar_id.clone(),
@@ -750,11 +850,11 @@ mod tests {
             false,
         )
         .expect("failed to create network config");
-        assert_eq!(vec![bar_config], saved_networks.lookup(bar_id));
+        assert_eq!(vec![bar_config], saved_networks.lookup(bar_id).await);
 
         // Network foo should not have been read into saved networks manager because it is invalid.
         let foo_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
-        assert!(saved_networks.lookup(foo_id).is_empty());
+        assert!(saved_networks.lookup(foo_id).await.is_empty());
 
         assert!(path.exists());
     }
@@ -789,11 +889,12 @@ mod tests {
             false,
         )
         .expect("failed to create network config");
-        assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()));
+        assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()).await);
 
         // Replace the network 'bar' that was read from legacy version storage
         saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
+            .await
             .expect("failed to store network");
         let new_net_config = NetworkConfig::new(
             net_id.clone(),
@@ -802,7 +903,7 @@ mod tests {
             false,
         )
         .expect("failed to create network config");
-        assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()));
+        assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()).await);
 
         // Recreate the SavedNetworksManager again, as would happen when the device restasts
         let saved_networks =
@@ -813,8 +914,8 @@ mod tests {
         // We should not have deleted the file while creating SavedNetworksManager the first time.
         assert!(path.exists());
         // Expect to see the replaced network 'bar'
-        assert_eq!(1, saved_networks.known_network_count());
-        assert_eq!(vec![new_net_config], saved_networks.lookup(net_id));
+        assert_eq!(1, saved_networks.known_network_count().await);
+        assert_eq!(vec![new_net_config], saved_networks.lookup(net_id).await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -847,11 +948,12 @@ mod tests {
             false,
         )
         .expect("failed to create network config");
-        assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()));
+        assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()).await);
 
         // Replace the network 'bar' that was read from legacy version storage
         saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
+            .await
             .expect("failed to store network");
         let new_net_config = NetworkConfig::new(
             net_id.clone(),
@@ -860,7 +962,7 @@ mod tests {
             false,
         )
         .expect("failed to create network config");
-        assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()));
+        assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()).await);
 
         // Add legacy store file again as if we had failed to delete it
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
@@ -874,8 +976,8 @@ mod tests {
                 .expect("failed to create saved networks store");
 
         // We should ignore the legacy file since there is something in the stash.
-        assert_eq!(1, saved_networks.known_network_count());
-        assert_eq!(vec![new_net_config], saved_networks.lookup(net_id));
+        assert_eq!(1, saved_networks.known_network_count().await);
+        assert_eq!(vec![new_net_config], saved_networks.lookup(net_id).await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -890,10 +992,11 @@ mod tests {
         let net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
         saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
+            .await
             .expect("failed to store network");
 
         // Explicitly clear just the stash
-        saved_networks.stash.lock().clear().expect("failed to clear the stash");
+        saved_networks.stash.lock().await.clear().await.expect("failed to clear the stash");
 
         // Create the saved networks manager again to trigger reading from persistent storage
         let saved_networks =
@@ -909,7 +1012,34 @@ mod tests {
             false,
         )
         .expect("failed to create network config");
-        assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()));
+        assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
+    }
+
+    #[test]
+    fn test_store_waits_for_stash() {
+        let mut exec = fasync::Executor::new().expect("failed to create executor");
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+
+        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::None);
+        let save_fut = saved_networks.store(network_id, Credential::None);
+        pin_mut!(save_fut);
+
+        // Verify that storing the network does not complete until stash responds.
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue{..})))
+        );
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::Flush{responder}))) => {
+                responder.send(&mut Ok(())).expect("failed to send stash response");
+            }
+        );
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(())));
     }
 
     /// Create a saved networks manager and clear the contents. Stash ID should be different for
@@ -923,7 +1053,7 @@ mod tests {
             SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
                 .await
                 .expect("Failed to create SavedNetworksManager");
-        saved_networks.clear().expect("Failed to clear new SavedNetworksManager");
+        saved_networks.clear().await.expect("Failed to clear new SavedNetworksManager");
         saved_networks
     }
 
@@ -940,5 +1070,9 @@ mod tests {
             seen_in_passive_scan_results: false,
             perf_stats: PerformanceStats::new(),
         }
+    }
+
+    fn rand_string() -> String {
+        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
     }
 }

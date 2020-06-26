@@ -110,7 +110,7 @@ async fn handle_request(
         }
         legacy::WlanRequest::ClearSavedNetworks { responder } => {
             info!("Clearing all saved networks.");
-            if let Err(e) = saved_networks.clear() {
+            if let Err(e) = saved_networks.clear().await {
                 error!("Error clearing network configs: {}", e);
             }
             responder.send()
@@ -252,7 +252,7 @@ async fn connect(
 ) -> legacy::Error {
     let network_id = legacy_config_to_network_id(&legacy_req);
     let credential = legacy_config_to_policy_credential(&legacy_req);
-    match saved_networks.store(network_id.clone(), credential.clone()) {
+    match saved_networks.store(network_id.clone(), credential.clone()).await {
         Ok(()) => {}
         Err(e) => {
             error!("failed to store connect config: {:?}", e);
@@ -428,6 +428,7 @@ mod tests {
         fuchsia_async as fasync,
         futures::{channel::oneshot, lock::Mutex as FutureMutex, stream::StreamFuture, task::Poll},
         pin_utils::pin_mut,
+        rand::{distributions::Alphanumeric, thread_rng, Rng},
         tempfile::TempDir,
         wlan_common::assert_variant,
     };
@@ -511,17 +512,13 @@ mod tests {
     #[test]
     fn clear_saved_networks_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "clear_saved_networks_request";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("temp.json");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
 
-        let saved_networks = Arc::new(
-            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
-                stash_id, path, tmp_path,
-            ))
-            .expect("Failed to make saved networks manager"),
-        );
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks = Arc::new(saved_networks);
 
         let (wlan_proxy, requests) =
             create_proxy::<legacy::WlanMarker>().expect("failed to create WlanRequest proxy");
@@ -534,19 +531,26 @@ mod tests {
 
         // Save the network directly without going through the legacy API.
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
-        saved_networks
-            .store(network_id, Credential::Password(b"qwertyuio".to_vec()))
-            .expect("Failed to save network");
+        let save_fut =
+            saved_networks.store(network_id, Credential::Password(b"qwertyuio".to_vec()));
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        // Process stash write for saved network
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(())));
 
         // Send the request to clear saved networks.
         let clear_fut = wlan_proxy.clear_saved_networks();
         pin_mut!(clear_fut);
+        // Process stash remove for saved network
+        assert_variant!(exec.run_until_stalled(&mut clear_fut), Poll::Pending);
+        process_stash_remove(&mut exec, &mut stash_server);
 
         // Process request to clear saved networks.
         assert_variant!(exec.run_until_stalled(&mut clear_fut), Poll::Ready(Ok(_)));
 
         // There should be no networks saved.
-        assert_eq!(0, saved_networks.known_network_count());
+        assert_eq!(0, exec.run_singlethreaded(saved_networks.known_network_count()));
     }
 
     pub static TEST_SSID: &str = "test_ssid";
@@ -676,26 +680,27 @@ mod tests {
         saved_networks: Arc<SavedNetworksManager>,
         legacy_proxy: legacy::WlanProxy,
         legacy_stream: legacy::WlanRequestStream,
+        stash_server: fidl_fuchsia_stash::StoreAccessorRequestStream,
+    }
+
+    fn rand_string() -> String {
+        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
     }
 
     fn test_setup(
         exec: &mut fasync::Executor,
-        stash_id: &str,
         connect_succeeds: bool,
         disconnect_succeeds: bool,
         scan_succeeds: bool,
     ) -> TestValues {
         set_logger_for_test();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("temp.json");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
 
-        let saved_networks = Arc::new(
-            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
-                stash_id, path, tmp_path,
-            ))
-            .expect("Failed to make saved networks manager"),
-        );
+        let (saved_networks, stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks = Arc::new(saved_networks);
 
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
@@ -730,14 +735,50 @@ mod tests {
             saved_networks,
             legacy_proxy,
             legacy_stream,
+            stash_server,
         }
+    }
+
+    /// Move stash requests forward so that a save request can progress.
+    fn process_stash_write(
+        mut exec: &mut fasync::Executor,
+        mut stash_server: &mut fidl_fuchsia_stash::StoreAccessorRequestStream,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_fuchsia_stash::StoreAccessorRequest::SetValue{..})))
+        );
+        process_stash_flush(&mut exec, &mut stash_server);
+    }
+
+    /// Move stash requests forward so that a remove request can progress.
+    fn process_stash_remove(
+        mut exec: &mut fasync::Executor,
+        mut stash_server: &mut fidl_fuchsia_stash::StoreAccessorRequestStream,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_fuchsia_stash::StoreAccessorRequest::DeletePrefix{..})))
+        );
+        process_stash_flush(&mut exec, &mut stash_server);
+    }
+
+    fn process_stash_flush(
+        exec: &mut fasync::Executor,
+        stash_server: &mut fidl_fuchsia_stash::StoreAccessorRequestStream,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_fuchsia_stash::StoreAccessorRequest::Flush{responder}))) => {
+                responder.send(&mut Ok(())).expect("failed to send stash response");
+            }
+        );
     }
 
     #[test]
     fn connect_succeeds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "connect_succeeds", true, true, true);
-
+        let mut test_values = test_setup(&mut exec, true, true, true);
         // Start the legacy service.
         let serve_fut =
             serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
@@ -755,6 +796,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
 
         // Progress the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        // Process stash write for saved network
+        process_stash_write(&mut exec, &mut test_values.stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Wait for a status request and send back a notification that the client is connected.
@@ -793,7 +837,7 @@ mod tests {
     #[test]
     fn connect_timeout() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "connect_timeout", true, true, true);
+        let mut test_values = test_setup(&mut exec, true, true, true);
 
         // Start the legacy service.
         let serve_fut =
@@ -812,6 +856,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
 
         // Progress the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        // Process stash write for saved network
+        process_stash_write(&mut exec, &mut test_values.stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Run into the timeout.
@@ -831,7 +878,7 @@ mod tests {
     #[test]
     fn connect_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "connect_fails", false, true, true);
+        let mut test_values = test_setup(&mut exec, false, true, true);
 
         // Start the legacy service.
         let serve_fut =
@@ -851,6 +898,9 @@ mod tests {
 
         // Progress the service.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        // Process stash write for saved network
+        process_stash_write(&mut exec, &mut test_values.stash_server);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Run the connect future to completion
         assert_variant!(
@@ -865,7 +915,7 @@ mod tests {
     #[test]
     fn disconnect_succeeds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "disconnect_succeeds", true, true, true);
+        let test_values = test_setup(&mut exec, true, true, true);
 
         // Start the legacy service.
         let serve_fut =
@@ -893,7 +943,7 @@ mod tests {
     #[test]
     fn disconnect_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "disconnect_fails", true, false, true);
+        let test_values = test_setup(&mut exec, true, false, true);
 
         // Start the legacy service.
         let serve_fut =
@@ -921,7 +971,7 @@ mod tests {
     #[test]
     fn scan_succeeds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "scan_succeeds", true, true, true);
+        let test_values = test_setup(&mut exec, true, true, true);
 
         // Start the legacy service.
         let serve_fut =
@@ -982,7 +1032,7 @@ mod tests {
     #[test]
     fn scan_start_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "scan_start_fails", true, true, false);
+        let test_values = test_setup(&mut exec, true, true, false);
 
         // Start the legacy service.
         let serve_fut =
@@ -1011,7 +1061,7 @@ mod tests {
     #[test]
     fn scan_results_fail() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "scan_results_fail", true, true, true);
+        let test_values = test_setup(&mut exec, true, true, true);
 
         // Start the legacy service.
         let serve_fut =

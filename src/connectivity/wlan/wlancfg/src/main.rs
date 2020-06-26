@@ -74,7 +74,7 @@ async fn monitor_client_connectivity(
     loop {
         fasync::Timer::new(AUTO_CONNECT_RETRY_SECONDS.seconds().after_now()).await;
 
-        if saved_networks.known_network_count() == 0 {
+        if saved_networks.known_network_count().await == 0 {
             // No saved networks, autoconnect won't succeed. Don't perform a scan/connection attempt
             continue;
         }
@@ -124,8 +124,12 @@ async fn serve_fidl(
 
     fs.dir("svc")
         .add_fidl_service(|stream| {
-            let fut = shim::serve_legacy(stream, legacy_client_ref.clone(), saved_networks.clone())
-                .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
+            let fut = legacy::shim::serve_legacy(
+                stream,
+                legacy_client_ref.clone(),
+                saved_networks.clone(),
+            )
+            .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
             fasync::spawn(fut)
         })
         .add_fidl_service(move |reqs| {
