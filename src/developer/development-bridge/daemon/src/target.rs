@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::events::{self, DaemonEvent, EventSynthesizer},
     crate::net::IsLinkLocal,
     crate::onet,
     anyhow::{anyhow, Context, Error},
@@ -17,7 +18,9 @@ use {
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
+    futures::future,
     futures::lock::{Mutex, MutexGuard},
+    futures::prelude::*,
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::fmt::{Debug, Display},
@@ -286,6 +289,13 @@ impl Target {
 }
 
 #[async_trait]
+impl EventSynthesizer<DaemonEvent> for Target {
+    async fn synthesize_events(&self) -> Vec<DaemonEvent> {
+        vec![DaemonEvent::NewTarget(self.nodename.clone())]
+    }
+}
+
+#[async_trait]
 impl ToFidlTarget for Arc<Target> {
     async fn to_fidl_target(self) -> bridge::Target {
         let (mut addrs, last_response, rcs_state) =
@@ -481,14 +491,39 @@ impl From<u64> for TargetQuery {
     }
 }
 
-#[derive(Debug)]
 pub struct TargetCollection {
     inner: RwLock<HashMap<String, Arc<Target>>>,
+    events: RwLock<Option<events::Queue<DaemonEvent>>>,
+}
+
+#[async_trait]
+impl EventSynthesizer<DaemonEvent> for TargetCollection {
+    async fn synthesize_events(&self) -> Vec<DaemonEvent> {
+        let collection = self.inner.read().await;
+        // TODO(awdavies): This won't be accurate once a target is able to create
+        // more than one event at a time.
+        let mut res = Vec::with_capacity(collection.len());
+        for target in collection.values() {
+            res.extend(target.synthesize_events().await);
+        }
+        res
+    }
 }
 
 impl TargetCollection {
     pub fn new() -> Self {
-        Self { inner: RwLock::new(HashMap::new()) }
+        Self { inner: RwLock::new(HashMap::new()), events: RwLock::new(None) }
+    }
+
+    pub async fn set_event_queue(&self, q: events::Queue<DaemonEvent>) {
+        // This should be the only place a write lock is ever held.
+        self.events
+            .write()
+            .then(move |mut e| {
+                *e = Some(q);
+                future::ready(())
+            })
+            .await;
     }
 
     pub async fn inner_lock(
@@ -517,6 +552,11 @@ impl TargetCollection {
             None => {
                 let t = Arc::new(t);
                 inner.insert(t.nodename.clone(), t.clone());
+                if let Some(e) = self.events.read().await.as_ref() {
+                    e.push(DaemonEvent::NewTarget(t.nodename.clone()))
+                        .await
+                        .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
+                }
                 t
             }
         }
@@ -535,14 +575,13 @@ impl TargetCollection {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use std::net::{Ipv4Addr, Ipv6Addr};
-
-    use chrono::offset::TimeZone;
-    use fidl;
-    use fidl_fuchsia_developer_remotecontrol as rcs;
-    use futures::executor::block_on;
-    use futures::prelude::*;
+    use {
+        super::*,
+        chrono::offset::TimeZone,
+        fidl, fidl_fuchsia_developer_remotecontrol as rcs,
+        futures::{channel::mpsc, executor::block_on},
+        std::net::{Ipv4Addr, Ipv6Addr},
+    };
 
     impl PartialEq for TargetState {
         /// This is a very loose eq function for now, might need to be updated
@@ -935,6 +974,92 @@ mod test {
             for address in conv_addrs {
                 let _ = addrs.get(&TargetAddr::from(address)).unwrap();
             }
+        });
+    }
+
+    #[test]
+    fn test_target_event_synthesis() {
+        hoist::run(async move {
+            let t = Target::new("clopperdoop");
+            let vec = t.synthesize_events().await;
+            assert_eq!(vec.len(), 1);
+            assert_eq!(&vec[0], &DaemonEvent::NewTarget("clopperdoop".to_string()));
+        });
+    }
+
+    #[test]
+    fn test_target_collection_event_synthesis() {
+        hoist::run(async move {
+            let t = Target::new("clam-chowder-is-tasty");
+            let t2 = Target::new("this-is-a-crunchy-falafel");
+            let t3 = Target::new("i-should-probably-eat-lunch");
+
+            let tc = TargetCollection::new();
+            tc.merge_insert(t).await;
+            tc.merge_insert(t2).await;
+            tc.merge_insert(t3).await;
+
+            let events = tc.synthesize_events().await;
+            assert_eq!(events.len(), 3);
+            assert!(
+                events
+                    .iter()
+                    .any(|e| e
+                        == &events::DaemonEvent::NewTarget("clam-chowder-is-tasty".to_string()))
+            );
+            assert!(events
+                .iter()
+                .any(|e| e
+                    == &events::DaemonEvent::NewTarget("this-is-a-crunchy-falafel".to_string())));
+            assert!(events
+                .iter()
+                .any(|e| e
+                    == &events::DaemonEvent::NewTarget("i-should-probably-eat-lunch".to_string())));
+        });
+    }
+
+    struct EventPusher {
+        got: mpsc::UnboundedSender<String>,
+    }
+
+    impl EventPusher {
+        fn new() -> (Self, mpsc::UnboundedReceiver<String>) {
+            let (got, rx) = mpsc::unbounded::<String>();
+            (Self { got }, rx)
+        }
+    }
+
+    #[async_trait]
+    impl events::EventHandler<DaemonEvent> for EventPusher {
+        async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
+            if let DaemonEvent::NewTarget(s) = event {
+                self.got.unbounded_send(s).unwrap();
+                Ok(false)
+            } else {
+                panic!("this should never receive any other kind of event");
+            }
+        }
+    }
+
+    #[test]
+    fn test_target_collection_events() {
+        hoist::run(async move {
+            let t = Target::new("clam-chowder-is-tasty");
+            let t2 = Target::new("this-is-a-crunchy-falafel");
+            let t3 = Target::new("i-should-probably-eat-lunch");
+
+            let tc = Arc::new(TargetCollection::new());
+            let queue = events::Queue::new(&tc);
+            let (handler, rx) = EventPusher::new();
+            queue.add_handler(handler).await;
+            tc.set_event_queue(queue).await;
+            tc.merge_insert(t).await;
+            tc.merge_insert(t2).await;
+            tc.merge_insert(t3).await;
+            let results = rx.take(3).collect::<Vec<_>>().await;
+            assert!(results.iter().any(|e| e == &"clam-chowder-is-tasty".to_string()));
+            assert!(results.iter().any(|e| e == &"this-is-a-crunchy-falafel".to_string()));
+            assert!(results.iter().any(|e| e == &"i-should-probably-eat-lunch".to_string()));
         });
     }
 }

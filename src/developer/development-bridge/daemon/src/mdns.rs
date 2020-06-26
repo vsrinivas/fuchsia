@@ -147,7 +147,7 @@ mod linux {
             // Listen on all sockets in the event that unicast packets are returned.
             for l in self.sender_sockets.iter().chain(self.listener_sockets.iter()) {
                 let sock = l.try_clone()?;
-                let mut e = e.clone();
+                let e = e.clone();
                 thread::spawn(move || {
                     let mut buf = [0; 1500];
                     loop {

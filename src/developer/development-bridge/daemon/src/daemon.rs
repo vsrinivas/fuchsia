@@ -6,7 +6,6 @@ use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
-    crate::ok_or_return,
     crate::target::{RCSConnection, Target, TargetCollection, ToFidlTarget},
     anyhow::{anyhow, Context, Error},
     async_std::task,
@@ -37,7 +36,7 @@ pub struct DaemonEventHandler {
 
 #[async_trait]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
-    async fn on_event(&self, event: DaemonEvent) {
+    async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
@@ -53,17 +52,20 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                 }
             },
             DaemonEvent::OvernetPeer(node_id) => {
-                let remote_control_proxy =
-                    ok_or_return!(RCSConnection::new(&mut NodeId { id: node_id })
-                        .await
-                        .context("unable to convert proxy to target"));
-                let target = ok_or_return!(Target::from_rcs_connection(remote_control_proxy)
+                let remote_control_proxy = RCSConnection::new(&mut NodeId { id: node_id })
                     .await
-                    .map_err(|e| anyhow!("unable to convert proxy to target: {}", e)));
+                    .context("unable to convert proxy to target")?;
+                let target = Target::from_rcs_connection(remote_control_proxy)
+                    .await
+                    .map_err(|e| anyhow!("unable to convert proxy to target: {}", e))?;
                 log::info!("Found new target via overnet: {}", target.nodename);
                 self.target_collection.merge_insert(target).await;
             }
+            _ => (),
         }
+
+        // This handler is never done, so always return false.
+        Ok(false)
     }
 }
 
@@ -71,28 +73,25 @@ impl Daemon {
     pub async fn new() -> Result<Daemon, Error> {
         log::info!("Starting daemon overnet server");
         let target_collection = Arc::new(TargetCollection::new());
-        let (queue, processor) = events::new_queue::<DaemonEvent>();
+        let queue = events::Queue::new(&target_collection);
         queue
             .add_handler(DaemonEventHandler { target_collection: target_collection.clone() })
             .await;
+        target_collection.set_event_queue(queue.clone()).await;
         Daemon::spawn_onet_discovery(queue.clone());
         Daemon::spawn_fastboot_discovery(queue.clone());
+
         let config =
             TargetFinderConfig { broadcast_interval: Duration::from_secs(120), mdns_ttl: 255 };
         let mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(queue.clone())?;
-        // TODO(awdavies): Move this into a future that is awaitable.
-        hoist::spawn(processor.process());
         Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue })
     }
 
     #[cfg(test)]
     pub fn new_for_test() -> Daemon {
         let target_collection = Arc::new(TargetCollection::new());
-        let (event_queue, processor) = events::new_queue::<events::DaemonEvent>();
-
-        // TODO(awdavies): Move this into a future that is awaitable.
-        hoist::spawn(processor.process());
+        let event_queue = events::Queue::new(&target_collection);
         Daemon { target_collection, event_queue }
     }
 
@@ -106,7 +105,7 @@ impl Daemon {
         Ok(())
     }
 
-    pub fn spawn_fastboot_discovery(mut queue: events::Queue<DaemonEvent>) {
+    pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
         spawn(async move {
             loop {
                 let fastboot_devices = ffx_fastboot::find_devices();
@@ -128,7 +127,7 @@ impl Daemon {
         });
     }
 
-    pub fn spawn_onet_discovery(mut queue: events::Queue<DaemonEvent>) {
+    pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
         spawn(async move {
             loop {
                 let svc = match hoist::connect_as_service_consumer() {
@@ -309,7 +308,7 @@ mod test {
 
     #[async_trait]
     impl EventHandler<DaemonEvent> for TestHookFakeRCS {
-        async fn on_event(&self, event: DaemonEvent) {
+        async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
                     let target = self.tc.merge_insert(t.into()).await;
@@ -325,6 +324,8 @@ mod test {
                 }
                 _ => panic!("unexpected event"),
             }
+
+            Ok(false)
         }
     }
 
