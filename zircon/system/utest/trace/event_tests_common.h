@@ -100,12 +100,7 @@
 
 #endif  // __cplusplus
 
-// This is a C/C++ preprocessor hack: the extra level of indirection causes
-// the test suite name to be the text that TEST_SUITE expands to, instead
-// of "TEST_SUITE".
-#define INSTANTIATE_TEST(test_suite, test_name) TEST(test_suite, test_name)
-
-INSTANTIATE_TEST(TEST_SUITE, test_enabled) {
+TEST(TEST_SUITE, test_enabled) {
   BEGIN_TRACE_TEST;
 
   EXPECT_FALSE(TRACE_ENABLED(), "");
@@ -123,7 +118,7 @@ INSTANTIATE_TEST(TEST_SUITE, test_enabled) {
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_category_enabled) {
+TEST(TEST_SUITE, test_category_enabled) {
   BEGIN_TRACE_TEST;
 
   EXPECT_FALSE(TRACE_CATEGORY_ENABLED("+enabled"), "");
@@ -149,7 +144,7 @@ INSTANTIATE_TEST(TEST_SUITE, test_category_enabled) {
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_trace_nonce) {
+TEST(TEST_SUITE, test_trace_nonce) {
   BEGIN_TRACE_TEST;
 
   // Note: TRACE_NONCE() still returns unique values when NTRACE is defined
@@ -163,7 +158,7 @@ INSTANTIATE_TEST(TEST_SUITE, test_trace_nonce) {
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_instant) {
+TEST(TEST_SUITE, test_instant) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -197,7 +192,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: thr
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_counter) {
+TEST(TEST_SUITE, test_counter) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -224,7 +219,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Counter(id: 1), {k
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_duration) {
+TEST(TEST_SUITE, test_duration) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -255,7 +250,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationComplete(e
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_duration_begin) {
+TEST(TEST_SUITE, test_duration_begin) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -284,7 +279,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_duration_end) {
+TEST(TEST_SUITE, test_duration_end) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -313,7 +308,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationEnd, {k1: 
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_async_begin) {
+TEST(TEST_SUITE, test_async_begin) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -342,7 +337,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncBegin(id: 1),
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_async_instant) {
+TEST(TEST_SUITE, test_async_instant) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -371,7 +366,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncInstant(id: 1
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_async_end) {
+TEST(TEST_SUITE, test_async_end) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -400,7 +395,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncEnd(id: 1), {
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_flow_begin) {
+TEST(TEST_SUITE, test_flow_begin) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -429,7 +424,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowBegin(id: 1), 
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_flow_step) {
+TEST(TEST_SUITE, test_flow_step) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -458,7 +453,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowStep(id: 1), {
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_flow_end) {
+TEST(TEST_SUITE, test_flow_end) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -487,7 +482,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowEnd(id: 1), {k
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_kernel_object) {
+TEST(TEST_SUITE, test_kernel_object) {
   BEGIN_TRACE_TEST;
 
   zx_handle_t event;
@@ -516,7 +511,7 @@ KernelObject(koid: <>, type: event, name: \"\", {k1: string(\"v1\"), k2: string(
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_null_arguments) {
+TEST(TEST_SUITE, test_null_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -544,7 +539,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_bool_arguments) {
+TEST(TEST_SUITE, test_bool_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -576,7 +571,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_int32_arguments) {
+TEST(TEST_SUITE, test_int32_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -624,7 +619,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_uint32_arguments) {
+TEST(TEST_SUITE, test_uint32_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -664,7 +659,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_int64_arguments) {
+TEST(TEST_SUITE, test_int64_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -700,7 +695,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_uint64_arguments) {
+TEST(TEST_SUITE, test_uint64_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -732,7 +727,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_enum_arguments) {
+TEST(TEST_SUITE, test_enum_arguments) {
   BEGIN_TRACE_TEST;
 
 #ifdef __cplusplus
@@ -832,7 +827,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_double_arguments) {
+TEST(TEST_SUITE, test_double_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -864,7 +859,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_char_array_arguments) {
+TEST(TEST_SUITE, test_char_array_arguments) {
   BEGIN_TRACE_TEST;
 
   char kCharArray[] = "char[n]...";
@@ -900,7 +895,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_string_arguments) {
+TEST(TEST_SUITE, test_string_arguments) {
   BEGIN_TRACE_TEST;
 
   char string[5] = {'?', '2', '3', '4', '\0'};
@@ -955,7 +950,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 
 // This function is kept pending resolution of PT-66 when TA_STRING_LITERAL()
 // is re-added.
-INSTANTIATE_TEST(TEST_SUITE, test_string_literal_arguments) {
+TEST(TEST_SUITE, test_string_literal_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -981,7 +976,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_pointer_arguments) {
+TEST(TEST_SUITE, test_pointer_arguments) {
   BEGIN_TRACE_TEST;
 
   void* kNull = NULL;
@@ -1046,7 +1041,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_koid_arguments) {
+TEST(TEST_SUITE, test_koid_arguments) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -1068,7 +1063,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_all_argument_counts) {
+TEST(TEST_SUITE, test_all_argument_counts) {
   BEGIN_TRACE_TEST;
 
   fixture_initialize_and_start_tracing();
@@ -1121,7 +1116,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1
   END_TRACE_TEST;
 }
 
-INSTANTIATE_TEST(TEST_SUITE, test_declare_args) {
+TEST(TEST_SUITE, test_declare_args) {
   BEGIN_TRACE_TEST;
 
 #ifndef NTRACE

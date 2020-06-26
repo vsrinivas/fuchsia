@@ -111,8 +111,7 @@ __END_CDECLS
 
 #define _ZXTEST_REGISTER_FN(TestCase, Test) TestCase##_##Test##_register_fn
 
-// Register a test as part of a TestCase.
-#define TEST(TestCase, Test)                                                          \
+#define _ZXTEST_REGISTER(TestCase, Test)                                              \
   static zxtest_test_ref_t _ZXTEST_TEST_REF(TestCase, Test) = {.test_index = 0,       \
                                                                .test_case_index = 0}; \
   static void _ZXTEST_TEST_FN(TestCase, Test)(void);                                  \
@@ -122,6 +121,14 @@ __END_CDECLS
         #TestCase, #Test, __FILE__, __LINE__, &_ZXTEST_TEST_FN(TestCase, Test));      \
   }                                                                                   \
   void _ZXTEST_TEST_FN(TestCase, Test)(void)
+
+// Register a test as part of a TestCase.
+//
+// The extra level of indirection here (i.e. having TEST invoke
+// _ZXTEST_REGISTER) is a C/C++ preprocessor hack that causes the tokens
+// TestCase and Test to be macro-expanded when taking the strings #TestCase
+// and #Test.
+#define TEST(TestCase, Test) _ZXTEST_REGISTER(TestCase, Test)
 
 // Helper function to print variables.
 #define _ZXTEST_SPRINT_PRINTER(var, buffer, size) \
