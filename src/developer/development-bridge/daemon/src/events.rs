@@ -197,13 +197,20 @@ impl<T: 'static + EventTrait> Queue<T> {
         let handlers = Arc::new(Mutex::new(Vec::<Dispatcher<T>>::new()));
         let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
         let state = Arc::downgrade(state);
-        Queue::<T> {
-            inner_tx,
-            handlers: handlers.clone(),
-            state,
+        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::spawn(proc.process())) }
+    }
 
-            _processor_task: Arc::new(Task::spawn(proc.process())),
-        }
+    /// Creates an event queue (see `new`) with a single handler to start.
+    #[allow(unused)] // TODO(awdavies): This will be needed later for target events.
+    pub fn new_with_handler(
+        state: &Arc<impl EventSynthesizer<T> + 'static>,
+        handler: impl EventHandler<T> + 'static,
+    ) -> Self {
+        let (inner_tx, inner_rx) = mpsc::unbounded::<T>();
+        let handlers = Arc::new(Mutex::new(vec![Dispatcher::new(handler)]));
+        let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
+        let state = Arc::downgrade(state);
+        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::spawn(proc.process())) }
     }
 
     /// Adds an event handler, which is fired every time an event comes in.
@@ -230,19 +237,15 @@ impl<T: 'static + EventTrait> Queue<T> {
         handlers.push(dispatcher);
     }
 
-    // TODO(awdavies): Use this for awaiting RCS (Same for below).
-    #[allow(unused)]
-    pub async fn wait_for(&self, predicate: impl Fn(T) -> bool + Send + Sync + Copy + 'static) {
+    pub async fn wait_for(&self, predicate: impl Fn(T) -> bool + Send + Sync + 'static) {
         self.wait_for_async(move |e| future::ready(predicate(e))).await
     }
 
-    #[allow(unused)]
-    pub async fn wait_for_async<F>(&self, predicate: impl Fn(T) -> F + Send + Sync + Copy + 'static)
+    pub async fn wait_for_async<F>(&self, predicate: impl Fn(T) -> F + Send + Sync + 'static)
     where
-        F: Future<Output = bool> + Send + Sync,
+        F: Future<Output = bool> + Send + Sync + 'static,
     {
-        let (handler, mut handler_done) =
-            PredicateHandler::new(move |t| async move { predicate.clone()(t).await });
+        let (handler, mut handler_done) = PredicateHandler::new(move |t| predicate(t));
         self.add_handler(handler).await;
         handler_done
             .next()

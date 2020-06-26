@@ -6,19 +6,18 @@ use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
-    crate::target::{RCSConnection, Target, TargetCollection, ToFidlTarget},
+    crate::target::{RcsConnection, Target, TargetCollection, TargetEvent, ToFidlTarget},
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
-    ffx_core::constants::{MAX_RETRY_COUNT, RETRY_DELAY, SOCKET},
+    ffx_core::constants::SOCKET,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::spawn,
     futures::prelude::*,
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
     std::time::Duration,
 };
 
@@ -31,40 +30,49 @@ pub struct Daemon {
 }
 
 pub struct DaemonEventHandler {
-    target_collection: Arc<TargetCollection>,
+    // This must be a weak ref or else it will cause a circular reference.
+    // Generally this should be the common practice for any handler pointing
+    // to shared state, as it could be the handler's parent state that is
+    // holding the event queue itself (as is the case with the target collection
+    // here).
+    target_collection: Weak<TargetCollection>,
 }
 
 #[async_trait]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
     async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
+        let tc = match self.target_collection.upgrade() {
+            Some(t) => t,
+            None => return Ok(true), // We're done, as the parent has been dropped.
+        };
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
                     log::info!("Found new target via mdns: {}", t.nodename);
-                    self.target_collection
-                        .merge_insert(t.into())
-                        .then(move |target| target.run_host_pipe())
+                    tc.merge_insert(t.into())
+                        .then(|target| async move { target.run_host_pipe().await })
                         .await;
                 }
                 WireTrafficType::Fastboot(t) => {
                     log::info!("Found new target via fastboot: {}", t.nodename);
-                    self.target_collection.merge_insert(t.into()).await;
+                    tc.merge_insert(t.into()).await;
                 }
             },
             DaemonEvent::OvernetPeer(node_id) => {
-                let remote_control_proxy = RCSConnection::new(&mut NodeId { id: node_id })
+                let remote_control_proxy = RcsConnection::new(&mut NodeId { id: node_id })
                     .await
                     .context("unable to convert proxy to target")?;
                 let target = Target::from_rcs_connection(remote_control_proxy)
                     .await
                     .map_err(|e| anyhow!("unable to convert proxy to target: {}", e))?;
-                log::info!("Found new target via overnet: {}", target.nodename);
-                self.target_collection.merge_insert(target).await;
+                log::info!("Found new target via overnet: {}", target.nodename());
+                tc.merge_insert(target).await;
             }
             _ => (),
         }
 
-        // This handler is never done, so always return false.
+        // This handler is never done unless the target_collection is dropped,
+        // so always return false.
         Ok(false)
     }
 }
@@ -75,7 +83,9 @@ impl Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let queue = events::Queue::new(&target_collection);
         queue
-            .add_handler(DaemonEventHandler { target_collection: target_collection.clone() })
+            .add_handler(DaemonEventHandler {
+                target_collection: Arc::downgrade(&target_collection),
+            })
             .await;
         target_collection.set_event_queue(queue.clone()).await;
         Daemon::spawn_onet_discovery(queue.clone());
@@ -89,9 +99,10 @@ impl Daemon {
     }
 
     #[cfg(test)]
-    pub fn new_for_test() -> Daemon {
+    pub async fn new_for_test() -> Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let event_queue = events::Queue::new(&target_collection);
+        target_collection.set_event_queue(event_queue.clone()).await;
         Daemon { target_collection, event_queue }
     }
 
@@ -106,7 +117,7 @@ impl Daemon {
     }
 
     pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
-        spawn(async move {
+        fuchsia_async::spawn(async move {
             loop {
                 let fastboot_devices = ffx_fastboot::find_devices();
                 for dev in fastboot_devices {
@@ -128,7 +139,7 @@ impl Daemon {
     }
 
     pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
-        spawn(async move {
+        fuchsia_async::spawn(async move {
             loop {
                 let svc = match hoist::connect_as_service_consumer() {
                     Ok(svc) => svc,
@@ -177,7 +188,7 @@ impl Daemon {
     /// devices.
     /// TODO(fxb/47843): Implement target lookup for commands to deprecate this
     /// function, and as a result remove the inner_lock() function.
-    async fn target_from_cache(&self, target_selector: String) -> Result<Arc<Target>, Error> {
+    async fn target_from_cache(&self, target_selector: String) -> Result<Target, Error> {
         let targets = self.target_collection.inner_lock().await;
 
         if targets.len() == 0 {
@@ -246,21 +257,19 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                let mut target_state =
-                    match target.wait_for_state_with_rcs(MAX_RETRY_COUNT, RETRY_DELAY).await {
-                        Ok(state) => state,
-                        Err(e) => {
-                            log::warn!("{}", e);
-                            responder
-                                .send(&mut Err(DaemonError::TargetStateError))
-                                .context("sending error response")?;
-                            return Ok(());
-                        }
-                    };
-                let mut response = target_state
-                    .rcs
-                    .as_mut()
-                    .unwrap()
+                // TODO(awdavies): Add a timeout here.
+                target.events.wait_for(|e| e == TargetEvent::RcsActivated).await;
+                let mut rcs = match target.rcs().await {
+                    Some(r) => r,
+                    None => {
+                        log::warn!("rcs dropped after event fired");
+                        responder
+                            .send(&mut Err(DaemonError::TargetStateError))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+                let mut response = rcs
                     .copy_to_channel(remote.into_channel())
                     .map_err(|_| DaemonError::RcsConnectionError);
                 responder.send(&mut response).context("error sending response")?;
@@ -297,30 +306,61 @@ mod test {
     use super::*;
     use fidl_fuchsia_developer_bridge as bridge;
     use fidl_fuchsia_developer_bridge::DaemonMarker;
+    use fidl_fuchsia_developer_remotecontrol as rcs;
     use fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy};
+    use fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet};
     use fidl_fuchsia_overnet_protocol::NodeId;
-    use futures::channel::mpsc;
+    use fuchsia_async::Task;
 
-    struct TestHookFakeRCS {
+    struct TestHookFakeRcs {
+        tc: Weak<TargetCollection>,
+    }
+
+    struct TargetControl {
+        event_queue: events::Queue<DaemonEvent>,
         tc: Arc<TargetCollection>,
-        ready_channel: mpsc::UnboundedSender<bool>,
+        _task: Task<()>,
+    }
+
+    impl TargetControl {
+        pub async fn send_mdns_discovery_event(&mut self, t: Target) {
+            self.event_queue
+                .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
+                    nodename: t.nodename(),
+                    addresses: Vec::new(),
+                })))
+                .await
+                .unwrap();
+
+            let nodename = t.nodename();
+            self.event_queue.wait_for(move |e| e == DaemonEvent::NewTarget(nodename.clone())).await;
+            self.tc
+                .get(t.nodename().into())
+                .await
+                .unwrap()
+                .events
+                .wait_for(|e| e == TargetEvent::RcsActivated)
+                .await;
+        }
     }
 
     #[async_trait]
-    impl EventHandler<DaemonEvent> for TestHookFakeRCS {
+    impl EventHandler<DaemonEvent> for TestHookFakeRcs {
         async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
+            let tc = match self.tc.upgrade() {
+                Some(t) => t,
+                None => return Ok(true),
+            };
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
-                    let target = self.tc.merge_insert(t.into()).await;
-                    let mut target_state = target.state.lock().await;
-                    target_state.rcs = match &target_state.rcs {
-                        Some(_) => panic!("fake RCS should be set at most once"),
-                        None => Some(RCSConnection::new_with_proxy(
-                            setup_fake_target_service(),
-                            &NodeId { id: 0u64 },
-                        )),
-                    };
-                    self.ready_channel.unbounded_send(true).unwrap();
+                    tc.merge_insert(t.into()).await;
+                }
+                DaemonEvent::NewTarget(n) => {
+                    let rcs = RcsConnection::new_with_proxy(
+                        setup_fake_target_service(n),
+                        &NodeId { id: 0u64 },
+                    );
+                    tc.merge_insert(Target::from_rcs_connection(rcs).await.unwrap()).await;
                 }
                 _ => panic!("unexpected event"),
             }
@@ -329,69 +369,57 @@ mod test {
         }
     }
 
-    struct TargetControlChannels {
-        event_queue: events::Queue<DaemonEvent>,
-        target_ready_channel: mpsc::UnboundedReceiver<bool>,
-    }
-
-    impl TargetControlChannels {
-        pub async fn send_mdns_discovery_event(&mut self, t: Target) {
-            self.event_queue
-                .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
-                    nodename: t.nodename.clone(),
-                    addresses: Vec::new(),
-                })))
-                .await
-                .unwrap();
-            assert!(self.next_target_ready().await);
-        }
-
-        pub async fn next_target_ready(&mut self) -> bool {
-            self.target_ready_channel.next().await.unwrap()
-        }
-    }
-
-    async fn spawn_daemon_server_with_target_ctrl(
-        stream: DaemonRequestStream,
-    ) -> TargetControlChannels {
-        let (target_ready_channel_in, target_ready_channel_out) = mpsc::unbounded::<bool>();
-        let d = Daemon::new_for_test();
+    async fn spawn_daemon_server_with_target_ctrl(stream: DaemonRequestStream) -> TargetControl {
+        let d = Daemon::new_for_test().await;
         d.event_queue
-            .add_handler(TestHookFakeRCS {
-                ready_channel: target_ready_channel_in,
-                tc: d.target_collection.clone(),
-            })
+            .add_handler(TestHookFakeRcs { tc: Arc::downgrade(&d.target_collection) })
             .await;
         let event_clone = d.event_queue.clone();
-        spawn(async move {
-            d.handle_requests_from_stream(stream)
-                .await
-                .unwrap_or_else(|err| panic!("Fatal error handling request: {:?}", err));
-        });
-
-        TargetControlChannels {
-            target_ready_channel: target_ready_channel_out,
+        let res = TargetControl {
             event_queue: event_clone,
-        }
+            tc: d.target_collection.clone(),
+            _task: Task::spawn(async move {
+                d.handle_requests_from_stream(stream)
+                    .await
+                    .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
+            }),
+        };
+        res
     }
 
     async fn spawn_daemon_server_with_fake_target(
         nodename: &str,
         stream: DaemonRequestStream,
-    ) -> TargetControlChannels {
+    ) -> TargetControl {
         let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
         res.send_mdns_discovery_event(Target::new(nodename)).await;
         res
     }
 
-    fn setup_fake_target_service() -> RemoteControlProxy {
+    fn setup_fake_target_service(nodename: String) -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
-        spawn(async move {
+        fuchsia_async::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
-                // No requests should be made to the target RCS.
-                assert!(false, format!("got unexpected {:?}", req))
+                match req {
+                    rcs::RemoteControlRequest::IdentifyHost { responder } => {
+                        let result: Vec<Subnet> = vec![Subnet {
+                            addr: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
+                            prefix_len: 24,
+                        }];
+                        let nodename =
+                            if nodename.len() == 0 { None } else { Some(nodename.clone()) };
+                        responder
+                            .send(&mut Ok(rcs::IdentifyHostResponse {
+                                nodename,
+                                addresses: Some(result),
+                            }))
+                            .context("sending testing response")
+                            .unwrap();
+                    }
+                    _ => assert!(false),
+                }
             }
         });
 
@@ -406,6 +434,7 @@ mod test {
         let _ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
         let echoed = daemon_proxy.echo_string(echo).await.unwrap();
         assert_eq!(echoed, echo);
+        daemon_proxy.quit().await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

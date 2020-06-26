@@ -17,7 +17,6 @@ use {
     std::io,
     std::os::unix::io::{FromRawFd, IntoRawFd},
     std::process::{Child, Stdio},
-    std::sync::Arc,
     std::time::Duration,
 };
 
@@ -47,8 +46,8 @@ struct HostPipeChild {
 }
 
 impl HostPipeChild {
-    pub async fn new(target: Arc<Target>) -> Result<HostPipeChild, Error> {
-        log::info!("Starting child connection to target: {}", target.nodename);
+    pub async fn new(target: Target) -> Result<HostPipeChild, Error> {
+        log::info!("Starting child connection to target: {}", target.nodename());
         let mut inner = build_ssh_command(target.addrs().await, vec!["remote_control_runner"])
             .await?
             .stdout(Stdio::piped())
@@ -134,7 +133,7 @@ impl Drop for HostPipeChild {
 }
 
 impl HostPipeConnection {
-    pub fn new(target: Arc<Target>) -> Result<Self, Error> {
+    pub fn new(target: Target) -> Result<Self, Error> {
         HostPipeConnection::new_with_cmd(
             target,
             HostPipeChild::new,
@@ -144,8 +143,8 @@ impl HostPipeConnection {
     }
 
     fn new_with_cmd<F>(
-        target: Arc<Target>,
-        cmd_func: impl FnOnce(Arc<Target>) -> F + Send + Copy + 'static,
+        target: Target,
+        cmd_func: impl FnOnce(Target) -> F + Send + Copy + 'static,
         cmd_poll_delay: Duration,
         relaunch_command_delay: Duration,
     ) -> Result<Self, Error>
@@ -271,10 +270,10 @@ mod test {
         }
     }
 
-    async fn start_child_normal_operation(target: Arc<Target>) -> Result<HostPipeChild, Error> {
+    async fn start_child_normal_operation(target: Target) -> Result<HostPipeChild, Error> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
-                .arg(target.nodename.clone())
+                .arg(target.nodename())
                 .stdout(Stdio::piped())
                 .stdin(Stdio::piped())
                 .spawn()
@@ -282,11 +281,11 @@ mod test {
         ))
     }
 
-    async fn start_child_internal_failure(_target: Arc<Target>) -> Result<HostPipeChild, Error> {
+    async fn start_child_internal_failure(_target: Target) -> Result<HostPipeChild, Error> {
         Err(anyhow!(ERR_CTX))
     }
 
-    async fn start_child_cmd_fails(_target: Arc<Target>) -> Result<HostPipeChild, Error> {
+    async fn start_child_cmd_fails(_target: Target) -> Result<HostPipeChild, Error> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("cat")
                 .arg("/some/file/path/that/is/never/going/to/exist")
@@ -297,7 +296,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_normal_operation() {
-        let target = Arc::new(Target::new("floop"));
+        let target = Target::new("floop");
         let mut conn = HostPipeConnection::new_with_cmd(
             target,
             start_child_normal_operation,
@@ -312,7 +311,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_internal_failure() {
-        let target = Arc::new(Target::new("boop"));
+        // TODO(awdavies): Verify the error matches.
+        let target = Target::new("boop");
         let mut conn = HostPipeConnection::new_with_cmd(
             target,
             start_child_internal_failure,
@@ -327,7 +327,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_cmd_fail() {
-        let target = Arc::new(Target::new("blorp"));
+        let target = Target::new("blorp");
         let mut conn = HostPipeConnection::new_with_cmd(
             target,
             start_child_cmd_fails,
