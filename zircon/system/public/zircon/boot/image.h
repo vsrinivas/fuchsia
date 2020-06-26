@@ -133,7 +133,8 @@ typedef struct {
     macro(ZBI_TYPE_DRV_BOARD_INFO, "DRV_BOARD_INFO", ".bin") \
     macro(ZBI_TYPE_IMAGE_ARGS, "IMAGE_ARGS", ".txt") \
     macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin") \
-    macro(ZBI_TYPE_HW_REBOOT_REASON, "HW_REBOOT_REASON", ".bin")
+    macro(ZBI_TYPE_HW_REBOOT_REASON, "HW_REBOOT_REASON", ".bin") \
+    macro(ZBI_TYPE_SERIAL_NUMBER, "SERIAL_NUMBER", ".txt")
 
 // Each ZBI starts with a container header.
 //     length:          Total size of the image after this header.
@@ -652,5 +653,9 @@ enum class ZbiHwRebootReason : uint32_t {
 using zbi_hw_reboot_reason_t = ZbiHwRebootReason;
 #endif  // __cplusplus
 #endif  // __ASSEMBLER__
+
+// The serial number, an unterminated ASCII string of printable non-whitespace
+// characters with length zbi_header_t.length.
+#define ZBI_TYPE_SERIAL_NUMBER          (0x4e4c5253) // SRLN
 
 #endif  // SYSROOT_ZIRCON_BOOT_IMAGE_H_

@@ -144,6 +144,10 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
+
+  // add fake serial number
+  const char serial_number[] = "fake0123456789";
+  append_boot_item(bootdata, ZBI_TYPE_SERIAL_NUMBER, 0, &serial_number, sizeof(serial_number) - 1);
 }
 
 static void set_cpu_count(uint32_t new_count) {

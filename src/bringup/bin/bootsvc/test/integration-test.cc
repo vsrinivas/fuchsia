@@ -24,6 +24,7 @@
 #include <zircon/syscalls/system.h>
 
 #include <cstdint>
+#include <string>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -240,6 +241,7 @@ TEST(BootsvcIntegrationTest, BootItems) {
       ZBI_TYPE_PLATFORM_ID,
       ZBI_TYPE_DRV_BOARD_INFO,
       ZBI_TYPE_STORAGE_RAMDISK,
+      ZBI_TYPE_SERIAL_NUMBER,
   };
   for (uint32_t type : types) {
     zx::vmo payload;
@@ -266,6 +268,14 @@ TEST(BootsvcIntegrationTest, BootItems) {
       ASSERT_BYTES_EQ(file_buf.get(), payload_buf.get(), length, "");
     }
 #endif
+
+    if (type == ZBI_TYPE_SERIAL_NUMBER) {
+      ASSERT_TRUE(payload.is_valid());
+      ASSERT_GE(length, 0);
+      std::string serial_no(length, '\0');
+      ASSERT_OK(payload.read(serial_no.data(), 0, length));
+      EXPECT_EQ(length, serial_no.size());
+    }
   }
 }
 

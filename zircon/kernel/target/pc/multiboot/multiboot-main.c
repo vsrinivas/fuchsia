@@ -98,9 +98,20 @@ static void add_cmdline(void* zbi, size_t capacity, const multiboot_info_t* info
   }
 }
 
+static void add_fake_serial_number(void* zbi, size_t capacity) {
+  const char serial_number[] = "fake0123456789";
+  zbi_result_t result = zbi_create_entry_with_payload(zbi, capacity, ZBI_TYPE_SERIAL_NUMBER, 0, 0,
+                                                      serial_number, sizeof(serial_number) - 1);
+  if (result != ZBI_RESULT_OK) {
+    panic("zbi_create_entry_with_payload() on zbi %p with capacity %u for size %u failed: %d",
+          zbi, capacity, sizeof(serial_number), (int)result);
+  }
+}
+
 static void add_zbi_items(void* zbi, size_t capacity, const multiboot_info_t* info) {
   add_memory_info(zbi, capacity, info);
   add_cmdline(zbi, capacity, info);
+  add_fake_serial_number(zbi, capacity);
 }
 
 static zbi_result_t find_kernel_item(zbi_header_t* hdr, void* payload, void* cookie) {

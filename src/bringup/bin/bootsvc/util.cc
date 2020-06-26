@@ -29,6 +29,7 @@ bool StoreItem(uint32_t type) {
     case ZBI_TYPE_STORAGE_BOOTFS_FACTORY:
     case ZBI_TYPE_STORAGE_RAMDISK:
     case ZBI_TYPE_IMAGE_ARGS:
+    case ZBI_TYPE_SERIAL_NUMBER:
       return true;
     default:
       return ZBI_TYPE_DRV_METADATA(type);
@@ -148,6 +149,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
     }
     uint32_t item_len = ZBI_ALIGN(header.length + static_cast<uint32_t>(sizeof(zbi_header_t)));
     uint32_t next_off = safemath::CheckAdd(off, item_len).ValueOrDie();
+
     if (item_len > len) {
       printf("bootsvc: ZBI item too large (%u > %u)\n", item_len, len);
       return ZX_ERR_IO_DATA_INTEGRITY;
