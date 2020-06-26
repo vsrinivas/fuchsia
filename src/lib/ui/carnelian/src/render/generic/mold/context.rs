@@ -76,7 +76,7 @@ fn buffer_collection_constraints(width: u32, height: u32) -> BufferCollectionCon
             ram_domain_supported: true,
             cpu_domain_supported: true,
             inaccessible_domain_supported: false,
-            heap_permitted_count: 1,
+            heap_permitted_count: 0,
             heap_permitted: [HeapType::SystemRam; 32],
         },
         image_format_constraints_count: 1,
