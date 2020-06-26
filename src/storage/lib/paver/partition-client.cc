@@ -25,6 +25,12 @@ namespace block = ::llcpp::fuchsia::hardware::block;
 
 }  // namespace
 
+BlockPartitionClient::~BlockPartitionClient() {
+  if (client_) {
+    partition_.CloseFifo();
+  }
+}
+
 zx::status<> BlockPartitionClient::ReadBlockInfo() {
   if (!block_info_) {
     auto result = partition_.GetInfo();

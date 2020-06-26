@@ -40,6 +40,7 @@ class FvmTest : public zxtest::Test {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
+    args.driver_search_paths.push_back("/boot/driver/test");
     args.disable_block_watcher = true;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 

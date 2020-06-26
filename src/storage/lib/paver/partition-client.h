@@ -56,6 +56,8 @@ class BlockPartitionClient final : public PartitionClient {
  public:
   explicit BlockPartitionClient(zx::channel partition) : partition_(std::move(partition)) {}
 
+  ~BlockPartitionClient();
+
   zx::status<size_t> GetBlockSize() final;
   zx::status<size_t> GetPartitionSize() final;
   zx::status<> Read(const zx::vmo& vmo, size_t size) final;
