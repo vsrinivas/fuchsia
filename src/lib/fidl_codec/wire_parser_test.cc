@@ -495,7 +495,7 @@ TEST_DECODE_WIRE(
 TEST_DECODE_WIRE(
     VectorUint8String, VectorUint8,
     R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33"]})",
-    "{ v: #gre#vector<uint8>#rst# = \"Hello testing world!\" }",
+    "{ v: #gre#vector<uint8>#rst# = #red#\"Hello testing world!\"#rst# }",
     VectorUint8("Hello testing world!"))
 
 TEST_DECODE_WIRE(
@@ -503,9 +503,9 @@ TEST_DECODE_WIRE(
     R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33","10","72","111","119","32","97","114","101","32","121","111","117","32","116","111","100","97","121", "63","10","73","39","109","32","116","101","115","116","105","110","103","32","102","105","100","108","95","99","111","100","101","99","46"]})",
     "{\n"
     "  v: #gre#vector<uint8>#rst# = [\n"
-    "    Hello testing world!\n"
+    "    #red#Hello testing world!\n"
     "    How are you today?\n"
-    "    I'm testing fidl_codec.\n"
+    "    I'm testing fidl_codec.#rst#\n"
     "  ]\n"
     "}",
     VectorUint8("Hello testing world!\nHow are you today?\nI'm testing fidl_codec."))

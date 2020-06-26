@@ -76,14 +76,14 @@ BTI_PIN_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_bti_pin("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32mzx_bti_perm_t\x1B[0m: \x1B[34mZX_BTI_PERM_READ | ZX_BTI_PERM_EXECUTE\x1B[0m, "
+    "options:\x1B[32mzx.bti_perm\x1B[0m: \x1B[34mZX_BTI_PERM_READ | ZX_BTI_PERM_EXECUTE\x1B[0m, "
     "vmo:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m, "
     "offset:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m, "
     "size:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (pmt:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n"
-    "      addrs:\x1B[32mzx_paddr_t\x1B[0m: "
+    "    addrs:\x1B[32mvector<zx.paddr>\x1B[0m: [ "
     "\x1B[34m0000000000001234\x1B[0m, \x1B[34m0000000000002345\x1B[0m, "
-    "\x1B[34m0000000000003456\x1B[0m\n");
+    "\x1B[34m0000000000003456\x1B[0m ]\n");
 
 // zx_bti_release_quarantine tests.
 

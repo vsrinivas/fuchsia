@@ -10,6 +10,8 @@
 
 namespace fidl_codec {
 
+constexpr int kCharactersPerByte = 2;
+
 const Colors WithoutColors("", "", "", "", "", "");
 const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
                         /*new_green=*/"\u001b[32m", /*new_blue=*/"\u001b[34m",
@@ -165,6 +167,40 @@ void PrettyPrinter::DisplayExceptionState(uint32_t state) {
   }
 }
 
+void PrettyPrinter::DisplayHexa8(uint8_t value) {
+  std::vector<char> buffer(sizeof(uint8_t) * kCharactersPerByte + 1);
+  snprintf(buffer.data(), buffer.size(), "%02" PRIx8, value);
+  *this << Blue << buffer.data() << ResetColor;
+}
+
+void PrettyPrinter::DisplayHexa16(uint16_t value) {
+  std::vector<char> buffer(sizeof(uint16_t) * kCharactersPerByte + 1);
+  snprintf(buffer.data(), buffer.size(), "%04" PRIx16, value);
+  *this << Blue << buffer.data() << ResetColor;
+}
+
+void PrettyPrinter::DisplayHexa32(uint32_t value) {
+  std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
+  snprintf(buffer.data(), buffer.size(), "%08" PRIx32, value);
+  *this << Blue << buffer.data() << ResetColor;
+}
+
+void PrettyPrinter::DisplayHexa64(uint64_t value) {
+  std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+  snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
+  *this << Blue << buffer.data() << ResetColor;
+}
+
+void PrettyPrinter::DisplayPaddr(zx_paddr_t addr) {
+  std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+#ifdef __MACH__
+  snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, addr);
+#else
+  snprintf(buffer.data(), buffer.size(), "%016" PRIx64, addr);
+#endif
+  *this << Blue << buffer.data() << ResetColor;
+}
+
 // ZX_PROP_REGISTER_GS and ZX_PROP_REGISTER_FS are defined in
 // <zircon/system/public/zircon/syscalls/object.h>
 // but only available for amd64.
@@ -282,6 +318,16 @@ void PrettyPrinter::DisplayTime(zx_time_t time_ns) {
       (*this) << Red << "unknown time" << ResetColor;
     }
   }
+}
+
+void PrettyPrinter::DisplayVaddr(zx_vaddr_t addr) {
+  std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
+#ifdef __MACH__
+  snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, addr);
+#else
+  snprintf(buffer.data(), buffer.size(), "%016" PRIx64, addr);
+#endif
+  *this << Blue << buffer.data() << ResetColor;
 }
 
 void PrettyPrinter::IncrementTabulations() {

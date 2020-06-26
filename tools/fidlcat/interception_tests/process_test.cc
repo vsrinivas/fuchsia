@@ -160,18 +160,19 @@ std::unique_ptr<SystemCallTest> ZxProcessReadMemory(int64_t result, std::string_
     PROCESS_READ_MEMORY_DISPLAY_TEST_CONTENT(errno, expected);  \
   }
 
-PROCESS_READ_MEMORY_DISPLAY_TEST(
-    ZxProcessReadMemory, ZX_OK,
-    "\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_process_read_memory("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "vaddr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000123456789\x1B[0m, "
-    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m10\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      buffer:\x1B[32muint8\x1B[0m: "
-    "\x1B[34m0\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m2\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m4\x1B[0m, "
-    "\x1B[34m5\x1B[0m, \x1B[34m6\x1B[0m, \x1B[34m7\x1B[0m, \x1B[34m8\x1B[0m, \x1B[34m9\x1B[0m\n");
+PROCESS_READ_MEMORY_DISPLAY_TEST(ZxProcessReadMemory, ZX_OK,
+                                 "\n"
+                                 "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                                 "zx_process_read_memory("
+                                 "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+                                 "vaddr:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000123456789\x1B[0m, "
+                                 "buffer_size:\x1B[32msize\x1B[0m: \x1B[34m10\x1B[0m)\n"
+                                 "  -> \x1B[32mZX_OK\x1B[0m\n"
+                                 "    buffer:\x1B[32mvector<uint8>\x1B[0m: [ "
+                                 "\x1B[34m00\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m02\x1B[0m, "
+                                 "\x1B[34m03\x1B[0m, \x1B[34m04\x1B[0m, "
+                                 "\x1B[34m05\x1B[0m, \x1B[34m06\x1B[0m, \x1B[34m07\x1B[0m, "
+                                 "\x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m ]\n");
 
 // zx_process_write_memory tests.
 
@@ -214,10 +215,12 @@ PROCESS_WRITE_MEMORY_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_process_write_memory("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "vaddr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000123456789\x1B[0m)\n"
-    "    buffer:\x1B[32muint8\x1B[0m: "
-    "\x1B[34m0\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m2\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m4\x1B[0m, "
-    "\x1B[34m5\x1B[0m, \x1B[34m6\x1B[0m, \x1B[34m7\x1B[0m, \x1B[34m8\x1B[0m, \x1B[34m9\x1B[0m\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m10\x1B[0m)\n");
+    "vaddr:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000123456789\x1B[0m)\n"
+    "  buffer:\x1B[32mvector<uint8>\x1B[0m: [ "
+    "\x1B[34m00\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m02\x1B[0m, \x1B[34m03\x1B[0m, "
+    "\x1B[34m04\x1B[0m, "
+    "\x1B[34m05\x1B[0m, \x1B[34m06\x1B[0m, \x1B[34m07\x1B[0m, \x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m "
+    "]\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize\x1B[0m: \x1B[34m10\x1B[0m)\n");
 
 }  // namespace fidlcat

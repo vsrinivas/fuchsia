@@ -44,6 +44,8 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kHexaDecimal);
     case SyscallType::kVaddr:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kVaddr);
+    case SyscallType::kPaddr:
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kPaddr);
     case SyscallType::kSize:
       return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kSize);
     case SyscallType::kHandle:

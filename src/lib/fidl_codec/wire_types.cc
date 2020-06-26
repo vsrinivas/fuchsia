@@ -18,8 +18,6 @@
 namespace fidl_codec {
 namespace {
 
-constexpr int kCharactersPerByte = 2;
-
 class ToStringVisitor : public TypeVisitor {
  public:
   enum ExpandLevels {
@@ -318,7 +316,7 @@ void Uint8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         printer << Blue << absolute << ResetColor;
         break;
       case Kind::kHexaDecimal:
-        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        printer.DisplayHexa8(absolute);
         break;
     }
   }
@@ -340,7 +338,7 @@ void Uint16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         printer << Blue << absolute << ResetColor;
         break;
       case Kind::kHexaDecimal:
-        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        printer.DisplayHexa16(absolute);
         break;
     }
   }
@@ -380,7 +378,7 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         printer << Blue << absolute << ResetColor;
         break;
       case Kind::kHexaDecimal:
-        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        printer.DisplayHexa32(absolute);
         break;
       case Kind::kBtiPerm:
         printer.DisplayBtiPerm(absolute);
@@ -413,6 +411,8 @@ std::string Uint64Type::Name() const {
       return "uint64";
     case Kind::kVaddr:
       return "zx.vaddr";
+    case Kind::kPaddr:
+      return "zx.paddr";
     case Kind::kSize:
       return "size";
   }
@@ -430,17 +430,17 @@ void Uint64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         printer << Blue << absolute << ResetColor;
         break;
       case Kind::kHexaDecimal:
-        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        printer.DisplayHexa64(absolute);
         break;
       case Kind::kSize:
         printer << Blue << absolute << ResetColor;
         break;
-      case Kind::kVaddr: {
-        std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-        snprintf(buffer.data(), buffer.size(), "%016" PRIx64, absolute);
-        printer << Blue << buffer.data() << ResetColor;
+      case Kind::kVaddr:
+        printer.DisplayVaddr(absolute);
         break;
-      }
+      case Kind::kPaddr:
+        printer.DisplayPaddr(absolute);
+        break;
     }
   }
 }

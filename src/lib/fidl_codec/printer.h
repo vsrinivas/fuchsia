@@ -86,6 +86,21 @@ class PrettyPrinter {
   // Displays an exception state.
   void DisplayExceptionState(uint32_t state);
 
+  // Displays a uint8_t value in padded hexadecimal format.
+  void DisplayHexa8(uint8_t value);
+
+  // Displays a uint16_t value in padded hexadecimal format.
+  void DisplayHexa16(uint16_t value);
+
+  // Displays a uint32_t value in padded hexadecimal format.
+  void DisplayHexa32(uint32_t value);
+
+  // Displays a uint64_t value in padded hexadecimal format.
+  void DisplayHexa64(uint64_t value);
+
+  // Displays a paddr.
+  void DisplayPaddr(zx_paddr_t addr);
+
   // Displays prop type.
   void DisplayPropType(uint32_t type);
 
@@ -97,6 +112,9 @@ class PrettyPrinter {
 
   // Displays a time.
   void DisplayTime(zx_time_t time_ns);
+
+  // Displays a vaddr.
+  void DisplayVaddr(zx_vaddr_t addr);
 
   void IncrementTabulations();
   void DecrementTabulations();

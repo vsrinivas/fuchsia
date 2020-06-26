@@ -47,36 +47,6 @@ void FidlcatPrinter::DisplayStatus(zx_status_t status) {
   (*this) << fidl_codec::StatusName(status) << fidl_codec::ResetColor;
 }
 
-bool FidlcatPrinter::DisplayReturnedValue(SyscallReturnType type, int64_t returned_value) {
-  switch (type) {
-    case SyscallReturnType::kNoReturn:
-    case SyscallReturnType::kVoid:
-      return false;
-    case SyscallReturnType::kStatus:
-      (*this) << "-> ";
-      DisplayStatus(static_cast<zx_status_t>(returned_value));
-      break;
-    case SyscallReturnType::kTicks:
-      (*this) << "-> " << fidl_codec::Green << "ticks" << fidl_codec::ResetColor << ": "
-              << fidl_codec::Blue << static_cast<uint64_t>(returned_value)
-              << fidl_codec::ResetColor;
-      break;
-    case SyscallReturnType::kTime:
-      (*this) << "-> " << fidl_codec::Green << "time" << fidl_codec::ResetColor << ": ";
-      DisplayTime(static_cast<zx_time_t>(returned_value));
-      break;
-    case SyscallReturnType::kUint32:
-      (*this) << "-> " << fidl_codec::Blue << static_cast<uint32_t>(returned_value)
-              << fidl_codec::ResetColor;
-      break;
-    case SyscallReturnType::kUint64:
-      (*this) << "-> " << fidl_codec::Blue << static_cast<uint64_t>(returned_value)
-              << fidl_codec::ResetColor;
-      break;
-  }
-  return true;
-}
-
 void FidlcatPrinter::DisplayInline(
     const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,
     const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values) {

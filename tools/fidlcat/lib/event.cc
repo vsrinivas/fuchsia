@@ -159,8 +159,37 @@ void OutputEvent::Write(proto::Event* dst) const {
 
 void OutputEvent::PrettyPrint(FidlcatPrinter& printer) const {
   fidl_codec::Indent indent(printer);
-  if (!printer.DisplayReturnedValue(syscall()->return_type(), returned_value_)) {
-    return;
+
+  switch (syscall()->return_type()) {
+    case SyscallReturnType::kNoReturn:
+      return;
+    case SyscallReturnType::kVoid:
+      if (inline_fields().empty() && outline_fields().empty()) {
+        return;
+      }
+      printer << "-> ";
+      break;
+    case SyscallReturnType::kStatus:
+      printer << "-> ";
+      printer.DisplayStatus(static_cast<zx_status_t>(returned_value_));
+      break;
+    case SyscallReturnType::kTicks:
+      printer << "-> " << fidl_codec::Green << "ticks" << fidl_codec::ResetColor << ": "
+              << fidl_codec::Blue << static_cast<uint64_t>(returned_value_)
+              << fidl_codec::ResetColor;
+      break;
+    case SyscallReturnType::kTime:
+      printer << "-> " << fidl_codec::Green << "time" << fidl_codec::ResetColor << ": ";
+      printer.DisplayTime(static_cast<zx_time_t>(returned_value_));
+      break;
+    case SyscallReturnType::kUint32:
+      printer << "-> " << fidl_codec::Blue << static_cast<uint32_t>(returned_value_)
+              << fidl_codec::ResetColor;
+      break;
+    case SyscallReturnType::kUint64:
+      printer << "-> " << fidl_codec::Blue << static_cast<uint64_t>(returned_value_)
+              << fidl_codec::ResetColor;
+      break;
   }
   // Adds the inline output arguments (if any).
   if (!inline_fields().empty()) {

@@ -249,11 +249,11 @@ SYSTEM_MEXEC_PAYLOAD_GET_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_mexec_payload_get("
     "resource:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m8\x1B[0m)\n"
+    "buffer_size:\x1B[32msize\x1B[0m: \x1B[34m8\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      buffer:\x1B[32muint8\x1B[0m: "
+    "    buffer:\x1B[32mvector<uint8>\x1B[0m: [ "
     "\x1B[34m10\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m20\x1B[0m, \x1B[34m02\x1B[0m, "
-    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m\n");
+    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n");
 
 // zx_system_powerctl tests.
 

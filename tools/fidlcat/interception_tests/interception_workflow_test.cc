@@ -505,7 +505,10 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
     }
   }
 
-  std::set<std::string> expected = {"zx_bti_create",
+  std::set<std::string> expected = {"__libc_extensions_init",
+                                    "processargs_extract_handles",
+                                    "zx_bti_create",
+                                    "zx_bti_pin",
                                     "zx_bti_release_quarantine",
                                     "zx_cache_flush",
                                     "zx_channel_call",
@@ -516,10 +519,14 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_clock_adjust",
                                     "zx_clock_get",
                                     "zx_clock_get_monotonic",
+                                    "zx_cprng_add_entropy",
+                                    "zx_cprng_draw",
                                     "zx_deadline_after",
                                     "zx_debug_send_command",
                                     "zx_debug_write",
                                     "zx_debuglog_create",
+                                    "zx_debuglog_read",
+                                    "zx_debuglog_write",
                                     "zx_event_create",
                                     "zx_eventpair_create",
                                     "zx_exception_get_process",
@@ -529,6 +536,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_framebuffer_set_range",
                                     "zx_guest_create",
                                     "zx_handle_close",
+                                    "zx_handle_close_many",
                                     "zx_handle_duplicate",
                                     "zx_handle_replace",
                                     "zx_interrupt_ack",
@@ -539,6 +547,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_ioports_request",
                                     "zx_job_create",
                                     "zx_ktrace_write",
+                                    "zx_mtrace_control",
                                     "zx_nanosleep",
                                     "zx_object_get_child",
                                     "zx_object_get_property",
@@ -548,6 +557,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_pager_create_vmo",
                                     "zx_pager_detach_vmo",
                                     "zx_pager_supply_pages",
+                                    "zx_pc_firmware_tables",
                                     "zx_pci_add_subtract_io_range",
                                     "zx_pci_cfg_pio_rw",
                                     "zx_pci_config_read",
@@ -562,11 +572,14 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_port_create",
                                     "zx_process_create",
                                     "zx_process_exit",
+                                    "zx_process_read_memory",
+                                    "zx_process_write_memory",
                                     "zx_system_get_dcache_line_size",
                                     "zx_system_get_num_cpus",
                                     "zx_system_get_physmem",
                                     "zx_system_get_version",
                                     "zx_system_mexec",
+                                    "zx_system_mexec_payload_get",
                                     "zx_task_create_exception_channel",
                                     "zx_task_kill",
                                     "zx_task_suspend",
@@ -583,10 +596,14 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
                                     "zx_vmar_unmap",
                                     "zx_vmar_unmap_handle_close_thread_exit",
                                     "zx_vmo_create_contiguous",
+                                    "zx_vmo_create_physical",
                                     "zx_vmo_get_size",
+                                    "zx_vmo_read",
                                     "zx_vmo_replace_as_executable",
                                     "zx_vmo_set_cache_policy",
-                                    "zx_vmo_set_size"};
+                                    "zx_vmo_set_size",
+                                    "zx_vmo_write"};
+
   ASSERT_EQ(expected, actual);
 }
 
@@ -601,14 +618,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
     }
   }
 
-  std::set<std::string> expected = {"__libc_extensions_init",
-                                    "processargs_extract_handles",
-                                    "zx_bti_pin",
-                                    "zx_cprng_add_entropy",
-                                    "zx_cprng_draw",
-                                    "zx_debug_read",
-                                    "zx_debuglog_read",
-                                    "zx_debuglog_write",
+  std::set<std::string> expected = {"zx_debug_read",
                                     "zx_fifo_read",
                                     "zx_fifo_write",
                                     "zx_futex_get_owner",
@@ -619,7 +629,6 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
                                     "zx_futex_wake_handle_close_thread_exit",
                                     "zx_futex_wake_single_owner",
                                     "zx_guest_set_trap",
-                                    "zx_handle_close_many",
                                     "zx_interrupt_create",
                                     "zx_interrupt_trigger",
                                     "zx_interrupt_wait",
@@ -627,22 +636,18 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
                                     "zx_job_set_policy",
                                     "zx_ktrace_control",
                                     "zx_ktrace_read",
-                                    "zx_mtrace_control",
                                     "zx_object_get_info",
                                     "zx_object_signal",
                                     "zx_object_signal_peer",
                                     "zx_object_wait_async",
                                     "zx_object_wait_many",
                                     "zx_object_wait_one",
-                                    "zx_pc_firmware_tables",
                                     "zx_pci_get_bar",
                                     "zx_pci_get_nth_device",
                                     "zx_pci_init",
                                     "zx_port_queue",
                                     "zx_port_wait",
-                                    "zx_process_read_memory",
                                     "zx_process_start",
-                                    "zx_process_write_memory",
                                     "zx_profile_create",
                                     "zx_resource_create",
                                     "zx_smc_call",
@@ -652,7 +657,6 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
                                     "zx_socket_write",
                                     "zx_system_get_event",
                                     "zx_system_get_features",
-                                    "zx_system_mexec_payload_get",
                                     "zx_system_powerctl",
                                     "zx_thread_read_state",
                                     "zx_thread_start",
@@ -666,10 +670,8 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
                                     "zx_vmar_protect",
                                     "zx_vmo_create",
                                     "zx_vmo_create_child",
-                                    "zx_vmo_create_physical",
-                                    "zx_vmo_op_range",
-                                    "zx_vmo_read",
-                                    "zx_vmo_write"};
+                                    "zx_vmo_op_range"};
+
   ASSERT_EQ(expected, actual);
 }
 

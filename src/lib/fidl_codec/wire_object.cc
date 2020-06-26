@@ -310,18 +310,20 @@ void VectorValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
       printer << "[\n";
       {
         Indent indent(printer);
+        printer << Red;
         for (const auto& value : values_) {
           printer << static_cast<char>(value->GetUint8Value());
         }
+        printer << ResetColor;
       }
       printer << '\n';
       printer << ']';
     } else {
-      printer << '"';
+      printer << Red << '"';
       for (const auto& value : values_) {
         printer << static_cast<char>(value->GetUint8Value());
       }
-      printer << '"';
+      printer << '"' << ResetColor;
     }
   } else if (DisplaySize(for_type, printer.remaining_size()) <= printer.remaining_size()) {
     const Type* component_type = for_type->GetComponentType();

@@ -874,6 +874,14 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
         elem_size_(std::move(elem_size)),
         elem_count_(std::move(elem_count)) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    std::unique_ptr<fidl_codec::Type> elem_type = SyscallTypeToFidlCodecType(syscall_type_);
+    return std::make_unique<fidl_codec::VectorType>(std::move(elem_type));
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override;
+
   bool InlineValue() const override { return false; }
 
   void Load(SyscallDecoder* decoder, Stage stage) const override {
@@ -919,6 +927,10 @@ class SyscallInputOutputStringBuffer : public SyscallInputOutputBase {
         buffer_(std::move(buffer)),
         count_(std::move(count)),
         max_size_(max_size) {}
+
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    return std::make_unique<fidl_codec::StringType>();
+  }
 
   bool InlineValue() const override { return false; }
 
@@ -2000,12 +2012,9 @@ inline void DisplayValue<uint8_t>(SyscallType type, uint8_t value,
     case SyscallType::kUint8:
       printer << fidl_codec::Blue << static_cast<uint32_t>(value) << fidl_codec::ResetColor;
       break;
-    case SyscallType::kUint8Hexa: {
-      std::vector<char> buffer(sizeof(uint8_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%02" PRIx8, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kUint8Hexa:
+      printer.DisplayHexa8(value);
       break;
-    }
     case SyscallType::kPacketGuestVcpuType:
       printer << fidl_codec::Blue;
       PacketGuestVcpuTypeName(value, printer);
@@ -2047,12 +2056,9 @@ inline void DisplayValue<uint16_t>(SyscallType type, uint16_t value,
     case SyscallType::kUint16:
       printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
       break;
-    case SyscallType::kUint16Hexa: {
-      std::vector<char> buffer(sizeof(uint16_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%04" PRIx16, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kUint16Hexa:
+      printer.DisplayHexa16(value);
       break;
-    }
     case SyscallType::kPacketPageRequestCommand:
       printer << fidl_codec::Blue;
       PacketPageRequestCommandName(value, printer);
@@ -2094,12 +2100,9 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
     case SyscallType::kUint32:
       printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
       break;
-    case SyscallType::kUint32Hexa: {
-      std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%08" PRIx32, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kUint32Hexa:
+      printer.DisplayHexa32(value);
       break;
-    }
     case SyscallType::kBtiPerm:
       printer.DisplayBtiPerm(value);
       break;
@@ -2322,12 +2325,9 @@ inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
     case SyscallType::kUint64:
       printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
       break;
-    case SyscallType::kUint64Hexa: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kUint64Hexa:
+      printer.DisplayHexa64(value);
       break;
-    }
 #ifndef __MACH__
     case SyscallType::kGpAddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
@@ -2347,12 +2347,9 @@ inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
     case SyscallType::kTime:
       printer << DisplayTime(value);
       break;
-    case SyscallType::kPaddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kPaddr:
+      printer.DisplayPaddr(value);
       break;
-    }
 #ifndef __MACH__
     case SyscallType::kUintptr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
@@ -2360,12 +2357,9 @@ inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
       printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
       break;
     }
-    case SyscallType::kVaddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kVaddr:
+      printer.DisplayVaddr(value);
       break;
-    }
 #endif
     default:
       printer << "unimplemented uint64_t value " << static_cast<uint32_t>(type);
@@ -2410,24 +2404,18 @@ inline void DisplayValue<uintptr_t>(SyscallType type, uintptr_t value,
     case SyscallType::kSize:
       printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
       break;
-    case SyscallType::kPaddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kPaddr:
+      printer.DisplayPaddr(value);
       break;
-    }
     case SyscallType::kUintptr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
       printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
       break;
     }
-    case SyscallType::kVaddr: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
-      printer << fidl_codec::Blue << buffer.data() << fidl_codec::ResetColor;
+    case SyscallType::kVaddr:
+      printer.DisplayVaddr(value);
       break;
-    }
     default:
       printer << "unimplemented uintptr_t value " << static_cast<uint32_t>(type);
       break;
@@ -2558,15 +2546,25 @@ void DynamicArrayClassField<ClassType, Type>::Display(const ClassType* object, d
 }
 
 template <typename Type>
+inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(Type handle) {
+  return std::make_unique<fidl_codec::InvalidValue>();
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(zx_handle_t handle) {
+  zx_handle_info_t info;
+  info.handle = handle;
+  info.type = ZX_OBJ_TYPE_NONE;
+  info.rights = 0;
+  return std::make_unique<fidl_codec::HandleValue>(info);
+}
+
+template <typename Type>
 std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoder* decoder,
                                                                Stage stage) const {
   if (ValueValid(decoder, stage)) {
     if (GetSyscallType() == SyscallType::kHandle) {
-      zx_handle_info_t info;
-      info.handle = Value(decoder, stage);
-      info.type = ZX_OBJ_TYPE_NONE;
-      info.rights = 0;
-      return std::make_unique<fidl_codec::HandleValue>(info);
+      return GenerateHandleValue<Type>(Value(decoder, stage));
     }
     return fidlcat::GenerateValue<Type>(Value(decoder, stage));
   }
@@ -2705,6 +2703,31 @@ inline void SyscallInputOutputBuffer<uint8_t, uint8_t, size_t>::DisplayOutline(
     }
   }
   printer << '\n';
+}
+
+template <typename Type, typename FromType, typename SizeType>
+std::unique_ptr<fidl_codec::Value>
+SyscallInputOutputBuffer<Type, FromType, SizeType>::GenerateValue(SyscallDecoder* decoder,
+                                                                  Stage stage) const {
+  const FromType* buffer = buffer_->Content(decoder, stage);
+  if (buffer == nullptr) {
+    return std::make_unique<fidl_codec::NullValue>();
+  }
+  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
+  size_t buffer_size = elem_size_->Value(decoder, stage);
+  if (elem_count_ != nullptr) {
+    buffer_size *= elem_count_->Value(decoder, stage);
+  }
+  for (size_t i = 0; i < buffer_size; ++i) {
+    if (syscall_type_ == SyscallType::kHandle) {
+      vector_value->AddValue(
+          fidlcat::GenerateHandleValue<Type>(reinterpret_cast<const Type*>(buffer)[i]));
+    } else {
+      vector_value->AddValue(
+          fidlcat::GenerateValue<Type>(reinterpret_cast<const Type*>(buffer)[i]));
+    }
+  }
+  return vector_value;
 }
 
 template <typename FromType>

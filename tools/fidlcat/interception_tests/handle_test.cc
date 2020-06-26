@@ -62,8 +62,8 @@ HANDLE_CLOSE_MANY_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_handle_close_many()\n"
-    "    handles:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, \x1B[31mcefa1222\x1B[0m, "
-    "\x1B[31mcefa1333\x1B[0m\n"
+    "  handles:\x1B[32mvector<handle>\x1B[0m: [ \x1B[31mcefa1db0\x1B[0m, \x1B[31mcefa1222\x1B[0m, "
+    "\x1B[31mcefa1333\x1B[0m ]\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_handle_duplicate tests.

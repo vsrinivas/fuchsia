@@ -258,7 +258,7 @@ class Uint32Type : public IntegralType<uint32_t> {
 
 class Uint64Type : public IntegralType<uint64_t> {
  public:
-  enum class Kind { kDecimal, kHexaDecimal, kVaddr, kSize };
+  enum class Kind { kDecimal, kHexaDecimal, kVaddr, kSize, kPaddr };
 
   explicit Uint64Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 

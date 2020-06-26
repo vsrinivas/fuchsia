@@ -69,14 +69,15 @@ std::unique_ptr<SystemCallTest> ZxDebuglogWrite(int64_t result, std::string_view
     DEBUGLOG_WRITE_DISPLAY_TEST_CONTENT(errno, expected);  \
   }
 
-DEBUGLOG_WRITE_DISPLAY_TEST(ZxDebuglogWrite, ZX_OK,
-                            "\n"
-                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-                            "zx_debuglog_write("
-                            "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                            "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
-                            "    buffer:\x1B[32muint8\x1B[0m: \x1B[31m\"My buffer data\"\x1B[0m\n"
-                            "  -> \x1B[32mZX_OK\x1B[0m\n");
+DEBUGLOG_WRITE_DISPLAY_TEST(
+    ZxDebuglogWrite, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_debuglog_write("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "  buffer:\x1B[32mvector<uint8>\x1B[0m: \x1B[31m\"My buffer data\"\x1B[0m\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_debuglog_read tests.
 
@@ -111,7 +112,7 @@ DEBUGLOG_READ_DISPLAY_TEST(
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
     "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      buffer:\x1B[32muint8\x1B[0m: \x1B[31m\"My buffer data\"\x1B[0m\n");
+    "    buffer:\x1B[32mvector<uint8>\x1B[0m: \x1B[31m\"My buffer data\"\x1B[0m\n");
 
 // zx_ktrace_read tests.
 
@@ -271,7 +272,7 @@ MTRACE_CONTROL_DISPLAY_TEST(ZxMtraceControl, ZX_OK,
                             "kind:\x1B[32muint32\x1B[0m: \x1B[34m1\x1B[0m, "
                             "action:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m, "
                             "options:\x1B[32muint32\x1B[0m: \x1B[34m3\x1B[0m)\n"
-                            "    ptr:\x1B[32muint8\x1B[0m: \x1B[31m\"My data\"\x1B[0m\n"
+                            "  ptr:\x1B[32mvector<uint8>\x1B[0m: \x1B[31m\"My data\"\x1B[0m\n"
                             "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_debug_read tests.
