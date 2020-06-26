@@ -202,9 +202,17 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     }
     // Enable Gamma at vsync using RDMA
     SetRdmaTableValue(rdma_channel, IDX_GAMMA_EN, 1);
+    // Set flag to indicate we have enabled gamma
+    osd_enabled_gamma_ = true;
   } else {
-    // Disable Gamma at vsync using RDMA
-    SetRdmaTableValue(rdma_channel, IDX_GAMMA_EN, 0);
+    // Only disbale gamma if we enabled it.
+    if (osd_enabled_gamma_) {
+      // Disable Gamma at vsync using RDMA
+      SetRdmaTableValue(rdma_channel, IDX_GAMMA_EN, 0);
+    } else {
+      SetRdmaTableValue(rdma_channel, IDX_GAMMA_EN,
+                        VppGammaCntlPortReg::Get().ReadFrom(&(*vpu_mmio_)).en());
+    }
   }
 
   // Update CFG_W0 with correct Canvas Index

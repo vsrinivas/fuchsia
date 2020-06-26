@@ -133,6 +133,11 @@ class Osd {
   uint32_t display_width_;
   uint32_t display_height_;
 
+  // This flag is set when the driver enables gamma correction.
+  // If this flag is not set, we should not disable gamma in the absence
+  // of a gamma table since that might have been provided by earlier boot stages.
+  bool osd_enabled_gamma_ = false;
+
   bool initialized_ = false;
 };
 
