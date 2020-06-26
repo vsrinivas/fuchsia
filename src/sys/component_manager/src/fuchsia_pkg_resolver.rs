@@ -130,7 +130,7 @@ mod tests {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();
             let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
             // Simulate a package server that only contains the "hello-world" package.
-            if parsed_url.name().unwrap() != "hello-world" {
+            if parsed_url.name() != "hello-world" {
                 return None;
             }
 

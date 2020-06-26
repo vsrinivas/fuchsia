@@ -633,7 +633,7 @@ impl<P: PkgFs> TestEnv<P> {
     pub async fn wait_for_pkg_resolver_to_start(&self) {
         self.proxies
             .rewrite_engine
-            .test_apply("fuchsia-pkg://test")
+            .test_apply("fuchsia-pkg://test.com/name")
             .await
             .expect("fidl call succeeds")
             .expect("test apply result is ok");

@@ -12,6 +12,12 @@ pub enum ParseError {
     #[error("invalid host")]
     InvalidHost,
 
+    #[error("empty host")]
+    EmptyHost,
+
+    #[error("missing host")]
+    MissingHost,
+
     #[error("host must be empty to imply absolute path")]
     HostMustBeEmpty,
 
@@ -20,6 +26,9 @@ pub enum ParseError {
 
     #[error("invalid name")]
     InvalidName,
+
+    #[error("missing name")]
+    MissingName,
 
     #[error("invalid variant")]
     InvalidVariant,

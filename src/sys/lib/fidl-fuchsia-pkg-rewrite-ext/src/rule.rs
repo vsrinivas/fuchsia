@@ -5,7 +5,7 @@
 use {
     crate::errors::{RuleDecodeError, RuleParseError},
     fidl_fuchsia_pkg_rewrite as fidl, fuchsia_inspect as inspect,
-    fuchsia_url::pkg_url::{ParseError, PkgUrl},
+    fuchsia_url::pkg_url::{ParseError, PkgUrl, RepoUrl},
     serde::{Deserialize, Serialize},
     std::convert::TryFrom,
 };
@@ -52,7 +52,7 @@ impl Rule {
         let path_prefix_replacement = path_prefix_replacement.into();
 
         fn validate_host(s: &str) -> Result<(), RuleParseError> {
-            PkgUrl::new_repository(s.to_owned()).map_err(|_err| RuleParseError::InvalidHost)?;
+            RepoUrl::new(s.to_owned()).map_err(|_err| RuleParseError::InvalidHost)?;
             Ok(())
         }
 
@@ -107,8 +107,6 @@ impl Rule {
         };
 
         Some(match (new_path.as_str(), uri.resource()) {
-            ("/", _) => PkgUrl::new_repository(self.host_replacement.clone()),
-
             (_, None) => PkgUrl::new_package(
                 self.host_replacement.clone(),
                 new_path,
@@ -462,14 +460,12 @@ mod rule_tests {
             host = "fuchsia.com" => "fuchsia.com",
             path = "/" => "/",
             cases = [
-                "fuchsia-pkg://fuchsia.com" => Some(Ok("fuchsia-pkg://fuchsia.com")),
                 "fuchsia-pkg://fuchsia.com/rolldice" => Some(Ok("fuchsia-pkg://fuchsia.com/rolldice")),
                 "fuchsia-pkg://fuchsia.com/rolldice/0" => Some(Ok("fuchsia-pkg://fuchsia.com/rolldice/0")),
                 "fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx" => Some(Ok("fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx")),
                 "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff" => Some(Ok(
                 "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")),
 
-                "fuchsia-pkg://example.com" => None,
                 "fuchsia-pkg://example.com/rolldice" => None,
                 "fuchsia-pkg://example.com/rolldice/0" => None,
             ],
@@ -478,11 +474,9 @@ mod rule_tests {
             host = "fuchsia.com" => "test.fuchsia.com",
             path = "/" => "/",
             cases = [
-                "fuchsia-pkg://fuchsia.com" => Some(Ok("fuchsia-pkg://test.fuchsia.com")),
                 "fuchsia-pkg://fuchsia.com/rolldice" => Some(Ok("fuchsia-pkg://test.fuchsia.com/rolldice")),
                 "fuchsia-pkg://fuchsia.com/rolldice/0" => Some(Ok("fuchsia-pkg://test.fuchsia.com/rolldice/0")),
 
-                "fuchsia-pkg://example.com" => None,
                 "fuchsia-pkg://example.com/rolldice" => None,
                 "fuchsia-pkg://example.com/rolldice/0" => None,
             ],
@@ -507,11 +501,9 @@ mod rule_tests {
             host = "fuchsia.com" => "example.com",
             path = "/" => "/",
             cases = [
-                "fuchsia-pkg://fuchsia.com" => Some(Ok("fuchsia-pkg://example.com")),
                 "fuchsia-pkg://fuchsia.com/rolldice" => Some(Ok("fuchsia-pkg://example.com/rolldice")),
                 "fuchsia-pkg://fuchsia.com/rolldice/0" => Some(Ok("fuchsia-pkg://example.com/rolldice/0")),
 
-                "fuchsia-pkg://example.com" => None,
                 "fuchsia-pkg://example.com/rolldice" => None,
                 "fuchsia-pkg://example.com/rolldice/0" => None,
             ],
@@ -565,7 +557,6 @@ mod rule_tests {
             host = "fuchsia.com" => "fuchsia.com",
             path = "/" => "/a+b/",
             cases = [
-                "fuchsia-pkg://fuchsia.com" => Some(Err(ParseError::InvalidName)),
                 "fuchsia-pkg://fuchsia.com/foo" => Some(Err(ParseError::InvalidName)),
             ],
         }

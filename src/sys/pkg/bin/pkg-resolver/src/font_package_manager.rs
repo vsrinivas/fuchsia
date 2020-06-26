@@ -95,13 +95,13 @@ fn load_font_packages_registry<P: AsRef<Path>>(path: P) -> Result<Vec<PkgUrl>, V
     }
 }
 
-/// Validates a single `PkgUrl` to make sure that it could conceivably be a font package URL. This
-/// means it must contain a name and not contain a resource.
+/// Validates a single `PkgUrl` to make sure that it could conceivably be a font package URL.
+/// This means it must not contain a resource.
 fn validate_package_url<P: AsRef<Path>>(
     file_path: Option<P>,
     package_url: &PkgUrl,
 ) -> Result<(), LoadError> {
-    let valid = package_url.name().is_some() && package_url.resource().is_none();
+    let valid = package_url.resource().is_none();
     if valid {
         Ok(())
     } else {
@@ -240,14 +240,6 @@ pub mod tests {
 
     #[test]
     fn test_non_package_urls() -> Result<(), Error> {
-        let host_only_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/")?;
-
-        assert_matches!(
-            FontPackageManagerBuilder::new().add_package_url(host_only_url.clone()),
-            Err((_, LoadError::PkgUrl{ path: None, bad_url })) =>
-                assert_eq!(&bad_url, &host_only_url)
-        );
-
         let resource_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx")?;
         assert_matches!(
             FontPackageManagerBuilder::new().add_package_url(resource_url.clone()),
@@ -333,7 +325,6 @@ pub mod tests {
             vec![
                 "fuchsia-pkg://fuchsia.com/font1",
                 "fuchsia-pkg://fuchsia.com/font2#meta/font2.cmx",
-                "fuchsia-pkg://fuchsia.com/",
             ],
         )?;
 
@@ -342,7 +333,7 @@ pub mod tests {
 
         assert_matches!(
             result,
-            Err((_, errs)) => assert_eq!(errs.len(), 2)
+            Err((_, errs)) => assert_eq!(errs.len(), 1)
         );
 
         Ok(())

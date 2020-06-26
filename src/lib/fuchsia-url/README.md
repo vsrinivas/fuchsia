@@ -1,10 +1,10 @@
 # `fuchsia-url`
 
-Reviewed on: 2019-07-12
+Reviewed on: 2020-06-15
 
 `fuchsia-url` is a library for parsing and constructing fuchsia boot and fuchsia
 package URLs. Docs are available
-[here](https://fuchsia-docs.firebaseapp.com/rust/fuchsia-url/index.html).
+[here](https://fuchsia.dev/fuchsia-src/concepts/packages/package_url).
 
 ## Building
 

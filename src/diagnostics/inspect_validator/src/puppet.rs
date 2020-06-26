@@ -247,7 +247,7 @@ pub(crate) mod tests {
     #[test]
     fn puppet_name_derivation() -> Result<(), Error> {
         assert_eq!(
-            Puppet::derive_my_name("fuchsia-pkg://path#meta/my_name.cmx")?,
+            Puppet::derive_my_name("fuchsia-pkg://path.com/name#meta/my_name.cmx")?,
             "my_name".to_string()
         );
         Ok(())

@@ -11,67 +11,35 @@ use std::fmt;
 use std::str;
 use url::{Host, Url};
 
-/// Decoded representation of a fuchsia-pkg URL.
-///
-/// Depending on which segments are included, the URL may identify a package
-/// repository, a package within a repository (with optional variant and hash),
-/// or a resource within a package.
-///
-/// Repository identifier:
-/// - fuchsia-pkg://example.com/
+/// Decoded representation of a fuchsia-pkg URL that identifies a package
+/// and optionally, a resource in that package.
 ///
 /// Package identifier:
 /// - fuchsia-pkg://example.com/some-package
 /// - fuchsia-pkg://example.com/some-package/some-variant
 /// - fuchsia-pkg://example.com/some-package/some-variant?hash=<some-hash>
-/// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash> (obsolete)
 ///
 /// Resource identifier:
 /// - fuchsia-pkg://example.com/some-package#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant?hash=<some-hash>#path/to/resource
-/// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash>#path/to/resource (obsolete)
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PkgUrl {
     repo: RepoUrl,
     path: String,
     hash: Option<String>,
     resource: Option<String>,
+    name: String,
 }
 
 impl PkgUrl {
     pub fn parse(input: &str) -> Result<Self, ParseError> {
-        let url = Url::parse(input)?;
+        let (url, repo_url) = parse_helper(input)?;
 
-        let scheme = url.scheme();
-        if scheme != "fuchsia-pkg" {
-            return Err(ParseError::InvalidScheme);
-        }
-
-        let host = if let Some(host) = url.host() {
-            host.to_string()
-        } else {
-            return Err(ParseError::InvalidHost);
-        };
-        if host.is_empty() {
-            return Err(ParseError::InvalidHost);
-        }
-
-        if url.port().is_some() {
-            return Err(ParseError::CannotContainPort);
-        }
-
-        if !url.username().is_empty() {
-            return Err(ParseError::CannotContainUsername);
-        }
-
-        if url.password().is_some() {
-            return Err(ParseError::CannotContainPassword);
-        }
-
-        parse_path(url.path())?;
+        let (name, _variant) = parse_path(url.path())?;
 
         let path = url.path().to_string();
+
         let hash = parse_query_pairs(url.query_pairs())?;
 
         let resource = if let Some(resource) = url.fragment() {
@@ -93,16 +61,15 @@ impl PkgUrl {
             None
         };
 
-        Ok(PkgUrl { repo: RepoUrl { host }, path, hash, resource })
+        Ok(PkgUrl { repo: repo_url, path, hash, resource, name: name.to_string() })
     }
 
     pub fn host(&self) -> &str {
         &self.repo.host()
     }
 
-    pub fn name(&self) -> Option<&str> {
-        // path is always prefixed by a '/'.
-        self.path[1..].split_terminator('/').nth(0)
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn variant(&self) -> Option<&str> {
@@ -123,12 +90,6 @@ impl PkgUrl {
         self.resource.as_ref().map(|s| &**s)
     }
 
-    /// Returns true if this URL only contains a hostname, and no other parameters. For example,
-    /// fuchsia-pkg://fuchsia.com.
-    pub fn is_repository(&self) -> bool {
-        self.path == "/" && self.hash.is_none() && self.resource.is_none()
-    }
-
     /// Returns the [RepoUrl] that corresponds to this package URL.
     pub fn repo(&self) -> &RepoUrl {
         &self.repo
@@ -141,28 +102,19 @@ impl PkgUrl {
             path: self.path.clone(),
             hash: self.hash.clone(),
             resource: None,
+            name: self.name.clone(),
         }
     }
 
     /// Produce a new [PkgUrl] with any variant stripped off.
     pub fn strip_variant(&self) -> PkgUrl {
-        let name = match self.name() {
-            Some(n) => {
-                // name() removes the preceding slash, so put it back.
-                format!("/{}", n)
-            }
-            _ => "/".to_string(),
-        };
         PkgUrl {
             repo: self.repo.clone(),
-            path: name,
+            path: format!("/{}", self.name()),
             hash: self.hash.clone(),
             resource: self.resource.clone(),
+            name: self.name().to_string(),
         }
-    }
-
-    pub fn new_repository(host: String) -> Result<PkgUrl, ParseError> {
-        Ok(PkgUrl { repo: RepoUrl::new(host)?, path: "/".to_string(), hash: None, resource: None })
     }
 
     pub fn new_package(
@@ -171,13 +123,8 @@ impl PkgUrl {
         hash: Option<String>,
     ) -> Result<PkgUrl, ParseError> {
         let repo = RepoUrl::new(host)?;
-
         let (name, variant) = parse_path(path.as_str())?;
-
-        if name.is_none() {
-            return Err(ParseError::InvalidName);
-        }
-
+        let name = name.to_string();
         if let Some(ref h) = hash {
             if variant.is_none() {
                 return Err(ParseError::InvalidVariant);
@@ -186,8 +133,7 @@ impl PkgUrl {
                 return Err(ParseError::InvalidHash);
             }
         }
-
-        Ok(PkgUrl { repo, path, hash, resource: None })
+        Ok(PkgUrl { repo, path, hash, resource: None, name })
     }
 
     pub fn new_resource(
@@ -255,6 +201,11 @@ impl<'de> Deserialize<'de> for PkgUrl {
     }
 }
 
+/// Decoded representation of a fuchsia-pkg URL that identifies a package repository.
+///
+/// Repository identifier:
+/// - fuchsia-pkg://example.com/
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RepoUrl {
     host: String,
@@ -272,8 +223,11 @@ impl RepoUrl {
     }
 
     pub fn parse(input: &str) -> Result<Self, ParseError> {
-        let url = PkgUrl::parse(input)?;
-        RepoUrl::try_from(url)
+        let (url, repo_url) = parse_helper(input)?;
+        if url.path() != "/" || url.query().is_some() || url.fragment().is_some() {
+            return Err(ParseError::InvalidRepository);
+        }
+        Ok(repo_url)
     }
 
     pub fn host(&self) -> &str {
@@ -308,24 +262,6 @@ impl TryFrom<&str> for RepoUrl {
     }
 }
 
-impl TryFrom<PkgUrl> for RepoUrl {
-    type Error = ParseError;
-
-    fn try_from(url: PkgUrl) -> Result<Self, Self::Error> {
-        if url.is_repository() {
-            Ok(url.repo)
-        } else {
-            Err(ParseError::InvalidRepository)
-        }
-    }
-}
-
-impl From<RepoUrl> for PkgUrl {
-    fn from(url: RepoUrl) -> Self {
-        PkgUrl { repo: url, path: "/".to_string(), hash: None, resource: None }
-    }
-}
-
 impl fmt::Display for RepoUrl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "fuchsia-pkg://{}", self.host)
@@ -341,45 +277,80 @@ impl Serialize for RepoUrl {
 // Implement a custom deserializer to make sure we restrict RepositoryConfig.repo_url to actually
 // be a repository URL.
 impl<'de> Deserialize<'de> for RepoUrl {
-    fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
-        let url = PkgUrl::deserialize(de)?;
-        Ok(RepoUrl::try_from(url).map_err(|err| serde::de::Error::custom(err))?)
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let url = String::deserialize(de)?;
+        Ok(RepoUrl::parse(&url).map_err(|err| serde::de::Error::custom(err))?)
     }
 }
 
-fn parse_path(mut path: &str) -> Result<(Option<&str>, Option<&str>), ParseError> {
-    let mut name = None;
-    let mut variant = None;
+// Validates the fuchsia-pkg URL invariants that are common between PkgUrl and
+// RepoUrl.
+fn parse_helper(input: &str) -> Result<(Url, RepoUrl), ParseError> {
+    let url = Url::parse(input)?;
 
+    let scheme = url.scheme();
+    if scheme != "fuchsia-pkg" {
+        return Err(ParseError::InvalidScheme);
+    }
+
+    if url.port().is_some() {
+        return Err(ParseError::CannotContainPort);
+    }
+
+    if !url.username().is_empty() {
+        return Err(ParseError::CannotContainUsername);
+    }
+
+    if url.password().is_some() {
+        return Err(ParseError::CannotContainPassword);
+    }
+
+    let host = if let Some(host) = url.host() {
+        host.to_string()
+    } else {
+        return Err(ParseError::MissingHost);
+    };
+    if host.is_empty() {
+        return Err(ParseError::EmptyHost);
+    }
+
+    Ok((url, RepoUrl { host }))
+}
+
+// Returns a valid name and an optional variant on success.
+fn parse_path(mut path: &str) -> Result<(&str, Option<&str>), ParseError> {
     if !path.starts_with('/') {
         return Err(ParseError::InvalidPath);
     }
-
     path = &path[1..];
-    if !path.is_empty() {
-        let mut iter = path.split('/').fuse();
-
-        if let Some(s) = iter.next() {
-            if is_name(s) {
-                name = Some(s);
-            } else {
-                return Err(ParseError::InvalidName);
-            }
-        }
-
-        if let Some(s) = iter.next() {
-            if is_name(s) {
-                variant = Some(s);
-            } else {
-                return Err(ParseError::InvalidVariant);
-            }
-        }
-
-        if let Some(_) = iter.next() {
-            return Err(ParseError::ExtraPathSegments);
-        }
+    if path.is_empty() {
+        return Err(ParseError::MissingName);
     }
-
+    let mut iter = path.split('/').fuse();
+    let name = if let Some(s) = iter.next() {
+        if is_name(s) {
+            s
+        } else {
+            return Err(ParseError::InvalidName);
+        }
+    } else {
+        return Err(ParseError::MissingName);
+    };
+    let variant = if let Some(s) = iter.next() {
+        if is_name(s) {
+            Some(s)
+        } else {
+            return Err(ParseError::InvalidVariant);
+        }
+    } else {
+        None
+    };
+    if let Some(_) = iter.next() {
+        return Err(ParseError::ExtraPathSegments);
+    }
     Ok((name, variant))
 }
 
@@ -404,7 +375,6 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::convert::TryInto;
 
     macro_rules! test_parse_ok {
         (
@@ -436,6 +406,7 @@ mod tests {
                                 path: $pkg_path.to_string(),
                                 hash: $pkg_hash.map(|s: &str| s.to_string()),
                                 resource: $pkg_resource.map(|s: &str| s.to_string()),
+                                name: $pkg_name.to_string()
                             })
                         );
 
@@ -507,20 +478,11 @@ mod tests {
     }
 
     test_parse_ok! {
-        test_parse_host => {
-            url = "fuchsia-pkg://fuchsia.com",
-            host = "fuchsia.com",
-            path = "/",
-            name = None,
-            variant = None,
-            hash = None,
-            resource = None,
-        }
         test_parse_host_name => {
             url = "fuchsia-pkg://fuchsia.com/fonts",
             host = "fuchsia.com",
             path = "/fonts",
-            name = Some("fonts"),
+            name = "fonts",
             variant = None,
             hash = None,
             resource = None,
@@ -529,7 +491,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/abc123-._",
             host = "fuchsia.com",
             path = "/abc123-._",
-            name = Some("abc123-._"),
+            name = "abc123-._",
             variant = None,
             hash = None,
             resource = None,
@@ -538,7 +500,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts/stable",
             host = "fuchsia.com",
             path = "/fonts/stable",
-            name = Some("fonts"),
+            name = "fonts",
             variant = Some("stable"),
             hash = None,
             resource = None,
@@ -547,7 +509,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
             host = "fuchsia.com",
             path = "/fonts/stable",
-            name = Some("fonts"),
+            name = "fonts",
             variant = Some("stable"),
             hash = Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
             resource = None,
@@ -556,7 +518,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
             host = "fuchsia.com",
             path = "/fonts",
-            name = Some("fonts"),
+            name = "fonts",
             variant = None,
             hash = Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
             resource = None,
@@ -565,7 +527,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts#",
             host = "fuchsia.com",
             path = "/fonts",
-            name = Some("fonts"),
+            name = "fonts",
             variant = None,
             hash = None,
             resource = None,
@@ -574,7 +536,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts#foo/bar",
             host = "fuchsia.com",
             path = "/fonts",
-            name = Some("fonts"),
+            name = "fonts",
             variant = None,
             hash = None,
             resource = Some("foo/bar"),
@@ -583,7 +545,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts#foo%23bar",
             host = "fuchsia.com",
             path = "/fonts",
-            name = Some("fonts"),
+            name = "fonts",
             variant = None,
             hash = None,
             resource = Some("foo#bar"),
@@ -592,7 +554,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts#foo\x00bar",
             host = "fuchsia.com",
             path = "/fonts",
-            name = Some("fonts"),
+            name = "fonts",
             variant = None,
             hash = None,
             resource = Some("foobar"),
@@ -601,7 +563,7 @@ mod tests {
             url = "fuchsia-pkg://fuchsia.com/fonts#foo%09bar",
             host = "fuchsia.com",
             path = "/fonts",
-            name = Some("fonts"),
+            name = "fonts",
             variant = None,
             hash = None,
             resource = Some("foo\tbar"),
@@ -609,17 +571,11 @@ mod tests {
     }
 
     test_parse_err! {
-        test_parse_host_cannot_be_absent => {
+        test_parse_host_cannot_be_empty => {
             urls = [
                 "fuchsia-pkg://",
             ],
-            err = ParseError::InvalidHost,
-        }
-        test_parse_host_cannot_be_empty => {
-            urls = [
-                "fuchsia-pkg:///",
-            ],
-            err = ParseError::InvalidHost,
+            err = ParseError::EmptyHost,
         }
         test_parse_name_cannot_be_empty => {
             urls = [
@@ -733,17 +689,13 @@ mod tests {
         }
         test_parse_rejects_unknown_query_params => {
             urls = [
-                "fuchsia-pkg://fuchsia.com?foo=bar",
+                "fuchsia-pkg://fuchsia.com/name?foo=bar",
             ],
             err = ParseError::ExtraQueryParameters,
         }
     }
 
     test_format! {
-        test_format_repository_url => {
-            parsed = PkgUrl::new_repository("fuchsia.com".to_string()).unwrap(),
-            formatted = "fuchsia-pkg://fuchsia.com",
-        }
         test_format_package_url => {
             parsed = PkgUrl::new_package(
                 "fuchsia.com".to_string(),
@@ -780,19 +732,6 @@ mod tests {
     }
 
     #[test]
-    fn test_new_repository() {
-        let url = PkgUrl::new_repository("fuchsia.com".to_string()).unwrap();
-        assert_eq!("fuchsia.com", url.host());
-        assert_eq!("/", url.path());
-        assert_eq!(None, url.name());
-        assert_eq!(None, url.variant());
-        assert_eq!(None, url.package_hash());
-        assert_eq!(None, url.resource());
-
-        assert_eq!(PkgUrl::new_repository("".to_string()), Err(ParseError::InvalidHost));
-    }
-
-    #[test]
     fn test_new_package() {
         let url = PkgUrl::new_package(
             "fuchsia.com".to_string(),
@@ -802,7 +741,7 @@ mod tests {
         .unwrap();
         assert_eq!("fuchsia.com", url.host());
         assert_eq!("/fonts/stable", url.path());
-        assert_eq!(Some("fonts"), url.name());
+        assert_eq!("fonts", url.name());
         assert_eq!(Some("stable"), url.variant());
         assert_eq!(
             Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
@@ -821,7 +760,7 @@ mod tests {
         );
         assert_eq!(
             PkgUrl::new_package("fuchsia.com".to_string(), "/".to_string(), None),
-            Err(ParseError::InvalidName)
+            Err(ParseError::MissingName)
         );
         assert_eq!(
             PkgUrl::new_package("fuchsia.com".to_string(), "/fonts/$".to_string(), None),
@@ -858,7 +797,7 @@ mod tests {
         .unwrap();
         assert_eq!("fuchsia.com", url.host());
         assert_eq!("/fonts/stable", url.path());
-        assert_eq!(Some("fonts"), url.name());
+        assert_eq!("fonts", url.name());
         assert_eq!(Some("stable"), url.variant());
         assert_eq!(
             Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
@@ -880,7 +819,7 @@ mod tests {
                 None,
                 "foo/bar".to_string()
             ),
-            Err(ParseError::InvalidName)
+            Err(ParseError::MissingName)
         );
         assert_eq!(
             PkgUrl::new_resource(
@@ -933,7 +872,6 @@ mod tests {
 
     #[test]
     fn test_repo_url() {
-        let parsed_pkg_url = PkgUrl::new_repository("fuchsia.com".to_string()).unwrap();
         let parsed_repo_url = RepoUrl::new("fuchsia.com".to_string()).unwrap();
 
         let urls = &["fuchsia-pkg://fuchsia.com", "fuchsia-pkg://fuchsia.com/"];
@@ -943,8 +881,6 @@ mod tests {
 
             let url = url.unwrap();
             assert_eq!(url.host(), "fuchsia.com");
-
-            assert_eq!(url.try_into().as_ref(), Ok(&parsed_pkg_url));
         }
 
         let urls = &[
@@ -981,13 +917,7 @@ mod tests {
 
     #[test]
     fn test_strip_variant() {
-        let urls = &[
-            "fuchsia-pkg://fuchsia.com/foo",
-            "fuchsia-pkg://fuchsia.com?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
-            "fuchsia-pkg://fuchsia.com#bar",
-            "fuchsia-pkg://fuchsia.com",
-            "fuchsia-pkg://fuchsia.com/",
-        ];
+        let urls = &["fuchsia-pkg://fuchsia.com/foo", "fuchsia-pkg://fuchsia.com/name#bar"];
         for url in urls {
             // Don't change urls with no variant.
             assert_eq!(PkgUrl::parse(url).unwrap(), PkgUrl::parse(url).unwrap().strip_variant());

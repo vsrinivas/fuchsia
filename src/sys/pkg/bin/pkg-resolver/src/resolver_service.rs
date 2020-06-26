@@ -201,7 +201,7 @@ fn missing_cache_package_disk_fallback(
             be overriding the domain for the repository which would normally serve \
             this package. This will be an error in a future version of Fuchsia, see \
             fxbug.dev/50748.",
-            rewritten_url.name().unwrap_or("unknown package"),
+            rewritten_url.name(),
             rewritten_url
         );
         inspect_state.cache_fallbacks_due_to_not_found.increment();
@@ -500,11 +500,7 @@ fn hash_from_cache_packages_manifest<'a>(
         None => "0",
         _ => return None,
     };
-    let package_name = match url.name() {
-        Some(n) => n,
-        None => return None,
-    };
-    let package_path = PackagePath::from_name_and_variant(package_name, variant)
+    let package_path = PackagePath::from_name_and_variant(url.name(), variant)
         .map_err(|e| {
             fx_log_err!(
                 "cache fallback: PackagePath::name_and_variant failed for url {}: {:#}",

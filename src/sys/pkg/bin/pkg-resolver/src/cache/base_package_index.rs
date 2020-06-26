@@ -74,10 +74,7 @@ mod tests {
                 .iter()
                 .map(|(path, hash)| PackageIndexEntry {
                     package_url: PackageUrl {
-                        url: format!(
-                            "fuchsia-pkg://fuchsia.com/{}",
-                            path.name().expect("name to be valid")
-                        ),
+                        url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
                     },
                     meta_far_blob_id: BlobId::from(hash.clone()).into(),
                 })

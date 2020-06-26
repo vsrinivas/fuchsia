@@ -567,7 +567,6 @@ async fn font_manager_load_static_registry_failure_parse() {
 #[fasync::run_singlethreaded(test)]
 async fn font_manager_load_static_registry_failure_pkg_url() {
     let json = serde_json::to_string(&json!([
-        "fuchsia-pkg://missing-pkg-name.com/",
         "fuchsia-pkg://includes-resource.com/foo#meta/resource.cmx"
     ]))
     .unwrap();
@@ -578,10 +577,7 @@ async fn font_manager_load_static_registry_failure_pkg_url() {
     assert_count_events(
         &env,
         metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-        vec![
-            metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl,
-            metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl,
-        ],
+        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl],
     )
     .await;
 
