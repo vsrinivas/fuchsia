@@ -33,8 +33,10 @@ group("core") {
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
 
-    # Placed with core because it does not run scenic, in contrast to terminal bundle.
-    "//src/tests/end_to_end/perf:touch_input_test",
+    # TODO(55209): re-enable perf:touch_input_test.
+    # Placed with core because core does not run scenic, in contrast to terminal bundle.
+    # (perf:touch_input_test expects scenic _not_ to be running)
+    # "//src/tests/end_to_end/perf:touch_input_test",
     "//src/tests/end_to_end/screen_is_not_black:config",
     "//tools",
     "//tools:tests",
