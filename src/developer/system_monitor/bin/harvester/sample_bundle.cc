@@ -8,6 +8,19 @@
 
 namespace harvester {
 
+std::ostream& operator<<(std::ostream& out, const SampleBundle& bundle) {
+  out << "SampleBundle:" << std::endl;
+  out << "  Strings:" << std::endl;
+  for (const auto& str : bundle.string_sample_list_) {
+    out << "    " << str.first << ": " << str.second << std::endl;
+  }
+  out << "  Values:" << std::endl;
+  for (const auto& value : bundle.int_sample_list_) {
+    out << "    " << value.first << ": " << value.second << std::endl;
+  }
+  return out;
+}
+
 // After gathering the data, upload it to |dockyard|.
 void SampleBundle::Upload(DockyardProxy* dockyard_proxy) {
   DockyardProxyStatus status =

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_H_
-#define GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_LIB_DOCKYARD_DOCKYARD_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_LIB_DOCKYARD_DOCKYARD_H_
 
 #include <stdint.h>
 
@@ -67,6 +67,7 @@ enum KoidType : SampleValue {
   JOB = 100ULL,
   PROCESS = 101ULL,
   THREAD = 102ULL,
+  CHANNEL = 103ULL,
 };
 
 // A Sample.
@@ -728,4 +729,4 @@ std::ostringstream DebugPrintQuery(const Dockyard& dockyard,
 
 }  // namespace dockyard
 
-#endif  // GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_LIB_DOCKYARD_DOCKYARD_H_

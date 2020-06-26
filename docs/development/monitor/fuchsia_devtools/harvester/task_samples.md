@@ -144,3 +144,25 @@ More precise thread states.
 ```
 
 See `zircon/system/public/zircon/syscalls/object.h` for an up-to-date reference.
+
+### Channel
+
+A channel provides a means of FIDL communication between processes.
+
+For each pair of processes using channels for IPC, a pair of channels is
+created. Channels are always created by the kernel in pairs. Two channels
+can be tied together using the koid of the peer channel.
+
+#### koid:\*:type
+
+This is always `dockyard::KoidType::CHANNEL` for a channel.
+
+#### koid:\*:process
+
+`*` refers to the koid of the process that holds the channel.
+
+#### koid:\*:peer
+
+`*` refers to the koid of the channel that communicates with this channel.
+Normally there is a complementary entry referring back to this channel.
+

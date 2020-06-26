@@ -23,6 +23,8 @@ source_set("lib") {
     "dockyard_proxy_grpc.h",
     "gather_category.cc",
     "gather_category.h",
+    "gather_channels.cc",
+    "gather_channels.h",
     "gather_cpu.cc",
     "gather_cpu.h",
     "gather_inspectable.cc",
@@ -103,6 +105,7 @@ executable("system_monitor_harvester_test") {
     "dockyard_proxy_fake.cc",
     "dockyard_proxy_fake.h",
     "dockyard_proxy_grpc_test.cc",
+    "gather_channels_test.cc",
     "gather_cpu_test.cc",
     "gather_inspectable_test.cc",
     "gather_introspection_test.cc",
@@ -123,6 +126,7 @@ executable("system_monitor_harvester_test") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fdio",
   ]
 }
 

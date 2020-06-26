@@ -17,20 +17,19 @@ namespace harvester {
 
 GatherProcessesAndMemory::GatherProcessesAndMemory(
     zx_handle_t root_resource, harvester::DockyardProxy* dockyard_proxy)
-    : GatherCategory(root_resource, dockyard_proxy), task_tree_(new TaskTree) {}
-
-GatherProcessesAndMemory::~GatherProcessesAndMemory() { delete task_tree_; }
+    : GatherCategory(root_resource, dockyard_proxy) {}
 
 void GatherProcessesAndMemory::Gather() {
   SampleBundle samples;
+  // Note: g_slow_data_task_tree is gathered in GatherChannels::Gather().
+  auto task_tree = &g_slow_data_task_tree;
   if (actions_.WantRefresh()) {
-    task_tree_->Gather();
-    AddTaskBasics(&samples, task_tree_->Jobs(), dockyard::KoidType::JOB);
-    AddTaskBasics(&samples, task_tree_->Processes(),
+    AddTaskBasics(&samples, task_tree->Jobs(), dockyard::KoidType::JOB);
+    AddTaskBasics(&samples, task_tree->Processes(),
                   dockyard::KoidType::PROCESS);
-    AddTaskBasics(&samples, task_tree_->Threads(), dockyard::KoidType::THREAD);
+    AddTaskBasics(&samples, task_tree->Threads(), dockyard::KoidType::THREAD);
   }
-  AddProcessStats(&samples, task_tree_->Processes());
+  AddProcessStats(&samples, task_tree->Processes());
   AddGlobalMemorySamples(&samples, RootResource());
   samples.Upload(DockyardPtr());
   actions_.NextInterval();

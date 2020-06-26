@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "gather_channels.h"
 #include "gather_cpu.h"
 #include "gather_inspectable.h"
 #include "gather_introspection.h"
@@ -59,6 +60,7 @@ void Harvester::GatherSlowData(async_dispatcher_t* dispatcher) {
   // dog food).
   // gather_memory_digest_.PostUpdate(dispatcher, now, zx::msec(500));
 
+  gather_channels_.PostUpdate(dispatcher, now, zx::sec(1));
   gather_processes_and_memory_.PostUpdate(dispatcher, now, zx::sec(2));
 }
 

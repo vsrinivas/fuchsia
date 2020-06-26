@@ -11,6 +11,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 
+#include <cstdio>
+
 namespace harvester {
 
 const size_t kNumInitialKoids = 128;

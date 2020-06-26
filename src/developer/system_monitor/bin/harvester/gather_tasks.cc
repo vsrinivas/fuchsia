@@ -112,8 +112,8 @@ void SampleBundleBuilder::AddProcessStats(zx_handle_t process, zx_koid_t koid) {
       zx_object_get_info(process, ZX_INFO_TASK_STATS, &info, sizeof(info),
                          /*actual=*/nullptr, /*avail=*/nullptr);
   if (status != ZX_OK) {
-    FX_VLOGS(VERBOSE_FOR_FILE) << ZxErrorString("AddProcessStats", status)
-                               << " for koid " << koid;
+    FX_VLOGS(VERBOSE_FOR_FILE)
+        << ZxErrorString("AddProcessStats", status) << " for koid " << koid;
     return;
   }
   AddKoidValue(koid, "memory_mapped_bytes", info.mem_mapped_bytes);

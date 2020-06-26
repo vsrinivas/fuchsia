@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_HARVESTER_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_HARVESTER_H_
 
 #include "dockyard_proxy.h"
+#include "gather_channels.h"
 #include "gather_cpu.h"
 #include "gather_inspectable.h"
 #include "gather_introspection.h"
@@ -38,6 +39,7 @@ class Harvester {
   zx_handle_t root_resource_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
 
+  GatherChannels gather_channels_{root_resource_, dockyard_proxy_.get()};
   GatherCpu gather_cpu_{root_resource_, dockyard_proxy_.get()};
   GatherInspectable gather_inspectable_{root_resource_, dockyard_proxy_.get()};
   GatherIntrospection gather_introspection_{root_resource_,
@@ -56,4 +58,4 @@ class Harvester {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_HARVESTER_H_

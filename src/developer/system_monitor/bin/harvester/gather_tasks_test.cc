@@ -34,7 +34,7 @@ class GatherTasksTest : public ::testing::Test {
   std::string self_koid_;
 };
 
-TEST_F(GatherTasksTest, Inspectable) {
+TEST_F(GatherTasksTest, MemoryData) {
   zx_handle_t root_resource;
   ASSERT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;

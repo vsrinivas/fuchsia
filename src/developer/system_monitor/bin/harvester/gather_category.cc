@@ -11,6 +11,9 @@
 
 namespace harvester {
 
+TaskTree g_fast_data_task_tree;
+TaskTree g_slow_data_task_tree;
+
 std::string ZxErrorString(const std::string& cmd, zx_status_t err) {
   std::ostringstream os;
   os << cmd << " returned " << zx_status_get_string(err) << " (" << err << ")";

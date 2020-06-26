@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_SAMPLE_BUNDLE_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_SAMPLE_BUNDLE_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_SAMPLE_BUNDLE_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_SAMPLE_BUNDLE_H_
 
 #include <string>
 
@@ -46,8 +46,11 @@ class SampleBundle final {
  private:
   SampleList int_sample_list_;
   StringSampleList string_sample_list_;
+
+  friend std::ostream& operator<<(std::ostream& out,
+                                  const SampleBundle& bundle);
 };
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_SAMPLE_BUNDLE_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_SAMPLE_BUNDLE_H_

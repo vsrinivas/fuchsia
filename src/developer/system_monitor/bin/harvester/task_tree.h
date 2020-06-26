@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_TASK_TREE_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_TASK_TREE_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_TASK_TREE_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_TASK_TREE_H_
 
-#include "gather_category.h"
+#include <zircon/types.h>
+
+#include <map>
+#include <vector>
 
 namespace harvester {
 
@@ -74,4 +77,4 @@ class TaskTree {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_TASK_TREE_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_TASK_TREE_H_

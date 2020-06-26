@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_FAKE_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_FAKE_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_FAKE_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_FAKE_H_
 
 #include <map>
 #include <string>
@@ -46,7 +46,10 @@ class DockyardProxyFake : public DockyardProxy {
   bool CheckValueSent(const std::string& dockyard_path,
                       dockyard::SampleValue* value) const;
   // Returns true if the substring appears in any value path.
-  bool CheckValueSubstringSent(const std::string& dockyard_path_substring) const;
+  bool CheckValueSubstringSent(
+      const std::string& dockyard_path_substring) const;
+  bool CheckValueSubstringSent(const std::string& dockyard_path_substring,
+                               std::string* key, uint64_t* value) const;
   bool CheckStringSent(const std::string& dockyard_path,
                        std::string* string) const;
   bool CheckStringPrefixSent(const std::string& dockyard_path_prefix,
@@ -69,4 +72,4 @@ std::ostream& operator<<(std::ostream& out, const DockyardProxyFake& dockyard);
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_FAKE_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_FAKE_H_

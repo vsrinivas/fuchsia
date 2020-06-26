@@ -4,6 +4,7 @@
 
 #include "task_tree.h"
 
+#include <lib/zx/object.h>
 #include <zircon/process.h>
 
 #include <gtest/gtest.h>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_CATEGORY_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_CATEGORY_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_CATEGORY_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_CATEGORY_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
@@ -13,10 +13,19 @@
 #include <string>
 
 #include "src/developer/system_monitor/lib/dockyard/dockyard.h"
+#include "task_tree.h"
 
 class SystemMonitorHarvesterTest;
 
 namespace harvester {
+
+// Requested hack to use one task tree per thread, with few lines of code
+// changed. This creates a potential gotcha, in that the correct task tree needs
+// to be used in the correct thread, which is currently verified via review.
+// Consult harvester.cc to determine which task tree should be used based on
+// whether the gatherer is run in GatherFastData() or GatherSlowData().
+extern TaskTree g_fast_data_task_tree;
+extern TaskTree g_slow_data_task_tree;
 
 class DockyardProxy;
 
@@ -69,4 +78,4 @@ class GatherCategory {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_CATEGORY_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_CATEGORY_H_
