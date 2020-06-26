@@ -41,10 +41,11 @@ SceneGraph::SceneGraph(sys::ComponentContext* app_context)
         [this](fidl::InterfaceRequest<FocusChainListenerRegistry> request) {
           focus_chain_listener_registry_.Bind(std::move(request));
         });
-
   } else {
     FX_LOGS(ERROR) << "SceneGraph failed to register fuchsia.ui.focus.FocusChainListenerRegistry.";
   }
+
+  view_tree_.PublishViewRefInstalledService(app_context);
 }
 
 void SceneGraph::AddCompositor(const CompositorWeakPtr& compositor) {
@@ -91,6 +92,7 @@ void SceneGraph::ProcessViewTreeUpdates() {
     }
   }
   view_tree_updates_.clear();
+  view_tree_.PostProcessUpdates();
 
   MaybeDispatchFidlFocusChainAndFocusEvents(old_focus_chain);
 }

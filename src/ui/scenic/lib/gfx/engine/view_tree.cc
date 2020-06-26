@@ -90,6 +90,16 @@ std::optional<zx_koid_t> ViewTree::ConnectedViewRefKoidOf(SessionId session_id) 
 
 bool ViewTree::IsTracked(zx_koid_t koid) const { return IsValid(koid) && nodes_.count(koid) > 0; }
 
+bool ViewTree::IsInstalled(zx_koid_t koid) {
+  if (!IsTracked(koid))
+    return false;
+  if (const auto ptr = std::get_if<RefNode>(&nodes_.at(koid))) {
+    return ptr->installed;
+  } else {
+    return false;
+  }
+}
+
 bool ViewTree::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) const {
   FX_DCHECK(IsTracked(descendant_koid)) << "precondition";
   FX_DCHECK(IsTracked(ancestor_koid)) << "precondition";
@@ -646,6 +656,17 @@ void ViewTree::RepairFocus() {
   }
 
   // Run state validity check at call site.
+}
+
+void ViewTree::UpdateInstalledRefs() {
+  for (auto& [koid, node] : nodes_) {
+    if (const auto ptr = std::get_if<RefNode>(&node)) {
+      if (!ptr->installed && IsConnectedToScene(koid)) {
+        ptr->installed = true;
+        view_ref_installed_impl_.OnViewRefInstalled(koid);
+      }
+    }
+  }
 }
 
 }  // namespace scenic_impl::gfx

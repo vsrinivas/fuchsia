@@ -19,6 +19,7 @@
 #include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
+#include "src/ui/scenic/lib/gfx/engine/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
@@ -100,6 +101,8 @@ class ViewTree {
     fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
 
     scheduling::SessionId session_id = 0u;  // Default value: an invalid ID.
+
+    bool installed = false;
   };
 
   // Provide detail on if/why focus change request was denied.
@@ -114,6 +117,8 @@ class ViewTree {
     kErrorUnhandledCase,  // last
   };
 
+  ViewTree() : view_ref_installed_impl_(fit::bind_member(this, &ViewTree::IsInstalled)){};
+
   // Return the current focus chain with cloned ViewRefs.
   // - Error conditions should not force the return of an empty focus chain; instead, the root_, if
   //   valid, should be returned. This allows client-side recovery from focus loss.
@@ -121,6 +126,10 @@ class ViewTree {
 
   // Return the current focus chain.
   const std::vector<zx_koid_t>& focus_chain() const;
+
+  void PublishViewRefInstalledService(sys::ComponentContext* app_context) {
+    view_ref_installed_impl_.Publish(app_context);
+  }
 
   // Return parent's KOID, if valid. Otherwise return std::nullopt.
   // Invariant: child exists in nodes_ map.
@@ -238,6 +247,9 @@ class ViewTree {
   // Post: child.parent set to ZX_KOID_INVALID
   void DisconnectFromParent(zx_koid_t child);
 
+  // To be called after a batch of ViewTree updates have been applied.
+  void PostProcessUpdates() { UpdateInstalledRefs(); }
+
   // Debug aid.
   // - Do not rely on the concrete format for testing or any other purpose.
   // - Do not rely on this function being runtime efficient; it is not guaranteed to be.
@@ -258,6 +270,14 @@ class ViewTree {
   //       KOIDs (P, R) is part of the ancestor hierarchy (P - Q - R) in the view tree.
   // Post: if root_ is invalid, focus_chain_ is empty.
   void RepairFocus();
+
+  // Returns true if there is a RefNode corresponding to |koid| that has ever been connected to the
+  // SceneGraph. Returns false otherwise.
+  bool IsInstalled(zx_koid_t koid);
+
+  // Cycles through all nodes, updating any that got connected to the SceneGraph for the first time
+  // and notifies any ViewRefInstalled clients. Called in PostProcessUpdates().
+  void UpdateInstalledRefs();
 
   // Map of ViewHolder's or ViewRef's KOID to its node representation.
   // - Nodes that are connected have an unbroken parent chain to root_.
@@ -283,6 +303,8 @@ class ViewTree {
   // - Mutator operations are required to keep the focus chain updated.
   // - If no view has focus (because there is no root), then the focus chain is empty.
   std::vector<zx_koid_t> focus_chain_;
+
+  ViewRefInstalledImpl view_ref_installed_impl_;
 };
 
 struct ViewTreeNewRefNode {

@@ -84,6 +84,8 @@ source_set("gfx") {
     "engine/session.h",
     "engine/session_manager.cc",
     "engine/session_manager.h",
+    "engine/view_ref_installed_impl.cc",
+    "engine/view_ref_installed_impl.h",
     "engine/view_tree.cc",
     "engine/view_tree.h",
     "engine/view_tree_updater.cc",
