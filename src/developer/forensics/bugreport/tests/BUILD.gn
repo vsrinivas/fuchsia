@@ -14,7 +14,7 @@ executable("bugreport_integration_test_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.mem",
-    "//src/developer/forensics/bugreport:src",
+    "//src/developer/forensics/bugreport:bug_reporter",
     "//src/developer/forensics/utils:archive",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -32,7 +32,7 @@ executable("bugreport_unittest_exe") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/bugreport:src",
+    "//src/developer/forensics/bugreport:bug_reporter",
     "//src/developer/forensics/testing/stubs:data_provider",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -42,18 +42,6 @@ executable("bugreport_unittest_exe") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-executable("command_line_options_unittest_exe") {
-  testonly = true
-
-  sources = [ "command_line_options_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/bugreport:command_line_options",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -76,14 +64,6 @@ fuchsia_component("bugreport_unittest") {
   deps = [ ":bugreport_unittest_exe" ]
 }
 
-fuchsia_component("command_line_options_unittest") {
-  testonly = true
-
-  manifest = "meta/command_line_options_unittest.cmx"
-
-  deps = [ ":command_line_options_unittest_exe" ]
-}
-
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -91,7 +71,6 @@ fuchsia_test_package("bugreport-tests") {
   test_components = [
     ":bugreport_integration_test",
     ":bugreport_unittest",
-    ":command_line_options_unittest",
   ]
 }
 

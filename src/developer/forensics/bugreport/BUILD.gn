@@ -40,8 +40,7 @@ executable("main") {
   sources = [ "main.cc" ]
 
   deps = [
-    ":command_line_options",
-    ":src",
+    ":bug_reporter",
     "//sdk/lib/sys/cpp",
   ]
 }
@@ -49,16 +48,7 @@ executable("main") {
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("command_line_options") {
-  sources = [
-    "command_line_options.cc",
-    "command_line_options.h",
-  ]
-
-  deps = [ "//src/lib/fxl" ]
-}
-
-source_set("src") {
+source_set("bug_reporter") {
   sources = [
     "bug_reporter.cc",
     "bug_reporter.h",

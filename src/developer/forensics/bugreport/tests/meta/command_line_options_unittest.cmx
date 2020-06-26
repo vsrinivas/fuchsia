@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "bin/command_line_options_unittest_exe"
-    }
-}
