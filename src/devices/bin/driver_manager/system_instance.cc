@@ -820,7 +820,8 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   // this should switch to use that
   int fd = open("/system-delayed", O_RDONLY);
   if (fd < 0) {
-    LOGF(ERROR, "Failed to open '/system-delayed', system drivers and autorun:system are disabled");
+    LOGF(WARNING,
+         "Unabled to open '/system-delayed', system drivers and autorun:system are disabled");
     return ZX_ERR_IO;
   }
   close(fd);

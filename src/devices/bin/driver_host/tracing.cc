@@ -39,7 +39,7 @@ zx_status_t start_trace_provider() {
   trace_provider_t* trace_provider = trace_provider_create(to_service, dispatcher);
   if (!trace_provider) {
     async_loop_destroy(loop);
-    LOGF(ERROR, "Failed to register trace provider");
+    LOGF(WARNING, "Failed to register trace provider");
     return ZX_ERR_INTERNAL;
   }
 
