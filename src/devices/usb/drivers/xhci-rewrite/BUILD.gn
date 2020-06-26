@@ -156,7 +156,10 @@ test("xhci-event-ring-unittest") {
     "xhci-event-ring-test.cc",
     "xhci-event-ring.cc",
   ]
-  deps = [ ":test-libs" ]
+  deps = [
+    ":test-libs",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
 
   # TODO(54318): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]

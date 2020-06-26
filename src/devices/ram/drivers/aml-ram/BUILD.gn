@@ -32,6 +32,7 @@ test("aml-ram-test") {
   ]
   deps = [
     ":common",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",

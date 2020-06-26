@@ -115,6 +115,7 @@ test("sysmem-unittest-executable") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",

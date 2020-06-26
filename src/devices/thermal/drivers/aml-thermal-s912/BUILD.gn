@@ -59,6 +59,7 @@ test("aml-thermal-s912-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
   ]
