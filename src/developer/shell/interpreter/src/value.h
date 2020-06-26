@@ -58,6 +58,9 @@ class ReferenceCountedBase {
   friend class TypeString;
   friend void StringConcatenation(Thread* thread, uint64_t count);
 
+ public:
+  size_t reference_count() const { return reference_count_; }
+
  protected:
   explicit ReferenceCountedBase(Interpreter* interpreter) : interpreter_(interpreter) {}
   ReferenceCountedBase(const ReferenceCountedBase&) = delete;
@@ -66,8 +69,6 @@ class ReferenceCountedBase {
 
   ReferenceCountedBase& operator=(const ReferenceCountedBase&) = delete;
   ReferenceCountedBase& operator=(ReferenceCountedBase&&) = delete;
-
-  size_t reference_count() const { return reference_count_; }
 
  protected:
   // Adds a reference to this value.

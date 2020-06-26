@@ -120,8 +120,11 @@ class Interpreter {
   // it encountered an error during execution of the code.
   virtual void ContextDoneWithExecutionError(ExecutionContext* context) = 0;
 
-  // Called when a context emit a text result.
+  // Called when a context emits a text result.
   virtual void TextResult(ExecutionContext* context, std::string_view text) = 0;
+
+  // Called when a context emits a result.
+  virtual void Result(ExecutionContext* context, const Value& result) = 0;
 
   // Gets the context for the specified id.
   ExecutionContext* GetContext(uint64_t context_id) const {

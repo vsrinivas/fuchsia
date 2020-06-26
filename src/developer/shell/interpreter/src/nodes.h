@@ -10,11 +10,14 @@
 #include <ostream>
 #include <string>
 
-#include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/value.h"
 
 namespace shell {
 namespace interpreter {
+
+namespace code {
+class Code;
+}
 
 class Addition;
 class ExecutionContext;
@@ -93,6 +96,12 @@ class Type {
   // Returns true if the type is the string type.
   bool IsString() const { return Kind() == TypeKind::kString; }
 
+  // Returns true if the type is the object type.
+  bool IsObject() const { return Kind() == TypeKind::kObject; }
+
+  // Returns a reference to this if the object is of type ObjectType.
+  virtual TypeObject* AsTypeObject() { return nullptr; }
+
   // Creates an exact copy of the type.
   virtual std::unique_ptr<Type> Duplicate() const = 0;
 
@@ -140,8 +149,8 @@ class Type {
   // to deallocate a field by assigning 0).
   virtual void SetData(uint8_t* data, uint64_t value, bool free_old_value) const;
 
-  // Returns a reference to this if the object is of type ObjectType.
-  virtual TypeObject* AsTypeObject() { return nullptr; }
+  // Interprets the value using the type, sends it back to the client and releases the value.
+  virtual void EmitResult(ExecutionContext* context, uint64_t value) const;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Type& type) {
@@ -182,6 +191,14 @@ class Expression : public Node {
 
   // Prints the expression.
   virtual void Dump(std::ostream& os) const = 0;
+
+  // Returns true is the node is constant. That includes, for example, nodes which compute a value
+  // only using constants.
+  virtual bool IsConstant() const { return false; }
+
+  // Infer the type of the expression. This is used when we don't know the type of the destination
+  // for the computed value.
+  virtual std::unique_ptr<Type> InferType(ExecutionContext* context) const = 0;
 
   // Compiles the expression (perform the semantic checks and generates code).
   virtual bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const = 0;

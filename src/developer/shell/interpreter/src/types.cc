@@ -125,6 +125,14 @@ void TypeString::SetData(uint8_t* data, uint64_t value, bool free_old_value) con
   *string = new_value;
 }
 
+void TypeString::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  String* string = reinterpret_cast<String*>(value);
+  result.SetString(string);
+  context->interpreter()->Result(context, result);
+  string->Release();
+}
+
 // - type int --------------------------------------------------------------------------------------
 
 bool TypeInt::GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
@@ -168,6 +176,13 @@ void TypeInt8::LoadVariable(const ExecutionScope* scope, size_t index, Value* va
   value->SetInt8(*data);
 }
 
+void TypeInt8::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  int8_t int8 = static_cast<int8_t>(static_cast<uint8_t>(value));
+  result.SetInt8(int8);
+  context->interpreter()->Result(context, result);
+}
+
 // - type uint8 ------------------------------------------------------------------------------------
 
 std::unique_ptr<Type> TypeUint8::Duplicate() const { return std::make_unique<TypeUint8>(); }
@@ -177,6 +192,13 @@ void TypeUint8::Dump(std::ostream& os) const { os << "uint8"; }
 void TypeUint8::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   const uint8_t* data = scope->Data<uint8_t>(index);
   value->SetUint8(*data);
+}
+
+void TypeUint8::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  uint8_t uint8 = static_cast<uint8_t>(value);
+  result.SetUint8(uint8);
+  context->interpreter()->Result(context, result);
 }
 
 // - type int16 ------------------------------------------------------------------------------------
@@ -190,6 +212,13 @@ void TypeInt16::LoadVariable(const ExecutionScope* scope, size_t index, Value* v
   value->SetInt16(*data);
 }
 
+void TypeInt16::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  int16_t int16 = static_cast<int16_t>(static_cast<uint16_t>(value));
+  result.SetInt16(int16);
+  context->interpreter()->Result(context, result);
+}
+
 // - type uint16 -----------------------------------------------------------------------------------
 
 std::unique_ptr<Type> TypeUint16::Duplicate() const { return std::make_unique<TypeUint16>(); }
@@ -199,6 +228,13 @@ void TypeUint16::Dump(std::ostream& os) const { os << "uint16"; }
 void TypeUint16::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   const uint16_t* data = scope->Data<uint16_t>(index);
   value->SetUint16(*data);
+}
+
+void TypeUint16::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  uint16_t uint16 = static_cast<uint16_t>(value);
+  result.SetUint16(uint16);
+  context->interpreter()->Result(context, result);
 }
 
 // - type int32 ------------------------------------------------------------------------------------
@@ -212,6 +248,13 @@ void TypeInt32::LoadVariable(const ExecutionScope* scope, size_t index, Value* v
   value->SetInt32(*data);
 }
 
+void TypeInt32::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  int32_t int32 = static_cast<int32_t>(static_cast<uint32_t>(value));
+  result.SetInt32(int32);
+  context->interpreter()->Result(context, result);
+}
+
 // - type uint32 -----------------------------------------------------------------------------------
 
 std::unique_ptr<Type> TypeUint32::Duplicate() const { return std::make_unique<TypeUint32>(); }
@@ -221,6 +264,13 @@ void TypeUint32::Dump(std::ostream& os) const { os << "uint32"; }
 void TypeUint32::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   const uint32_t* data = scope->Data<uint32_t>(index);
   value->SetUint32(*data);
+}
+
+void TypeUint32::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  uint32_t uint32 = static_cast<uint32_t>(value);
+  result.SetUint32(uint32);
+  context->interpreter()->Result(context, result);
 }
 
 // - type int64 ------------------------------------------------------------------------------------
@@ -234,6 +284,13 @@ void TypeInt64::LoadVariable(const ExecutionScope* scope, size_t index, Value* v
   value->SetInt64(*data);
 }
 
+void TypeInt64::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  int64_t int64 = static_cast<int64_t>(value);
+  result.SetInt64(int64);
+  context->interpreter()->Result(context, result);
+}
+
 // - type uint64 -----------------------------------------------------------------------------------
 
 std::unique_ptr<Type> TypeUint64::Duplicate() const { return std::make_unique<TypeUint64>(); }
@@ -243,6 +300,12 @@ void TypeUint64::Dump(std::ostream& os) const { os << "uint64"; }
 void TypeUint64::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   const uint64_t* data = scope->Data<uint64_t>(index);
   value->SetUint64(*data);
+}
+
+void TypeUint64::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  result.SetUint64(value);
+  context->interpreter()->Result(context, result);
 }
 
 // - type integer ----------------------------------------------------------------------------------
@@ -279,6 +342,10 @@ void TypeFloat64::Dump(std::ostream& os) const { os << "float64"; }
 // - type object
 // ----------------------------------------------------------------------------------
 
+std::unique_ptr<Type> TypeObject::Duplicate() const {
+  return std::make_unique<TypeObject>(schema_);
+}
+
 void TypeObject::Dump(std::ostream& os) const {
   const char* separator = "";
   os << "{" << std::endl;
@@ -288,10 +355,6 @@ void TypeObject::Dump(std::ostream& os) const {
     separator = ", ";
   }
   os << "}";
-}
-
-std::unique_ptr<Type> TypeObject::Duplicate() const {
-  return std::make_unique<TypeObject>(schema_);
 }
 
 void TypeObject::GenerateObject(ExecutionContext* context, code::Code* code,
@@ -311,6 +374,18 @@ void TypeObject::GenerateInitialization(ExecutionContext* context, code::Code* c
 Variable* TypeObject::CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
                                      const std::string& name) const {
   return scope->CreateVariable(id, name, Duplicate());
+}
+
+bool TypeObject::GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                                  const Variable* variable) const {
+  if (!variable->type()->IsObject()) {
+    std::stringstream ss;
+    ss << "Can't use variable of type " << *variable->type() << " for type " << *this << ".";
+    context->EmitError(id, ss.str());
+    return false;
+  }
+  code->LoadReferenceCounted(variable->index());
+  return true;
 }
 
 void TypeObject::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
@@ -335,6 +410,14 @@ void TypeObject::SetData(uint8_t* data, uint64_t value, bool free_old_value) con
     (*object)->Release();
   }
   *object = new_value;
+}
+
+void TypeObject::EmitResult(ExecutionContext* context, uint64_t value) const {
+  Value result;
+  auto object = reinterpret_cast<Object*>(value);
+  result.SetObject(object);
+  context->interpreter()->Result(context, result);
+  object->Release();
 }
 
 }  // namespace interpreter

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string_view>
+#include <vector>
 
 #include "src/developer/shell/interpreter/src/expressions.h"
 #include "src/developer/shell/interpreter/src/interpreter.h"

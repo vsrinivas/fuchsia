@@ -84,9 +84,9 @@ std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_f
   return std::make_unique<TypeUndefined>();
 }
 
-class LoadGlobalHelper {
+class SerializeHelper {
  public:
-  LoadGlobalHelper() = default;
+  SerializeHelper() = default;
 
   fidl::VectorView<llcpp::fuchsia::shell::Node> nodes() { return builder_.NodesAsVectorView(); }
 
@@ -261,6 +261,12 @@ void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view t
                          /*partial_result=*/false);
 }
 
+void ServerInterpreter::Result(ExecutionContext* context, const Value& result) {
+  SerializeHelper helper;
+  helper.Set(result);
+  service_->OnResult(context->id(), helper.nodes(), false);
+}
+
 void ServerInterpreter::CreateServerContext(ExecutionContext* context) {
   FX_DCHECK(contexts_.find(context->id()) == contexts_.end());
   contexts_.emplace(context->id(), std::make_unique<ServerInterpreterContext>(context));
@@ -410,6 +416,9 @@ void Service::AddNodes(uint64_t context_id,
       } else if (node.node.is_variable()) {
         AddVariable(context, node.node_id.file_id, node.node_id.node_id, node.node.variable(),
                     node.root_node);
+      } else if (node.node.is_emit_result()) {
+        AddEmitResult(context, node.node_id.file_id, node.node_id.node_id, node.node.emit_result(),
+                      node.root_node);
       } else if (node.node.is_addition()) {
         AddAddition(context, node.node_id.file_id, node.node_id.node_id, node.node.addition(),
                     node.root_node);
@@ -451,7 +460,7 @@ void Service::ExecuteExecutionContext(uint64_t context_id,
 }
 
 void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) {
-  LoadGlobalHelper helper;
+  SerializeHelper helper;
   const Variable* variable = interpreter_->SearchGlobal(std::string(name.data(), name.size()));
   if (variable != nullptr) {
     Value value;
@@ -592,6 +601,17 @@ void Service::AddVariable(ServerInterpreterContext* context, uint64_t node_file_
   auto result = std::make_unique<ExpressionVariable>(interpreter(), node_file_id, node_node_id,
                                                      NodeId(node.file_id, node.node_id));
   interpreter_->AddExpression(context, std::move(result), root_node);
+}
+
+void Service::AddEmitResult(ServerInterpreterContext* context, uint64_t node_file_id,
+                            uint64_t node_node_id, const llcpp::fuchsia::shell::NodeId& node,
+                            bool root_node) {
+  std::unique_ptr<Expression> expression =
+      interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "expression",
+                                  NodeId(node.file_id, node.node_id));
+  auto result = std::make_unique<EmitResult>(interpreter(), node_file_id, node_node_id,
+                                             std::move(expression));
+  interpreter_->AddInstruction(context, std::move(result), root_node);
 }
 
 void Service::AddAddition(ServerInterpreterContext* context, uint64_t node_file_id,

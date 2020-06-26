@@ -9,6 +9,7 @@
 #include <set>
 #include <vector>
 
+#include "src/developer/shell/interpreter/src/nodes.h"
 #include "src/developer/shell/interpreter/src/value.h"
 
 namespace shell {
@@ -20,6 +21,8 @@ namespace code {
 enum class Opcode : uint64_t {
   // Nop: do nothing.
   kNop,
+  // Pops a value from the stack and emits it (send it back to the client).
+  kEmitResult,
   // Pops two 8 bit integers from the stack, adds them and pushes the result to the stack.
   kInt8Addition,
   // Pops two 16 bit integers from the stack, adds them and pushes the result to the stack.
@@ -107,6 +110,13 @@ class Code {
   Code() = default;
 
   const std::vector<uint64_t>& code() const { return code_; }
+
+  // Adds an emit result.
+  void EmitResult(std::unique_ptr<Type> type) {
+    emplace_back_opcode(Opcode::kEmitResult);
+    code_.emplace_back(reinterpret_cast<uint64_t>(type.get()));
+    types_.emplace_back(std::move(type));
+  }
 
   // Adds an integer addition.
   void IntegerAddition(bool with_exceptions, size_t size, bool is_signed) {
@@ -237,6 +247,9 @@ class Code {
 
   // Keeps alive the string literals in the code.
   std::vector<StringContainer> strings_;
+
+  // Keeps alive the types in the code.
+  std::vector<std::unique_ptr<Type>> types_;
 };
 
 }  // namespace code

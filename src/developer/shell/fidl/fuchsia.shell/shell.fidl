@@ -147,10 +147,13 @@ union Node {
     6: ObjectFieldDefinition object_field;
     /// A string value.
     7: string:MAX string_literal;
-    /// The value of a previously defined variable;
+    /// The value of a previously defined variable. The node id refers to the variable_definition's
+    /// node id.
     8: NodeId variable;
+    /// Emits a result. The value of the expression is sent back to the client using OnResult.
+    9: NodeId emit_result;
     /// An addition.
-    9: Addition addition;
+    10: Addition addition;
 };
 
 /// Defines a node which has to be inserted in the AST. The node will stay pending until it is used
@@ -285,4 +288,18 @@ protocol Shell {
     /// - `partial_result` if true, the result is partial and at least one other event will be
     ///   called. All the results must be concatenated to reconstruct the original text.
     -> OnTextResult(uint64 context_id, string:MAX result, bool partial_result);
+
+    /// Called when an execution context has a result (emit_result instruction). If the result is
+    /// too big to fit into one message, this event is called several times.
+    /// This event can be called several times for one context if several emit_result instructions
+    /// are used.
+    ///
+    /// - `context_id` the execution context id.
+    /// - `nodes` the nodes of the result. The last node of OnResult for which partial_result is
+    ///   false is the root node which defines the result (all the other nodes are children of
+    ///   this node). All nodes are implicitly numbered starting at one for the first node in the
+    ///   vector.
+    /// - `partial_result` if true, the result is partial and at least one other event will be
+    ///   called. All the nodes must be used to reconstruct the original value.
+    -> OnResult(uint64 context_id, vector<Node>:MAX nodes, bool partial_result);
 };

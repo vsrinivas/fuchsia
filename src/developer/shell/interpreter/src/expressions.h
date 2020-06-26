@@ -33,6 +33,10 @@ class IntegerLiteral : public Expression {
 
   void Dump(std::ostream& os) const override;
 
+  bool IsConstant() const override { return true; }
+
+  std::unique_ptr<Type> InferType(ExecutionContext* context) const override;
+
   bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 
  private:
@@ -84,6 +88,8 @@ class ObjectDeclaration : public Expression {
   // Prints the object.
   virtual void Dump(std::ostream& os) const override;
 
+  std::unique_ptr<Type> InferType(ExecutionContext* context) const override;
+
   // Compiles the instruction (performs the semantic checks and generates code).
   virtual bool Compile(ExecutionContext* context, code::Code* code,
                        const Type* for_type) const override;
@@ -106,6 +112,10 @@ class StringLiteral : public Expression {
 
   void Dump(std::ostream& os) const override;
 
+  bool IsConstant() const override { return true; }
+
+  std::unique_ptr<Type> InferType(ExecutionContext* context) const override;
+
   bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 
  private:
@@ -120,6 +130,8 @@ class ExpressionVariable : public Expression {
       : Expression(interpreter, file_id, node_id), variable_definition_(variable_definition) {}
 
   void Dump(std::ostream& os) const override;
+
+  std::unique_ptr<Type> InferType(ExecutionContext* context) const override;
 
   bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 
@@ -138,6 +150,8 @@ class BinaryOperation : public Expression {
   const Expression* left() const { return left_.get(); }
   const Expression* right() const { return right_.get(); }
 
+  bool IsConstant() const override { return left_->IsConstant() && right_->IsConstant(); }
+
  private:
   std::unique_ptr<Expression> left_;
   std::unique_ptr<Expression> right_;
@@ -153,6 +167,8 @@ class Addition : public BinaryOperation {
   bool with_exceptions() const { return with_exceptions_; }
 
   void Dump(std::ostream& os) const override;
+
+  std::unique_ptr<Type> InferType(ExecutionContext* context) const override;
 
   bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 

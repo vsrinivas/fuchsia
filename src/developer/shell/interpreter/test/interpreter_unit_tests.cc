@@ -23,6 +23,8 @@ class TestInterpreter : public shell::interpreter::Interpreter {
   void ContextDoneWithAnalysisError(shell::interpreter::ExecutionContext* context) override {}
   void ContextDoneWithExecutionError(shell::interpreter::ExecutionContext* context) override {}
   void TextResult(shell::interpreter::ExecutionContext* context, std::string_view text) override {}
+  void Result(shell::interpreter::ExecutionContext* context,
+              const shell::interpreter::Value& result) override {}
 };
 
 TEST(InterpreterUnitTest, AssignValueToItself) {

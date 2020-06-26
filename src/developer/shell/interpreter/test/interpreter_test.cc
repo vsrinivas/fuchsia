@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "fuchsia/shell/llcpp/fidl.h"
 #include "fuchsia/sys/cpp/fidl.h"
@@ -85,8 +86,8 @@ void InterpreterTest::Run(FinishAction action) {
   llcpp::fuchsia::shell::Shell::EventHandlers handlers;
   bool done = false;
   enum Errs : zx_status_t { kNoContext = 1, kNoResult, kWrongAction };
+  std::string msg;
   while (!done) {
-    std::string msg;
     handlers.on_error = [this, &msg, &done, action](
                             uint64_t context_id,
                             fidl::VectorView<llcpp::fuchsia::shell::Location> locations,
@@ -171,21 +172,38 @@ void InterpreterTest::Run(FinishAction action) {
         return kNoContext;
       }
       std::string result_string(result.data(), result.size());
-      if (last_result_partial_) {
-        if (results_.empty()) {
-          msg = "results empty";
+      if (last_text_result_partial_) {
+        if (text_results_.empty()) {
+          msg = "text results empty";
           return kNoResult;
         }
-        results_.back() += result_string;
+        text_results_.back() += result_string;
       } else {
-        results_.emplace_back(std::move(result_string));
+        text_results_.emplace_back(std::move(result_string));
       }
-      last_result_partial_ = partial_result;
+      last_text_result_partial_ = partial_result;
+      return ZX_OK;
+    };
+
+    handlers.on_result = [this, &msg](uint64_t context_id,
+                                      fidl::VectorView<llcpp::fuchsia::shell::Node> nodes,
+                                      bool partial_result) -> zx_status_t {
+      InterpreterTestContext* context = GetContext(context_id);
+      if (context == nullptr) {
+        msg = "context == nullptr in on_text_result";
+        return kNoContext;
+      }
+      if (partial_result) {
+        msg = " partial results not supported";
+        return kNoResult;
+      }
+      shell::common::DeserializeResult deserialize;
+      results_.emplace_back(deserialize.Deserialize(nodes));
       return ZX_OK;
     };
     ASSERT_EQ(ZX_OK, shell_->HandleEvents(std::move(handlers))) << msg;
   }
-}
+};
 
 InterpreterTestContext* InterpreterTest::CreateContext() {
   uint64_t id = ++last_context_id_;

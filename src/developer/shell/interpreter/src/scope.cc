@@ -97,6 +97,12 @@ void ExecutionScope::Execute(ExecutionContext* context, Thread* thread,
     switch (opcode) {
       case code::Opcode::kNop:
         break;
+      case code::Opcode::kEmitResult: {
+        const Type* type = reinterpret_cast<const Type*>(code->code()[pc++]);
+        uint64_t value = thread->Pop();
+        type->EmitResult(context, value);
+        break;
+      }
       case code::Opcode::kInt8Addition: {
         uint8_t right = static_cast<uint8_t>(thread->Pop());
         uint8_t left = static_cast<uint8_t>(thread->Pop());

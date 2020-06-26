@@ -76,6 +76,10 @@ void Type::SetData(uint8_t* data, uint64_t value, bool free_old_value) const {
   memcpy(data, &value, size);
 }
 
+void Type::EmitResult(ExecutionContext* context, uint64_t value) const {
+  FX_LOGS(FATAL) << "Can't emit value of type " << *this;
+}
+
 // - Node ------------------------------------------------------------------------------------------
 
 Node::Node(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)

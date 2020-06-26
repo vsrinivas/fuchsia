@@ -91,11 +91,11 @@ TEST_F(InterpreterTest, VariableDefinition) {
   ASSERT_CALL_OK(shell().DumpExecutionContext(context->id));
   Finish(kDump);
 
-  ASSERT_FALSE(last_result_partial());
-  ASSERT_EQ(results().size(), static_cast<size_t>(3));
-  ASSERT_EQ(results()[0], "var foo: uint64\n");
-  ASSERT_EQ(results()[1], "const bar: int64 = -1\n");
-  ASSERT_EQ(results()[2], "const x: uint64 = 10\n");
+  ASSERT_FALSE(last_text_result_partial());
+  ASSERT_EQ(text_results().size(), static_cast<size_t>(3));
+  ASSERT_EQ(text_results()[0], "var foo: uint64\n");
+  ASSERT_EQ(text_results()[1], "const bar: int64 = -1\n");
+  ASSERT_EQ(text_results()[2], "const x: uint64 = 10\n");
 }
 
 TEST_F(InterpreterTest, BuiltinTypes) {
@@ -123,22 +123,22 @@ TEST_F(InterpreterTest, BuiltinTypes) {
   ASSERT_CALL_OK(shell().DumpExecutionContext(context->id));
   Finish(kDump);
 
-  ASSERT_FALSE(last_result_partial());
-  ASSERT_EQ(results().size(), static_cast<size_t>(14));
-  ASSERT_EQ(results()[0], "var b: bool\n");
-  ASSERT_EQ(results()[1], "var c: char\n");
-  ASSERT_EQ(results()[2], "var s: string\n");
-  ASSERT_EQ(results()[3], "var i8: int8\n");
-  ASSERT_EQ(results()[4], "var u8: uint8\n");
-  ASSERT_EQ(results()[5], "var i16: int16\n");
-  ASSERT_EQ(results()[6], "var u16: uint16\n");
-  ASSERT_EQ(results()[7], "var i32: int32\n");
-  ASSERT_EQ(results()[8], "var u32: uint32\n");
-  ASSERT_EQ(results()[9], "var i64: int64\n");
-  ASSERT_EQ(results()[10], "var u64: uint64\n");
-  ASSERT_EQ(results()[11], "var big_int: integer\n");
-  ASSERT_EQ(results()[12], "var f32: float32\n");
-  ASSERT_EQ(results()[13], "var f64: float64\n");
+  ASSERT_FALSE(last_text_result_partial());
+  ASSERT_EQ(text_results().size(), static_cast<size_t>(14));
+  ASSERT_EQ(text_results()[0], "var b: bool\n");
+  ASSERT_EQ(text_results()[1], "var c: char\n");
+  ASSERT_EQ(text_results()[2], "var s: string\n");
+  ASSERT_EQ(text_results()[3], "var i8: int8\n");
+  ASSERT_EQ(text_results()[4], "var u8: uint8\n");
+  ASSERT_EQ(text_results()[5], "var i16: int16\n");
+  ASSERT_EQ(text_results()[6], "var u16: uint16\n");
+  ASSERT_EQ(text_results()[7], "var i32: int32\n");
+  ASSERT_EQ(text_results()[8], "var u32: uint32\n");
+  ASSERT_EQ(text_results()[9], "var i64: int64\n");
+  ASSERT_EQ(text_results()[10], "var u64: uint64\n");
+  ASSERT_EQ(text_results()[11], "var big_int: integer\n");
+  ASSERT_EQ(text_results()[12], "var f32: float32\n");
+  ASSERT_EQ(text_results()[13], "var f64: float64\n");
 }
 
 namespace {

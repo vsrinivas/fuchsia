@@ -55,6 +55,23 @@ class VariableDefinition : public Instruction {
   size_t index_ = 0;
 };
 
+// Emits a result. A value is computed and then sent back to the client using OnResult.
+class EmitResult : public Instruction {
+ public:
+  EmitResult(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+             std::unique_ptr<Expression> expression)
+      : Instruction(interpreter, file_id, node_id), expression_(std::move(expression)) {}
+
+  const Expression* expression() const { return expression_.get(); }
+
+  void Dump(std::ostream& os) const override;
+  void Compile(ExecutionContext* context, code::Code* code) override;
+
+ private:
+  // The expression we want to compute and send back to the client.
+  std::unique_ptr<Expression> expression_;
+};
+
 }  // namespace interpreter
 }  // namespace shell
 

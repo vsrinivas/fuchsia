@@ -87,6 +87,9 @@ class AstBuilder {
   // Adds a string literal node with the value |s|.  Returns the resulting node_id.
   NodeId AddStringLiteral(const std::string& s);
 
+  // Adds the emition of an expression.
+  void AddEmitResult(NodeId expression);
+
   // Adds an addition of two values.
   NodeId AddAddition(bool with_exceptions, NodeId left, NodeId right);
 

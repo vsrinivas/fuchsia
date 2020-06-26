@@ -12,6 +12,8 @@
 namespace shell {
 namespace interpreter {
 
+// - VariableDefinition ----------------------------------------------------------------------------
+
 void VariableDefinition::Dump(std::ostream& os) const {
   os << (is_mutable_ ? "var " : "const ") << name_;
   if (!type_->IsUndefined()) {
@@ -45,6 +47,16 @@ void VariableDefinition::Compile(ExecutionContext* context, code::Code* code) {
   }
   index_ = variable->index();
   code->StoreRaw(index_, type_->Size());
+}
+
+// - EmitResult ------------------------------------------------------------------------------------
+
+void EmitResult::Dump(std::ostream& os) const { os << "emit " << *expression_ << '\n'; }
+
+void EmitResult::Compile(ExecutionContext* context, code::Code* code) {
+  std::unique_ptr<Type> type = expression_->InferType(context);
+  expression_->Compile(context, code, type.get());
+  code->EmitResult(std::move(type));
 }
 
 }  // namespace interpreter

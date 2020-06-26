@@ -116,6 +116,8 @@ class TypeString : public TypeReferenceCounted {
   void ClearVariable(ExecutionScope* scope, size_t index) const override;
 
   void SetData(uint8_t* data, uint64_t value, bool free_old_value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeInt : public TypeRaw {
@@ -167,6 +169,8 @@ class TypeInt8 : public TypeSignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeUint8 : public TypeUnsignedInt {
@@ -188,6 +192,8 @@ class TypeUint8 : public TypeUnsignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeInt16 : public TypeSignedInt {
@@ -210,6 +216,8 @@ class TypeInt16 : public TypeSignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeUint16 : public TypeUnsignedInt {
@@ -231,6 +239,8 @@ class TypeUint16 : public TypeUnsignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeInt32 : public TypeSignedInt {
@@ -253,6 +263,8 @@ class TypeInt32 : public TypeSignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeUint32 : public TypeUnsignedInt {
@@ -274,6 +286,8 @@ class TypeUint32 : public TypeUnsignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeInt64 : public TypeSignedInt {
@@ -296,6 +310,8 @@ class TypeInt64 : public TypeSignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeUint64 : public TypeUnsignedInt {
@@ -317,6 +333,8 @@ class TypeUint64 : public TypeUnsignedInt {
   void Dump(std::ostream& os) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 };
 
 class TypeInteger : public TypeBuiltin {
@@ -383,8 +401,6 @@ class TypeObject : public Type {
   TypeObject(TypeObject&) = delete;
   TypeObject operator=(TypeObject& t) = delete;
 
-  void Dump(std::ostream& os) const override;
-
   // The size of a reference to an object of the type (i.e., the thing that is stored in another
   // object / variable / value stack element).
   virtual size_t Size() const override { return sizeof(Object*); }
@@ -394,10 +410,12 @@ class TypeObject : public Type {
 
   TypeKind Kind() const override { return TypeKind::kObject; }
 
+  virtual TypeObject* AsTypeObject() override { return this; }
+
   // Creates an exact copy of the type.
   virtual std::unique_ptr<Type> Duplicate() const override;
 
-  virtual TypeObject* AsTypeObject() override { return this; }
+  void Dump(std::ostream& os) const override;
 
   void GenerateObject(ExecutionContext* context, code::Code* code,
                       const ObjectDeclaration* literal) const;
@@ -408,11 +426,16 @@ class TypeObject : public Type {
   Variable* CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
                            const std::string& name) const override;
 
+  bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                        const Variable* variable) const override;
+
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 
   void ClearVariable(ExecutionScope* scope, size_t index) const override;
 
   void SetData(uint8_t* data, uint64_t value, bool free_old_value) const override;
+
+  void EmitResult(ExecutionContext* context, uint64_t value) const override;
 
  private:
   const std::shared_ptr<ObjectSchema> schema_;

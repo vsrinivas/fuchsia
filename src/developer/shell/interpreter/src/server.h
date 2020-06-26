@@ -92,6 +92,7 @@ class ServerInterpreter : public Interpreter {
   void ContextDoneWithAnalysisError(ExecutionContext* context) override;
   void ContextDoneWithExecutionError(ExecutionContext* context) override;
   void TextResult(ExecutionContext* context, std::string_view text) override;
+  void Result(ExecutionContext* context, const Value& result) override;
 
   // Gets the server context for the given id.
   ServerInterpreterContext* GetServerContext(uint64_t id) {
@@ -201,6 +202,12 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
         ::zx::unowned_channel(handle_), context_id, fidl::unowned_str(result), partial_result);
   }
 
+  zx_status_t OnResult(uint64_t context_id, fidl::VectorView<llcpp::fuchsia::shell::Node>&& nodes,
+                       bool partial_result) {
+    return llcpp::fuchsia::shell::Shell::SendOnResultEvent(
+        ::zx::unowned_channel(handle_), context_id, std::move(nodes), partial_result);
+  }
+
  private:
   // Helpers to be able to create AST nodes.
   void AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
@@ -233,6 +240,10 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 
   void AddVariable(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
                    const llcpp::fuchsia::shell::NodeId& node, bool root_node);
+
+  void AddEmitResult(ServerInterpreterContext* context, uint64_t node_file_id,
+                     uint64_t node_node_id, const llcpp::fuchsia::shell::NodeId& node,
+                     bool root_node);
 
   void AddAddition(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
                    const llcpp::fuchsia::shell::Addition& node, bool root_node);

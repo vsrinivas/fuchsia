@@ -4,6 +4,8 @@
 
 #include "src/developer/shell/interpreter/src/expressions.h"
 
+#include <limits>
+#include <memory>
 #include <ostream>
 
 #include "src/developer/shell/interpreter/src/instructions.h"
@@ -25,6 +27,17 @@ void IntegerLiteral::Dump(std::ostream& os) const {
   os << absolute_value_;
 }
 
+std::unique_ptr<Type> IntegerLiteral::InferType(ExecutionContext* context) const {
+  uint64_t max_absolute_value = std::numeric_limits<int64_t>::max();
+  if (negative_) {
+    ++max_absolute_value;
+  }
+  if (absolute_value_ <= max_absolute_value) {
+    return std::make_unique<TypeInt64>();
+  }
+  return std::make_unique<TypeInteger>();
+}
+
 bool IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
                              const Type* for_type) const {
   return for_type->GenerateIntegerLiteral(context, code, this);
@@ -42,15 +55,15 @@ ObjectDeclaration::ObjectDeclaration(Interpreter* interpreter, uint64_t file_id,
                                      std::shared_ptr<ObjectSchema> object_schema,
                                      std::vector<std::unique_ptr<ObjectDeclarationField>>&& fields)
     : Expression(interpreter, file_id, node_id),
-      object_schema_(object_schema),
+      object_schema_(std::move(object_schema)),
       fields_(std::move(fields)) {
   // Fields need to be in the same order that they are in the schema.  Find them in the schema and
   // insert them at the correct point.
-  for (size_t i = 0; i < object_schema->fields().size(); i++) {
-    if (object_schema->fields()[i].get() != fields_[i]->schema()) {
+  for (size_t i = 0; i < object_schema_->fields().size(); i++) {
+    if (object_schema_->fields()[i].get() != fields_[i]->schema()) {
       bool found = false;
-      for (size_t j = i + 1; j < object_schema->fields().size(); j++) {
-        if (object_schema->fields()[i].get() == fields_[j]->schema()) {
+      for (size_t j = i + 1; j < object_schema_->fields().size(); j++) {
+        if (object_schema_->fields()[i].get() == fields_[j]->schema()) {
           ObjectDeclarationField* tmp = fields_[j].release();
           fields_[j].reset(fields_[i].release());
           fields_[i].reset(tmp);
@@ -73,6 +86,10 @@ void ObjectDeclaration::Dump(std::ostream& os) const {
   os << "}";
 }
 
+std::unique_ptr<Type> ObjectDeclaration::InferType(ExecutionContext* context) const {
+  return std::make_unique<TypeObject>(object_schema_);
+}
+
 bool ObjectDeclaration::Compile(ExecutionContext* context, code::Code* code,
                                 const Type* for_type) const {
   const TypeObject* object_type = const_cast<Type*>(for_type)->AsTypeObject();
@@ -88,6 +105,10 @@ void StringLiteral::Dump(std::ostream& os) const {
   os << '"' << string()->value() << '"';
 }
 
+std::unique_ptr<Type> StringLiteral::InferType(ExecutionContext* context) const {
+  return std::make_unique<TypeString>();
+}
+
 bool StringLiteral::Compile(ExecutionContext* context, code::Code* code,
                             const Type* for_type) const {
   return for_type->GenerateStringLiteral(context, code, this);
@@ -96,6 +117,14 @@ bool StringLiteral::Compile(ExecutionContext* context, code::Code* code,
 // - ExpressionVariable ----------------------------------------------------------------------------
 
 void ExpressionVariable::Dump(std::ostream& os) const { os << variable_definition_.StringId(); }
+
+std::unique_ptr<Type> ExpressionVariable::InferType(ExecutionContext* context) const {
+  const Variable* definition = context->interpreter()->SearchGlobal(variable_definition_);
+  if (definition == nullptr) {
+    return std::unique_ptr<TypeUndefined>();
+  }
+  return definition->type()->Duplicate();
+}
 
 bool ExpressionVariable::Compile(ExecutionContext* context, code::Code* code,
                                  const Type* for_type) const {
@@ -111,6 +140,10 @@ bool ExpressionVariable::Compile(ExecutionContext* context, code::Code* code,
 
 void Addition::Dump(std::ostream& os) const {
   os << *left() << (with_exceptions_ ? " +? " : " + ") << *right();
+}
+
+std::unique_ptr<Type> Addition::InferType(ExecutionContext* context) const {
+  return left()->IsConstant() ? right()->InferType(context) : left()->InferType(context);
 }
 
 bool Addition::Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const {

@@ -38,8 +38,11 @@ class InterpreterTest : public ::testing::Test {
  protected:
   std::string GlobalErrors() { return global_error_stream_.str(); }
   llcpp::fuchsia::shell::Shell::SyncClient& shell() { return *(shell_.get()); }
-  const std::vector<std::string>& results() const { return results_; }
-  bool last_result_partial() const { return last_result_partial_; }
+  const std::vector<std::string>& text_results() const { return text_results_; }
+  bool last_text_result_partial() const { return last_text_result_partial_; }
+  const std::vector<std::unique_ptr<shell::common::ResultNode>>& results() const {
+    return results_;
+  }
 
   // Loads a global variable. The loads are defered after the end of the execution.
   void LoadGlobal(const std::string& name) { globals_to_load_.emplace_back(name); }
@@ -87,8 +90,9 @@ class InterpreterTest : public ::testing::Test {
   uint64_t last_context_id_ = 0;
   std::map<uint64_t, std::unique_ptr<InterpreterTestContext>> contexts_;
   std::stringstream global_error_stream_;
-  std::vector<std::string> results_;
-  bool last_result_partial_ = false;
+  std::vector<std::string> text_results_;
+  bool last_text_result_partial_ = false;
+  std::vector<std::unique_ptr<shell::common::ResultNode>> results_;
   // Holds the response buffers for llcpp calls, so that they are cleaned up on shutdown.  Needs to
   // be destructed after globals_.
   std::vector<std::unique_ptr<fidl::Buffer<llcpp::fuchsia::shell::Node>>> to_be_deleted_;
@@ -103,5 +107,13 @@ class InterpreterTest : public ::testing::Test {
 extern shell::console::AstBuilder::NodeId NullNode;
 
 #define ASSERT_CALL_OK(x) ASSERT_EQ(ZX_OK, x.status())
+
+#define CHECK_RESULT(index, string)                          \
+  {                                                          \
+    ASSERT_LT(static_cast<size_t>(index), results().size()); \
+    std::stringstream ss;                                    \
+    results()[index]->Dump(ss);                              \
+    ASSERT_EQ(string, ss.str());                             \
+  }
 
 #endif  // SRC_DEVELOPER_SHELL_INTERPRETER_TEST_INTERPRETER_TEST_H_

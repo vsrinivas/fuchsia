@@ -120,6 +120,13 @@ NodeId AstBuilder::AddStringLiteral(const std::string& s) {
   return AddNode(std::move(node));
 }
 
+void AstBuilder::AddEmitResult(NodeId expression) {
+  auto emit_result = ManageNew<llcpp::fuchsia::shell::NodeId>();
+  *emit_result = expression;
+  auto node = llcpp::fuchsia::shell::Node::WithEmitResult(fidl::unowned_ptr(emit_result));
+  AddNode(std::move(node), /*root_node=*/true);
+}
+
 NodeId AstBuilder::AddAddition(bool with_exceptions, NodeId left_id, NodeId right_id) {
   auto addition = ManageNew<llcpp::fuchsia::shell::Addition>();
   addition->left = std::move(left_id);
