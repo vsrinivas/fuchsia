@@ -1005,11 +1005,13 @@ void Thread::Current::CheckPreemptPending() {
 }
 
 // timer callback to wake up a sleeping thread
-static void thread_sleep_handler(Timer* timer, zx_time_t now, void* arg) {
-  Thread* t = (Thread*)arg;
-
+void Thread::SleepHandler(Timer* timer, zx_time_t now, void* arg) {
+  Thread* t = static_cast<Thread*>(arg);
   DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
+  t->HandleSleep(timer, now);
+}
 
+void Thread::HandleSleep(Timer* timer, zx_time_t now) {
   // spin trylocking on the thread lock since the routine that set up the callback,
   // thread_sleep_etc, may be trying to simultaneously cancel this timer while holding the
   // thread_lock.
@@ -1017,13 +1019,13 @@ static void thread_sleep_handler(Timer* timer, zx_time_t now, void* arg) {
     return;
   }
 
-  if (t->state_ != THREAD_SLEEPING) {
+  if (state_ != THREAD_SLEEPING) {
     thread_lock.Release();
     return;
   }
 
   // Unblock the thread, regardless of whether the sleep was interruptible.
-  const bool resched = t->wait_queue_state_.Unsleep(t, ZX_OK);
+  const bool resched = wait_queue_state_.Unsleep(this, ZX_OK);
   if (resched) {
     Scheduler::Reschedule();
   }
@@ -1085,7 +1087,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
   }
 
   // set a one shot timer to wake us up and reschedule
-  timer.Set(deadline, thread_sleep_handler, current_thread);
+  timer.Set(deadline, &Thread::SleepHandler, current_thread);
 
   current_thread->state_ = THREAD_SLEEPING;
 
@@ -1442,9 +1444,9 @@ void dump_thread_locked(Thread* t, bool full_dump) {
             (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "", (t->flags_ & THREAD_FLAG_VCPU) ? "Vc" : "");
 
     dprintf(INFO, "\twait queue %p, blocked_status %d, interruptible %s, wait queues owned %s\n",
-            t->wait_queue_state_.blocking_wait_queue_, t->wait_queue_state_.blocked_status_,
-            t->wait_queue_state_.interruptible_ == Interruptible::Yes ? "yes" : "no",
-            t->wait_queue_state_.owned_wait_queues_.is_empty() ? "no" : "yes");
+            t->wait_queue_state().blocking_wait_queue_, t->wait_queue_state().blocked_status_,
+            t->wait_queue_state().interruptible_ == Interruptible::Yes ? "yes" : "no",
+            t->wait_queue_state().owned_wait_queues_.is_empty() ? "no" : "yes");
 
     dprintf(INFO, "\taspace %p\n", t->aspace_);
     dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n", t->user_thread_.get(),
@@ -1452,7 +1454,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     arch_dump_thread(t);
   } else {
     printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
-           thread_state_to_str(t->state_), !t->wait_queue_state_.owned_wait_queues_.is_empty(),
+           thread_state_to_str(t->state_), !t->wait_queue_state().owned_wait_queues_.is_empty(),
            t->scheduler_state().effective_priority_, t->scheduler_state().base_priority_,
            t->scheduler_state().inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name());
   }

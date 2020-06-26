@@ -512,6 +512,10 @@ struct Thread {
   // Caller must hold the thread lock.
   bool IsUserStateSavedLocked() const TA_REQ(thread_lock);
 
+  // Callback for the Timer used for SleepEtc.
+  static void SleepHandler(Timer* timer, zx_time_t now, void* arg);
+  void HandleSleep(Timer* timer, zx_time_t now);
+
   // All of these operations implicitly operate on the current thread.
   struct Current {
     // This is defined below, just after the Thread declaration.
@@ -737,6 +741,9 @@ struct Thread {
   SchedulerState& scheduler_state() { return scheduler_state_; }
   const SchedulerState& scheduler_state() const { return scheduler_state_; }
 
+  WaitQueueState& wait_queue_state() { return wait_queue_state_; }
+  const WaitQueueState& wait_queue_state() const { return wait_queue_state_; }
+
   arch_thread& arch() { return arch_; }
 
   const char* name() const { return name_; }
@@ -790,9 +797,9 @@ struct Thread {
  private:
   SchedulerState scheduler_state_;
 
- public:
   WaitQueueState wait_queue_state_;
 
+ public:
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in thread context
   lockdep::ThreadLockState lock_state_;
@@ -1034,8 +1041,8 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
 
     while (true) {
       next = nullptr;
-      if (!queue_head->wait_queue_state_.sublist_.is_empty()) {
-        next = &queue_head->wait_queue_state_.sublist_.front();
+      if (!queue_head->wait_queue_state().sublist_.is_empty()) {
+        next = &queue_head->wait_queue_state().sublist_.front();
       }
 
       if (!visit_thread(queue_head)) {
@@ -1048,7 +1055,7 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
       }
 
       // If next is not the new queue head, stop.
-      if (!next->wait_queue_state_.IsHead()) {
+      if (!next->wait_queue_state().IsHead()) {
         break;
       }
 
@@ -1060,9 +1067,9 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
     DEBUG_ASSERT(next);
     do {
       Thread* t = next;
-      auto iter = queue_head->wait_queue_state_.sublist_.make_iterator(*t);
+      auto iter = queue_head->wait_queue_state().sublist_.make_iterator(*t);
       ++iter;
-      if (iter == queue_head->wait_queue_state_.sublist_.end()) {
+      if (iter == queue_head->wait_queue_state().sublist_.end()) {
         next = nullptr;
       } else {
         next = &*iter;
@@ -1091,11 +1098,11 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
 }
 
 inline WaitQueueHeadsTrait::NodeState& WaitQueueHeadsTrait::node_state(Thread& thread) {
-  return thread.wait_queue_state_.heads_node_;
+  return thread.wait_queue_state().heads_node_;
 }
 
 inline WaitQueueSublistTrait::NodeState& WaitQueueSublistTrait::node_state(Thread& thread) {
-  return thread.wait_queue_state_.sublist_node_;
+  return thread.wait_queue_state().sublist_node_;
 }
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_

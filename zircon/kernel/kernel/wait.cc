@@ -102,13 +102,13 @@ bool WaitQueue::UpdatePriority(int old_prio) TA_REQ(thread_lock) {
 // and update the WaitQueue specific bookkeeping in the thread in the process.
 void WaitQueue::Dequeue(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
   DEBUG_ASSERT(t != nullptr);
-  DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
+  DEBUG_ASSERT(t->wait_queue_state().InWaitQueue());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
-  DEBUG_ASSERT(t->wait_queue_state_.blocking_wait_queue_ == this);
+  DEBUG_ASSERT(t->wait_queue_state().blocking_wait_queue_ == this);
 
   collection_.Remove(t);
-  t->wait_queue_state_.blocked_status_ = wait_queue_error;
-  t->wait_queue_state_.blocking_wait_queue_ = nullptr;
+  t->wait_queue_state().blocked_status_ = wait_queue_error;
+  t->wait_queue_state().blocking_wait_queue_ = nullptr;
 }
 
 Thread* WaitQueueCollection::Peek() {
@@ -140,7 +140,7 @@ void WaitQueueCollection::Insert(Thread* thread) {
         return;
       } else if (head.scheduler_state().effective_priority() == pri) {
         // Same priority, add ourself to the tail of this queue.
-        head.wait_queue_state_.sublist_.push_back(thread);
+        head.wait_queue_state().sublist_.push_back(thread);
         return;
       }
     }
@@ -155,12 +155,12 @@ void WaitQueueCollection::Remove(Thread* thread) {
   // Either way, the count goes down one.
   --count_;
 
-  if (!thread->wait_queue_state_.IsHead()) {
+  if (!thread->wait_queue_state().IsHead()) {
     // We're just in a queue, not a head.
-    thread->wait_queue_state_.sublist_node_.RemoveFromContainer<WaitQueueSublistTrait>();
+    thread->wait_queue_state().sublist_node_.RemoveFromContainer<WaitQueueSublistTrait>();
   } else {
     // We're the head of a queue.
-    if (thread->wait_queue_state_.sublist_.is_empty()) {
+    if (thread->wait_queue_state().sublist_.is_empty()) {
       // If there's no new queue head, the only work we have to do is
       // removing |thread| from the heads list.
       heads_.erase(*thread);
@@ -171,10 +171,10 @@ void WaitQueueCollection::Remove(Thread* thread) {
       // - replace |thread| with |newhead| in the heads list.
 
       // Remove the newhead from its position in the sublist.
-      Thread* newhead = thread->wait_queue_state_.sublist_.pop_front();
+      Thread* newhead = thread->wait_queue_state().sublist_.pop_front();
 
       // Move the sublist from |thread| to |newhead|.
-      newhead->wait_queue_state_.sublist_ = ktl::move(thread->wait_queue_state_.sublist_);
+      newhead->wait_queue_state().sublist_ = ktl::move(thread->wait_queue_state().sublist_);
 
       // Patch in the new head into the queue head list.
       heads_.replace(*thread, newhead);
@@ -197,7 +197,7 @@ void WaitQueueCollection::Validate() const {
     }
 
     // Walk any threads linked to this head, validating that they're the same priority.
-    for (const Thread& thread : head.wait_queue_state_.sublist_) {
+    for (const Thread& thread : head.wait_queue_state().sublist_) {
       DEBUG_ASSERT(thread.magic_ == THREAD_MAGIC);
       DEBUG_ASSERT_MSG(head.scheduler_state().effective_priority() ==
                            thread.scheduler_state().effective_priority(),
@@ -375,14 +375,14 @@ void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
   }
 
   DEBUG_ASSERT(t != nullptr);
-  DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
+  DEBUG_ASSERT(t->wait_queue_state().InWaitQueue());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
-  DEBUG_ASSERT(t->wait_queue_state_.blocking_wait_queue_ == source);
+  DEBUG_ASSERT(t->wait_queue_state().blocking_wait_queue_ == source);
   DEBUG_ASSERT(source->collection_.Count() > 0);
 
   source->collection_.Remove(t);
   dest->collection_.Insert(t);
-  t->wait_queue_state_.blocking_wait_queue_ = dest;
+  t->wait_queue_state().blocking_wait_queue_ = dest;
 }
 
 /**
@@ -490,10 +490,10 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
     return ZX_ERR_BAD_STATE;
   }
 
-  WaitQueue* wq = t->wait_queue_state_.blocking_wait_queue_;
+  WaitQueue* wq = t->wait_queue_state().blocking_wait_queue_;
   DEBUG_ASSERT(wq != nullptr);
   DEBUG_ASSERT_MAGIC_CHECK(wq);
-  DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
+  DEBUG_ASSERT(t->wait_queue_state().InWaitQueue());
 
   if (WAIT_QUEUE_VALIDATION) {
     wq->ValidateQueue();
@@ -516,7 +516,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   DEBUG_ASSERT(thread_lock.IsHeld());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
 
-  WaitQueue* wq = t->wait_queue_state_.blocking_wait_queue_;
+  WaitQueue* wq = t->wait_queue_state().blocking_wait_queue_;
   DEBUG_ASSERT(wq != NULL);
   DEBUG_ASSERT_MAGIC_CHECK(wq);
 
@@ -538,7 +538,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   bool ret = (propagate == PropagatePI::Yes) ? wq->UpdatePriority(old_wq_prio) : false;
 
   if (WAIT_QUEUE_VALIDATION) {
-    t->wait_queue_state_.blocking_wait_queue_->ValidateQueue();
+    t->wait_queue_state().blocking_wait_queue_->ValidateQueue();
   }
   return ret;
 }

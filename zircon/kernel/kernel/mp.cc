@@ -237,7 +237,7 @@ static void mp_unplug_trampoline(void) {
   // We had better not be holding any OwnedWaitQueues at this point in time
   // (it is unclear how we would have ever obtained any in the first place
   // since everything this thread ever does is in this function).
-  ct->wait_queue_state_.AssertNoOwnedWaitQueues();
+  ct->wait_queue_state().AssertNoOwnedWaitQueues();
 
   // do *not* enable interrupts, we want this CPU to never receive another
   // interrupt
