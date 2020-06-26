@@ -5,6 +5,63 @@
 import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
 
+# Wraps a dart snapshot in a script to be invoked by dart
+#
+# Parameters
+#
+#   dart (required)
+#     The path to the dart binary
+#
+#   snapshot (required)
+#     The path to the dart snapshot
+#
+#   deps (optional)
+#     Dependencies of this application
+#
+#   output_name (optional)
+#     Name of the output file to generate. Defaults to $target_name.
+template("_dart_snapshot_invocation") {
+  assert(defined(invoker.dart), "Must specify the path to the dart binary")
+  assert(defined(invoker.snapshot),
+         "Must specify the path to the dart snapshot")
+
+  if (defined(invoker.output_name)) {
+    app_name = invoker.output_name
+  } else {
+    app_name = target_name
+  }
+
+  # Builds a convenience script to invoke the app.
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                           ])
+
+    script = "//build/dart/gen_app_invocation.py"
+
+    app_path = "$root_out_dir/dart-tools/$app_name"
+    dart_binary = invoker.dart
+    snapshot = invoker.snapshot
+
+    inputs = [
+      dart_binary,
+      snapshot,
+    ]
+    outputs = [ app_path ]
+
+    args = [
+      "--out",
+      rebase_path(app_path),
+      "--dart",
+      rebase_path(dart_binary),
+      "--snapshot",
+      rebase_path(snapshot),
+    ]
+  }
+}
+
 # Defines a Dart application that can be run on the host
 #
 # Parameters
@@ -134,9 +191,7 @@ template("dart_tool") {
 
     depfile = depfile_path
 
-    outputs = [
-      snapshot_path,
-    ]
+    outputs = [ snapshot_path ]
 
     script = dart_binary
 
@@ -165,38 +220,41 @@ template("dart_tool") {
     deps = sdk_deps + [ ":$dart_library_target_name" ]
   }
 
-  if (defined(invoker.output_name)) {
-    app_name = invoker.output_name
-  } else {
-    app_name = target_name
-  }
-
   # Builds a convenience script to invoke the app.
-  action(target_name) {
-    script = "//build/dart/gen_app_invocation.py"
-
-    app_path = "$root_out_dir/dart-tools/$app_name"
-
-    inputs = [
-      dart_binary,
-      snapshot_path,
-    ]
-    outputs = [
-      app_path,
-    ]
-
-    args = [
-      "--out",
-      rebase_path(app_path),
-      "--dart",
-      rebase_path(dart_binary),
-      "--snapshot",
-      rebase_path(snapshot_path),
-    ]
+  _dart_snapshot_invocation(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "output_name",
+                           ])
+    dart = dart_binary
+    snapshot = snapshot_path
 
     deps = sdk_deps + [ ":$snapshot_target_name" ]
     if (defined(invoker.non_dart_deps)) {
       deps += invoker.non_dart_deps
     }
+  }
+}
+
+# Defines a Dart application that can be run on the host which is
+# compiled from an existing snapshot
+#
+# Parameters
+#
+#   snapshot (required)
+#     The path to the dart snapshot
+#
+#   deps (optional)
+#     Dependencies of this application
+#
+#   output_name (optional)
+#     Name of the output file to generate. Defaults to $target_name.
+template("dart_prebuilt_tool") {
+  assert(defined(invoker.snapshot),
+         "Must specify the path to the dart snapshot")
+  _dart_snapshot_invocation(target_name) {
+    dart = prebuilt_dart
+    forward_variables_from(invoker, "*")
   }
 }
