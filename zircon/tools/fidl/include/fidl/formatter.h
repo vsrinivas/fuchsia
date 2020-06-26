@@ -351,7 +351,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
     // NoSpacesBeforeChar is called 2nd (after RequiresWSBeforeChar).
     bool NoSpacesBeforeChar(char ch) {
-      return NoWSBeforeChar(ch) || (ch == ')') || (ch == '?') ||
+      return NoWSBeforeChar(ch) || (ch == ')') || (ch == '?') || (ch == '<') ||
              (!visitor_->blank_space_before_colon_ && ch == ':') ||
              (visitor_->nested_type_depth_ > 0 && ch == '>');
     }

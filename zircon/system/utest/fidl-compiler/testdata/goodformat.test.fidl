@@ -234,6 +234,7 @@ resource SomeRes : uint32 {
 };
 
 using OldHandleAlias = handle<vmo>;
+using OldHandleAlias2 = handle<thread>;
 
 struct Constraints {
     handle:THING1 h1;

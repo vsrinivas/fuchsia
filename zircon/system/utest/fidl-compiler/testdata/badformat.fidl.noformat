@@ -238,6 +238,7 @@ properties {
              };
 
 using OldHandleAlias = handle<  vmo >;
+using OldHandleAlias2 = handle  <  thread  >;
 
 struct        Constraints {
     handle :      THING1         h1;           handle: <  THING2  >    h2;  
