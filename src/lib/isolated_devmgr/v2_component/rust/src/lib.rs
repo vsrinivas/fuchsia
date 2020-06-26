@@ -31,22 +31,25 @@ pub fn launch_isolated_driver_manager() -> Result<(), Error> {
     fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)?;
     let mut realm = fsys::RealmSynchronousProxy::new(client);
     let mut child_ref = fsys::ChildRef { name: "isolated_devmgr".to_string(), collection: None };
-    let (client, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    let (client, server) = zx::Channel::create()?;
     realm
-        .bind_child(&mut child_ref, server, zx::Time::INFINITE)?
+        .bind_child(
+            &mut child_ref,
+            fidl::endpoints::ServerEnd::<fio::DirectoryMarker>::new(server),
+            zx::Time::INFINITE,
+        )?
         .map_err(|e| format_err!("Failed to bind to child: {:#?}", e))?;
-    let mut exposed_dir =
-        fio::DirectorySynchronousProxy::new(client.into_channel().unwrap().into());
-    let (client, server) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
+    let mut exposed_dir = fio::DirectorySynchronousProxy::new(client);
 
     // Now open the exported /dev and bind it to our namespace.
+    let (client, server) = zx::Channel::create()?;
     exposed_dir.open(
         fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_DIRECTORY,
         "dev",
-        server,
+        fidl::endpoints::ServerEnd::<fio::NodeMarker>::new(server),
     )?;
-    fdio::Namespace::installed()?.bind("/dev", client.into_channel().unwrap().into())?;
+    fdio::Namespace::installed()?.bind("/dev", client)?;
 
     *launched = true;
     Ok(())
