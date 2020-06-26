@@ -39,11 +39,11 @@ enum arm64_microarch {
   QEMU_TCG,
 };
 
-extern uint32_t arm64_features;
+extern uint32_t arm64_isa_features;
 
 enum arm64_microarch midr_to_microarch(uint32_t midr);
 
-static inline bool arm64_feature_test(uint32_t feature) { return arm64_features & feature; }
+static inline bool arm64_feature_test(uint32_t feature) { return arm64_isa_features & feature; }
 
 /* block size of the dc zva instruction, dcache cache line and icache cache line */
 extern uint32_t arm64_zva_size;

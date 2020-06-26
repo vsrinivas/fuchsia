@@ -37,6 +37,9 @@
 #define ZX_ARM64_FEATURE_ISA_SM4       ((uint32_t)(1u << 12))
 #define ZX_ARM64_FEATURE_ISA_DP        ((uint32_t)(1u << 13))
 #define ZX_ARM64_FEATURE_ISA_DPB       ((uint32_t)(1u << 14))
+#define ZX_ARM64_FEATURE_ISA_FHM       ((uint32_t)(1u << 15))
+#define ZX_ARM64_FEATURE_ISA_TS        ((uint32_t)(1u << 16))
+#define ZX_ARM64_FEATURE_ISA_RNDR      ((uint32_t)(1u << 17))
 
 #else
 
