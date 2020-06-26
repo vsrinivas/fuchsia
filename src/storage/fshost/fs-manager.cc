@@ -177,7 +177,8 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   outgoing_dir->AddEntry("delayed", delayed_outdir_.Initialize(std::move(filesystems_client_2)));
 
   // Add the diagnostics directory
-  outgoing_dir->AddEntry("diagnostics", inspect_.Initialize(global_loop_->dispatcher()));
+  diagnostics_dir_ = inspect_.Initialize(global_loop_->dispatcher());
+  outgoing_dir->AddEntry("diagnostics", diagnostics_dir_);
 
   // Run the outgoing directory
   outgoing_vfs_.ServeDirectory(outgoing_dir, std::move(dir_request));
@@ -275,6 +276,17 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
       [callback = std::move(callback)](async_dispatcher_t*, async::Wait*, zx_status_t status,
                                        /*signal*/ const zx_packet_signal_t*) { callback(status); });
   shutdown_waiter_->Begin(global_loop_->dispatcher());
+}
+
+zx_status_t FsManager::AddFsDiagnosticsDirectory(const char* diagnostics_dir_name,
+                                                 zx::channel fs_diagnostics_dir_client) {
+  // The diagnostics directory may not be initialized in tests.
+  if (diagnostics_dir_ == nullptr) {
+    return ZX_ERR_INTERNAL;
+  }
+  auto fs_diagnostics_dir =
+      fbl::MakeRefCounted<fs::RemoteDir>(std::move(fs_diagnostics_dir_client));
+  return diagnostics_dir_->AddEntry(diagnostics_dir_name, fs_diagnostics_dir);
 }
 
 }  // namespace devmgr

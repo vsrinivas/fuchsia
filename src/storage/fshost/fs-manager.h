@@ -80,6 +80,13 @@ class FsManager {
 
   zx::event* event() { return &event_; }
 
+  // Creates a RemoteDir sub-directory in the fshost diagnostics directory.
+  // This allows a filesystem to expose its Inspect API to Archivist alongside fshost.
+  // |diagnostics_dir_name| is the name of the diagnostics subdirectory created for
+  // this filesystem.
+  zx_status_t AddFsDiagnosticsDirectory(const char* diagnostics_dir_name,
+                                        zx::channel fs_diagnostics_dir_client);
+
  private:
   FsManager(FsHostMetrics metrics);
   zx_status_t SetupOutgoingDirectory(zx::channel dir_request, loader_service_t* loader_svc);
@@ -123,6 +130,11 @@ class FsManager {
   // A RemoteDir in the outgoing directory that ignores requests until Start is
   // called on it.
   DelayedOutdir delayed_outdir_;
+
+  // The diagnostics directory for the fshost inspect tree.
+  // Each filesystem gets a subdirectory to host their own inspect tree.
+  // Archivist will parse all the inspect trees found in this directory tree.
+  fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
 
   std::unique_ptr<async::Wait> shutdown_waiter_;
 };

@@ -164,6 +164,7 @@ zx_library("blobfs") {
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/lib/fdio",
+      "//sdk/lib/sys/inspect/cpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/metrics",

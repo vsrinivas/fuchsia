@@ -39,6 +39,9 @@ class FdioTest : public zxtest::Test {
   // The vmex resource defaults to empty. It only needs to be set if a test requires it.
   void set_vmex_resource(zx::resource resource) { vmex_resource_ = std::move(resource); }
 
+  // Returns a handle to the client side of the Inspect diagnostics directory
+  zx_handle_t diagnostics_dir() { return diagnostics_dir_client_.get(); }
+
  private:
   block_client::FakeBlockDevice* block_device_ = nullptr;  // Owned by the runner_.
 
@@ -46,6 +49,7 @@ class FdioTest : public zxtest::Test {
   zx::resource vmex_resource_;
   fbl::unique_fd root_fd_;
   std::unique_ptr<blobfs::Runner> runner_;
+  zx::channel diagnostics_dir_client_;
 
   std::unique_ptr<async::Loop> loop_;  // Must be destroyed after the runner.
 };

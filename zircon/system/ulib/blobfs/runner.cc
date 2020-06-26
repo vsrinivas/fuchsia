@@ -5,6 +5,7 @@
 #include "runner.h"
 
 #include <fuchsia/fs/llcpp/fidl.h>
+#include <lib/inspect/service/cpp/service.h>
 
 #include <fs/pseudo_dir.h>
 
@@ -15,7 +16,7 @@ namespace blobfs {
 // static.
 zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
                            MountOptions* options, zx::resource vmex_resource,
-                           std::unique_ptr<Runner>* out) {
+                           std::unique_ptr<Runner>* out, zx::channel diagnostics_dir_server) {
   std::unique_ptr<Blobfs> fs;
   zx_status_t status =
       Blobfs::Create(loop->dispatcher(), std::move(device), options, std::move(vmex_resource), &fs);
@@ -23,7 +24,36 @@ zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> devic
     return status;
   }
 
+  // Setup the diagnostics directory for BlobFS
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+
+  auto vnode = fbl::AdoptRef(new fs::Service(
+      [connector = inspect::MakeTreeHandler(fs->Metrics()->inspector(), loop->dispatcher())](
+          zx::channel chan) mutable {
+        connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
+        return ZX_OK;
+      }));
+
+  status = diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, vnode);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: failed to add Inspect vnode to diagnostics directory: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
   auto runner = std::unique_ptr<Runner>(new Runner(loop, std::move(fs)));
+
+  if (diagnostics_dir_server.is_valid()) {
+    status = runner->ServeDirectory(diagnostics_dir, std::move(diagnostics_dir_server));
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: failed to serve diagnostics directory: %s\n",
+                     zx_status_get_string(status));
+      return status;
+    }
+  } else {
+    FS_TRACE_WARN("blobfs: diagnostics directory server handle is invalid!\n");
+  }
+
   *out = std::move(runner);
   return ZX_OK;
 }

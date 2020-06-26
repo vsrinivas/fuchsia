@@ -7,6 +7,7 @@
 #include <lib/zx/process.h>
 #include <zircon/status.h>
 
+#include <blobfs/mount.h>
 #include <fs-management/mount.h>
 #include <minfs/minfs.h>
 
@@ -26,22 +27,19 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
 
 zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const char* binary,
                                                const mount_options_t& options,
-                                               zx::channel block_device_client, uint32_t fs_flags) {
+                                               zx::channel block_device_client,
+                                               zx::channel diagnostics_dir, uint32_t fs_flags) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   if (status != ZX_OK) {
     return status;
   }
 
-  constexpr size_t kNumHandles = 2;
-  zx_handle_t handles[kNumHandles] = {
-      server.release(),
-      block_device_client.release(),
-  };
-  uint32_t ids[kNumHandles] = {
-      FS_HANDLE_ROOT_ID,
-      FS_HANDLE_BLOCK_DEVICE_ID,
-  };
+  size_t num_handles = diagnostics_dir.is_valid() ? 3 : 2;
+  zx_handle_t handles[3] = {server.release(), block_device_client.release(),
+                            diagnostics_dir.release()};
+  uint32_t ids[3] = {FS_HANDLE_ROOT_ID, FS_HANDLE_BLOCK_DEVICE_ID, FS_HANDLE_DIAGNOSTICS_DIR};
+
   fbl::Vector<const char*> argv;
   argv.push_back(binary);
   if (options.readonly) {
@@ -66,7 +64,7 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
   argv.push_back("mount");
   argv.push_back(nullptr);
   status =
-      LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, kNumHandles, fs_flags);
+      LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, num_handles, fs_flags);
 
   if (status != ZX_OK) {
     return status;
@@ -88,8 +86,11 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx_status_t status =
-      MountFilesystem(PATH_DATA, "/boot/bin/minfs", options, std::move(block_device), FS_SVC);
+  // TODO(54525): The Inspect API has not been connected for MinFS yet.
+  zx::channel diagnostics_dir;
+
+  zx_status_t status = MountFilesystem(PATH_DATA, "/boot/bin/minfs", options,
+                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
   if (status != ZX_OK) {
     return status;
   }
@@ -104,8 +105,11 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx_status_t status =
-      MountFilesystem(PATH_INSTALL, "/boot/bin/minfs", options, std::move(block_device), FS_SVC);
+  // TODO(54525): The Inspect API has not been connected for MinFS yet.
+  zx::channel diagnostics_dir;
+
+  zx_status_t status = MountFilesystem(PATH_INSTALL, "/boot/bin/minfs", options,
+                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
   if (status != ZX_OK) {
     return status;
   }
@@ -119,8 +123,23 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx_status_t status = MountFilesystem(PATH_BLOB, "/boot/bin/blobfs", options,
-                                       std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
+  zx::channel fs_diagnostics_dir_client, fs_diagnostics_dir_server;
+  zx_status_t status =
+      zx::channel::create(0, &fs_diagnostics_dir_client, &fs_diagnostics_dir_server);
+  if (status != ZX_OK) {
+    fprintf(stderr, "fshost: failed to create channel for diagnostics dir: %s\n",
+            zx_status_get_string(status));
+    return status;
+  }
+
+  status = fshost_->AddFsDiagnosticsDirectory("blobfs", std::move(fs_diagnostics_dir_client));
+  if (status != ZX_OK) {
+    fprintf(stderr, "fshost: failed to add diagnostic directory for blobfs: %s\n",
+            zx_status_get_string(status));
+  }
+
+  status = MountFilesystem(PATH_BLOB, "/boot/bin/blobfs", options, std::move(block_device),
+                           std::move(fs_diagnostics_dir_server), FS_SVC | FS_SVC_BLOBFS);
   if (status != ZX_OK) {
     return status;
   }

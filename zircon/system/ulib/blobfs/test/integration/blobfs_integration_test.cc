@@ -8,6 +8,7 @@
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
@@ -28,11 +29,13 @@
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
+#include "fdio_test.h"
 
 namespace {
 
 using blobfs::BlobInfo;
 using blobfs::CharFill;
+using blobfs::FdioTest;
 using blobfs::GenerateBlob;
 using blobfs::GenerateRandomBlob;
 using blobfs::StreamAll;
@@ -1517,6 +1520,13 @@ TEST_F(BlobfsTest, VmoCloneWatchingTest) {
 
 TEST_F(BlobfsTestWithFvm, VmoCloneWatchingTest) {
   ASSERT_NO_FAILURES(RunVmoCloneWatchingTest(environment_->ramdisk()));
+}
+
+TEST_F(FdioTest, InspectServedTest) {
+  zx::channel inspect_client, inspect_server;
+  ASSERT_OK(zx::channel::create(0, &inspect_client, &inspect_server));
+  ASSERT_OK(
+      fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree", inspect_server.release()));
 }
 
 }  // namespace

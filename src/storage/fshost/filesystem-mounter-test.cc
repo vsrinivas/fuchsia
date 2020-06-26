@@ -9,6 +9,7 @@
 
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <zxtest/zxtest.h>
+#include <blobfs/mount.h>
 
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
@@ -73,18 +74,24 @@ class TestMounter : public FilesystemMounter {
     if (argc != 3) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (len != 2) {
-      return ZX_ERR_INVALID_ARGS;
-    }
 
     switch (expected_filesystem_) {
       case FilesystemType::kBlobfs:
         EXPECT_STR_EQ(argv[0], "/boot/bin/blobfs");
         EXPECT_EQ(fs_flags, FS_SVC | FS_SVC_BLOBFS);
+        EXPECT_EQ(len, 3);
+
+        // TODO(54521): This check is over-constraining.
+        // BlobFS does not *require* this handle to be
+        // passed in. However, filesystem-mounter will
+        // always pass this handle in. Remove this check
+        // once we migrate away from using this handle.
+        EXPECT_EQ(ids[2], FS_HANDLE_DIAGNOSTICS_DIR);
         break;
       case FilesystemType::kMinfs:
         EXPECT_STR_EQ(argv[0], "/boot/bin/minfs");
         EXPECT_EQ(fs_flags, FS_SVC);
+        EXPECT_EQ(len, 2);
         break;
       default:
         ADD_FAILURE("Unexpected filesystem type");

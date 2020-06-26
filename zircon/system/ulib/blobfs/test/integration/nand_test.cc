@@ -77,10 +77,13 @@ NandTest::Connection::Connection(const char* dev_root, zx::vmo vmo, bool create_
   zx::channel root_client, root_server;
   ASSERT_OK(zx::channel::create(0, &root_client, &root_server));
 
+  zx::channel diagnostics_dir_client, diagnostics_dir_server;
+  ASSERT_OK(zx::channel::create(0, &diagnostics_dir_client, &diagnostics_dir_server));
+
   // Create the blobfs. This takes ownership of the device.
   MountOptions mount_options;
   ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), &mount_options, zx::resource(),
-                                   &runner_));
+                                   &runner_, std::move(diagnostics_dir_server)));
   ASSERT_OK(runner_->ServeRoot(std::move(root_server), blobfs::ServeLayout::kDataRootOnly));
 
   // FDIO serving the root directory.

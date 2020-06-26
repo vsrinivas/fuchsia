@@ -8,10 +8,14 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fzl/time.h>
+#include <lib/inspect/cpp/inspector.h>
+#include <lib/inspect/service/cpp/service.h>
 #include <lib/zx/time.h>
 
 #include <fs/metrics/events.h>
+#include <fs/service.h>
 #include <fs/trace.h>
+#include <fs/vnode.h>
 
 namespace blobfs {
 namespace {
@@ -51,14 +55,13 @@ void BlobfsMetrics::Dump() {
   // Timings are only recorded when Cobalt metrics are enabled.
 
   FS_TRACE_INFO("Allocation Info:\n");
-  FS_TRACE_INFO("  Allocated %zu blobs (%zu MB)\n", blobs_created_,
-                blobs_created_total_size_ / mb);
+  FS_TRACE_INFO("  Allocated %zu blobs (%zu MB)\n", blobs_created_, blobs_created_total_size_ / mb);
   if (Collecting())
     FS_TRACE_INFO("  Total allocation time is %zu ms\n", TicksToMs(total_allocation_time_ticks_));
 
   FS_TRACE_INFO("Write Info:\n");
-  FS_TRACE_INFO("  Wrote %zu MB of data and %zu MB of merkle trees\n",
-                data_bytes_written_ / mb, merkle_bytes_written_ / mb);
+  FS_TRACE_INFO("  Wrote %zu MB of data and %zu MB of merkle trees\n", data_bytes_written_ / mb,
+                merkle_bytes_written_ / mb);
   if (Collecting()) {
     FS_TRACE_INFO("  Enqueued to journal in %zu ms, made merkle tree in %zu ms\n",
                   TicksToMs(total_write_enqueue_time_ticks_),

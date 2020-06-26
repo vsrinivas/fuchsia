@@ -18,6 +18,10 @@ namespace blobfs {
 
 using block_client::BlockDevice;
 
+// TODO(54521): This is a temporary measure. The diagnostics directory can
+// eventually be added to the outgoing dir passed via PA_DIRECTORY_REQUEST.
+#define FS_HANDLE_DIAGNOSTICS_DIR PA_HND(PA_USER0, 2)
+
 // Determines the kind of directory layout the filesystem server should expose to the outside world.
 // TODO(fxb/34531): When all users migrate to the export directory, delete this enum, since only
 // |kExportDirectory| would be used.
@@ -60,9 +64,12 @@ struct MountOptions {
 // |vmex_resource|, or else the mounted filesystem will not support requesting VMOs for blobs with
 // VMO_FLAG_EXEC.
 //
+// |diagnostics_dir| is the server end of a diagnostics directory made for BlobFS.
+// The inspect tree is served in this directory. This directory will be visible to Archivist.
+//
 // This function blocks until the filesystem terminates.
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root,
-                  ServeLayout layout, zx::resource vmex_resource);
+                  ServeLayout layout, zx::resource vmex_resource, zx::channel diagnostics_dir);
 
 }  // namespace blobfs
 

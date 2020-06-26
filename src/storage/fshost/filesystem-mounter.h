@@ -72,7 +72,7 @@ class FilesystemMounter {
   // validating the type of filesystem being mounted.
   zx_status_t MountFilesystem(const char* mount_path, const char* binary,
                               const mount_options_t& options, zx::channel block_device_client,
-                              uint32_t fs_flags);
+                              zx::channel diagnostics_dir, uint32_t fs_flags);
 
   bool WaitForData() const { return options_.wait_for_data; }
 

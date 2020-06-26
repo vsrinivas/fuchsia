@@ -19,6 +19,7 @@
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
 #include <fs/ticker.h>
+#include <fs/vnode.h>
 
 #include "read-metrics.h"
 #include "verification-metrics.h"
@@ -73,6 +74,9 @@ class BlobfsMetrics {
   // The |BlobfsMetrics| class is not thread-safe except for these accessors.
   ReadMetrics& read_metrics() { return read_metrics_; }
   VerificationMetrics& verification_metrics() { return verification_metrics_; }
+
+  // Accessor for BlobFS Inspector. This Inspector serves the BlobFS inspect tree.
+  inspect::Inspector* inspector() { return &inspector_; }
 
  private:
   // Returns the underlying collector of cobalt metrics.

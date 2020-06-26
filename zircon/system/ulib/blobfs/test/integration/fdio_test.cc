@@ -25,10 +25,14 @@ void FdioTest::SetUp() {
   zx::channel root_client, root_server;
   ASSERT_OK(zx::channel::create(0, &root_client, &root_server));
 
+  zx::channel diagnostics_dir_server;
+  ASSERT_OK(zx::channel::create(0, &diagnostics_dir_client_, &diagnostics_dir_server));
+
   blobfs::MountOptions options;
   std::unique_ptr<blobfs::Runner> runner;
   ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), &options,
-                                   std::move(vmex_resource_), &runner));
+                                   std::move(vmex_resource_), &runner,
+                                   std::move(diagnostics_dir_server)));
   ASSERT_OK(runner->ServeRoot(std::move(root_server), layout_));
   ASSERT_OK(loop_->StartThread("blobfs test dispatcher"));
 
