@@ -596,10 +596,9 @@ void Service::AddStringLiteral(ServerInterpreterContext* context, uint64_t node_
 }
 
 void Service::AddVariable(ServerInterpreterContext* context, uint64_t node_file_id,
-                          uint64_t node_node_id, const llcpp::fuchsia::shell::NodeId& node,
-                          bool root_node) {
+                          uint64_t node_node_id, const fidl::StringView& name, bool root_node) {
   auto result = std::make_unique<ExpressionVariable>(interpreter(), node_file_id, node_node_id,
-                                                     NodeId(node.file_id, node.node_id));
+                                                     std::string(name.data(), name.size()));
   interpreter_->AddExpression(context, std::move(result), root_node);
 }
 

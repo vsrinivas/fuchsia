@@ -18,14 +18,14 @@ TEST_F(InterpreterTest, StringAdditionOk) {
   ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
-  auto marx = builder.AddVariableDeclaration("marx", builder.TypeString(),
-                                             builder.AddStringLiteral("Marx"), false, true);
+  builder.AddVariableDeclaration("marx", builder.TypeString(), builder.AddStringLiteral("Marx"),
+                                 false, true);
   // Checks s1 + (s2 + s3).
   builder.AddVariableDeclaration(
       "groucho1", builder.TypeString(),
       builder.AddAddition(
           /*with_exceptions=*/true, builder.AddStringLiteral("A "),
-          builder.AddAddition(/*with_exceptions=*/true, builder.AddVariableFromDef(marx),
+          builder.AddAddition(/*with_exceptions=*/true, builder.AddVariable("marx"),
                               builder.AddStringLiteral(" brother"))),
       false, true);
   // Checks (s1 + s2) + s3.
@@ -34,7 +34,7 @@ TEST_F(InterpreterTest, StringAdditionOk) {
       builder.AddAddition(
           /*with_exceptions=*/true,
           builder.AddAddition(/*with_exceptions=*/true, builder.AddStringLiteral("A "),
-                              builder.AddVariableFromDef(marx)),
+                              builder.AddVariable("marx")),
           builder.AddStringLiteral(" brother")),
       false, true);
 
@@ -63,17 +63,17 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
   ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
-  auto foo = builder.AddVariableDeclaration("foo", builder.TypeString(),
-                                            builder.AddStringLiteral("foo"), false, true);
+  builder.AddVariableDeclaration("foo", builder.TypeString(), builder.AddStringLiteral("foo"),
+                                 false, true);
   builder.AddVariableDeclaration(
       "foo1", builder.TypeString(),
-      builder.AddAddition(/*with_exceptions=*/true, builder.AddVariableFromDef(foo),
+      builder.AddAddition(/*with_exceptions=*/true, builder.AddVariable("foo"),
                           builder.AddStringLiteral("")),
       false, true);
   builder.AddVariableDeclaration(
       "foo2", builder.TypeString(),
       builder.AddAddition(/*with_exceptions=*/true, builder.AddStringLiteral(""),
-                          builder.AddVariableFromDef(foo)),
+                          builder.AddVariable("foo")),
       false, true);
 
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
@@ -97,26 +97,26 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
 
 // - Helpers ---------------------------------------------------------------------------------------
 
-#define ExecuteAddition(type, with_exceptions, left, right)                                    \
-  constexpr uint64_t kFileId = 1;                                                              \
-  InterpreterTestContext* context = CreateContext();                                           \
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));                                 \
-                                                                                               \
-  shell::console::AstBuilder builder(kFileId);                                                 \
-  auto x = builder.AddVariableDeclaration("x", type,                                           \
-                                          (left < 0) ? builder.AddIntegerLiteral(-left, true)  \
-                                                     : builder.AddIntegerLiteral(left, false), \
-                                          false, true);                                        \
-  builder.AddVariableDeclaration(                                                              \
-      "y", type,                                                                               \
-      builder.AddAddition(with_exceptions, builder.AddVariableFromDef(x),                      \
-                          (right < 0) ? builder.AddIntegerLiteral(-right, true)                \
-                                      : builder.AddIntegerLiteral(right, false)),              \
-      false, true);                                                                            \
-                                                                                               \
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));                   \
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));                                \
-  LoadGlobal("y");                                                                             \
+#define ExecuteAddition(type, with_exceptions, left, right)                           \
+  constexpr uint64_t kFileId = 1;                                                     \
+  InterpreterTestContext* context = CreateContext();                                  \
+  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));                        \
+                                                                                      \
+  shell::console::AstBuilder builder(kFileId);                                        \
+  builder.AddVariableDeclaration("x", type,                                           \
+                                 (left < 0) ? builder.AddIntegerLiteral(-left, true)  \
+                                            : builder.AddIntegerLiteral(left, false), \
+                                 false, true);                                        \
+  builder.AddVariableDeclaration(                                                     \
+      "y", type,                                                                      \
+      builder.AddAddition(with_exceptions, builder.AddVariable("x"),                  \
+                          (right < 0) ? builder.AddIntegerLiteral(-right, true)       \
+                                      : builder.AddIntegerLiteral(right, false)),     \
+      false, true);                                                                   \
+                                                                                      \
+  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));          \
+  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));                       \
+  LoadGlobal("y");                                                                    \
   Finish(kExecute);
 
 #define DoAdditionTest(name, type, with_exceptions, left, right, result)               \

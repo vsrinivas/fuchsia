@@ -147,9 +147,9 @@ union Node {
     6: ObjectFieldDefinition object_field;
     /// A string value.
     7: string:MAX string_literal;
-    /// The value of a previously defined variable. The node id refers to the variable_definition's
-    /// node id.
-    8: NodeId variable;
+    /// The value of a previously defined variable. It refers to a previously created variable
+    /// definition using its name.
+    8: string:MAX variable;
     /// Emits a result. The value of the expression is sent back to the client using OnResult.
     9: NodeId emit_result;
     /// An addition.

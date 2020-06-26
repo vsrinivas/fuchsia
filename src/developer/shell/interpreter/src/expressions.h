@@ -126,8 +126,8 @@ class StringLiteral : public Expression {
 class ExpressionVariable : public Expression {
  public:
   ExpressionVariable(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
-                     NodeId variable_definition)
-      : Expression(interpreter, file_id, node_id), variable_definition_(variable_definition) {}
+                     std::string&& name)
+      : Expression(interpreter, file_id, node_id), name_(std::move(name)) {}
 
   void Dump(std::ostream& os) const override;
 
@@ -136,7 +136,7 @@ class ExpressionVariable : public Expression {
   bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 
  private:
-  const NodeId variable_definition_;
+  const std::string name_;
 };
 
 class BinaryOperation : public Expression {

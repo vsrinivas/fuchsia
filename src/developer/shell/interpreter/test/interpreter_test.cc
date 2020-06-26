@@ -80,6 +80,12 @@ void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>
     }
     ASSERT_TRUE(ok);
   }
+  if (action != kError) {
+    std::string global_errors = global_error_stream_.str();
+    if (!global_errors.empty()) {
+      std::cout << global_errors;
+    }
+  }
 }
 
 void InterpreterTest::Run(FinishAction action) {

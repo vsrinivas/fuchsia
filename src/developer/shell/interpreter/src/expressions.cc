@@ -116,10 +116,10 @@ bool StringLiteral::Compile(ExecutionContext* context, code::Code* code,
 
 // - ExpressionVariable ----------------------------------------------------------------------------
 
-void ExpressionVariable::Dump(std::ostream& os) const { os << variable_definition_.StringId(); }
+void ExpressionVariable::Dump(std::ostream& os) const { os << name_; }
 
 std::unique_ptr<Type> ExpressionVariable::InferType(ExecutionContext* context) const {
-  const Variable* definition = context->interpreter()->SearchGlobal(variable_definition_);
+  const Variable* definition = context->interpreter()->SearchGlobal(name_);
   if (definition == nullptr) {
     return std::unique_ptr<TypeUndefined>();
   }
@@ -128,9 +128,9 @@ std::unique_ptr<Type> ExpressionVariable::InferType(ExecutionContext* context) c
 
 bool ExpressionVariable::Compile(ExecutionContext* context, code::Code* code,
                                  const Type* for_type) const {
-  const Variable* definition = context->interpreter()->SearchGlobal(variable_definition_);
+  const Variable* definition = context->interpreter()->SearchGlobal(name_);
   if (definition == nullptr) {
-    context->EmitError(id(), "Can't find variable " + variable_definition_.StringId() + ".");
+    context->EmitError(id(), "Can't find variable " + name_ + ".");
     return false;
   }
   return for_type->GenerateVariable(context, code, id(), definition);

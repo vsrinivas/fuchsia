@@ -9,29 +9,29 @@
 #include "src/developer/shell/common/result.h"
 #include "src/developer/shell/interpreter/test/interpreter_test.h"
 
-#define EmitResultTest(name, type, left, right, result)                                          \
-  TEST_F(InterpreterTest, name) {                                                                \
-    constexpr uint64_t kFileId = 1;                                                              \
-    InterpreterTestContext* context = CreateContext();                                           \
-    shell().CreateExecutionContext(context->id);                                                 \
-                                                                                                 \
-    shell::console::AstBuilder builder(kFileId);                                                 \
-    auto x = builder.AddVariableDeclaration("x", type,                                           \
-                                            (left < 0) ? builder.AddIntegerLiteral(-left, true)  \
-                                                       : builder.AddIntegerLiteral(left, false), \
-                                            false, true);                                        \
-    builder.AddEmitResult(builder.AddAddition(false, builder.AddVariableFromDef(x),              \
-                                              (right < 0)                                        \
-                                                  ? builder.AddIntegerLiteral(-right, true)      \
-                                                  : builder.AddIntegerLiteral(right, false)));   \
-                                                                                                 \
-    shell().AddNodes(context->id, builder.DefsAsVectorView());                                   \
-    shell().ExecuteExecutionContext(context->id);                                                \
-    Finish(kExecute);                                                                            \
-                                                                                                 \
-    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());                   \
-                                                                                                 \
-    CHECK_RESULT(0, result);                                                                     \
+#define EmitResultTest(name, type, left, right, result)                                        \
+  TEST_F(InterpreterTest, name) {                                                              \
+    constexpr uint64_t kFileId = 1;                                                            \
+    InterpreterTestContext* context = CreateContext();                                         \
+    shell().CreateExecutionContext(context->id);                                               \
+                                                                                               \
+    shell::console::AstBuilder builder(kFileId);                                               \
+    builder.AddVariableDeclaration("x", type,                                                  \
+                                   (left < 0) ? builder.AddIntegerLiteral(-left, true)         \
+                                              : builder.AddIntegerLiteral(left, false),        \
+                                   false, true);                                               \
+    builder.AddEmitResult(builder.AddAddition(false, builder.AddVariable("x"),                 \
+                                              (right < 0)                                      \
+                                                  ? builder.AddIntegerLiteral(-right, true)    \
+                                                  : builder.AddIntegerLiteral(right, false))); \
+                                                                                               \
+    shell().AddNodes(context->id, builder.DefsAsVectorView());                                 \
+    shell().ExecuteExecutionContext(context->id);                                              \
+    Finish(kExecute);                                                                          \
+                                                                                               \
+    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());                 \
+                                                                                               \
+    CHECK_RESULT(0, result);                                                                   \
   }
 
 EmitResultTest(EmitResultInt8, builder.TypeInt8(), 10, -30, "-20");
@@ -52,11 +52,9 @@ TEST_F(InterpreterTest, EmitResultString) {
   shell().CreateExecutionContext(context->id);
 
   shell::console::AstBuilder builder(kFileId);
-  auto good =
-      builder.AddVariableDeclaration("good", builder.TypeString(), builder.AddStringLiteral("good"),
-                                     /*is_const=*/false, /*is_root=*/true);
-  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/true,
-                                            builder.AddVariableFromDef(good),
+  builder.AddVariableDeclaration("good", builder.TypeString(), builder.AddStringLiteral("good"),
+                                 /*is_const=*/false, /*is_root=*/true);
+  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/true, builder.AddVariable("good"),
                                             builder.AddStringLiteral(" morning")));
 
   shell().AddNodes(context->id, builder.DefsAsVectorView());
@@ -77,10 +75,9 @@ TEST_F(InterpreterTest, EmitObject) {
 
   builder.OpenObject();
   shell::console::AstBuilder::NodePair obj1 = builder.CloseObject();
-  auto var1 =
-      builder.AddVariableDeclaration("obj1", builder.TypeObject(obj1.schema_node), obj1.value_node,
-                                     /*is_const=*/false, /*is_root=*/true);
-  builder.AddEmitResult(builder.AddVariableFromDef(var1));
+  builder.AddVariableDeclaration("obj1", builder.TypeObject(obj1.schema_node), obj1.value_node,
+                                 /*is_const=*/false, /*is_root=*/true);
+  builder.AddEmitResult(builder.AddVariable("obj1"));
 
   builder.OpenObject();
   builder.AddField("alpha", builder.AddIntegerLiteral(100, false), builder.TypeUint64());
@@ -104,17 +101,13 @@ TEST_F(InterpreterTest, EmitMultipleResults) {
   shell().CreateExecutionContext(context->id);
 
   shell::console::AstBuilder builder(kFileId);
-  auto x = builder.AddVariableDeclaration("x", builder.TypeInt64(),
-                                          builder.AddIntegerLiteral(1250, false),
-                                          /*is_const=*/false, /*is_root=*/true);
-  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false,
-                                            builder.AddVariableFromDef(x),
+  builder.AddVariableDeclaration("x", builder.TypeInt64(), builder.AddIntegerLiteral(1250, false),
+                                 /*is_const=*/false, /*is_root=*/true);
+  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false, builder.AddVariable("x"),
                                             builder.AddIntegerLiteral(3000, true)));
-  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false,
-                                            builder.AddVariableFromDef(x),
+  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false, builder.AddVariable("x"),
                                             builder.AddIntegerLiteral(3000, false)));
-  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false,
-                                            builder.AddVariableFromDef(x),
+  builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false, builder.AddVariable("x"),
                                             builder.AddIntegerLiteral(1000, true)));
 
   shell().AddNodes(context->id, builder.DefsAsVectorView());

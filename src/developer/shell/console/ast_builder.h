@@ -76,7 +76,7 @@ class AstBuilder {
                                 bool is_const, bool is_root = false);
 
   // Adds a variable reference, where |node_id| was the variable declaration.
-  NodeId AddVariableFromDef(NodeId node_id);
+  NodeId AddVariable(const std::string& identifier);
 
   // Adds an integer literal node with the value |i|.  Returns the resulting node_id.
   NodeId AddIntegerLiteral(uint64_t i, bool is_negative);

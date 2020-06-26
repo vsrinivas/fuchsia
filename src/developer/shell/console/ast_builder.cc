@@ -76,9 +76,12 @@ NodeId AstBuilder::AddVariableDeclaration(const std::string& identifier,
   return AddNode(std::move(node), is_root);
 }
 
-NodeId AstBuilder::AddVariableFromDef(NodeId node_id) {
-  auto managed_node = ManagedNodeId(node_id);
-  auto node = llcpp::fuchsia::shell::Node::WithVariable(fidl::unowned_ptr(managed_node));
+NodeId AstBuilder::AddVariable(const std::string& identifier) {
+  auto name = ManageNew<fidl::StringView>();
+  char* name_buf = ManageCopyOf(identifier.c_str(), identifier.size());
+  name->set_data(fidl::unowned_ptr(name_buf));
+  name->set_size(identifier.size());
+  auto node = llcpp::fuchsia::shell::Node::WithVariable(fidl::unowned_ptr(name));
   return AddNode(std::move(node));
 }
 
