@@ -4,7 +4,8 @@
 
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
-    LightError, LightGroup, LightMarker, LightRequest, LightState, LightWatchLightGroupsResponder,
+    LightError, LightGroup, LightMarker, LightRequest, LightState, LightWatchLightGroupResponder,
+    LightWatchLightGroupsResponder,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -19,10 +20,8 @@ use crate::switchboard::base::FidlResponseErrorLogger;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
-type LightGroupSet = Vec<LightGroup>;
-
-impl Sender<LightGroupSet> for LightWatchLightGroupsResponder {
-    fn send_response(self, data: LightGroupSet) {
+impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
+    fn send_response(self, data: Vec<LightGroup>) {
         self.send(&mut data.into_iter()).log_fidl_response_error(LightMarker::DEBUG_NAME);
     }
 
@@ -32,7 +31,38 @@ impl Sender<LightGroupSet> for LightWatchLightGroupsResponder {
     }
 }
 
-impl From<SettingResponse> for LightGroupSet {
+/// Responder that wraps LightWatchLightGroupResponder to filter the vector of light groups down to
+/// the single light group the client is watching.
+struct IndividualLightGroupResponder {
+    responder: LightWatchLightGroupResponder,
+    light_group_name: String,
+}
+
+impl Sender<Vec<LightGroup>> for IndividualLightGroupResponder {
+    fn send_response(self, data: Vec<LightGroup>) {
+        let light_group_name = self.light_group_name;
+        self.responder
+            .send(
+                data.into_iter()
+                    .find(|group| {
+                        group.name.as_ref().map(|n| *n == light_group_name).unwrap_or(false)
+                    })
+                    .unwrap(),
+            )
+            .log_fidl_response_error(LightMarker::DEBUG_NAME);
+    }
+
+    fn on_error(self) {
+        fx_log_err!(
+            "error occurred watching light group {} for service: {:?}",
+            self.light_group_name,
+            LightMarker::DEBUG_NAME
+        );
+        self.responder.control_handle().shutdown_with_epitaph(Status::INTERNAL);
+    }
+}
+
+impl From<SettingResponse> for Vec<LightGroup> {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Light(info) = response {
             // Internally we store the data in a HashMap, need to flatten it out into a vector.
@@ -52,18 +82,21 @@ impl From<SettingResponse> for LightGroupSet {
 fidl_process_full!(
     Light,
     SettingType::Light,
-    LightGroupSet,
+    Vec<LightGroup>,
     LightWatchLightGroupsResponder,
     String,
-    process_request
+    process_request,
+    SettingType::Light,
+    Vec<LightGroup>,
+    IndividualLightGroupResponder,
+    String,
+    process_watch_light_group_request
 );
 
 async fn process_request(
-    context: RequestContext<LightGroupSet, LightWatchLightGroupsResponder>,
+    context: RequestContext<Vec<LightGroup>, LightWatchLightGroupsResponder>,
     req: LightRequest,
 ) -> Result<Option<LightRequest>, anyhow::Error> {
-    // Support future expansion of FIDL
-    #[allow(unreachable_patterns)]
     match req {
         LightRequest::SetLightGroupValues { name, state, responder } => {
             fasync::spawn(async move {
@@ -92,6 +125,58 @@ async fn process_request(
     return Ok(None);
 }
 
+/// Processes a request to watch a single light group.
+async fn process_watch_light_group_request(
+    context: RequestContext<Vec<LightGroup>, IndividualLightGroupResponder>,
+    req: LightRequest,
+) -> Result<Option<LightRequest>, anyhow::Error> {
+    match req {
+        LightRequest::WatchLightGroup { name, responder } => {
+            if !validate_light_group_name(name.clone(), context.clone()).await {
+                // Light group name not known, close the connection.
+                responder.control_handle().shutdown_with_epitaph(Status::INTERNAL);
+                return Ok(None);
+            }
+
+            let name_clone = name.clone();
+            context
+                .watch_with_change_fn(
+                    name.clone(),
+                    Box::new(move |old_data: &Vec<LightGroup>, new_data: &Vec<LightGroup>| {
+                        let old_light_group = old_data.iter().find(|group| {
+                            group.name.as_ref().map(|n| *n == name_clone).unwrap_or(false)
+                        });
+                        let new_light_group = new_data.iter().find(|group| {
+                            group.name.as_ref().map(|n| *n == name_clone).unwrap_or(false)
+                        });
+                        old_light_group != new_light_group
+                    }),
+                    IndividualLightGroupResponder { responder, light_group_name: name },
+                    true,
+                )
+                .await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    return Ok(None);
+}
+
+/// Returns true if the given string is the name of a known light group, else returns false.
+async fn validate_light_group_name(
+    name: String,
+    context: RequestContext<Vec<LightGroup>, IndividualLightGroupResponder>,
+) -> bool {
+    let result = context.request(SettingType::Light, SettingRequest::Get).await;
+
+    match result {
+        Ok(Some(SettingResponse::Light(info))) => info.contains_light_group_name(name),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -105,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_response_to_vector_empty() {
-        let response: LightGroupSet = SettingResponse::into(SettingResponse::Light(LightInfo {
+        let response: Vec<LightGroup> = SettingResponse::into(SettingResponse::Light(LightInfo {
             light_groups: Default::default(),
         }));
 
@@ -132,7 +217,7 @@ mod tests {
         light_groups.insert("test".to_string(), light_group_1.clone().into());
         light_groups.insert("test2".to_string(), light_group_2.clone().into());
 
-        let mut response: LightGroupSet =
+        let mut response: Vec<LightGroup> =
             SettingResponse::into(SettingResponse::Light(LightInfo { light_groups }));
 
         // Sort so light groups are in a predictable order.

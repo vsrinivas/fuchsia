@@ -273,7 +273,7 @@ where
                 request = fused_stream => {
                     if let Ok(Some(mut req)) = request {
                         for processing_unit in &self.processing_units {
-                            // If the processing unit consumes the request (a non-empty
+                            // If the processing unit consumes the request (an empty
                             // result is returned) or an error occurs, exit processing this
                             // request. Otherwise, hand the request to the next processing
                             // unit
