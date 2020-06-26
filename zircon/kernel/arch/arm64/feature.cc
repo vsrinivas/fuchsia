@@ -139,6 +139,8 @@ enum arm64_microarch midr_to_microarch(uint32_t midr) {
         return ARM_CORTEX_A77;
       case 0xd0e:
         return ARM_CORTEX_A76AE;
+      case 0xd41:
+        return ARM_CORTEX_A78;
       case 0xd4a:
         return ARM_NEOVERSE_E1;
       default:
@@ -212,6 +214,9 @@ static void midr_to_core_string(uint32_t midr, char* str, size_t len) {
       break;
     case ARM_CORTEX_A77:
       partnum_str = "ARM Cortex-a77";
+      break;
+    case ARM_CORTEX_A78:
+      partnum_str = "ARM Cortex-a78";
       break;
     case ARM_NEOVERSE_E1:
       partnum_str = "ARM Neoverse E1";
