@@ -5,7 +5,8 @@
 use {
     async_trait::async_trait,
     eui48::MacAddress,
-    fidl_fuchsia_wlan_device::{self as fidl_device, MacRole},
+    fidl_fuchsia_wlan_device as fidl_device,
+    fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_device_service as fidl_service, fuchsia_zircon,
     log::{info, warn},
     std::collections::{HashMap, HashSet},

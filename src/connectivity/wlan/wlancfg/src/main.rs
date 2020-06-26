@@ -30,8 +30,8 @@ use {
     },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
-    fidl_fuchsia_wlan_policy as fidl_policy,
-    fuchsia_async::{self as fasync, DurationExt},
+    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
+    fuchsia_async::DurationExt,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::prelude::*,
     futures::{

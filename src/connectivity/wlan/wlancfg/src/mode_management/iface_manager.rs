@@ -4,10 +4,7 @@
 
 use {
     crate::{
-        access_point::{
-            state_machine::{self as ap_fsm, AccessPointApi},
-            types as ap_types,
-        },
+        access_point::{state_machine as ap_fsm, state_machine::AccessPointApi, types as ap_types},
         client::state_machine as client_fsm,
         config_management::SavedNetworksManager,
         mode_management::phy_manager::PhyManagerApi,
