@@ -8,6 +8,7 @@
 #include <lib/syslog/global.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/sys/appmgr/util.h"
 
 namespace component {
 
@@ -98,11 +99,12 @@ void LogConnectorImpl::AddLogConnection(
   }
   std::reverse(realm_path.begin(), realm_path.end());
 
+  auto component_name = Util::GetLabelFromURL(component_url);
   fuchsia::sys::internal::SourceIdentity identity;
   identity.set_instance_id(instance_id);
   identity.set_realm_path(realm_path);
   identity.set_component_url(std::move(component_url));
-  identity.set_component_name(realm_label_);
+  identity.set_component_name(std::move(component_name));
 
   current->consumer_->OnNewConnection({
       .log_request = std::move(connection),
