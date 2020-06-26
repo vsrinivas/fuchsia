@@ -9,19 +9,16 @@ use {
         epitaph::ChannelEpitaphExt, AsHandleRef, AsyncChannel, Channel, Error, Handle, HandleBased,
         HandleRef, ServeInner,
     },
-    fuchsia_zircon_status as zx_status,
-    futures::{Stream, TryStream},
+    fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
+    futures::{self, Future, FutureExt, Stream, TryFutureExt, TryStream, TryStreamExt},
+    log::error,
     std::convert::From,
     std::marker::{PhantomData, Unpin},
     std::sync::Arc,
 };
 
 #[cfg(target_os = "fuchsia")]
-use {
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{self, Future, FutureExt, TryFutureExt, TryStreamExt},
-    log::error,
-};
+use fuchsia_zircon as zx;
 
 /// A marker for a particular FIDL service.
 ///
@@ -147,7 +144,6 @@ pub trait MemberOpener {
 
 /// Utility that spawns a new task to handle requests of a particular type, requiring a
 /// singlethreaded executor. The requests are handled one at a time.
-#[cfg(target_os = "fuchsia")]
 pub fn spawn_local_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
 where
     P: Proxy,
@@ -161,7 +157,6 @@ where
 
 /// Utility that spawns a new task to handle requests of a particular type. The request handler
 /// must be threadsafe. The requests are handled one at a time.
-#[cfg(target_os = "fuchsia")]
 pub fn spawn_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
 where
     P: Proxy,
@@ -173,7 +168,6 @@ where
     Ok(proxy)
 }
 
-#[cfg(target_os = "fuchsia")]
 fn for_each_or_log<St, F, Fut>(stream: St, mut f: F) -> impl Future<Output = ()>
 where
     St: RequestStream,
