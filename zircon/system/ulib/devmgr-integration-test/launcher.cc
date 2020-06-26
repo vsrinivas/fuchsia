@@ -252,6 +252,8 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
   ForwardService(svc_loop_state_->root, "fuchsia.logger.LogSink", std::move(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.fshost.Loader", std::move(fshost_svc_client));
 
+  boot_args.try_emplace("virtcon.disable", "true");
+
   // Host fake instances of some services normally provided by bootsvc and routed to devcoordinator
   // by component_manager. The difference between these fakes and the optional services above is
   // that these 1) are fakeable (unlike fuchsia.process.Launcher) and 2) seem to be required
