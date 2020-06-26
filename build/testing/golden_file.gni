@@ -1,0 +1,48 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines a golden file test to be executed during the build. Fails
+# if `golden`'s contents aren't equal to `current`'s.
+#
+# Parameters
+#   golden (required)
+#     Path to the canonical file.
+#
+#   current (required)
+#     Path to the file under test.
+#
+#   warn_on_changes (default: false)
+#     If true, mismatches are treated as warnings rather than errors.
+template("golden_file") {
+  assert(defined(invoker.golden), "golden is a required parameter")
+  assert(defined(invoker.current), "current is a required parameter")
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    script = "//build/testing/verify_golden_file.py"
+
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    inputs = [
+      current,
+      golden,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--golden",
+      rebase_path(golden),
+      "--current",
+      rebase_path(current),
+      "--stamp",
+      rebase_path(stamp_file),
+    ]
+
+    if (warn_on_changes) {
+      args += [ "--warn" ]
+    }
+  }
+}

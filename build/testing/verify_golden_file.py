@@ -8,16 +8,15 @@ import filecmp
 import json
 import sys
 
-# Verifies if the API for an atom has changed.
-# This is done with a simple file comparison of the API file version.
+# Verifies that the current golden file matches the provided golden.
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--reference', help='Path to the golden API file', required=True)
+        '--golden', help='Path to the golden file', required=True)
     parser.add_argument(
-        '--current', help='Path to the local API file', required=True)
+        '--current', help='Path to the local file', required=True)
     parser.add_argument(
         '--stamp', help='Path to the victory file', required=True)
     parser.add_argument(
@@ -26,17 +25,17 @@ def main():
         action='store_true')
     args = parser.parse_args()
 
-    if args.reference:
-        if not filecmp.cmp(args.reference, args.current):
+    if args.golden:
+        if not filecmp.cmp(args.golden, args.current):
             type = 'Warning' if args.warn else 'Error'
-            print('%s: API has changed!' % type)
+            print('%s: Golden file mismatch' % type)
             print('Please acknowledge this change by running:')
-            print('  cp ' + args.current + ' ' + args.reference)
+            print('  cp ' + args.current + ' ' + args.golden)
             if not args.warn:
                 return 1
 
     with open(args.stamp, 'w') as stamp_file:
-        stamp_file.write('API is good!\n')
+        stamp_file.write('Golden!\n')
 
     return 0
 
