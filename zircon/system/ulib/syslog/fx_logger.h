@@ -43,8 +43,9 @@ struct fx_logger {
     pid_ = GetCurrentProcessKoid();
     dropped_logs_.store(0, std::memory_order_relaxed);
     Reconfigure(config);
-    if (config->log_service_channel == ZX_HANDLE_INVALID && config->console_fd == -1)
+    if (config->log_service_channel == ZX_HANDLE_INVALID && config->console_fd == -1) {
       ActivateFallback(-1);
+    }
   }
 
   ~fx_logger() = default;
@@ -88,7 +89,7 @@ struct fx_logger {
   zx_koid_t pid_;
   std::atomic<fx_log_severity_t> severity_;
   std::atomic<uint32_t> dropped_logs_;
-  std::atomic<int> logger_fd_;
+  std::atomic<int> logger_fd_ = -1;
   zx::socket socket_;
   fbl::Vector<fbl::String> tags_;
 
