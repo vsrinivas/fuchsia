@@ -27,18 +27,12 @@ LOCAL_PACKAGES = {
   'flutter_test': '//third_party/dart-pkg/git/flutter/packages/flutter_test',
   'flutter_web_plugins': '//third_party/dart-pkg/git/flutter/packages/flutter_web_plugins',
   'func': '//third_party/dart/third_party/pkg/func',
-  'intl': '//third_party/dart/third_party/pkg/intl',
   'sky_engine': '//prebuilt/third_party/sky_engine',
   'testing': '//third_party/dart/pkg/testing',
   'typed_mock': '//third_party/dart/pkg/typed_mock',
 }
 
 FORBIDDEN_PACKAGES = ['mojo', 'mojo_services']
-
-# TODO(fxb/54344) we need to do a soft transition from the intl package in third_party/dart 
-# to the one we get from pub. This will allow that package to be downloaded so we can soft 
-# transition.
-SOFT_TRANSITION_PACKAGES = ['intl']
 
 # This is to account for https://github.com/flutter/devtools/issues/1148
 PACKAGES_WITH_NO_LIB = ['devtools']
@@ -271,7 +265,7 @@ def main():
                 print 'Package %s not from dartlang (%s), ignoring' % (package[0], source_dir)
                 continue
             # Don't import packages that live canonically in the tree.
-            if package_name in LOCAL_PACKAGES and package_name not in SOFT_TRANSITION_PACKAGES:
+            if package_name in LOCAL_PACKAGES:
                 continue
             if package_name in FORBIDDEN_PACKAGES:
                 print 'Warning: dependency on forbidden package %s' % package_name
