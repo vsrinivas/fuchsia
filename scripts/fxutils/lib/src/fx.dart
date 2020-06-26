@@ -24,14 +24,15 @@ import 'package:meta/meta.dart';
 /// final output = await fx.getSubCommandOutput('some-command');
 /// ```
 class Fx {
-  final FxEnv fxEnv;
+  final IFxEnv fxEnv;
   final ProcessLauncher _processLauncher;
   Fx({
     @required this.fxEnv,
     StartProcess processStarter,
-  }) : _processLauncher = ProcessLauncher(processStarter: processStarter);
+  })  : assert(fxEnv != null),
+        _processLauncher = ProcessLauncher(processStarter: processStarter);
 
-  factory Fx.mock(Process process, [FxEnv fxEnv]) => Fx(
+  factory Fx.mock(Process process, IFxEnv fxEnv) => Fx(
         processStarter: returnGivenProcess(process),
         fxEnv: fxEnv,
       );
@@ -50,7 +51,7 @@ class Fx {
   }
 
   Future<bool> updateIfInBase(
-    Iterable<String> testNames, {
+    List<String> testNames, {
     int batchSize = 50,
   }) async {
     final testNamesIterator = ListIterator<String>.from(testNames);

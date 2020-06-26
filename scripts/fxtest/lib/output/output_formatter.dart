@@ -22,6 +22,7 @@ abstract class OutputFormatter {
   final bool simpleOutput;
   final bool hasRealTimeOutput;
   final Duration slowTestThreshold;
+  final List<TestEvent> allEvents;
   final List<TestInfo> _infoEvents;
   final List<TestStarted> _testStartedEvents;
   final List<TestResult> _testResultEvents;
@@ -43,6 +44,7 @@ abstract class OutputFormatter {
     this.simpleOutput = false,
     OutputBuffer buffer,
   })  : buffer = buffer ?? OutputBuffer.realIO(),
+        allEvents = [],
         _testResultEvents = [],
         _infoEvents = [],
         _testStartedEvents = [],
@@ -105,6 +107,7 @@ abstract class OutputFormatter {
 
   /// Accepts a [TestEvent] and updates the output buffer.
   void update(TestEvent event) {
+    allEvents.add(event);
     if (event is TestInfo) {
       _infoEvents.add(event);
     } else if (event is TestStarted) {
@@ -146,11 +149,13 @@ abstract class OutputFormatter {
     } else if (event is TestInfo) {
       _handleTestInfo(event);
     } else if (event is FatalError) {
-      _handleFatalError(event);
+      _handleError(event);
     } else if (event is AllTestsCompleted) {
       _finalizeOutput();
     }
   }
+
+  void _handleError(FatalError event);
 
   /// Handles every [TimeElapsedEvent] instance, regardless of whether the test
   /// has yet been deemed "slow".
@@ -172,9 +177,6 @@ abstract class OutputFormatter {
 
   /// Generic info events handler.
   void _handleTestInfo(TestInfo event);
-
-  /// Handler for fatal errors.
-  void _handleFatalError(FatalError event);
 
   /// Handler for the stream of stdout and stderr content produced by running
   /// tests.
@@ -326,8 +328,8 @@ class StandardOutputFormatter extends OutputFormatter {
   }
 
   @override
-  void _handleFatalError(FatalError event) {
-    buffer.addLine(wrapWith(event.message, [red]));
+  void _handleError(FatalError event) {
+    buffer..addLine('')..addLine(event.message);
   }
 
   void _finalizeLastTestLine() {
@@ -367,8 +369,6 @@ class InfoFormatter extends OutputFormatter {
   @override
   void _handleTestInfo(TestInfo event) {}
   @override
-  void _handleFatalError(FatalError event) {}
-  @override
   void _handleTestStarted(TestStarted event) {
     buffer.addLines([
       ...infoPrint(event.testDefinition),
@@ -378,6 +378,8 @@ class InfoFormatter extends OutputFormatter {
 
   @override
   void _handleTestResult(TestResult event) {}
+  @override
+  void _handleError(FatalError event) {}
   @override
   void _finalizeOutput() {}
   @override

@@ -4,7 +4,6 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:io/ansi.dart';
 import 'package:fxtest/fxtest.dart';
@@ -29,6 +28,9 @@ class ParsedManifest {
   /// of this script's capabilities. This number should be 0.
   final int numUnparsedTests;
 
+  /// Memoize helper for the derived value [hasDeviceTests].
+  bool _hasDeviceTests;
+
   ParsedManifest({
     @required this.testDefinitions,
     @required this.testBundles,
@@ -40,6 +42,11 @@ class ParsedManifest {
   @override
   String toString() => '<ParsedManifest ${testBundles.length} matches, '
       '${skippedTests.length} skipped tests / ${testDefinitions.length} total />';
+
+  bool get isEmpty => testBundles.isEmpty;
+  bool get isNotEmpty => testBundles.isNotEmpty;
+  bool get hasDeviceTests => _hasDeviceTests ??= testBundles
+      .any((e) => !hostTestTypes.contains(e.testDefinition.testType));
 }
 
 class TestsManifestReader {
@@ -232,44 +239,5 @@ class TestsManifestReader {
       testDefinitions: testDefinitions,
       testBundles: testBundles,
     );
-  }
-
-  void reportOnTestBundles({
-    @required ParsedManifest parsedManifest,
-    @required TestsConfig testsConfig,
-    @required void Function(TestEvent) eventEmitter,
-    @required String userFriendlyBuildDir,
-  }) {
-    if (testsConfig.flags.shouldPrintSkipped) {
-      for (var testDef in parsedManifest.skippedTests) {
-        eventEmitter(TestInfo('Skipped test:\n$testDef'));
-      }
-    }
-    String duplicates = '';
-    if (parsedManifest.numDuplicateTests > 0) {
-      String duplicateWord =
-          parsedManifest.numDuplicateTests == 1 ? 'duplicate' : 'duplicates';
-      duplicates = testsConfig.wrapWith(
-          ' (with ${parsedManifest.numDuplicateTests} $duplicateWord)',
-          [darkGray]);
-    }
-
-    String manifestName =
-        testsConfig.wrapWith('$userFriendlyBuildDir/tests.json', [green]);
-    eventEmitter(TestInfo(
-      'Found ${parsedManifest.testDefinitions.length} total '
-      '${parsedManifest.testDefinitions.length != 1 ? "tests" : "test"} in '
-      '$manifestName$duplicates',
-    ));
-
-    int numTests = testsConfig.flags.limit == 0
-        ? parsedManifest.testBundles.length
-        : min(testsConfig.flags.limit, parsedManifest.testBundles.length);
-    if (numTests > 0) {
-      eventEmitter(TestInfo(
-        'Will run $numTests '
-        '${parsedManifest.testBundles.length != 1 ? "tests" : "test"}',
-      ));
-    }
   }
 }

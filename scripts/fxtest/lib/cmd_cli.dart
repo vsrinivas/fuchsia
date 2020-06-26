@@ -71,18 +71,31 @@ class FuchsiaTestCommandCli {
     return true;
   }
 
-  Future<void> run() async {
+  Future<void> run([TestsManifestReader manifestReader]) async {
     _cmd = createCommand();
 
-    // Without waiting, start the command.
-    unawaited(
-      // But register a listener for when it completes, which resolves the
-      // stdout future.
-      _cmd.runTestSuite(TestsManifestReader()).then((_) {
-        // Once the actual command finishes without problems, close the stdout.
-        _cmd.dispose();
-      }),
-    );
+    manifestReader ??= TestsManifestReader();
+    final parsedManifest = await _cmd.readManifest(manifestReader);
+
+    if (parsedManifest.isEmpty) {
+      // Generate hints instead of finishing running tests, since we didn't find
+      // any tests.
+      _cmd.noMatchesHelp(
+        manifestReader: manifestReader,
+        testDefinitions: parsedManifest.testDefinitions,
+        testsConfig: testsConfig,
+      );
+    } else {
+      // Without waiting, start the command.
+      unawaited(
+        // But register a listener for when it completes, which resolves the
+        // stdout future.
+        _cmd.runTestSuite(parsedManifest).then((_) {
+          // Once the actual command finishes without problems, close the stdout.
+          _cmd.dispose();
+        }),
+      );
+    }
 
     // Register a listener for when the `stdout` closes.
     try {
