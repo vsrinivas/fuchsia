@@ -45,6 +45,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     These arguments come after synthesized arguments to configure blobfs and
 #     pkgfs.
 #
+#   sysmgr_golden, sysmgr_golden_warn (optional, default: false)
+#     [path, boolean] Passed directly to the config_package template, see //build/config.gni.
+#
 #   ta_uuids (default: [])
 #     [list of strings] UUIDs of Trusted Applications to include in the system
 #     image.
@@ -110,6 +113,12 @@ template("assemble_system") {
     testonly = true
     visibility = [ ":*" ]
     deps = base_packages + cache_packages + universe_packages
+    if (defined(invoker.sysmgr_golden)) {
+      sysmgr_golden = invoker.sysmgr_golden
+    }
+    if (defined(invoker.sysmgr_golden_warn)) {
+      sysmgr_golden_warn = invoker.sysmgr_golden_warn
+    }
   }
 
   group("${image_name}_base_packages") {

@@ -1,0 +1,44 @@
+{
+  "apps": [
+    "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx",
+    "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx"
+  ],
+  "services": {
+    "fuchsia.deprecatedtimezone.TimeService": "fuchsia-pkg://fuchsia.com/network_time_service#meta/network_time_service.cmx",
+    "fuchsia.net.Connectivity": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.filter.Filter": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http_client#meta/http_client.cmx",
+    "fuchsia.net.name.LookupAdmin": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.stack.Log": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.pkg.PackageCache": "fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cmx",
+    "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
+    "fuchsia.pkg.RepositoryManager": "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
+    "fuchsia.pkg.rewrite.Engine": "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
+    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
+    "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
+    "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx",
+    "fuchsia.wlan.device.service.DeviceService": "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
+    "fuchsia.wlan.policy.AccessPointListener": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+    "fuchsia.wlan.policy.AccessPointProvider": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+    "fuchsia.wlan.policy.ClientListener": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+    "fuchsia.wlan.policy.ClientProvider": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+    "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+    "fuchsia.wlan.service.Wlan": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
+  },
+  "startup_services": [
+    "fuchsia.wlan.service.Wlan",
+    "fuchsia.wlan.policy.ClientProvider",
+    "fuchsia.wlan.policy.ClientListener",
+    "fuchsia.wlan.policy.AccessPointProvider",
+    "fuchsia.wlan.policy.AccessPointListener",
+    "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+    "fuchsia.time.Utc"
+  ],
+  "update_dependencies": [
+    "fuchsia.bogus.DoesNotExist"
+  ]
+}

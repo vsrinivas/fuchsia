@@ -83,6 +83,7 @@ assemble_system("recovery-eng") {
   # unification is in progress
   bootfs_allowlist = []
   ta_uuids = recovery_ta_uuids
+  sysmgr_golden = "sysmgr-eng-golden.json"
 }
 
 assemble_system("recovery-fdr") {
@@ -99,6 +100,7 @@ assemble_system("recovery-fdr") {
   # unification is in progress
   bootfs_allowlist = []
   ta_uuids = recovery_ta_uuids
+  sysmgr_golden = "sysmgr-fdr-golden.json"
 }
 
 if (is_host) {

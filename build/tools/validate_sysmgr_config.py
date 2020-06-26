@@ -54,6 +54,11 @@ def main():
         metavar='FILE',
         help='Write a GN depfile to the given path',
         required=True)
+    parser.add_argument(
+        '--merged',
+        metavar='FILE',
+        help='Write a snapshot of this sysmgr config to the given path',
+        required=True)
     parser.add_argument('manifest', help='config-data package manifest')
     args = parser.parse_args()
 
@@ -64,7 +69,13 @@ def main():
     sysmgr_lines = [line for line in lines if line.startswith('data/sysmgr/')]
     sysmgr_config_files = [line.split('=')[1] for line in sysmgr_lines]
 
-    # Parse all config files and build a list of all conflicts, rather than
+    # Parse all config files
+    configs = []
+    for config_file in sysmgr_config_files:
+        with open(config_file, 'r') as f:
+            configs.append(json.load(f))
+
+    # Build a list of all conflicts, rather than
     # failing immediately on the first conflict. This allows us to print a more
     # useful build failure so that developers don't need to play whack-a-mole with
     # multiple conflicts.
@@ -72,10 +83,7 @@ def main():
     service_conflicts = {}
     seen_diag = None
     diag_conflicts = []
-    for config_file in sysmgr_config_files:
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-
+    for config in configs:
         diag = config.get('diagnostics')
         if diag is not None:
             if seen_diag is None:
@@ -109,6 +117,22 @@ def main():
                 'Duplicate diagnostics config in files: {}'.format(
                     ', '.join(diag_conflicts)))
         return 1
+
+    # Create a single merged configuration analogous to sysmgr's init itself.
+    merged_config = {}
+    for config in configs:
+        for category, values in config.items():
+            existing = merged_config.get(category)
+            if type(existing) is dict:
+                merged_config[category].update(values)
+            elif type(existing) is list:
+                merged_config[category] += values
+            else:
+                merged_config[category] = values
+
+    with open(args.merged, 'w') as f:
+        json.dump(
+            merged_config, f, indent=2, separators=(',', ': '), sort_keys=True)
 
     # Write the depfile, which is a Makefile format file that has a single output
     # (the stamp file) and lists all input files as dependencies.
