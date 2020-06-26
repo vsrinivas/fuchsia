@@ -117,18 +117,11 @@ zx_status_t ThreadDispatcher::Initialize() {
 zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
   canary_.Assert();
 
-  // ignore characters after the first NUL
-  len = strnlen(name, len);
-
-  if (len >= ZX_MAX_NAME_LEN)
-    len = ZX_MAX_NAME_LEN - 1;
-
   Guard<Mutex> thread_guard{get_lock()};
   if (core_thread_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  memcpy(core_thread_->name_, name, len);
-  memset(core_thread_->name_ + len, 0, ZX_MAX_NAME_LEN - len);
+  core_thread_->set_name({name, len});
   return ZX_OK;
 }
 
@@ -141,7 +134,7 @@ void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
   if (core_thread_ == nullptr) {
     return;
   }
-  strlcpy(out_name, core_thread_->name_, ZX_MAX_NAME_LEN);
+  strlcpy(out_name, core_thread_->name(), ZX_MAX_NAME_LEN);
 }
 
 // start a thread

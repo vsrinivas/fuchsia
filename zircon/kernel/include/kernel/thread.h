@@ -32,6 +32,7 @@
 #include <kernel/task_runtime_stats.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
+#include <ktl/string_view.h>
 #include <lockdep/thread_lock_state.h>
 #include <vm/kstack.h>
 
@@ -361,10 +362,6 @@ typedef void (*thread_trampoline_routine)() __NO_RETURN;
 
 #define THREAD_MAGIC (0x74687264)  // 'thrd'
 
-// This includes the trailing NUL.
-// N.B. This must match ZX_MAX_NAME_LEN.
-#define THREAD_NAME_LENGTH 32
-
 // thread priority
 #define NUM_PRIORITIES (32)
 #define LOWEST_PRIORITY (0)
@@ -498,7 +495,7 @@ struct Thread {
 
   static Thread* IdToThreadSlow(uint64_t tid);
 
-  void OwnerName(char out_name[THREAD_NAME_LENGTH]);
+  void OwnerName(char out_name[ZX_MAX_NAME_LEN]);
   // Return the number of nanoseconds a thread has been running for.
   zx_duration_t Runtime() const;
 
@@ -742,6 +739,11 @@ struct Thread {
 
   arch_thread& arch() { return arch_; }
 
+  const char* name() const { return name_; }
+  // This may truncate |name|, so that it (including a trailing NUL
+  // byte) fit in ZX_MAX_NAME_LEN bytes.
+  void set_name(ktl::string_view name);
+
   Linebuffer& linebuffer() { return linebuffer_; }
 
  private:
@@ -853,15 +855,14 @@ struct Thread {
   //    while preempt_pending_ is being checked.
   volatile bool preempt_pending_;
 
-private:
+  // TODO(54383) More of Thread should be private than this.
+ private:
   // This is used by dispatcher.cc:SafeDeleter.
   void* recursive_object_deletion_list_ = nullptr;
 
-public:
-  char name_[THREAD_NAME_LENGTH];
+  // This always includes the trailing NUL.
+  char name_[ZX_MAX_NAME_LEN];
 
-  // TODO(54383) More of Thread should be private than this.
- private:
   // Buffering for Debuglog output.
   Linebuffer linebuffer_;
 

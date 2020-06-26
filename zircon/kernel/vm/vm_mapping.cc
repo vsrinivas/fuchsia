@@ -788,7 +788,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
     } else {
       // some other page is mapped there already
       LTRACEF("thread %s faulted on va %#" PRIxPTR ", different page was present\n",
-              Thread::Current::Get()->name_, va);
+              Thread::Current::Get()->name(), va);
       LTRACEF("old pa %#" PRIxPTR " new pa %#" PRIxPTR "\n", pa, new_pa);
 
       // assert that we're not accidentally mapping the zero page writable

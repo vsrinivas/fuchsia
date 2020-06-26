@@ -200,13 +200,13 @@ void Scheduler::Dump() {
     if (IsFairThread(active_thread_)) {
       printf("\t-> name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64
              " ema=%" PRId64 "\n",
-             active_thread_->name_, Format(state.fair_.weight).c_str(),
+             active_thread_->name(), Format(state.fair_.weight).c_str(),
              state.start_time_.raw_value(), state.finish_time_.raw_value(),
              state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
     } else {
       printf("\t-> name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
              " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
-             active_thread_->name_, state.deadline_.capacity_ns.raw_value(),
+             active_thread_->name(), state.deadline_.capacity_ns.raw_value(),
              state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
              state.start_time_.raw_value(), state.finish_time_.raw_value(),
              state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
@@ -217,7 +217,7 @@ void Scheduler::Dump() {
     const SchedulerState& state = thread.scheduler_state();
     printf("\t   name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
            " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
-           thread.name_, state.deadline_.capacity_ns.raw_value(),
+           thread.name(), state.deadline_.capacity_ns.raw_value(),
            state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
            state.start_time_.raw_value(), state.finish_time_.raw_value(),
            state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
@@ -227,7 +227,7 @@ void Scheduler::Dump() {
     const SchedulerState& state = thread.scheduler_state();
     printf("\t   name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64
            "\n",
-           thread.name_, Format(state.fair_.weight).c_str(), state.start_time_.raw_value(),
+           thread.name(), Format(state.fair_.weight).c_str(), state.start_time_.raw_value(),
            state.finish_time_.raw_value(), state.time_slice_ns_.raw_value(),
            state.expected_runtime_ns_.raw_value());
   }
@@ -571,7 +571,7 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   DEBUG_ASSERT_MSG(available_mask != 0,
                    "thread=%s affinity=%#x soft_affinity=%#x active=%#x "
                    "idle=%#x arch_ints_disabled=%d",
-                   thread->name_, thread->scheduler_state().hard_affinity_,
+                   thread->name(), thread->scheduler_state().hard_affinity_,
                    thread->scheduler_state().soft_affinity_, active_mask, mp_get_idle_mask(),
                    arch_ints_disabled());
 
@@ -582,7 +582,7 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   if (IsFairThread(thread)) {
     const cpu_num_t target_cpu = load_balancer::FindTargetCpu(thread);
 
-    SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name_, target_cpu);
+    SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name(), target_cpu);
     trace.End(target_cpu, available_mask);
     return target_cpu;
   }  // deadline threads will follow the old path for now.
@@ -644,7 +644,7 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
     remaining_mask &= ~cpu_num_to_mask(candidate_cpu);
   }
 
-  SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name_, target_cpu);
+  SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name(), target_cpu);
   trace.End(target_cpu, remaining_mask);
 
   bool delay_migration = last_cpu != target_cpu && last_cpu != INVALID_CPU &&
@@ -738,10 +738,10 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
   SCHED_LTRACEF("current={%s, %s} next={%s, %s} expired=%d total_runtime_ns=%" PRId64
                 " fair_front=%s deadline_front=%s\n",
-                current_thread->name_, ToString(current_thread->state_), next_thread->name_,
+                current_thread->name(), ToString(current_thread->state_), next_thread->name(),
                 ToString(next_thread->state_), timeslice_expired, total_runtime_ns.raw_value(),
-                fair_run_queue_.is_empty() ? "[none]" : fair_run_queue_.front().name_,
-                deadline_run_queue_.is_empty() ? "[none]" : deadline_run_queue_.front().name_);
+                fair_run_queue_.is_empty() ? "[none]" : fair_run_queue_.front().name(),
+                deadline_run_queue_.is_empty() ? "[none]" : deadline_run_queue_.front().name());
 
   // Update the state of the current and next thread.
   current_thread->preempt_pending_ = false;
@@ -803,7 +803,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
   if (next_thread->IsIdle()) {
     LocalTraceDuration<KTRACE_DETAILED> trace_stop_preemption{"idle"_stringref};
-    SCHED_LTRACEF("Idle: current=%s next=%s\n", current_thread->name_, next_thread->name_);
+    SCHED_LTRACEF("Idle: current=%s next=%s\n", current_thread->name(), next_thread->name());
     UpdateCounters(SchedDuration{0});
     next_state->last_started_running_ = now;
 
@@ -841,7 +841,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     scheduled_weight_total_ = weight_total_;
 
     SCHED_LTRACEF("Start preempt timer: current=%s next=%s now=%" PRId64 " deadline=%" PRId64 "\n",
-                  current_thread->name_, next_thread->name_, now.raw_value(),
+                  current_thread->name(), next_thread->name(), now.raw_value(),
                   absolute_deadline_ns_.raw_value());
     percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
 
@@ -867,8 +867,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
     TraceContextSwitch(current_thread, next_thread, current_cpu);
 
-    SCHED_LTRACEF("current=(%s, flags 0x%#x) next=(%s, flags 0x%#x)\n", current_thread->name_,
-                  current_thread->flags_, next_thread->name_, next_thread->flags_);
+    SCHED_LTRACEF("current=(%s, flags 0x%#x) next=(%s, flags 0x%#x)\n", current_thread->name(),
+                  current_thread->flags_, next_thread->name(), next_thread->flags_);
 
     if (current_thread->aspace_ != next_thread->aspace_) {
       vmm_context_switch(current_thread->aspace_, next_thread->aspace_);
@@ -968,7 +968,7 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
                      state->time_slice_ns_.raw_value(), now.raw_value(),
                      absolute_deadline_ns.raw_value());
 
-    SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x time_slice_ns=%" PRId64 "\n", thread->name_,
+    SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x time_slice_ns=%" PRId64 "\n", thread->name(),
                   static_cast<uint32_t>(weight_total_.raw_value()),
                   static_cast<uint32_t>(state->fair_.weight.raw_value()),
                   state->time_slice_ns_.raw_value());
@@ -981,7 +981,7 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
 
     SCHED_LTRACEF("name=%s capacity=%" PRId64 " deadline=%" PRId64 " period=%" PRId64
                   " time_slice_ns=%" PRId64 "\n",
-                  thread->name_, state->deadline_.capacity_ns.raw_value(),
+                  thread->name(), state->deadline_.capacity_ns.raw_value(),
                   state->deadline_.deadline_ns.raw_value(), state->deadline_.period_ns.raw_value(),
                   state->time_slice_ns_.raw_value());
   }
@@ -996,7 +996,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
 
   DEBUG_ASSERT(thread->state_ == THREAD_READY);
   DEBUG_ASSERT(!thread->IsIdle());
-  SCHED_LTRACEF("QueueThread: thread=%s\n", thread->name_);
+  SCHED_LTRACEF("QueueThread: thread=%s\n", thread->name());
 
   SchedulerState* const state = &thread->scheduler_state();
 
@@ -1155,7 +1155,7 @@ void Scheduler::Remove(Thread* thread) {
       weight_total_ -= state->fair_.weight;
       DEBUG_ASSERT(weight_total_ >= 0);
 
-      SCHED_LTRACEF("name=%s weight_total=%s weight=%s\n", thread->name_,
+      SCHED_LTRACEF("name=%s weight_total=%s weight=%s\n", thread->name(),
                     Format(weight_total_).c_str(), Format(state->fair_.weight).c_str());
     } else {
       UpdateTotalDeadlineUtilization(-state->deadline_.utilization);
@@ -1176,7 +1176,7 @@ void Scheduler::Block() {
   DEBUG_ASSERT(current_thread->state_ != THREAD_RUNNING);
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name_, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name(), now.raw_value());
 
   Scheduler::Get()->RescheduleCommon(now, trace.Completer());
 }
@@ -1188,7 +1188,7 @@ bool Scheduler::Unblock(Thread* thread) {
   DEBUG_ASSERT(thread_lock.IsHeld());
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name_, now.raw_value());
+  SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name(), now.raw_value());
 
   const cpu_num_t target_cpu = FindTargetCpu(thread);
   Scheduler* const target = Get(target_cpu);
@@ -1217,7 +1217,7 @@ bool Scheduler::Unblock(WaitQueueSublist list) {
     DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
     DEBUG_ASSERT(!thread->IsIdle());
 
-    SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name_, now.raw_value());
+    SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name(), now.raw_value());
 
     const cpu_num_t target_cpu = FindTargetCpu(thread);
     Scheduler* const target = Get(target_cpu);
@@ -1246,7 +1246,7 @@ void Scheduler::UnblockIdle(Thread* thread) {
   DEBUG_ASSERT(thread->IsIdle());
   DEBUG_ASSERT(state->hard_affinity_ && (state->hard_affinity_ & (state->hard_affinity_ - 1)) == 0);
 
-  SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name_, current_time());
+  SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name(), current_time());
 
   thread->state_ = THREAD_READY;
   state->curr_cpu_ = lowest_cpu_set(state->hard_affinity_);
@@ -1263,7 +1263,7 @@ void Scheduler::Yield() {
 
   Scheduler* const current = Get();
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name_, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name(), now.raw_value());
 
   // Set the time slice to expire now.
   current_thread->state_ = THREAD_READY;
@@ -1298,7 +1298,7 @@ void Scheduler::Preempt() {
   DEBUG_ASSERT(current_state->last_cpu_ == current_state->curr_cpu_);
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name_, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name(), now.raw_value());
 
   current_thread->state_ = THREAD_READY;
   Get()->RescheduleCommon(now, trace.Completer());
@@ -1322,7 +1322,7 @@ void Scheduler::Reschedule() {
   DEBUG_ASSERT(current_state->last_cpu_ == current_state->curr_cpu_);
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name_, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name(), now.raw_value());
 
   current_thread->state_ = THREAD_READY;
   Get()->RescheduleCommon(now, trace.Completer());
@@ -1612,7 +1612,7 @@ void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_r
   SchedulerState* const state = &thread->scheduler_state();
 
   DEBUG_ASSERT(thread_lock.IsHeld());
-  SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
+  SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name(),
                 ToString(thread->state_), state->base_priority_, state->effective_priority_,
                 state->inherited_priority_);
 
@@ -1645,7 +1645,7 @@ void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params
   SchedulerState* const state = &thread->scheduler_state();
 
   DEBUG_ASSERT(thread_lock.IsHeld());
-  SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
+  SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name(),
                 ToString(thread->state_), state->base_priority_, state->effective_priority_,
                 state->inherited_priority_);
 
@@ -1678,7 +1678,7 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
   SchedulerState* const state = &thread->scheduler_state();
 
   DEBUG_ASSERT(thread_lock.IsHeld());
-  SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
+  SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name(),
                 ToString(thread->state_), state->base_priority_, state->effective_priority_,
                 state->inherited_priority_);
 

@@ -166,6 +166,13 @@ Thread::~Thread() {
   DEBUG_ASSERT(!migrate_list_node_.InContainer());
 }
 
+void Thread::set_name(ktl::string_view name) {
+  // |name| must fit in ZX_MAX_NAME_LEN bytes, minus 1 for the trailing NUL.
+  name = name.substr(0, ZX_MAX_NAME_LEN - 1);
+  memcpy(name_, name.data(), name.size());
+  memset(name_ + name.size(), 0, ZX_MAX_NAME_LEN - name.size());
+}
+
 void init_thread_struct(Thread* t, const char* name) {
   memset(t, 0, sizeof(Thread));
 
@@ -178,7 +185,7 @@ void init_thread_struct(Thread* t, const char* name) {
   new (t) Thread();
 
   t->magic_ = THREAD_MAGIC;
-  strlcpy(t->name_, name, sizeof(t->name_));
+  t->set_name(name);
   init_thread_lock_state(t);
 }
 
@@ -1368,7 +1375,7 @@ Thread* Thread::CreateIdleThread(cpu_num_t cpu_num) {
  * Returns "kernel" if there is no owner.
  */
 
-void Thread::OwnerName(char out_name[THREAD_NAME_LENGTH]) {
+void Thread::OwnerName(char out_name[ZX_MAX_NAME_LEN]) {
   if (user_thread_) {
     user_thread_->process()->get_name(out_name);
     return;
@@ -1413,11 +1420,11 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     runtime = zx_duration_add_duration(runtime, recent);
   }
 
-  char oname[THREAD_NAME_LENGTH];
+  char oname[ZX_MAX_NAME_LEN];
   t->OwnerName(oname);
 
   if (full_dump) {
-    dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name_);
+    dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name());
     dprintf(INFO,
             "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinity %#x, "
             "priority %d [%d,%d], remaining time slice %" PRIi64 "\n",
@@ -1447,7 +1454,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
            thread_state_to_str(t->state_), !t->wait_queue_state_.owned_wait_queues_.is_empty(),
            t->scheduler_state().effective_priority_, t->scheduler_state().base_priority_,
-           t->scheduler_state().inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name_);
+           t->scheduler_state().inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name());
   }
 }
 
@@ -1516,10 +1523,10 @@ void ktrace_report_live_threads() {
     DEBUG_ASSERT(t.magic_ == THREAD_MAGIC);
     if (t.user_tid_) {
       ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.user_tid_),
-                  static_cast<uint32_t>(t.user_pid_), t.name_);
+                  static_cast<uint32_t>(t.user_pid_), t.name());
     } else {
       ktrace_name(TAG_KTHREAD_NAME, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(&t)), 0,
-                  t.name_);
+                  t.name());
     }
   }
 }

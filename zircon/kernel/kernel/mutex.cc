@@ -112,7 +112,7 @@ Mutex::~Mutex() {
     if (val() != STATE_FREE) {
       Thread* h = holder();
       panic("~Mutex(): thread %p (%s) tried to destroy locked mutex %p, locked by %p (%s)\n",
-            Thread::Current::Get(), Thread::Current::Get()->name_, this, h, h->name_);
+            Thread::Current::Get(), Thread::Current::Get()->name(), this, h, h->name());
     }
   }
 
@@ -171,7 +171,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {
     panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n", ct,
-          ct->name_, this);
+          ct->name(), this);
   }
 
   {
@@ -246,8 +246,8 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
       panic(
           "Mutex::ReleaseInternal: sanity check failure.  Thread %p (%s) tried to release "
           "mutex %p.  Expected state (%lx) != observed state (%lx).  Other holder (%s)\n",
-          ct, ct->name_, this, expected_state, old_mutex_state,
-          other_holder ? other_holder->name_ : "<none>");
+          ct, ct->name(), this, expected_state, old_mutex_state,
+          other_holder ? other_holder->name() : "<none>");
     }
   }
 

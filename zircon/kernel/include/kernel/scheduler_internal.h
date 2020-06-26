@@ -33,15 +33,16 @@ void Scheduler::SubtreeMinObserver::RecordInsert(Iter node) {
 // scheduler.
 template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordInsertCollision(Thread* node, Iter collision) {
-  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name_, collision->name_);
+  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name(),
+                      collision->name());
 }
 
 // Replacements are not used as WAVLTree::insert_or_replace is not used by the
 // scheduler.
 template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordInsertReplace(Iter node, Thread* replacement) {
-  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name_,
-                      replacement->name_);
+  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name(),
+                      replacement->name());
 }
 
 // Adjust each ancestor node as the tree is descended to find the insertion

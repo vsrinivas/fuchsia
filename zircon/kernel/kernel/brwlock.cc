@@ -186,7 +186,7 @@ void BrwLock<PI>::WriteRelease() {
           "BrwLock<PI>::WriteRelease: thread %p (%s) tried to release brwlock %p it "
           "doesn't "
           "own. Ownedby %p (%s)\n",
-          ct, ct->name_, this, holder, holder ? holder->name_ : "none");
+          ct, ct->name(), this, holder, holder ? holder->name() : "none");
     }
   }
 #endif

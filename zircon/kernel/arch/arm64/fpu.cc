@@ -26,7 +26,7 @@ static inline bool is_fpu_enabled(uint64_t cpacr) { return !!(BITS(cpacr, 21, 20
 static void arm64_fpu_load_regs(Thread* t) {
   struct fpstate* fpstate = &t->arch().fpstate;
 
-  LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name_, fpstate);
+  LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name(), fpstate);
 
   static_assert(sizeof(fpstate->regs) == 16 * 32, "");
   __asm__ volatile(
@@ -54,7 +54,7 @@ static void arm64_fpu_load_regs(Thread* t) {
 __NO_SAFESTACK static void arm64_fpu_save_regs(Thread* t) {
   struct fpstate* fpstate = &t->arch().fpstate;
 
-  LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name_, fpstate);
+  LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name(), fpstate);
 
   __asm__ volatile(
       "stp     q0, q1, [%0, #(0 * 32)]\n"
@@ -82,7 +82,7 @@ __NO_SAFESTACK static void arm64_fpu_save_regs(Thread* t) {
   fpstate->fpcr = (uint32_t)fpcr;
   fpstate->fpsr = (uint32_t)fpsr;
 
-  LTRACEF("thread %s, fpcr %x, fpsr %x\n", t->name_, fpstate->fpcr, fpstate->fpsr);
+  LTRACEF("thread %s, fpcr %x, fpsr %x\n", t->name(), fpstate->fpcr, fpstate->fpsr);
 }
 
 __NO_SAFESTACK static bool use_lazy_fpu_restore(Thread* t) {
@@ -125,7 +125,7 @@ __NO_SAFESTACK void arm64_fpu_restore_state(Thread* t) {
 __NO_SAFESTACK void arm64_fpu_context_switch(Thread* oldthread, Thread* newthread) {
   const uint64_t cpacr = __arm_rsr64("cpacr_el1");
   if (is_fpu_enabled(cpacr)) {
-    LTRACEF("saving state on thread %s\n", oldthread->name_);
+    LTRACEF("saving state on thread %s\n", oldthread->name());
     arm64_fpu_save_regs(oldthread);
   }
 
@@ -149,7 +149,7 @@ __NO_SAFESTACK void arm64_fpu_context_switch(Thread* oldthread, Thread* newthrea
 
 // Called because of a fpu instruction caused exception.
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
-  LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), Thread::Current::Get()->name_,
+  LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), Thread::Current::Get()->name(),
           exception_flags);
 
   // Only valid to be called if exception came from lower level.

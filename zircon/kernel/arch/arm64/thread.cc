@@ -109,7 +109,7 @@ __NO_SAFESTACK static void arm64_context_switch_spec_mitigations(Thread* oldthre
 }
 
 __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
-  LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name_, newthread, newthread->name_);
+  LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name(), newthread, newthread->name());
 
   // DSB here to make sure any pending TLB or cache operations that we may be
   // preempting are complete before the thread switch. This avoids a problem in
