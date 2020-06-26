@@ -5,6 +5,7 @@
 #include "src/developer/shell/mirror/wire_format.h"
 
 #include <fcntl.h>
+#include <lib/async-loop/default.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>

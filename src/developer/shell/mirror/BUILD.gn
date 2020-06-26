@@ -85,6 +85,7 @@ executable("sh_mirror_tests_bin") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs",
   ]
 
