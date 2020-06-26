@@ -94,6 +94,8 @@ class App {
   void SetState(A11yManagerState newState);
   A11yManagerState state() { return state_; };
 
+  a11y::ScreenReader* screen_reader() { return screen_reader_.get(); }
+
  private:
   // If gesture manager/handler/arena ever get idempotent operations, we can remove this.
 

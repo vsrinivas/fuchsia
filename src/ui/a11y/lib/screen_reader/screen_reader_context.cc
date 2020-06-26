@@ -9,9 +9,11 @@
 
 namespace a11y {
 
-ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager)
+ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager,
+                                         std::string locale_id)
     : executor_(async_get_default_dispatcher()),
-      a11y_focus_manager_(std::move(a11y_focus_manager)) {}
+      a11y_focus_manager_(std::move(a11y_focus_manager)),
+      locale_id_(std::move(locale_id)) {}
 
 A11yFocusManager* ScreenReaderContext::GetA11yFocusManager() {
   FX_DCHECK(a11y_focus_manager_.get());

@@ -17,12 +17,13 @@ MockPropertyProvider::MockPropertyProvider(sys::testing::ComponentContextProvide
 void MockPropertyProvider::GetProfile(GetProfileCallback callback) {
   get_profile_count_++;
   fuchsia::intl::Profile profile;
-  profile_.Clone(&profile);
   if (delay_response_) {
-    callback_ = [profile = std::move(profile), callback = std::move(callback)]() mutable {
+    callback_ = [this, profile = std::move(profile), callback = std::move(callback)]() mutable {
+      profile_.Clone(&profile);
       callback(std::move(profile));
     };
   } else {
+    profile_.Clone(&profile);
     callback(std::move(profile));
   }
 }

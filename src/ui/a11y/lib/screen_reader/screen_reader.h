@@ -41,6 +41,8 @@ class ScreenReader {
 
   void BindGestures(a11y::GestureHandler* gesture_handler);
 
+  ScreenReaderContext* context() { return context_.get(); }
+
  private:
   // Initializes services TTS Engine and binds actions to gesture manager.
   void InitializeServicesAndAction();

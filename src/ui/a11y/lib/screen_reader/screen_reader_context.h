@@ -32,7 +32,8 @@ class ScreenReaderContext {
     kContinuousExploration,
   };
 
-  explicit ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager);
+  explicit ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager,
+                               std::string locale_id = "en-US");
 
   virtual ~ScreenReaderContext() = default;
 
@@ -46,6 +47,9 @@ class ScreenReaderContext {
   void set_mode(ScreenReaderMode mode) { mode_ = mode; }
   ScreenReaderMode mode() const { return mode_; }
 
+  void set_locale_id(const std::string& locale_id) { locale_id_ = locale_id; }
+  const std::string& locale_id() const { return locale_id_; }
+
  private:
   async::Executor executor_;
 
@@ -55,6 +59,9 @@ class ScreenReaderContext {
 
   // Current Screen Reader mode.
   ScreenReaderMode mode_ = ScreenReaderMode::kNormal;
+
+  // Unicode BCP-47 Locale Identifier.
+  std::string locale_id_;
 };
 
 }  // namespace a11y

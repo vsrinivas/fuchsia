@@ -94,6 +94,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
 App::~App() = default;
 
 void App::FinishSetUp() {
+  FX_DCHECK(i18n_profile_) << "App is being initialized without i18n profile from user.";
   // Start watching setui for current settings
   WatchSetui();
 }
@@ -224,15 +225,26 @@ A11yManagerState A11yManagerState::withSettings(
 std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(
       focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_);
+  std::string locale_id = "en-US";
+  if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {
+    locale_id = i18n_profile_->locales()[0].id;
+  }
   auto screen_reader_context =
-      std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
+      std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager), locale_id);
   return std::make_unique<a11y::ScreenReader>(std::move(screen_reader_context), view_manager_,
                                               tts_manager_, gesture_listener_registry_);
 }
 
 void App::PropertyProviderOnChangeHandler() {
-  property_provider_->GetProfile(
-      [this](fuchsia::intl::Profile profile) { i18n_profile_ = std::move(profile); });
+  property_provider_->GetProfile([this](fuchsia::intl::Profile profile) {
+    this->i18n_profile_ = std::move(profile);
+    if (state_.screen_reader_enabled()) {
+      if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {
+        const auto& locale_id = i18n_profile_->locales()[0].id;
+        screen_reader_->context()->set_locale_id(locale_id);
+      }
+    }
+  });
 }
 
 }  // namespace a11y_manager

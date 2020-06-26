@@ -65,6 +65,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
     EXPECT_EQ(0, mock_setui_.num_watch2_called());
     // Right now, obtaining the locale causes the app to be fully-initialized.
     ASSERT_EQ(1, mock_property_provider_.get_profile_count());
+    mock_property_provider_.SetLocale("foo-bar");
     mock_property_provider_.ReplyToGetProfile();
     RunLoopUntilIdle();
     ASSERT_EQ(1,
@@ -452,6 +453,28 @@ TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {
   // The event causes GetProfile() to be invoked again from the a11y manager side. Check if the call
   // happened through the mock.
   ASSERT_EQ(2, mock_property_provider_.get_profile_count());
+}
+
+TEST_F(AppUnitTest, ScreenReaderReceivesLocaleWhenItChanges) {
+  fuchsia::settings::AccessibilitySettings accessibilitySettings;
+  accessibilitySettings.set_screen_reader(true);
+  accessibilitySettings.set_color_inversion(false);
+  accessibilitySettings.set_enable_magnification(false);
+  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
+  mock_setui_.Set(std::move(accessibilitySettings), [](auto) {});
+  RunLoopUntilIdle();
+  EXPECT_TRUE(app_.state().screen_reader_enabled());
+  EXPECT_EQ(app_.screen_reader()->context()->locale_id(), "foo-bar");
+  mock_property_provider_.SetLocale("foo-baz");
+  mock_property_provider_.SendOnChangeEvent();
+  RunLoopUntilIdle();
+  // The event causes GetProfile() to be invoked again from the a11y manager side. Check if the call
+  // happened through the mock.
+  ASSERT_EQ(2, mock_property_provider_.get_profile_count());
+  // Sends a reply.
+  mock_property_provider_.ReplyToGetProfile();
+  RunLoopUntilIdle();
+  EXPECT_EQ(app_.screen_reader()->context()->locale_id(), "foo-baz");
 }
 
 // TODO(fxb/49924): Improve tests to cover what happens if services aren't available at

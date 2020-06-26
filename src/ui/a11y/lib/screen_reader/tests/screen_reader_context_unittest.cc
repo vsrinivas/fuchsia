@@ -42,5 +42,11 @@ TEST_F(ScreenReaderContextTest, GetA11yFocusManager) {
   ASSERT_EQ(a11y_focus_manager_ptr_, screen_reader_context_->GetA11yFocusManager());
 }
 
+TEST_F(ScreenReaderContextTest, ContainsLocaleId) {
+  EXPECT_EQ(screen_reader_context_->locale_id(), "en-US");
+  screen_reader_context_->set_locale_id("foo-bar");
+  EXPECT_EQ(screen_reader_context_->locale_id(), "foo-bar");
+}
+
 }  // namespace
 }  // namespace accessibility_test
