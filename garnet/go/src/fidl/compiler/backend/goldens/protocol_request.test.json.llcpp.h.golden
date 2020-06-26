@@ -53,10 +53,10 @@ class Parent final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel c;
-
     explicit GetChildResponse(::zx::channel& c) : c(std::move(c)) {
       _InitHeader();
     }
+    GetChildResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &test_name_ParentGetChildResponseTable;
@@ -72,16 +72,37 @@ class Parent final {
    private:
     void _InitHeader();
   };
-  using GetChildRequest = ::fidl::AnyZeroArgMessage;
+  struct GetChildRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit GetChildRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = GetChildResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   struct GetChildRequestResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel r;
-
     explicit GetChildRequestResponse(::zx::channel& r) : r(std::move(r)) {
       _InitHeader();
     }
+    GetChildRequestResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &test_name_ParentGetChildRequestResponseTable;
@@ -97,14 +118,38 @@ class Parent final {
    private:
     void _InitHeader();
   };
-  using GetChildRequestRequest = ::fidl::AnyZeroArgMessage;
+  struct GetChildRequestRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit GetChildRequestRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = GetChildRequestResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   struct TakeChildRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel c;
-
-    explicit TakeChildRequest(::zx::channel& c) : c(std::move(c)) {}
+    explicit TakeChildRequest(zx_txid_t _txid, ::zx::channel& c)
+        : c(std::move(c)) {
+      _InitHeader(_txid);
+    }
+    explicit TakeChildRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &test_name_ParentTakeChildRequestTable;
@@ -118,14 +163,20 @@ class Parent final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   struct TakeChildRequestRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel r;
-
-    explicit TakeChildRequestRequest(::zx::channel& r) : r(std::move(r)) {}
+    explicit TakeChildRequestRequest(zx_txid_t _txid, ::zx::channel& r)
+        : r(std::move(r)) {
+      _InitHeader(_txid);
+    }
+    explicit TakeChildRequestRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &test_name_ParentTakeChildRequestRequestTable;
@@ -139,6 +190,9 @@ class Parent final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -516,38 +570,6 @@ class Parent final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void GetChildRequest(
-        const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void GetChildRequest(
-        const ::fidl::EncodedMessage<Parent::GetChildRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void GetChildRequestRequest(
-        const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void GetChildRequestRequest(
-        const ::fidl::EncodedMessage<Parent::GetChildRequestRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void TakeChildRequest(
-        const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void TakeChildRequest(
-        const ::fidl::EncodedMessage<Parent::TakeChildRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void TakeChildRequestRequest(
-        const ::fidl::DecodedMessage<Parent::TakeChildRequestRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void TakeChildRequestRequest(
-        const ::fidl::EncodedMessage<Parent::TakeChildRequestRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 class Child final {
@@ -608,14 +630,6 @@ class Child final {
   class ClientImpl;
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-  };
 };
 
 }  // namespace name
@@ -623,6 +637,15 @@ class Child final {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::test::name::Parent::GetChildRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::Parent::GetChildRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Parent::GetChildRequest) ==
+              ::llcpp::test::name::Parent::GetChildRequest::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::test::name::Parent::GetChildResponse>
@@ -633,6 +656,15 @@ struct IsFidlMessage<::llcpp::test::name::Parent::GetChildResponse>
 static_assert(sizeof(::llcpp::test::name::Parent::GetChildResponse) ==
               ::llcpp::test::name::Parent::GetChildResponse::PrimarySize);
 static_assert(offsetof(::llcpp::test::name::Parent::GetChildResponse, c) == 16);
+
+template <>
+struct IsFidlType<::llcpp::test::name::Parent::GetChildRequestRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::Parent::GetChildRequestRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Parent::GetChildRequestRequest) ==
+              ::llcpp::test::name::Parent::GetChildRequestRequest::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::test::name::Parent::GetChildRequestResponse>

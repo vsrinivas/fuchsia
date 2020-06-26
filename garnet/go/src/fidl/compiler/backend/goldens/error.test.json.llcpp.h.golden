@@ -177,11 +177,11 @@ class Example final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Example_foo_Result result;
-
     explicit fooResponse(::llcpp::fidl::test::json::Example_foo_Result& result)
         : result(std::move(result)) {
       _InitHeader();
     }
+    fooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ExamplefooResponseTable;
@@ -201,9 +201,11 @@ class Example final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
-
-    explicit fooRequest(const ::fidl::StringView& s)
-        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {}
+    explicit fooRequest(zx_txid_t _txid, const ::fidl::StringView& s)
+        : s(::fidl::unowned_ptr_t<const char>(s.data()), s.size()) {
+      _InitHeader(_txid);
+    }
+    explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ExamplefooRequestTable;
@@ -218,6 +220,9 @@ class Example final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -401,20 +406,6 @@ class Example final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void fooRequest(
-        const ::fidl::DecodedMessage<Example::fooRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void fooRequest(
-        const ::fidl::EncodedMessage<Example::fooRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 }  // namespace json

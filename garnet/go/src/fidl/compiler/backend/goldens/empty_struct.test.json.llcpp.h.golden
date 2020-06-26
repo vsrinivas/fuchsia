@@ -67,9 +67,11 @@ class EmptyProtocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
-
-    explicit SendRequest(::llcpp::fidl::test::json::Empty& e)
-        : e(std::move(e)) {}
+    explicit SendRequest(zx_txid_t _txid, ::llcpp::fidl::test::json::Empty& e)
+        : e(std::move(e)) {
+      _InitHeader(_txid);
+    }
+    explicit SendRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolSendRequestTable;
@@ -83,17 +85,20 @@ class EmptyProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   struct ReceiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
-
     explicit ReceiveResponse(::llcpp::fidl::test::json::Empty& e)
         : e(std::move(e)) {
       _InitHeader();
     }
+    ReceiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolReceiveEventTable;
@@ -113,11 +118,11 @@ class EmptyProtocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
-
     explicit SendAndReceiveResponse(::llcpp::fidl::test::json::Empty& e)
         : e(std::move(e)) {
       _InitHeader();
     }
+    SendAndReceiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
@@ -137,9 +142,12 @@ class EmptyProtocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Empty e;
-
-    explicit SendAndReceiveRequest(::llcpp::fidl::test::json::Empty& e)
-        : e(std::move(e)) {}
+    explicit SendAndReceiveRequest(zx_txid_t _txid,
+                                   ::llcpp::fidl::test::json::Empty& e)
+        : e(std::move(e)) {
+      _InitHeader(_txid);
+    }
+    explicit SendAndReceiveRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
@@ -154,6 +162,9 @@ class EmptyProtocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SendAndReceiveResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   struct EventHandlers {
@@ -438,28 +449,6 @@ class EmptyProtocol final {
       ::fidl::DecodedMessage<ReceiveResponse> params);
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void SendRequest(
-        const ::fidl::DecodedMessage<EmptyProtocol::SendRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void SendRequest(
-        const ::fidl::EncodedMessage<EmptyProtocol::SendRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void SendAndReceiveRequest(
-        const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveRequest>&
-            _msg,
-        zx_txid_t _txid = 0);
-    static void SendAndReceiveRequest(
-        const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveRequest>&
-            _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 }  // namespace json

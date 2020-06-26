@@ -43,28 +43,26 @@ const ClientAsyncMethods = `
   }
   {{- end }}
 
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{- if .LLProps.LinearizeRequest }}
-  {{ .Name }}Request _request{
-  {{- template "PassthroughParams" .Request -}}
-  };
+  {{ .Name }}Request _request(_context->Txid()
+  {{- template "PassthroughRequestParams" .Request -}}
+  );
   {{- else }}
-  new (_request_buffer.data()) {{ .Name }}Request{
-  {{- template "PassthroughParams" .Request -}}
-  };
+  new (_request_buffer.data()) {{ .Name }}Request(_context->Txid()
+  {{- template "PassthroughRequestParams" .Request -}}
+  );
   {{- end }}
 
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{- if .LLProps.LinearizeRequest }}
   auto _encode_request_result = ::fidl::LinearizeAndEncode<{{ .Name }}Request>(&_request, std::move(_request_buffer));
   if (_encode_request_result.status != ZX_OK) {
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
     return std::move(_encode_request_result);
   }
-  SetTransactionHeaderFor::{{ .Name }}Request(_encode_request_result.message, _context->Txid());
   {{- else }}
   _request_buffer.set_actual(sizeof({{ .Name }}Request));
   ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request(std::move(_request_buffer));
-  SetTransactionHeaderFor::{{ .Name }}Request(_decoded_request, _context->Txid());
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);

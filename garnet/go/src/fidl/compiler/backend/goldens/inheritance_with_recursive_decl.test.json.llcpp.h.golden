@@ -48,9 +48,11 @@ class Parent final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel request;
-
-    explicit FirstRequest(::zx::channel& request)
-        : request(std::move(request)) {}
+    explicit FirstRequest(zx_txid_t _txid, ::zx::channel& request)
+        : request(std::move(request)) {
+      _InitHeader(_txid);
+    }
+    explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ParentFirstRequestTable;
@@ -64,6 +66,9 @@ class Parent final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -216,20 +221,6 @@ class Parent final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void FirstRequest(
-        const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void FirstRequest(
-        const ::fidl::EncodedMessage<Parent::FirstRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 extern "C" const fidl_type_t fidl_test_json_ChildFirstRequestTable;
@@ -245,9 +236,11 @@ class Child final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel request;
-
-    explicit FirstRequest(::zx::channel& request)
-        : request(std::move(request)) {}
+    explicit FirstRequest(zx_txid_t _txid, ::zx::channel& request)
+        : request(std::move(request)) {
+      _InitHeader(_txid);
+    }
+    explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ChildFirstRequestTable;
@@ -261,15 +254,20 @@ class Child final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   struct SecondRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel request;
-
-    explicit SecondRequest(::zx::channel& request)
-        : request(std::move(request)) {}
+    explicit SecondRequest(zx_txid_t _txid, ::zx::channel& request)
+        : request(std::move(request)) {
+      _InitHeader(_txid);
+    }
+    explicit SecondRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ChildSecondRequestTable;
@@ -283,6 +281,9 @@ class Child final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -499,26 +500,6 @@ class Child final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void FirstRequest(
-        const ::fidl::DecodedMessage<Child::FirstRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void FirstRequest(
-        const ::fidl::EncodedMessage<Child::FirstRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void SecondRequest(
-        const ::fidl::DecodedMessage<Child::SecondRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void SecondRequest(
-        const ::fidl::EncodedMessage<Child::SecondRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 }  // namespace json

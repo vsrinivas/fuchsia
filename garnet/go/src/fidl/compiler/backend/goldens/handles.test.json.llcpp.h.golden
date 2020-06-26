@@ -231,14 +231,6 @@ class SomeProtocol final {
   class ClientImpl;
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-  };
 };
 
 }  // namespace handles

@@ -22,7 +22,7 @@ ExampleProtocol::ResultOf::Method_Impl::Method_Impl(
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
-  auto& _request = *new (_request_buffer) MethodRequest{arg};
+  auto& _request = *new (_request_buffer) MethodRequest(0, arg);
 
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodRequest>(&_request);
@@ -56,7 +56,7 @@ ExampleProtocol::UnownedResultOf::Method_Impl::Method_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  new (_request_buffer.data()) MethodRequest{arg};
+  new (_request_buffer.data()) MethodRequest(0, arg);
   _request_buffer.set_actual(sizeof(MethodRequest));
   ::fidl::DecodedMessage<MethodRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<MethodRequest>(std::move(_msg));
@@ -98,7 +98,9 @@ ExampleProtocol::UnownedResultOf::Method ExampleProtocol::Call::Method(
 ::fidl::internal::StatusAndError ExampleProtocol::InPlace::Method(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<MethodRequest> params) {
-  ExampleProtocol::SetTransactionHeaderFor::MethodRequest(params);
+  MethodRequest* request =
+      reinterpret_cast<MethodRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, kExampleProtocol_Method_Ordinal);
   zx_status_t _write_status =
       ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
@@ -175,18 +177,8 @@ bool ExampleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
-    const ::fidl::DecodedMessage<ExampleProtocol::MethodRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kExampleProtocol_Method_Ordinal);
-}
-void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
-    const ::fidl::EncodedMessage<ExampleProtocol::MethodRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kExampleProtocol_Method_Ordinal);
+void ExampleProtocol::MethodRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kExampleProtocol_Method_Ordinal);
 }
 auto ::llcpp::example::ExampleXUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());

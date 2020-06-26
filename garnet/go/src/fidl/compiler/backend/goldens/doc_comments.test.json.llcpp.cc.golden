@@ -34,7 +34,7 @@ Interface::ResultOf::Method_Impl::Method_Impl(
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
-  auto& _request = *new (_request_buffer) MethodRequest{};
+  auto& _request = *new (_request_buffer) MethodRequest(0);
 
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodRequest>(&_request);
@@ -64,7 +64,9 @@ Interface::ResultOf::Method Interface::Call::Method(
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::EncodedMessage<MethodRequest> params(std::move(_request_buffer));
-  Interface::SetTransactionHeaderFor::MethodRequest(params);
+  MethodRequest* request =
+      reinterpret_cast<MethodRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, kInterface_Method_Ordinal);
   zx_status_t _write_status =
       ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
@@ -245,17 +247,8 @@ zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _chan) {
                        std::move(_encode_result.message));
 }
 
-void Interface::SetTransactionHeaderFor::MethodRequest(
-    const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kInterface_Method_Ordinal);
-}
-void Interface::SetTransactionHeaderFor::MethodRequest(
-    const ::fidl::EncodedMessage<Interface::MethodRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kInterface_Method_Ordinal);
+void Interface::MethodRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kInterface_Method_Ordinal);
 }
 
 void Interface::OnEventResponse::_InitHeader() {

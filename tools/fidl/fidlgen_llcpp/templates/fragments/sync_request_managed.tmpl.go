@@ -32,9 +32,9 @@ const SyncRequestManaged = `
 
   {{- if .LLProps.LinearizeRequest }}
   {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
-  {{ .Name }}Request _request{
-  {{- template "PassthroughParams" .Request -}}
-  };
+  {{ .Name }}Request _request(0
+  {{- template "PassthroughRequestParams" .Request -}}
+  );
   {{- else }}
   {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
   This is ok because there are no tracking_ptrs, since LinearizeResponse is true when
@@ -42,9 +42,9 @@ const SyncRequestManaged = `
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof({{ .Name }}Request)];
-  auto& _request = *new (_request_buffer) {{ .Name }}Request{
-  {{- template "PassthroughParams" .Request -}}
-  };
+  auto& _request = *new (_request_buffer) {{ .Name }}Request(0
+  {{- template "PassthroughRequestParams" .Request -}}
+  );
   {{- end }}
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<{{ .Name }}Request>(&_request);

@@ -24,7 +24,7 @@ SecondProtocol::ResultOf::MethodOnSecond_Impl::MethodOnSecond_Impl(
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnSecondRequest)];
-  auto& _request = *new (_request_buffer) MethodOnSecondRequest{};
+  auto& _request = *new (_request_buffer) MethodOnSecondRequest(0);
 
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodOnSecondRequest>(&_request);
@@ -57,7 +57,10 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::EncodedMessage<MethodOnSecondRequest> params(
       std::move(_request_buffer));
-  SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(params);
+  MethodOnSecondRequest* request =
+      reinterpret_cast<MethodOnSecondRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0,
+                       kSecondProtocol_MethodOnSecond_Ordinal);
   zx_status_t _write_status =
       ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
@@ -121,18 +124,8 @@ bool SecondProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
-    const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kSecondProtocol_MethodOnSecond_Ordinal);
-}
-void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
-    const ::fidl::EncodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kSecondProtocol_MethodOnSecond_Ordinal);
+void SecondProtocol::MethodOnSecondRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kSecondProtocol_MethodOnSecond_Ordinal);
 }
 
 namespace {
@@ -149,7 +142,7 @@ FirstProtocol::ResultOf::MethodOnFirst_Impl::MethodOnFirst_Impl(
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnFirstRequest)];
-  auto& _request = *new (_request_buffer) MethodOnFirstRequest{};
+  auto& _request = *new (_request_buffer) MethodOnFirstRequest(0);
 
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<MethodOnFirstRequest>(&_request);
@@ -182,7 +175,9 @@ FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::EncodedMessage<MethodOnFirstRequest> params(
       std::move(_request_buffer));
-  FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(params);
+  MethodOnFirstRequest* request =
+      reinterpret_cast<MethodOnFirstRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, kFirstProtocol_MethodOnFirst_Ordinal);
   zx_status_t _write_status =
       ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
@@ -246,18 +241,8 @@ bool FirstProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
-    const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kFirstProtocol_MethodOnFirst_Ordinal);
-}
-void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
-    const ::fidl::EncodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kFirstProtocol_MethodOnFirst_Ordinal);
+void FirstProtocol::MethodOnFirstRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kFirstProtocol_MethodOnFirst_Ordinal);
 }
 
 }  // namespace name

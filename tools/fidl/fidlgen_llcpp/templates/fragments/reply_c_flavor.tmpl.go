@@ -14,7 +14,7 @@ void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ templa
   {{- if .LLProps.LinearizeResponse }}
   {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
   {{ .Name }}Response _response{
-  {{- template "PassthroughParams" .Response -}}
+  {{- template "PassthroughResponseParams" .Response -}}
   };
   {{- else }}
   {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
@@ -24,7 +24,7 @@ void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ templa
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof({{ .Name }}Response)];
   auto& _response = *new (_response_buffer) {{ .Name }}Response{
-  {{- template "PassthroughParams" .Response -}}
+  {{- template "PassthroughResponseParams" .Response -}}
   };
   {{- end }}
 

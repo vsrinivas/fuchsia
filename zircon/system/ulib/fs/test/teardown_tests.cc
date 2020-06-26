@@ -101,9 +101,8 @@ void SendSync(const zx::channel& client) {
   memset(buffer.view().begin(), 0, buffer.view().capacity());
   fidl::BytePart bytes = buffer.view();
   bytes.set_actual(bytes.capacity());
+  new (bytes.data()) llcpp::fuchsia::io::Node::SyncRequest(5);
   fidl::DecodedMessage<llcpp::fuchsia::io::Node::SyncRequest> message(std::move(bytes));
-  llcpp::fuchsia::io::Node::SetTransactionHeaderFor::SyncRequest(message);
-  message.message()->_hdr.txid = 5;
   ASSERT_OK(fidl::Write(client, std::move(message)));
 }
 
@@ -158,16 +157,12 @@ void CommonTestUnpostedTeardown(zx_status_t status_for_sync) {
 }
 
 // Test a case where the VFS object is shut down outside the dispatch loop.
-TEST(Teardown, UnpostedTeardown) {
-  CommonTestUnpostedTeardown(ZX_OK);
-}
+TEST(Teardown, UnpostedTeardown) { CommonTestUnpostedTeardown(ZX_OK); }
 
 // Test a case where the VFS object is shut down outside the dispatch loop,
 // where the |Vnode::Sync| operation also failed causing the connection to
 // be closed.
-TEST(Teardown, UnpostedTeardownSyncError) {
-  CommonTestUnpostedTeardown(ZX_ERR_INVALID_ARGS);
-}
+TEST(Teardown, UnpostedTeardownSyncError) { CommonTestUnpostedTeardown(ZX_ERR_INVALID_ARGS); }
 
 void CommonTestPostedTeardown(zx_status_t status_for_sync) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -195,9 +190,7 @@ void CommonTestPostedTeardown(zx_status_t status_for_sync) {
 
 // Test a case where the VFS object is shut down as a posted request to the
 // dispatch loop.
-TEST(Teardown, PostedTeardown) {
-  ASSERT_NO_FAILURES(CommonTestPostedTeardown(ZX_OK));
-}
+TEST(Teardown, PostedTeardown) { ASSERT_NO_FAILURES(CommonTestPostedTeardown(ZX_OK)); }
 
 // Test a case where the VFS object is shut down as a posted request to the
 // dispatch loop, where the |Vnode::Sync| operation also failed causing the

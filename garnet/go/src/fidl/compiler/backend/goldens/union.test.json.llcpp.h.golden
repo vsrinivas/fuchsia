@@ -2415,12 +2415,12 @@ class TestProtocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictBoundedXUnion xu;
-
     explicit StrictXUnionHenceResponseMayBeStackAllocatedResponse(
         ::llcpp::fidl::test::json::StrictBoundedXUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
+    StrictXUnionHenceResponseMayBeStackAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
@@ -2436,19 +2436,42 @@ class TestProtocol final {
    private:
     void _InitHeader();
   };
-  using StrictXUnionHenceResponseMayBeStackAllocatedRequest =
-      ::fidl::AnyZeroArgMessage;
+  struct StrictXUnionHenceResponseMayBeStackAllocatedRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit StrictXUnionHenceResponseMayBeStackAllocatedRequest(
+        zx_txid_t _txid) {
+      _InitHeader(_txid);
+    }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = StrictXUnionHenceResponseMayBeStackAllocatedResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   struct FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::OlderSimpleUnion xu;
-
     explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
         ::llcpp::fidl::test::json::OlderSimpleUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
@@ -2464,8 +2487,31 @@ class TestProtocol final {
    private:
     void _InitHeader();
   };
-  using FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest =
-      ::fidl::AnyZeroArgMessage;
+  struct FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
+        zx_txid_t _txid) {
+      _InitHeader(_txid);
+    }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -2767,34 +2813,6 @@ class TestProtocol final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void StrictXUnionHenceResponseMayBeStackAllocatedRequest(
-        const ::fidl::DecodedMessage<
-            TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>&
-            _msg,
-        zx_txid_t _txid = 0);
-    static void StrictXUnionHenceResponseMayBeStackAllocatedRequest(
-        const ::fidl::EncodedMessage<
-            TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>&
-            _msg,
-        zx_txid_t _txid = 0);
-    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
-        const ::fidl::DecodedMessage<
-            TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
-        const ::fidl::EncodedMessage<
-            TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 extern "C" const fidl_type_t fidl_test_json_NullableUnionStructTable;
@@ -2920,6 +2938,20 @@ static_assert(
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::
+                      StrictXUnionHenceResponseMayBeStackAllocatedRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fidl::test::json::TestProtocol::
+                         StrictXUnionHenceResponseMayBeStackAllocatedRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::json::TestProtocol::
+               StrictXUnionHenceResponseMayBeStackAllocatedRequest) ==
+    ::llcpp::fidl::test::json::TestProtocol::
+        StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::
                       StrictXUnionHenceResponseMayBeStackAllocatedResponse>
     : public std::true_type {};
 template <>
@@ -2934,6 +2966,20 @@ static_assert(
 static_assert(offsetof(::llcpp::fidl::test::json::TestProtocol::
                            StrictXUnionHenceResponseMayBeStackAllocatedResponse,
                        xu) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::
+                      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fidl::test::json::TestProtocol::
+                         FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::json::TestProtocol::
+               FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest) ==
+    ::llcpp::fidl::test::json::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::

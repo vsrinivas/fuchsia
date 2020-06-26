@@ -24,7 +24,7 @@ SimpleProtocol::ResultOf::Add_Impl<SimpleProtocol::AddResponse>::Add_Impl(
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(AddRequest)];
-  auto& _request = *new (_request_buffer) AddRequest{a, b};
+  auto& _request = *new (_request_buffer) AddRequest(0, a, b);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<AddRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -61,7 +61,7 @@ SimpleProtocol::UnownedResultOf::Add_Impl<
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  new (_request_buffer.data()) AddRequest{a, b};
+  new (_request_buffer.data()) AddRequest(0, a, b);
   _request_buffer.set_actual(sizeof(AddRequest));
   ::fidl::DecodedMessage<AddRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<AddRequest>(std::move(_msg));
@@ -109,7 +109,8 @@ SimpleProtocol::UnownedResultOf::Add SimpleProtocol::Call::Add(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<AddRequest> params,
     ::fidl::BytePart response_buffer) {
-  SimpleProtocol::SetTransactionHeaderFor::AddRequest(params);
+  AddRequest* request = reinterpret_cast<AddRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, kSimpleProtocol_Add_Ordinal);
   auto _call_result = ::fidl::Call<AddRequest, AddResponse>(
       std::move(_client_end), std::move(params), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
@@ -176,13 +177,12 @@ SimpleProtocol::UnownedResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  new (_request_buffer.data()) AddRequest{a, b};
 
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  new (_request_buffer.data()) AddRequest(_context->Txid(), a, b);
   _request_buffer.set_actual(sizeof(AddRequest));
   ::fidl::DecodedMessage<AddRequest> _decoded_request(
       std::move(_request_buffer));
-  SetTransactionHeaderFor::AddRequest(_decoded_request, _context->Txid());
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
@@ -310,18 +310,8 @@ void SimpleProtocol::Interface::AddCompleterBase::Reply(
   CompleterBase::SendReply(std::move(params));
 }
 
-void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
-    const ::fidl::DecodedMessage<SimpleProtocol::AddRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kSimpleProtocol_Add_Ordinal);
-}
-void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
-    const ::fidl::EncodedMessage<SimpleProtocol::AddRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kSimpleProtocol_Add_Ordinal);
+void SimpleProtocol::AddRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kSimpleProtocol_Add_Ordinal);
 }
 
 void SimpleProtocol::AddResponse::_InitHeader() {

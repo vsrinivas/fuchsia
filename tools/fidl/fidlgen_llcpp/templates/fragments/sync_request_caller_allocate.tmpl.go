@@ -40,13 +40,13 @@ const SyncRequestCallerAllocate = `
   }
   {{- end }}
   {{- if .LLProps.LinearizeRequest }}
-  {{ .Name }}Request _request{
-  {{- template "PassthroughParams" .Request -}}
-  };
+  {{ .Name }}Request _request(0
+  {{- template "PassthroughRequestParams" .Request -}}
+  );
   {{- else }}
-  new (_request_buffer.data()) {{ .Name }}Request{
-  {{- template "PassthroughParams" .Request -}}
-  };
+  new (_request_buffer.data()) {{ .Name }}Request(0
+  {{- template "PassthroughRequestParams" .Request -}}
+  );
   {{- end }}
 
   {{- if .LLProps.LinearizeRequest }}

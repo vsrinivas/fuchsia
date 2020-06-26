@@ -393,13 +393,32 @@ class Interface final {
   Interface() = delete;
 
  public:
-  using MethodRequest = ::fidl::AnyZeroArgMessage;
+  struct MethodRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit MethodRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   struct OnEventResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-
-    explicit OnEventResponse() { _InitHeader(); }
+    OnEventResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
@@ -588,20 +607,6 @@ class Interface final {
   static zx_status_t SendOnEventEvent(::zx::unowned_channel _chan);
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void MethodRequest(
-        const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void MethodRequest(
-        const ::fidl::EncodedMessage<Interface::MethodRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 // service comment #1
@@ -704,6 +709,15 @@ static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
 static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
 static_assert(sizeof(::llcpp::test::name::Struct) ==
               ::llcpp::test::name::Struct::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::Interface::MethodRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::Interface::MethodRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Interface::MethodRequest) ==
+              ::llcpp::test::name::Interface::MethodRequest::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::test::name::Interface::OnEventResponse>

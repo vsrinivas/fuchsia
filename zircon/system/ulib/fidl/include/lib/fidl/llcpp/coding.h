@@ -34,27 +34,8 @@ struct FromFailureMixin {
 
 }  // namespace internal
 
-// The request/response type of any FIDL method with zero in/out parameters.
+// The table of any FIDL method with zero in/out parameters.
 extern "C" const fidl_type_t _llcpp_coding_AnyZeroArgMessageTable;
-struct AnyZeroArgMessage final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
-
-  AnyZeroArgMessage() = default;
-
-  static constexpr const fidl_type_t* Type = &_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = sizeof(fidl_message_header_t);
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
-};
-
-template <>
-struct IsFidlType<AnyZeroArgMessage> : public std::true_type {};
-template <>
-struct IsFidlMessage<AnyZeroArgMessage> : public std::true_type {};
 
 // Holds a |DecodedMessage| in addition to |status| and |error|.
 // This is typically the return type of fidl::Decode and FIDL methods which require

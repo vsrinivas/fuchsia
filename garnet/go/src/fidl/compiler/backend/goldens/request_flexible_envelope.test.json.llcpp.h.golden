@@ -269,12 +269,12 @@ class Protocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::FlexibleFoo f;
-
     explicit RequestStrictResponseFlexibleResponse(
         ::llcpp::fidl::test::json::FlexibleFoo& f)
         : f(std::move(f)) {
       _InitHeader();
     }
+    RequestStrictResponseFlexibleResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
@@ -294,10 +294,14 @@ class Protocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictFoo s;
-
     explicit RequestStrictResponseFlexibleRequest(
-        ::llcpp::fidl::test::json::StrictFoo& s)
-        : s(std::move(s)) {}
+        zx_txid_t _txid, ::llcpp::fidl::test::json::StrictFoo& s)
+        : s(std::move(s)) {
+      _InitHeader(_txid);
+    }
+    explicit RequestStrictResponseFlexibleRequest(zx_txid_t _txid) {
+      _InitHeader(_txid);
+    }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
@@ -312,18 +316,21 @@ class Protocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestStrictResponseFlexibleResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   struct RequestFlexibleResponseStrictResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictFoo f;
-
     explicit RequestFlexibleResponseStrictResponse(
         ::llcpp::fidl::test::json::StrictFoo& f)
         : f(std::move(f)) {
       _InitHeader();
     }
+    RequestFlexibleResponseStrictResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
@@ -343,10 +350,14 @@ class Protocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::FlexibleFoo s;
-
     explicit RequestFlexibleResponseStrictRequest(
-        ::llcpp::fidl::test::json::FlexibleFoo& s)
-        : s(std::move(s)) {}
+        zx_txid_t _txid, ::llcpp::fidl::test::json::FlexibleFoo& s)
+        : s(std::move(s)) {
+      _InitHeader(_txid);
+    }
+    explicit RequestFlexibleResponseStrictRequest(zx_txid_t _txid) {
+      _InitHeader(_txid);
+    }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
@@ -361,6 +372,9 @@ class Protocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestFlexibleResponseStrictResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -671,30 +685,6 @@ class Protocol final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void RequestStrictResponseFlexibleRequest(
-        const ::fidl::DecodedMessage<
-            Protocol::RequestStrictResponseFlexibleRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void RequestStrictResponseFlexibleRequest(
-        const ::fidl::EncodedMessage<
-            Protocol::RequestStrictResponseFlexibleRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void RequestFlexibleResponseStrictRequest(
-        const ::fidl::DecodedMessage<
-            Protocol::RequestFlexibleResponseStrictRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void RequestFlexibleResponseStrictRequest(
-        const ::fidl::EncodedMessage<
-            Protocol::RequestFlexibleResponseStrictRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 }  // namespace json

@@ -47,10 +47,10 @@ class Top final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::bottom::Foo foo;
-
     explicit GetFooResponse(::llcpp::bottom::Foo& foo) : foo(std::move(foo)) {
       _InitHeader();
     }
+    GetFooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type = &top_TopGetFooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -65,7 +65,28 @@ class Top final {
    private:
     void _InitHeader();
   };
-  using GetFooRequest = ::fidl::AnyZeroArgMessage;
+  struct GetFooRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit GetFooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = GetFooResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -231,26 +252,20 @@ class Top final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void GetFooRequest(
-        const ::fidl::DecodedMessage<Top::GetFooRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void GetFooRequest(
-        const ::fidl::EncodedMessage<Top::GetFooRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 }  // namespace top
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::top::Top::GetFooRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::top::Top::GetFooRequest> : public std::true_type {
+};
+static_assert(sizeof(::llcpp::top::Top::GetFooRequest) ==
+              ::llcpp::top::Top::GetFooRequest::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::top::Top::GetFooResponse> : public std::true_type {};

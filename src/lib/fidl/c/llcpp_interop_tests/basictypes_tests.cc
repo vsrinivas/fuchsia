@@ -120,12 +120,11 @@ template <typename T>
 void WithEncodedMessage(T callback) {
   // manually call the server using generated message definitions
   FIDL_ALIGNDECL uint8_t storage[512] = {};
-  fidl::BytePart bytes(&storage[0], sizeof(storage));
-  // trivial linearization except to set message length
-  bytes.set_actual(sizeof(basictypes::TestInterface::ConsumeSimpleStructRequest));
+  fidl::BytePart bytes(storage, sizeof(storage),
+                       sizeof(basictypes::TestInterface::ConsumeSimpleStructRequest));
+  new (storage) basictypes::TestInterface::ConsumeSimpleStructRequest(0);
   fidl::DecodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> request(
       std::move(bytes));
-  basictypes::TestInterface::SetTransactionHeaderFor::ConsumeSimpleStructRequest(request);
   request.message()->arg.field = 123;
   // make sure array shape is as expected (5 by 4)
   constexpr size_t kNumRow = 5;

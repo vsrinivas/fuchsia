@@ -639,7 +639,7 @@ void InPlaceConsumeDirectories() {
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesRequest> request_buffer;
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_buffer;
   auto golden = golden_dirents();
-  gen::DirEntTestInterface::ConsumeDirectoriesRequest request(golden);
+  gen::DirEntTestInterface::ConsumeDirectoriesRequest request(0, golden);
   auto encode_result = fidl::LinearizeAndEncode(&request, request_buffer.view());
   ASSERT_OK(encode_result.status);
   ASSERT_OK(gen::DirEntTestInterface::InPlace::ConsumeDirectories(
@@ -701,7 +701,7 @@ void InPlaceOneWayDirents() {
     ASSERT_EQ(server.OneWayDirentsNumCalls(), iter);
     fidl::Buffer<gen::DirEntTestInterface::OneWayDirentsRequest> buffer;
     auto golden = golden_dirents();
-    gen::DirEntTestInterface::OneWayDirentsRequest request(golden, server_ep);
+    gen::DirEntTestInterface::OneWayDirentsRequest request(0, golden, server_ep);
     auto encode_result = fidl::LinearizeAndEncode(&request, buffer.view());
     ASSERT_OK(encode_result.status);
     ASSERT_OK(gen::DirEntTestInterface::InPlace::OneWayDirents(

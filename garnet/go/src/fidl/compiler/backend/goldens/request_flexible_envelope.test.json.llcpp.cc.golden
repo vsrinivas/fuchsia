@@ -56,7 +56,7 @@ Protocol::ResultOf::RequestStrictResponseFlexible_Impl<
     Protocol::RequestStrictResponseFlexibleResponse>::
     RequestStrictResponseFlexible_Impl(::zx::unowned_channel _client_end,
                                        ::llcpp::fidl::test::json::StrictFoo s) {
-  RequestStrictResponseFlexibleRequest _request{s};
+  RequestStrictResponseFlexibleRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<
       RequestStrictResponseFlexibleRequest>(&_request);
@@ -100,7 +100,7 @@ Protocol::UnownedResultOf::RequestStrictResponseFlexible_Impl<
             ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  RequestStrictResponseFlexibleRequest _request{s};
+  RequestStrictResponseFlexibleRequest _request(0, s);
   auto _encode_result =
       ::fidl::LinearizeAndEncode<RequestStrictResponseFlexibleRequest>(
           &_request, std::move(_request_buffer));
@@ -154,8 +154,11 @@ Protocol::InPlace::RequestStrictResponseFlexible(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<RequestStrictResponseFlexibleRequest> params,
     ::fidl::BytePart response_buffer) {
-  Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleRequest(
-      params);
+  RequestStrictResponseFlexibleRequest* request =
+      reinterpret_cast<RequestStrictResponseFlexibleRequest*>(
+          params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0,
+                       kProtocol_RequestStrictResponseFlexible_Ordinal);
   auto _call_result = ::fidl::Call<RequestStrictResponseFlexibleRequest,
                                    RequestStrictResponseFlexibleResponse>(
       std::move(_client_end), std::move(params), std::move(response_buffer));
@@ -173,7 +176,7 @@ Protocol::ResultOf::RequestFlexibleResponseStrict_Impl<
     RequestFlexibleResponseStrict_Impl(
         ::zx::unowned_channel _client_end,
         ::llcpp::fidl::test::json::FlexibleFoo s) {
-  RequestFlexibleResponseStrictRequest _request{s};
+  RequestFlexibleResponseStrictRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<
       RequestFlexibleResponseStrictRequest>(&_request);
@@ -218,7 +221,7 @@ Protocol::UnownedResultOf::RequestFlexibleResponseStrict_Impl<
             ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  RequestFlexibleResponseStrictRequest _request{s};
+  RequestFlexibleResponseStrictRequest _request(0, s);
   auto _encode_result =
       ::fidl::LinearizeAndEncode<RequestFlexibleResponseStrictRequest>(
           &_request, std::move(_request_buffer));
@@ -273,8 +276,11 @@ Protocol::InPlace::RequestFlexibleResponseStrict(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<RequestFlexibleResponseStrictRequest> params,
     ::fidl::BytePart response_buffer) {
-  Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictRequest(
-      params);
+  RequestFlexibleResponseStrictRequest* request =
+      reinterpret_cast<RequestFlexibleResponseStrictRequest*>(
+          params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0,
+                       kProtocol_RequestFlexibleResponseStrict_Ordinal);
   auto _call_result = ::fidl::Call<RequestFlexibleResponseStrictRequest,
                                    RequestFlexibleResponseStrictResponse>(
       std::move(_client_end), std::move(params), std::move(response_buffer));
@@ -353,9 +359,9 @@ Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  RequestStrictResponseFlexibleRequest _request{s};
 
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  RequestStrictResponseFlexibleRequest _request(_context->Txid(), s);
   auto _encode_request_result =
       ::fidl::LinearizeAndEncode<RequestStrictResponseFlexibleRequest>(
           &_request, std::move(_request_buffer));
@@ -363,8 +369,6 @@ Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
     return std::move(_encode_request_result);
   }
-  SetTransactionHeaderFor::RequestStrictResponseFlexibleRequest(
-      _encode_request_result.message, _context->Txid());
 
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     zx_status_t _write_status = ::fidl::Write(
@@ -446,9 +450,9 @@ Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  RequestFlexibleResponseStrictRequest _request{s};
 
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  RequestFlexibleResponseStrictRequest _request(_context->Txid(), s);
   auto _encode_request_result =
       ::fidl::LinearizeAndEncode<RequestFlexibleResponseStrictRequest>(
           &_request, std::move(_request_buffer));
@@ -456,8 +460,6 @@ Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
     return std::move(_encode_request_result);
   }
-  SetTransactionHeaderFor::RequestFlexibleResponseStrictRequest(
-      _encode_request_result.message, _context->Txid());
 
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     zx_status_t _write_status = ::fidl::Write(
@@ -647,20 +649,9 @@ void Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
   CompleterBase::SendReply(std::move(params));
 }
 
-void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleRequest(
-    const ::fidl::DecodedMessage<
-        Protocol::RequestStrictResponseFlexibleRequest>& _msg,
+void Protocol::RequestStrictResponseFlexibleRequest::_InitHeader(
     zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kProtocol_RequestStrictResponseFlexible_Ordinal);
-}
-void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleRequest(
-    const ::fidl::EncodedMessage<
-        Protocol::RequestStrictResponseFlexibleRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid,
+  fidl_init_txn_header(&_hdr, _txid,
                        kProtocol_RequestStrictResponseFlexible_Ordinal);
 }
 
@@ -669,20 +660,9 @@ void Protocol::RequestStrictResponseFlexibleResponse::_InitHeader() {
                        kProtocol_RequestStrictResponseFlexible_Ordinal);
 }
 
-void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictRequest(
-    const ::fidl::DecodedMessage<
-        Protocol::RequestFlexibleResponseStrictRequest>& _msg,
+void Protocol::RequestFlexibleResponseStrictRequest::_InitHeader(
     zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kProtocol_RequestFlexibleResponseStrict_Ordinal);
-}
-void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictRequest(
-    const ::fidl::EncodedMessage<
-        Protocol::RequestFlexibleResponseStrictRequest>& _msg,
-    zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid,
+  fidl_init_txn_header(&_hdr, _txid,
                        kProtocol_RequestFlexibleResponseStrict_Ordinal);
 }
 

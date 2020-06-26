@@ -20,7 +20,7 @@ extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 template <>
 super::ResultOf::foo_Impl<super::fooResponse>::foo_Impl(
     ::zx::unowned_channel _client_end, ::fidl::StringView s) {
-  fooRequest _request{s};
+  fooRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<fooRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -53,7 +53,7 @@ super::UnownedResultOf::foo_Impl<super::fooResponse>::foo_Impl(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  fooRequest _request{s};
+  fooRequest _request(0, s);
   auto _encode_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -100,7 +100,8 @@ super::UnownedResultOf::foo super::Call::foo(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<fooRequest> params,
     ::fidl::BytePart response_buffer) {
-  super::SetTransactionHeaderFor::fooRequest(params);
+  fooRequest* request = reinterpret_cast<fooRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, ksuper_foo_Ordinal);
   auto _call_result = ::fidl::Call<fooRequest, fooResponse>(
       std::move(_client_end), std::move(params), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
@@ -166,17 +167,15 @@ super::UnownedResultOf::foo super::ClientImpl::foo_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  fooRequest _request{s};
 
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  fooRequest _request(_context->Txid(), s);
   auto _encode_request_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
   if (_encode_request_result.status != ZX_OK) {
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
     return std::move(_encode_request_result);
   }
-  SetTransactionHeaderFor::fooRequest(_encode_request_result.message,
-                                      _context->Txid());
 
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     zx_status_t _write_status = ::fidl::Write(
@@ -296,15 +295,8 @@ void super::Interface::fooCompleterBase::Reply(
   CompleterBase::SendReply(std::move(params));
 }
 
-void super::SetTransactionHeaderFor::fooRequest(
-    const ::fidl::DecodedMessage<super::fooRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, ksuper_foo_Ordinal);
-}
-void super::SetTransactionHeaderFor::fooRequest(
-    const ::fidl::EncodedMessage<super::fooRequest>& _msg, zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, ksuper_foo_Ordinal);
+void super::fooRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, ksuper_foo_Ordinal);
 }
 
 void super::fooResponse::_InitHeader() {
@@ -321,7 +313,7 @@ extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 template <>
 sub::ResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
     ::zx::unowned_channel _client_end, ::fidl::StringView s) {
-  fooRequest _request{s};
+  fooRequest _request(0, s);
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<fooRequest>(&_request);
   auto& _encode_result = _encoded.result();
@@ -354,7 +346,7 @@ sub::UnownedResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
-  fooRequest _request{s};
+  fooRequest _request(0, s);
   auto _encode_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
   if (_encode_result.status != ZX_OK) {
@@ -402,7 +394,8 @@ sub::UnownedResultOf::foo sub::Call::foo(::zx::unowned_channel _client_end,
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<fooRequest> params,
     ::fidl::BytePart response_buffer) {
-  sub::SetTransactionHeaderFor::fooRequest(params);
+  fooRequest* request = reinterpret_cast<fooRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, ksub_foo_Ordinal);
   auto _call_result = ::fidl::Call<fooRequest, fooResponse>(
       std::move(_client_end), std::move(params), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
@@ -468,17 +461,15 @@ sub::UnownedResultOf::foo sub::ClientImpl::foo_Sync(
     return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
                                   ::fidl::kErrorRequestBufferTooSmall);
   }
-  fooRequest _request{s};
 
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  fooRequest _request(_context->Txid(), s);
   auto _encode_request_result = ::fidl::LinearizeAndEncode<fooRequest>(
       &_request, std::move(_request_buffer));
   if (_encode_request_result.status != ZX_OK) {
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
     return std::move(_encode_request_result);
   }
-  SetTransactionHeaderFor::fooRequest(_encode_request_result.message,
-                                      _context->Txid());
 
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     zx_status_t _write_status = ::fidl::Write(
@@ -597,15 +588,8 @@ void sub::Interface::fooCompleterBase::Reply(
   CompleterBase::SendReply(std::move(params));
 }
 
-void sub::SetTransactionHeaderFor::fooRequest(
-    const ::fidl::DecodedMessage<sub::fooRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, ksub_foo_Ordinal);
-}
-void sub::SetTransactionHeaderFor::fooRequest(
-    const ::fidl::EncodedMessage<sub::fooRequest>& _msg, zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, ksub_foo_Ordinal);
+void sub::fooRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, ksub_foo_Ordinal);
 }
 
 void sub::fooResponse::_InitHeader() {

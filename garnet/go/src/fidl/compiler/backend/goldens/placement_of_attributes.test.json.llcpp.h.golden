@@ -432,9 +432,11 @@ class ExampleProtocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::exampleusing::Empty arg;
-
-    explicit MethodRequest(::llcpp::exampleusing::Empty& arg)
-        : arg(std::move(arg)) {}
+    explicit MethodRequest(zx_txid_t _txid, ::llcpp::exampleusing::Empty& arg)
+        : arg(std::move(arg)) {
+      _InitHeader(_txid);
+    }
+    explicit MethodRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &example_ExampleProtocolMethodRequestTable;
@@ -448,6 +450,9 @@ class ExampleProtocol final {
     static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -602,20 +607,6 @@ class ExampleProtocol final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void MethodRequest(
-        const ::fidl::DecodedMessage<ExampleProtocol::MethodRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void MethodRequest(
-        const ::fidl::EncodedMessage<ExampleProtocol::MethodRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 extern "C" const fidl_type_t example_ExampleStructTable;

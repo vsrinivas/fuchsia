@@ -17,12 +17,12 @@ zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCallerAllocateMet
 
   {{- if .LLProps.LinearizeResponse }}
   {{ .Name }}Response _response{
-  {{- template "PassthroughParams" .Response -}}
+  {{- template "PassthroughResponseParams" .Response -}}
   };
   {{- else }}
   new (_buffer.data()) {{ .Name }}Response{
-  {{- template "PassthroughParams" .Response -}}
-};
+  {{- template "PassthroughResponseParams" .Response -}}
+  };
   {{- end }}
 
   {{- if .LLProps.LinearizeResponse }}

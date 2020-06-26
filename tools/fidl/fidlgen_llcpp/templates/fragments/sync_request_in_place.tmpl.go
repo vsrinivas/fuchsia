@@ -47,7 +47,8 @@ const SyncRequestInPlace = `
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::EncodedMessage<{{ .Name }}Request> params(std::move(_request_buffer));
   {{- end }}
-  {{ $protocol_name }}::SetTransactionHeaderFor::{{ .Name }}Request(params);
+  {{ .Name }}Request* request = reinterpret_cast<{{ .Name }}Request*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, {{ .OrdinalName }});
   {{- if .HasResponse }}
   auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
     std::move(_client_end), std::move(params), std::move(response_buffer));

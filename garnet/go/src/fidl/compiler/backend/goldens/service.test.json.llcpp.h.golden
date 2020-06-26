@@ -46,7 +46,27 @@ class SecondProtocol final {
   SecondProtocol() = delete;
 
  public:
-  using MethodOnSecondRequest = ::fidl::AnyZeroArgMessage;
+  struct MethodOnSecondRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit MethodOnSecondRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -180,22 +200,6 @@ class SecondProtocol final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void MethodOnSecondRequest(
-        const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>&
-            _msg,
-        zx_txid_t _txid = 0);
-    static void MethodOnSecondRequest(
-        const ::fidl::EncodedMessage<SecondProtocol::MethodOnSecondRequest>&
-            _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
@@ -204,7 +208,27 @@ class FirstProtocol final {
   FirstProtocol() = delete;
 
  public:
-  using MethodOnFirstRequest = ::fidl::AnyZeroArgMessage;
+  struct MethodOnFirstRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit MethodOnFirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
 
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
@@ -338,20 +362,6 @@ class FirstProtocol final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void MethodOnFirstRequest(
-        const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void MethodOnFirstRequest(
-        const ::fidl::EncodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 class SingleMemberService final {
@@ -657,7 +667,29 @@ class MultiHeterogeneousMemberService final {
 }  // namespace test
 }  // namespace llcpp
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::test::name::SecondProtocol::MethodOnSecondRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::SecondProtocol::MethodOnSecondRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::SecondProtocol::MethodOnSecondRequest) ==
+    ::llcpp::test::name::SecondProtocol::MethodOnSecondRequest::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::FirstProtocol::MethodOnFirstRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::FirstProtocol::MethodOnFirstRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::FirstProtocol::MethodOnFirstRequest) ==
+    ::llcpp::test::name::FirstProtocol::MethodOnFirstRequest::PrimarySize);
+
+}  // namespace fidl
 
 namespace llcpp {
 

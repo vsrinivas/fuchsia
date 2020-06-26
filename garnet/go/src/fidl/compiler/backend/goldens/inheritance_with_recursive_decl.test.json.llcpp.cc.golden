@@ -24,7 +24,7 @@ Parent::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-  auto& _request = *new (_request_buffer) FirstRequest{request};
+  auto& _request = *new (_request_buffer) FirstRequest(0, request);
 
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<FirstRequest>(&_request);
@@ -57,7 +57,7 @@ Parent::UnownedResultOf::First_Impl::First_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  new (_request_buffer.data()) FirstRequest{request};
+  new (_request_buffer.data()) FirstRequest(0, request);
   _request_buffer.set_actual(sizeof(FirstRequest));
   ::fidl::DecodedMessage<FirstRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<FirstRequest>(std::move(_msg));
@@ -99,7 +99,9 @@ Parent::UnownedResultOf::First Parent::Call::First(
 ::fidl::internal::StatusAndError Parent::InPlace::First(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<FirstRequest> params) {
-  Parent::SetTransactionHeaderFor::FirstRequest(params);
+  FirstRequest* request =
+      reinterpret_cast<FirstRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, kParent_First_Ordinal);
   zx_status_t _write_status =
       ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
@@ -175,15 +177,8 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-void Parent::SetTransactionHeaderFor::FirstRequest(
-    const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kParent_First_Ordinal);
-}
-void Parent::SetTransactionHeaderFor::FirstRequest(
-    const ::fidl::EncodedMessage<Parent::FirstRequest>& _msg, zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kParent_First_Ordinal);
+void Parent::FirstRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kParent_First_Ordinal);
 }
 
 namespace {
@@ -204,7 +199,7 @@ Child::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-  auto& _request = *new (_request_buffer) FirstRequest{request};
+  auto& _request = *new (_request_buffer) FirstRequest(0, request);
 
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<FirstRequest>(&_request);
@@ -237,7 +232,7 @@ Child::UnownedResultOf::First_Impl::First_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  new (_request_buffer.data()) FirstRequest{request};
+  new (_request_buffer.data()) FirstRequest(0, request);
   _request_buffer.set_actual(sizeof(FirstRequest));
   ::fidl::DecodedMessage<FirstRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<FirstRequest>(std::move(_msg));
@@ -279,7 +274,9 @@ Child::UnownedResultOf::First Child::Call::First(
 ::fidl::internal::StatusAndError Child::InPlace::First(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<FirstRequest> params) {
-  Child::SetTransactionHeaderFor::FirstRequest(params);
+  FirstRequest* request =
+      reinterpret_cast<FirstRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, kChild_First_Ordinal);
   zx_status_t _write_status =
       ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
@@ -295,7 +292,7 @@ Child::ResultOf::Second_Impl::Second_Impl(::zx::unowned_channel _client_end,
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
-  auto& _request = *new (_request_buffer) SecondRequest{request};
+  auto& _request = *new (_request_buffer) SecondRequest(0, request);
 
   auto _encoded =
       ::fidl::internal::LinearizedAndEncoded<SecondRequest>(&_request);
@@ -328,7 +325,7 @@ Child::UnownedResultOf::Second_Impl::Second_Impl(
     Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
-  new (_request_buffer.data()) SecondRequest{request};
+  new (_request_buffer.data()) SecondRequest(0, request);
   _request_buffer.set_actual(sizeof(SecondRequest));
   ::fidl::DecodedMessage<SecondRequest> _msg(std::move(_request_buffer));
   auto _encode_result = ::fidl::Encode<SecondRequest>(std::move(_msg));
@@ -371,7 +368,9 @@ Child::UnownedResultOf::Second Child::Call::Second(
 ::fidl::internal::StatusAndError Child::InPlace::Second(
     ::zx::unowned_channel _client_end,
     ::fidl::EncodedMessage<SecondRequest> params) {
-  Child::SetTransactionHeaderFor::SecondRequest(params);
+  SecondRequest* request =
+      reinterpret_cast<SecondRequest*>(params.bytes().data());
+  fidl_init_txn_header(&request->_hdr, 0, kChild_Second_Ordinal);
   zx_status_t _write_status =
       ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
@@ -476,26 +475,12 @@ bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-void Child::SetTransactionHeaderFor::FirstRequest(
-    const ::fidl::DecodedMessage<Child::FirstRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_First_Ordinal);
-}
-void Child::SetTransactionHeaderFor::FirstRequest(
-    const ::fidl::EncodedMessage<Child::FirstRequest>& _msg, zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kChild_First_Ordinal);
+void Child::FirstRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kChild_First_Ordinal);
 }
 
-void Child::SetTransactionHeaderFor::SecondRequest(
-    const ::fidl::DecodedMessage<Child::SecondRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_Second_Ordinal);
-}
-void Child::SetTransactionHeaderFor::SecondRequest(
-    const ::fidl::EncodedMessage<Child::SecondRequest>& _msg, zx_txid_t _txid) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kChild_Second_Ordinal);
+void Child::SecondRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kChild_Second_Ordinal);
 }
 
 }  // namespace json

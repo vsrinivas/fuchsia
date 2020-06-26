@@ -5,8 +5,8 @@
 package fragments
 
 const Protocol = `
-{{- /* Defines the arguments for a message method/constructor. */}}
-{{- define "MessagePrototype" -}}
+{{- /* Defines the arguments for a response method/constructor. */}}
+{{- define "ResponsePrototype" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{- end}}
     {{- if eq $param.Type.LLFamily TrivialCopy }}
@@ -17,6 +17,22 @@ const Protocol = `
     const {{ $param.Type.LLDecl }}& {{ $param.Name }}
     {{- else if eq $param.Type.LLFamily Vector }}
     {{ $param.Type.LLDecl }}& {{ $param.Name }}
+    {{- end }}
+  {{- end -}}
+{{- end }}
+
+{{- /* Defines the arguments for a request method/constructor. */}}
+{{- define "RequestPrototype" -}}
+  zx_txid_t _txid
+  {{- range $index, $param := . -}}
+    {{- if eq $param.Type.LLFamily TrivialCopy }}
+    , {{ $param.Type.LLDecl }} {{ $param.Name }}
+    {{- else if eq $param.Type.LLFamily Reference }}
+    , {{ $param.Type.LLDecl }}& {{ $param.Name }}
+    {{- else if eq $param.Type.LLFamily String }}
+    , const {{ $param.Type.LLDecl }}& {{ $param.Name }}
+    {{- else if eq $param.Type.LLFamily Vector }}
+    , {{ $param.Type.LLDecl }}& {{ $param.Name }}
     {{- end }}
   {{- end -}}
 {{- end }}
@@ -56,11 +72,19 @@ class {{ .Name }};
   {{- end -}}
 {{- end }}
 
-{{- /* All the parameters for a method/constructor which uses values with references or */}}
-{{- /* trivial copy. */}}
-{{- define "PassthroughParams" -}}
+{{- /* All the parameters for a response method/constructor which uses values with references */}}
+{{- /* or trivial copy. */}}
+{{- define "PassthroughResponseParams" -}}
   {{- range $index, $param := . }}
     {{- if $index }}, {{- end }} {{ $param.Name }}
+  {{- end }}
+{{- end }}
+
+{{- /* All the parameters for a request method/constructor which uses values with references */}}
+{{- /* or trivial copy. */}}
+{{- define "PassthroughRequestParams" -}}
+  {{- range $index, $param := . }}
+    , {{ $param.Name }}
   {{- end }}
 {{- end }}
 
@@ -112,8 +136,13 @@ class {{ .Name }} final {
     {{ $param.Type.LLDecl }} {{ $param.Name }};
         {{- end }}
 
-    explicit {{ .Name }}Response({{ template "MessagePrototype" .Response }})
+    {{- if .Response }}
+    explicit {{ .Name }}Response({{ template "ResponsePrototype" .Response }})
     {{ template "InitMessage" .Response }} {
+      _InitHeader();
+    }
+    {{- end }}
+    {{ .Name }}Response() {
       _InitHeader();
     }
 
@@ -138,7 +167,6 @@ class {{ .Name }} final {
     {{- end }}
 
     {{- if .HasRequest }}
-      {{- if .Request }}
   struct {{ .Name }}Request final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
@@ -147,10 +175,22 @@ class {{ .Name }} final {
     {{ $param.Type.LLDecl }} {{ $param.Name }};
         {{- end }}
 
-    explicit {{ .Name }}Request({{ template "MessagePrototype" .Request }})
-    {{ template "InitMessage" .Request }} {}
+    {{- if .Request }}
+    explicit {{ .Name }}Request({{ template "RequestPrototype" .Request }})
+    {{ template "InitMessage" .Request }} {
+      _InitHeader(_txid);
+    }
+    {{- end }}
+    explicit {{ .Name }}Request(zx_txid_t _txid) {
+      _InitHeader(_txid);
+    }
 
-    static constexpr const fidl_type_t* Type = {{ template "RequestCodingTable" . }};
+    static constexpr const fidl_type_t* Type =
+    {{- if .Request }}
+      {{ template "RequestCodingTable" . }};
+    {{- else }}
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    {{- end }}
     static constexpr uint32_t MaxNumHandles = {{ .RequestMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .RequestSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .RequestMaxOutOfLine }};
@@ -165,12 +205,11 @@ class {{ .Name }} final {
         {{- if and .HasResponse .Response }}
     using ResponseType = {{ .Name }}Response;
         {{- end }}
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 {{ "" }}
-      {{- else }}
-  using {{ .Name }}Request = ::fidl::AnyZeroArgMessage;
-{{ "" }}
-      {{- end }}
     {{- end }}
 
   {{- end }}
@@ -468,18 +507,6 @@ class {{ .Name }} final {
   {{- end }}
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-   public:
-  {{- range .Methods }}
-    {{- if .HasRequest }}
-    static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignatureDecodedMessage" . }};
-    static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignatureEncodedMessage" . }};
-    {{- end }}
-  {{- end }}
-  };
 };
 {{- end }}
 
@@ -487,7 +514,7 @@ class {{ .Name }} final {
 {{ $protocol := . -}}
 {{ range .Methods -}}
 {{ $method := . -}}
-{{- if and .HasRequest .Request }}
+{{- if .HasRequest }}
 
 template <>
 struct IsFidlType<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request> : public std::true_type {};
@@ -622,7 +649,9 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
     {{- if .HasRequest }}
 {{ "" }}
-      {{- template "SetTransactionHeaderForRequestMethodDefinition" . }}
+    void {{ .LLProps.ProtocolName }}::{{ .Name }}Request::_InitHeader(zx_txid_t _txid) {
+      fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
+    }
     {{- end }}
     {{- if .HasResponse }}
 {{ "" }}

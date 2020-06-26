@@ -262,8 +262,8 @@ class SimpleProtocol final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t sum;
-
     explicit AddResponse(int32_t sum) : sum(sum) { _InitHeader(); }
+    AddResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_nullable_SimpleProtocolAddResponseTable;
@@ -284,8 +284,10 @@ class SimpleProtocol final {
     fidl_message_header_t _hdr;
     int32_t a;
     int32_t b;
-
-    explicit AddRequest(int32_t a, int32_t b) : a(a), b(b) {}
+    explicit AddRequest(zx_txid_t _txid, int32_t a, int32_t b) : a(a), b(b) {
+      _InitHeader(_txid);
+    }
+    explicit AddRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
         &fidl_test_nullable_SimpleProtocolAddRequestTable;
@@ -300,6 +302,9 @@ class SimpleProtocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = AddResponse;
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -478,20 +483,6 @@ class SimpleProtocol final {
   }
 
   class EventSender;
-
-  // Helper functions to fill in the transaction header in a
-  // |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-
-   public:
-    static void AddRequest(
-        const ::fidl::DecodedMessage<SimpleProtocol::AddRequest>& _msg,
-        zx_txid_t _txid = 0);
-    static void AddRequest(
-        const ::fidl::EncodedMessage<SimpleProtocol::AddRequest>& _msg,
-        zx_txid_t _txid = 0);
-  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_Int32WrapperTable;

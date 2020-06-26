@@ -167,11 +167,10 @@ zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_clie
 
   // This request is manually sent to allow timeout for the fidl::Call, until fxb/53240
   // is resolved.
-  RegisterRequest request(system_state_transition_client, devfs_handle);
+  RegisterRequest request(0, system_state_transition_client, devfs_handle);
   fidl::BytePart request_bytes(reinterpret_cast<uint8_t*>(&request), sizeof(request),
                                sizeof(request));
   fidl::DecodedMessage<RegisterRequest> msg(std::move(request_bytes));
-  power_manager_fidl::DriverManagerRegistration::SetTransactionHeaderFor::RegisterRequest(msg);
 
   fidl::EncodeResult<RegisterRequest> encode_result = fidl::Encode(std::move(msg));
   if (encode_result.status != ZX_OK) {
