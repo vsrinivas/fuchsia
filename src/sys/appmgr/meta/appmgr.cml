@@ -54,6 +54,10 @@
             as: "/svc_for_sys/fuchsia.boot.FactoryItems",
         },
         {
+            protocol: "/svc/fuchsia.boot.Items",
+            as: "/svc_for_sys/fuchsia.boot.Items",
+        },
+        {
             protocol: "/svc/fuchsia.boot.ReadOnlyLog",
             as: "/svc_for_sys/fuchsia.boot.ReadOnlyLog",
         },
