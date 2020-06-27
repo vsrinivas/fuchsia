@@ -274,6 +274,8 @@ class WaitQueue {
   // A thread's priority has changed.  Update the wait queue bookkeeping to
   // properly reflect this change.
   //
+  // |t| must be blocked on this WaitQueue.
+  //
   // If |propagate| is PropagatePI::Yes, call into the wait queue code to
   // propagate the priority change down the PI chain (if any).  Then returns true
   // if the change of priority has affected the priority of another thread due to
@@ -281,7 +283,7 @@ class WaitQueue {
   //
   // If |propagate| is PropagatePI::No, do not attempt to propagate the PI change.
   // This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
-  static bool PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
+  bool PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
 
   // OwnedWaitQueue needs to be able to call this on WaitQueues to
   // determine if they are base WaitQueues or the OwnedWaitQueue

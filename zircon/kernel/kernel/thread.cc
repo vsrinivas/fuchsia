@@ -143,7 +143,7 @@ bool WaitQueueState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) 
 
 void WaitQueueState::UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate) {
   if (blocking_wait_queue_) {
-    WaitQueue::PriorityChanged(thread, priority, propagate);
+    blocking_wait_queue_->PriorityChanged(thread, priority, propagate);
   }
 }
 

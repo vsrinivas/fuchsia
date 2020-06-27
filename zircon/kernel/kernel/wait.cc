@@ -516,29 +516,28 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   DEBUG_ASSERT(thread_lock.IsHeld());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
 
-  WaitQueue* wq = t->wait_queue_state().blocking_wait_queue_;
-  DEBUG_ASSERT(wq != NULL);
-  DEBUG_ASSERT_MAGIC_CHECK(wq);
+  DEBUG_ASSERT(t->wait_queue_state().blocking_wait_queue_ == this);
+  DEBUG_ASSERT_MAGIC_CHECK(this);
 
   LTRACEF("%p %d -> %d\n", t, old_prio, t->scheduler_state().effective_priority());
 
   // |t|'s effective priority has already been re-calculated.  If |t| is
-  // currently at the head of the wait queue, then |t|'s old priority is the
-  // previous priority of the wait queue.  Otherwise, it is the priority of
-  // the wait queue as it stands before we re-insert |t|
-  int old_wq_prio = (wq->Peek() == t) ? old_prio : wq->BlockedPriority();
+  // currently at the head of this WaitQueue, then |t|'s old priority is the
+  // previous priority of the WaitQueue.  Otherwise, it is the priority of
+  // the WaitQueue as it stands before we re-insert |t|.
+  int old_wq_prio = (Peek() == t) ? old_prio : BlockedPriority();
 
   // simple algorithm: remove the thread from the queue and add it back
   // TODO: implement optimal algorithm depending on all the different edge
   // cases of how the thread was previously queued and what priority its
   // switching to.
-  wq->collection_.Remove(t);
-  wq->collection_.Insert(t);
+  collection_.Remove(t);
+  collection_.Insert(t);
 
-  bool ret = (propagate == PropagatePI::Yes) ? wq->UpdatePriority(old_wq_prio) : false;
+  bool ret = (propagate == PropagatePI::Yes) ? UpdatePriority(old_wq_prio) : false;
 
   if (WAIT_QUEUE_VALIDATION) {
-    t->wait_queue_state().blocking_wait_queue_->ValidateQueue();
+    ValidateQueue();
   }
   return ret;
 }
