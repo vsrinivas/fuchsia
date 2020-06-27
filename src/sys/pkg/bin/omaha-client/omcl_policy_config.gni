@@ -21,7 +21,7 @@ import("//build/config.gni")
 #
 #   for_pkg (optional)
 #     [string] The package to make a config_data blob for. Defaults to
-#     "omaha-client-service"
+#     "omaha-client"
 
 template("omcl_policy_config") {
   forward_variables_from(invoker,
@@ -42,7 +42,7 @@ template("omcl_policy_config") {
   }
 
   if (!defined(for_pkg)) {
-    for_pkg = "omaha-client-service"
+    for_pkg = "omaha-client"
   }
 
   config_path = "$target_gen_dir/policy_config.json"
