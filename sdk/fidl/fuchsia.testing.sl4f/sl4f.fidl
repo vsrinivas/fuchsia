@@ -24,4 +24,11 @@ protocol FacadeProvider {
     /// Executes ‘command’ on ‘facade’. Returns an optional result JSON blob and error string.
     Execute(string:MAX facade, string:MAX command, zx.handle:VMO params_blob)
         -> (zx.handle:VMO? result_blob, string:MAX? error);
+
+    /// Cleans up any resources and transient state associated with SL4F facades hosted by this
+    /// `FacadeProvider`. Returns on completion.
+    Cleanup() -> ();
+
+    /// Prints the state of all facades hosted by this `FacadeProvider`. Returns on completion.
+    Print() -> ();
 };
