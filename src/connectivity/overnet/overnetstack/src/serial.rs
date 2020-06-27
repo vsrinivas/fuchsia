@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fidl::endpoints::create_proxy;
+use fidl::endpoints::{create_proxy, ServiceMarker};
 use fidl_fuchsia_hardware_serial::{
     NewDeviceProxy, NewDeviceProxy_Marker, NewDeviceReadResult, NewDeviceWriteResult,
 };
@@ -30,10 +30,15 @@ pub async fn run_serial_link_handlers(
             let router = router.clone();
             async move {
                 let (cli, svr) = create_proxy()?;
+                let text_desc = format!("{:?}", desc);
                 match desc {
                     Descriptor::Debug => {
                         fuchsia_component::client::connect_to_service::<NewDeviceProxy_Marker>()?
-                            .get_channel(svr)?;
+                            .get_channel(svr)
+                            .context(format!(
+                                "connecting to service {}",
+                                NewDeviceProxy_Marker::NAME
+                            ))?;
                     }
                     Descriptor::Device { path, mut config } => {
                         fdio::service_connect(
@@ -46,7 +51,9 @@ pub async fn run_serial_link_handlers(
                     }
                 }
                 let (rx, tx) = Dev::new(cli).split();
-                run(Role::Server, rx, tx, router, ReportSkipped::new("skipped serial bytes")).await
+                run(Role::Server, rx, tx, router, ReportSkipped::new("skipped serial bytes"))
+                    .await
+                    .context(format!("during run on descriptor: {}", text_desc))
             }
         })
         .await
@@ -72,11 +79,15 @@ fn convert_io_result<R>(
 ) -> Result<R, std::io::Error> {
     match r {
         Ok(Ok(r)) => Ok(r),
-        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
-        Ok(Err(zx::sys::ZX_OK)) => {
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "got OK error?"))
+        Err(e) => {
+            println!("serial i/o fidl error: {:?}", e);
+            Err(std::io::Error::new(std::io::ErrorKind::Other, e))
         }
-        Ok(Err(e)) => Err(zx::Status::from_raw(e).into_io_error()),
+        Ok(Err(zx::sys::ZX_OK)) => panic!(),
+        Ok(Err(e)) => {
+            println!("serial i/o zircon error: {:?}", e);
+            Err(zx::Status::from_raw(e).into_io_error())
+        }
     }
 }
 

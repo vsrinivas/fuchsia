@@ -4,7 +4,7 @@
 
 use crate::fragment_io::{new_fragment_io, FragmentReader, FragmentWriter};
 use crate::lossy_text::LossyText;
-use anyhow::{bail, ensure, format_err, Error};
+use anyhow::{bail, ensure, format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
@@ -76,8 +76,8 @@ async fn write_bytes(
     mut f_write: impl AsyncWrite + Unpin,
 ) -> Result<(), Error> {
     loop {
-        let bytes = framer_reader.read().await?;
-        f_write.write_all(&bytes).await?;
+        let bytes = framer_reader.read().await.context("framer_reader failed")?;
+        f_write.write_all(&bytes).await.context("serial.write_all failed")?;
     }
 }
 
@@ -87,7 +87,7 @@ async fn read_bytes(
 ) -> Result<(), Error> {
     let mut buf = [0u8; 1024];
     loop {
-        let n = f_read.read(&mut buf).await?;
+        let n = f_read.read(&mut buf).await.context("serial.read failed")?;
         deframer_writer.write(&buf[..n]).await?;
     }
 }
@@ -270,6 +270,8 @@ async fn main<OutputSink: AsyncWrite + Unpin>(
             peer_node_id
         }
     };
+
+    log::info!("Established {:?} Overnet serial connection to peer {:?}", role, peer_node_id);
 
     let (link_sender, link_receiver) = router.get()?.new_link(peer_node_id).await?;
     futures::future::try_join(

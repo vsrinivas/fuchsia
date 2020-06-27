@@ -35,7 +35,7 @@ func TestOOM(t *testing.T) {
 		AppendCmdline: "devmgr.log-to-debuglog",
 	})
 
-	i.Start()
+	err = i.Start()
 	if err != nil {
 		t.Fatal(err)
 	}

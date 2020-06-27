@@ -93,6 +93,7 @@ type Params struct {
 
 type Instance struct {
 	cmd    *exec.Cmd
+	piped  *exec.Cmd
 	stdin  *bufio.Writer
 	stdout *bufio.Reader
 	stderr *bufio.Reader
@@ -395,6 +396,12 @@ dm poweroff
 
 // Start the QEMU instance.
 func (i *Instance) Start() error {
+	return i.StartPiped(nil)
+}
+
+// Start the QEMU instance with stdin/stdout piped through a different process.
+// Assumes that the stderr from the piped process should replace the stdout from the emulator.
+func (i *Instance) StartPiped(piped *exec.Cmd) error {
 	stdin, err := i.cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -407,9 +414,35 @@ func (i *Instance) Start() error {
 	if err != nil {
 		return err
 	}
-	i.stdin = bufio.NewWriter(stdin)
-	i.stdout = bufio.NewReader(stdout)
-	i.stderr = bufio.NewReader(stderr)
+
+	if piped != nil {
+		pipedStdin, err := piped.StdinPipe()
+		if err != nil {
+			return err
+		}
+		pipedStdout, err := piped.StdoutPipe()
+		if err != nil {
+			return err
+		}
+		pipedStderr, err := piped.StderrPipe()
+		if err != nil {
+			return err
+		}
+		go io.Copy(pipedStdin, stdout)
+		go io.Copy(stdin, pipedStdout)
+		i.stdout = bufio.NewReader(pipedStderr)
+		i.stderr = bufio.NewReader(stderr)
+
+		err = piped.Start()
+		if err != nil {
+			return err
+		}
+		i.piped = piped
+	} else {
+		i.stdin = bufio.NewWriter(stdin)
+		i.stdout = bufio.NewReader(stdout)
+		i.stderr = bufio.NewReader(stderr)
+	}
 
 	startErr := i.cmd.Start()
 
@@ -431,6 +464,12 @@ func (i *Instance) Start() error {
 
 // Kill terminates the QEMU instance.
 func (i *Instance) Kill() error {
+	if i.piped != nil {
+		err := i.piped.Process.Kill()
+		if err != nil {
+			return err
+		}
+	}
 	return i.cmd.Process.Kill()
 }
 

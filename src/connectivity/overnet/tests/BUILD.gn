@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  public_deps = [ "host_examples:tests" ]
+  public_deps = [
+    "host_examples:tests",
+    "serial:tests",
+  ]
 }
