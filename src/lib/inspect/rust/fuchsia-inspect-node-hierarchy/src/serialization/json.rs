@@ -20,7 +20,7 @@ pub struct RawJsonNodeHierarchySerializer {}
 /// Implements deserialization of a `NodeHierarchy` from a String.
 impl<Key> HierarchyDeserializer<Key> for JsonNodeHierarchySerializer
 where
-    Key: FromStr + Debug,
+    Key: FromStr + Debug + AsRef<str>,
     Error: From<<Key as FromStr>::Err>,
 {
     // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
@@ -37,7 +37,7 @@ where
 /// Implements deserialization of a `NodeHierarchy` from a Serde JSON Value.
 impl<Key> HierarchyDeserializer<Key> for RawJsonNodeHierarchySerializer
 where
-    Key: FromStr + Debug,
+    Key: FromStr + Debug + AsRef<str>,
     Error: From<<Key as FromStr>::Err>,
 {
     // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
@@ -57,7 +57,7 @@ where
 // TODO(43030): Remove explicit root nodes from serialized diagnostics data.
 fn deserialize_json<Key>(root_node: serde_json::Value) -> Result<NodeHierarchy<Key>, Error>
 where
-    Key: FromStr + Debug,
+    Key: FromStr + Debug + AsRef<str>,
     Error: From<<Key as FromStr>::Err>,
 {
     match root_node {
@@ -287,7 +287,7 @@ fn parse_node_object<Key>(
     contents: &Map<String, Value>,
 ) -> Result<NodeHierarchy<Key>, Error>
 where
-    Key: FromStr + Debug,
+    Key: FromStr + Debug + AsRef<str>,
     Error: From<<Key as FromStr>::Err>,
 {
     let mut properties: Vec<Property<Key>> = Vec::new();

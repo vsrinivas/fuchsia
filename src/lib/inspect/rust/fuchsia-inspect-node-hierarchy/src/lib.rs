@@ -121,9 +121,7 @@ where
             child.sort();
         }
     }
-}
 
-impl<Key> NodeHierarchy<Key> {
     pub fn new_root() -> Self {
         NodeHierarchy::new("root", vec![], vec![])
     }
@@ -215,7 +213,58 @@ impl<Key> NodeHierarchy<Key> {
     pub fn add_missing(&mut self, reason: MissingValueReason, name: String) {
         self.missing.push(MissingValue { reason, name });
     }
+    /// Returns the property of the given |name| if one exists.
+    pub fn get_property(&self, name: &str) -> Option<&Property<Key>> {
+        self.properties.iter().find(|prop| prop.name() == name)
+    }
+
+    /// Returns the child of the given |name| if one exists.
+    pub fn get_child(&self, name: &str) -> Option<&NodeHierarchy<Key>> {
+        self.children.iter().find(|node| node.name == name)
+    }
+
+    /// Returns the child of the given |path| if one exists.
+    pub fn get_child_by_path(&self, path: &[&str]) -> Option<&NodeHierarchy<Key>> {
+        let mut result = Some(self);
+        for name in path {
+            result = result.and_then(|node| node.get_child(name));
+        }
+        result
+    }
+
+    /// Returns the property of the given |name| if one exists.
+    pub fn get_property_by_path(&self, path: &[&str]) -> Option<&Property<Key>> {
+        let node = self.get_child_by_path(&path[..path.len() - 1]);
+        node.and_then(|node| node.get_property(path[path.len() - 1]))
+    }
 }
+
+macro_rules! property_type_getters {
+    ($([$variant:ident, $fn_name:ident, $type:ty]),*) => {
+        impl<Key> Property<Key> {
+            $(
+                pub fn $fn_name(&self) -> Option<&$type> {
+                    match self {
+                        Property::$variant(_, value) => Some(value),
+                        _ => None,
+                    }
+                }
+            )*
+        }
+    }
+}
+
+property_type_getters!(
+    [String, string, str],
+    [Bytes, bytes, [u8]],
+    [Int, int, i64],
+    [Uint, uint, u64],
+    [Double, double, f64],
+    [Bool, boolean, bool],
+    [DoubleArray, double_array, ArrayContent<f64>],
+    [IntArray, int_array, ArrayContent<i64>],
+    [UintArray, uint_array, ArrayContent<u64>]
+);
 
 impl<Key> TrieIterableNode<String, Property<Key>> for NodeHierarchy<Key> {
     fn get_children(&self) -> HashMap<&String, &Self> {
@@ -475,11 +524,6 @@ where
             | Property::Bool(name, _)
             | Property::DoubleArray(name, _) => name.as_ref(),
         }
-    }
-
-    /// Convenience wrapper to construct a String property.
-    pub fn string(key: impl Into<Key>, value: impl Into<String>) -> Self {
-        Property::String(key.into(), value.into())
     }
 }
 
@@ -841,6 +885,23 @@ mod tests {
         ];
 
         validate_hierarchy_iteration(results_vec, test_hierarchy);
+    }
+
+    #[test]
+    fn test_getters() {
+        let a_prop = Property::Int("a".to_string(), 1);
+        let b_prop = Property::Uint("b".to_string(), 2);
+        let child2 = NodeHierarchy::new("child2".to_string(), vec![], vec![]);
+        let child =
+            NodeHierarchy::new("child".to_string(), vec![b_prop.clone()], vec![child2.clone()]);
+        let hierarchy =
+            NodeHierarchy::new("root".to_string(), vec![a_prop.clone()], vec![child.clone()]);
+        assert_matches!(hierarchy.get_child("child"), Some(node) if *node == child);
+        assert_matches!(hierarchy.get_child_by_path(&vec!["child", "child2"]),
+                        Some(node) if *node == child2);
+        assert_matches!(hierarchy.get_property("a"), Some(prop) if *prop == a_prop);
+        assert_matches!(hierarchy.get_property_by_path(&vec!["child", "b"]),
+                        Some(prop) if *prop == b_prop);
     }
 
     #[test]

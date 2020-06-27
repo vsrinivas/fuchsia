@@ -162,7 +162,7 @@ impl Message {
                         LogProperty::Uint(Field::ProcessId, pid),
                         LogProperty::Uint(Field::ThreadId, tid),
                         LogProperty::Uint(Field::Dropped, dropped_logs as u64),
-                        LogProperty::string(Field::Msg, message),
+                        LogProperty::String(Field::Msg, message),
                     ],
                     vec![],
                 );
@@ -191,7 +191,7 @@ impl Message {
                 Value::SignedInt(v) => Ok(LogProperty::Int(label, v)),
                 Value::UnsignedInt(v) => Ok(LogProperty::Uint(label, v)),
                 Value::Floating(v) => Ok(LogProperty::Double(label, v)),
-                Value::Text(v) => Ok(LogProperty::string(label, v)),
+                Value::Text(v) => Ok(LogProperty::String(label, v)),
                 Value::__UnknownVariant { .. } => Err(StreamError::UnrecognizedValue),
             }
         }))?;
@@ -514,8 +514,8 @@ mod tests {
                     LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
                     LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
                     LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(Field::Tag, "AAAAAAAAAAA"),
-                    LogProperty::string(Field::Msg, "BBBBB"),
+                    LogProperty::String(Field::Tag, "AAAAAAAAAAA".into()),
+                    LogProperty::String(Field::Msg, "BBBBB".into()),
                 ],
                 vec![],
             ),
@@ -586,9 +586,9 @@ mod tests {
                     LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
                     LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
                     LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(Field::Tag, "AAAAAAAAAAA"),
-                    LogProperty::string(Field::Tag, "BBBBB"),
-                    LogProperty::string(Field::Msg, "CCCCC"),
+                    LogProperty::String(Field::Tag, "AAAAAAAAAAA".to_string()),
+                    LogProperty::String(Field::Tag, "BBBBB".to_string()),
+                    LogProperty::String(Field::Msg, "CCCCC".to_string()),
                 ],
                 vec![],
             ),
@@ -697,7 +697,7 @@ mod tests {
                 LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
                 LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
                 LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                LogProperty::string(Field::Msg, ""),
+                LogProperty::String(Field::Msg, "".to_string()),
             ],
             vec![],
         );
@@ -746,7 +746,7 @@ mod tests {
                         LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
                         LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
                         LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                        LogProperty::string(Field::Msg, "AA")
+                        LogProperty::String(Field::Msg, "AA".to_string())
                     ],
                     vec![],
                 ),
@@ -773,7 +773,7 @@ mod tests {
                     LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
                     LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
                     LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(Field::Msg, ""),
+                    LogProperty::String(Field::Msg, "".to_string()),
                 ],
                 vec![],
             ),
@@ -830,7 +830,7 @@ mod tests {
                     LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
                     LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
                     LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(Field::Msg, ""),
+                    LogProperty::String(Field::Msg, "".to_string()),
                 ],
                 vec![],
             ),
@@ -902,8 +902,8 @@ mod tests {
                         LogProperty::Uint(Field::ProcessId, 43),
                         LogProperty::Uint(Field::ThreadId, 912),
                         LogProperty::Uint(Field::Dropped, 2),
-                        LogProperty::string(Field::Tag, "tag"),
-                        LogProperty::string(Field::Msg, "msg"),
+                        LogProperty::String(Field::Tag, "tag".to_string()),
+                        LogProperty::String(Field::Msg, "msg".to_string()),
                     ],
                     vec![],
                 )
@@ -934,9 +934,9 @@ mod tests {
                 contents: LogHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::string(Field::Tag, "tag1"),
-                        LogProperty::string(Field::Tag, "tag2"),
-                        LogProperty::string(Field::Tag, "tag3"),
+                        LogProperty::String(Field::Tag, "tag1".to_string()),
+                        LogProperty::String(Field::Tag, "tag2".to_string()),
+                        LogProperty::String(Field::Tag, "tag3".to_string()),
                     ],
                     vec![],
                 )

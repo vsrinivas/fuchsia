@@ -356,44 +356,29 @@ impl From<&NodeHierarchy> for ComponentLogStats {
     }
 }
 
-trait NodeHierarchyExt {
-    fn get_child(&self, name: &str) -> Result<&NodeHierarchy, Error>;
-    fn get_property_str(&self, name: &str) -> Result<&str, Error>;
-}
-
-impl NodeHierarchyExt for NodeHierarchy {
-    fn get_child(&self, name: &str) -> Result<&NodeHierarchy, Error> {
-        self.children
-            .iter()
-            .find(|x| x.name == name)
-            .ok_or(format_err!("Failed to find {} node in the inspect hierarchy", name))
-    }
-    fn get_property_str(&self, name: &str) -> Result<&str, Error> {
-        for property in &self.properties {
-            if let Property::String(key, value) = property {
-                if key == name {
-                    return Ok(value);
-                }
-            }
-        }
-        return Err(format_err!("Failed to find string property {}", name));
-    }
-}
-
 // Extracts the component start times from the inspect hierarchy.
 fn get_component_start_times(inspect_root: &NodeHierarchy) -> Result<HashMap<&str, f64>, Error> {
     let mut res = HashMap::new();
-    let events_node = inspect_root.get_child("event_stats")?.get_child("recent_events")?;
+    let events_node = inspect_root
+        .get_child_by_path(&vec!["event_stats", "recent_events"])
+        .ok_or(format_err!("Missing event_stats/recent_events"))?;
 
     for event in &events_node.children {
         // Extract the component name from the moniker. This allows us to match against the
         // component url from log stats.
-        let moniker = event.get_property_str("moniker")?;
+        let moniker = event
+            .get_property("moniker")
+            .and_then(|prop| prop.string())
+            .ok_or(format_err!("Missing moniker"))?;
         let last_slash_index = moniker.rfind("/");
         if let Some(i) = last_slash_index {
             let last_colon_index = moniker.rfind(":");
             if let Some(j) = last_colon_index {
-                res.insert(&moniker[i + 1..j], event.get_property_str("@time")?.parse::<f64>()?);
+                let time = event
+                    .get_property("@time")
+                    .and_then(|prop| prop.double())
+                    .ok_or(format_err!("Missing @time"))?;
+                res.insert(&moniker[i + 1..j], *time);
             }
         }
     }
@@ -414,7 +399,9 @@ async fn print_log_stats(opt: Opt) -> Result<(), Error> {
 
     let hierarchy = response.pop().unwrap();
 
-    let stats_node = hierarchy.get_child("log_stats")?.get_child("by_component")?;
+    let stats_node = hierarchy
+        .get_child_by_path(&vec!["log_stats", "by_component"])
+        .ok_or(format_err!("Missing log_stats/by_component"))?;
     let mut stats_list =
         stats_node.children.iter().map(|x| ComponentLogStats::from(x)).collect::<Vec<_>>();
     stats_list.sort_by_key(|x| Reverse(x.get_sort_key()));

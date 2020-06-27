@@ -153,8 +153,8 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
             vec![
                 LogProperty::Uint(Field::ProcessId, pid),
                 LogProperty::Uint(Field::ThreadId, tid),
-                LogProperty::string(Field::Tag, "klog"),
-                LogProperty::string(Field::Msg, contents),
+                LogProperty::String(Field::Tag, "klog".to_string()),
+                LogProperty::String(Field::Msg, contents),
             ],
             vec![],
         ),
@@ -276,8 +276,8 @@ pub mod tests {
                     vec![
                         LogProperty::Uint(Field::ProcessId, klog.pid),
                         LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::string(Field::Tag, "klog"),
-                        LogProperty::string(Field::Msg, "test log")
+                        LogProperty::String(Field::Tag, "klog".to_string()),
+                        LogProperty::String(Field::Msg, "test log".to_string())
                     ],
                     vec![]
                 )
@@ -298,8 +298,8 @@ pub mod tests {
                     vec![
                         LogProperty::Uint(Field::ProcessId, klog.pid),
                         LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::string(Field::Tag, "klog"),
-                        LogProperty::string(
+                        LogProperty::String(Field::Tag, "klog".to_string()),
+                        LogProperty::String(
                             Field::Msg,
                             String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
                                 .unwrap()
@@ -324,8 +324,8 @@ pub mod tests {
                     vec![
                         LogProperty::Uint(Field::ProcessId, klog.pid),
                         LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::string(Field::Tag, "klog"),
-                        LogProperty::string(Field::Msg, "")
+                        LogProperty::String(Field::Tag, "klog".to_string()),
+                        LogProperty::String(Field::Msg, "".to_string())
                     ],
                     vec![]
                 )
@@ -364,8 +364,8 @@ pub mod tests {
                     vec![
                         LogProperty::Uint(Field::ProcessId, klog.pid),
                         LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::string(Field::Tag, "klog"),
-                        LogProperty::string(Field::Msg, "test log")
+                        LogProperty::String(Field::Tag, "klog".to_string()),
+                        LogProperty::String(Field::Msg, "test log".to_string())
                     ],
                     vec![]
                 )

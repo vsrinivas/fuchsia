@@ -17,32 +17,6 @@ use {
 const TEST_COMPONENT: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
 
-// TODO(fxb/54357): Move these into the core inspect library.
-trait NodeHierarchyExt {
-    fn get_child(&self, name: &str) -> &NodeHierarchy;
-    fn get_property_str(&self, name: &str) -> &str;
-}
-
-impl NodeHierarchyExt for NodeHierarchy {
-    fn get_child(&self, name: &str) -> &NodeHierarchy {
-        self.children
-            .iter()
-            .find(|x| x.name == name)
-            .expect(&format!("Failed to find {} node in the inspect hierarchy", name))
-    }
-
-    fn get_property_str(&self, name: &str) -> &str {
-        for property in &self.properties {
-            if let Property::String(key, value) = property {
-                if key == name {
-                    return value;
-                }
-            }
-        }
-        panic!(format!("Failed to find string property {}", name));
-    }
-}
-
 // Verifies that archivist attributes logs from this component.
 async fn verify_component_attributed(url: &str, expected_info_count: u64) {
     let mut response = InspectDataFetcher::new()
@@ -54,7 +28,7 @@ async fn verify_component_attributed(url: &str, expected_info_count: u64) {
         .await
         .unwrap();
     let hierarchy = response.pop().unwrap();
-    let stats_node = hierarchy.get_child("log_stats").get_child("by_component");
+    let stats_node = hierarchy.get_child_by_path(&vec!["log_stats", "by_component"]).unwrap();
     let component_stats = stats_node
         .children
         .iter()

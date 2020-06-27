@@ -133,8 +133,8 @@ mod tests {
                     LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
                     LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
                     LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::string(Field::Tag, "AAAAA"),
-                    LogProperty::string(Field::Msg, "BBBBB"),
+                    LogProperty::String(Field::Tag, "AAAAA".to_string()),
+                    LogProperty::String(Field::Msg, "BBBBB".to_string()),
                 ],
                 vec![],
             ),
@@ -176,8 +176,8 @@ mod tests {
             contents: LogHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::string(Field::Other("key".to_string()), "value"),
-                    LogProperty::string(Field::Tag, "tag-a"),
+                    LogProperty::String(Field::Other("key".to_string()), "value".to_string()),
+                    LogProperty::String(Field::Tag, "tag-a".to_string()),
                 ],
                 vec![],
             ),
