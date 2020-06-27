@@ -191,7 +191,7 @@ func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []stri
 	// are meant to mirror those used by `fx qemu`.
 	if params.Arch == Arm64 {
 		args = append(args, "-machine", "virtualization=true",
-			"-cpu", "cortex-a53", "-machine", "virt,gic_version=3")
+			"-cpu", "max", "-machine", "virt-2.12,gic-version=3")
 	} else if params.Arch == X64 {
 		args = append(args, "-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
 			"-cpu", "Haswell,+smap,-check,-fsgsbase")

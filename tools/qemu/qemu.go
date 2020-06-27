@@ -119,12 +119,12 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 	switch target {
 	case TargetEnum.AArch64:
 		if kvm {
-			q.SetFlag("-machine", "virt,gic_version=host")
+			q.SetFlag("-machine", "virt-2.12,gic-version=host")
 			q.SetFlag("-cpu", "host")
 			q.SetFlag("-enable-kvm")
 		} else {
-			q.SetFlag("-machine", "virt,gic_version=3,virtualization=true")
-			q.SetFlag("-cpu", "cortex-a53")
+			q.SetFlag("-machine", "virt-2.12,gic-version=3,virtualization=true")
+			q.SetFlag("-cpu", "max")
 		}
 	case TargetEnum.X86_64:
 		q.SetFlag("-machine", "q35")
