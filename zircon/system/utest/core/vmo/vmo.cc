@@ -1460,4 +1460,84 @@ TEST(VmoTestCase, PinTests) {
   }
 }
 
+TEST(VmoTestCase, DecommitChildSliceTests) {
+  constexpr size_t kTestPages = 6;
+
+  struct Level {
+    Level(size_t offset_pages, size_t size_pages)
+        : offset(offset_pages * PAGE_SIZE), size(size_pages * PAGE_SIZE) {}
+
+    zx::vmo vmo;
+    const size_t offset;
+    const size_t size;
+    size_t size_past_end = 0;
+  };
+
+  std::array levels = {
+      Level{0, kTestPages},
+      Level{1, kTestPages - 2},
+      Level{1, kTestPages - 4},
+  };
+
+  // Create the root level of the child-slice hierarchy.
+  ASSERT_OK(zx::vmo::create(levels[0].size, 0, &levels[0].vmo));
+
+  // Now that we have our root, create each of our child slice levels.  Each
+  // level will be offset by level[i].offset bytes into level[i - 1].vmo.
+  for (size_t i = 1; i < levels.size(); ++i) {
+    auto &child = levels[i];
+    auto &parent = levels[i - 1];
+    ASSERT_OK(parent.vmo.create_child(ZX_VMO_CHILD_SLICE, child.offset, child.size, &child.vmo));
+
+    // Compute the amount of space past this end of this child slice which
+    // still exists in the root VMO.
+    ASSERT_LE(child.size + child.offset, parent.size);
+    child.size_past_end = parent.size_past_end + (parent.size - (child.size + child.offset));
+  }
+
+
+  // OK, now we should be ready to test each of the levels.
+  for (const auto &level : levels) {
+    // Make sure that we test ranges which have starting and ending points
+    // entirely inside of the VMO, in the region after the VMO but inside the
+    // root VMO, and entirely outside of even the root VMO.
+    size_t root_end = level.size + level.size_past_end;
+    bool exercised_out_of_range = false;
+    bool exercised_ok = false;
+    for (size_t start = 0; start <= (root_end + PAGE_SIZE); start += PAGE_SIZE) {
+      for (size_t end = start + PAGE_SIZE; end <= (root_end + (2 * PAGE_SIZE)); end += PAGE_SIZE) {
+        size_t size = end - start;
+
+        // Attempt to completely commit the root before the decommit operation.
+        EXPECT_OK(levels[0].vmo.op_range(ZX_VMO_OP_COMMIT, 0, levels[0].size, nullptr, 0));
+
+        // Now attempt to decommit our test range and check to make sure that we
+        // get the expected result.  We only expect failure if our offset is out
+        // of range for our child VMO.  We expect extra long sizes to be
+        // silently trimmed for us.
+        zx_status_t expected_status;
+
+        if (start > level.size) {
+          expected_status = ZX_ERR_OUT_OF_RANGE;
+          exercised_out_of_range = true;
+        } else {
+          expected_status = ZX_OK;
+          exercised_ok = true;
+        }
+
+        EXPECT_STATUS(
+            level.vmo.op_range(ZX_VMO_OP_DECOMMIT, start, size, nullptr, 0),
+            expected_status,
+            "Decommit op was offset 0x%zx size 0x%zx in VMO (offset 0x%zx size 0x%zx spe 0x%zx)",
+            start, size, level.offset, level.size, level.size_past_end);
+      }
+    }
+
+    // For every level that we test, make sure we have at least one test vector
+    // which expects ZX_ERR_OUT_OF_RANGE and at least one which expects ZX_OK.
+    EXPECT_TRUE(exercised_out_of_range);
+    EXPECT_TRUE(exercised_ok);
+  }
+}
+
 }  // namespace

@@ -2146,11 +2146,31 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // Trim the size and perform our zero-length hot-path check before we recurse
+  // up to our top-level ancestor.  Size bounding needs to take place relative
+  // to the child the operation was originally targeted against.
+  uint64_t new_len;
+  if (!TrimRange(offset, len, size_, &new_len)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // was in range, just zero length
+  if (new_len == 0) {
+    return ZX_OK;
+  }
+
+  // If this is a child slice of a VMO, then find our way up to our root
+  // ancestor (taking our offset into account as we do), and then recurse,
+  // running the operation against our ancestor.  Note that
+  // PagedParentOfSliceLocked will iteratively walk all the way up to our
+  // non-slice ancestor, not just our immediate parent, so we can guaranteed
+  // bounded recursion.
   if (is_slice()) {
     uint64_t parent_offset;
     VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
-    return parent->DecommitRangeLocked(offset + parent_offset, len, free_list);
+    DEBUG_ASSERT(!parent->is_slice());  // assert bounded recursion.
+    return parent->DecommitRangeLocked(offset + parent_offset, new_len, free_list);
   }
 
   if (parent_ || GetRootPageSourceLocked()) {
@@ -2160,17 +2180,6 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
   // Demand offset and length be correctly aligned to not give surprising user semantics.
   if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(len)) {
     return ZX_ERR_INVALID_ARGS;
-  }
-
-  // trim the size
-  uint64_t new_len;
-  if (!TrimRange(offset, len, size_, &new_len)) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  // was in range, just zero length
-  if (new_len == 0) {
-    return ZX_OK;
   }
 
   LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 "\n", offset, offset + new_len);
