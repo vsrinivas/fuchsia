@@ -45,10 +45,10 @@ class ResourceDispatcher final
   // given region of address space from a particular address space allocator, or a root resource
   // granted full access permissions. Only one instance of the root resource is created at boot.
   static zx_status_t Create(KernelHandle<ResourceDispatcher>* handle, zx_rights_t* rights,
-                            uint32_t kind, uint64_t base, size_t size, uint32_t flags,
+                            zx_rsrc_kind_t kind, uint64_t base, size_t size, uint32_t flags,
                             const char name[ZX_MAX_NAME_LEN], ResourceStorage* = nullptr);
   // Initializes the static mmembers used for bookkeeping and storage.
-  static zx_status_t InitializeAllocator(uint32_t kind, uint64_t base, size_t size,
+  static zx_status_t InitializeAllocator(zx_rsrc_kind_t kind, uint64_t base, size_t size,
                                          ResourceStorage* = nullptr);
   static void Dump();
 
@@ -78,7 +78,7 @@ class ResourceDispatcher final
   ~ResourceDispatcher();
 
  private:
-  ResourceDispatcher(uint32_t kind, uint64_t base, size_t size, uint32_t flags,
+  ResourceDispatcher(zx_rsrc_kind_t kind, uint64_t base, size_t size, uint32_t flags,
                      RegionAllocator::Region::UPtr&& region, ResourceStorage* storage);
 
   template <typename T>
@@ -93,7 +93,7 @@ class ResourceDispatcher final
     return ZX_OK;
   }
 
-  const uint32_t kind_;
+  const zx_rsrc_kind_t kind_;
   const uint64_t base_;
   const size_t size_;
   const uint32_t flags_;

@@ -41,7 +41,7 @@ const char* kLogTag = "Resources:";
 // Validation of parent handles is handled at the syscall boundary in the
 // implementation for |zx_resource_create|.
 zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
-                                       zx_rights_t* rights, uint32_t kind, uint64_t base,
+                                       zx_rights_t* rights, zx_rsrc_kind_t kind, uint64_t base,
                                        size_t size, uint32_t flags,
                                        const char name[ZX_MAX_NAME_LEN], ResourceStorage* storage) {
   Guard<Mutex> guard{ResourcesLock::Get()};
@@ -141,8 +141,8 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
   return ZX_OK;
 }
 
-ResourceDispatcher::ResourceDispatcher(uint32_t kind, uint64_t base, uint64_t size, uint32_t flags,
-                                       RegionAllocator::Region::UPtr&& region,
+ResourceDispatcher::ResourceDispatcher(zx_rsrc_kind_t kind, uint64_t base, uint64_t size,
+                                       uint32_t flags, RegionAllocator::Region::UPtr&& region,
                                        ResourceStorage* storage)
     : kind_(kind),
       base_(base),
@@ -192,7 +192,7 @@ ResourceDispatcher::~ResourceDispatcher() {
   resource_list_->erase(*this);
 }
 
-zx_status_t ResourceDispatcher::InitializeAllocator(uint32_t kind, uint64_t base, size_t size,
+zx_status_t ResourceDispatcher::InitializeAllocator(zx_rsrc_kind_t kind, uint64_t base, size_t size,
                                                     ResourceStorage* storage) {
   DEBUG_ASSERT(kind < ZX_RSRC_KIND_COUNT);
   DEBUG_ASSERT(size > 0);
@@ -252,7 +252,7 @@ static constexpr void flags_to_string(uint32_t flags, char str[kFlagLen]) {
 static void pad_field(int width) { printf("\t%.*s", width, "                        "); }
 
 void ResourceDispatcher::Dump() {
-  uint32_t kind;
+  zx_rsrc_kind_t kind;
   auto callback = [&](const ResourceDispatcher& r) -> zx_status_t {
     char name[ZX_MAX_NAME_LEN];
     char flag_str[kFlagLen];

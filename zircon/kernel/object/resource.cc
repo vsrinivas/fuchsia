@@ -26,7 +26,7 @@
 // Possible errors:
 // ++ ZX_ERR_ACCESS_DENIED: |handle| is not the right |kind| of handle.
 // ++ ZX_ERR_WRONG_TYPE: |handle| is not a valid handle.
-zx_status_t validate_resource(zx_handle_t handle, uint32_t kind) {
+zx_status_t validate_resource(zx_handle_t handle, zx_rsrc_kind_t kind) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<ResourceDispatcher> resource;
   auto status = up->GetDispatcher(handle, &resource);
@@ -42,7 +42,7 @@ zx_status_t validate_resource(zx_handle_t handle, uint32_t kind) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, uint32_t kind,
+zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, zx_rsrc_kind_t kind,
                                      uintptr_t base, size_t size) {
   // Root gets access to almost everything, but there are still resource ranges
   // it is not permitted to mint. For example:
@@ -110,7 +110,7 @@ zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, u
 //                       the request.
 // ++ ZX_ERR_OUT_OF_RANGE: The range specified by |base| and |Len| is not granted by this
 // resource.
-zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uintptr_t base,
+zx_status_t validate_ranged_resource(zx_handle_t handle, zx_rsrc_kind_t kind, uintptr_t base,
                                      size_t size) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<ResourceDispatcher> resource;

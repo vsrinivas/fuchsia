@@ -19,13 +19,14 @@
 // Determines if this handle is to a resource of the specified
 // kind *or* to the root resource, which can stand in for any kind.
 // Used to provide access to privileged syscalls.
-zx_status_t validate_resource(zx_handle_t handle, uint32_t kind);
+zx_status_t validate_resource(zx_handle_t handle, zx_rsrc_kind_t kind);
 
 // Validates a resource based on type and low/high range.
 class ResourceDispatcher;
-zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, uint32_t kind,
+zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, zx_rsrc_kind_t kind,
                                      uint64_t base, size_t len);
-zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uint64_t base, size_t len);
+zx_status_t validate_ranged_resource(zx_handle_t handle, zx_rsrc_kind_t kind, uint64_t base,
+                                     size_t len);
 
 #if ARCH_X86
 // Validates enabling ioport access bits for a given process based on a resource handle
