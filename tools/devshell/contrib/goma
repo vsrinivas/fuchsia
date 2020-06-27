@@ -58,6 +58,10 @@ set -e
 
 readonly GOMA_AUTH="$PREBUILT_GOMA_DIR/goma_auth.py"
 readonly GOMA_CTL="$PREBUILT_GOMA_DIR/goma_ctl.py"
+readonly GOMA_HTTP2_PROXY="$PREBUILT_GOMA_DIR/http_proxy"
+readonly GOMA_HTTP2_PROXY_PORT="8199"
+# The URL of the backend cannot be read from prebuilt. Hard-code it for now.
+BACKEND_URL="rbe-prod1.endpoints.fuchsia-infra-goma-prod.cloud.goog"
 
 if [[ ! -x "$GOMA_AUTH" || ! -x "$GOMA_CTL" ]]; then
   echo "*** $PREBUILT_GOMA_DIR is not current."
@@ -78,6 +82,14 @@ function main {
       update=true
       shift
       ;;
+    --disable-http2)
+      use_http2=false
+      shift
+      ;;
+    --kill)
+      kill-goma
+      return 0
+      ;;
     *)
       fx-command-help
       return 1
@@ -92,9 +104,47 @@ function main {
   "$GOMA_AUTH" info || "$GOMA_AUTH" login "$@"
   if "$GOMA_CTL" status; then
     "$GOMA_CTL" update_hook
+    return 0
+  fi
+  if $use_http2; then
+    if [[ -n "$GOMA_SERVER_HOST" ]]; then
+      BACKEND_URL=$GOMA_SERVER_HOST
+    fi
+    setup-http2-proxy
+    # TODO(haowei): Remove these after HTTP2 proxy is merged into goma_ctl.
+    echo "*** Using Goma experimental HTTP2 proxy."
+    echo "*** If you experiencing instability, please run: "
+    echo "*** \`fx goma --kill && fx goma --disable-http2\`"
+    echo "*** to restart goma without HTTP2 proxy."
+    GOMA_SERVER_HOST=127.0.0.1 GOMA_SERVER_PORT="$GOMA_HTTP2_PROXY_PORT" GOMA_USE_SSL=false "$GOMA_CTL" ensure_start
   else
     "$GOMA_CTL" ensure_start
   fi
+}
+
+function kill-goma {
+  set +e
+  pgrep http_proxy > /dev/null
+  retcode=$?
+  set -e
+  if [ $retcode -eq 0 ]; then
+    killall http_proxy
+  fi
+  "$GOMA_CTL" ensure_stop
+}
+
+function setup-http2-proxy {
+  set +e
+  pgrep http_proxy > /dev/null
+  retcode=$?
+  set -e
+  if [ $retcode -eq 0 ]; then
+    return
+  fi
+  (
+    trap '' 1
+    "$GOMA_HTTP2_PROXY" -server-host "$BACKEND_URL" -port "$GOMA_HTTP2_PROXY_PORT" 2>&1 >/dev/null &
+  )
 }
 
 # TODO(mcgrathr): Remove this after some period when old installs are gone.
