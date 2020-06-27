@@ -111,9 +111,17 @@ function check {
         "$(cd "$goma_dir" && /bin/pwd)" = "$(cd "$PREBUILT_GOMA_DIR" && /bin/pwd)" ]]; then
     return 0
   fi
-  echo "*** Detected old Goma installed in $goma_dir"
-  echo "*** Recommend \`fx goma_ctl stop\` and \`rm -rf '$goma_dir'\`."
-  echo "*** It may still be necessary to run \`fx goma\` separately in each old build."
+  # Running goma has different directory than current one, test the versions.
+  local running_goma_version="$("$goma_dir"/compiler_proxy --version)"
+  local prebuilt_goma_version="$("$PREBUILT_GOMA_DIR"/compiler_proxy --version)"
+  if [[ "$running_goma_version" = "$prebuilt_goma_version" ]]; then
+    # Running daemon has same version string as one from prebuilt.
+    return 0
+  fi
+
+  echo "*** Detected a different version of Goma daemon running at $goma_dir"
+  echo "*** Recommend \`fx goma_ctl ensure_stop\` and \`fx goma\` to restart Goma daemon with current version."
+  echo "*** Goma-client should not be used when there is a version mismatch."
   return 1
 }
 
@@ -140,7 +148,6 @@ function check-build {
     sed -e /use_goma/d "$FUCHSIA_BUILD_DIR/args.gn" > "$FUCHSIA_BUILD_DIR/args.gn.new"
     mv -f "$FUCHSIA_BUILD_DIR/args.gn.new" "$FUCHSIA_BUILD_DIR/args.gn"
     echo "use_goma = true" >> "$FUCHSIA_BUILD_DIR/args.gn"
-    echo "*** Make sure that Goma has been set up via \`fx goma bootstrap\`!"
     gen=true
   else
     echo "$FUCHSIA_BUILD_DIR has Goma disabled."
