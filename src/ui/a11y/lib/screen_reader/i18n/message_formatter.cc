@@ -12,8 +12,8 @@
 namespace a11y {
 namespace i18n {
 
-MessageFormatter::MessageFormatter(std::string language, std::unique_ptr<intl::Lookup> lookup)
-    : language_(std::move(language)), lookup_(std::move(lookup)) {}
+MessageFormatter::MessageFormatter(icu::Locale locale, std::unique_ptr<intl::Lookup> lookup)
+    : locale_(std::move(locale)), lookup_(std::move(lookup)) {}
 
 std::optional<std::string> MessageFormatter::FormatStringById(
     const uint64_t id, const std::vector<std::string>& arg_names,
@@ -37,8 +37,7 @@ std::optional<std::string> MessageFormatter::FormatStringById(
   }
 
   UErrorCode status = U_ZERO_ERROR;
-  icu::MessageFormat message_format(std::string(message_pattern).c_str(),
-                                    icu::Locale(language_.c_str()), status);
+  icu::MessageFormat message_format(std::string(message_pattern).c_str(), locale_, status);
   FX_DCHECK(U_SUCCESS(status))
       << "Tried to build an icu::MessageFormat with a invalid string pattern" << message_pattern;
   std::vector<icu::Formattable> icu_arg_values;

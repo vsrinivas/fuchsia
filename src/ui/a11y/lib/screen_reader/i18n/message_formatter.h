@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/lib/intl/lookup/cpp/lookup.h"
+#include "third_party/icu/source/i18n/unicode/msgfmt.h"
 
 namespace a11y {
 namespace i18n {
@@ -26,9 +27,8 @@ namespace i18n {
 // documentation.
 class MessageFormatter {
  public:
-  // Language is a lower-case two-letter code as defined by ISO-639.
   // |lookup_| must be initialized and holds the icu::MessageFormat patterns.
-  explicit MessageFormatter(std::string language, std::unique_ptr<intl::Lookup> lookup);
+  explicit MessageFormatter(icu::Locale locale, std::unique_ptr<intl::Lookup> lookup);
   virtual ~MessageFormatter() = default;
 
   // Formats a icu::MessageFormat pattern pointed by |id|, optionally using |arg_names| which map to
@@ -46,8 +46,8 @@ class MessageFormatter {
   MessageFormatter() = default;
 
  private:
-  // Language code used to build MessageFormat.
-  std::string language_;
+  // Locale used to build MessageFormat.
+  icu::Locale locale_;
   // API where messages are retrieeved.
   std::unique_ptr<intl::Lookup> lookup_;
 };

@@ -9,6 +9,8 @@
 #include <memory>
 
 #include "src/lib/intl/lookup/cpp/lookup.h"
+#include "third_party/icu/source/common/unicode/ucnv.h"
+#include "third_party/icu/source/i18n/unicode/msgfmt.h"
 
 namespace accessibility_test {
 namespace {
@@ -24,15 +26,13 @@ class MessageFormatterTest : public gtest::TestLoopFixture {
   MessageFormatterTest() {}
 
   ~MessageFormatterTest() = default;
-
- protected:
 };
 
 TEST_F(MessageFormatterTest, MessageIDDoesNotExist) {
   auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
   ASSERT_FALSE(lookup_or_error.is_error());
-  auto formatter =
-      std::make_unique<a11y::i18n::MessageFormatter>("pt", lookup_or_error.take_value());
+  auto formatter = std::make_unique<a11y::i18n::MessageFormatter>(icu::Locale("pt"),
+                                                                  lookup_or_error.take_value());
   auto result = formatter->FormatStringById(3);
   EXPECT_FALSE(result);
 }
@@ -40,8 +40,8 @@ TEST_F(MessageFormatterTest, MessageIDDoesNotExist) {
 TEST_F(MessageFormatterTest, FormatsMessageWithNamedArgument) {
   auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
   ASSERT_FALSE(lookup_or_error.is_error());
-  auto formatter =
-      std::make_unique<a11y::i18n::MessageFormatter>("pt", lookup_or_error.take_value());
+  auto formatter = std::make_unique<a11y::i18n::MessageFormatter>(icu::Locale("pt"),
+                                                                  lookup_or_error.take_value());
   auto result = formatter->FormatStringById(1, {"person"}, {"Goku"});
   ASSERT_TRUE(result);
   EXPECT_EQ(result.value(), "Hello Goku!");
@@ -50,8 +50,8 @@ TEST_F(MessageFormatterTest, FormatsMessageWithNamedArgument) {
 TEST_F(MessageFormatterTest, InvalidArgumentName) {
   auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
   ASSERT_FALSE(lookup_or_error.is_error());
-  auto formatter =
-      std::make_unique<a11y::i18n::MessageFormatter>("pt", lookup_or_error.take_value());
+  auto formatter = std::make_unique<a11y::i18n::MessageFormatter>(icu::Locale("pt"),
+                                                                  lookup_or_error.take_value());
   auto result = formatter->FormatStringById(1, {"age"}, {"42"});
   ASSERT_FALSE(result);
 }
@@ -59,8 +59,8 @@ TEST_F(MessageFormatterTest, InvalidArgumentName) {
 TEST_F(MessageFormatterTest, MoreArgumentsThanPattern) {
   auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
   ASSERT_FALSE(lookup_or_error.is_error());
-  auto formatter =
-      std::make_unique<a11y::i18n::MessageFormatter>("pt", lookup_or_error.take_value());
+  auto formatter = std::make_unique<a11y::i18n::MessageFormatter>(icu::Locale("pt"),
+                                                                  lookup_or_error.take_value());
   auto result = formatter->FormatStringById(1, {"person", "age"}, {"Goku", "42"});
   ASSERT_FALSE(result);
 }
@@ -68,8 +68,8 @@ TEST_F(MessageFormatterTest, MoreArgumentsThanPattern) {
 TEST_F(MessageFormatterTest, DifferentNumberOfArgumentValuesAndArgumentNames) {
   auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
   ASSERT_FALSE(lookup_or_error.is_error());
-  auto formatter =
-      std::make_unique<a11y::i18n::MessageFormatter>("pt", lookup_or_error.take_value());
+  auto formatter = std::make_unique<a11y::i18n::MessageFormatter>(icu::Locale("pt"),
+                                                                  lookup_or_error.take_value());
   auto result = formatter->FormatStringById(1, {"person"}, {"Goku", "42"});
   ASSERT_FALSE(result);
 }
@@ -77,8 +77,8 @@ TEST_F(MessageFormatterTest, DifferentNumberOfArgumentValuesAndArgumentNames) {
 TEST_F(MessageFormatterTest, FormatsMessageWithNoArgument) {
   auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
   ASSERT_FALSE(lookup_or_error.is_error());
-  auto formatter =
-      std::make_unique<a11y::i18n::MessageFormatter>("pt", lookup_or_error.take_value());
+  auto formatter = std::make_unique<a11y::i18n::MessageFormatter>(icu::Locale("pt-BR"),
+                                                                  lookup_or_error.take_value());
   auto result = formatter->FormatStringById(2);
   ASSERT_TRUE(result);
   EXPECT_EQ(result.value(), "Hello world!");
