@@ -6,6 +6,7 @@
 
 import("$zx/kernel/phys/phys_executable.gni")
 import("$zx/kernel/phys/qemu.gni")
+import("$zx/kernel/phys/zbi_executable.gni")
 import("$zx/public/gn/test/zbi_test.gni")
 
 assert(toolchain.environment == "kernel.phys" ||
@@ -21,7 +22,21 @@ source_set("qemu-test-main") {
     "$zx/kernel/lib/libc",
     "$zx/system/ulib/uart",
   ]
-  public_deps = [ ":test-main" ]
+  public_deps = [
+    # This is public to propagate its public_deps so dependents
+    # of qemu-test-main can use #include "test-main.h".
+    ":test-main",
+  ]
+}
+
+source_set("zbi-test-main") {
+  testonly = true
+  sources = [ "zbi-test-main.cc" ]
+  defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+  deps = [
+    ":test-main",
+    "$zx/kernel/lib/libc",
+  ]
 }
 
 source_set("test-main") {
@@ -76,7 +91,7 @@ template("phys_qemu_test") {
 
     # Set a short timeout since the tests don't necessarily shut down QEMU
     # after printing the success string.
-    timeout = 30  # seconds
+    timeout = qemu_short_timeout
   }
 
   # The "null redirect" is needed to perform variant selection consistent
@@ -90,14 +105,62 @@ template("phys_qemu_test") {
   }
 }
 
-phys_qemu_test("hello-world-test") {
-  sources = [ "hello-world-test.cc" ]
-  deps = [ "$zx/kernel/lib/libc" ]
+# Build these tests in both phys_qemu_test() and zbi_executable()/zbi_test()
+# incarnations.
+common_tests = [
+  "hello-world-test",
+  "backtrace-test",
+  "phys-unittests",
+]
+
+foreach(test, common_tests) {
+  phys_qemu_test("qemu-$test") {
+    deps = [ ":$test" ]
+  }
+
+  if (current_cpu == "arm64") {  # TODO(mcgrathr): enable for x86
+    zbi_executable("zbi-$test.executable") {
+      testonly = true
+      deps = [
+        ":$test",
+        ":zbi-test-main",
+      ]
+    }
+
+    zbi_test("zbi-$test") {
+      args = []
+      deps = [ ":zbi-$test.executable" ]
+
+      # There is no BOOTFS so this doesn't count as a "complete" ZBI.
+      cpu = ""
+      tags = [ "incomplete" ]
+
+      # TODO(mcgrathr): enable on hardware too
+      device_types = [ "QEMU" ]
+
+      # Set a short timeout since the tests don't reliably reboot the machine.
+      timeout = qemu_short_timeout
+    }
+  }
 }
 
-phys_qemu_test("backtrace-test") {
+source_set("hello-world-test") {
+  testonly = true
+  sources = [ "hello-world-test.cc" ]
+  deps = [
+    ":test-main",
+    "$zx/kernel/lib/libc",
+  ]
+}
+
+source_set("backtrace-test") {
+  testonly = true
   sources = [ "backtrace-test.cc" ]
-  deps = [ "$zx/kernel/lib/libc" ]
+  deps = [
+    ":test-main",
+    "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/libc",
+  ]
 }
 
 # Ideally we'd test all four combinations on arm64 and both combinations on
@@ -106,7 +169,7 @@ phys_qemu_test("backtrace-test") {
 # x86 so we can't disable the ABI support for it there.  The start.S code only
 # enables extra stack support conditionally so as not to waste space, so there
 # isn't a good way to test non-default configurations.
-source_set("unittests") {
+source_set("phys-unittests") {
   testonly = true
   sources = [
     "phys-unittests.cc",
@@ -120,16 +183,15 @@ source_set("unittests") {
   ]
 }
 
-phys_qemu_test("qemu-phys-unittests") {
-  deps = [ ":unittests" ]
-}
-
 group("test") {
   testonly = true
 
-  deps = [
-    ":backtrace-test",
-    ":hello-world-test",
-    ":qemu-phys-unittests",
-  ]
+  deps = []
+  foreach(test, common_tests) {
+    deps += [ ":qemu-$test" ]
+
+    if (current_cpu == "arm64") {  # TODO(mcgrathr): enable for x86
+      deps += [ ":zbi-$test" ]
+    }
+  }
 }

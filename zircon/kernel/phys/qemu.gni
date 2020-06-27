@@ -25,3 +25,6 @@ if (toolchain.environment == "kernel.phys") {
   # What to link into a raw QEMU kernel executable (x86-32 Multiboot).
   qemu_deps = [ "$zx/kernel/arch/x86/phys:multiboot" ]
 }
+
+# zbi_test() $timeout value for short-running tests launched via QEMU.
+qemu_short_timeout = 30

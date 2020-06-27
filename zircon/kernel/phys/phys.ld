@@ -60,6 +60,14 @@ SECTIONS {
 
   .data : {
     *(.data*)
+
+    /*
+     * For ZBI format, the file size must be aligned to 8 bytes.  Just aligning
+     * doesn't do anything to the ultimate binary-format load image size when
+     * there isn't any subsequent data.  So align and write a useless word.
+     */
+    . = ALIGN(8);
+    QUAD(0xdeadd00dfeedface);
   }
 
   /*
@@ -90,6 +98,13 @@ SECTIONS {
     . = ALIGN(16);
     PROVIDE_HIDDEN(_end = .);
   }
+
+  /*
+   * This is the amount of memory past the load image that should be
+   * reserved by the boot loader.  In a ZBI executable, it goes into
+   * the zbi_kernel_t::reserve_memory_size field.
+   */
+  PROVIDE_HIDDEN(PHYS_RESERVE_MEMORY_SIZE = _end - PHYS_LOAD_END);
 }
 
 PHDRS {

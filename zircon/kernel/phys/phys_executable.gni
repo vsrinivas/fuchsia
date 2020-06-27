@@ -93,7 +93,9 @@ template("phys_executable") {
       # actual executable.
       variant_target = {
         match = "executable"
-        forward_variables_from(invoker, [ "output_name" ])
+        if (defined(invoker.output_name)) {
+          output_name = invoker.output_name
+        }
       }
 
       if (!defined(output_dir)) {

@@ -82,6 +82,19 @@ struct Driver {
 };
 
 }  // namespace null
+
+// Provide a specialization to do nothing with the lack of configuration info
+// and provide no access to the lack of hardware.
+template <>
+class BasicIoProvider<null::Driver::config_type> {
+ public:
+  BasicIoProvider(const null::Driver::config_type&, uint16_t) {}
+
+ private:
+  // Nothing should call this.  The visibility will cause a compilation error.
+  auto io() { return nullptr; }
+};
+
 }  // namespace uart
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_NULL_H_

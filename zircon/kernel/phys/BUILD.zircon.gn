@@ -101,7 +101,8 @@ if (current_toolchain == default_toolchain) {
     defines = [ "LK_DEBUGLEVEL=2" ]
   }
 
-  # This is used implicitly by phys_executable() targets.
+  # This is used implicitly by phys_executable() targets,
+  # including zbi_executable() targets.
   source_set("phys_executable.deps") {
     sources = [
       "frame-pointer.cc",
@@ -117,6 +118,19 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/arch/$zircon_cpu/phys",
       "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/libc",
+    ]
+  }
+
+  # This is used implicitly by zbi_executable() targets.
+  source_set("zbi_executable.deps") {
+    sources = [
+      "zbi-header.S",
+      "zbi-main.cc",
+    ]
+    deps = [
+      "$zx/kernel/lib/arch",
+      "$zx/system/ulib/uart",
+      "$zx/system/ulib/zbitl",
     ]
   }
 

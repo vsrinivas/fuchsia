@@ -1,0 +1,74 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("$zx/kernel/phys/phys_executable.gni")
+
+# Build a standalone ZBI kernel in the phys environment.
+#
+# This defines one public target that acts as a zbi_input() target.  The
+# target is used like executable(), but deps on this target from other
+# environments transparently redirect to the phys environment.  There
+# are also implicit deps to supply the ZBI headers and phys entry point
+# code that calls the C++ `ZbiMain` via the "main.h" API.
+#
+# Parameters
+#
+#   * output_extension
+#     - Optional: See executable(), but defaults to "zbi".
+#     - Type: string
+#     - Default: "zbi"
+#
+# See executable() for other parameters.
+#
+template("zbi_executable") {
+  phys_executable(target_name) {
+    deps = []
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "linker_script",
+                             "metadata",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker, [ "visibility" ])
+
+    linker_script = "$zx/kernel/phys/phys.ld"
+    deps += [ "$zx/kernel/phys:zbi_executable.deps" ]
+
+    if (!defined(output_dir)) {
+      output_dir = target_out_dir
+    }
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+    if (!defined(output_extension)) {
+      output_extension = "zbi"
+    }
+    output_file = "$output_dir/$output_name"
+    if (output_extension != "") {
+      output_file += ".$output_extension"
+    }
+
+    metadata = {
+      zbi_input_args = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # This metadata makes the kernel act as a zbi_input() target so it can
+      # be a dependency of a zbi() target to get into the image.
+      zbi_input_args += [
+        "--type=container",
+        rebase_path(output_file, root_build_dir),
+      ]
+    }
+  }
+}
+
+set_defaults("zbi_executable") {
+  configs = phys_default_configs
+}

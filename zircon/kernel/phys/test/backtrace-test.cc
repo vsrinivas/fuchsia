@@ -41,7 +41,11 @@ namespace {
 
 }  // namespace
 
-int TestMain(void*, arch::EarlyTicks) {
-  ZX_ASSERT(Foo() == 3);  // _start -> PhysMain -> TestMain -> Foo...
+int TestMain(void* zbi, arch::EarlyTicks) {
+  if (zbi) {
+    ZX_ASSERT(Foo() == 4);  // _start -> PhysMain -> ZbiMain -> TestMain -> Foo
+  } else {
+    ZX_ASSERT(Foo() == 3);  // _start -> PhysMain -> TestMain -> Foo...
+  }
   return 0;
 }
