@@ -1,0 +1,21 @@
+{
+    "local_auth": {
+        "secret": "abc",
+        "accounts": [
+            {
+                "id": "foo",
+                "email": "account@gmail.com"
+            },
+            {
+                "id": "bar",
+                "email": "reader@gmail.com"
+            }
+        ],
+        "rpc_port": 4567,
+        "default_account_id": "task"
+    },
+    "result_sink": {
+        "address": "result.sink",
+        "auth_token": "token"
+    }
+}

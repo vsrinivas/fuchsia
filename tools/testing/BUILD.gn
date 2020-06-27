@@ -7,6 +7,7 @@ group("tools") {
 
   deps = [
     "affectedtests",
+    "resultdb",
     "seriallistener",
     "tefmocheck",
     "testparser",
@@ -19,6 +20,7 @@ group("tests") {
 
   deps = [
     "affectedtests:tests",
+    "resultdb:tests",
     "runtests:tests",
     "tap:tap_tests",
     "tefmocheck:tests",
