@@ -46,19 +46,7 @@
 
 namespace usb_xhci {
 
-// Obtains the slot index for a specified endpoint.
-__UNUSED static uint8_t XhciEndpointIndex(uint8_t ep_address) {
-  if (ep_address == 0)
-    return 0;
-  uint8_t index = static_cast<uint8_t>(2 * (ep_address & ~USB_ENDPOINT_DIR_MASK));
-  if ((ep_address & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_OUT)
-    index--;
-  return index;
-}
-
-__UNUSED static uint32_t Log2(uint32_t value) { return 31 - __builtin_clz(value); }
-
-static inline void InvalidatePageCache(void* addr, uint32_t options) {
+inline void InvalidatePageCache(void* addr, uint32_t options) {
   uintptr_t page = reinterpret_cast<uintptr_t>(addr);
   page = fbl::round_down(page, static_cast<uintptr_t>(PAGE_SIZE));
   zx_cache_flush(reinterpret_cast<void*>(page), PAGE_SIZE, options);
@@ -140,7 +128,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   zx_status_t UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address);
 
-  bool Running() { return running_; }
+  bool Running() const { return running_; }
 
   zx_status_t UsbHciResetDevice(uint32_t hub_address, uint32_t device_id);
 
@@ -203,10 +191,10 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   zx::profile& get_profile() { return profile_; }
 
   template <typename T>
-  zx_status_t PostCallback(T callback) {
-    ddk_interaction_executor_.schedule_task(fit::make_ok_promise().then(
-        [this, cb = std::move(callback)](fit::result<void, void>& result) mutable { cb(bus_); }));
-    return ZX_OK;
+  void PostCallback(T&& callback) {
+    ddk_interaction_executor_.schedule_task(
+        fit::make_ok_promise().then([this, cb = std::forward<T>(callback)](
+                                        fit::result<void, void>& result) mutable { cb(bus_); }));
   }
 
   uint8_t get_port_count() { return static_cast<uint8_t>(params_.MaxPorts()); }
@@ -239,22 +227,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // where the emulated controller violates the xHCI specification.
   bool IsQemu() { return qemu_quirk_; }
 
-  // Converts a TRB promise to a USB request promise
-  fit::promise<OwnedRequest, void> TRBToUSBRequestPromise(TRBPromise promise, OwnedRequest request);
-
-  // Converts a USB request promise to a TRB promise. The returned TRB pointer
-  // will be nullptr.
-  TRBPromise USBRequestToTRBPromise(fit::promise<OwnedRequest, void> promise);
-
-  TRBPromise ResultToTRBPromise(const fit::result<TRB*, zx_status_t>& result) const {
-    return fit::make_result_promise(result).box();
-  }
-
-  fit::promise<OwnedRequest, void> ResultToUSBRequestPromise(
-      fit::result<OwnedRequest, void> result) {
-    return fit::make_result_promise(std::move(result)).box();
-  }
-
   // Schedules a promise for execution on the executor
   void ScheduleTask(TRBPromise promise) {
     interrupters_[0].ring().ScheduleTask(std::move(promise));
@@ -278,15 +250,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
     RunUntilIdle();
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     return completion_code;
-  }
-
-  // Returns an empty promise
-  TRBPromise EmptyPromise() {
-    fit::bridge<TRB*, zx_status_t> bridge;
-    auto promise = bridge.consumer.promise().then(
-        [](fit::result<TRB*, zx_status_t>& result) { return result; });
-    bridge.completer.complete_ok(nullptr);
-    return promise.box();
   }
 
   // Creates a promise that resolves after a timeout
@@ -338,86 +301,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbXhci);
 
-  // Tracks the state of a USB request
-  // This state is passed around to the various transfer request
-  // queueing methods, and its lifetime should not outlast
-  // the lifetime of the transaction. This struct should be
-  // stack-allocated.
-  // None of the values in this field should be accessed
-  // after the USB transaction has been sent to hardware.
-  struct UsbRequestState {
-    // Invokes the completion callback if the request was marked as completed.
-    // Returns true if the completer was called, false otherwise.
-    bool Complete();
-
-    // Request status
-    zx_status_t status;
-
-    // Number of bytes transferred
-    size_t bytes_transferred = 0;
-
-    // Whether or not the request is complete
-    bool complete = false;
-
-    // Size of the slot
-    size_t slot_size;
-
-    // Max burst size (value of the max burst size register + 1, since it is zero-based)
-    uint32_t burst_size;
-
-    // Max packet size
-    uint32_t max_packet_size;
-
-    // True if the current transfer is isochronous
-    bool is_isochronous_transfer;
-
-    // First TRB in the transfer
-    // This is owned by the transfer ring.
-    TRB* first_trb = nullptr;
-
-    // Value to set the cycle bit on the first TRB to
-    bool first_cycle;
-
-    // TransferRing transaction state
-    TransferRing::State transaction;
-
-    // The transfer ring to post transactions to
-    // This is owned by UsbXhci and is valid for
-    // the duration of this transaction.
-    TransferRing* transfer_ring;
-
-    // Index of the transfer ring
-    uint8_t index;
-
-    // Transfer context
-    std::unique_ptr<TRBContext> context;
-
-    // The number of packets in the transfer
-    size_t packet_count = 0;
-
-    // The slot ID of the transfer
-    uint8_t slot;
-
-    // Total length of the transfer
-    uint32_t total_len = 0;
-
-    // The setup TRB
-    // This is owned by the transfer ring.
-    TRB* setup;
-
-    // The interrupter to use
-    uint8_t interrupter = 0;
-
-    // Pointer to the status TRB
-    // This is owned by the transfer ring.
-    TRB* status_trb_ptr = nullptr;
-
-    // Cycle bit of the setup TRB during the allocation phase
-    bool setup_cycle;
-    // Last TRB in the transfer
-    // This is owned by the transfer ring.
-    TRB* last_trb;
-  };
+  struct UsbRequestState;
 
   // Waits for a time interval when it is suitable to schedule an isochronous transfer
   void WaitForIsochronousReady(UsbRequestState* state);

@@ -90,10 +90,10 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
   // Obtain a Device Slot for the newly attached device
   auto address_device =
       hci->EnableSlotCommand()
-          .and_then([=](TRB*& result) {
+          .and_then([=](TRB*& result) -> TRBPromise {
             auto completion_event = static_cast<CommandCompletionEvent*>(result);
             if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-              return hci->ResultToTRBPromise(fit::error(ZX_ERR_IO));
+              return fit::make_error_promise(ZX_ERR_IO);
             }
             // After successfully obtaining a device slot,
             // issue an Address Device command and enable its default control endpoint.
@@ -111,21 +111,21 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
             }
             return hci->AddressDeviceCommand(slot, port, hub_info, state->bsr);
           })
-          .and_then([=](TRB*& result) {
+          .and_then([=](TRB*& result) -> TRBPromise {
             // Check for errors and retry if the device refuses the SET_ADDRESS command
             auto completion_event = static_cast<CommandCompletionEvent*>(result);
             if (completion_event->CompletionCode() == CommandCompletionEvent::UsbTransactionError) {
               // Retry at most once
               if (!hci->IsDeviceConnected(state->slot) || state->retry_ctx) {
-                return hci->ResultToTRBPromise(fit::error(ZX_ERR_IO));
+                return fit::make_error_promise(ZX_ERR_IO);
               }
               state->bsr = true;
               return RetryEnumeration(hci, port, state->slot, hub_info, state);
             }
             if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-              return hci->ResultToTRBPromise(fit::error(ZX_ERR_IO));
+              return fit::make_error_promise(ZX_ERR_IO);
             }
-            return hci->ResultToTRBPromise(fit::ok(result));
+            return fit::make_ok_promise(result);
           })
           .and_then([=](TRB*& result) {
             // If retry was successful, re-initialize the error handler with the new slot
@@ -145,31 +145,31 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
   // We're being invoked from a retry context. Return to the original caller.
   if (state->retry_ctx) {
     return address_device
-        .and_then([=](TRB*& result) {
+        .and_then([=](TRB*& result) -> TRBPromise {
           // Clear the retry_ctx field before returning to the caller
           state->retry_ctx = false;
           auto completion_event = static_cast<CommandCompletionEvent*>(result);
           if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-            return hci->ResultToTRBPromise(fit::ok(result));
+            return fit::make_ok_promise(result);
           }
           // Update the maximum packet size
           return UpdateMaxPacketSize(hci, state->slot);
         })
-        .and_then([=](TRB*& result) {
+        .and_then([=](TRB*& result) -> TRBPromise {
           auto completion_event = static_cast<CommandCompletionEvent*>(result);
           if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-            return hci->ResultToTRBPromise(fit::ok(result));
+            return fit::make_ok_promise(result);
           }
           // Issue a SET_ADDRESS request to the device
           return hci->AddressDeviceCommand(state->slot);
         })
-        .and_then([=](TRB*& result) {
+        .and_then([=](TRB*& result) -> fit::result<TRB*, zx_status_t> {
           auto completion_event = static_cast<CommandCompletionEvent*>(result);
           if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-            return hci->ResultToTRBPromise(fit::ok(result));
+            return fit::ok(result);
           }
           error_handler->Cancel();
-          return hci->ResultToTRBPromise(fit::ok(result));
+          return fit::ok(result);
         })
         .box();
   }
@@ -184,12 +184,12 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
         // prevent later enumeration failures.
         return GetMaxPacketSize(hci, state->slot);
       })
-      .and_then([=](uint8_t& result) {
+      .and_then([=](uint8_t& result) -> TRBPromise {
         // Set the max packet size if the device is a full speed device.
         if (hci->GetDeviceSpeed(state->slot) == USB_SPEED_FULL) {
           return hci->SetMaxPacketSizeCommand(state->slot, result);
         }
-        return hci->ResultToTRBPromise(fit::ok<TRB*>(nullptr));
+        return fit::make_ok_promise((TRB*)nullptr);
       })
       .and_then([=](TRB*& result) -> fit::result<TRB*, zx_status_t> {
         // Online the device, making it visible to the DDK (enumeration has completed)

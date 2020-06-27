@@ -246,11 +246,11 @@ fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::TakePendingTRBs
 }
 
 TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
-  return ResultToTRBPromise(fit::error(ZX_ERR_NOT_SUPPORTED));
+  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info) {
-  return hci->ResultToTRBPromise(fit::error(ZX_ERR_NOT_SUPPORTED));
+  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
 TRB* TransferRing::PhysToVirt(zx_paddr_t paddr) {

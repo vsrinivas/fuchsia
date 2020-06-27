@@ -175,11 +175,11 @@ void UsbXhci::Shutdown(zx_status_t status) {}
 void EventRing::RemovePressure() {}
 
 TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
-  return ResultToTRBPromise(fit::error(ZX_ERR_NOT_SUPPORTED));
+  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info) {
-  return hci->ResultToTRBPromise(fit::error(ZX_ERR_NOT_SUPPORTED));
+  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(TransferRingHarness, EmptyShortTransferTest) {

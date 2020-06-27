@@ -270,7 +270,7 @@ TRBPromise Interrupter::Timeout(zx::time deadline) {
       },
       deadline);
   if (status != ZX_OK) {
-    return hci_->ResultToTRBPromise(fit::error(status));
+    return fit::make_error_promise(status);
   }
   return bridge.consumer.promise().box();
 }

@@ -43,4 +43,17 @@ struct TRBContext : fbl::DoublyLinkedListable<std::unique_ptr<TRBContext>>,
 
 }  // namespace usb_xhci
 
+// Specializations of some fit methods to make code more ergnomic.
+namespace fit {
+inline promise_impl<::fit::internal::result_continuation<usb_xhci::TRB*, zx_status_t>>
+make_error_promise(zx_status_t error) {
+  return make_result_promise<usb_xhci::TRB*, zx_status_t>(fit::error(error));
+}
+
+inline promise_impl<::fit::internal::result_continuation<usb_xhci::TRB*, zx_status_t>>
+make_ok_promise(usb_xhci::TRB* trb) {
+  return make_result_promise<usb_xhci::TRB*, zx_status_t>(fit::ok(trb));
+}
+}  // namespace fit
+
 #endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_
