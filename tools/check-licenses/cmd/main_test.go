@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/scripts/check-licenses/lib"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/lib"
 )
 
 func TestMainLoadConfig(t *testing.T) {

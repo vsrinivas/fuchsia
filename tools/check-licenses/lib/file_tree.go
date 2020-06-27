@@ -165,7 +165,7 @@ func readFromFile(path string, max_read_size int) ([]byte, error) {
 }
 
 func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
-	ch := make(chan *FileTree)
+	ch := make(chan *FileTree, 1)
 	go func() {
 		var curr *FileTree
 		var q []*FileTree
@@ -188,7 +188,7 @@ func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
 }
 
 func (file_tree *FileTree) getFileIterator() <-chan string {
-	ch := make(chan string)
+	ch := make(chan string, 1)
 	go func() {
 		var curr *FileTree
 		var q []*FileTree

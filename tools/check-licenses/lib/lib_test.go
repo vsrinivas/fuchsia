@@ -6,6 +6,7 @@ package lib
 
 import (
 	"io/ioutil"
+	"os"
 	"regexp"
 	"testing"
 )
@@ -53,6 +54,52 @@ func TestLicenseAppend(t *testing.T) {
 	if len(license.matches[0].files) != want {
 		t.Errorf("%v(): got %v, want %v", funcName, len(license.matches[0].files), want)
 	}
+}
+
+func TestLicensesInit(t *testing.T) {
+	folder := "golden"
+	filename := "test.lic"
+	path := folder + "/" + filename
+	var licenses Licenses
+	os.Mkdir(folder, 0700)
+	{
+		f, err := os.Create(path)
+		if err != nil {
+			defer f.Close()
+		}
+		f.WriteString("abc")
+	}
+	if err := licenses.Init(folder); err != nil {
+		t.Error("error: licenses.Init()")
+	}
+	os.Remove(path)
+	os.Remove(folder)
+}
+
+func TestNewLicenses(t *testing.T) {
+	folder := "golden"
+	filename := "test.lic"
+	path := folder + "/" + filename
+	os.Mkdir(folder, 0700)
+	{
+		f, err := os.Create(path)
+		if err != nil {
+			defer f.Close()
+		}
+		f.WriteString("abc")
+	}
+	_, err := NewLicenses(folder)
+	if err != nil {
+		t.Error("error: NewLicenses(...)")
+	}
+	os.Remove(path)
+	os.Remove(folder)
+}
+
+func TestLicensesMatchSingleLicenseFile(t *testing.T) {
+}
+
+func TestLicensesMatchFile(t *testing.T) {
 }
 
 func TestMetricsInit(t *testing.T) {

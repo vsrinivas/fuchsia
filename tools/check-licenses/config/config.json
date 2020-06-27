@@ -4,7 +4,8 @@
     ".gitignore"
   ],
   "skipDirs": [
-    ".git"
+    ".git",
+    "out"
   ],
   "textExtensionList": [
     "ac",
@@ -36,7 +37,7 @@
   "maxReadSize": 6144,
   "separatorWidth": 80,
   "outputFilePrefix": "NOTICE",
-  "outputFileExtension": "txt",
+  "outputFileExtension": "html",
   "product": "astro",
   "singleLicenseFiles": [
     "LICENSE",

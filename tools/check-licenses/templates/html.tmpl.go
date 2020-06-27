@@ -6,43 +6,19 @@ package templates
 
 const TemplateHtml = `
 <html>
-<body bgcolor="black">
-<font color="white">
 
-Signature: {{ .Signature }}<br />
-<br />
-UNUSED LICENSES:<br />
-<br />
-{{ range $_, $license := .Unused }}
-================================================================================<br />
-ORIGIN: <ORIGIN><br />
-TYPE: <TYPE><br />
---------------------------------------------------------------------------------<br />
-<LICENSE><br />
-{{ (getPattern $license) }}<br />
-================================================================================<br />
-}<br />
+<div style="width: 1000">
+{{ range $_, $license := .Used }}<br />
+<div style="background-color: #eeeeee">
+Notices for file(s), reference: {{ (getCategory $license) }}:<ul>
+{{ range $file := (getFiles $license) }}<li>{{ $file }}</li>
 {{ end }}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<br />
-<br />
-USED LICENSES:<br />
-<br />
-{{ range $_, $license := .Used }}
-================================================================================<br />
-LIBRARY: <LIBRARY><br />
-ORIGIN: <ORIGIN><br />
-TYPE: <TYPE><br />
-{{ range $file := (getFiles $license) }}FILE: {{ $file }}<br />
+</ul>
+{{ (getHTMLText $license) }}<br />
+</div>
 {{ end }}
-<br />
---------------------------------------------------------------------------------<br />
-<LICENSE><br />
-{{ (getPattern $license) }}<br />
-================================================================================<br />
-<br />
-{{ end }}
+</div>
 
-</font>
 </body>
 </html>
 `

@@ -7,12 +7,12 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_binary("check-licenses") {
-  gopackage = "go.fuchsia.dev/fuchsia/scripts/check-licenses/cmd"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/check-licenses/cmd"
   deps = [ ":main" ]
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/scripts/check-licenses/cmd"
+  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/cmd"
   source_dir = "cmd"
   deps = [
     ":lib",
@@ -23,12 +23,12 @@ go_library("main") {
 }
 
 go_library("templates") {
-  name = "go.fuchsia.dev/fuchsia/scripts/check-licenses/templates"
+  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/templates"
   source_dir = "templates"
 }
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/scripts/check-licenses/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/lib"
   deps = [
     ":templates",
     "//tools/lib/logger",
@@ -50,11 +50,11 @@ group("tests") {
 }
 
 go_test("check-licenses_main_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/scripts/check-licenses/cmd" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/cmd" ]
   deps = [ ":main" ]
 }
 
 go_test("check-licenses_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/scripts/check-licenses/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/lib" ]
   deps = [ ":lib" ]
 }

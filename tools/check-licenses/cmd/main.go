@@ -8,7 +8,7 @@ import (
 	"flag"
 	"fmt"
 
-	"go.fuchsia.dev/fuchsia/scripts/check-licenses/lib"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/lib"
 )
 
 const configFile = "tools/check-licenses/config/config.json"
