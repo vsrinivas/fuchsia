@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 
+#include <memory>
+
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
@@ -411,6 +413,36 @@ TEST(BindingSet, ErrorHandlerDestroysBindingSetAndBindingsWithUniquePtr) {
   loop.RunUntilIdle();
 
   EXPECT_TRUE(handler_called);
+}
+
+TEST(BindingSet, ErrorHandlerFunctionMoveOnly) {
+  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
+  fidl::test::AsyncLoopForTest loop;
+
+  // Use the reference counting of a `shared_ptr` canary to make sure that the lambda capture
+  // context is never copied.
+  auto ref_counted_canary = std::make_shared<int>(1337);
+  std::weak_ptr<int> ref_counted_canary_weak = ref_counted_canary;
+  ASSERT_EQ(ref_counted_canary_weak.use_count(), 1);
+
+  std::unique_ptr<int> force_move_only;
+
+  test::FrobinatorImpl impl;
+  fidl::test::frobinator::FrobinatorPtr ptr;
+
+  binding_set.AddBinding(&impl, ptr.NewRequest(), nullptr,
+                         [ref_counted_canary = std::move(ref_counted_canary),
+                          force_move_only = std::move(force_move_only)](zx_status_t) {});
+
+  // There still should only be one reference to the canary (the lambda capture).
+  ASSERT_EQ(ref_counted_canary_weak.use_count(), 1);
+
+  // Trigger error.
+  ptr.Unbind();
+  loop.RunUntilIdle();
+
+  // The canary should've been dropped and cleaned up.
+  ASSERT_TRUE(ref_counted_canary_weak.expired());
 }
 
 }  // namespace
