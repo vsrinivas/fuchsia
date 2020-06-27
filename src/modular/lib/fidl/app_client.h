@@ -65,7 +65,7 @@ class AppClientBase : public AsyncHolderBase {
 
   // Service specific parts of the termination sequence.
   virtual void LifecycleServiceTerminate(fit::function<void()> done);
-  virtual void UnbindLlifecycleService();
+  virtual void UnbindLifecycleService();
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
   component::Services services_;
@@ -99,7 +99,7 @@ class AppClient : public AppClientBase {
     lifecycle_service_->Terminate();
   }
 
-  void UnbindLlifecycleService() override { lifecycle_service_.Unbind(); }
+  void UnbindLifecycleService() override { lifecycle_service_.Unbind(); }
 
   fidl::InterfacePtr<Service> lifecycle_service_;
 

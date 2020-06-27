@@ -82,7 +82,7 @@ void AppClientBase::ImplTeardown(fit::function<void()> done) {
 
 void AppClientBase::ImplReset() {
   component_controller_.Unbind();
-  UnbindLlifecycleService();
+  UnbindLifecycleService();
 }
 
 void AppClientBase::SetAppErrorHandler(fit::function<void()> error_handler) {
@@ -92,7 +92,7 @@ void AppClientBase::SetAppErrorHandler(fit::function<void()> error_handler) {
 
 void AppClientBase::LifecycleServiceTerminate(fit::function<void()> /* done */) {}
 
-void AppClientBase::UnbindLlifecycleService() {}
+void AppClientBase::UnbindLifecycleService() {}
 
 template <>
 void AppClient<fuchsia::modular::Lifecycle>::LifecycleServiceTerminate(fit::function<void()> done) {
