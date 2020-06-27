@@ -66,9 +66,12 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, config *Conf
 		} else {
 			metrics.increment("num_with_project_license")
 			for _, arr_license := range project.singleLicenseFiles {
-				for _, license := range arr_license {
+				for i, license := range arr_license {
+					if i == 0 {
+						metrics.increment("num_one_file_matched_to_one_single_license")
+					}
 					fmt.Printf("project license: %s\n", license.category)
-					metrics.increment("num_matched_to_project_file")
+					metrics.increment("num_one_file_matched_to_multiple_single_licenses")
 					license.append(path)
 				}
 			}

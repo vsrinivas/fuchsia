@@ -15,6 +15,7 @@ go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/check-licenses/cmd"
   source_dir = "cmd"
   deps = [
+    ":golden",
     ":lib",
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:github.com/google/subcommands",
@@ -36,6 +37,11 @@ go_library("lib") {
   source_dir = "lib"
 }
 
+go_library("golden") {
+  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/golden"
+  source_dir = "golden"
+}
+
 install_host_tools("host") {
   deps = [ ":check-licenses" ]
   outputs = [ "check-licenses" ]
@@ -44,6 +50,7 @@ install_host_tools("host") {
 group("tests") {
   testonly = true
   deps = [
+    ":check-licenses_golden_tests($host_toolchain)",
     ":check-licenses_lib_tests($host_toolchain)",
     ":check-licenses_main_tests($host_toolchain)",
   ]
@@ -57,4 +64,9 @@ go_test("check-licenses_main_tests") {
 go_test("check-licenses_lib_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/lib" ]
   deps = [ ":lib" ]
+}
+
+go_test("check-licenses_golden_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/golden" ]
+  deps = [ ":golden" ]
 }

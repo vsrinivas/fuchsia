@@ -5,7 +5,8 @@
   ],
   "skipDirs": [
     ".git",
-    "out"
+    "out",
+    ".cipd"
   ],
   "textExtensionList": [
     "ac",
@@ -23,10 +24,10 @@
     "gypi",
     "h",
     "hh",
-    "html",
     "in",
     "inc",
     "java",
+    "js",
     "m",
     "md",
     "py",
@@ -46,7 +47,7 @@
     "NOTICE"
   ],
   "goldenLicenses": "golden",
-  "licensePatternDir": "tools/check-licenses/golden/",
+  "licensePatternDir": "tools/check-licenses/golden/patterns",
   "baseDir": ".",
   "target": "all",
   "logLevel": "verbose"

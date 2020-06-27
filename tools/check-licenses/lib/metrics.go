@@ -17,8 +17,9 @@ func (metrics *Metrics) Init() {
 	metrics.order = []string{
 		"num_extensions_excluded",
 		"num_licensed",
-		"num_matched_to_project_file",
 		"num_non_single_license_files",
+		"num_one_file_matched_to_multiple_single_licenses",
+		"num_one_file_matched_to_one_single_license",
 		"num_single_license_file_match",
 		"num_single_license_files",
 		"num_unlicensed",
