@@ -89,6 +89,6 @@ base_package_labels += [ "//src/sys/pkg:tools" ]
 # built by fx tooling
 base_package_labels += [ "//tools/cargo-gnaw" ]
 
-cache_package_labels += [ "//src/developer/development-bridge:runtime" ]
+cache_package_labels += [ "//src/developer/ffx:runtime" ]
 
 universe_package_labels += [ "//bundles:tools" ]

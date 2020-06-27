@@ -8,7 +8,7 @@ group("developer") {
     ":tests",
     "cmd",
     "debug",
-    "development-bridge",
+    "ffx",
     "forensics",
     "fuchsia-criterion",
     "kcounter_inspect",
@@ -23,7 +23,7 @@ group("tests") {
   deps = [
     "//src/developer/cmd:tests",
     "//src/developer/debug:tests",
-    "//src/developer/development-bridge:tests",
+    "//src/developer/ffx:tests",
     "//src/developer/forensics:tests",
     "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
     "//src/developer/kcounter_inspect/tests:kcounter_inspect_tests",

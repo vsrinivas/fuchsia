@@ -3,8 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("command.gni")
+import("plugins.gni")
 
-# Defines a FFX plugin
+# Defines a FFX plugin suite.  This allows for composability of
+# plugins to allow for deeper CLI param definitions.
 #
 # Parameters
 #
@@ -12,12 +15,19 @@ import("//build/rust/rustc_library.gni")
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name. All dashes will be replaced
 #     with underscores in the library name: <name_underscored>. This
-#     target creates two libraries: one for the plugin callback method
-#     and one for the argh command struct needed for CLI params. The
-#     libraries creates will be <target>_lib and <target>_args_lib.
+#     target creates three rust libraries:
+#
+#     1. <target>_sub_command_lib - argh sub command struct that includes
+#                                   all plugins contained in the suite
+#     2. <target>_args_lib - the argh command struct that is the entry
+#                            point for the suite
+#     3. <target>_lib - the library that routes the CLI params to the
+#                       plugin in the suite
+#
 #     If the `with_unit_tests` flag is used, additional test libraries
-#     will be created for a total of four libraries: <target>_lib,
-#     <target>_lib_test, <target>_args_lib, <target>_args_lib_test.
+#     will be created for a total of six libraries: <target>_lib,
+#     <target>_lib_test, <target>_args_lib, <target>_args_lib_test,
+#     <target>_sub_command_lib, <target>_sub_command_lib_test
 #
 #   version
 #     Semver version of the crate as seen on crates.io.
@@ -38,9 +48,8 @@ import("//build/rust/rustc_library.gni")
 #     List of rust_library GN targets on which this crate's tests depend.
 #
 #   with_unit_tests (optional)
-#     Builds unit tests associated with the binary. This will create a
-#     `<name>_lib_test` test file in the output directory. Equivalent
-#     to adding a `rustc_test` target with that name and the same source_root.
+#     Builds unit tests associated with the include libraries. This will create a
+#     `<name>_lib_test` test file in the output directory.
 #
 #   test_environments (optional)
 #     What environments unit tests, if provided, should target. Only used here
@@ -49,46 +58,87 @@ import("//build/rust/rustc_library.gni")
 #     See environments parameter on //build/testing/test_spec.gni for more
 #     details.
 #
-#   source_root (optional)
-#     Location of the plugin root (e.g. `src/lib.rs`). This defaults to `./src/lib.rs`
-#     This should be the location of the method marked with the
-#     ffx_plugin attribute.
-#
 #   args_source_root (optional)
 #     Location of the plugin's argh command root (e.g. `src/args.rs`). This defaults
 #     to `./src/args.rs`. This should be the location of the struct marked with the
-#     ffx_command attribute. Due to internal dependencies this cannot
-#     be the same file as the source_root.
+#     ffx_command attribute.
 #
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature=XXX'
 #
-template("ffx_plugin") {
-  output_name = target_name
-  if (defined(invoker.name)) {
-    output_name = invoker.name
-  }
-
+template("ffx_plugin_suite") {
   if (host_toolchain == current_toolchain) {
+    output_name = target_name
+    if (defined(invoker.name)) {
+      output_name = invoker.name
+    }
+    p_deps = []
+    if (defined(invoker.plugin_deps)) {
+      foreach(d, invoker.plugin_deps) {
+        p_deps += [ d ]
+      }
+    }
+
+    template = "suite_command.md"
+    if (defined(invoker.template)) {
+      template = invoker.template
+    }
+
+    command(output_name + "_sub_command_gen") {
+      output_name = "cmd_args.rs"
+      plugin_deps = p_deps
+      template = template
+    }
+
     args = output_name + "_args"
+    args_deps = []
+    if (defined(invoker.plugin_deps)) {
+      foreach(d, invoker.plugin_deps) {
+        dep = d + "_args"
+        args_deps += [ dep ]
+      }
+    }
+    if (defined(invoker.args_deps)) {
+      foreach(d, invoker.args_deps) {
+        args_deps += [ d ]
+      }
+    }
+
+    sub_cmd = output_name + "_sub_command"
+
+    rustc_library(sub_cmd) {
+      source_root = "$target_gen_dir/cmd_args.rs"
+      deps = args_deps + [
+               ":" + output_name + "_sub_command_gen",
+               "//third_party/rust_crates:argh",
+             ]
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "deps",
+                               "args_deps",
+                               "args_source_root",
+                               "not_complete",
+                               "source_root",
+                               "target_name",
+                             ])
+    }
+
     args_source_root = "src/args.rs"
     if (defined(invoker.args_source_root)) {
       args_source_root = invoker.args_source_root
     }
 
-    args_deps = []
-    if (defined(invoker.args_deps)) {
-      args_deps += invoker.args_deps
-    }
-
     rustc_library(args) {
       source_root = args_source_root
-      deps = args_deps + [
-               "//src/developer/development-bridge/core:lib",
-               "//third_party/rust_crates:argh",
-             ]
+      deps = [
+        ":" + sub_cmd,
+        "//src/developer/ffx/core:lib",
+        "//third_party/rust_crates:argh",
+      ]
       non_rust_deps = [ "//third_party/boringssl" ]
       forward_variables_from(invoker,
                              "*",
@@ -96,8 +146,26 @@ template("ffx_plugin") {
                                "name",
                                "deps",
                                "source_root",
+                               "not_complete",
                                "non_rust_deps",
                                "target_name",
+                             ])
+    }
+
+    plugins_name = output_name + "_plugins"
+
+    plugins(plugins_name) {
+      output_name = "plugins.rs"
+      plugin_deps = p_deps
+      args = args
+      sub_command = sub_cmd
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "output_name",
+                               "plugin_deps",
+                               "args",
                              ])
     }
 
@@ -106,11 +174,8 @@ template("ffx_plugin") {
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//src/connectivity/overnet/lib/hoist",
-      "//src/developer/development-bridge/core:lib",
-      "//src/developer/development-bridge:ffx_lib_args",
-      "//src/developer/development-bridge:ffx_lib_sub_command",
-      "//src/developer/development-bridge/config:lib",
-      "//src/diagnostics/lib/selectors",
+      "//src/developer/ffx/core:lib",
+      "//src/developer/ffx/config:lib",
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
@@ -123,7 +188,12 @@ template("ffx_plugin") {
     }
 
     rustc_library(output_name) {
-      deps = lib_deps
+      source_root = "$target_gen_dir/plugins.rs"
+      deps = lib_deps + p_deps + [
+               ":" + sub_cmd,
+               ":" + args,
+               ":" + plugins_name,
+             ]
       non_rust_deps = [ "//third_party/boringssl" ]
       forward_variables_from(invoker,
                              "*",

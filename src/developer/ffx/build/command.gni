@@ -29,7 +29,7 @@ template("command") {
 
   lib_str = string_join(",", libraries)
   action(target_name) {
-    script = "//src/developer/development-bridge/build/gn_generate_cmd.py"
+    script = "//src/developer/ffx/build/gn_generate_cmd.py"
     args = [
       "--out",
       rebase_path(generated_file),
@@ -41,8 +41,8 @@ template("command") {
 
     # Rebuild if the template changes
     inputs = [
-      "//src/developer/development-bridge/build/templates/command.md",
-      "//src/developer/development-bridge/build/templates/suite_command.md",
+      "//src/developer/ffx/build/templates/command.md",
+      "//src/developer/ffx/build/templates/suite_command.md",
     ]
   }
 }

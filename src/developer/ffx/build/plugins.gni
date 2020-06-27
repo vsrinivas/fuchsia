@@ -42,10 +42,10 @@ template("plugins") {
   }
 
   action(target_name) {
-    script = "//src/developer/development-bridge/build/gn_generate_plugins.py"
+    script = "//src/developer/ffx/build/gn_generate_plugins.py"
     args = script_args
 
     # Rebuild if the template changes
-    inputs = [ "//src/developer/development-bridge/build/templates/plugins.md" ]
+    inputs = [ "//src/developer/ffx/build/templates/plugins.md" ]
   }
 }
