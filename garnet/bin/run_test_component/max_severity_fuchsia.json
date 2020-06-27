@@ -61,6 +61,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/bind-fail-test#meta/bind-fail-test.cmx ",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/brightness_manager_tests#meta/brightness_manager_test.cmx",
          "max_severity": "ERROR"
       },
