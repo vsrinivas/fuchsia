@@ -14,7 +14,7 @@ use {
 };
 
 /// Macro that provides a `serde::de::Deserialize` implementation for a `Vec<T>`. Attributes
-/// may be specified to add assertions.
+/// are provided with `#[checked_vec(...)]`.
 ///
 /// Attributes:
 /// - `expected` (required): The `expected` string attached to the serde deserializer.
@@ -26,12 +26,14 @@ use {
 ///
 /// ```rust
 /// #[derive(CheckedVec)]
-/// #[expected = "a nonempty array of rights, with unique elements"]
-/// #[min_length = 1]
-/// #[unique_items = true]
+/// #[checked_vec(
+///     expected = "a nonempty array of rights, with unique elements",
+///     min_length = 1,
+///     unique_items = true,
+/// )]
 /// pub struct Rights(pub Vec<Right>);
 /// ```
-#[proc_macro_derive(CheckedVec, attributes(expected, min_length, unique_items))]
+#[proc_macro_derive(CheckedVec, attributes(checked_vec))]
 pub fn derive_checked_vec(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("could not parse input");
     impl_derive_checked_vec(ast).unwrap_or_else(|err| err.to_compile_error()).into()
@@ -212,12 +214,47 @@ fn parse_checked_vec_attributes(
     let mut min_length = None;
     let mut unique_items = None;
     for attr in &ast.attrs {
-        if attr.path.is_ident("expected") {
-            extract_expected(ast, attr, &mut expected)?;
-        } else if attr.path.is_ident("min_length") {
-            extract_min_length(ast, attr, &mut min_length)?;
-        } else if attr.path.is_ident("unique_items") {
-            extract_unique_items(ast, attr, &mut unique_items)?;
+        if !attr.path.is_ident("checked_vec") {
+            continue;
+        }
+        match attr
+            .parse_meta()
+            .map_err(|_| syn::Error::new_spanned(ast, "`checked_vec` attribute is not valid"))?
+        {
+            syn::Meta::List(l) => {
+                for attr in l.nested {
+                    match attr {
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(attr)) => {
+                            let ident = ident_from_path(&attr.path);
+                            match &ident as &str {
+                                "expected" => extract_expected(ast, attr, &mut expected)?,
+                                "min_length" => extract_min_length(ast, attr, &mut min_length)?,
+                                "unique_items" => {
+                                    extract_unique_items(ast, attr, &mut unique_items)?
+                                }
+                                _ => {
+                                    return Err(syn::Error::new_spanned(
+                                        ast,
+                                        "`checked_vec` attribute is not valid",
+                                    ));
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(syn::Error::new_spanned(
+                                ast,
+                                "`checked_vec` attribute must contain name-value pairs",
+                            ))?
+                        }
+                    }
+                }
+            }
+            _ => {
+                return Err(syn::Error::new_spanned(
+                    ast,
+                    "`checked_vec` attribute value must be a list",
+                ));
+            }
         }
     }
 
@@ -269,7 +306,7 @@ fn get_vec_inner_type(fields: &syn::FieldsUnnamed) -> Result<syn::Path, ParseErr
 }
 
 /// Macro that provides a `serde::de::Deserialize` implementation for `OneOrMany<T>`.
-/// Attributes may be specified to add assertions.
+/// Attributes are provided with `#[one_or_many(...)]`
 ///
 /// The type which is derived is merely a dummy type to serve as a target for the macro. The trait
 /// implementation is actually on `OneOrMany<T>`.
@@ -285,13 +322,15 @@ fn get_vec_inner_type(fields: &syn::FieldsUnnamed) -> Result<syn::Path, ParseErr
 ///
 /// ```rust
 /// #[derive(OneOrMany)]
-/// #[inner_type(Name)]
-/// #[expected = "a single name or a nonempty array of name, with unique elements"]
-/// #[min_length = 1]
-/// #[unique_items = true]
+/// #[one_or_many(
+///     expected = "a single name or a nonempty array of name, with unique elements",
+///     inner_type = "Name",
+///     min_length = 1,
+///     unique_items = true,
+/// )]
 /// pub struct OneOrManyNames;
 /// ```
-#[proc_macro_derive(OneOrMany, attributes(inner_type, expected, min_length, unique_items))]
+#[proc_macro_derive(OneOrMany, attributes(one_or_many))]
 pub fn derive_one_or_many(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("could not parse input");
     impl_derive_one_or_many(ast).unwrap_or_else(|err| err.to_compile_error()).into()
@@ -386,19 +425,55 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
     let mut min_length = None;
     let mut unique_items = None;
     for attr in &ast.attrs {
-        if attr.path.is_ident("expected") {
-            extract_expected(ast, attr, &mut expected)?;
-        } else if attr.path.is_ident("inner_type") {
-            extract_inner_type(ast, attr, &mut inner_type)?;
-        } else if attr.path.is_ident("min_length") {
-            extract_min_length(ast, attr, &mut min_length)?;
-        } else if attr.path.is_ident("unique_items") {
-            extract_unique_items(ast, attr, &mut unique_items)?;
+        if !attr.path.is_ident("one_or_many") {
+            continue;
+        }
+        match attr
+            .parse_meta()
+            .map_err(|_| syn::Error::new_spanned(ast, "`one_or_many` attribute is not valid"))?
+        {
+            syn::Meta::List(l) => {
+                for attr in l.nested {
+                    match attr {
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(attr)) => {
+                            let ident = ident_from_path(&attr.path);
+                            match &ident as &str {
+                                "expected" => extract_expected(ast, attr, &mut expected)?,
+                                "inner_type" => extract_inner_type(ast, attr, &mut inner_type)?,
+                                "min_length" => extract_min_length(ast, attr, &mut min_length)?,
+                                "unique_items" => {
+                                    extract_unique_items(ast, attr, &mut unique_items)?
+                                }
+                                _ => {
+                                    return Err(syn::Error::new_spanned(
+                                        ast,
+                                        "`one_or_many` attribute is not valid",
+                                    ));
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(syn::Error::new_spanned(
+                                ast,
+                                "`one_or_many` attribute must contain name-value pairs",
+                            ))?
+                        }
+                    }
+                }
+            }
+            _ => {
+                return Err(syn::Error::new_spanned(
+                    ast,
+                    "`one_or_many` attribute value must be a list",
+                ));
+            }
         }
     }
 
-    let inner_type = inner_type
-        .ok_or_else(|| syn::Error::new_spanned(ast, "`inner_type` attribute is missing"))?;
+    let inner_type: syn::Path = inner_type
+        .ok_or_else(|| syn::Error::new_spanned(ast, "`inner_type` attribute is missing"))?
+        .parse()
+        .map_err(|_| syn::Error::new_spanned(ast, "`inner_type` attribute is not a valid path"))?;
     let expected =
         expected.ok_or_else(|| syn::Error::new_spanned(ast, "`expected` attribute is missing"))?;
     let unique_items = unique_items.unwrap_or(false);
@@ -407,7 +482,7 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
 
 /// Macro that provides trait implementations for a CML reference enum type that wishes to be serde
 /// deserializable. This makes it possible to easily create context-specific reference types that
-/// encode their accepted variants.
+/// encode their accepted variants. Attributes are provided with `#[reference(...)]`.
 ///
 /// The following enum variants are accepted:
 /// - Named(Name),
@@ -415,8 +490,8 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
 /// - Framework,
 /// - Self_,
 ///
-/// Attributes (all required):
-/// - `expected`: The `expected` string attached to the serde deserializer.
+/// Attributes:
+/// - `expected` (required): The `expected` string attached to the serde deserializer.
 ///
 /// This macro implements the following traits:
 /// - `std::str::FromStr`
@@ -427,8 +502,8 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
 /// Example:
 ///
 /// ```rust
-/// #[derive(Ref)]
-/// #[expected = "a registration reference"]
+/// #[derive(Reference)]
+/// #[reference(expected = "a registration reference")]
 /// pub enum RegistrationRef {
 ///     /// A reference to a child.
 ///     Named(Name),
@@ -438,14 +513,14 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
 ///     Self_,
 /// }
 /// ```
-#[proc_macro_derive(Ref, attributes(expected))]
-pub fn derive_ref(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Reference, attributes(reference))]
+pub fn derive_reference(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("could not parse input");
     impl_derive_ref(ast).unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
 fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
-    let attrs = parse_ref_attributes(&ast)?;
+    let attrs = parse_reference_attributes(&ast)?;
 
     struct Display<'a> {
         name: &'a Ident,
@@ -644,8 +719,8 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
     Ok(tokens)
 }
 
-/// Attributes extracted from the `derive(Ref)` macro.
-struct RefAttributes {
+/// Attributes extracted from the `derive(Reference)` macro.
+struct ReferenceAttributes {
     /// Name of the reference enum.
     name: Ident,
     /// `expecting` string to return from the deserializer.
@@ -655,7 +730,7 @@ struct RefAttributes {
     variants: HashSet<String>,
 }
 
-fn parse_ref_attributes(ast: &syn::DeriveInput) -> Result<RefAttributes, syn::Error> {
+fn parse_reference_attributes(ast: &syn::DeriveInput) -> Result<ReferenceAttributes, syn::Error> {
     let variants: HashSet<_> = if let syn::Data::Enum(enum_) = &ast.data {
         enum_.variants.iter().map(|v| v.ident.to_string()).collect()
     } else {
@@ -677,42 +752,66 @@ fn parse_ref_attributes(ast: &syn::DeriveInput) -> Result<RefAttributes, syn::Er
     }
     let mut expected = None;
     for attr in &ast.attrs {
-        if attr.path.is_ident("expected") {
-            extract_expected(ast, attr, &mut expected)?;
+        if !attr.path.is_ident("reference") {
+            continue;
+        }
+        match attr
+            .parse_meta()
+            .map_err(|_| syn::Error::new_spanned(ast, "`reference` attribute is not valid"))?
+        {
+            syn::Meta::List(l) => {
+                for attr in l.nested {
+                    match attr {
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(attr)) => {
+                            let ident = ident_from_path(&attr.path);
+                            match &ident as &str {
+                                "expected" => extract_expected(ast, attr, &mut expected)?,
+                                _ => {
+                                    return Err(syn::Error::new_spanned(
+                                        ast,
+                                        "`reference` attribute is not valid",
+                                    ));
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(syn::Error::new_spanned(
+                                ast,
+                                "`reference` attribute must contain name-value pairs",
+                            ))?
+                        }
+                    }
+                }
+            }
+            _ => {
+                return Err(syn::Error::new_spanned(
+                    ast,
+                    "`reference` attribute value must be a list",
+                ));
+            }
         }
     }
 
     let expected =
         expected.ok_or_else(|| syn::Error::new_spanned(ast, "`expected` attribute is missing"))?;
 
-    Ok(RefAttributes { name: ast.ident.clone(), expected, variants })
+    Ok(ReferenceAttributes { name: ast.ident.clone(), expected, variants })
 }
 
 fn extract_expected(
     ast: &syn::DeriveInput,
-    attr: &syn::Attribute,
+    attr: syn::MetaNameValue,
     expected: &mut Option<syn::LitStr>,
 ) -> Result<(), syn::Error> {
-    match attr
-        .parse_meta()
-        .map_err(|_| syn::Error::new_spanned(ast, "`expected` attribute must be name-value"))?
-    {
-        syn::Meta::NameValue(m) => match m.lit {
-            syn::Lit::Str(l) => {
-                if expected.is_some() {
-                    return Err(syn::Error::new_spanned(ast, "duplicate `expected` attribute"));
-                }
-                *expected = Some(l);
+    match attr.lit {
+        syn::Lit::Str(l) => {
+            if expected.is_some() {
+                return Err(syn::Error::new_spanned(ast, "duplicate `expected` attribute"));
             }
-            _ => {
-                return Err(syn::Error::new_spanned(
-                    ast,
-                    "`expected` attribute value must be string",
-                ));
-            }
-        },
+            *expected = Some(l);
+        }
         _ => {
-            return Err(syn::Error::new_spanned(ast, "`expected` attribute must be name-value"));
+            return Err(syn::Error::new_spanned(ast, "`expected` attribute value must be string"));
         }
     }
     Ok(())
@@ -720,40 +819,20 @@ fn extract_expected(
 
 fn extract_inner_type(
     ast: &syn::DeriveInput,
-    attr: &syn::Attribute,
-    inner_type: &mut Option<syn::Path>,
+    attr: syn::MetaNameValue,
+    inner_type: &mut Option<syn::LitStr>,
 ) -> Result<(), syn::Error> {
-    match attr
-        .parse_meta()
-        .map_err(|_| syn::Error::new_spanned(ast, "`inner_type` attribute must be a path"))?
-    {
-        syn::Meta::List(l) => {
-            if l.nested.len() != 1 {
-                return Err(syn::Error::new_spanned(
-                    ast,
-                    "`inner_type` must contain exactly one path",
-                ));
+    match attr.lit {
+        syn::Lit::Str(l) => {
+            if inner_type.is_some() {
+                return Err(syn::Error::new_spanned(ast, "duplicate `inner_type` attribute"));
             }
-            let nested_meta = l.nested.first().unwrap();
-            match nested_meta {
-                syn::NestedMeta::Meta(syn::Meta::Path(p)) => {
-                    if inner_type.is_some() {
-                        return Err(syn::Error::new_spanned(
-                            ast,
-                            "duplicate `inner_type` attribute",
-                        ));
-                    }
-                    *inner_type = Some(p.clone());
-                }
-                _ => {
-                    return Err(syn::Error::new_spanned(ast, "`inner_type` must contain a path"));
-                }
-            }
+            *inner_type = Some(l);
         }
         _ => {
             return Err(syn::Error::new_spanned(
                 ast,
-                "`inner_type` attribute value must be a path",
+                "`inner_type` attribute value must be string",
             ));
         }
     }
@@ -762,32 +841,21 @@ fn extract_inner_type(
 
 fn extract_min_length(
     ast: &syn::DeriveInput,
-    attr: &syn::Attribute,
+    attr: syn::MetaNameValue,
     min_length: &mut Option<usize>,
 ) -> Result<(), syn::Error> {
-    match attr
-        .parse_meta()
-        .map_err(|_| syn::Error::new_spanned(ast, "`min_length` attribute must be name-value"))?
-    {
-        syn::Meta::NameValue(m) => match m.lit {
-            syn::Lit::Int(l) => {
-                if min_length.is_some() {
-                    return Err(syn::Error::new_spanned(ast, "duplicate `min_length` attribute"));
-                }
-                let l: usize = l.base10_parse().map_err(|_| {
-                    syn::Error::new_spanned(ast, "`min_length` attribute is not base 10")
-                })?;
-                *min_length = Some(l);
+    match attr.lit {
+        syn::Lit::Int(l) => {
+            if min_length.is_some() {
+                return Err(syn::Error::new_spanned(ast, "duplicate `min_length` attribute"));
             }
-            _ => {
-                return Err(syn::Error::new_spanned(
-                    ast,
-                    "`min_length` attribute value must be int",
-                ));
-            }
-        },
+            let l: usize = l.base10_parse().map_err(|_| {
+                syn::Error::new_spanned(ast, "`min_length` attribute is not base 10")
+            })?;
+            *min_length = Some(l);
+        }
         _ => {
-            return Err(syn::Error::new_spanned(ast, "`min_length` attribute must be name-value"));
+            return Err(syn::Error::new_spanned(ast, "`min_length` attribute value must be int"));
         }
     }
     Ok(())
@@ -795,33 +863,26 @@ fn extract_min_length(
 
 fn extract_unique_items(
     ast: &syn::DeriveInput,
-    attr: &syn::Attribute,
+    attr: syn::MetaNameValue,
     unique_items: &mut Option<bool>,
 ) -> Result<(), syn::Error> {
-    match attr
-        .parse_meta()
-        .map_err(|_| syn::Error::new_spanned(ast, "`unique_items` attribute must be name-value"))?
-    {
-        syn::Meta::NameValue(m) => match m.lit {
-            syn::Lit::Bool(b) => {
-                if unique_items.is_some() {
-                    return Err(syn::Error::new_spanned(ast, "duplicate `unique_items` attribute"));
-                }
-                *unique_items = Some(b.value);
+    match attr.lit {
+        syn::Lit::Bool(b) => {
+            if unique_items.is_some() {
+                return Err(syn::Error::new_spanned(ast, "duplicate `unique_items` attribute"));
             }
-            _ => {
-                return Err(syn::Error::new_spanned(
-                    ast,
-                    "`unique_items` attribute value must be bool",
-                ));
-            }
-        },
+            *unique_items = Some(b.value);
+        }
         _ => {
             return Err(syn::Error::new_spanned(
                 ast,
-                "`unique_items` attribute must be name-value",
+                "`unique_items` attribute value must be bool",
             ));
         }
     }
     Ok(())
+}
+
+fn ident_from_path(path: &syn::Path) -> String {
+    path.get_ident().map(|i| i.to_string()).unwrap_or_else(|| String::new())
 }

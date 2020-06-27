@@ -5,7 +5,7 @@
 use {
     crate::one_or_many::OneOrMany,
     cm_json::{cm, Error},
-    cmc_macro::{CheckedVec, OneOrMany, Ref},
+    cmc_macro::{CheckedVec, OneOrMany, Reference},
     serde::{de, Deserialize},
     serde_json::{Map, Value},
     std::{collections::HashMap, fmt, str::FromStr},
@@ -112,48 +112,60 @@ impl<'de> de::Deserialize<'de> for NameOrPath {
 
 /// A list of offer targets.
 #[derive(CheckedVec, Debug)]
-#[expected = "a nonempty array of offer targets, with unique elements"]
-#[min_length = 1]
-#[unique_items = true]
+#[checked_vec(
+    expected = "a nonempty array of offer targets, with unique elements",
+    min_length = 1,
+    unique_items = true
+)]
 pub struct OfferTo(pub Vec<OfferToRef>);
 
 /// A list of rights.
 #[derive(CheckedVec, Debug)]
-#[expected = "a nonempty array of rights, with unique elements"]
-#[min_length = 1]
-#[unique_items = true]
+#[checked_vec(
+    expected = "a nonempty array of rights, with unique elements",
+    min_length = 1,
+    unique_items = true
+)]
 pub struct Rights(pub Vec<Right>);
 
 /// Generates deserializer for `OneOrMany<Name>`.
 #[derive(OneOrMany, Debug, Clone)]
-#[inner_type(Name)]
-#[expected = "a name or nonempty array of names, with unique elements"]
-#[min_length = 1]
-#[unique_items = true]
+#[one_or_many(
+    expected = "a name or nonempty array of names, with unique elements",
+    inner_type = "Name",
+    min_length = 1,
+    unique_items = true
+)]
 pub struct OneOrManyNames;
 
 /// Generates deserializer for `OneOrMany<Path>`.
 #[derive(OneOrMany, Debug, Clone)]
-#[inner_type(Path)]
-#[expected = "a path or nonempty array of paths, with unique elements"]
-#[min_length = 1]
-#[unique_items = true]
+#[one_or_many(
+    expected = "a path or nonempty array of paths, with unique elements",
+    inner_type = "Path",
+    min_length = 1,
+    unique_items = true
+)]
 pub struct OneOrManyPaths;
 
 /// Generates deserializer for `OneOrMany<ExposeFromRef>`.
 #[derive(OneOrMany, Debug, Clone)]
-#[inner_type(ExposeFromRef)]
-#[expected = "one or an array of \"framework\", \"self\", or \"#<child-name>\""]
-#[min_length = 1]
-#[unique_items = true]
+#[one_or_many(
+    expected = "one or an array of \"framework\", \"self\", or \"#<child-name>\"",
+    inner_type = "ExposeFromRef",
+    min_length = 1,
+    unique_items = true
+)]
 pub struct OneOrManyExposeFromRefs;
 
 /// Generates deserializer for `OneOrMany<OfferFromRef>`.
 #[derive(OneOrMany, Debug, Clone)]
-#[inner_type(OfferFromRef)]
-#[expected = "one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\""]
-#[min_length = 1]
-#[unique_items = true]
+#[one_or_many(
+    expected = "one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\"",
+    inner_type = "OfferFromRef",
+    min_length = 1,
+    unique_items = true
+)]
 pub struct OneOrManyOfferFromRefs;
 
 /// The stop timeout configured in an environment.
@@ -197,7 +209,7 @@ impl<'de> de::Deserialize<'de> for StopTimeoutMs {
 /// itself.
 ///
 /// Objects of this type are usually derived from conversions of context-specific reference
-/// types that `#[derive(Ref)]`. This type makes it easy to write helper functions that operate on
+/// types that `#[derive(Reference)]`. This type makes it easy to write helper functions that operate on
 /// generic references.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AnyRef<'a> {
@@ -225,8 +237,8 @@ impl fmt::Display for AnyRef<'_> {
 }
 
 /// A reference in a `use from`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"realm\", \"framework\", or none"]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"realm\", \"framework\", or none")]
 pub enum UseFromRef {
     /// A reference to the containing realm.
     Realm,
@@ -235,8 +247,8 @@ pub enum UseFromRef {
 }
 
 /// A reference in an `expose from`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"framework\", \"self\", or \"#<child-name>\""]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"framework\", \"self\", or \"#<child-name>\"")]
 pub enum ExposeFromRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -247,8 +259,8 @@ pub enum ExposeFromRef {
 }
 
 /// A reference in an `expose to`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"realm\", \"framework\", or none"]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"realm\", \"framework\", or none")]
 pub enum ExposeToRef {
     /// A reference to the realm.
     Realm,
@@ -257,8 +269,8 @@ pub enum ExposeToRef {
 }
 
 /// A reference in an `offer from`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"realm\", \"framework\", \"self\", or \"#<child-name>\""]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"realm\", \"framework\", \"self\", or \"#<child-name>\"")]
 pub enum OfferFromRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -271,24 +283,26 @@ pub enum OfferFromRef {
 }
 
 /// A reference in an `offer to`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(
+    expected = "\"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
+)]
 pub enum OfferToRef {
     /// A reference to a child or collection.
     Named(Name),
 }
 
 /// A reference in an environment.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"#<environment-name>\""]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"#<environment-name>\"")]
 pub enum EnvironmentRef {
     /// A reference to an environment defined in this component.
     Named(Name),
 }
 
 /// A reference in a `storage from`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"realm\", \"self\", or \"#<child-name>\""]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"realm\", \"self\", or \"#<child-name>\"")]
 pub enum StorageFromRef {
     /// A reference to a child.
     Named(Name),
@@ -299,8 +313,8 @@ pub enum StorageFromRef {
 }
 
 /// A reference in a `runner from`.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"realm\", \"self\", or \"#<child-name>\""]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"realm\", \"self\", or \"#<child-name>\"")]
 pub enum RunnerFromRef {
     /// A reference to a child.
     Named(Name),
@@ -311,8 +325,8 @@ pub enum RunnerFromRef {
 }
 
 /// A reference in an environment registration.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
-#[expected = "\"realm\", \"self\", or \"#<child-name>\""]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"realm\", \"self\", or \"#<child-name>\"")]
 pub enum RegistrationRef {
     /// A reference to a child.
     Named(Name),
