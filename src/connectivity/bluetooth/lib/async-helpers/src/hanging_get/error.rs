@@ -50,8 +50,9 @@ impl From<oneshot::Canceled> for HangingGetServerError {
 }
 
 impl From<anyhow::Error> for HangingGetServerError {
+    /// Try downcasting to more specific error types, falling back to `Generic` if that fails.
     fn from(e: anyhow::Error) -> Self {
-        HangingGetServerError::Generic(e)
+        e.downcast::<mpsc::SendError>().map_or_else(HangingGetServerError::Generic, Self::from)
     }
 }
 

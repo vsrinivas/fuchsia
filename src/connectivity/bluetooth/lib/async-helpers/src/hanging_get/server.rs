@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::hanging_get::error::HangingGetServerError,
+    crate::{hanging_get::error::HangingGetServerError, responding_channel as responding},
     async_utils::stream_epitaph::*,
     core::hash::Hash,
-    futures::{
-        channel::{mpsc, oneshot},
-        select, SinkExt, StreamExt,
-    },
+    futures::{channel::mpsc, select, SinkExt, StreamExt},
     std::collections::HashMap,
 };
 
@@ -86,7 +83,7 @@ pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O) -> bool> {
     publisher: Publisher<S>,
     updates: mpsc::Receiver<UpdateFn<S>>,
     registrar: SubscriptionRegistrar<O>,
-    subscribers: mpsc::Receiver<NewSubscriberRequest<O>>,
+    subscription_requests: responding::Receiver<(), Subscriber<O>>,
     /// A `subscriber_key::Key` held by the broker to track the next unique key that the broker can
     /// assign to a `Subscriber`.
     subscriber_key_generator: subscriber_key::Generator,
@@ -106,14 +103,14 @@ where
     pub fn new(state: S, notify: F, channel_size: usize) -> Self {
         let (sender, updates) = mpsc::channel(channel_size);
         let publisher = Publisher { sender };
-        let (sender, subscribers) = mpsc::channel(channel_size);
+        let (sender, subscription_requests) = responding::channel(channel_size);
         let registrar = SubscriptionRegistrar { sender };
         Self {
             inner: HangingGet::new(state, notify),
             publisher,
             updates,
             registrar,
-            subscribers,
+            subscription_requests,
             subscriber_key_generator: subscriber_key::Generator::default(),
             channel_size,
         }
@@ -155,11 +152,11 @@ where
                     }
                 }
                 // A request for a new subscriber as been requested from a `SubscriptionRegistrar`.
-                subscriber = self.subscribers.next() => {
-                    if let Some(subscriber) = subscriber {
-                        let (sender, mut receiver) = mpsc::channel(self.channel_size);
+                subscriber = self.subscription_requests.next() => {
+                    if let Some((_, responder)) = subscriber {
+                        let (sender, mut receiver) = responding::channel(self.channel_size);
                         let key = self.subscriber_key_generator.next().unwrap();
-                        if let Ok(()) = subscriber.send(sender.into()) {
+                        if let Ok(()) = responder.respond(sender.into()) {
                             subscriptions.push(receiver.map(move |o| (key, o)).with_epitaph(key));
                         }
                     }
@@ -168,7 +165,7 @@ where
                 observer = subscriptions.next() => {
                     match observer {
                         Some(StreamItem::Item((key, (observer, responder)))) => {
-                            let _ = responder.send(self.inner.subscribe(key, observer));
+                            let _ = responder.respond(self.inner.subscribe(key, observer));
                         },
                         Some(StreamItem::Epitaph(key)) => {
                             self.inner.unsubscribe(key);
@@ -186,7 +183,7 @@ where
 /// A cheaply copyable handle that can be used to register new `Subscriber`s with
 /// the `HangingGetBroker`.
 pub struct SubscriptionRegistrar<O> {
-    sender: mpsc::Sender<NewSubscriberRequest<O>>,
+    sender: responding::Sender<(), Subscriber<O>>,
 }
 
 impl<O> Clone for SubscriptionRegistrar<O> {
@@ -198,28 +195,19 @@ impl<O> Clone for SubscriptionRegistrar<O> {
 impl<O> SubscriptionRegistrar<O> {
     /// Register a new subscriber
     pub async fn new_subscriber(&mut self) -> Result<Subscriber<O>, HangingGetServerError> {
-        let (request, response) = oneshot::channel();
-        self.sender.send(request).await?;
-        let sender = response.await.map_err(|_| HangingGetServerError::NoBroker)?;
-        Ok(sender)
+        Ok(self.sender.request(()).await?)
     }
 }
-
-/// A new subscriber request is sent over as a oneshot sender that can be used
-/// to send the subscriber's mpsc sender end of a channel
-type NewSubscriberRequest<O> = oneshot::Sender<Subscriber<O>>;
 
 /// A `Subscriber` can be used to register observation requests with the `HangingGetBroker`.
 /// These observations will be fulfilled when the state changes or immediately the first time
 /// a `Subscriber` registers an observation.
 pub struct Subscriber<O> {
-    sender: mpsc::Sender<(O, oneshot::Sender<Result<(), HangingGetServerError>>)>,
+    sender: responding::Sender<O, Result<(), HangingGetServerError>>,
 }
 
-impl<O> From<mpsc::Sender<(O, oneshot::Sender<Result<(), HangingGetServerError>>)>>
-    for Subscriber<O>
-{
-    fn from(sender: mpsc::Sender<(O, oneshot::Sender<Result<(), HangingGetServerError>>)>) -> Self {
+impl<O> From<responding::Sender<O, Result<(), HangingGetServerError>>> for Subscriber<O> {
+    fn from(sender: responding::Sender<O, Result<(), HangingGetServerError>>) -> Self {
         Self { sender }
     }
 }
@@ -230,9 +218,7 @@ impl<O> Subscriber<O> {
     /// * A `Subscriber` is sending observation requests at too high a rate.
     /// * The `HangingGetBroker` has been dropped by the server.
     pub async fn register(&mut self, observation: O) -> Result<(), HangingGetServerError> {
-        let (responder, response) = oneshot::channel();
-        self.sender.send((observation, responder)).await?;
-        Ok(response.await??)
+        self.sender.request(observation).await?
     }
 }
 
@@ -434,7 +420,7 @@ mod subscriber_key {
 mod tests {
     use {
         super::*, crate::hanging_get::test_util::TestObserver, fuchsia_async as fasync,
-        std::task::Poll,
+        futures::channel::oneshot, std::task::Poll,
     };
 
     const TEST_CHANNEL_SIZE: usize = 128;
