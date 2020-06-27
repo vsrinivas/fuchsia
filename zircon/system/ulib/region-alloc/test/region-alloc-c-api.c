@@ -38,7 +38,7 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
     const ralloc_region_t req = {.base = 128u, .size = 256u};
     const ralloc_region_t* out;
 
-    EXPECT_OK(ralloc_add_region(alloc, &tmp, false));
+    EXPECT_OK(ralloc_add_region(alloc, &tmp, RegionAllocatorDontAllowOverlap));
     EXPECT_OK(ralloc_get_specific_region_ex(alloc, &req, &out));
 
     // Now attempt to assign a region pool to allocate from.  Since we have both
@@ -66,7 +66,7 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
 
   // Add some regions to our allocator.
   for (size_t i = 0; i < countof(GOOD_REGIONS); ++i) {
-    EXPECT_OK(ralloc_add_region(alloc, &GOOD_REGIONS[i], false));
+    EXPECT_OK(ralloc_add_region(alloc, &GOOD_REGIONS[i], RegionAllocatorDontAllowOverlap));
   }
 
   // Make a new pool and try to assign it to the allocator.  This should fail
@@ -83,7 +83,7 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
   {
     ralloc_region_t tmp = {.base = GOOD_MERGE_REGION_BASE, .size = GOOD_MERGE_REGION_SIZE};
     for (size_t i = 0; i < OOM_RANGE_LIMIT; ++i) {
-      ASSERT_OK(ralloc_add_region(alloc, &tmp, false));
+      ASSERT_OK(ralloc_add_region(alloc, &tmp, RegionAllocatorDontAllowOverlap));
       tmp.base += tmp.size;
     }
   }
@@ -91,7 +91,8 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
   // Attempt (and fail) to add some bad regions (regions which overlap,
   // regions which wrap the address space)
   for (size_t i = 0; i < countof(BAD_REGIONS); ++i) {
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, ralloc_add_region(alloc, &BAD_REGIONS[i], false));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              ralloc_add_region(alloc, &BAD_REGIONS[i], RegionAllocatorDontAllowOverlap));
   }
 
   // Force the region bookkeeping pool to run out of memory by adding more and
@@ -104,7 +105,7 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
     for (i = 0; i < OOM_RANGE_LIMIT; ++i) {
       zx_status_t res;
 
-      res = ralloc_add_region(alloc, &tmp, false);
+      res = ralloc_add_region(alloc, &tmp, RegionAllocatorDontAllowOverlap);
       if (res != ZX_OK) {
         EXPECT_EQ(ZX_ERR_NO_MEMORY, res);
         break;
@@ -153,7 +154,7 @@ void AllocBySizeHelper(enum TestFlavor flavor) {
 
   // Now add our test regions.
   for (size_t i = 0; i < countof(ALLOC_BY_SIZE_REGIONS); ++i) {
-    EXPECT_OK(ralloc_add_region(alloc, &ALLOC_BY_SIZE_REGIONS[i], false));
+    EXPECT_OK(ralloc_add_region(alloc, &ALLOC_BY_SIZE_REGIONS[i], RegionAllocatorDontAllowOverlap));
   }
 
   // Run the alloc by size tests.  Hold onto the regions it allocates so they
@@ -228,7 +229,8 @@ void AllocSpecificHelper(enum TestFlavor flavor) {
 
   // Now add our test regions.
   for (size_t i = 0; i < countof(ALLOC_SPECIFIC_REGIONS); ++i) {
-    EXPECT_OK(ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i], false));
+    EXPECT_OK(
+        ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i], RegionAllocatorDontAllowOverlap));
   }
 
   // Run the alloc by size tests.  Hold onto the regions it allocates so they
@@ -297,7 +299,9 @@ void AddOverlapHelper(enum TestFlavor flavor) {
   for (size_t i = 0; i < countof(ADD_OVERLAP_TESTS); ++i) {
     const alloc_add_overlap_test_t* TEST = ADD_OVERLAP_TESTS + i;
 
-    zx_status_t res = ralloc_add_region(alloc, &TEST->reg, TEST->ovl);
+    zx_status_t res = ralloc_add_region(
+        alloc, &TEST->reg,
+        TEST->ovl ? RegionAllocatorAllowOverlap : RegionAllocatorDontAllowOverlap);
 
     EXPECT_EQ(TEST->res, res);
     EXPECT_EQ(TEST->cnt, ralloc_get_available_region_count(alloc));
@@ -341,9 +345,11 @@ void SubtractHelper(enum TestFlavor flavor) {
 
     zx_status_t res;
     if (TEST->add)
-      res = ralloc_add_region(alloc, &TEST->reg, false);
+      res = ralloc_add_region(alloc, &TEST->reg, RegionAllocatorDontAllowOverlap);
     else
-      res = ralloc_sub_region(alloc, &TEST->reg, TEST->incomplete);
+      res = ralloc_sub_region(
+          alloc, &TEST->reg,
+          TEST->incomplete ? RegionAllocatorAllowIncomplete : RegionAllocatorDontAllowIncomplete);
 
     EXPECT_EQ(TEST->res ? ZX_OK : ZX_ERR_INVALID_ARGS, res);
     EXPECT_EQ(TEST->cnt, ralloc_get_available_region_count(alloc));
@@ -409,7 +415,7 @@ void AllocatedWalkHelper(enum TestFlavor flavor) {
   // Add a region which covers the entire address space to the allocator's
   // available set.
   ralloc_region_t full_region = {.base = 0, .size = UINT64_MAX};
-  ASSERT_OK(ralloc_add_region(alloc, &full_region, false));
+  ASSERT_OK(ralloc_add_region(alloc, &full_region, RegionAllocatorDontAllowOverlap));
 
   // Pull each region defined above out of the allocator and stash their UPtrs
   // for the time being.  Then the lambda can walk the allocated regions and

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/listnode.h>  // for containerof
+
 #include <region-alloc/region-alloc.h>
 
 extern "C" {
@@ -28,8 +29,7 @@ void ralloc_release_pool(ralloc_pool_t* pool) {
   // Reclaim our reference back from the land of C by turning the pointer
   // back into a RefPtr, then deliberately let it go out of scope, dropping
   // its reference and destructing the RegionPool if need be.
-  auto release_me =
-      fbl::ImportFromRawPtr(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
+  auto release_me = fbl::ImportFromRawPtr(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
 }
 
 zx_status_t ralloc_create_allocator(ralloc_allocator_t** out_allocator) {
@@ -54,8 +54,7 @@ zx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool* p
   // then use it to call the RegionAllocator::SetRegionPool method.  Finally,
   // deliberately leak the reference again so we are not accidentally removing
   // the unmanaged reference held by our C user.
-  auto pool_ref =
-      fbl::ImportFromRawPtr(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
+  auto pool_ref = fbl::ImportFromRawPtr(reinterpret_cast<RegionAllocator::RegionPool*>(pool));
   zx_status_t ret = alloc.SetRegionPool(pool_ref);
   __UNUSED auto leak = fbl::ExportToRawPtr(&pool_ref);
 
@@ -76,19 +75,21 @@ void ralloc_destroy_allocator(ralloc_allocator_t* allocator) {
 }
 
 zx_status_t ralloc_add_region(ralloc_allocator_t* allocator, const ralloc_region_t* region,
-                              bool allow_overlap) {
+                              region_allocator_allow_overlap_t allow_overlap) {
   if (!allocator || !region)
     return ZX_ERR_INVALID_ARGS;
 
-  return reinterpret_cast<RegionAllocator*>(allocator)->AddRegion(*region, allow_overlap);
+  return reinterpret_cast<RegionAllocator*>(allocator)->AddRegion(
+      *region, static_cast<RegionAllocator::AllowOverlap>(allow_overlap));
 }
 
 zx_status_t ralloc_sub_region(ralloc_allocator_t* allocator, const ralloc_region_t* region,
-                              bool allow_incomplete) {
+                              region_allocator_allow_incomplete_t allow_incomplete) {
   if (!allocator || !region)
     return ZX_ERR_INVALID_ARGS;
 
-  return reinterpret_cast<RegionAllocator*>(allocator)->SubtractRegion(*region, allow_incomplete);
+  return reinterpret_cast<RegionAllocator*>(allocator)->SubtractRegion(
+      *region, static_cast<RegionAllocator::AllowIncomplete>(allow_incomplete));
 }
 
 zx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator, uint64_t size,

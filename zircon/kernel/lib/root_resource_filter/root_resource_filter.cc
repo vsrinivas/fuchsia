@@ -42,7 +42,8 @@ void RootResourceFilter::Finalize() {
     // regions to deny, it can only be because we failed a heap allocation which
     // should be impossible at this point. If it does happen, panic. We cannot
     // run if we cannot enforce the deny list.
-    res = mmio_deny_.AddRegion({.base = info.base, .size = info.size}, true);
+    res = mmio_deny_.AddRegion({.base = info.base, .size = info.size},
+                               RegionAllocator::AllowOverlap::Yes);
     ASSERT(res == ZX_OK);
   }
 
@@ -145,7 +146,8 @@ std::optional<uintptr_t> RootResourceFilter::ProcessCmdLineReservation(size_t si
   }
 
   // Allow user mode access to the RAM we just reserved.
-  status = mmio_deny_.SubtractRegion({.base = phys, .size = size}, true);
+  status = mmio_deny_.SubtractRegion({.base = phys, .size = size},
+                                     RegionAllocator::AllowIncomplete::Yes);
   if (status != ZX_OK) {
     Printf(
         "WARNING - Failed to add region [%lx, %lx) command line reservation \"%V\" to deny "
@@ -171,7 +173,8 @@ void RootResourceFilter::ProcessZbiEntry(const zbi_header_t* hdr, const void* pa
 
   for (uint32_t i = 0; i < count; i++, mem_range++) {
     if (mem_range->type == ZBI_MEM_RANGE_RESERVED) {
-      mmio_deny_.SubtractRegion({.base = mem_range->paddr, .size = mem_range->length}, true);
+      mmio_deny_.SubtractRegion({.base = mem_range->paddr, .size = mem_range->length},
+                                RegionAllocator::AllowIncomplete::Yes);
     }
   }
 }

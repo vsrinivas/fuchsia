@@ -66,7 +66,7 @@ zx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool
   return ZX_OK;
 }
 
-zx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow_overlap) {
+zx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, AllowOverlap allow_overlap) {
   fbl::AutoLock alloc_lock(&alloc_lock_);
 
   // Start with sanity checks
@@ -77,7 +77,7 @@ zx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
 
   // Make sure that we do not intersect with the available regions if we do
   // not allow overlaps.
-  if (!allow_overlap && IntersectsLocked(avail_regions_by_base_, region)) {
+  if ((allow_overlap != AllowOverlap::Yes) && IntersectsLocked(avail_regions_by_base_, region)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -98,7 +98,7 @@ zx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
 }
 
 zx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
-                                            bool allow_incomplete) {
+                                            AllowIncomplete allow_incomplete) {
   fbl::AutoLock alloc_lock(&alloc_lock_);
 
   // Start with sanity checks
@@ -191,8 +191,8 @@ zx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
 
   // If we have gotten this far, then there is no single region in the
   // available set which completely contains the subtraction region.  We
-  // cannot continue unless allow_incomplete is true.
-  if (!allow_incomplete) {
+  // cannot continue unless allow_incomplete is Yes.
+  if (allow_incomplete != AllowIncomplete::Yes) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -508,13 +508,14 @@ zx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
   return ZX_OK;
 }
 
-void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap) {
+void RegionAllocator::AddRegionToAvailLocked(Region* region, AllowOverlap allow_overlap) {
   // Sanity checks.  This region should not exist in any bookkeeping, and
   // should not overlap with any of the regions we are currently tracking.
   ZX_DEBUG_ASSERT(!fbl::InContainer<SortByBaseTag>(*region));
   ZX_DEBUG_ASSERT(!fbl::InContainer<SortBySizeTag>(*region));
   ZX_DEBUG_ASSERT(!IntersectsLocked(allocated_regions_by_base_, *region));
-  ZX_DEBUG_ASSERT(allow_overlap || !IntersectsLocked(avail_regions_by_base_, *region));
+  ZX_DEBUG_ASSERT((allow_overlap == AllowOverlap::Yes) ||
+                  !IntersectsLocked(avail_regions_by_base_, *region));
 
   // Find the region which comes before us and the region which comes after us
   // in the tree.
@@ -527,7 +528,8 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
     ZX_DEBUG_ASSERT(before->base <= region->base);
 
     uint64_t before_end = (before->base + before->size);  // exclusive end
-    if (allow_overlap ? (before_end >= region->base) : (before_end == region->base)) {
+    if ((allow_overlap == AllowOverlap::Yes) ? (before_end >= region->base)
+                                             : (before_end == region->base)) {
       region_end = std::max(region_end, before_end);
       region->base = before->base;
 
@@ -542,7 +544,8 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
   while (after.IsValid()) {
     ZX_DEBUG_ASSERT(region->base < after->base);
 
-    if (!(allow_overlap ? (region_end >= after->base) : (region_end == after->base))) {
+    if (!((allow_overlap == AllowOverlap::Yes) ? (region_end >= after->base)
+                                               : (region_end == after->base))) {
       break;
     }
 
@@ -554,7 +557,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
     avail_regions_by_size_.erase(*removed);
     DestroyRegion(removed);
 
-    if (!allow_overlap) {
+    if (allow_overlap != AllowOverlap::Yes) {
       break;
     }
   }

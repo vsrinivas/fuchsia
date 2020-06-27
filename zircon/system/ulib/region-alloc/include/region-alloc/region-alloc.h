@@ -164,6 +164,17 @@ typedef struct ralloc_region {
 zx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool);
 void ralloc_release_pool(ralloc_pool_t* pool);
 
+// C Version of the AllowOverlap and AllowIncomplete enums.
+typedef enum {
+  RegionAllocatorDontAllowOverlap = 0,
+  RegionAllocatorAllowOverlap = 1
+} region_allocator_allow_overlap_t;
+
+typedef enum {
+  RegionAllocatorDontAllowIncomplete = 0,
+  RegionAllocatorAllowIncomplete = 1
+} region_allocator_allow_incomplete_t;
+
 // RegionAllocator interface.  Valid operations are...
 //
 // ++ Create
@@ -180,9 +191,9 @@ zx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool_t*
 void ralloc_reset_allocator(ralloc_allocator_t* allocator);
 void ralloc_destroy_allocator(ralloc_allocator_t* allocator);
 zx_status_t ralloc_add_region(ralloc_allocator_t* allocator, const ralloc_region_t* region,
-                              bool allow_overlap);
+                              region_allocator_allow_overlap_t allow_overlap);
 zx_status_t ralloc_sub_region(ralloc_allocator_t* allocator, const ralloc_region_t* region,
-                              bool allow_incomplete);
+                              region_allocator_allow_incomplete_t allow_incomplete);
 
 zx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator, uint64_t size,
                                        uint64_t alignment, const ralloc_region_t** out_region);
@@ -252,6 +263,18 @@ class RegionAllocator {
   enum class TestRegionSet {
     Allocated,  // The set of currently allocated regions.
     Available,  // The set of currently available regions.
+  };
+
+  // Enums which act as strongly typed bools and are used to control the
+  // behavior of AddRegion and SubtractRegion.
+  enum class AllowOverlap {
+    No = RegionAllocatorDontAllowOverlap,
+    Yes = RegionAllocatorAllowOverlap,
+  };
+
+  enum class AllowIncomplete {
+    No = RegionAllocatorDontAllowIncomplete,
+    Yes = RegionAllocatorAllowIncomplete,
   };
 
   class Region;
@@ -391,11 +414,11 @@ class RegionAllocator {
 
   // Add a region to the set of allocatable regions.
   //
-  // If allow_overlap is false, the added region may not overlap with any
-  // previously added region and will be rejected if it does.  If
-  // allow_overlap is true, the added region will be union'ed with existing
-  // available regions, provided it does not intersect any currently allocated
-  // region.
+  // If allow_overlap is AllowOverlap::No, the added region may not overlap with
+  // any previously added region and will be rejected if it does.  If
+  // allow_overlap is AllowOverlap::Yes, the added region will be union'ed with
+  // existing available regions, provided it does not intersect any currently
+  // allocated region.
   //
   // Possible return values
   // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
@@ -406,8 +429,8 @@ class RegionAllocator {
   //      allocated regions.
   // ++++ The region being added intersects one ore more of the currently
   //      available regions, and allow_overlap is false.
-  zx_status_t AddRegion(const ralloc_region_t& region, bool allow_overlap = false)
-      __TA_EXCLUDES(alloc_lock_);
+  zx_status_t AddRegion(const ralloc_region_t& region,
+                        AllowOverlap allow_overlap = AllowOverlap::No) __TA_EXCLUDES(alloc_lock_);
 
   // Subtract a region from the set of allocatable regions.
   //
@@ -430,7 +453,8 @@ class RegionAllocator {
   // ++++ The region being subtracted intersects portions of the space which
   //      are absent from both the allocated and available sets, and
   //      allow_incomplete is false.
-  zx_status_t SubtractRegion(const ralloc_region_t& region, bool allow_incomplete = false)
+  zx_status_t SubtractRegion(const ralloc_region_t& region,
+                             AllowIncomplete allow_incomplete = AllowIncomplete::No)
       __TA_EXCLUDES(alloc_lock_);
 
   // Get a region out of the set of currently available regions which has a
@@ -565,7 +589,7 @@ class RegionAllocator {
   zx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region)
       __TA_REQUIRES(alloc_lock_);
   void ReleaseRegion(Region* region) __TA_EXCLUDES(alloc_lock_);
-  void AddRegionToAvailLocked(Region* region, bool allow_overlap = false)
+  void AddRegionToAvailLocked(Region* region, AllowOverlap allow_overlap = AllowOverlap::No)
       __TA_REQUIRES(alloc_lock_);
 
   zx_status_t AllocFromAvailLocked(Region::WAVLTreeSortBySize::iterator source,

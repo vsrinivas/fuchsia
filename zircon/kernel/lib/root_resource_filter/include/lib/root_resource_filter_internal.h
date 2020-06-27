@@ -62,7 +62,8 @@ class RootResourceFilter {
       // startup. Failure to add a region implies heap allocation failure. Not
       // only should it never happen, _not_ enforcing our deny list is not an
       // option. Panic if this happens.
-      zx_status_t res = mmio_deny_.AddRegion({.base = base, .size = size}, true);
+      zx_status_t res =
+          mmio_deny_.AddRegion({.base = base, .size = size}, RegionAllocator::AllowOverlap::Yes);
       ASSERT(res == ZX_OK);
     }
   }

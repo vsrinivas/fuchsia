@@ -244,7 +244,8 @@ void AddOverlapHelper(TestFlavor flavor) {
   for (size_t i = 0; i < std::size(ADD_OVERLAP_TESTS); ++i) {
     const alloc_add_overlap_test_t* TEST = ADD_OVERLAP_TESTS + i;
 
-    zx_status_t res = alloc.AddRegion(TEST->reg, TEST->ovl);
+    zx_status_t res = alloc.AddRegion(TEST->reg, TEST->ovl ? RegionAllocator::AllowOverlap::Yes
+                                                           : RegionAllocator::AllowOverlap::No);
 
     EXPECT_EQ(TEST->res, res);
     EXPECT_EQ(TEST->cnt, alloc.AvailableRegionCount());
@@ -274,7 +275,9 @@ void SubtractHelper(TestFlavor flavor) {
     if (TEST->add)
       res = alloc.AddRegion(TEST->reg);
     else
-      res = alloc.SubtractRegion(TEST->reg, TEST->incomplete);
+      res =
+          alloc.SubtractRegion(TEST->reg, TEST->incomplete ? RegionAllocator::AllowIncomplete::Yes
+                                                           : RegionAllocator::AllowIncomplete::No);
 
     EXPECT_EQ(TEST->res ? ZX_OK : ZX_ERR_INVALID_ARGS, res);
     EXPECT_EQ(TEST->cnt, alloc.AvailableRegionCount());

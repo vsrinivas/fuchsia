@@ -423,19 +423,25 @@ zx_status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base, uint64_t size, Pc
     return ZX_ERR_INVALID_ARGS;
 
   uint64_t end = base + size - 1;
-  auto OpPtr = add_op ? &RegionAllocator::AddRegion : &RegionAllocator::SubtractRegion;
+
+  auto AddSub = add_op ?
+    [](RegionAllocator& allocator, const ralloc_region_t& region) {
+      return allocator.AddRegion(region, RegionAllocator::AllowOverlap::Yes);
+    }
+  :
+    [](RegionAllocator& allocator, const ralloc_region_t& region) {
+      return allocator.SubtractRegion(region, RegionAllocator::AllowIncomplete::Yes);
+    };
 
   if (aspace == PciAddrSpace::MMIO) {
     // Figure out if this goes in the low region, the high region, or needs
     // to be split into two regions.
     constexpr uint64_t U32_MAX = ktl::numeric_limits<uint32_t>::max();
-    auto& mmio_lo = mmio_lo_regions_;
-    auto& mmio_hi = mmio_hi_regions_;
 
     if (end <= U32_MAX) {
-      return (mmio_lo.*OpPtr)({.base = base, .size = size}, true);
+      return AddSub(mmio_lo_regions_, {.base = base, .size = size});
     } else if (base > U32_MAX) {
-      return (mmio_hi.*OpPtr)({.base = base, .size = size}, true);
+      return AddSub(mmio_hi_regions_, {.base = base, .size = size});
     } else {
       uint64_t lo_base = base;
       uint64_t hi_base = U32_MAX + 1;
@@ -443,11 +449,12 @@ zx_status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base, uint64_t size, Pc
       uint64_t hi_size = size - lo_size;
       zx_status_t res;
 
-      res = (mmio_lo.*OpPtr)({.base = lo_base, .size = lo_size}, true);
-      if (res != ZX_OK)
+      res = AddSub(mmio_lo_regions_, {.base = lo_base, .size = lo_size});
+      if (res != ZX_OK) {
         return res;
+      }
 
-      return (mmio_hi.*OpPtr)({.base = hi_base, .size = hi_size}, true);
+      return AddSub(mmio_hi_regions_, {.base = hi_base, .size = hi_size});
     }
   } else {
     DEBUG_ASSERT(aspace == PciAddrSpace::PIO);
@@ -455,7 +462,7 @@ zx_status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base, uint64_t size, Pc
     if ((base | end) & ~PCIE_PIO_ADDR_SPACE_MASK)
       return ZX_ERR_INVALID_ARGS;
 
-    return (pio_regions_.*OpPtr)({.base = base, .size = size}, true);
+    return AddSub(pio_regions_, {.base = base, .size = size});
   }
 }
 
