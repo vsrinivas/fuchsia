@@ -212,6 +212,11 @@ class Binding final {
     return controller_.reader().WaitAndDispatchOneMessageUntil(zx::time::infinite());
   }
 
+  // Whether an error handler has been set.
+  //
+  // See |set_error_handler()|.
+  constexpr bool has_error_handler() const { return controller_.reader().has_error_handler(); }
+
   // Sets an error handler that will be called if an error causes the underlying
   // channel to be closed.
   //

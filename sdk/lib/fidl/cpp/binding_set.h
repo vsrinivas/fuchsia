@@ -66,13 +66,21 @@ class BindingSet final {
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
     binding->set_error_handler(
-        [binding, capture_handler = std::move(handler), this](zx_status_t status) mutable {
-          // Subtle behavior: it is necessary to std::move into a local
-          // variable because the closure is deleted when RemoveOnError
-          // is called.
-          ErrorHandler handler(std::move(capture_handler));
-          this->RemoveOnError(binding);
+        [binding, handler = std::move(handler), this](zx_status_t status) mutable {
+          // This error handler is not thread-safe and assumes that concurrent calls to the lambda
+          // are not possible.
+          //
+          // All actions done in this lambda must not modify the error handler of |binding|, as
+          // |binding| owns the captured contents of this lambda. For example, resetting the error
+          // handler anywhere before the end of this function will cause undefined behavior within
+          // this function.
+          std::unique_ptr<Binding> removed_binding = this->RemoveOnError(binding);
+
+          // The removed binding must have an error handler (which is this lambda).
+          ZX_DEBUG_ASSERT(removed_binding->has_error_handler());
+
           if (handler) {
+            // Invoke the (real) handler provided by the client.
             handler(status);
           }
         });
@@ -111,8 +119,8 @@ class BindingSet final {
   template <class T>
   bool RemoveBinding(const T& impl) {
     return RemoveMatchedBinding([&impl](const std::unique_ptr<Binding>& b) {
-      return ResolvePtr(impl) == ResolvePtr(b->impl());
-    });
+             return ResolvePtr(impl) == ResolvePtr(b->impl());
+           }) != nullptr;
   }
 
   // Removes a binding from the set.
@@ -200,21 +208,22 @@ class BindingSet final {
   }
 
   // Called when a binding has an error to remove the binding from the set.
-  void RemoveOnError(Binding* binding) {
-    bool found = RemoveMatchedBinding(
+  std::unique_ptr<Binding> RemoveOnError(Binding* binding) {
+    std::unique_ptr<Binding> removed_binding = RemoveMatchedBinding(
         [binding](const std::unique_ptr<Binding>& b) { return b.get() == binding; });
-    ZX_DEBUG_ASSERT(found);
+    ZX_DEBUG_ASSERT(removed_binding != nullptr);
+
+    return removed_binding;
   }
 
-  bool RemoveMatchedBinding(std::function<bool(const std::unique_ptr<Binding>&)> binding_matcher) {
-    {
-      auto matching_binding = ExtractMatchedBinding(binding_matcher);
-      if (matching_binding == nullptr)
-        return false;
-    }
+  std::unique_ptr<Binding> RemoveMatchedBinding(
+      std::function<bool(const std::unique_ptr<Binding>&)> binding_matcher) {
+    auto matching_binding = ExtractMatchedBinding(binding_matcher);
+    if (matching_binding == nullptr)
+      return nullptr;
 
     CheckIfEmpty();
-    return true;
+    return matching_binding;
   }
 
   std::unique_ptr<Binding> ExtractMatchedBinding(
@@ -223,8 +232,7 @@ class BindingSet final {
     if (it == bindings_.end())
       return nullptr;
 
-    auto binding_local = std::move(*it);
-    binding_local->set_error_handler(nullptr);
+    std::unique_ptr<Binding> binding_local = std::move(*it);
     bindings_.erase(it);
 
     return binding_local;

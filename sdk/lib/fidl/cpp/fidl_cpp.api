@@ -1,6 +1,6 @@
 {
-  "pkg/fidl_cpp/include/lib/fidl/cpp/binding.h": "7f203538aca29287ea5fc6050bcc432d",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h": "de89db058e39d8ab93c5a38a38e4dbdf",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/binding.h": "cb92317498a026e243fcbef5da774b8a",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h": "20d3497f371ecbddd9af6f30f0cbb65d",
   "pkg/fidl_cpp/include/lib/fidl/cpp/enum.h": "ad164c5cd66ea3db9d5df386b47755a4",
   "pkg/fidl_cpp/include/lib/fidl/cpp/event_sender.h": "cac2e1fe4c1e0f4efafec35a57e04ab3",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "6a9d47bcabd33792dafebe19663feca0",
@@ -8,7 +8,7 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "1656f11c6efd63a7fa1a2d5f5a8fc5f2",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/implementation.h": "8dfc64d045bbfb27491e60988ba56c07",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_handler.h": "d8a20f51ac020fd1cd3a34703da33d63",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "229a4d7cb41296dd234d4a0e4d48d6f3",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "3a6660f20ae89cd753e8bb6184230b73",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/pending_response.h": "4f79aa17c9c76305cf89c9ed3538e517",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy.h": "12a79be8ee86efcf3600c2d39b38c454",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy_controller.h": "f0f511a11bb0ba653d375c61035d0e5a",

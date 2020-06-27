@@ -105,6 +105,11 @@ class MessageReader final {
   // error handler.
   void set_message_handler(MessageHandler* message_handler) { message_handler_ = message_handler; }
 
+  // Whether an error handler has been set.
+  //
+  // See |set_error_handler()|.
+  constexpr bool has_error_handler() const { return static_cast<bool>(error_handler_); }
+
   // The given error handler is called whenever the |MessageReader| encounters
   // an error on the channel.
   //
