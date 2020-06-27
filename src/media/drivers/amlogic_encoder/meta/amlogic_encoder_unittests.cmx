@@ -1,9 +1,0 @@
-{
-    "facets": {},
-    "program": {
-        "binary": "test/amlogic_encoder_unittests"
-    },
-    "sandbox": {
-        "services": []
-    }
-}

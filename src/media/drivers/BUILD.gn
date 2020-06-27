@@ -4,10 +4,7 @@
 
 group("drivers") {
   if (target_cpu == "arm64") {
-    deps = [
-      "amlogic_decoder:amlogic_decoder",
-      "amlogic_encoder",
-    ]
+    deps = [ "amlogic_decoder:amlogic_decoder" ]
   }
 }
 
@@ -15,9 +12,6 @@ group("tests") {
   testonly = true
 
   if (target_cpu == "arm64") {
-    deps = [
-      "amlogic_decoder:tests",
-      "amlogic_encoder:tests",
-    ]
+    deps = [ "amlogic_decoder:tests" ]
   }
 }
