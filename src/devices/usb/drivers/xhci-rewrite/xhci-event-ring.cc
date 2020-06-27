@@ -153,8 +153,83 @@ zx_status_t EventRing::AddSegment() {
   return ZX_OK;
 }
 
-zx_status_t EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
+TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
   auto sc = PORTSC::Get(cap_length_, port_id).ReadFrom(mmio_);
+  std::optional<TRBPromise> pending_enumeration;
+  // Read status bits
+  bool needs_enum = false;
+
+  // xHCI doesn't provide a way of retrieving the port speed prior to a device being fully
+  // online (without using ACPI or another out-of-band mechanism).
+  // In order to correctly enumerate devices, we use heuristics to try and determine
+  // whether or not a port is 2.0 or 3.0.
+  if (sc.CCS()) {
+    // Wait for the port to exit polling state, if applicable.
+    // Only 2.0 ports should go into a polling state, so if we get here,
+    // we can be sure that it's a 2.0 port. Some controllers may skip this step though....
+    if ((sc.PLS() == PORTSC::Polling)) {
+      // USB 2.0 port connect
+      if (!hci_->get_port_state()[port_id - 1].is_connected) {
+        // USB 2.0 requires a port reset to advance to U0
+        Usb2DeviceAttach(port_id);
+        needs_enum = true;
+      }
+    } else {
+      // USB 3.0 port connect, since we got a connect status bit set,
+      // and were not polling.
+      if (!hci_->get_port_state()[port_id - 1].is_connected) {
+        Usb3DeviceAttach(port_id);
+        needs_enum = true;
+      }
+      if ((sc.PLS() == PORTSC::U0) && (sc.PED()) && (!sc.PR()) &&
+          !hci_->get_port_state()[port_id - 1].link_active) {
+        // Set the link active bit here to prevent us from onlining the same device twice.
+        hci_->get_port_state()[port_id - 1].link_active = true;
+        needs_enum = false;
+        pending_enumeration = LinkUp(port_id);
+      }
+    }
+
+    // Link could be active from connect status change above.
+    // To prevent enumerating a device twice, we ensure that the link wasn't previously active
+    // before enumerating.
+    if ((sc.PLS() == PORTSC::U0) && sc.CCS() &&
+        !(hci_->get_port_state()[port_id - 1].link_active)) {
+      if (!hci_->get_port_state()[port_id - 1].is_connected) {
+        // Spontaneous initialization of USB 3.0 port without going through
+        // CSC event. We know this is USB 3.0 since this cannot possibly happen
+        // with a 2.0 port.
+        hci_->get_port_state()[port_id - 1].is_USB3 = true;
+        hci_->get_port_state()[port_id - 1].is_connected = true;
+      }
+      hci_->get_port_state()[port_id - 1].link_active = true;
+      if (!hci_->get_port_state()[port_id - 1].is_USB3) {
+        // USB 2.0 specification section 9.2.6.3
+        // states that we must wait 10 milliseconds.
+        needs_enum = false;
+        pending_enumeration =
+            hci_->Timeout(zx::deadline_after(zx::msec(10)))
+                .and_then([=](TRB*& result) { return LinkUp(static_cast<uint8_t>(port_id)); })
+                .box();
+      } else {
+        needs_enum = false;
+        pending_enumeration = LinkUp(static_cast<uint8_t>(port_id));
+      }
+    }
+
+  } else {
+    // For hubs, we need to take the device offline from the bus's standpoint before tearing down
+    // the hub. This means that the slot has to be kept alive until the hub driver is removed.
+    hci_->get_port_state()[port_id - 1].retry = false;
+    hci_->get_port_state()[port_id - 1].link_active = false;
+    hci_->get_port_state()[port_id - 1].is_connected = false;
+    hci_->get_port_state()[port_id - 1].is_USB3 = false;
+    if (hci_->get_port_state()[port_id - 1].slot_id) {
+      ScheduleTask(hci_->DeviceOffline(hci_->get_port_state()[port_id - 1].slot_id, nullptr).box());
+    }
+  }
+
+  // Update registers if not init
   if (sc.OCC()) {
     bool overcurrent = sc.OCA();
     PORTSC::Get(cap_length_, port_id)
@@ -185,39 +260,9 @@ zx_status_t EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
         .set_PP(sc.PP())
         .set_CSC(sc.CSC())
         .WriteTo(mmio_);
-    if (sc.CCS()) {
-      // Wait for the port to exit polling state, if applicable.
-      if (sc.PLS() == PORTSC::Polling) {
-        // USB 2.0 port connect
-        Usb2DeviceAttach(port_id);
-      } else {
-        // USB 3.0 port connect
-        Usb3DeviceAttach(port_id);
-        if (sc.PLS() == PORTSC::U0) {
-          LinkUp(port_id);
-        }
-      }
-      sc = PORTSC::Get(cap_length_, port_id).ReadFrom(mmio_);
-    } else {
-      // For hubs, we need to take the device offline from the bus's standpoint before tearing down
-      // the hub. This means that the slot has to be kept alive until the hub driver is removed.
-      if (!hci_->get_port_state()[port_id - 1].slot_id) {
-        // No slot was bound to this port.
-        return ZX_OK;
-      }
-      fbl::AutoLock l(&hci_->get_device_state()[hci_->get_port_state()[port_id - 1].slot_id - 1]
-                           .transaction_lock());
-      hci_->get_port_state()[port_id - 1].retry = false;
-      hci_->get_port_state()[port_id - 1].link_active = false;
-      hci_->get_port_state()[port_id - 1].is_connected = false;
-      hci_->get_port_state()[port_id - 1].is_USB3 = false;
-      l.release();
-      ScheduleTask(hci_->DeviceOffline(hci_->get_port_state()[port_id - 1].slot_id, nullptr).box());
-      return ZX_OK;
-    }
   }
   if (sc.PEC()) {
-    return ZX_ERR_BAD_STATE;
+    return fit::make_error_promise(ZX_ERR_BAD_STATE);
   }
   if (sc.PRC() || sc.WRC()) {
     PORTSC::Get(cap_length_, port_id)
@@ -230,34 +275,28 @@ zx_status_t EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
         .set_PRC(sc.PRC())
         .set_WRC(sc.WRC())
         .WriteTo(mmio_);
-    sc = PORTSC::Get(cap_length_, port_id).ReadFrom(mmio_);
-    // Link could be active from connect status change above.
-    if ((sc.PLS() == PORTSC::U0) && sc.PED() && sc.CCS() &&
-        !(hci_->get_port_state()[port_id - 1].link_active)) {
-      if (!hci_->get_port_state()[port_id - 1].is_connected) {
-        // Spontaneous initialization of USB 3.0 port without going through
-        // CSC event. We know this is USB 3.0 since this cannot possibly happen
-        // with a 2.0 port.
-        hci_->get_port_state()[port_id - 1].is_USB3 = true;
-        hci_->get_port_state()[port_id - 1].is_connected = true;
-      }
-      hci_->get_port_state()[port_id - 1].link_active = true;
-      if (!hci_->get_port_state()[port_id - 1].is_USB3) {
-        // USB 2.0 specification section 9.2.6.3
-        // states that we must wait 10 milliseconds.
-        hci_->ScheduleTask(hci_->Timeout(zx::deadline_after(zx::msec(10)))
-                               .and_then([=](TRB*& result) {
-                                 LinkUp(static_cast<uint8_t>(port_id));
-                                 return fit::ok(result);
-                               })
-                               .box());
-      } else {
-        zx_status_t status = LinkUp(static_cast<uint8_t>(port_id));
-        return status;
-      }
-    }
   }
-  return ZX_OK;
+  if (pending_enumeration.has_value()) {
+    return *std::move(pending_enumeration);
+  }
+  if (needs_enum) {
+    return WaitForPortStatusChange(port_id)
+        .and_then([=](TRB*& trb) {
+          // Retry enumeration
+          HandlePortStatusChangeEventInterrupt(port_id, true);
+          return fit::ok(trb);
+        })
+        .box();
+  }
+  return fit::make_ok_promise(static_cast<TRB*>(nullptr));
+}
+
+TRBPromise EventRing::WaitForPortStatusChange(uint8_t port_id) {
+  fit::bridge<TRB*, zx_status_t> bridge;
+  auto context = hci_->get_command_ring()->AllocateContext();
+  context->completer = std::move(bridge.completer);
+  hci_->get_port_state()[port_id - 1].wait_for_port_status_change_ = std::move(context);
+  return bridge.consumer.promise();
 }
 
 TRBPromise Interrupter::Timeout(zx::time deadline) {
@@ -323,16 +362,68 @@ zx_status_t Interrupter::IrqThread() {
   return ZX_OK;
 }
 
-zx_status_t EventRing::Ring0Bringup() {
-  hci_->WaitForBringup();
-  // Qemu doesn't generate interrupts for already-connected devices.
-  // In order to support USB passthrouh on Qemu, we need to simulate
-  // a port status change event for each virtual port.
-  if (hci_->IsQemu()) {
-    for (size_t i = 0; i < hci_->get_port_count(); i++) {
-      HandlePortStatusChangeEvent(static_cast<uint8_t>(i));
+void EventRing::CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state) {
+  if (state->port_index < state->port_count) {
+    hci_->ScheduleTask(
+        HandlePortStatusChangeEvent(static_cast<uint8_t>(state->port_index))
+            .then([=](fit::result<TRB*, zx_status_t>& trb) -> fit::result<TRB*, zx_status_t> {
+              if (trb.is_error()) {
+                if (trb.error() == ZX_ERR_BAD_STATE) {
+                  return trb;
+                }
+              }
+              state->port_index++;
+              CallPortStatusChanged(state);
+              return fit::ok(nullptr);
+            })
+            .box());
+  } else {
+    if (enumeration_queue_.is_empty()) {
+      enumerating_ = false;
+    } else {
+      enumerating_ = true;
+      auto enum_task = enumeration_queue_.pop_front();
+      hci_->ScheduleTask(HandlePortStatusChangeEvent(enum_task->port_number)
+                             .then([this, state, task = std::move(enum_task)](
+                                       fit::result<TRB*, zx_status_t>& trb) mutable {
+                               if (trb.is_error()) {
+                                 if (trb.error() == ZX_ERR_BAD_STATE) {
+                                   return trb;
+                                 }
+                                 task->completer->complete_error(trb.error());
+                               } else {
+                                 task->completer->complete_ok(trb.value());
+                               }
+                               state->port_index = state->port_count;
+                               CallPortStatusChanged(state);
+                               return trb;
+                             }));
     }
   }
+}
+
+void EventRing::HandlePortStatusChangeEventInterrupt(uint8_t port_id, bool preempt) {
+  auto ctx = hci_->get_command_ring()->AllocateContext();
+  ctx->port_number = port_id;
+  fit::bridge<TRB*, zx_status_t> bridge;
+  ctx->completer = std::move(bridge.completer);
+  hci_->ScheduleTask(bridge.consumer.promise()
+                         .then([=](fit::result<TRB*, zx_status_t>& result) { return result; })
+                         .box());
+  if (preempt) {
+    enumeration_queue_.push_front(std::move(ctx));
+  } else {
+    enumeration_queue_.push_back(std::move(ctx));
+  }
+  if (!enumerating_) {
+    auto state = fbl::MakeRefCounted<PortStatusChangeState>(0, 0);
+    CallPortStatusChanged(std::move(state));
+  }
+}
+
+zx_status_t EventRing::Ring0Bringup() {
+  hci_->WaitForBringup();
+  enumerating_ = false;
   return ZX_OK;
 }
 
@@ -354,6 +445,29 @@ void EventRing::ScheduleTask(fit::promise<TRB*, zx_status_t> promise) {
 }
 
 void EventRing::RunUntilIdle() { executor_.run(); }
+
+std::variant<bool, std::unique_ptr<TRBContext>> EventRing::StallWorkaroundForDefectiveHubs(
+    std::unique_ptr<TRBContext> context) {
+  // Workaround for full-speed hub issue in Gateway keyboard
+  auto request = context->request->request();
+  if ((request->header.ep_address == 0) && (request->setup.bRequest == USB_REQ_GET_DESCRIPTOR) &&
+      (request->setup.wIndex == 0) && (request->setup.wValue == (USB_DT_DEVICE_QUALIFIER << 8))) {
+    usb_device_qualifier_descriptor_t* desc;
+    if ((context->request->Mmap(reinterpret_cast<void**>(&desc)) == ZX_OK) &&
+        (request->header.length >= sizeof(desc))) {
+      desc->bDeviceProtocol =
+          0;  // Don't support multi-TT unless we're sure the device supports it.
+      hci_->ScheduleTask(hci_->UsbHciResetEndpointAsync(request->header.device_id, 0)
+                             .and_then([ctx = std::move(context)](TRB*& result) {
+                               ctx->request->Complete(ZX_OK, sizeof(*desc));
+                               return fit::ok(result);
+                             }));
+
+      return true;
+    }
+  }
+  return context;
+}
 
 zx_status_t EventRing::HandleIRQ() {
   iman_reg_.set_IP(1).set_IE(1).WriteTo(mmio_);
@@ -379,13 +493,12 @@ zx_status_t EventRing::HandleIRQ() {
           // Section 6.4.2.3 (Port Status change TRB)
           auto change_event = static_cast<PortStatusChangeEvent*>(erdp_virt_);
           uint8_t port_id = static_cast<uint8_t>(change_event->PortID());
-          zx_status_t status = HandlePortStatusChangeEvent(port_id);
-          if (status != ZX_OK) {
-            if (status == ZX_ERR_BAD_STATE) {
-              hci_->Shutdown(status);
-              return status;
-            }
-            return status;
+          auto event = std::move(hci_->get_port_state()[port_id - 1].wait_for_port_status_change_);
+          // Resume interrupted wait
+          if (event) {
+            event->completer->complete_ok(nullptr);
+          } else {
+            HandlePortStatusChangeEventInterrupt(port_id);
           }
         } break;
         case Control::CommandCompletionEvent: {
@@ -480,6 +593,26 @@ zx_status_t EventRing::HandleIRQ() {
               break;
             }
           }
+          if (completion->CompletionCode() == CommandCompletionEvent::StallError) {
+            ring->set_stall(true);
+            auto completions = ring->TakePendingTRBs();
+            l.release();
+            if (context) {
+              if (completions.is_empty()) {
+                auto result = StallWorkaroundForDefectiveHubs(std::move(context));
+                if (std::holds_alternative<bool>(result)) {
+                  break;
+                }
+                context = std::move(std::get<std::unique_ptr<TRBContext>>(result));
+              }
+              context->request->Complete(ZX_ERR_IO_REFUSED, 0);
+            }
+            for (auto cb = completions.begin(); cb != completions.end(); cb++) {
+              cb->request->Complete(ZX_ERR_IO_REFUSED, 0);
+            }
+
+            break;
+          }
           if (status != ZX_OK) {
             auto completions = ring->TakePendingTRBs();
             l.release();
@@ -495,6 +628,7 @@ zx_status_t EventRing::HandleIRQ() {
             break;
           }
           l.release();
+
           if ((completion->CompletionCode() != CommandCompletionEvent::Success) &&
               (completion->CompletionCode() != CommandCompletionEvent::ShortPacket)) {
             // asix-88179 will stall the endpoint if we're sending data too fast.
@@ -539,11 +673,10 @@ zx_status_t EventRing::HandleIRQ() {
   return ZX_OK;
 }
 
-zx_status_t EventRing::LinkUp(uint8_t port_id) {
+TRBPromise EventRing::LinkUp(uint8_t port_id) {
   // Port is in U0 state (link up)
   // Enumerate device
-  ScheduleTask(EnumerateDevice(hci_, port_id, std::nullopt));
-  return ZX_OK;
+  return EnumerateDevice(hci_, port_id, std::nullopt);
 }
 
 void EventRing::Usb2DeviceAttach(uint16_t port_id) {

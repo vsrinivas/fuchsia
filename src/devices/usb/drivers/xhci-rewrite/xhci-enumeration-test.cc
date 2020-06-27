@@ -47,12 +47,14 @@ struct FakeTRB : TRB {
     OnlineDevice,
     ShutdownController,
     SetDeviceInformation,
+    Timeout,
   } Op;
   uint32_t slot;
   uint8_t max_packet_size;
   uint16_t port;
   usb_speed_t speed;
   zx_status_t status;
+  zx::time deadline;
   std::optional<HubInfo> hub_info;
   bool bsr;
   static FakeTRB* FromTRB(TRB* trb) { return static_cast<FakeTRB*>(trb); }
@@ -96,6 +98,19 @@ zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset
                                ddk::MmioView mmio_view, UsbXhci* hci) {
   hci_ = hci;
   return ZX_OK;
+}
+
+TRBPromise Interrupter::Timeout(zx::time deadline) {
+  fit::bridge<TRB*, zx_status_t> bridge;
+  auto state = reinterpret_cast<TestState*>(hci_->parent());
+  auto context = state->trb_context_allocator_.New();
+  FakeTRB* trb = new FakeTRB();
+  trb->Op = FakeTRB::Op::Timeout;
+  trb->deadline = deadline;
+  context->trb = trb;
+  context->completer = std::move(bridge.completer);
+  state->pending_operations.push_back(std::move(context));
+  return bridge.consumer.promise();
 }
 
 void UsbXhci::SetDeviceInformation(uint8_t slot, uint8_t port, const std::optional<HubInfo>& hub) {
@@ -582,7 +597,11 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
       ->set_CompletionCode(CommandCompletionEvent::Success);
   address_device->completer->complete_ok(address_device_op);
   controller().RunUntilIdle();
-
+  // Timeout
+  auto timeout = state().pending_operations.pop_front();
+  ASSERT_TRUE(FakeTRB::FromTRB(timeout->trb)->deadline.get());
+  timeout->completer->complete_ok(address_device_op);
+  controller().RunUntilIdle();
   // GetMaxPacketSize
   auto get_max_packet_size = state().pending_operations.pop_front();
   auto get_max_packet_size_request = std::move(get_max_packet_size->request);
@@ -759,6 +778,12 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   reinterpret_cast<CommandCompletionEvent*>(address_device_op)
       ->set_CompletionCode(CommandCompletionEvent::Success);
   address_device->completer->complete_ok(address_device_op);
+  controller().RunUntilIdle();
+
+  // Timeout
+  auto timeout = state().pending_operations.pop_front();
+  ASSERT_TRUE(FakeTRB::FromTRB(timeout->trb)->deadline.get());
+  timeout->completer->complete_ok(address_device_op);
   controller().RunUntilIdle();
 
   // GetMaxPacketSize

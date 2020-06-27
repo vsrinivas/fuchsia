@@ -47,7 +47,12 @@ class DeviceState {
 
   uint8_t GetSlot() { return slot_; }
 
-  std::optional<HubInfo>& GetHub() __TA_REQUIRES(transaction_lock_) { return hub_; }
+  std::optional<HubInfo>& GetHubLocked() __TA_REQUIRES(transaction_lock_) { return hub_; }
+
+  std::optional<HubInfo>& GetHub() {
+    fbl::AutoLock l(&transaction_lock_);
+    return hub_;
+  }
 
   bool IsDisconnecting() __TA_REQUIRES(transaction_lock_) { return disconnecting_; }
 

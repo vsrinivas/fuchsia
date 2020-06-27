@@ -61,6 +61,7 @@ struct FakeTRB : TRB {
   // that isn't valid. This value is a fallback for cases where ASAN isn't being used.
   static constexpr uint64_t kMagicValue = 0x12345678901ABCDEU;
   std::unique_ptr<FakePhysAddr> phys_addr_;
+  std::vector<TRB> contig;
   zx_paddr_t next = 0;
   zx_paddr_t prev = 0;
 };
@@ -336,6 +337,15 @@ class XhciHarness : public zxtest::Test {
     return it->get();
   }
 
+  FakeTRB* CreateTRBs(size_t count) {
+    auto it = trbs_.insert(trbs_.end(), std::make_unique<FakeTRB>());
+    (*it)->control = 0;
+    (*it)->ptr = 0;
+    (*it)->status = 0;
+    (*it)->contig.resize(count);
+    return it->get();
+  }
+
   size_t GetMaxDeviceCount() { return device_->UsbHciGetMaxDeviceCount(); }
 
   void RequestQueue(TestRequest request) { request.Queue(*device_); }
@@ -491,6 +501,29 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
   return ZX_OK;
 }
 
+zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
+  fbl::AutoLock _(&mutex_);
+  auto new_trb = static_cast<XhciHarness*>(hci_->get_test_harness())->CreateTRBs(count);
+  new_trb->prev = static_cast<FakeTRB*>(trbs_)->phys();
+  static_cast<FakeTRB*>(trbs_)->next = new_trb->phys();
+  trbs_ = new_trb->contig.data();
+  trbs_->ptr = 0;
+  trbs_->status = pcs_;
+  ContiguousTRBInfo info;
+  info.trbs = fbl::Span(trbs_, count);
+  return zx::ok(info);
+}
+
+constexpr auto kPeekPtr = 0x13823990000;
+
+zx::status<CRCR> TransferRing::TransferRing::PeekCommandRingControlRegister(uint8_t cap_length) {
+  fbl::AutoLock l(&mutex_);
+  CRCR cr;
+  cr.set_RCS(pcs_);
+  cr.set_PTR(kPeekPtr);
+  return zx::ok(cr);
+}
+
 zx_status_t TransferRing::CompleteTRB(TRB* trb, std::unique_ptr<TRBContext>* context) {
   fbl::AutoLock _(&mutex_);
   if (pending_trbs_.is_empty()) {
@@ -531,6 +564,7 @@ zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* 
   mmio_ = mmio;
   isochronous_ = false;
   token_++;
+  stalled_ = false;
   hci_ = &hci;
   trbs_ = static_cast<XhciHarness*>(hci_->get_test_harness())->CreateTRB();
   static_assert(sizeof(uint64_t) == sizeof(this));
@@ -598,7 +632,11 @@ zx_status_t TransferRing::DeinitIfActive() __TA_NO_THREAD_SAFETY_ANALYSIS {
   return ZX_OK;
 }
 
-zx_paddr_t TransferRing::VirtToPhys(TRB* trb) { return static_cast<FakeTRB*>(trb)->phys(); }
+zx_paddr_t TransferRing::VirtToPhys(TRB* trb) {
+  auto phys = static_cast<FakeTRB*>(trb)->phys();
+  ZX_ASSERT(FakeTRB::is_valid_paddr(phys));
+  return phys;
+}
 
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
@@ -761,7 +799,6 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
   });
 
   RequestQueue(std::move(*request));
-
   ASSERT_TRUE(rang);
   // Find slot context pointer in address device command
   auto cr = FakeTRB::get(crcr()->next);
@@ -774,12 +811,12 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
                               (static_cast<uint64_t>(endpoint_context->dequeue_pointer_b) << 32)) &
       (~1);
 
-  auto trb = FakeTRB::get(ring_phys);
-  auto first_trb = trb;
+  auto trb_start = FakeTRB::get(ring_phys);
 
   // Data (page 0)
-  trb = FakeTRB::get(trb->next);
+  auto trb = FakeTRB::get(trb_start->next)->contig.data();
   auto data_trb = static_cast<Normal*>(static_cast<TRB*>(trb));
+  ASSERT_EQ(Control::FromTRB(data_trb).Type(), Control::Normal);
   ASSERT_EQ(data_trb->IOC(), 0);
   ASSERT_EQ(data_trb->ISP(), 1);
   ASSERT_EQ(data_trb->INTERRUPTER(), 0);
@@ -789,27 +826,34 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
   void** virt = reinterpret_cast<void**>(FakeTRB::get(static_cast<zx_paddr_t>(data_trb->ptr))->ptr);
   *virt = virt;
 
-  // Data (page 1)
-  trb = FakeTRB::get(trb->next);
+  // Data (page 1, contiguous)
+  trb++;
   data_trb = static_cast<Normal*>(static_cast<TRB*>(trb));
   ASSERT_EQ(data_trb->IOC(), 1);
-  ASSERT_EQ(data_trb->ISP(), 0);
+  ASSERT_EQ(data_trb->ISP(), 1);
   ASSERT_EQ(data_trb->INTERRUPTER(), 0);
   ASSERT_EQ(data_trb->LENGTH(), ZX_PAGE_SIZE);
   ASSERT_EQ(data_trb->SIZE(), 0);
   ASSERT_TRUE(data_trb->NO_SNOOP());
 
   // Interrupt on completion
-  TransferRing* ring = reinterpret_cast<TransferRing*>(first_trb->ptr);
+  TransferRing* ring = reinterpret_cast<TransferRing*>(trb_start->ptr);
   std::unique_ptr<TRBContext> context;
   ring->CompleteTRB(trb, &context);
   context->request->Complete(ZX_OK, sizeof(void*));
   ASSERT_TRUE(invoked);
 }
 
-TEST_F(XhciMmioHarness, ResetEndpointTest) {
+TEST_F(XhciMmioHarness, ResetEndpointTestSuccessCase) {
   ConnectDevice(1, USB_SPEED_HIGH);
   EnableEndpoint(0, 1, true);
+  uint64_t paddr;
+  {
+    auto& state = device_->get_device_state()[0];
+    fbl::AutoLock l(&state.transaction_lock());
+    state.GetTransferRing(0).set_stall(true);
+    paddr = state.GetTransferRing(0).PeekCommandRingControlRegister(0).value().reg_value();
+  }
   zx_status_t reset_status;
   auto cr = FakeTRB::get(crcr()->next);
   Control control_trb = Control::FromTRB(cr);
@@ -822,22 +866,46 @@ TEST_F(XhciMmioHarness, ResetEndpointTest) {
   ASSERT_EQ(control_trb.Type(), Control::ConfigureEndpointCommand);
   ASSERT_OK(CompleteCommand(cr, &event));
   bool got_reset_endpoint = false;
+  bool got_set_tr_dequeue_ptr = false;
   SetDoorbellListener([&](uint8_t doorbell, uint8_t target) {
     if (doorbell == 0) {
       cr = FakeTRB::get(cr->next);
       Control control = Control::FromTRB(cr);
-      if (control.Type() == Control::ResetEndpointCommand) {
-        auto reset_command = reinterpret_cast<ResetEndpoint*>(cr);
-        ASSERT_EQ(reset_command->ENDPOINT(), 1);
-        ASSERT_EQ(reset_command->SLOT(), 1);
-        got_reset_endpoint = true;
-        ASSERT_OK(CompleteCommand(cr, &event));
+      switch (control.Type()) {
+        case Control::ResetEndpointCommand: {
+          auto reset_command = reinterpret_cast<ResetEndpoint*>(cr);
+          ASSERT_EQ(reset_command->ENDPOINT(), 2);
+          ASSERT_EQ(reset_command->SLOT(), 1);
+          got_reset_endpoint = true;
+          ASSERT_OK(CompleteCommand(cr, &event));
+        } break;
+        case Control::SetTrDequeuePointerCommand: {
+          // ResetEndpoint should be sent prior to SetTrDequeuePointer
+          ASSERT_TRUE(got_reset_endpoint);
+          auto set_cmd = reinterpret_cast<SetTRDequeuePointer*>(cr);
+          ASSERT_EQ(set_cmd->ENDPOINT(), 2);
+          ASSERT_EQ(set_cmd->ptr, paddr);
+          ASSERT_OK(CompleteCommand(cr, &event));
+          got_set_tr_dequeue_ptr = true;
+        } break;
       }
     }
   });
   reset_status = ResetEndpointCommand(0, 1);
   ASSERT_TRUE(got_reset_endpoint);
+  ASSERT_TRUE(got_set_tr_dequeue_ptr);
   ASSERT_OK(reset_status);
+}
+
+TEST_F(XhciMmioHarness, ResetEndpointFailsIfNotStalled) {
+  ConnectDevice(1, USB_SPEED_HIGH);
+  EnableEndpoint(0, 1, true);
+  {
+    auto& state = device_->get_device_state()[0];
+    fbl::AutoLock l(&state.transaction_lock());
+    state.GetTransferRing(0).set_stall(false);
+  }
+  ASSERT_EQ(ResetEndpointCommand(0, 1), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(XhciMmioHarness, GetMaxDeviceCount) { ASSERT_EQ(GetMaxDeviceCount(), 34); }

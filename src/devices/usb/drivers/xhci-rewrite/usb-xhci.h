@@ -128,6 +128,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   zx_status_t UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address);
 
+  TRBPromise UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_address);
+
   bool Running() const { return running_; }
 
   zx_status_t UsbHciResetDevice(uint32_t hub_address, uint32_t device_id);
@@ -176,7 +178,9 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Returns the value in the CAPLENGTH register
   uint8_t CapLength() const { return cap_length_; }
 
-  uint8_t DeviceIdToSlotId(uint8_t device_id) const { return static_cast<uint8_t>(device_id + 1); }
+  static uint8_t DeviceIdToSlotId(uint8_t device_id) { return static_cast<uint8_t>(device_id + 1); }
+
+  static uint8_t SlotIdToDeviceId(uint8_t slot_id) { return static_cast<uint8_t>(slot_id - 1); }
 
   void SetDeviceInformation(uint8_t slot, uint8_t port, const std::optional<HubInfo>& hub);
 

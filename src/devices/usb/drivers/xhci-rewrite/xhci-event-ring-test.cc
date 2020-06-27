@@ -7,8 +7,12 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <zircon/errors.h>
+#include <zircon/hw/usb.h>
 
 #include <atomic>
+#include <list>
+#include <memory>
 #include <thread>
 
 #include <fake-dma-buffer/fake-dma-buffer.h>
@@ -30,16 +34,34 @@ constexpr size_t kTransferLengthInclusive = 8162;
 constexpr size_t kShortTransferLength = 800;
 constexpr size_t kFakeTrb = 0x3924ff0913;
 constexpr size_t kFakeTrbVirt = 0x8411487132;
+constexpr auto kPortNo = 5;
+
+enum class CommandType {
+  EnumerateDevice,
+  ResetEndpoint,
+};
+
+struct Command : public fbl::DoublyLinkedListable<std::unique_ptr<Command>> {
+  uint8_t port;
+  std::optional<HubInfo> hub;
+  fit::completer<TRB*, zx_status_t> completer;
+  CommandType type;
+  uint8_t endpoint;
+  uint32_t device_id;
+};
 
 class EventRingHarness : public zxtest::Test {
  public:
   EventRingHarness()
       : trb_context_allocator_(-1, true), hci_(reinterpret_cast<zx_device_t*>(this)) {}
   void SetUp() override {
+    // Globals
     constexpr auto kRuntimeRegisterOffset = 6;
     constexpr auto kErdp = 2062;
     region_.emplace(regs_, sizeof(uint32_t), std::size(regs_));
     buffer_.emplace(region_->GetMmioBuffer());
+
+    // Core registers
     regs_[kRuntimeRegisterOffset].SetReadCallback([=]() { return 0x2000; });
     regs_[kErdp].SetReadCallback([=]() { return erdp_; });
     regs_[kErdp].SetWriteCallback([=](uint64_t value) {
@@ -47,7 +69,20 @@ class EventRingHarness : public zxtest::Test {
       reg.set_reg_value(value);
       erdp_ = reg.Pointer();
     });
+
+    // Port/per-slot registers
+    regs_[PORTSC::Get(0, kPortNo).addr() / sizeof(uint32_t)].SetReadCallback(
+        [=]() { return port_sc_.reg_value(); });
+    regs_[PORTSC::Get(0, kPortNo).addr() / sizeof(uint32_t)].SetWriteCallback([=](uint64_t value) {
+      PORTSC sc;
+      sc.set_reg_value(static_cast<uint32_t>(value));
+      if (sc.PR()) {
+        port_sc_.set_PR(true);
+      }
+    });
     hci_.set_test_harness(this);
+
+    // Initialization
     ASSERT_OK(hci_.InitThread(ddk_fake::CreateBufferFactory()));
   }
 
@@ -62,14 +97,54 @@ class EventRingHarness : public zxtest::Test {
     erdp_ += sizeof(TRB);
   }
 
+  void ConnectDevice() {
+    port_sc_.set_CCS(true);
+    port_sc_.set_PED(true);
+    port_sc_.set_PR(false);
+    port_sc_.set_PLS(PORTSC::Polling);
+    port_sc_.set_CSC(true);
+  }
+
+  void DisconnectDevice() {
+    port_sc_.set_CCS(false);
+    port_sc_.set_CSC(true);
+  }
+
+  void MakeQuantumPort() {
+    // Port is enabled and disabled simultaneously
+    port_sc_.set_PLS(PORTSC::Disabled);
+    port_sc_.set_PED(1);
+  }
+
+  void LinkUp() {
+    port_sc_.set_PR(false);
+    port_sc_.set_PLS(PORTSC::U0);
+  }
+
+  bool PortResetPending() { return port_sc_.PR(); }
+
+  void InsertPortStatusChangeEvent() {
+    TRB trb;
+    trb.ptr = 0;
+    Control::FromTRB(&trb).set_Type(Control::PortStatusChangeEvent).ToTrb(&trb);
+    auto evt = static_cast<PortStatusChangeEvent*>(&trb);
+    evt->set_PortID(kPortNo);
+    AddTRB(trb);
+  }
+
   TRB* trb() { return ddk_fake::PhysToVirt<TRB*>(erdp_); }
 
   using TestRequest = usb::CallbackRequest<sizeof(max_align_t)>;
   template <typename Callback>
   zx_status_t AllocateRequest(std::optional<TestRequest>* request, uint32_t device_id,
                               uint64_t data_size, uint8_t endpoint, Callback callback) {
-    return TestRequest::Alloc(request, data_size, endpoint, hci_.UsbHciGetRequestSize(),
-                              std::move(callback));
+    zx_status_t status = TestRequest::Alloc(request, data_size, endpoint,
+                                            hci_.UsbHciGetRequestSize(), std::move(callback));
+    if (status != ZX_OK) {
+      return status;
+    }
+    request->value().request()->header.device_id = device_id;
+    return ZX_OK;
   }
 
   std::unique_ptr<TRBContext> AllocateContext() { return trb_context_allocator_.New(); }
@@ -130,6 +205,12 @@ class EventRingHarness : public zxtest::Test {
     pending_contexts_.push_back(std::move(context));
   }
 
+  void AddCommand(std::unique_ptr<Command> command) { commands_.push_back(std::move(command)); }
+
+  std::unique_ptr<Command> GetCommand() { return commands_.pop_front(); }
+
+  bool HasCommand() { return !commands_.is_empty(); }
+
  private:
   std::optional<Request> pending_req_;
   std::optional<fit::function<void(usb_xhci::TRB*, size_t*, usb_xhci::TRB**, size_t)>>
@@ -138,10 +219,12 @@ class EventRingHarness : public zxtest::Test {
   using AllocatorType = fbl::SlabAllocator<AllocatorTraits>;
   AllocatorType trb_context_allocator_;
   TRB* expected_completion_ = nullptr;
+  fbl::DoublyLinkedList<std::unique_ptr<Command>> commands_;
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> pending_contexts_;
   std::optional<ddk::MmioBuffer> buffer_;
   EventRing* ring_;
   UsbXhci hci_;
+  PORTSC port_sc_;
   CommandRing command_ring_;
   uint64_t dcbaa_[128];
   uint64_t erdp_;
@@ -179,6 +262,7 @@ zx_status_t UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> facto
                                                *this);
     }
   }
+  port_state_ = std::make_unique<PortState[]>(32);
   return static_cast<EventRingHarness*>(get_test_harness())->InitRing(&interrupters_[0].ring());
 }
 
@@ -202,6 +286,18 @@ zx_status_t UsbXhci::UsbHciHubDeviceReset(uint32_t device_id, uint32_t port) {
 
 zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address) {
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+TRBPromise UsbXhci::UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_address) {
+  auto harness = static_cast<EventRingHarness*>(get_test_harness());
+  std::unique_ptr<Command> command = std::make_unique<Command>();
+  fit::bridge<TRB*, zx_status_t> bridge;
+  command->type = CommandType::ResetEndpoint;
+  command->device_id = device_id;
+  command->endpoint = ep_address;
+  command->completer = std::move(bridge.completer);
+  harness->AddCommand(std::move(command));
+  return bridge.consumer.promise();
 }
 
 zx_status_t UsbXhci::UsbHciResetDevice(uint32_t hub_address, uint32_t device_id) {
@@ -250,7 +346,15 @@ TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
 }
 
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info) {
-  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
+  auto harness = static_cast<EventRingHarness*>(hci->get_test_harness());
+  std::unique_ptr<Command> command = std::make_unique<Command>();
+  fit::bridge<TRB*, zx_status_t> bridge;
+  command->type = CommandType::EnumerateDevice;
+  command->port = port;
+  command->hub = hub_info;
+  command->completer = std::move(bridge.completer);
+  harness->AddCommand(std::move(command));
+  return bridge.consumer.promise();
 }
 
 TRB* TransferRing::PhysToVirt(zx_paddr_t paddr) {
@@ -308,6 +412,129 @@ TEST_F(EventRingHarness, ShortTransferTest) {
   ASSERT_EQ(shorts[1], kShortTransferLength1);
   ASSERT_EQ(trb_list[0], reinterpret_cast<TRB*>(kFakeTrbVirt));
   ASSERT_EQ(trb_list[1], reinterpret_cast<TRB*>(kFakeTrbVirt));
+}
+
+TEST_F(EventRingHarness, NormalStall) {
+  TRB* start = trb();
+  TRB trb;
+  trb.ptr = kFakeTrb;
+  Control::FromTRB(&trb).set_Type(Control::TransferEvent).ToTrb(&trb);
+  TransferEvent* evt = static_cast<TransferEvent*>(&trb);
+  evt->set_SlotID(1);
+  evt->set_EndpointID(2);
+  evt->set_CompletionCode(CommandCompletionEvent::StallError);
+  evt->set_TransferLength(0);
+  AddTRB(trb);
+  auto ctx = AllocateContext();
+  size_t transfer_len;
+  zx_status_t transfer_status;
+  ctx->trb = start;
+  std::optional<TestRequest> request;
+  AllocateRequest(&request, 1, ZX_PAGE_SIZE * 3, 5, [&](TestRequest request) {
+    transfer_status = request.request()->response.status;
+    transfer_len = request.request()->response.actual;
+  });
+  ctx->request = Borrow(std::move(*request));
+  AddContext(std::move(ctx));
+  SetCompletion(reinterpret_cast<TRB*>(kFakeTrbVirt));
+  Interrupt();
+  ASSERT_EQ(transfer_status, ZX_ERR_IO_REFUSED);
+  ASSERT_EQ(transfer_len, 0);
+}
+
+TEST_F(EventRingHarness, BadHubStallOnDtDeviceQualifier) {
+  TRB* start = trb();
+  TRB trb;
+  trb.ptr = kFakeTrb;
+  Control::FromTRB(&trb).set_Type(Control::TransferEvent).ToTrb(&trb);
+  TransferEvent* evt = static_cast<TransferEvent*>(&trb);
+  evt->set_SlotID(1);
+  evt->set_EndpointID(2);
+  evt->set_CompletionCode(CommandCompletionEvent::StallError);
+  evt->set_TransferLength(0);
+  AddTRB(trb);
+  auto ctx = AllocateContext();
+  size_t transfer_len;
+  zx_status_t transfer_status;
+  ctx->trb = start;
+  std::optional<TestRequest> request;
+  usb_device_qualifier_descriptor_t descriptor;
+  AllocateRequest(&request, 1, sizeof(usb_device_qualifier_descriptor_t), 0,
+                  [&](TestRequest request) {
+                    transfer_status = request.request()->response.status;
+                    transfer_len = request.request()->response.actual;
+                    usb_device_qualifier_descriptor_t* result;
+                    request.Mmap(reinterpret_cast<void**>(&result));
+                    memcpy(&descriptor, result, sizeof(usb_device_qualifier_descriptor_t));
+                  });
+  request->request()->setup.bRequest = USB_REQ_GET_DESCRIPTOR;
+  request->request()->setup.wIndex = 0;
+  request->request()->setup.wValue = USB_DT_DEVICE_QUALIFIER << 8;
+  request->request()->header.length = sizeof(usb_device_qualifier_descriptor_t);
+
+  ctx->request = Borrow(std::move(*request));
+  AddContext(std::move(ctx));
+  SetCompletion(reinterpret_cast<TRB*>(kFakeTrbVirt));
+  Interrupt();
+  auto cmd = GetCommand();
+  ASSERT_EQ(cmd->type, CommandType::ResetEndpoint);
+  ASSERT_EQ(cmd->endpoint, 0);
+  ASSERT_EQ(cmd->device_id, 1);
+  cmd->completer.complete_ok(nullptr);
+  Interrupt();
+
+  ASSERT_EQ(transfer_status, ZX_OK);
+  ASSERT_EQ(transfer_len, sizeof(usb_device_qualifier_descriptor_t));
+  ASSERT_EQ(descriptor.bDeviceProtocol, 0);
+}
+
+TEST_F(EventRingHarness, USB2DeviceAttach) {
+  ConnectDevice();
+  InsertPortStatusChangeEvent();
+  Interrupt();
+  ASSERT_TRUE(PortResetPending());
+  ASSERT_FALSE(HasCommand());
+  LinkUp();
+  InsertPortStatusChangeEvent();
+  Interrupt();
+  ASSERT_TRUE(HasCommand());
+  auto cmd = GetCommand();
+  ASSERT_EQ(cmd->port, kPortNo);
+  ASSERT_EQ(cmd->type, CommandType::EnumerateDevice);
+  ASSERT_FALSE(cmd->hub);
+}
+
+TEST_F(EventRingHarness, USB2DeviceAttachBadStateTransition) {
+  ConnectDevice();
+  InsertPortStatusChangeEvent();
+  Interrupt();
+  ASSERT_TRUE(PortResetPending());
+  ASSERT_FALSE(HasCommand());
+  LinkUp();
+  MakeQuantumPort();
+  InsertPortStatusChangeEvent();
+  Interrupt();
+  ASSERT_FALSE(HasCommand());
+  LinkUp();
+  InsertPortStatusChangeEvent();
+  Interrupt();
+  ASSERT_TRUE(HasCommand());
+  auto cmd = GetCommand();
+  ASSERT_EQ(cmd->port, kPortNo);
+  ASSERT_EQ(cmd->type, CommandType::EnumerateDevice);
+  ASSERT_FALSE(cmd->hub);
+}
+
+TEST_F(EventRingHarness, Usb3DeviceAttach) {
+  ConnectDevice();
+  LinkUp();
+  InsertPortStatusChangeEvent();
+  Interrupt();
+  ASSERT_TRUE(HasCommand());
+  auto cmd = GetCommand();
+  ASSERT_EQ(cmd->port, kPortNo);
+  ASSERT_EQ(cmd->type, CommandType::EnumerateDevice);
+  ASSERT_FALSE(cmd->hub);
 }
 
 }  // namespace usb_xhci

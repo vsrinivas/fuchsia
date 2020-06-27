@@ -26,6 +26,8 @@ struct PortState {
   // For hubs, this would be the slot ID of the hub
   // (not any peripherals attached to the hub)
   uint8_t slot_id;
+
+  std::unique_ptr<TRBContext> wait_for_port_status_change_;
 };
 
 }  // namespace usb_xhci

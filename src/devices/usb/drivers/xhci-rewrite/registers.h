@@ -180,10 +180,34 @@ struct StopEndpoint : TRB {
   StopEndpoint() { Control::Get().FromValue(0).set_Type(Control::StopEndpointCommand).ToTrb(this); }
 };
 
+// Command Ring Control Register
+// section 5.4.5
+class CRCR : public hwreg::RegisterBase<CRCR, uint64_t> {
+ public:
+  DEF_UNSHIFTED_FIELD(63, 4, PTR);
+  // Command ring running
+  DEF_BIT(3, CRR);
+  // Command abort -- Aborts the running command and generates a
+  // stopped event when complete.
+  DEF_BIT(2, CA);
+  // Command stop -- asynchronously aborts the running command
+  // and generates a stopped event when complete.
+  DEF_BIT(1, CS);
+  // Consumer cycle state (see 4.9.3)
+  DEF_BIT(0, RCS);
+  static auto Get(uint8_t cap_length) { return hwreg::RegisterAddr<CRCR>(cap_length + 0x18); }
+};
+
 // Section 6.4.3.9
 struct SetTRDequeuePointer : TRB {
+  DEF_SUBBIT(ptr, 0, DCS);
+  DEF_SUBFIELD(ptr, 3, 1, SCT);
   DEF_SUBFIELD(control, 31, 24, SLOT);
   DEF_SUBFIELD(control, 20, 16, ENDPOINT);
+  void SetPtr(CRCR cr) {
+    ptr = cr.PTR();
+    set_DCS(cr.RCS());
+  }
   SetTRDequeuePointer() {
     Control::Get().FromValue(0).set_Type(Control::SetTrDequeuePointerCommand).ToTrb(this);
   }
@@ -430,24 +454,6 @@ class USB_PAGESIZE : public hwreg::RegisterBase<USB_PAGESIZE, uint32_t> {
   static auto Get(uint8_t cap_length) {
     return hwreg::RegisterAddr<USB_PAGESIZE>(cap_length + 0x8);
   }
-};
-
-// Command Ring Control Register
-// section 5.4.5
-class CRCR : public hwreg::RegisterBase<CRCR, uint64_t> {
- public:
-  DEF_UNSHIFTED_FIELD(63, 4, PTR);
-  // Command ring running
-  DEF_BIT(3, CRR);
-  // Command abort -- Aborts the running command and generates a
-  // stopped event when complete.
-  DEF_BIT(2, CA);
-  // Command stop -- asynchronously aborts the running command
-  // and generates a stopped event when complete.
-  DEF_BIT(1, CS);
-  // Consumer cycle state (see 4.9.3)
-  DEF_BIT(0, RCS);
-  static auto Get(uint8_t cap_length) { return hwreg::RegisterAddr<CRCR>(cap_length + 0x18); }
 };
 
 class DCBAAP : public hwreg::RegisterBase<DCBAAP, uint64_t> {

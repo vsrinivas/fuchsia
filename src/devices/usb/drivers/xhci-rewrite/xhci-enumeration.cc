@@ -176,6 +176,13 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
 
   // We're NOT being invoked from a retry context -- finish device initialization
   return address_device
+      .and_then([=](TRB*& result) -> TRBPromise {
+        if (hci->GetDeviceSpeed(state->slot) != USB_SPEED_SUPER) {
+          // See USB 2.0 specification (revision 2.0) section 9.2.6
+          return hci->Timeout(zx::deadline_after(zx::msec(10)));
+        }
+        return fit::make_ok_promise(result);
+      })
       .and_then([=](TRB*& result) -> fit::promise<uint8_t, zx_status_t> {
         // For full-speed devices, system software should read the first 8 bytes
         // of the device descriptor to determine the max packet size of the default control

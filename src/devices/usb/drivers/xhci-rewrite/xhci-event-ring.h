@@ -9,6 +9,8 @@
 #include <lib/zx/bti.h>
 #include <zircon/hw/usb.h>
 
+#include <variant>
+
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -71,6 +73,12 @@ class EventRingSegmentTable {
   std::optional<ddk::MmioView> mmio_;
 };
 
+struct PortStatusChangeState : public fbl::RefCounted<PortStatusChangeState> {
+  size_t port_index;
+  size_t port_count;
+  PortStatusChangeState(size_t i, size_t port_count) : port_index(i), port_count(port_count) {}
+};
+
 // Keeps track of events received from the XHCI controller
 class UsbXhci;
 struct PortState;
@@ -101,9 +109,16 @@ class EventRing {
   void RunUntilIdle();
 
  private:
+  // List of pending enumeration tasks
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> enumeration_queue_;
+  // Whether or not we're currently enumerating a device
+  bool enumerating_ = false;
   synchronous_executor executor_;
-  zx_status_t HandlePortStatusChangeEvent(uint8_t port_id);
-  zx_status_t LinkUp(uint8_t port_id);
+  void HandlePortStatusChangeEventInterrupt(uint8_t port_id, bool preempt = false);
+  TRBPromise HandlePortStatusChangeEvent(uint8_t port_id);
+  TRBPromise WaitForPortStatusChange(uint8_t port_id);
+  TRBPromise LinkUp(uint8_t port_id);
+  void CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state);
   Control AdvanceErdp() {
     fbl::AutoLock _(&segment_mutex_);
     erdp_ = (erdp_ + 1) % segments_.TrbCount();
@@ -132,6 +147,9 @@ class EventRing {
   void Usb3DeviceAttach(uint16_t port_id);
   // USB 2.0 device attach
   void Usb2DeviceAttach(uint16_t port_id);
+
+  std::variant<bool, std::unique_ptr<TRBContext>> StallWorkaroundForDefectiveHubs(
+      std::unique_ptr<TRBContext> context);
 
   fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>> buffers_;
   fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>>::iterator buffers_it_;
