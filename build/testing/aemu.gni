@@ -7,7 +7,4 @@
 # evaluate flakiness and performance without known failures.
 # As tests are fixed remove them from this list and set `aemu_env` in their
 # list of test environments to ensure they do not regress.
-aemu_known_failures = [
-  # TODO(54086): Remove this line after fixing the test on AEMU.
-  "fuchsia-pkg://fuchsia.com/scenic_tests#meta/flatland_renderer_unittests.cmx",
-]
+aemu_known_failures = []
