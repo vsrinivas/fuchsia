@@ -16,6 +16,7 @@ executable("screen_reader_tests") {
     "node_describer_unittest.cc",
     "screen_reader_context_unittest.cc",
     "screen_reader_unittest.cc",
+    "speaker_unittest.cc",
     "swipe_action_unittest.cc",
     "three_finger_swipe_action_unittest.cc",
   ]
@@ -44,6 +45,8 @@ executable("screen_reader_tests") {
     "//src/ui/a11y/lib/view",
     "//src/ui/a11y/lib/view/tests/mocks",
     "//src/ui/lib/glm_workaround",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   # TODO(46525): Fix the leaks and remove this.

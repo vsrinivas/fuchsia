@@ -38,8 +38,12 @@ class NodeDescriber {
   virtual ~NodeDescriber() = default;
 
   // Returns a description of the semantic node.
-  std::vector<UtteranceAndContext> DescribeNode(
+  virtual std::vector<UtteranceAndContext> DescribeNode(
       const fuchsia::accessibility::semantics::Node* node);
+
+ protected:
+  // Constructor for mock only.
+  NodeDescriber() = default;
 
  private:
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
