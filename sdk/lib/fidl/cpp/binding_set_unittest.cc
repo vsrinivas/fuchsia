@@ -445,5 +445,80 @@ TEST(BindingSet, ErrorHandlerFunctionMoveOnly) {
   ASSERT_TRUE(ref_counted_canary_weak.expired());
 }
 
+TEST(BindingSet, ErrorHandlerFunctionValidWhenInvoked) {
+  // Declared outside of `MoveOnlyCanary` because local classes may not have static members.
+  constexpr uint64_t kAliveCanaryValue = 0x1234567890ABCDEF;
+  constexpr uint64_t kMovedFromCanaryValue = 0xFEDCBA0987654321;
+  constexpr uint64_t kDeadCanaryValue = 0;
+  static_assert(kAliveCanaryValue != kMovedFromCanaryValue &&
+                    kAliveCanaryValue != kDeadCanaryValue &&
+                    kMovedFromCanaryValue != kDeadCanaryValue,
+                "Different canary values cannot be equivalent");
+
+  // A move-only type with a destructor that uses a canary to detect whether it has previously been
+  // destructed.
+  class MoveOnlyCanary {
+   public:
+    constexpr MoveOnlyCanary() = default;
+
+    MoveOnlyCanary(MoveOnlyCanary&& other) : canary_(other.TakeCanary()) {}
+
+    MoveOnlyCanary& operator=(MoveOnlyCanary&& other) {
+      if (this == &other) {
+        return *this;
+      }
+
+      canary_ = other.TakeCanary();
+      return *this;
+    }
+
+    MoveOnlyCanary(const MoveOnlyCanary&) = delete;
+    MoveOnlyCanary& operator=(const MoveOnlyCanary&) = delete;
+
+    ~MoveOnlyCanary() { Kill(); }
+
+    bool IsAlive() const { return canary_ == kAliveCanaryValue; }
+
+    bool IsMovedFrom() const { return canary_ == kMovedFromCanaryValue; }
+
+   private:
+    void Kill() {
+      ASSERT_TRUE(IsMovedFrom() || IsAlive());
+      canary_ = kDeadCanaryValue;
+    }
+
+    uint64_t TakeCanary() {
+      EXPECT_TRUE(IsAlive());
+
+      uint64_t ret = canary_;
+      canary_ = kMovedFromCanaryValue;
+      return ret;
+    }
+
+    uint64_t canary_ = kAliveCanaryValue;
+  };
+
+  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
+  fidl::test::AsyncLoopForTest loop;
+
+  test::FrobinatorImpl impl;
+  fidl::test::frobinator::FrobinatorPtr ptr;
+
+  MoveOnlyCanary canary;
+  ASSERT_TRUE(canary.IsAlive());
+
+  bool handler_called = false;
+
+  binding_set.AddBinding(
+      &impl, ptr.NewRequest(), nullptr,
+      [canary = std::move(canary), &handler_called](zx_status_t) { handler_called = true; });
+
+  // Trigger error.
+  ptr.Unbind();
+  loop.RunUntilIdle();
+
+  ASSERT_TRUE(handler_called);
+}
+
 }  // namespace
 }  // namespace fidl

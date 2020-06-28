@@ -108,6 +108,7 @@ TEST(Binding, ErrorHandler) {
   Binding<fidl::test::frobinator::Frobinator> binding(&impl, handle.NewRequest());
   EXPECT_TRUE(handle.is_valid());
   EXPECT_TRUE(binding.is_bound());
+  EXPECT_FALSE(binding.has_error_handler());
   EXPECT_EQ(&impl, binding.impl());
 
   int error_count = 0;
@@ -117,6 +118,7 @@ TEST(Binding, ErrorHandler) {
     EXPECT_FALSE(binding.is_bound());
   });
 
+  EXPECT_TRUE(binding.has_error_handler());
   EXPECT_EQ(ZX_OK, handle.channel().write(0, "a", 1, nullptr, 0));
   EXPECT_EQ(0, error_count);
 
@@ -135,6 +137,7 @@ TEST(Binding, DestructDuringErrorHandler) {
   binding->Bind(handle.NewRequest());
   EXPECT_TRUE(handle.is_valid());
   EXPECT_TRUE(binding->is_bound());
+  EXPECT_FALSE(binding->has_error_handler());
   EXPECT_EQ(&impl, binding->impl());
 
   int error_count = 0;
@@ -145,6 +148,7 @@ TEST(Binding, DestructDuringErrorHandler) {
     binding.reset();
   });
 
+  EXPECT_TRUE(binding->has_error_handler());
   EXPECT_EQ(ZX_OK, handle.channel().write(0, "a", 1, nullptr, 0));
   EXPECT_EQ(0, error_count);
 
@@ -166,6 +170,7 @@ TEST(Binding, PeerClosedTriggersErrorHandler) {
     EXPECT_FALSE(binding.is_bound());
   });
 
+  EXPECT_TRUE(binding.has_error_handler());
   handle = nullptr;
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
@@ -184,6 +189,7 @@ TEST(Binding, UnbindDoesNotTriggerErrorHandler) {
     ++error_count;
   });
 
+  EXPECT_TRUE(binding.has_error_handler());
   binding.Unbind();
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
@@ -228,6 +234,7 @@ TEST(Binding, ErrorHandlerCalledWhenInterfacePtrClosed) {
 
   zx_status_t error = 0;
   binding.set_error_handler([&error](zx_status_t remote_error) { error = remote_error; });
+  EXPECT_TRUE(binding.has_error_handler());
 
   ptr.Unbind();
 

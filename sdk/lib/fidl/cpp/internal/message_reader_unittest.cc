@@ -162,6 +162,7 @@ TEST(MessageReader, Control) {
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
     ++error_count;
   });
+  EXPECT_TRUE(reader.has_error_handler());
 
   h2.reset();
   EXPECT_EQ(0, error_count);
@@ -212,6 +213,8 @@ TEST(MessageReader, HandlerErrorWithoutErrorHandler) {
   MessageReader reader;
   reader.set_message_handler(&handler);
 
+  EXPECT_FALSE(reader.has_error_handler());
+
   fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
@@ -253,6 +256,7 @@ TEST(MessageReader, WaitAndDispatchOneMessageUntilErrors) {
     ++error_count;
   });
 
+  EXPECT_TRUE(reader.has_error_handler());
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(ZX_ERR_BAD_STATE, reader.WaitAndDispatchOneMessageUntil(zx::time()));
   EXPECT_EQ(0, error_count);
@@ -300,6 +304,7 @@ TEST(MessageReader, UnbindDuringHandler) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
     ++error_count;
   });
+  EXPECT_TRUE(reader.has_error_handler());
 
   fidl::test::AsyncLoopForTest loop;
 
@@ -357,6 +362,7 @@ TEST(MessageReader, ShouldWaitFromRead) {
     EXPECT_EQ(ZX_ERR_CANCELED, status);
     ++error_count;
   });
+  EXPECT_TRUE(reader.has_error_handler());
 
   fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
@@ -412,6 +418,7 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
     ++error_count;
   });
+  EXPECT_TRUE(reader.has_error_handler());
 
   fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
@@ -443,6 +450,7 @@ TEST(MessageReader, NoHandler) {
     EXPECT_EQ(ZX_ERR_CANCELED, status);
     ++error_count;
   });
+  EXPECT_TRUE(reader.has_error_handler());
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -465,6 +473,7 @@ TEST(MessageReader, Reset) {
   int destruction_count = 0;
   DestructionCounter counter(&destruction_count);
   reader.set_error_handler([counter = std::move(counter)](zx_status_t status) {});
+  EXPECT_TRUE(reader.has_error_handler());
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -493,6 +502,7 @@ TEST(MessageReader, TakeChannelAndErrorHandlerFrom) {
     EXPECT_EQ(ZX_ERR_INTERNAL, status);
     ++error_count;
   });
+  EXPECT_TRUE(reader1.has_error_handler());
 
   StatusMessageHandler handler2;
   handler2.status = ZX_ERR_INTERNAL;
@@ -698,6 +708,7 @@ TEST(MessageReader, MagicNumberCheck) {
 
   zx_status_t error = 0;
   reader.set_error_handler([&error](zx_status_t remote_error) { error = remote_error; });
+  EXPECT_TRUE(reader.has_error_handler());
 
   fidl_message_header_t header;
   header.magic_number = 0xFF;
