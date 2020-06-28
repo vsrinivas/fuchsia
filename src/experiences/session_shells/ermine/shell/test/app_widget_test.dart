@@ -63,6 +63,7 @@ void main() async {
 
     await tester.pumpWidget(app);
     await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
     expect(find.byWidget(app.recents), findsOneWidget);
     expect(find.byWidget(app.overview), findsOneWidget);
