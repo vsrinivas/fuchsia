@@ -177,7 +177,7 @@ ThreadLockState* SystemGetThreadLockState() {
   if (arch_blocking_disallowed()) {
     return &get_local_percpu()->lock_state;
   }
-  return &Thread::Current::Get()->lock_state_;
+  return &Thread::Current::Get()->lock_state();
 }
 
 // Initializes an instance of ThreadLockState.

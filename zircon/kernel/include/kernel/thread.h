@@ -750,6 +750,11 @@ struct Thread {
   WaitQueueState& wait_queue_state() { return wait_queue_state_; }
   const WaitQueueState& wait_queue_state() const { return wait_queue_state_; }
 
+#if WITH_LOCK_DEP
+  lockdep::ThreadLockState& lock_state() { return lock_state_; }
+  const lockdep::ThreadLockState& lock_state() const { return lock_state_; }
+#endif
+
   arch_thread& arch() { return arch_; }
 
   KernelStack& stack() { return stack_; }
@@ -808,12 +813,12 @@ struct Thread {
 
   WaitQueueState wait_queue_state_;
 
- public:
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in thread context
   lockdep::ThreadLockState lock_state_;
 #endif
 
+ public:
   // pointer to the kernel address space this thread is associated with
   struct vmm_aspace* aspace_;
 
