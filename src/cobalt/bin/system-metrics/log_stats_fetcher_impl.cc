@@ -13,12 +13,33 @@ namespace {
 // A map from components urls in the approve-list to the corresponding Cobalt event
 // codes (as defined in metrics.yaml).
 const std::unordered_map<std::string, ComponentEventCode> kComponentCodeMap{
-    {"fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
-     ComponentEventCode::RootPresenter},
+    {"fuchsia-boot:///#meta/driver_manager.cm", ComponentEventCode::DriverManager},
+    {"fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx",
+     ComponentEventCode::A11yManager},
+    {"fuchsia-pkg://fuchsia.com/audio_core_google#meta/audio_core.cmx",
+     ComponentEventCode::AudioCore},
+    {"fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm", ComponentEventCode::Appmgr},
+    {"fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx",
+     ComponentEventCode::BrightnessManager},
+    {"fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx", ComponentEventCode::CastAgent},
+    {"fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx", ComponentEventCode::CastRunner},
+    {"fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx", ComponentEventCode::Cobalt},
+    {"fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cmx", ComponentEventCode::Dhcpd},
+    {"fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cmx", ComponentEventCode::Hwinfo},
+    {"fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx", ComponentEventCode::Mdns},
+    {"fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx", ComponentEventCode::Netcfg},
     {"fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
      ComponentEventCode::PkgResolver},
-    {"fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm", ComponentEventCode::Appmgr},
-    {"fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx", ComponentEventCode::Sysmgr}};
+    {"fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
+     ComponentEventCode::RootPresenter},
+    {"fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx", ComponentEventCode::Scenic},
+    {"fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx", ComponentEventCode::SessionMgr},
+    {"fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx", ComponentEventCode::Sysmgr},
+    {"fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx",
+     ComponentEventCode::SystemUpdateChecker},
+    {"fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx",
+     ComponentEventCode::ContextProvider},
+};
 
 }  // namespace
 
