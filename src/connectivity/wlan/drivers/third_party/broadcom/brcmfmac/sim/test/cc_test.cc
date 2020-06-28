@@ -23,20 +23,15 @@ class CountryCodeTest : public SimTest {
   uint32_t DeviceCount();
 
  private:
-  // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
   SimInterface client_ifc_;
 };
-
-wlanif_impl_ifc_protocol_ops_t CountryCodeTest::sme_ops_ = {};
 
 void CountryCodeTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
 
 void CountryCodeTest::CreateInterface() {
   zx_status_t status;
 
-  status = SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_);
+  status = StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
   ASSERT_EQ(status, ZX_OK);
 }
 

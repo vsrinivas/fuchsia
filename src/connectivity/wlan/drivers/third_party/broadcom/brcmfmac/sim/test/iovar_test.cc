@@ -13,41 +13,22 @@ namespace wlan::brcmfmac {
 
 class IovarTest : public SimTest {
  public:
-  // How long an individual test will run for. We need an end time because tests run until no more
-  // events remain and so we need to stop aps from beaconing to drain the event queue.
-  static constexpr zx::duration kTestDuration = zx::sec(100);
   IovarTest() = default;
   // This is the interface we will use for our single client interface
   SimInterface client_ifc_;
 
   void Init();
-  void Finish();
 
-  zx_status_t CreateInterface(wlan_info_mac_role_t role,
-                              std::optional<common::MacAddr> mac_addr = std::nullopt);
   uint32_t DeviceCount();
 
   zx_status_t IovarGet(char* buf, uint32_t buf_len);
   zx_status_t IovarSet(char* buf, uint32_t buf_len);
-
- private:
-  // SME callbacks
-  wlanif_impl_ifc_protocol_ops_t sme_ops_ = {};
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 };
-
-zx_status_t IovarTest::CreateInterface(wlan_info_mac_role_t role,
-                                       std::optional<common::MacAddr> mac_addr) {
-  EXPECT_EQ(role, WLAN_INFO_MAC_ROLE_CLIENT);
-  return SimTest::StartInterface(role, &client_ifc_, &sme_protocol_, mac_addr);
-}
 
 uint32_t IovarTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
 // Create our device instance and hook up the callbacks
 void IovarTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
-
-void IovarTest::Finish() {}
 
 zx_status_t IovarTest::IovarGet(char* buf, uint32_t buf_len) {
   brcmf_simdev* sim = device_->GetSim();
@@ -63,7 +44,7 @@ zx_status_t IovarTest::IovarSet(char* buf, uint32_t buf_len) {
 
 TEST_F(IovarTest, CheckIovarGet) {
   Init();
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   char buf[32];
   strcpy(buf, "mpc");
@@ -80,7 +61,7 @@ TEST_F(IovarTest, CheckIovarGet) {
 
 TEST_F(IovarTest, CheckIovarSet) {
   Init();
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCount(), 2u);
   brcmf_simdev* sim = device_->GetSim();
   // Get the current value of mpc through the public interface
@@ -103,7 +84,7 @@ TEST_F(IovarTest, CheckIovarSet) {
 
 TEST_F(IovarTest, CheckIovarWrongBufLen) {
   Init();
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCount(), 2u);
   char buf[32];
   strcpy(buf, "wsec_key");
