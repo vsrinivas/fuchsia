@@ -38,7 +38,7 @@
   "maxReadSize": 6144,
   "separatorWidth": 80,
   "outputFilePrefix": "NOTICE",
-  "outputFileExtension": "html",
+  "outputFileExtension": "html.gz",
   "product": "astro",
   "singleLicenseFiles": [
     "LICENSE",

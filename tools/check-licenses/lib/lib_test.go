@@ -95,9 +95,11 @@ func TestNewLicenses(t *testing.T) {
 }
 
 func TestLicensesMatchSingleLicenseFile(t *testing.T) {
+	// TODO(solomonkinard) implement
 }
 
 func TestLicensesMatchFile(t *testing.T) {
+	// TODO(solomonkinard) implement
 }
 
 func TestMetricsInit(t *testing.T) {

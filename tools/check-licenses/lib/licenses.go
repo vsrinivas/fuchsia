@@ -76,7 +76,6 @@ func (licenses *Licenses) add(license *License) {
 // MatchFile returns true if any License matches input data
 func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metrics *Metrics, file_tree *FileTree) {
 	// TODO(solomonokinard) deduplicate Match*File()
-	// TODO(solomonkinard) async regex pattern matching
 	var wg sync.WaitGroup
 	wg.Add(len(licenses.licenses))
 	var sm sync.Map
@@ -99,7 +98,6 @@ func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metri
 
 func (licenses *Licenses) MatchFile(data []byte, path string, metrics *Metrics) bool {
 	is_matched := false
-	// TODO(solomonkinard) async regex pattern matching
 	var wg sync.WaitGroup
 	wg.Add(len(licenses.licenses))
 	var sm sync.Map
