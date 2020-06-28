@@ -213,27 +213,21 @@ void CreateSoftAPTest::OnChannelSwitch(const wlanif_channel_switch_info_t* info)
 
 void CreateSoftAPTest::TxAssocReq() {
   // Get the mac address of the SoftAP
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr soft_ap_mac(mac_buf);
-  const common::MacAddr mac(kFakeMac);
-  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, kDefaultSsid);
+  common::MacAddr soft_ap_mac;
+  softap_ifc_.GetMacAddr(&soft_ap_mac);
+  simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, kDefaultSsid);
   env_->Tx(assoc_req_frame, tx_info_, this);
 }
 
 void CreateSoftAPTest::TxDisassocReq() {
   // Get the mac address of the SoftAP
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr soft_ap_mac(mac_buf);
-  const common::MacAddr mac(kFakeMac);
+  common::MacAddr soft_ap_mac;
+  softap_ifc_.GetMacAddr(&soft_ap_mac);
   // Associate with the SoftAP
-  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, kDefaultSsid);
+  simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, kDefaultSsid);
   env_->Tx(assoc_req_frame, tx_info_, this);
   // Disassociate with the SoftAP
-  simulation::SimDisassocReqFrame disassoc_req_frame(mac, soft_ap_mac, 0);
+  simulation::SimDisassocReqFrame disassoc_req_frame(kFakeMac, soft_ap_mac, 0);
   env_->Tx(disassoc_req_frame, tx_info_, this);
 }
 

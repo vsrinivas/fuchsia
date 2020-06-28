@@ -234,8 +234,7 @@ void DataFrameTest::Init() {
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
 
   // Figure out the interface's mac address
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", ifc_mac_.byte, ETH_ALEN);
+  client_ifc_.GetMacAddr(&ifc_mac_);
 
   // Schedule a time to terminate execution. Simulation runs until no more events are scheduled,
   // and since we have a beaconing fake AP, that means forever if we don't stop it.

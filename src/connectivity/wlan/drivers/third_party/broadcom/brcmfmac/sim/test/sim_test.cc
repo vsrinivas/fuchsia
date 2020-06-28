@@ -176,6 +176,12 @@ void SimInterface::Query(wlanif_query_info_t* out_info) {
   if_impl_ops_->query(if_impl_ctx_, out_info);
 }
 
+void SimInterface::GetMacAddr(common::MacAddr* out_macaddr) {
+  wlanif_query_info_t info;
+  Query(&info);
+  memcpy(out_macaddr->byte, info.mac_addr, ETH_ALEN);
+}
+
 void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
                               const wlan_channel_t& channel) {
   // This should only be performed on a Client interface

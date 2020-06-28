@@ -244,10 +244,8 @@ void AssocTest::Init() {
 }
 
 void AssocTest::DisassocFromAp() {
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr my_mac(mac_buf);
+  common::MacAddr my_mac;
+  client_ifc_.GetMacAddr(&my_mac);
 
   // Disassoc the STA
   for (auto ap : aps_) {
@@ -380,10 +378,8 @@ void AssocTest::DeauthClient() {
 
 void AssocTest::DeauthFromAp() {
   // Figure out our own MAC
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr my_mac(mac_buf);
+  common::MacAddr my_mac;
+  client_ifc_.GetMacAddr(&my_mac);
 
   // Send a Deauth to our STA
   simulation::SimDeauthFrame deauth_frame(context_.bssid, my_mac, kDefaultApDeauthReason);
@@ -392,10 +388,8 @@ void AssocTest::DeauthFromAp() {
 
 void AssocTest::TxFakeDisassocReq() {
   // Figure out our own MAC
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr my_mac(mac_buf);
+  common::MacAddr my_mac;
+  client_ifc_.GetMacAddr(&my_mac);
 
   // Send a Disassoc Req to our STA (which is not associated)
   simulation::SimDisassocReqFrame not_associated_frame(context_.bssid, my_mac,
@@ -607,10 +601,8 @@ TEST_F(AssocTest, SimFwIgnoreAssocReq) {
 
 void AssocTest::SendBadResp() {
   // Figure out our own MAC
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr my_mac(mac_buf);
+  common::MacAddr my_mac;
+  client_ifc_.GetMacAddr(&my_mac);
 
   // Send a response from the wrong bss
   common::MacAddr wrong_src(context_.bssid);
@@ -656,10 +648,8 @@ void AssocTest::SendMultipleResp() {
   constexpr unsigned kRespCount = 100;
 
   // Figure out our own MAC
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr my_mac(mac_buf);
+  common::MacAddr my_mac;
+  client_ifc_.GetMacAddr(&my_mac);
   simulation::SimAssocRespFrame multiple_resp_frame(context_.bssid, my_mac,
                                                     WLAN_ASSOC_RESULT_SUCCESS);
   for (unsigned i = 0; i < kRespCount; i++) {
@@ -690,10 +680,8 @@ void AssocTest::SendAssocRespWithWmm() {
 }
 
 void AssocTest::SendOpenAuthResp() {
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
-  common::MacAddr my_mac(mac_buf);
+  common::MacAddr my_mac;
+  client_ifc_.GetMacAddr(&my_mac);
   simulation::SimAuthFrame auth_resp(context_.bssid, my_mac, 2, simulation::AUTH_TYPE_OPEN,
                                      WLAN_AUTH_RESULT_SUCCESS);
   env_->Tx(auth_resp, context_.tx_info, this);

@@ -84,9 +84,7 @@ void ActiveScanTest::Init() {
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 
   // Get the interface MAC address
-  wlanif_query_info_t info;
-  client_ifc_.Query(&info);
-  memcpy(sim_fw_mac_.byte, info.mac_addr, ETH_ALEN);
+  client_ifc_.GetMacAddr(&sim_fw_mac_);
 }
 
 void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,

@@ -97,6 +97,9 @@ class SimInterface {
   // Query an interface
   void Query(wlanif_query_info_t* out_info);
 
+  // Get the Mac address of an interface
+  void GetMacAddr(common::MacAddr* out_macaddr);
+
   // Start an assocation with a fake AP. We can use these for subsequent association events, but
   // not interleaved association events (which I doubt are terribly useful, anyway). Note that for
   // the moment only non-authenticated associations are supported.

@@ -54,9 +54,6 @@ class DynamicIfTest : public SimTest {
   void SetChanspec(bool is_ap_iface, uint16_t* chanspec, zx_status_t expect_result);
   uint16_t GetChanspec(bool is_ap_iface, zx_status_t expect_result);
 
-  // Get MAC addr from sim-fw
-  void GetMacAddr(uint8_t mac_out[ETH_ALEN], bool is_ap);
-
  protected:
   struct AssocContext {
     // Information about the BSS we are attempting to associate with. Used to generate the
@@ -78,6 +75,9 @@ class DynamicIfTest : public SimTest {
     common::MacAddr dst;
     uint16_t status;
   };
+
+  SimInterface client_ifc_;
+  SimInterface softap_ifc_;
 
   AssocContext context_;
   // Keep track of the APs that are in operation so we can easily disable beaconing on all of them
@@ -101,8 +101,6 @@ class DynamicIfTest : public SimTest {
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
   wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
-  SimInterface client_ifc_;
-  SimInterface softap_ifc_;
 
   // Event handlers
   void OnJoinConf(const wlanif_join_confirm_t* resp);
@@ -269,12 +267,10 @@ void DynamicIfTest::StartAssoc() {
 
 void DynamicIfTest::TxAssocReq() {
   // Get the mac address of the SoftAP
-  uint8_t mac_buf[ETH_ALEN];
-  GetMacAddr(mac_buf, true);
-  common::MacAddr soft_ap_mac(mac_buf);
-  const common::MacAddr mac(kFakeMac);
+  common::MacAddr soft_ap_mac;
+  softap_ifc_.GetMacAddr(&soft_ap_mac);
   wlan_ssid_t ssid = {.len = 6, .ssid = "Sim_AP"};
-  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, ssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, ssid);
   env_->Tx(assoc_req_frame, kDefaultTxInfo, this);
 }
 
@@ -323,16 +319,6 @@ uint16_t DynamicIfTest::GetChanspec(bool is_ap_iface, zx_status_t expect_result)
   return chanspec;
 }
 
-void DynamicIfTest::GetMacAddr(uint8_t mac_out[ETH_ALEN], bool is_ap) {
-  brcmf_simdev* sim = device_->GetSim();
-  if (is_ap) {
-    sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "cur_etheraddr", mac_out, ETH_ALEN);
-  } else {
-    // If it's client iface, we directly use ifidx 0.
-    sim->sim_fw->IovarsGet(0, "cur_etheraddr", mac_out, ETH_ALEN);
-  }
-}
-
 TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
   ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT), ZX_OK);
@@ -341,9 +327,8 @@ TEST_F(DynamicIfTest, CreateDestroy) {
 
   ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_AP, kDefaultBssid), ZX_OK);
   // Verify whether the default bssid is correctly set to sim-fw when creating softAP iface.
-  uint8_t mac_buf[ETH_ALEN];
-  GetMacAddr(mac_buf, true);
-  common::MacAddr soft_ap_mac(mac_buf);
+  common::MacAddr soft_ap_mac;
+  softap_ifc_.GetMacAddr(&soft_ap_mac);
   EXPECT_EQ(soft_ap_mac, kDefaultBssid);
 
   DeleteInterface(WLAN_INFO_MAC_ROLE_AP);
@@ -355,9 +340,8 @@ TEST_F(DynamicIfTest, CreateDestroy) {
 TEST_F(DynamicIfTest, CreateAPwithSameMacAsClient) {
   Init();
   ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT), ZX_OK);
-  uint8_t mac_buf[ETH_ALEN];
-  GetMacAddr(mac_buf, false);
-  common::MacAddr client_mac(mac_buf);
+  common::MacAddr client_mac;
+  client_ifc_.GetMacAddr(&client_mac);
 
   // Create AP iface with the same mac addr.
   EXPECT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_AP, client_mac), ZX_ERR_ALREADY_EXISTS);
@@ -370,9 +354,9 @@ TEST_F(DynamicIfTest, CreateAPwithSameMacAsClient) {
 // pre-set one, no error will be returned.
 TEST_F(DynamicIfTest, CreateClientwithPreAllocMac) {
   Init();
-  uint8_t mac_buf[ETH_ALEN];
-  GetMacAddr(mac_buf, false);
-  common::MacAddr pre_set_mac(mac_buf);
+  common::MacAddr pre_set_mac;
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsGet(0, "cur_etheraddr", pre_set_mac.byte, ETH_ALEN);
   EXPECT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, pre_set_mac), ZX_OK);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   DeleteInterface(WLAN_INFO_MAC_ROLE_CLIENT);
