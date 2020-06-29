@@ -312,9 +312,9 @@ impl Player {
         }
 
         // Flush the decoder if we have one.
-        self.decoder
-            .as_mut()
-            .map_or(Ok(()), |d| d.flush().map_err(|e| format_err!("failed flush: {:?}", e)))?;
+        self.decoder.as_mut().map_or(Ok(()), |d| {
+            d.send_packet().map_err(|e| format_err!("failed flush: {:?}", e))
+        })?;
         trace::duration_end!("bt-a2dp-sink", "Media:PacketReceived");
         Ok(())
     }

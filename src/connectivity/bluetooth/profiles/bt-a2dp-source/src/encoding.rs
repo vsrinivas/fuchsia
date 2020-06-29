@@ -191,7 +191,7 @@ impl Stream for EncodedStream {
                     // flush() if we have sent enough bytes to generate a frame
                     if self.unflushed_bytecount > self.pcm_bytes_per_encoded_packet {
                         // Attempt to flush.
-                        if self.encoder.flush().is_ok() {
+                        if self.encoder.send_packet().is_ok() {
                             self.unflushed_bytecount = 0;
                         }
                     }

@@ -15,7 +15,7 @@ use {
         ready,
         stream::{FusedStream, Stream},
         task::{Context, Poll, Waker},
-        Future, StreamExt,
+        StreamExt,
     },
     parking_lot::{Mutex, RwLock},
     std::{
@@ -37,19 +37,38 @@ fn fidl_error_to_io_error(e: fidl::Error) -> io::Error {
 enum Listener {
     /// No one is listening.
     None,
-    /// Someone wants to listen but hasn't polled.
+    /// Someone is listening, but either have been woken and not repolled, or never polled yet.
     New,
     /// Someone is listening, and can be woken with the waker.
     Some(Waker),
 }
 
 impl Listener {
-    /// If a listener is registered, returns the current state and replaces it with
-    /// New.  Otherwise returns None and does nothing.
-    fn take(&mut self) -> Listener {
-        match self {
-            Listener::None => Listener::None,
-            _ => mem::replace(self, Listener::New),
+    /// Adds a waker to be awoken with `Listener::wake`.
+    /// Panics if no one is listening.
+    fn register(&mut self, waker: Waker) {
+        *self = match mem::replace(self, Listener::None) {
+            Listener::None => panic!("Polled a listener with no pollers"),
+            _ => Listener::Some(waker),
+        };
+    }
+
+    /// If a listener has polled, wake the listener and replace it with New.
+    /// Panics if no one is listening.
+    fn wake(&mut self) {
+        match mem::replace(self, Listener::New) {
+            Listener::None => panic!("Cannot wake with no listener!"),
+            Listener::Some(waker) => waker.wake(),
+            Listener::New => {}
+        }
+    }
+
+    /// Get a reference to the waker, if there is one waiting.
+    fn waker(&self) -> Option<&Waker> {
+        if let Listener::Some(ref waker) = self {
+            Some(waker)
+        } else {
+            None
         }
     }
 }
@@ -75,20 +94,14 @@ impl OutputQueue {
     /// Adds a packet to the queue and wakes the listener if necessary.
     fn enqueue(&mut self, packet: Packet) {
         self.queue.push_back(packet);
-        self.notify_listener();
+        self.listener.wake();
     }
 
     /// Signals the end of the stream has happened.
     /// Wakes the listener if necessary.
     fn mark_ended(&mut self) {
         self.ended = true;
-        self.notify_listener();
-    }
-
-    fn notify_listener(&mut self) {
-        if let Listener::Some(waker) = self.listener.take() {
-            waker.wake_by_ref();
-        }
+        self.listener.wake();
     }
 }
 
@@ -106,7 +119,7 @@ impl Stream for OutputQueue {
             Some(packet) => Poll::Ready(Some(packet)),
             None if self.ended => Poll::Ready(None),
             None => {
-                self.listener = Listener::Some(cx.waker().clone());
+                self.listener.register(cx.waker().clone());
                 Poll::Pending
             }
         }
@@ -212,19 +225,48 @@ impl StreamProcessorInner {
         Ok(())
     }
 
+    /// Process one event, and return Poll::Ready if the item has been processed,
+    /// and Poll::Pending if no event has been processed and the waker will be woken if
+    /// another event happens.
+    fn process_event(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+        match ready!(self.events.poll_next_unpin(cx)) {
+            Some(Err(e)) => Poll::Ready(Err(e.into())),
+            Some(Ok(event)) => Poll::Ready(self.handle_event(event)),
+            None => Poll::Ready(Err(format_err!("Client disconnected"))),
+        }
+    }
+
     /// Process all the events that are currently available from the StreamProcessor, and set the
     /// waker of `cx` to be woken when another event arrives.
     fn process_events(&mut self, cx: &mut Context<'_>) -> Result<usize, Error> {
         let mut processed = 0;
         loop {
-            match self.events.poll_next_unpin(cx) {
+            match self.process_event(cx) {
                 Poll::Pending => return Ok(processed),
-                Poll::Ready(Some(Err(e))) => return Err(e.into()),
-                Poll::Ready(Some(Ok(event))) => self.handle_event(event)?,
-                Poll::Ready(None) => return Err(format_err!("Client disconnected")),
+                Poll::Ready(Err(e)) => return Err(e.into()),
+                Poll::Ready(Ok(())) => processed = processed + 1,
             }
-            processed = processed + 1;
         }
+    }
+
+    /// If there is an output waker, process all the events in the queue with the output
+    /// waker to be woken up next.
+    fn process_events_output(&mut self) -> Result<usize, Error> {
+        let waker = match self.output_queue.lock().listener.waker() {
+            None => return Ok(0),
+            Some(waker) => waker.clone(),
+        };
+        self.process_events(&mut Context::from_waker(&waker))
+    }
+
+    /// If there is any input waker, process all the events in the queue with the output
+    /// waker to be woken up
+    fn process_events_input(&mut self) -> Result<usize, Error> {
+        let waker = match self.input_wakers.first() {
+            None => return Ok(0),
+            Some(waker) => waker.clone(),
+        };
+        self.process_events(&mut Context::from_waker(&waker))
     }
 
     /// Attempts to set up a new input cursor, out of the current set of client owned input buffers.
@@ -232,6 +274,7 @@ impl StreamProcessorInner {
     fn setup_input_cursor(&mut self) {
         if self.input_cursor.is_some() {
             // Nothing to be done
+            self.input_wakers.drain(..).for_each(|w| w.wake());
             return;
         }
         let next_idx = match self.client_owned.iter().cloned().next() {
@@ -240,7 +283,7 @@ impl StreamProcessorInner {
         };
         self.client_owned.take(&next_idx).unwrap();
         self.input_cursor = Some((next_idx, 0));
-        self.input_wakers.drain(..).for_each(|w| w.wake_by_ref());
+        self.input_wakers.drain(..).for_each(|w| w.wake());
     }
 
     /// Reads an output packet from the output buffers, and marks the packets as recycled so the
@@ -283,8 +326,8 @@ fn make_buffer(
 }
 
 /// Struct representing a CodecFactory .
-/// Input sent to the encoder via `StreamProcessor::write` is queued for delivery, and delivered
-/// whenever a buffer is full or `StreamProcessor::flush` is called.  Output can be retrieved using
+/// Input sent to the encoder via `StreamProcessor::write_bytes` is queued for delivery, and delivered
+/// whenever a packet is full or `StreamProcessor::send_packet` is called.  Output can be retrieved using
 /// an `StreamProcessorStream` from `StreamProcessor::take_output_stream`.
 pub struct StreamProcessor {
     inner: Arc<RwLock<StreamProcessorInner>>,
@@ -297,8 +340,8 @@ pub struct StreamProcessorOutputStream {
 }
 
 impl StreamProcessor {
-    /// Create a new StreamProcessor, given the connection to the stream processor and it's
-    /// event stream.
+    /// Create a new StreamProcessor given the proxy.
+    /// Takes the event stream of the proxy.
     fn create(processor: StreamProcessorProxy) -> Self {
         let events = processor.take_event_stream();
         Self {
@@ -407,15 +450,8 @@ impl StreamProcessor {
         Ok(StreamProcessorOutputStream { inner: self.inner.clone() })
     }
 
-    /// Returns a future that will wait on any events from the underlying StreamProcessor.
-    /// This is not necessary in normal operation, as StreamProcessor events are also processed
-    /// when writing to the client (using AsyncWrite) and reading from the StreamProcessorOutputStream.
-    pub fn process_events(&self) -> StreamProcessorProcess {
-        StreamProcessorProcess { inner: self.inner.clone() }
-    }
-
     /// Deliver input to the stream processor.  Returns the number of bytes delivered.
-    fn send_to_input(&mut self, bytes: &[u8]) -> Result<usize, io::Error> {
+    fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize, io::Error> {
         let mut bytes_idx = 0;
         while bytes.len() > bytes_idx {
             {
@@ -445,7 +481,7 @@ impl StreamProcessor {
                 assert_eq!(size + write_len as u64, write.input_packet_size);
                 write.input_cursor = Some((idx, write.input_packet_size));
             }
-            self.flush()?;
+            self.send_packet()?;
         }
         Ok(bytes_idx)
     }
@@ -453,7 +489,7 @@ impl StreamProcessor {
     /// Flush the input buffer to the processor, relinquishing the ownership of the buffer
     /// currently in the input cursor, and picking a new input buffer.  If there is no input
     /// buffer left, the input cursor is left as None.
-    pub fn flush(&mut self) -> Result<(), io::Error> {
+    pub fn send_packet(&mut self) -> Result<(), io::Error> {
         let mut write = self.inner.write();
         if write.input_cursor.is_none() {
             // Nothing to flush, nothing can have been written to an empty input cursor.
@@ -489,20 +525,17 @@ impl StreamProcessor {
     /// notification when an input buffer becomes available or the encoder is closed.
     fn poll_writable(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         let mut write = self.inner.write();
-        if let Err(e) = write.process_events(cx) {
-            return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e)));
-        }
-        match &write.input_cursor {
-            Some(_) => Poll::Ready(Ok(())),
-            None => {
-                write.input_wakers.push(cx.waker().clone());
-                Poll::Pending
+        while write.input_cursor.is_none() {
+            if let Err(e) = ready!(write.process_event(cx)) {
+                return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e)));
             }
         }
+        // The input cursor is set now.
+        Poll::Ready(Ok(()))
     }
 
     pub fn close(&mut self) -> Result<(), io::Error> {
-        self.flush()?;
+        self.send_packet()?;
 
         let mut write = self.inner.write();
 
@@ -514,24 +547,6 @@ impl StreamProcessor {
     }
 }
 
-/// Returned by `StreamProcessorProcess::process_events()`. Rarely used in normal operation, as delivering data to
-/// the stream processor and reading from the StreamProcessorStream will process events.
-pub struct StreamProcessorProcess {
-    inner: Arc<RwLock<StreamProcessorInner>>,
-}
-
-impl Future for StreamProcessorProcess {
-    type Output = Result<usize, Error>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut write = self.inner.write();
-        match write.process_events(cx) {
-            Ok(0) => Poll::Pending,
-            n => Poll::Ready(n),
-        }
-    }
-}
-
 impl AsyncWrite for StreamProcessor {
     fn poll_write(
         mut self: Pin<&mut Self>,
@@ -539,18 +554,22 @@ impl AsyncWrite for StreamProcessor {
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         ready!(self.poll_writable(cx))?;
-        match self.send_to_input(buf) {
+        // Since we are returning Poll::Ready, process events with the output waker having priority
+        // (if it exists) so that it will be woken up if there is an event.
+        // Ignoring result as errors are caught by write_bytes below.
+        let _ = self.inner.write().process_events_output();
+        match self.write_bytes(buf) {
             Ok(written) => Poll::Ready(Ok(written)),
             Err(e) => Poll::Ready(Err(e.into())),
         }
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(self.flush())
+        Poll::Ready(self.send_packet())
     }
 
     fn poll_close(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(self.flush())
+        Poll::Ready(self.send_packet())
     }
 }
 
@@ -559,19 +578,31 @@ impl Stream for StreamProcessorOutputStream {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut write = self.inner.write();
-        // Process the event stream if we can, or set a waker on it.
-        if let Err(e) = write.process_events(cx) {
-            return Poll::Ready(Some(Err(e.into())));
-        }
-
+        // If we have a item ready, just return it.
         let packet = {
             let mut queue = write.output_queue.lock();
-            match ready!(queue.poll_next_unpin(cx)) {
-                None => return Poll::Ready(None),
-                Some(packet) => packet,
+            match queue.poll_next_unpin(cx) {
+                Poll::Ready(Some(packet)) => Some(packet),
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => {
+                    // The waker has been set for when the queue is filled.
+                    // We also need to set the waker for if an event happens.
+                    None
+                }
             }
         };
-        Poll::Ready(Some(write.read_output_packet(packet)))
+        if let Some(packet) = packet {
+            // If we're returning Ready, but an input waiter is listening, process events until
+            // there are none with the input waker so it will wake up on any new event.
+            let _ = write.process_events_input();
+            return Poll::Ready(Some(write.read_output_packet(packet)));
+        }
+        // Process the events with the stored output waker having priority, since will be returning
+        // Poll::Pending
+        if let Err(e) = write.process_events_output() {
+            return Poll::Ready(Some(Err(e.into())));
+        }
+        Poll::Pending
     }
 }
 
@@ -586,8 +617,8 @@ mod tests {
     use super::*;
 
     use byteorder::{ByteOrder, NativeEndian};
-    use fuchsia_async::{self as fasync};
-    use futures::io::AsyncWriteExt;
+    use fuchsia_async as fasync;
+    use futures::{io::AsyncWriteExt, Future};
     use futures_test::task::new_count_waker;
     use hex;
     use mundane::hash::{Digest, Hasher, Sha256};
@@ -744,18 +775,14 @@ mod tests {
 
         assert_eq!(input_frames, frames_sent);
 
-        // After the encoder runs, the encoded future should have been woken once the output
-        // started.
-        let mut processed_events = 0;
-        // 4 encoder events that happen before Output is guaranteed: OnInputConstraints,
-        // OnOutputConstraints, OnOutputFormat, OnOutputPacket
-        while processed_events < 4 {
-            let mut process_fut = encoder.process_events();
-            let process_result = exec.run_singlethreaded(&mut process_fut);
-            assert!(process_result.is_ok());
-            processed_events += process_result.unwrap();
+        // When an unprocessed event has happened on the stream, even if intervening events have been
+        // procesed by the input processes, it should wake the output future to process the events.
+        loop {
+            if encoder_fut_wake_count.get() == 1 {
+                break;
+            }
+            let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         }
-
         assert_eq!(encoder_fut_wake_count.get(), 1);
 
         // Get data from the output now.
@@ -815,16 +842,6 @@ mod tests {
         // Shouldn't be able to take the stream twice
         assert!(decoder.take_output_stream().is_err());
 
-        // Polling the decoded stream before the decoder has started up should wake it when
-        // output starts happening, set up the poll here.
-        let decoded_fut = decoded_stream.next();
-
-        let (waker, decoder_fut_wake_count) = new_count_waker();
-        let mut counting_ctx = Context::from_waker(&waker);
-
-        fasync::pin_mut!(decoded_fut);
-        assert!(decoded_fut.poll(&mut counting_ctx).is_pending());
-
         let mut frames_sent = 0;
 
         let frames_per_packet: usize = 1; // Randomly chosen by fair d10 roll.
@@ -840,23 +857,13 @@ mod tests {
             frames_sent += frames.len() / SBC_FRAME_SIZE;
         }
 
-        decoder.close().expect("stream should always be closable");
-
         assert_eq!(INPUT_FRAMES, frames_sent);
 
-        // After the decoder runs, the decoded future should have been woken once the output
-        // started.
-        let mut processed_events = 0;
-        // 4 decoder events that happen before Output is guaranteed: OnInputConstraints,
-        // OnOutputConstraints, OnOutputFormat, OutputPacket
-        while processed_events < 4 {
-            let mut process_fut = decoder.process_events();
-            let process_result = exec.run_singlethreaded(&mut process_fut);
-            assert!(process_result.is_ok());
-            processed_events += process_result.unwrap();
-        }
+        let flush_fut = decoder.flush();
+        fasync::pin_mut!(flush_fut);
+        exec.run_singlethreaded(&mut flush_fut).expect("to flush the decoder");
 
-        assert_eq!(decoder_fut_wake_count.get(), 1);
+        decoder.close().expect("stream should always be closable");
 
         // Get data from the output now.
         let mut decoded = Vec::new();
@@ -889,5 +896,71 @@ mod tests {
 
         let validated = hash_validator.validate(decoded.as_slice());
         assert!(validated.is_ok(), "Failed hash: {:?}", validated);
+    }
+
+    #[test]
+    fn decode_sbc_wakes_output_to_process_events() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
+        const SBC_FRAME_SIZE: usize = 72;
+
+        let mut sbc_data = Vec::new();
+        File::open(SBC_TEST_FILE)
+            .expect("open test file")
+            .read_to_end(&mut sbc_data)
+            .expect("read test file");
+
+        // SBC codec info corresponding to Mono reference stream.
+        let oob_data = Some([0x82, 0x00, 0x00, 0x00].to_vec());
+        let mut decoder =
+            StreamProcessor::create_decoder("audio/sbc", oob_data).expect("to create decoder");
+
+        let mut decoded_stream = decoder.take_output_stream().expect("Stream should be taken");
+
+        // Polling the decoded stream before the decoder has started up should wake it when
+        // output starts happening, set up the poll here.
+        let decoded_fut = decoded_stream.next();
+
+        let (waker, decoder_fut_wake_count) = new_count_waker();
+        let mut counting_ctx = Context::from_waker(&waker);
+
+        fasync::pin_mut!(decoded_fut);
+        assert!(decoded_fut.poll(&mut counting_ctx).is_pending());
+
+        // Send only one frame. This is not eneough to automatically cause output to be generated
+        // by pushing data.
+        let frame = sbc_data.as_slice().chunks(SBC_FRAME_SIZE).next().unwrap();
+        let mut written_fut = decoder.write(&frame);
+        let written_bytes = exec.run_singlethreaded(&mut written_fut).expect("to write to decoder");
+        assert_eq!(frame.len(), written_bytes);
+
+        let flush_fut = decoder.flush();
+        fasync::pin_mut!(flush_fut);
+        exec.run_singlethreaded(&mut flush_fut).expect("to flush the decoder");
+
+        // When an unprocessed event has happened on the stream, even if intervening events have been
+        // procesed by the input processes, it should wake the output future to process the events.
+        loop {
+            if decoder_fut_wake_count.get() == 1 {
+                break;
+            }
+            let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        }
+        assert_eq!(decoder_fut_wake_count.get(), 1);
+
+        let mut decoded = Vec::new();
+        // Drops the previous decoder future, which is fine.
+        let mut decoded_fut = decoded_stream.next();
+
+        match exec.run_singlethreaded(&mut decoded_fut) {
+            Some(Ok(dec_data)) => {
+                assert!(!dec_data.is_empty());
+                decoded.extend_from_slice(&dec_data);
+            }
+            x => panic!("Expected decoded frame, got {:?}", x),
+        }
+
+        assert_eq!(512, decoded.len(), "Decoded size should be equal to one frame");
     }
 }
