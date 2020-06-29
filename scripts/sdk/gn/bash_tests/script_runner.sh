@@ -17,7 +17,7 @@ get_jiri_root() {
     root_dir="$(dirname "${root_dir}")"
     if [[ ${#root_dir} -eq 1 ]]; then
       echo >&2 "Error! could not find the root of the project starting from $SCRIPT_SRC_DIR. The current working directory needs to be under the root of the project"
-      find $TEST_DIR 
+      find "${TEST_DIR}"
       exit 1
     fi
   done
@@ -29,7 +29,6 @@ launch_script() {
   test_script_name="$1"
   shift
   local test_script_path="${SCRIPT_SRC_DIR}/${test_script_name}"
-  local test_script_arg="${test_script_name}"
   local bt_deps_root="${TEST_DIR}";
 
   # Check the local directory as the root of the test framework first,
@@ -39,8 +38,6 @@ launch_script() {
     echo "Could not find $test_framework_path"
     bt_deps_root="$(get_jiri_root)"
     test_framework_path="${bt_deps_root}/tools/devshell/tests/lib/bash_test_framework.sh"
-    test_script_arg="${test_script_path}"
-
   fi
 
   if [[ ! -f "${test_script_path}" ]]; then

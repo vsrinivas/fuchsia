@@ -98,16 +98,23 @@ INPUT
   --femu-log "${BT_TEMP_DIR}/femu_exec_wrapper_multi_pid.log"  > "${BT_TEMP_DIR}/TEST_femu_exec_wrapper_multi_pid_out.txt" 2>&1
 
   if ! is-mac; then
+    # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/isolated/ps.mock_state.1"
     gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" _ANY_
+    # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/isolated/ps.mock_state.2"
+    # shellcheck disable=SC1090
     gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "10"
+    # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/isolated/ps.mock_state.3"
     gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "11"
+    # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/isolated/ps.mock_state.4"
     gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "20"
+    # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/isolated/ps.mock_state.5"
     gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "12"
+    # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/isolated/ps.mock_state.6"
     gn-test-check-mock-args _ANY_ "-o" "pid:1=" "--ppid" "13"
   fi
@@ -122,10 +129,28 @@ INPUT
 
 }
 
+TEST_femu_exec_wrapper_with_default_ip_set() {
+  # This tests making sure the package server is serving to the emulator, and not the default ip address
+  # set via fconfig.sh.
+
+    BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+
+
+    BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu-exec-wrapper.sh"  > "${BT_TEMP_DIR}/TEST_femu_exec_wrapper_with_default_ip_set.txt" 2>&1
+
+  # Check that femu.sh was called
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state.1"
+
+  gn-test-check-mock-args _ANY_ --device-ip "fe80::5054:ff:fe63:5e7a%qemu" --image qemu-x64
+
+}
+
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
+  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/femu-exec-wrapper.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
@@ -144,6 +169,10 @@ BT_MOCKED_TOOLS=(
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+
+    # Make "home" directory in the test dir so the paths are stable."
+  mkdir -p "${BT_TEMP_DIR}/test-home"
+  export HOME="${BT_TEMP_DIR}/test-home"
 }
 
 BT_RUN_TESTS "$@"

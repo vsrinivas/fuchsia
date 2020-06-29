@@ -176,7 +176,7 @@ echo "Emulator pid ${FEMU_PID} is running and accepting connections"
 
 # Start the package server after the emulator is ready, so we know it is configured when we run commands
 echo "Starting package server"
-"${SCRIPT_SRC_DIR}/fserve.sh" --image "${IMAGE_NAME}"
+"${SCRIPT_SRC_DIR}/fserve.sh" --device-ip "${EMULATOR_ADDRESS}" --image "${IMAGE_NAME}"
 
 # Execute the script specified on the command-line
 EXEC_RESULT=0
