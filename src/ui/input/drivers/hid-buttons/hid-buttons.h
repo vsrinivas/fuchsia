@@ -48,11 +48,11 @@ constexpr uint64_t kPortKeyTimerStart = 0x100;
 constexpr uint64_t kDebounceThresholdNs = 50'000'000;
 
 class HidButtonsDevice;
-using DeviceType = ddk::Device<HidButtonsDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<HidButtonsDevice, ddk::UnbindableNew>;
 class HidButtonsHidBusFunction;
-using HidBusFunctionType = ddk::Device<HidButtonsHidBusFunction, ddk::UnbindableDeprecated>;
+using HidBusFunctionType = ddk::Device<HidButtonsHidBusFunction, ddk::UnbindableNew>;
 class HidButtonsButtonsFunction;
-using ButtonsFunctionType = ddk::Device<HidButtonsButtonsFunction, ddk::UnbindableDeprecated>;
+using ButtonsFunctionType = ddk::Device<HidButtonsButtonsFunction, ddk::UnbindableNew>;
 class ButtonsNotifyInterface;
 
 using Buttons = ::llcpp::fuchsia::buttons::Buttons;
@@ -91,7 +91,7 @@ class HidButtonsDevice : public DeviceType {
   bool GetState(ButtonType type);
   zx_status_t RegisterNotify(uint8_t types, uint64_t chan_id);
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t Bind(fbl::Array<Gpio> gpios, fbl::Array<buttons_button_config_t> buttons);
@@ -152,7 +152,7 @@ class HidButtonsHidBusFunction
       : HidBusFunctionType(device), device_(peripheral) {}
   virtual ~HidButtonsHidBusFunction() = default;
 
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Methods required by the ddk mixins.
@@ -198,9 +198,9 @@ class HidButtonsButtonsFunction
   }
   virtual ~HidButtonsButtonsFunction() = default;
 
-  void DdkUnbindDeprecated() {
+  void DdkUnbindNew(ddk::UnbindTxn txn) {
     loop_.Shutdown();
-    DdkRemoveDeprecated();
+    txn.Reply();
   }
   void DdkRelease() { delete this; }
 

@@ -361,13 +361,13 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   std::unique_ptr<HidButtonsHidBusFunction> hidbus_function(
       new (&ac) HidButtonsHidBusFunction(zxdev(), this));
   if (!ac.check()) {
-    ShutDown();
+    DdkAsyncRemove();
     return ZX_ERR_NO_MEMORY;
   }
   status = hidbus_function->DdkAdd("hidbus_function");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAdd for Hidbus Function failed %d", __FUNCTION__, status);
-    ShutDown();
+    DdkAsyncRemove();
     return status;
   }
   hidbus_function_ = hidbus_function.release();
@@ -380,7 +380,7 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   status = buttons_function->DdkAdd("buttons_function");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAdd for Buttons Function failed %d", __FUNCTION__, status);
-    ShutDown();
+    DdkAsyncRemove();
     return status;
   }
   buttons_function_ = buttons_function.release();
@@ -399,15 +399,13 @@ void HidButtonsDevice::ShutDown() {
   fbl::AutoLock lock(&client_lock_);
   client_.clear();
 
-  hidbus_function_->DdkUnbindDeprecated();
   hidbus_function_ = nullptr;
-  buttons_function_->DdkUnbindDeprecated();
   buttons_function_ = nullptr;
 }
 
-void HidButtonsDevice::DdkUnbindDeprecated() {
+void HidButtonsDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void HidButtonsDevice::DdkRelease() { delete this; }
