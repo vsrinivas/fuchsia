@@ -30,6 +30,11 @@
 
 namespace buttons {
 
+bool input_reports_are_equal(const buttons_input_rpt_t& lhs, const buttons_input_rpt_t& rhs) {
+  return (lhs.rpt_id == rhs.rpt_id && lhs.volume_up == rhs.volume_up &&
+          lhs.volume_down == rhs.volume_down && lhs.reset == rhs.reset && lhs.mute == rhs.mute);
+}
+
 void HidButtonsDevice::Notify(uint32_t type) {
   // HID Report
   buttons_input_rpt_t input_rpt;
@@ -38,11 +43,11 @@ void HidButtonsDevice::Notify(uint32_t type) {
       HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &input_rpt, sizeof(input_rpt), &out_len);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s HidbusGetReport failed %d", __FUNCTION__, status);
-  } else {
+  } else if (!input_reports_are_equal(last_report_, input_rpt)) {
     fbl::AutoLock lock(&client_lock_);
     if (client_.is_valid()) {
       client_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t), zx_clock_get_monotonic());
-      // If report could not be filled, we do not ioqueue.
+      last_report_ = input_rpt;
     }
   }
   if (fdr_gpio_.has_value() && fdr_gpio_.value() == type) {
@@ -332,6 +337,12 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
         return status;
       }
     }
+  }
+
+  size_t out_len = 0;
+  status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &last_report_, sizeof(last_report_), &out_len);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s HidbusGetReport failed %d", __FUNCTION__, status);
   }
 
   auto f = [](void* arg) -> int { return reinterpret_cast<HidButtonsDevice*>(arg)->Thread(); };

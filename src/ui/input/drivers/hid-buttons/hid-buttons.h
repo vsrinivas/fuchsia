@@ -119,6 +119,8 @@ class HidButtonsDevice : public DeviceType {
   HidButtonsButtonsFunction* buttons_function_;
 
  private:
+  friend class HidButtonsDeviceTest;
+
   int Thread();
   uint8_t ReconfigurePolarity(uint32_t idx, uint64_t int_port);
   zx_status_t ConfigureInterrupt(uint32_t idx, uint64_t int_port);
@@ -137,6 +139,8 @@ class HidButtonsDevice : public DeviceType {
     bool value;
   };
   fbl::Array<debounce_state> debounce_states_;
+  // last_report_ saved to de-duplicate reports
+  buttons_input_rpt_t last_report_;
 };
 
 class HidButtonsHidBusFunction
