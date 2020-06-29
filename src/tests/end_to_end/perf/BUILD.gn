@@ -49,8 +49,13 @@ shards = [
   "0",
   "1",
   "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
 ]
-total_shards = "3"
+total_shards = "8"
 foreach(shard, shards) {
   target_name = "fidl_microbenchmarks_test_shard_" + shard
   dart_test(target_name) {

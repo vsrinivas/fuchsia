@@ -36,9 +36,10 @@ void main(List<String> args) {
   runFidlBenchmark('hlcpp_fidl_microbenchmarks');
   runFidlBenchmark('lib_fidl_microbenchmarks');
   runFidlBenchmark('llcpp_fidl_microbenchmarks');
+  runFidlBenchmark('walker_fidl_microbenchmarks');
   runFidlBenchmark('rust_fidl_microbenchmarks',
       tmpPerfResultsJson('rust_fidl_microbenchmarks'));
-  runFidlBenchmark('walker_fidl_microbenchmarks');
+  runFidlBenchmark('reference_fidl_microbenchmarks');
 
   _tests.add(() {
     test('dart_fidl_microbenchmarks', () async {

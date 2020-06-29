@@ -285,3 +285,11 @@ template("gidl_walker") {
     forward_variables_from(invoker, "*")
   }
 }
+
+template("gidl_reference") {
+  gidl_source_set(target_name) {
+    language = "reference"
+    bindings_suffix = "_llcpp"
+    forward_variables_from(invoker, "*")
+  }
+}

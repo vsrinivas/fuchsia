@@ -4,7 +4,11 @@
 
 package ir
 
-import "reflect"
+import (
+	"reflect"
+
+	"gidl/config"
+)
 
 func Merge(input []All) All {
 	var output All
@@ -35,6 +39,9 @@ func FilterByBinding(input All, binding string) All {
 		}
 		if allowlist != nil {
 			return allowlist.Includes(binding)
+		}
+		if LanguageList(config.DefaultBindingsDenylist).Includes(binding) {
+			return false
 		}
 		return true
 	}

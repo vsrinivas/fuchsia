@@ -9,6 +9,7 @@ group("benchmarks") {
     "hlcpp",
     "lib-fidl",
     "llcpp",
+    "reference",
     "rust",
     "walker",
     "//topaz/tests/dart_fidl_benchmarks",

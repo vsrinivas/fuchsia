@@ -20,7 +20,7 @@ benchmark("Table/Unset/16") {
 
 // Table with 256 fields all unset
 benchmark("Table/Unset/256") {
-    bindings_denylist = [dart],
+    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
     value = Table256Struct{
         value: Table256{},
     },

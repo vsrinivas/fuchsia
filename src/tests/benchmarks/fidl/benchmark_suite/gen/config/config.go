@@ -17,7 +17,8 @@ const (
 	Rust  Binding = "rust"
 	Go    Binding = "go"
 	// GIDL only. Uses "LLCPP" for FIDL inputs.
-	Walker Binding = "walker"
+	Walker    Binding = "walker"
+	Reference Binding = "reference"
 )
 
 type ConfigKey string

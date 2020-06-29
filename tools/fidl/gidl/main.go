@@ -23,8 +23,9 @@ import (
 	gidlir "gidl/ir"
 	gidlllcpp "gidl/llcpp"
 	gidlparser "gidl/parser"
+	gidlreference "gidl/reference"
 	gidlrust "gidl/rust"
-	giidlwalker "gidl/walker"
+	gidlwalker "gidl/walker"
 )
 
 // Generator is a function that generates conformance tests for a particular
@@ -42,12 +43,13 @@ var conformanceGenerators = map[string]Generator{
 }
 
 var benchmarkGenerators = map[string]Generator{
-	"go":     gidlgolang.GenerateBenchmarks,
-	"llcpp":  gidlllcpp.GenerateBenchmarks,
-	"cpp":    gidlcpp.GenerateBenchmarks,
-	"rust":   gidlrust.GenerateBenchmarks,
-	"dart":   gidldart.GenerateBenchmarks,
-	"walker": giidlwalker.GenerateBenchmarks,
+	"go":        gidlgolang.GenerateBenchmarks,
+	"llcpp":     gidlllcpp.GenerateBenchmarks,
+	"cpp":       gidlcpp.GenerateBenchmarks,
+	"rust":      gidlrust.GenerateBenchmarks,
+	"dart":      gidldart.GenerateBenchmarks,
+	"reference": gidlreference.GenerateBenchmarks,
+	"walker":    gidlwalker.GenerateBenchmarks,
 }
 
 var allGenerators = map[string]map[string]Generator{

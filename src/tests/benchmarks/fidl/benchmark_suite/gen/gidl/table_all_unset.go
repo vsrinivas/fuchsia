@@ -36,7 +36,7 @@ func init() {
 					"size": 256,
 				},
 				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Denylist: []config.Binding{config.Dart},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
 			},
 		},
 	})

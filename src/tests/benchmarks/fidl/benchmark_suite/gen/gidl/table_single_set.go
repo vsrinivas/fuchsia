@@ -39,7 +39,7 @@ func init() {
 					"field_to_set": 1,
 				},
 				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Denylist: []config.Binding{config.Dart},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
 			},
 			{
 				Name:    "Table/SingleSet/16_of_16",
@@ -57,7 +57,7 @@ func init() {
 					"field_to_set": 16,
 				},
 				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Denylist: []config.Binding{config.Dart},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
 			},
 			{
 				Name:    "Table/SingleSet/256_of_256",
@@ -67,7 +67,7 @@ func init() {
 					"field_to_set": 256,
 				},
 				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Denylist: []config.Binding{config.Dart},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
 			},
 		},
 	})
