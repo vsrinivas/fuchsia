@@ -89,7 +89,6 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
 PortObserver::PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
                            Lock<Mutex>* port_lock, uint64_t key, zx_signals_t signals)
     : options_(options),
-      trigger_(signals),
       packet_(handle, nullptr),
       port_(ktl::move(port)),
       port_lock_(port_lock),
@@ -102,54 +101,33 @@ PortObserver::PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<P
   packet.status = ZX_OK;
   packet.key = key;
   packet.type = ZX_PKT_TYPE_SIGNAL_ONE;
-  packet.signal.trigger = trigger_;
+  packet.signal.trigger = signals;
 }
 
-StateObserver::Flags PortObserver::OnInitialize(zx_signals_t initial_state) {
-  return MaybeQueue(initial_state);
-}
-
-StateObserver::Flags PortObserver::OnStateChange(zx_signals_t new_state) {
-  return MaybeQueue(new_state);
-}
-
-StateObserver::Flags PortObserver::OnCancel(const Handle* handle) {
-  if (packet_.handle == handle) {
-    return kHandled | kNeedRemoval;
-  } else {
-    return 0;
-  }
-}
-
-StateObserver::Flags PortObserver::OnCancelByKey(const Handle* handle, const void* port,
-                                                 uint64_t key) {
-  if ((packet_.handle != handle) || (packet_.key() != key) || (port_.get() != port))
-    return 0;
-  return kHandled | kNeedRemoval;
-}
-
-void PortObserver::OnRemoved() {
-  port_->MaybeReap(this, &packet_);
-  // The |MaybeReap| call may have deleted |this|, so it is not safe to access any members now.
-}
-
-StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state) {
-  // Always called with the object state lock being held.
-  if ((trigger_ & new_state) == 0u)
-    return 0;
-
+void PortObserver::OnMatch(zx_signals_t signals) {
   if (options_ & ZX_WAIT_ASYNC_TIMESTAMP) {
     // Getting the current time can be somewhat expensive.
     packet_.packet.signal.timestamp = current_time();
   }
+
   // The packet is not allocated in the packet arena and does not count against the per-port limit
   // so |Queue| cannot fail due to the packet count.  However, the last handle to the port may have
   // been closed so it can still fail with ZX_ERR_BAD_HANDLE.  Just ignore ZX_ERR_BAD_HANDLE because
   // there is nothing to be done.
-  const zx_status_t status = port_->Queue(&packet_, new_state);
+  const zx_status_t status = port_->Queue(&packet_, signals);
   DEBUG_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_BAD_HANDLE, "status %d\n", status);
 
-  return kNeedRemoval;
+  port_->MaybeReap(this, &packet_);
+  // The |MaybeReap| call may have deleted |this|, so it is not safe to access any members now.
+}
+
+void PortObserver::OnCancel(zx_signals_t signals) {
+  port_->MaybeReap(this, &packet_);
+  // The |MaybeReap| call may have deleted |this|, so it is not safe to access any members now.
+}
+
+bool PortObserver::MatchesKey(const void* port, uint64_t key) {
+  return key == packet_.key() && port == port_.get();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -210,8 +188,9 @@ void PortDispatcher::on_zero_handles() {
 
   // For each of our outstanding observers, remove them from their dispatchers and destroy them.
   //
-  // We could be racing with the dispatcher calling OnRemoved/MaybeReap. Only destroy the observer
-  // after RemoveObserver completes to ensure we don't destroy it out from under the dispatcher.
+  // We could be racing with the dispatcher calling OnMatch/OnCancel/MaybeReap. Only destroy the
+  // observer after RemoveObserver completes to ensure we don't destroy it out from under the
+  // dispatcher.
   while (!observers_.is_empty()) {
     PortObserver* observer = observers_.pop_front();
     fbl::RefPtr<Dispatcher> dispatcher = observer->UnlinkDispatcherLocked();
@@ -429,7 +408,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     observers_.push_front(observer);
   }
 
-  return dispatcher->AddObserver(observer);
+  return dispatcher->AddObserver(observer, handle, signals);
 }
 
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {

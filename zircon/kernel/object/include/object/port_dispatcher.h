@@ -20,7 +20,7 @@
 #include <ktl/unique_ptr.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <object/state_observer.h>
+#include <object/signal_observer.h>
 
 // Important pointers diagram for PortObserver
 //
@@ -111,7 +111,7 @@ struct PortInterruptPacket final : public fbl::DoublyLinkedListable<PortInterrup
 
 // Observers are weakly contained in Dispatchers until their OnInitialize(), OnStateChange() or
 // OnCancel() callbacks return StateObserver::kNeedRemoval.
-class PortObserver final : public StateObserver {
+class PortObserver final : public SignalObserver {
  public:
   using ListNodeState = fbl::DoublyLinkedListNodeState<PortObserver*>;
 
@@ -137,19 +137,12 @@ class PortObserver final : public StateObserver {
   PortObserver(const PortObserver&) = delete;
   PortObserver& operator=(const PortObserver&) = delete;
 
-  // StateObserver overrides.
-  Flags OnInitialize(zx_signals_t initial_state) final;
-  Flags OnStateChange(zx_signals_t new_state) final;
-  Flags OnCancel(const Handle* handle) final;
-  Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) final;
-  void OnRemoved() final;
-
-  // The following method can only be called from
-  // OnInitialize(), OnStateChange() and OnCancel().
-  Flags MaybeQueue(zx_signals_t new_state);
+  // |SignalObserver| implementation.
+  void OnMatch(zx_signals_t signals) final;
+  void OnCancel(zx_signals_t signals) final;
+  bool MatchesKey(const void* port, uint64_t key) final;
 
   const uint32_t options_;
-  const zx_signals_t trigger_;
   PortPacket packet_;
 
   fbl::RefPtr<PortDispatcher> const port_;
