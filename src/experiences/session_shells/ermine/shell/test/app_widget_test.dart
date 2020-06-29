@@ -62,8 +62,7 @@ void main() async {
     when(model.overviewVisibility).thenReturn(overviewNotifier);
 
     await tester.pumpWidget(app);
-    await tester.pumpAndSettle();
-    await tester.pumpAndSettle();
+    await tester.pumpUntilVisible(app.overview);
 
     expect(find.byWidget(app.recents), findsOneWidget);
     expect(find.byWidget(app.overview), findsOneWidget);
@@ -71,7 +70,7 @@ void main() async {
 
     // Home should be visible.
     overviewNotifier.value = false;
-    await tester.pumpAndSettle();
+    await tester.pumpUntilVisible(app.home);
 
     expect(find.byWidget(app.recents), findsOneWidget);
     expect(find.byWidget(app.overview), findsNothing);
@@ -97,3 +96,14 @@ class TestApp extends App {
 }
 
 class MockAppModel extends Mock implements AppModel {}
+
+extension _WidgetVisibility on WidgetTester {
+  /// Calls [pumpAndSettle] until widget finder finds a widget or the default
+  /// timeout of the surrounding test is exceeded.
+  Future<void> pumpUntilVisible(Widget widget) async {
+    var matchState = {};
+    while (findsNothing.matches(find.byWidget(widget), matchState)) {
+      await pumpAndSettle();
+    }
+  }
+}
