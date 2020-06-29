@@ -100,14 +100,13 @@ impl VolumeRelay {
 
         let audio_proxy_clone = audio.clone();
         let mut audio_watch_stream =
-            HangingGetStream::new(Box::new(move || Some(audio_proxy_clone.watch())));
+            HangingGetStream::new(Box::new(move || Some(audio_proxy_clone.watch2())));
 
         // Wait for the first update from the settings app.
         let mut current_volume = match audio_watch_stream.next().await {
             None => return Err(format_err!("Volume watch response stream ended")),
             Some(Err(e)) => return Err(format_err!("FIDL error polling audio watch: {:?}", e)),
-            Some(Ok(Err(e))) => return Err(format_err!("Error return audio watch: {:?}", e)),
-            Some(Ok(Ok(settings))) => match AvrcpVolume::from_media_volume(settings) {
+            Some(Ok(settings)) => match AvrcpVolume::from_media_volume(settings) {
                 Err(e) => return Err(format_err!("Can't get initial volume: {:?}", e)),
                 Ok(vol) => vol.0,
             },
@@ -172,8 +171,7 @@ impl VolumeRelay {
                     let settings = match watch_response {
                         None => return Err(format_err!("Volume watch response stream ended")),
                         Some(Err(e)) => return Err(format_err!("FIDL error from watch: {:?}", e)),
-                        Some(Ok(Err(e))) => return Err(format_err!("Error return audio watch: {:?}", e)),
-                        Some(Ok(Ok(settings))) => settings,
+                        Some(Ok(settings)) => settings,
                     };
 
                     current_volume = match AvrcpVolume::from_media_volume(settings) {
@@ -292,19 +290,19 @@ mod tests {
     fn expect_audio_watch(
         exec: &mut fasync::Executor,
         audio_request_stream: &mut settings::AudioRequestStream,
-    ) -> settings::AudioWatchResponder {
+    ) -> settings::AudioWatch2Responder {
         let watch_request_fut = audio_request_stream.select_next_some();
         pin_mut!(watch_request_fut);
 
         match exec.run_until_stalled(&mut watch_request_fut) {
-            Poll::Ready(Ok(settings::AudioRequest::Watch { responder })) => responder,
+            Poll::Ready(Ok(settings::AudioRequest::Watch2 { responder })) => responder,
             x => panic!("Expected an Audio Watch Reqeust, got {:?}", x),
         }
     }
 
-    fn respond_to_audio_watch(responder: settings::AudioWatchResponder, level: f32) {
+    fn respond_to_audio_watch(responder: settings::AudioWatch2Responder, level: f32) {
         responder
-            .send(&mut Ok(settings::AudioSettings {
+            .send(settings::AudioSettings {
                 streams: Some(vec![settings::AudioStreamSettings {
                     stream: Some(media::AudioRenderUsage::Media),
                     user_volume: Some(settings::Volume {
@@ -314,7 +312,7 @@ mod tests {
                     ..settings::AudioStreamSettings::new_empty()
                 }]),
                 ..settings::AudioSettings::new_empty()
-            }))
+            })
             .expect("watch responder to send");
     }
 
@@ -326,7 +324,7 @@ mod tests {
         mut exec: &mut fasync::Executor,
         mut avrcp_request_stream: avrcp::PeerManagerRequestStream,
         audio_request_stream: &mut settings::AudioRequestStream,
-    ) -> (avrcp::AbsoluteVolumeHandlerProxy, settings::AudioWatchResponder)
+    ) -> (avrcp::AbsoluteVolumeHandlerProxy, settings::AudioWatch2Responder)
     where
         <T as Future>::Output: Debug,
     {
