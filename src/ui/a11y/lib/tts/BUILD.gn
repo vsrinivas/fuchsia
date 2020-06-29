@@ -8,13 +8,15 @@ source_set("tts") {
     "tts_manager.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.accessibility.tts" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.accessibility.tts",
+    "//src/lib/fxl",
+  ]
 
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
   ]
 }

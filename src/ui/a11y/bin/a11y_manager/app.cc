@@ -229,8 +229,8 @@ std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {
     locale_id = i18n_profile_->locales()[0].id;
   }
-  auto screen_reader_context =
-      std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager), locale_id);
+  auto screen_reader_context = std::make_unique<a11y::ScreenReaderContext>(
+      std::move(a11y_focus_manager), tts_manager_, locale_id);
   return std::make_unique<a11y::ScreenReader>(std::move(screen_reader_context), view_manager_,
                                               tts_manager_, gesture_listener_registry_);
 }

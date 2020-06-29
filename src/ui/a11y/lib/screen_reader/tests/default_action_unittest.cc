@@ -17,6 +17,7 @@
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
@@ -36,10 +37,9 @@ class DefaultActionTest : public gtest::TestLoopFixture {
                       context_provider_.context()->outgoing()->debug_dir()),
         semantic_provider_(&view_manager_) {
     action_context_.semantics_source = &view_manager_;
-    a11y_focus_manager_ = std::make_unique<MockA11yFocusManager>();
-    a11y_focus_manager_ptr_ = a11y_focus_manager_.get();
-    screen_reader_context_ =
-        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_));
+
+    screen_reader_context_ = std::make_unique<MockScreenReaderContext>();
+    a11y_focus_manager_ptr_ = screen_reader_context_->mock_a11y_focus_manager_ptr();
     view_manager_.SetSemanticsEnabled(true);
   }
 
@@ -48,8 +48,7 @@ class DefaultActionTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   a11y::ViewManager view_manager_;
   a11y::ScreenReaderAction::ActionContext action_context_;
-  std::unique_ptr<a11y::ScreenReaderContext> screen_reader_context_;
-  std::unique_ptr<MockA11yFocusManager> a11y_focus_manager_;
+  std::unique_ptr<MockScreenReaderContext> screen_reader_context_;
   MockA11yFocusManager* a11y_focus_manager_ptr_;
   accessibility_test::MockSemanticProvider semantic_provider_;
 };
@@ -70,8 +69,8 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedCalled) {
   // Commit nodes.
   semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
-
-  a11y::DefaultAction default_action(&action_context_, screen_reader_context_.get());
+  a11y::ScreenReaderContext* context = screen_reader_context_.get();
+  a11y::DefaultAction default_action(&action_context_, context);
   a11y::DefaultAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
 
@@ -108,7 +107,8 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedNotCalled) {
   semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
 
-  a11y::DefaultAction default_action(&action_context_, screen_reader_context_.get());
+  a11y::ScreenReaderContext* context = screen_reader_context_.get();
+  a11y::DefaultAction default_action(&action_context_, context);
   a11y::DefaultAction::ActionData action_data;
 
   // Update focused node.

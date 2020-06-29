@@ -51,7 +51,7 @@ class ExploreActionTest : public gtest::TestLoopFixture {
     auto a11y_focus_manager = std::make_unique<accessibility_test::MockA11yFocusManager>();
     a11y_focus_manager_ptr_ = a11y_focus_manager.get();
     screen_reader_context_ =
-        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
+        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager), &tts_manager_);
     // Setup tts and basic semantic support for this test.
     fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
         mock_tts_engine_.GetHandle();

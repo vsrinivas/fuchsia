@@ -8,12 +8,17 @@ source_set("mocks") {
   sources = [
     "mock_node_describer.cc",
     "mock_node_describer.h",
+    "mock_screen_reader_context.cc",
+    "mock_screen_reader_context.h",
     "mock_tts_engine.cc",
     "mock_tts_engine.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.accessibility.tts",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//src/ui/a11y/lib/screen_reader",
+    "//src/ui/a11y/lib/screen_reader/focus/tests/mocks",
+    "//src/ui/a11y/lib/tts",
   ]
 }

@@ -5,11 +5,14 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_CONTEXT_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_CONTEXT_H_
 
+#include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 
 #include <memory>
 
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
+#include "src/ui/a11y/lib/screen_reader/speaker.h"
+#include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y {
 
@@ -32,8 +35,11 @@ class ScreenReaderContext {
     kContinuousExploration,
   };
 
+  // |a11y_focus_manager| will be owned by this class.
+  // |tts_manager| is not kept, and must be valid only during this constructor, where
+  // |tts_engine_ptr_| is instantiated.
   explicit ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager,
-                               std::string locale_id = "en-US");
+                               TtsManager* tts_manager, std::string locale_id = "en-US");
 
   virtual ~ScreenReaderContext() = default;
 
@@ -43,6 +49,8 @@ class ScreenReaderContext {
   // Returns the Executor used by the Screen Reader to schedule promises.
   async::Executor* executor() { return &executor_; }
 
+  virtual Speaker* speaker();
+
   // Sets the Screen Reader current mode.
   void set_mode(ScreenReaderMode mode) { mode_ = mode; }
   ScreenReaderMode mode() const { return mode_; }
@@ -50,12 +58,23 @@ class ScreenReaderContext {
   void set_locale_id(const std::string& locale_id) { locale_id_ = locale_id; }
   const std::string& locale_id() const { return locale_id_; }
 
+ protected:
+  // For mocks.
+  ScreenReaderContext();
+
  private:
   async::Executor executor_;
 
   // Stores A11yFocusManager pointer.
   // A11yFocusManager pointer should never be nullptr.
   std::unique_ptr<A11yFocusManager> a11y_focus_manager_;
+
+  // Interface to the engine is owned by this class so that it can build and rebuild the Speaker
+  // when the locale changes.
+  fuchsia::accessibility::tts::EnginePtr tts_engine_ptr_;
+
+  // Manages speech tasks of this screen reader.
+  std::unique_ptr<Speaker> speaker_;
 
   // Current Screen Reader mode.
   ScreenReaderMode mode_ = ScreenReaderMode::kNormal;

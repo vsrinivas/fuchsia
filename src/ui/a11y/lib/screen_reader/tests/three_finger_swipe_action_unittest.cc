@@ -26,7 +26,7 @@ class ThreeFingerSwipeActionTest : public gtest::TestLoopFixture {
     auto a11y_focus_manager = std::make_unique<accessibility_test::MockA11yFocusManager>();
     a11y_focus_manager_ptr_ = a11y_focus_manager.get();
     screen_reader_context_ =
-        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
+        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager), &tts_manager_);
 
     // Setup TTS.
     tts_manager_.OpenEngine(action_context_.tts_engine_ptr.NewRequest(),

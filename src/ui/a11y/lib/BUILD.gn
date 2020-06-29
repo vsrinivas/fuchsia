@@ -81,6 +81,14 @@ test_package("a11y_lib_tests") {
       path = rebase_path("$target_gen_dir/screen_reader/i18n/en/l10n.json")
       dest = "assets/locales/en/l10n.json"
     },
+
+    # [START icudata_resource]
+    {
+      # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
+      # be loaded from a file instead.
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
   ]
 
   tests = [

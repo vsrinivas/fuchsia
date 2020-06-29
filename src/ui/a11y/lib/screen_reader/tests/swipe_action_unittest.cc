@@ -80,7 +80,7 @@ class SwipeActionTest : public gtest::TestLoopFixture {
     a11y_focus_manager_ = std::make_unique<MockA11yFocusManager>();
     a11y_focus_manager_ptr_ = a11y_focus_manager_.get();
     screen_reader_context_ =
-        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_));
+        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_), &tts_manager_);
     view_manager_.SetSemanticsEnabled(true);
 
     SetupTtsEngine(&mock_tts_engine_);

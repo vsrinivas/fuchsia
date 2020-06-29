@@ -10,14 +10,42 @@
 namespace a11y {
 
 ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager,
-                                         std::string locale_id)
+                                         TtsManager* tts_manager, std::string locale_id)
     : executor_(async_get_default_dispatcher()),
       a11y_focus_manager_(std::move(a11y_focus_manager)),
-      locale_id_(std::move(locale_id)) {}
+      locale_id_(std::move(locale_id)) {
+  FX_DCHECK(tts_manager);
+  // TODO (fxb/53926): connect to the tts service from here.
+  // The connection to the tts would be something like:
+  // tts_manager->OpenEngine(tts_engine_ptr_.NewRequest(),
+  //[](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
+  //                            if (result.is_err()) {
+  // FX_LOGS(ERROR) << "Unable to connect to TTS service";
+  //}
+  //});
+  // And this only can be called when all actions are already using the Speaker via this class,
+  // otherwise, the Screen Reader will have a conflict trying to register two engines at the same
+  // time.
+  // TODO(FXB/55181): Use Fuchsia provided locale to load the translated strings instead of
+  // hard-coded English.
+  auto result = intl::Lookup::New({"en"});
+  FX_DCHECK(result.is_ok()) << "Load of l10n resources failed.";
+  auto message_formatter =
+      std::make_unique<i18n::MessageFormatter>(icu::Locale("en-US"), result.take_value());
+  auto node_describer = std::make_unique<NodeDescriber>(std::move(message_formatter));
+  speaker_ = std::make_unique<Speaker>(tts_engine_ptr_, std::move(node_describer));
+}
+
+ScreenReaderContext::ScreenReaderContext() : executor_(async_get_default_dispatcher()) {}
 
 A11yFocusManager* ScreenReaderContext::GetA11yFocusManager() {
   FX_DCHECK(a11y_focus_manager_.get());
   return a11y_focus_manager_.get();
+}
+
+Speaker* ScreenReaderContext::speaker() {
+  FX_DCHECK(speaker_.get());
+  return speaker_.get();
 }
 
 }  // namespace a11y
