@@ -86,7 +86,7 @@ static_assert(TP_OFFSET(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 #undef TP_OFFSET
 
 // Used to hold up the boot sequence on secondary CPUs until signaled by the primary.
-static ktl::atomic<int> secondaries_released;
+static ktl::atomic<bool> secondaries_released;
 
 static volatile int secondaries_to_init = 0;
 
@@ -227,7 +227,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   lk_init_secondary_cpus(secondaries_to_init);
 
   LTRACEF("releasing %d secondary cpus\n", secondaries_to_init);
-  secondaries_released.store(1);
+  secondaries_released.store(true);
 
   // Flush the signaling variable since the secondary cpus may have not yet enabled their caches.
   arch_clean_cache_range((vaddr_t)&secondaries_released, sizeof(secondaries_released));
@@ -288,7 +288,7 @@ extern "C" void arm64_secondary_entry() {
   arm64_cpu_early_init();
 
   // Wait until the primary has finished setting things up.
-  while (secondaries_released.load() == 0) {
+  while (!secondaries_released.load()) {
     arch::Yield();
   }
 
