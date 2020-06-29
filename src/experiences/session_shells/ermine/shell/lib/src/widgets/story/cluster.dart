@@ -48,40 +48,31 @@ class Cluster extends StatelessWidget {
   Widget _chromeBuilder(BuildContext context, TileModel<ErmineStory> tile,
       {bool custom = false}) {
     final story = tile.content;
-    final confirmEditNotifier = ValueNotifier<bool>(null);
-    final titleFieldController = TextEditingController(text: '');
     return AnimatedBuilder(
-      animation: story.childViewConnectionNotifier,
+      animation: Listenable.merge([
+        story.childViewConnectionNotifier,
+        story.fullscreenNotifier,
+      ]),
       builder: (context, child) {
-        return AnimatedBuilder(
-          animation: Listenable.merge([
-            story.nameNotifier,
-            story.focusedNotifier,
-            story.editStateNotifier,
-          ]),
-          builder: (context, child) => TileChrome(
-            name: story.name,
-            showTitle: !custom,
-            titleFieldController: titleFieldController,
-            editing: story.editStateNotifier.value,
-            focused: story.focused,
-            child: AnimatedBuilder(
-              animation: story.fullscreenNotifier,
-              builder: (context, child) => story.isImmersive
-                  ? Offstage()
-                  : story.childViewConnection != null
-                      ? ChildView(connection: story.childViewConnection)
-                      : Offstage(), //TODO(47796) show a placeholder until the view loads
-            ),
-            onTap: story.focus,
-            onDelete: story.delete,
-            onFullscreen: story.maximize,
-            onMinimize: story.restore,
-            onEdit: story.edit,
-            onCancelEdit: () => confirmEditNotifier.value = false,
-            onConfirmEdit: () => confirmEditNotifier.value = true,
-          ),
-        );
+        return story.childViewConnection == null || story.isImmersive
+            ? Offstage()
+            : AnimatedBuilder(
+                animation: Listenable.merge([
+                  story.nameNotifier,
+                  story.focusedNotifier,
+                ]),
+                builder: (context, child) => TileChrome(
+                  name: story.name,
+                  showTitle: !custom,
+                  focused: story.focused,
+                  //TODO(47796) show a placeholder until the view loads
+                  child: ChildView(connection: story.childViewConnection),
+                  onTap: story.focus,
+                  onDelete: story.delete,
+                  onFullscreen: story.maximize,
+                  onMinimize: story.restore,
+                ),
+              );
       },
     );
   }

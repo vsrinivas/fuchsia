@@ -26,28 +26,18 @@ class FullscreenStory extends StatelessWidget {
         animation: model.clustersModel.fullscreenStoryNotifier,
         builder: (context, child) {
           final story = model.clustersModel.fullscreenStory;
-          final confirmEditNotifier = ValueNotifier<bool>(null);
-          final titleFieldController = TextEditingController(text: '');
           return story != null
               ? AnimatedBuilder(
-                  animation: Listenable.merge([
-                    story.nameNotifier,
-                    story.editStateNotifier,
-                  ]),
+                  animation: story.nameNotifier,
                   builder: (context, _) {
                     return TileChrome(
                       name: story.name,
                       focused: story.focused,
                       fullscreen: true,
-                      editing: story.editStateNotifier.value,
-                      titleFieldController: titleFieldController,
                       child: ChildView(connection: story.childViewConnection),
                       onDelete: story.delete,
                       onMinimize: story.restore,
                       onFullscreen: story.maximize,
-                      onEdit: story.edit,
-                      onCancelEdit: () => confirmEditNotifier.value = false,
-                      onConfirmEdit: () => confirmEditNotifier.value = true,
                     );
                   })
               : Offstage();

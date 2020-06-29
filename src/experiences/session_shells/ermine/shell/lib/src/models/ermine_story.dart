@@ -93,6 +93,8 @@ class ErmineStory {
   bool get isImmersive => fullscreenNotifier.value == true;
 
   void delete() {
+    childViewConnectionNotifier.value?.dispose();
+    childViewConnectionNotifier.value = null;
     viewController?.close();
     onDelete?.call(this);
     _elementController?.ctrl?.close();
@@ -103,9 +105,6 @@ class ErmineStory {
   void maximize() => onChange?.call(this..fullscreen = true);
 
   void restore() => onChange?.call(this..fullscreen = false);
-
-  ValueNotifier<bool> editStateNotifier = ValueNotifier(false);
-  void edit() => editStateNotifier.value = !editStateNotifier.value;
 
   static Future<void> launchSuggestion(
       Suggestion suggestion, ElementControllerProxy elementController) async {
