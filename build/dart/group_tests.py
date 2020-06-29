@@ -28,7 +28,7 @@ def main():
     if not os.path.exists(grouped_test_dir):
         os.makedirs(grouped_test_dir)
 
-    tests = filter(lambda src: src.endswith('_test.dart'), args.source)
+    tests = [src for src in args.source if src.endswith('_test.dart')]
     assert len(
         tests
     ) > 0, 'a least one *_test.dart file must be passed in under |sources|'

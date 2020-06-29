@@ -7,7 +7,7 @@ import sys
 
 
 def print_list(name, content):
-    quoted = map(lambda c: '"%s"' % c, content)
+    quoted = ['"%s"' % c for c in content]
     print('%s = [%s]' % (name, ', '.join(quoted)))
 
 
@@ -17,8 +17,8 @@ def main():
     def is_3p(dep):
         return dep.startswith('//third_party')
 
-    print_list('third_party', filter(is_3p, deps))
-    print_list('local', filter(lambda d: not is_3p(d), deps))
+    print_list('third_party', list(filter(is_3p, deps)))
+    print_list('local', [d for d in deps if not is_3p(d)])
     return 0
 
 

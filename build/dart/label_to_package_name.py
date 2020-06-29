@@ -41,7 +41,7 @@ def convert(label):
 
 
 def main():
-    print convert(sys.argv[1])
+    print(convert(sys.argv[1]))
 
 
 if __name__ == '__main__':

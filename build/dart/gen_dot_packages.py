@@ -60,18 +60,18 @@ def main():
 
     for dep in args.deps:
         dependent_packages = parse_dot_packages(dep)
-        for name, path in dependent_packages.iteritems():
+        for name, path in dependent_packages.items():
             if name in package_deps:
                 if path != package_deps[name]:
-                    print "Error, conflicting entries for %s: %s and %s from %s" % (
-                        name, path, package_deps[name], dep)
+                    print("Error, conflicting entries for %s: %s and %s from %s" % (
+                        name, path, package_deps[name], dep))
                     return 1
             else:
                 package_deps[name] = path
 
     dot_packages_file = os.path.abspath(dot_packages_file)
     with open(dot_packages_file, "w") as dot_packages:
-        names = package_deps.keys()
+        names = list(package_deps.keys())
         names.sort()
         for name in names:
             dot_packages.write(

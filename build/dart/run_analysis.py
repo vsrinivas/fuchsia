@@ -13,7 +13,11 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # dart
     os.path.abspath(__file__))))
 
-sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
+if sys.version > (3,):
+  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
+else:
+  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
+
 import yaml
 
 
