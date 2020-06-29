@@ -110,6 +110,11 @@ void ClientContext::Shutdown() {
   }
 
   semaphore_port_.reset();
+
+  // Clear pending command buffers so buffer release doesn't see stuck mappings
+  while (pending_command_buffer_queue_.size()) {
+    pending_command_buffer_queue_.pop();
+  }
 }
 
 magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer) {

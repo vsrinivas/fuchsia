@@ -101,15 +101,48 @@ void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* b
       ->ReleaseBuffer(MsdIntelAbiBuffer::cast(buffer)->ptr()->platform_buffer());
 }
 
-void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer) {
+void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer,
+                                       std::function<void(uint32_t delay_ms)> sleep_callback) {
   std::vector<std::shared_ptr<GpuMapping>> mappings;
   per_process_gtt()->ReleaseBuffer(buffer, &mappings);
 
   DLOG("ReleaseBuffer %lu\n", buffer->id());
 
-  bool killed = false;
   for (const auto& mapping : mappings) {
     uint32_t use_count = mapping.use_count();
+
+    if (use_count > 1) {
+      // It's an error to release a buffer while it has inflight mappings, as that can fault the
+      // GPU.  However Mesa/Anvil no longer exactly tracks the user buffers that are associated
+      // with each command buffer, instead it snapshots all user buffers currently allocated on
+      // the device, which can include buffers from other threads.
+      // We observe this happening in at least one multithreaded CTS case.
+      // Intel says their DRM system driver will stall to handle the unlikely case when it happens,
+      // so we do the same here.
+      DLOG("ReleaseBuffer %lu mapping has use count %u", mapping->BufferId(), use_count);
+
+      if (!sent_context_killed()) {
+        constexpr uint32_t kRetries = 10;
+        constexpr uint32_t kRetrySleepMs = 100;
+
+        for (uint32_t retry = 0; retry < kRetries; retry++) {
+          sleep_callback(kRetrySleepMs);
+
+          use_count = mapping.use_count();
+          if (use_count == 1)
+            break;
+        }
+
+        if (use_count > 1) {
+          MAGMA_LOG(
+              WARNING,
+              "ReleaseBuffer %lu mapping has use count %u after stall, sending context killed",
+              mapping->BufferId(), use_count);
+          SendContextKilled();
+        }
+      }
+    }
+
     if (use_count == 1) {
       // Bus mappings are held in the connection and passed through the command stream to
       // ensure the memory isn't released until the tlbs are invalidated, which happens
@@ -118,14 +151,6 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer) {
       mapping->Release(&bus_mappings);
       for (uint32_t i = 0; i < bus_mappings.size(); i++) {
         mappings_to_release_.emplace_back(std::move(bus_mappings[i]));
-      }
-    } else {
-      // It's an error to release a buffer while it has inflight mappings, as that
-      // can fault the gpu.
-      DLOG("buffer %lu mapping use_count %d", mapping->BufferId(), use_count);
-      if (!killed) {
-        SendContextKilled();
-        killed = true;
       }
     }
   }

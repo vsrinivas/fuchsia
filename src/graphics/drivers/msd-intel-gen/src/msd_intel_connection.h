@@ -50,14 +50,22 @@ class MsdIntelConnection {
     notifications_.SendBufferIds(buffer_ids);
   }
 
-  void SendContextKilled() { notifications_.SendContextKilled(); }
+  void SendContextKilled() {
+    notifications_.SendContextKilled();
+    sent_context_killed_ = true;
+  }
 
   // Maps |page_count| pages of the given |buffer| at |page_offset| to |gpu_addr| into the
   // GPU address space belonging to this connection.
   magma::Status MapBufferGpu(std::shared_ptr<MsdIntelBuffer> buffer, uint64_t gpu_addr,
                              uint64_t page_offset, uint64_t page_count);
 
-  void ReleaseBuffer(magma::PlatformBuffer* buffer);
+  void ReleaseBuffer(magma::PlatformBuffer* buffer) {
+    auto callback = [](uint32_t delay_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+    };
+    ReleaseBuffer(buffer, callback);
+  }
 
   // Submit pending release mappings on the given context
   bool SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context);
@@ -71,12 +79,18 @@ class MsdIntelConnection {
     return mappings_to_release_;
   }
 
+  bool sent_context_killed() { return sent_context_killed_; }
+
+  void ReleaseBuffer(magma::PlatformBuffer* buffer,
+                     std::function<void(uint32_t delay_ms)> sleep_callback);
+
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
 
   Owner* owner_;
   std::shared_ptr<PerProcessGtt> ppgtt_;
   msd_client_id_t client_id_;
   std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_to_release_;
+  bool sent_context_killed_ = false;
 
   class Notifications {
    public:
