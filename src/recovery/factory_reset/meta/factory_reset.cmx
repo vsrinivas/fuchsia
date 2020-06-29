@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "dev": [
-            "class/block",
-            "sys/platform"
+            "class/block"
         ],
         "services": [
             "fuchsia.hardware.power.statecontrol.Admin"
