@@ -7,7 +7,6 @@
 
 export 'src/audio.dart';
 export 'src/component.dart';
-export 'src/component_search.dart';
 export 'src/device.dart';
 export 'src/device_log.dart';
 export 'src/diagnostics.dart';
@@ -16,7 +15,6 @@ export 'src/exceptions.dart';
 export 'src/factory_store.dart';
 export 'src/input.dart';
 export 'src/inspect.dart';
-export 'src/launch.dart';
 export 'src/modular.dart';
 export 'src/performance.dart';
 export 'src/power.dart';
