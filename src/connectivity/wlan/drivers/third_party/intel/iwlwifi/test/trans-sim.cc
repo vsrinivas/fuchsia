@@ -261,7 +261,8 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
   status = device_add(dev, &args, &iwl_trans->zxdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to create device: %s", zx_status_get_string(status));
-    goto free_iwl_trans;
+    free(iwl_trans);
+    return status;
   }
 
   status = iwl_drv_init();
@@ -292,9 +293,7 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
   }
 
 remove_dev:
-  device_remove_deprecated(iwl_trans->zxdev);
-free_iwl_trans:
-  free(iwl_trans);
+  device_async_remove(iwl_trans->zxdev);
 
   return status;
 }
