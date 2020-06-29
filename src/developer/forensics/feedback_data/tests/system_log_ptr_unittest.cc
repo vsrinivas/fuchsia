@@ -95,6 +95,40 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 )");
 }
 
+TEST_F(CollectSystemLogTest, Succeed_OrdersMessagesCorrectly) {
+  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
+  logger->set_messages({
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 1"),
+      stubs::BuildLogMessage(FX_LOG_WARNING, "line 2", zx::msec(2)),
+      stubs::BuildLogMessage(FX_LOG_ERROR, "line 3", zx::msec(2)),
+      stubs::BuildLogMessage(FX_LOG_FATAL, "line 4", zx::msec(2)),
+      stubs::BuildLogMessage(FX_LOG_INFO - 1 /*VLOG(1)*/, "line 5", zx::msec(1)),
+      stubs::BuildLogMessage(FX_LOG_INFO - 2 /*VLOG(2)*/, "line 6", zx::msec(1)),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 7", zx::msec(3), /*tags=*/{"foo"}),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 8", zx::msec(4), /*tags=*/{"bar"}),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(5),
+                             /*tags=*/{"foo", "bar"}),
+  });
+  SetUpLoggerServer(std::move(logger));
+
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_ok());
+  AttachmentValue logs = result.take_value();
+
+  ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
+  EXPECT_STREQ(logs.Value().c_str(), R"([15604.000][07559][07687][] INFO: line 1
+[15604.001][07559][07687][] VLOG(1): line 5
+[15604.001][07559][07687][] VLOG(2): line 6
+[15604.002][07559][07687][] WARN: line 2
+[15604.002][07559][07687][] ERROR: line 3
+[15604.002][07559][07687][] FATAL: line 4
+[15604.003][07559][07687][foo] INFO: line 7
+[15604.004][07559][07687][bar] INFO: line 8
+[15604.005][07559][07687][foo, bar] INFO: line 9
+)");
+}
+
 TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
   auto logger = std::make_unique<stubs::LoggerUnbindsFromLogListenerAfterOneMessage>();
   logger->set_messages({

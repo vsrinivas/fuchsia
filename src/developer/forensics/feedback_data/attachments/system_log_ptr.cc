@@ -58,16 +58,20 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
       .then([this](::fit::result<void, Error>& result) -> ::fit::result<AttachmentValue> {
         binding_.Close(ZX_OK);
 
-        if (logs_.empty()) {
+        if (log_messages_.empty()) {
           FX_LOGS(WARNING) << "Empty system log";
           AttachmentValue value = (result.is_ok()) ? AttachmentValue(Error::kMissingValue)
                                                    : AttachmentValue(result.error());
           return ::fit::ok(std::move(value));
         }
 
-        AttachmentValue value = (result.is_ok())
-                                    ? AttachmentValue(std::move(logs_))
-                                    : AttachmentValue(std::move(logs_), result.error());
+        std::string logs;
+        for (const auto& message : log_messages_) {
+          logs += Format(message);
+        }
+
+        AttachmentValue value = (result.is_ok()) ? AttachmentValue(std::move(logs))
+                                                 : AttachmentValue(std::move(logs), result.error());
 
         return ::fit::ok(std::move(value));
       });
@@ -82,7 +86,15 @@ void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages,
 }
 
 void LogListener::Log(fuchsia::logger::LogMessage message, LogCallback done) {
-  logs_ += Format(message);
+  // Keep |log_messages_| sorted by assuming |log_messages_| is already sorted and inserting
+  // |message| after the last message with a timestamp less than or equal to |message.time|. This is
+  // done because log messages are received mostly in order and messages with the same timestamp
+  // should not be reordered.
+  auto it = log_messages_.crbegin();
+  while (it != log_messages_.crend() && message.time < it->time) {
+    ++it;
+  }
+  log_messages_.insert(it.base(), std::move(message));
   done();
 }
 

@@ -21,7 +21,7 @@
 namespace forensics {
 namespace feedback_data {
 
-// Collects system log.
+// Collects and orders the system log.
 //
 // fuchsia.logger.Log is expected to be in |services|.
 ::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
@@ -50,7 +50,7 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
 
   fidl::OneShotPtr<fuchsia::logger::Log> logger_;
 
-  std::string logs_;
+  std::vector<fuchsia::logger::LogMessage> log_messages_;
 };
 
 }  // namespace feedback_data
