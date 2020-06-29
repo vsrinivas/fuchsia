@@ -31,6 +31,11 @@ import("fuchsia_test_package.gni")
 #
 # Parameters
 #
+#   package_name (optional)
+#     The name of the package.
+#     Type: string
+#     Default: target_name
+#
 #   manifest (optional)
 #     Specify a component manifest for the test.
 #     If a manifest is not specified, a trivial manifest will be generated.
@@ -104,10 +109,10 @@ template("fuchsia_unittest_package") {
   fuchsia_test_package(target_name) {
     forward_variables_from(invoker,
                            [
+                             "package_name",
                              "test_specs",
                              "visibility",
                            ])
     test_components = [ ":$component_target" ]
-    package_name = invoker.target_name
   }
 }
