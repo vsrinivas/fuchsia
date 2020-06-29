@@ -185,6 +185,9 @@ source_set("crash_server") {
   ]
 
   public_deps = [
+    ":report",
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//third_party/crashpad/util",
@@ -280,9 +283,19 @@ source_set("queue") {
   ]
 
   deps = [
+    ":report",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
+}
+
+source_set("report") {
+  sources = [
+    "report.cc",
+    "report.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
 }
 
 source_set("report_util") {

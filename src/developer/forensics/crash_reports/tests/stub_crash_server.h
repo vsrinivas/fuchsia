@@ -26,6 +26,7 @@ class StubCrashServer : public CrashServer {
 
   ~StubCrashServer();
 
+  bool MakeRequest(const Report& report, std::string* server_report_id) override;
   bool MakeRequest(const std::map<std::string, std::string>& annotations,
                    const std::map<std::string, crashpad::FileReader*>& attachments,
                    std::string* server_report_id) override;

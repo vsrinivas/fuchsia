@@ -4,6 +4,10 @@
 
 #include "src/developer/forensics/crash_reports/crash_server.h"
 
+#include <lib/syslog/cpp/macros.h>
+
+#include <memory>
+
 #include "third_party/crashpad/util/net/http_body.h"
 #include "third_party/crashpad/util/net/http_headers.h"
 #include "third_party/crashpad/util/net/http_multipart_builder.h"
@@ -12,12 +16,94 @@
 
 namespace forensics {
 namespace crash_reports {
+namespace {
+
+// Wrapper around Report::Attachment that allows crashpad::HTTPMultipartBuilder to upload
+// attachments.
+class AttachmentReader : public crashpad::FileReaderInterface {
+ public:
+  AttachmentReader(const Report::Attachment& attachment) : attachment_(attachment) {
+    FX_CHECK(attachment.data) << "|attachment| must have data";
+  }
+
+  // crashpad::FileReaderInterface
+  crashpad::FileOperationResult Read(void* data, size_t size) override;
+
+  // crashpad::FileSeekerInterface
+  crashpad::FileOffset Seek(crashpad::FileOffset offset, int whence) override;
+
+ private:
+  const Report::Attachment& attachment_;
+  size_t offset_{};
+};
+
+crashpad::FileOperationResult AttachmentReader::Read(void* data, size_t size) {
+  if (offset_ >= attachment_.size) {
+    return 0;
+  }
+
+  // Can't read beyond the end of the buffer.
+  const auto read_size = std::min(size, attachment_.size - offset_);
+  memcpy(data, static_cast<void*>(attachment_.data.get()), read_size);
+  Seek(read_size, SEEK_CUR);
+
+  return read_size;
+}
+
+crashpad::FileOffset AttachmentReader::Seek(crashpad::FileOffset offset, int whence) {
+  if (whence == SEEK_SET) {
+    offset_ = offset;
+  } else if (whence == SEEK_CUR) {
+    offset_ += offset;
+  } else if (whence == SEEK_END) {
+    offset_ = attachment_.size + offset;
+  } else {
+    return -1;
+  }
+
+  return offset_;
+}
+
+}  // namespace
 
 CrashServer::CrashServer(const std::string& url) : url_(url) {}
+
+bool CrashServer::MakeRequest(const Report& report, std::string* server_report_id) {
+  std::vector<AttachmentReader> attachment_readers;
+  attachment_readers.reserve(report.Attachments().size() + 1);
+
+  std::map<std::string, crashpad::FileReaderInterface*> file_readers;
+
+  for (const auto& [k, v] : report.Attachments()) {
+    if (k.empty()) {
+      continue;
+    }
+    attachment_readers.emplace_back(v);
+    file_readers.emplace(k, &attachment_readers.back());
+  }
+
+  if (report.Minidump().has_value()) {
+    attachment_readers.emplace_back(report.Minidump().value());
+    file_readers.emplace("uploadFileMinidump", &attachment_readers.back());
+  }
+
+  return MakeRequestInternal(report.Annotations(), file_readers, server_report_id);
+}
 
 bool CrashServer::MakeRequest(const std::map<std::string, std::string>& annotations,
                               const std::map<std::string, crashpad::FileReader*>& attachments,
                               std::string* server_report_id) {
+  std::map<std::string, crashpad::FileReaderInterface*> file_readers;
+  for (const auto& [k, v] : attachments) {
+    file_readers[k] = v;
+  }
+  return MakeRequestInternal(annotations, file_readers, server_report_id);
+}
+
+bool CrashServer::MakeRequestInternal(
+    const std::map<std::string, std::string>& annotations,
+    const std::map<std::string, crashpad::FileReaderInterface*>& attachments,
+    std::string* server_report_id) {
   // We have to build the MIME multipart message ourselves as all the public Crashpad helpers are
   // asynchronous and we won't be able to know the upload status nor the server report ID.
   crashpad::HTTPMultipartBuilder http_multipart_builder;

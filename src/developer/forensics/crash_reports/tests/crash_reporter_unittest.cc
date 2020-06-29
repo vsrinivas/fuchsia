@@ -287,10 +287,8 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
     std::vector<std::string> expected_attachment_keys = expected_extra_attachment_keys;
 
-    EXPECT_EQ(crash_server_->latest_attachment_keys().size(), expected_attachment_keys.size());
-    for (const auto& key : expected_attachment_keys) {
-      EXPECT_THAT(crash_server_->latest_attachment_keys(), testing::Contains(key));
-    }
+    EXPECT_THAT(crash_server_->latest_attachment_keys(),
+                testing::UnorderedElementsAreArray(expected_attachment_keys));
   }
 
   // Checks that the crash server is still expecting at least one more request.
