@@ -44,10 +44,10 @@ reasons, such as:
 - When the component is about to be destroyed.
 - When the system is shutting down.
 
-A component can implement a [lifecycle handler][doc-lifecycle] to be notified
-of its impending termination and other events on a best effort basis. Note
-that a component can be terminated involuntarily and without notice in
-circumstances such as resource exhaustion, crashes, or power failure.
+A component can implement a lifecycle handler ([example][handler-example]) to
+be notified of its impending termination and other events on a best effort
+basis. Note that a component can be terminated involuntarily and without notice
+in circumstances such as resource exhaustion, crashes, or power failure.
 
 Components can stop themselves by exiting. The means by which a component exits
 depend on the runner that runs the component.
@@ -66,5 +66,6 @@ have their own identity and state distinct from all prior instances.
 [doc-lifecycle]: lifecycle.md
 [doc-storage]: capabilities/storage.md
 [doc-topology]: topology.md
+[handler-example]: /examples/components/basic/src/lifecycle_full.rs
 [principle-accountability]: design_principles.md#accountability
 [principle-continuity]: design_principles.md#illusion-of-continuity

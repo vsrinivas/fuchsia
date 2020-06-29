@@ -18,7 +18,7 @@ the transition to the new architecture is complete.
 - [Component manager](component_manager.md): The runtime.
 - [Declarations](declarations.md): Describe components themselves.
 - [Component URLs](component_urls.md): URLs that identify components.
-- [Lifecycle](declarations.md): Component instance progression from creation to
+- [Lifecycle](lifecycle.md): Component instance progression from creation to
   destruction.
 - [Topology](topology.md): The relationships among component instances.
 - [Realms](realms.md): Sub-trees of the component instance topology.
