@@ -136,7 +136,9 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
 
   // Remove an observer.
   //
-  // Returns true if the method removed |observer|, otherwise returns false.
+  // Returns true if the method removed |observer|, otherwise returns false. If
+  // provided, |signals| will be given the current state of the dispatcher's
+  // signals when the observer was removed.
   //
   // This method may return false if the observer was never added or has already been removed in
   // preparation for its destruction.
@@ -145,7 +147,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   //
   // May only be called when |is_waitable| reports true.
   bool RemoveObserver(StateObserver* observer);
-  bool RemoveObserver(SignalObserver* observer);
+  bool RemoveObserver(SignalObserver* observer, zx_signals_t* signals = nullptr);
 
   // Cancel observers of this object's state (e.g., waits on the object).
   // Should be called when a handle to this dispatcher is being destroyed.

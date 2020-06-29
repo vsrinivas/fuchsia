@@ -55,7 +55,7 @@ zx_library("object") {
     "virtual_interrupt_dispatcher.cc",
     "vm_address_region_dispatcher.cc",
     "vm_object_dispatcher.cc",
-    "wait_state_observer.cc",
+    "wait_signal_observer.cc",
   ]
   deps = [
     ":tests",

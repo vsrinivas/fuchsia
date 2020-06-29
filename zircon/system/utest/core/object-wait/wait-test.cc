@@ -52,6 +52,14 @@ TEST(ObjectWaitOneTest, WaitForEventTimeout) {
   ASSERT_EQ(observed, 0u);
 }
 
+TEST(ObjectWaitOneTest, EmptySignalSet) {
+  auto ev = MakeEvent();
+  zx_signals_t observed;
+  ASSERT_EQ(ev.wait_one(/*signals=*/0u, zx::deadline_after(zx::msec(1)), &observed),
+            ZX_ERR_TIMED_OUT);
+  ASSERT_EQ(observed, 0u);
+}
+
 TEST(ObjectWaitOneTest, WaitForEventTimeoutPreSignalClear) {
   auto ev = MakeEvent();
   ev.signal(0u, ZX_EVENT_SIGNALED);

@@ -176,13 +176,17 @@ zx_status_t Dispatcher::AddObserver(SignalObserver* observer, const Handle* hand
   return ZX_OK;
 }
 
-bool Dispatcher::RemoveObserver(SignalObserver* observer) {
+bool Dispatcher::RemoveObserver(SignalObserver* observer, zx_signals_t* signals) {
   canary_.Assert();
 
   ZX_DEBUG_ASSERT(is_waitable());
   ZX_DEBUG_ASSERT(observer != nullptr);
 
   Guard<Mutex> guard{get_lock()};
+
+  if (signals != nullptr) {
+    *signals = signals_;
+  }
 
   if (observer->InContainer()) {
     signal_observers_.erase(*observer);

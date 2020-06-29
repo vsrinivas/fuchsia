@@ -21,7 +21,7 @@
 #include <object/handle.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <object/wait_state_observer.h>
+#include <object/wait_signal_observer.h>
 
 #include "priv.h"
 
@@ -39,7 +39,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
   Event event;
 
   zx_status_t result;
-  WaitStateObserver wait_state_observer;
+  WaitSignalObserver wait_signal_observer;
 
   auto up = ProcessDispatcher::GetCurrent();
   {
@@ -51,7 +51,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
     if (!handle->HasRights(ZX_RIGHT_WAIT))
       return ZX_ERR_ACCESS_DENIED;
 
-    result = wait_state_observer.Begin(&event, handle, signals);
+    result = wait_signal_observer.Begin(&event, handle, signals);
     if (result != ZX_OK)
       return result;
   }
@@ -72,7 +72,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
   }
 
   // Regardless of wait outcome, we must call End().
-  auto signals_state = wait_state_observer.End();
+  auto signals_state = wait_signal_observer.End();
 
   ktrace(TAG_WAIT_ONE_DONE, koid, signals_state, result, 0);
 
@@ -115,12 +115,12 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
   if (user_items.copy_array_from_user(items, count) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 
-  // WaitStateObserver is heavier than it looks so make sure we know how
+  // WaitSignalObserver is heavier than it looks so make sure we know how
   // much stack InlineArray is going to use, given limited kernel stack size.
-  static_assert(sizeof(WaitStateObserver) * 8 < 640);
+  static_assert(sizeof(WaitSignalObserver) * 8 < 640);
 
   fbl::AllocChecker ac;
-  fbl::InlineArray<WaitStateObserver, 8u> wait_state_observers(&ac, count);
+  fbl::InlineArray<WaitSignalObserver, 8u> wait_signal_observers(&ac, count);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -144,14 +144,14 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
         break;
       }
 
-      result = wait_state_observers[num_added].Begin(&event, handle, items[num_added].waitfor);
+      result = wait_signal_observers[num_added].Begin(&event, handle, items[num_added].waitfor);
       if (result != ZX_OK)
         break;
     }
   }
   if (result != ZX_OK) {
     for (size_t ix = 0; ix < num_added; ++ix)
-      wait_state_observers[ix].End();
+      wait_signal_observers[ix].End();
     return result;
   }
 
@@ -167,7 +167,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
   // Regardless of wait outcome, we must call End().
   zx_signals_t combined = 0;
   for (size_t ix = 0; ix != count; ++ix) {
-    combined |= (items[ix].pending = wait_state_observers[ix].End());
+    combined |= (items[ix].pending = wait_signal_observers[ix].End());
   }
 
   if (user_items.copy_array_to_user(items, count) != ZX_OK)
