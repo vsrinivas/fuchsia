@@ -237,6 +237,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Idempotent (and has no effect if LoadVmosFromDisk() has already been called.)
   zx_status_t PrepareVmosForWriting(uint32_t node_index, size_t data_size);
 
+  // Commits all the data pages of the blob into memory, i.e. reads them from disk.
+  zx_status_t CommitDataBuffer();
+
   // Verifies the integrity of the in-memory Blob - operates on the entire blob at once.
   // LoadVmosFromDisk() must have already been called for this blob.
   zx_status_t Verify() const;

@@ -733,6 +733,10 @@ zx_status_t Blob::QueueUnlink() {
   return TryPurge();
 }
 
+zx_status_t Blob::CommitDataBuffer() {
+  return data_mapping_.vmo().op_range(ZX_VMO_OP_COMMIT, 0, inode_.blob_size, nullptr, 0);
+}
+
 zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {
   fbl::RefPtr<Blob> vn = fbl::MakeRefCounted<Blob>(bs, node_index, *bs->GetNode(node_index));
 
@@ -742,8 +746,12 @@ zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {
   }
 
   // Blobs that are not pager-backed are already verified when they are loaded.
+  // For pager-backed blobs, commit the entire blob in memory. This will cause all of the pages to
+  // be verified as they are read in. Note that a separate call to Verify() is not required. If the
+  // commit operation fails due to a verification failure, we do propagate the error back via the
+  // return status.
   if (vn->IsPagerBacked()) {
-    return vn->Verify();
+    return vn->CommitDataBuffer();
   }
   return ZX_OK;
 }
