@@ -5,6 +5,7 @@
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
+import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -12,7 +13,6 @@ import 'package:mockito/mockito.dart';
 import 'package:ermine/src/models/cluster_model.dart';
 import 'package:ermine/src/models/ermine_story.dart';
 import 'package:ermine/src/models/status_model.dart';
-import 'package:ermine/src/utils/pointer_events_listener.dart';
 import 'package:ermine/src/utils/suggestions.dart';
 import 'package:ermine/src/models/app_model.dart';
 

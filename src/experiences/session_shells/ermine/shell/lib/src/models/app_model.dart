@@ -13,8 +13,8 @@ import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
+import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 
-import '../utils/pointer_events_listener.dart';
 import '../utils/presenter.dart';
 import '../utils/suggestions.dart';
 import '../widgets/ask/ask.dart';

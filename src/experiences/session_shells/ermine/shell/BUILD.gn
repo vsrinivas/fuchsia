@@ -104,6 +104,7 @@ flutter_app("ermine") {
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/settings",
     "//src/experiences/session_shells/ermine/tiler",
+    "//src/experiences/settings/lib/widgets",
     "//src/sys/component_index/fidl:index",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
