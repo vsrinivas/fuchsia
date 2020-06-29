@@ -4,7 +4,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.stack.Stack",
             "fuchsia.posix.socket.Provider"
         ]
     }

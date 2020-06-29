@@ -51,9 +51,9 @@
                     }
                 ],
                 "services": {
-                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx",
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx",
-                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx"
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx"
                 }
             },
             "networks": [

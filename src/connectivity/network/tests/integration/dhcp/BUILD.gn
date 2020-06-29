@@ -39,17 +39,23 @@ resource("dhcp6_setup") {
 }
 
 fuchsia_component("dhcp-validity") {
+  testonly = true
   manifest = "meta/dhcp_validity.cmx"
   deps = [ "dhcp_validity:test" ]
 }
 
 fuchsia_component("dhcp-validity-test") {
+  testonly = true
   manifest = "meta/dhcp_validity_test.cmx"
   deps = [
     ":dhcp-validity",
     ":dhcp6_setup",
     ":dhcp_setup",
     ":dhcpd_config",
+
+    # DHCP is implemented in-stack in netstack2. This will change when DHCP is
+    # implemented out-of-stack.
+    "//src/connectivity/network/netstack:debug",
   ]
 }
 

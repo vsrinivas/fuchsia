@@ -27,6 +27,22 @@ package("netstack") {
       path = rebase_path("meta/netstack.cmx")
       dest = "netstack.cmx"
     },
+  ]
+}
+
+package("debug") {
+  package_name = "netstack-debug"
+  testonly = true
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
+
+  binaries = [
+    {
+      name = "netstack"
+      source = "grand_unified_binary"
+    },
+  ]
+
+  meta = [
     {
       path = rebase_path("meta/netstack_debug.cmx")
       dest = "netstack_debug.cmx"

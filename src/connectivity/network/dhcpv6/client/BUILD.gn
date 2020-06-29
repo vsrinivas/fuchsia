@@ -52,7 +52,13 @@ group("client") {
 
 fuchsia_unittest_package("dhcpv6-client-test") {
   manifest = "meta/dhcpv6-client-test.cmx"
-  deps = [ ":dhcpv6_client_test" ]
+  deps = [
+    ":dhcpv6_client_test",
+
+    # The DHCPv6 client creates sockets so it depends on an implementation of
+    # `fuchsia.posix.socket.Provider`.
+    "//src/connectivity/network/netstack:debug",
+  ]
 }
 
 group("tests") {

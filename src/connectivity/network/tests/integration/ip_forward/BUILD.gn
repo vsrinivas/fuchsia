@@ -25,7 +25,12 @@ rustc_binary("bin") {
 fuchsia_component("ip-forward") {
   testonly = true
   manifest = "meta/ip_forward.cmx"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+
+    # netstack is under test.
+    "//src/connectivity/network/netstack:debug",
+  ]
 }
 
 fuchsia_component("ipv4-forward-test") {
