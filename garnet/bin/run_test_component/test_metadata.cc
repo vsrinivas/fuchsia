@@ -36,6 +36,17 @@ using fxl::Substitute;
 constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
+// Services below were reported by their owners to be impractical to fake in a
+// test environment because they depend on devices. Appmgr's test support does
+// not offer the ability to fake the device namespace.
+// Component Manager is able to route and fake devices and early boot
+// capabilities.
+// At this time the body of tests largely depends on appmgr, so we maintain
+// this list as a necessary compromise.
+// Please add items to this list only if you believe that no other pragmatic
+// alternative is currently present.
+// Please document the rationale for each entry added.
+// See also: docs/concepts/testing/test_component.md
 const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::boot::FactoryItems::Name_,
     fuchsia::boot::Items::Name_,

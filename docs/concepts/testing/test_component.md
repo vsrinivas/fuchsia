@@ -213,29 +213,10 @@ enable this workaround you need to allow some system services:
 
 ### Other system services
 
-There are some services, such as network, that cannot be faked or mocked. However, you can connect to real system versions of these services by mentioning these services in `system-services`. Services that cannot be faked:
+There are some services, such as network, that cannot be faked or mocked. However, you can connect to real system versions of these services by mentioning these services in `system-services`. Services that cannot be faked are listed [here](/garnet/bin/run_test_component/test_metadata.cc).
 
-```text
-"fuchsia.boot.FactoryItems"
-"fuchsia.boot.ReadOnlyLog"
-"fuchsia.boot.RootJob"
-"fuchsia.boot.RootResource"
-"fuchsia.boot.WriteOnlyLog"
-"fuchsia.device.NameProvider"
-"fuchsia.kernel.Counter"
-"fuchsia.scheduler.ProfileProvider"
-"fuchsia.sys.test.CacheControl"
-"fuchsia.sysmem.Allocator"
-"fuchsia.time.Utc"
-"fuchsia.ui.policy.Presenter"
-"fuchsia.ui.scenic.Scenic"
-"fuchsia.vulkan.loader.Loader"
-```
-
-Depending on your use case you can include one or more of the services above.
-However, services that are not listed here are not supported.
-
-This option would be replaced once we fix CP-144 (in component manager v2).
+Test can only list allowlisted system services under `"system-services"` as
+demonstrated above.
 
 [executing-tests]: /docs/development/testing/running_tests_as_components.md
 [run-test-component]: /docs/development/testing/running_tests_as_components.md#running_tests_legacy
