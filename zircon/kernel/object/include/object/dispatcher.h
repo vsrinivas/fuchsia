@@ -29,6 +29,7 @@
 #include <ktl/type_traits.h>
 #include <ktl/unique_ptr.h>
 #include <object/handle.h>
+#include <object/signal_observer.h>
 #include <object/state_observer.h>
 
 template <typename T>
@@ -125,6 +126,14 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // Be sure to |RemoveObserver| before the Dispatcher is destroyed.
   zx_status_t AddObserver(StateObserver* observer);
 
+  // Add a observer which will be triggered when any |signal| becomes active
+  // or cancelled when |handle| is destroyed.
+  //
+  // Fails when |is_waitable| reports false.
+  //
+  // Be sure to |RemoveObserver| before the Dispatcher is destroyed.
+  zx_status_t AddObserver(SignalObserver* observer, const Handle* handle, zx_signals_t signals);
+
   // Remove an observer.
   //
   // Returns true if the method removed |observer|, otherwise returns false.
@@ -136,6 +145,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   //
   // May only be called when |is_waitable| reports true.
   bool RemoveObserver(StateObserver* observer);
+  bool RemoveObserver(SignalObserver* observer);
 
   // Cancel observers of this object's state (e.g., waits on the object).
   // Should be called when a handle to this dispatcher is being destroyed.
@@ -190,7 +200,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   zx_signals_t PollSignals() const TA_EXCL(get_lock());
 
  protected:
-  // At construction, the object's state tracker is asserting |signals|.
+  // At construction, the object is asserting |signals|.
   explicit Dispatcher(zx_signals_t signals);
 
   // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
@@ -206,6 +216,10 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   virtual Lock<Mutex>* get_lock() const = 0;
 
  private:
+  // Call the function |f| on each observer, and remove the observer if required.
+  template <typename Func>
+  StateObserver::Flags CancelWithFunc(Func f) TA_REQ(get_lock());
+
   friend class fbl::Recyclable<Dispatcher>;
   void fbl_recycle();
 
@@ -218,6 +232,9 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
 
   // Active observers are elements in |observers_|.
   ObserverList observers_ TA_GUARDED(get_lock());
+
+  // List of observers watching for changes in signals on this dispatcher.
+  fbl::DoublyLinkedList<SignalObserver*> signal_observers_ TA_GUARDED(get_lock());
 
   // Used to store this dispatcher on the dispatcher deleter list.
   fbl::SinglyLinkedListNodeState<Dispatcher*> deleter_ll_;

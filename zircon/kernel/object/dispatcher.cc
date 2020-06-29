@@ -87,35 +87,27 @@ void Dispatcher::fbl_recycle() {
   SafeDeleter::Delete(this);
 }
 
-namespace {
-
-template <typename Func, typename LockType>
-StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
-                                    Lock<LockType>* observer_lock, Func f) {
+template <typename Func>
+StateObserver::Flags Dispatcher::CancelWithFunc(Func f) {
   StateObserver::Flags flags = 0;
 
-  {
-    Guard<LockType> guard{observer_lock};
-    for (auto it = observers->begin(); it != observers->end();) {
-      StateObserver::Flags it_flags = f(it.CopyPointer());
-      flags |= it_flags;
-      if (it_flags & StateObserver::kNeedRemoval) {
-        auto to_remove = it;
-        ++it;
-        observers->erase(to_remove);
-        to_remove->OnRemoved();
-        kcounter_add(dispatcher_cancel_count, 1);
-      } else {
-        ++it;
-      }
+  for (auto it = observers_.begin(); it != observers_.end();) {
+    StateObserver::Flags it_flags = f(it.CopyPointer());
+    flags |= it_flags;
+    if (it_flags & StateObserver::kNeedRemoval) {
+      auto to_remove = it;
+      ++it;
+      observers_.erase(to_remove);
+      to_remove->OnRemoved();
+      kcounter_add(dispatcher_cancel_count, 1);
+    } else {
+      ++it;
     }
   }
 
   // We've processed the removal flag, so strip it
   return flags & (~StateObserver::kNeedRemoval);
 }
-
-}  // namespace
 
 zx_status_t Dispatcher::AddObserver(StateObserver* observer) {
   DEBUG_ASSERT(observer != nullptr);
@@ -156,23 +148,116 @@ bool Dispatcher::RemoveObserver(StateObserver* observer) {
   return false;
 }
 
+zx_status_t Dispatcher::AddObserver(SignalObserver* observer, const Handle* handle,
+                                    zx_signals_t signals) {
+  canary_.Assert();
+  ZX_DEBUG_ASSERT(observer != nullptr);
+
+  if (!is_waitable()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  kcounter_add(dispatcher_observe_count, 1);
+
+  Guard<Mutex> guard{get_lock()};
+
+  // If the currently active signals already match the desired signals,
+  // just execute the match now.
+  if ((signals_ & signals) != 0) {
+    observer->OnMatch(signals_);
+    return ZX_OK;
+  }
+
+  // Otherwise, enqueue this observer.
+  observer->handle_ = handle;
+  observer->triggering_signals_ = signals;
+  signal_observers_.push_front(observer);
+
+  return ZX_OK;
+}
+
+bool Dispatcher::RemoveObserver(SignalObserver* observer) {
+  canary_.Assert();
+
+  ZX_DEBUG_ASSERT(is_waitable());
+  ZX_DEBUG_ASSERT(observer != nullptr);
+
+  Guard<Mutex> guard{get_lock()};
+
+  if (observer->InContainer()) {
+    signal_observers_.erase(*observer);
+    return true;
+  }
+
+  return false;
+}
+
 void Dispatcher::Cancel(const Handle* handle) {
   canary_.Assert();
   ZX_DEBUG_ASSERT(is_waitable());
+  int32_t cancel_count = 0;
 
-  CancelWithFunc(&observers_, get_lock(),
-                 [handle](StateObserver* obs) { return obs->OnCancel(handle); });
+  {
+    Guard<Mutex> guard{get_lock()};
+
+    // Cancel StateObservers.
+    CancelWithFunc([handle](StateObserver* obs) { return obs->OnCancel(handle); });
+
+    // Cancel all observers that registered on "handle".
+    for (auto it = signal_observers_.begin(); it != signal_observers_.end(); /* nothing */) {
+      if (it->handle_ != handle) {
+        ++it;
+        continue;
+      }
+
+      // Remove the element.
+      auto to_remove = it;
+      ++it;
+      signal_observers_.erase(to_remove);
+      to_remove->OnCancel(signals_);
+      cancel_count++;
+    }
+  }
+
+  kcounter_add(dispatcher_cancel_count, cancel_count);
 }
 
 bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t key) {
   canary_.Assert();
   ZX_DEBUG_ASSERT(is_waitable());
 
-  StateObserver::Flags flags = CancelWithFunc(
-      &observers_, get_lock(),
-      [handle, port, key](StateObserver* obs) { return obs->OnCancelByKey(handle, port, key); });
+  bool remove_performed = false;
+  uint32_t cancel_count = 0;
 
-  if (flags & StateObserver::kHandled) {
+  {
+    Guard<Mutex> guard{get_lock()};
+
+    StateObserver::Flags flags = CancelWithFunc(
+        [handle, port, key](StateObserver* obs) { return obs->OnCancelByKey(handle, port, key); });
+    if (flags & StateObserver::kHandled) {
+      remove_performed = true;
+    }
+
+    // Cancel all observers that registered on "handle" that match the given key.
+    for (auto it = signal_observers_.begin(); it != signal_observers_.end(); /* nothing */) {
+      if (it->handle_ != handle || !it->MatchesKey(port, key)) {
+        ++it;
+        continue;
+      }
+
+      // Remove the element.
+      auto to_remove = it;
+      ++it;
+      signal_observers_.erase(to_remove);
+      to_remove->OnCancel(signals_);
+      remove_performed = true;
+      cancel_count++;
+    }
+  }
+
+  kcounter_add(dispatcher_cancel_count, cancel_count);
+
+  if (remove_performed) {
     kcounter_add(dispatcher_cancel_bk_count, 1);
     return true;
   }
@@ -200,6 +285,7 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mas
     return;
   }
 
+  // Update state observers.
   for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
     StateObserver::Flags it_flags = it->OnStateChange(signals_);
     if (it_flags & StateObserver::kNeedRemoval) {
@@ -210,6 +296,20 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mas
     } else {
       ++it;
     }
+  }
+
+  // Update signal observers.
+  for (auto it = signal_observers_.begin(); it != signal_observers_.end(); /* nothing */) {
+    // Ignore observers that don't need to be notified.
+    if ((it->triggering_signals_ & signals_) == 0) {
+      ++it;
+      continue;
+    }
+
+    auto to_remove = it;
+    ++it;
+    signal_observers_.erase(to_remove);
+    to_remove->OnMatch(signals_);
   }
 }
 
