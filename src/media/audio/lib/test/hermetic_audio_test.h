@@ -72,11 +72,13 @@ class HermeticAudioTest : public TestFixture {
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   UltrasoundRendererShim<SampleFormat>* CreateUltrasoundRenderer(TypedFormat<SampleFormat> format,
-                                                                 size_t frame_count);
+                                                                 size_t frame_count,
+                                                                 bool wait_for_creation = true);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   UltrasoundCapturerShim<SampleFormat>* CreateUltrasoundCapturer(TypedFormat<SampleFormat> format,
-                                                                 size_t frame_count);
+                                                                 size_t frame_count,
+                                                                 bool wait_for_creation = true);
 
   // Takes ownership of the AudioDeviceEnumerator. This is useful when tests need to watch for
   // low-level device enumeration events. This is incompatible with CreateInput and CreateOutput.

@@ -101,22 +101,31 @@ class UltrasoundCapturerShim : public CapturerShimImpl {
   // appropriately bound into the test environment.
   UltrasoundCapturerShim(TestFixture* fixture, fuchsia::ultrasound::FactoryPtr& ultrasound_factory,
                          Format format, size_t payload_frame_count)
-      : CapturerShimImpl(format, payload_frame_count) {
-    bool created = false;
+      : CapturerShimImpl(format, payload_frame_count), fixture_(fixture) {
+    auto vmo = payload_buffer_.CreateAndMapVmo(true);
     ultrasound_factory->CreateCapturer(
-        capturer_.NewRequest(), [this, &created](auto ref_clock, auto stream_type) {
-          created = true;
+        capturer_.NewRequest(),
+        [this, vmo = std::move(vmo)](auto ref_clock, auto stream_type) mutable {
+          created_ = true;
           reference_clock_ = std::move(ref_clock);
           EXPECT_EQ(stream_type.sample_format, format_.sample_format());
           EXPECT_EQ(stream_type.channels, format_.channels());
           EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
+          // TODO(55243): Enable AddPayloadBuffer before the capturer is created.
+          capturer_->AddPayloadBuffer(0, std::move(vmo));
         });
     capturer_.set_error_handler(fixture->ErrorHandler());
-    capturer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(true));
-    fixture->RunLoopUntil([&created] { return created; });
   }
 
+  void WaitForDevice() {
+    fixture_->RunLoopUntil([this] { return created_ || fixture_->error_occurred(); });
+  }
+
+  bool created() const { return created_; }
+
  private:
+  bool created_ = false;
+  TestFixture* fixture_;
   zx::clock reference_clock_;
 };
 

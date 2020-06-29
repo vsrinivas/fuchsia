@@ -214,24 +214,28 @@ AudioCapturerShim<SampleFormat>* HermeticAudioTest::CreateAudioCapturer(
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 UltrasoundRendererShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundRenderer(
-    TypedFormat<SampleFormat> format, size_t frame_count) {
+    TypedFormat<SampleFormat> format, size_t frame_count, bool wait_for_creation) {
   auto ptr = std::make_unique<UltrasoundRendererShim<SampleFormat>>(
       static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count);
   auto out = ptr.get();
   renderers_.push_back(std::move(ptr));
 
-  // Wait until the renderer is connected.
-  RunLoopUntil([this, out]() { return error_occurred_ || (out->GetMinLeadTime() > 0); });
+  if (wait_for_creation) {
+    out->WaitForDevice();
+  }
   return out;
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 UltrasoundCapturerShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundCapturer(
-    TypedFormat<SampleFormat> format, size_t frame_count) {
+    TypedFormat<SampleFormat> format, size_t frame_count, bool wait_for_creation) {
   auto ptr = std::make_unique<UltrasoundCapturerShim<SampleFormat>>(
       static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count);
   auto out = ptr.get();
   capturers_.push_back(std::move(ptr));
+  if (wait_for_creation) {
+    out->WaitForDevice();
+  }
   return out;
 }
 
@@ -395,9 +399,9 @@ void HermeticAudioTest::CheckInspectHierarchy(const inspect::Hierarchy& root,
   template AudioCapturerShim<T>* HermeticAudioTest::CreateAudioCapturer<T>(                      \
       TypedFormat<T>, size_t, fuchsia::media::AudioCapturerConfiguration);                       \
   template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>(            \
-      TypedFormat<T>, size_t);                                                                   \
+      TypedFormat<T>, size_t, bool);                                                             \
   template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(            \
-      TypedFormat<T>, size_t);
+      TypedFormat<T>, size_t, bool);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 

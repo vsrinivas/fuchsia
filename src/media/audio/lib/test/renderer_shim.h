@@ -154,25 +154,31 @@ class UltrasoundRendererShim : public RendererShimImpl {
   // appropriately bound into the test environment.
   UltrasoundRendererShim(TestFixture* fixture, fuchsia::ultrasound::FactoryPtr& ultrasound_factory,
                          Format format, size_t payload_frame_count)
-      : RendererShimImpl(format, payload_frame_count) {
-    bool created = false;
+      : RendererShimImpl(format, payload_frame_count), fixture_(fixture) {
     ultrasound_factory->CreateRenderer(
-        renderer_.NewRequest(), [this, &created](auto ref_clock, auto stream_type) {
-          created = true;
+        renderer_.NewRequest(), [this](auto ref_clock, auto stream_type) {
+          created_ = true;
           reference_clock_ = std::move(ref_clock);
           EXPECT_EQ(stream_type.sample_format, format_.sample_format());
           EXPECT_EQ(stream_type.channels, format_.channels());
           EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
         });
     renderer_.set_error_handler(fixture->ErrorHandler());
-    fixture->RunLoopUntil([&created] { return created; });
 
     WatchEvents();
     SetPtsUnits(format_.frames_per_second(), 1);
     renderer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
   }
 
+  void WaitForDevice() {
+    fixture_->RunLoopUntil([this] { return created_ || fixture_->error_occurred(); });
+  }
+
+  bool created() const { return created_; }
+
  private:
+  bool created_ = false;
+  TestFixture* fixture_;
   zx::clock reference_clock_;
 };
 
