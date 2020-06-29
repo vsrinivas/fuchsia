@@ -15,7 +15,7 @@ use fidl_fuchsia_netemul_sandbox as netemul_sandbox;
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
-use futures::{FutureExt as _, TryFutureExt as _};
+use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
 
 use crate::Result;
 
@@ -519,6 +519,33 @@ impl<'a> TestEnvironment<'a> {
             InterfaceConfig::None => (),
         };
         let () = interface.enable_interface().await.context("failed to enable interface")?;
+
+        // Wait for Netstack to observe interface up so callers can safely
+        // assume the state of the world on return.
+        let netstack = self
+            .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+            .context("failed to connect to Netstack")?;
+        let iface_id = interface.id();
+        let _ifaces = netstack
+            .take_event_stream()
+            .try_filter(
+                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                    futures::future::ready(
+                        interfaces
+                            .iter()
+                            .find(|iface| iface.id as u64 == iface_id)
+                            .map(|iface| {
+                                iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0
+                            })
+                            .unwrap_or(false),
+                    )
+                },
+            )
+            .try_next()
+            .await
+            .context("failed to observe interface up")?
+            .ok_or_else(|| anyhow::anyhow!("netstack event stream ended unexpectedly"))?;
+
         Ok(interface)
     }
 
