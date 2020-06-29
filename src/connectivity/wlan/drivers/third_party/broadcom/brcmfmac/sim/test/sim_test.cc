@@ -114,6 +114,16 @@ void SimInterface::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   }
 }
 
+void SimInterface::OnAssocInd(const wlanif_assoc_ind_t* ind) {
+  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+  stats_.assoc_indications.push_back(*ind);
+}
+
+void SimInterface::OnAuthInd(const wlanif_auth_ind_t* resp) {
+  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+  stats_.auth_indications.push_back(*resp);
+}
+
 void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kAuthenticating);
   ZX_ASSERT(!memcmp(assoc_ctx_.bssid.byte, resp->peer_sta_address, ETH_ALEN));

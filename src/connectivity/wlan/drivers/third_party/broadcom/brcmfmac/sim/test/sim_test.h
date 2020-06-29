@@ -48,6 +48,8 @@ class SimInterface {
     std::list<wlan_join_result_t> join_results;
     std::list<wlanif_auth_confirm_t> auth_results;
     std::list<wlanif_assoc_confirm_t> assoc_results;
+    std::list<wlanif_assoc_ind_t> assoc_indications;
+    std::list<wlanif_auth_ind_t> auth_indications;
     std::list<wlanif_deauth_indication_t> deauth_indications;
     std::list<wlanif_channel_switch_info_t> csa_indications;
     std::list<wlanif_start_confirm_t> start_confirmations;
@@ -77,11 +79,11 @@ class SimInterface {
   virtual void OnScanEnd(const wlanif_scan_end_t* end) {}
   virtual void OnJoinConf(const wlanif_join_confirm_t* resp);
   virtual void OnAuthConf(const wlanif_auth_confirm_t* resp);
-  virtual void OnAuthInd(const wlanif_auth_ind_t* resp) {}
+  virtual void OnAuthInd(const wlanif_auth_ind_t* resp);
   virtual void OnDeauthConf(const wlanif_deauth_confirm_t* resp) {}
   virtual void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   virtual void OnAssocConf(const wlanif_assoc_confirm_t* resp);
-  virtual void OnAssocInd(const wlanif_assoc_ind_t* ind) {}
+  virtual void OnAssocInd(const wlanif_assoc_ind_t* ind);
   virtual void OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {}
   virtual void OnDisassocInd(const wlanif_disassoc_indication_t* ind) {}
   virtual void OnStartConf(const wlanif_start_confirm_t* resp);
@@ -167,6 +169,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
 
   // Stop and delete a SimInterface
   void DeleteInterface(uint16_t iface_id);
+  void DeleteInterface(const SimInterface& ifc) { DeleteInterface(ifc.iface_id_); }
 
   // Fake device manager
   std::unique_ptr<simulation::FakeDevMgr> dev_mgr_;
