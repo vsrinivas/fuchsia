@@ -15,16 +15,12 @@ namespace system_log_recorder {
 
 // Decodes data previously encoded via an Encoder.
 //
-// As an Encoder operates on a block, the Decoder needs to be reset when decoding data from another
-// block.
+// As an Encoder operates on a block, the Decoder needs to decode a whole block at once.
 class Decoder {
  public:
   virtual ~Decoder(){};
 
-  virtual std::string Decode(const fsl::SizedVmo& vmo) = 0;
-
-  // Resets the state of the decoder. The state can consist of previous data, dictionaries, etc.
-  virtual void Reset() = 0;
+  virtual std::string Decode(const fsl::SizedVmo& block) = 0;
 };
 
 }  // namespace system_log_recorder

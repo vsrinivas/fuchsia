@@ -21,7 +21,6 @@ class IdentityDecoder : public Decoder {
 
   // |Decoder|
   virtual std::string Decode(const fsl::SizedVmo& vmo);
-  virtual void Reset(){};
 };
 
 }  // namespace system_log_recorder

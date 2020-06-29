@@ -45,10 +45,9 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
   }
 
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
-    fsl::SizedVmo vmo;
-    fsl::VmoFromFilename(*path, &vmo);
-    out << decoder->Decode(vmo);
-    decoder->Reset();
+    fsl::SizedVmo block;
+    fsl::VmoFromFilename(*path, &block);
+    out << decoder->Decode(block);
   }
 
   out.flush();
