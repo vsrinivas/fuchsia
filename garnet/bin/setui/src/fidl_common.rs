@@ -117,6 +117,32 @@ macro_rules! fidl_process {
     };
 }
 
+// Only differentiated from fidl_process in that the expected responder
+// type is Watch2Responder.
+// TODO(fxb/53742): remove when watch2 is migrated back to watch
+#[macro_export]
+macro_rules! fidl_process_2 {
+    // Generates a fidl_io mod with a spawn for the given fidl interface,
+    // setting type, and handler function. Additional handlers can be specified
+    // by providing the switchboard setting type, fidl setting type,
+    // watch responder, and handle function.
+    ($interface:ident, $setting_type:expr, $handle_func:ident
+            $(,$item_setting_type:expr, $fidl_settings:ty, $fidl_responder:ty,
+            $item_handle_func:ident)*$(,)*) => {
+        paste::item! {
+            $crate::fidl_process_full!(
+                $interface,
+                $setting_type,
+                [<$interface Settings>],
+                [<$interface Watch2Responder>],
+                String,
+                $handle_func
+                $(,$item_setting_type, $fidl_settings, $fidl_responder, String, $item_handle_func)*
+            );
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! fidl_hanging_get_responder {
     ($setting_type:ty, $responder_type:ty, $marker_debug_name:expr) => {
