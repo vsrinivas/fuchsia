@@ -6,7 +6,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
-executable("astro-audio-out-test") {
+executable("astro-audio-out-test-bin") {
   defines = [ "_ALL_SOURCE" ]
   testonly = true
   sources = [
@@ -41,9 +41,9 @@ executable("astro-audio-out-test") {
   ]
 }
 
-fuchsia_unittest_package("test-package") {
-  executable_name = "astro-audio-out-test"
-  deps = [ ":astro-audio-out-test" ]
+fuchsia_unittest_package("astro-audio-out-test") {
+  executable_name = "astro-audio-out-test-bin"
+  deps = [ ":astro-audio-out-test-bin" ]
   test_specs = {
     environments = basic_envs
   }
