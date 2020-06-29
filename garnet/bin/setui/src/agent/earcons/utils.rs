@@ -6,6 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
+    fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
     fuchsia_zircon::{self as zx},
     futures::lock::Mutex,
@@ -76,11 +77,16 @@ pub async fn play_sound<'a>(
         }
     }
 
-    match sound_player_proxy.play_sound(id, AudioRenderUsage::Background).await {
-        Ok(_) => {
-            // TODO(fxb/50246): Add inspect logging.
-        }
-        Err(e) => fx_log_err!("[earcons] Unable to Play sound from Player: {}", e),
-    };
+    let sound_player_proxy = sound_player_proxy.clone();
+    // This fasync thread is needed so that the earcons sounds can play rapidly and not wait
+    // for the previous sound to finish to send another request.
+    fasync::spawn(async move {
+        match sound_player_proxy.play_sound(id, AudioRenderUsage::Background).await {
+            Ok(_) => {
+                // TODO(fxb/50246): Add inspect logging.
+            }
+            Err(e) => fx_log_err!("[earcons] Unable to Play sound from Player: {}", e),
+        };
+    });
     Ok(())
 }
