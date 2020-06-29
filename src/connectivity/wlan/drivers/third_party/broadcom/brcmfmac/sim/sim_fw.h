@@ -141,8 +141,6 @@ class SimFirmware {
     uint64_t assoc_timer_id;
     // Association attempt number
     uint8_t num_attempts;
-    // The interface idx on which the assoc is being done
-    uint16_t ifidx;
     bool is_beacon_watchdog_active = false;
     uint64_t beacon_watchdog_id_;
   };
@@ -159,7 +157,6 @@ class SimFirmware {
     uint64_t auth_timer_id;
     enum simulation::SimSecProtoType sec_type = simulation::SEC_PROTO_TYPE_OPEN;
     common::MacAddr bssid;
-    uint16_t ifidx;
   };
 
   struct ChannelSwitchState {
@@ -290,33 +287,29 @@ class SimFirmware {
 
   // Iovar handlers
   zx_status_t SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr);
-  zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len,
-                                 const uint16_t ifidx);
+  zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
-  zx_status_t HandleJoinRequest(const void* value, size_t value_len, const uint16_t ifidx);
+  zx_status_t HandleJoinRequest(const void* value, size_t value_len);
   zx_status_t HandleAssocReq(uint16_t ifidx,
                              std::shared_ptr<const simulation::SimAssocReqFrame> frame);
   void HandleDisconnectForClientIF(std::shared_ptr<const simulation::SimManagementFrame> frame,
-                                   const uint16_t ifidx, const common::MacAddr& bssid,
-                                   const uint16_t reason);
+                                   const common::MacAddr& bssid, const uint16_t reason);
 
   // Generic scan operations
-  zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts, const uint16_t ifidx);
+  zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
   void ScanNextChannel();
 
   // Escan operations
-  zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len,
-                         const uint16_t ifidx);
+  zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);
   void EscanResultSeen(const ScanResult& scan_result);
   void EscanComplete();
 
   // Association operations
-  void AssocInit(std::unique_ptr<AssocOpts> assoc_opts, const uint16_t ifidx,
-                 wlan_channel_t& channel);
+  void AssocInit(std::unique_ptr<AssocOpts> assoc_opts, wlan_channel_t& channel);
   void AssocScanResultSeen(const ScanResult& scan_result);
   void AssocScanDone();
-  void AuthStart(uint16_t ifidx);  // Scan complete, start authentication process
+  void AuthStart();  // Scan complete, start authentication process
   void AssocStart();
   void AssocClearContext();
   void AuthClearContext();
@@ -324,7 +317,7 @@ class SimFirmware {
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(uint32_t reason);
-  void SetStateToDisassociated(const uint16_t ifidx);
+  void SetStateToDisassociated();
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
@@ -375,10 +368,6 @@ class SimFirmware {
   // Get the idx of the SoftAP IF based on Mac address
   int16_t GetIfidxByMac(const common::MacAddr& addr);
 
-  // Get the idx of IF, the parameter indicates whether we need to find softAP ifidx or client
-  // ifidx.
-  int16_t GetIfidx(bool is_ap);
-
   // Get the channel of IF the parameter indicates whether we need to find softAP ifidx or client
   // ifidx.
   wlan_channel_t GetIfChannel(bool is_ap);
@@ -410,6 +399,12 @@ class SimFirmware {
   // created in the driver (see the comments above for the contents of each
   // entry). Interface specific config/parameters are stored in this table
   sim_iface_entry_t iface_tbl_[kMaxIfSupported] = {};
+
+  // The two ifidxs we support for now, the client ifidx is always 0(according to real firmware),
+  // and softap_ifidx is not fixed. here if the value of it is std::optnull, that means the softap
+  // iface has not been allocated or has not been started yet.
+  const uint16_t kClientIfidx = 0;
+  std::optional<uint16_t> softap_ifidx_;
 
   // Internal firmware state variables
   std::array<uint8_t, ETH_ALEN> mac_addr_;
