@@ -194,9 +194,6 @@ async fn decode_media_stream(
                     fx_log_info!("can't push packet: {:?}", e);
                 }
 
-                if !player.playing() {
-                    player.play().unwrap_or_else(|e| fx_log_info!("Problem playing: {:}", e));
-                }
                 let _ = inspect.try_lock().map(|mut l| {
                     l.record_transferred(pkt.len(), fuchsia_async::Time::now());
                 });
@@ -335,7 +332,7 @@ mod tests {
     fn decode_media_stream_stats() {
         let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
         let sbc_config = MediaCodecConfig::min_sbc();
-        let (mut player, mut sink_requests, _consumer_requests, _vmo) =
+        let (player, mut sink_requests, _consumer_requests, _vmo) =
             player::tests::setup_player(&mut exec, sbc_config);
         let inspector = inspect::component::inspector();
         let root = inspector.root();
@@ -345,8 +342,6 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(5_678900000));
 
         let (mut media_sender, mut media_receiver) = mpsc::channel(1);
-
-        player.play().unwrap_or_else(|e| fx_log_info!("Problem playing: {:}", e));
 
         let decode_fut = decode_media_stream(&mut media_receiver, player, inspect);
         pin_mut!(decode_fut);

@@ -14,12 +14,19 @@ use {
         SessionAudioConsumerFactoryProxy, StreamPacket, StreamSinkProxy, NO_TIMESTAMP,
         STREAM_PACKET_FLAG_DISCONTINUITY,
     },
+    fuchsia_async as fasync,
     fuchsia_audio_codec::StreamProcessor,
     fuchsia_syslog::fx_log_info,
-    fuchsia_trace::{self as trace},
+    fuchsia_trace as trace,
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{io::AsyncWriteExt, select, stream::pending, FutureExt, Stream, StreamExt},
-    std::convert::TryInto,
+    futures::{
+        channel::mpsc,
+        future::{AbortHandle, Abortable, Aborted},
+        io::{AsyncWrite, AsyncWriteExt},
+        task::{Context, Poll},
+        Future, StreamExt,
+    },
+    std::{convert::TryInto, io, pin::Pin},
 };
 
 use crate::latm::AudioMuxElement;
@@ -27,25 +34,132 @@ use crate::DEFAULT_SAMPLE_RATE;
 
 const DEFAULT_BUFFER_LEN: usize = 65536;
 
-pub type DecodedStreamItem = Result<Vec<u8>, Error>;
-pub type DecodedStream = Box<dyn Stream<Item = DecodedStreamItem> + Unpin>;
-
-/// Players are configured and accept media frames, which are sent to the
-/// media subsystem.
-pub struct Player {
+struct AudioConsumerSink {
     buffer: zx::Vmo,
     buffer_len: usize,
-    codec_config: MediaCodecConfig,
     current_offset: usize,
+    tx_count: u64,
+    first_packet_sent: Option<fasync::Time>,
+    flags_receiver: mpsc::Receiver<u32>,
     stream_sink: StreamSinkProxy,
     audio_consumer: AudioConsumerProxy,
-    watch_status_stream: HangingGetStream<AudioConsumerStatus>,
-    playing: bool,
-    next_packet_flags: u32,
-    last_seq_played: u16,
-    decoder: Option<StreamProcessor>,
-    decoded_stream: DecodedStream,
-    tx_count: u64,
+}
+
+impl AudioConsumerSink {
+    fn build(
+        audio_consumer: &mut AudioConsumerProxy,
+        frames_per_second: u32,
+        mut compression: Option<Compression>,
+        flags_receiver: mpsc::Receiver<u32>,
+    ) -> Result<AudioConsumerSink, Error> {
+        let (stream_sink, stream_sink_server) = fidl::endpoints::create_proxy()?;
+
+        let mut audio_stream_type = AudioStreamType {
+            sample_format: AudioSampleFormat::Signed16,
+            channels: 2, // Stereo
+            frames_per_second,
+        };
+
+        let buffer_len = DEFAULT_BUFFER_LEN;
+
+        let buffer = zx::Vmo::create(buffer_len as u64)?;
+        let buffers = vec![buffer.duplicate_handle(
+            zx::Rights::READ
+                | zx::Rights::DUPLICATE
+                | zx::Rights::GET_PROPERTY
+                | zx::Rights::TRANSFER
+                | zx::Rights::MAP,
+        )?];
+
+        audio_consumer.create_stream_sink(
+            &mut buffers.into_iter(),
+            &mut audio_stream_type,
+            compression.as_mut(),
+            stream_sink_server,
+        )?;
+
+        Ok(AudioConsumerSink {
+            buffer,
+            buffer_len,
+            current_offset: 0,
+            tx_count: 0,
+            first_packet_sent: None,
+            flags_receiver,
+            stream_sink,
+            audio_consumer: audio_consumer.clone(),
+        })
+    }
+
+    /// Push an encoded media frame into the buffer and signal that it's there to media.
+    fn send_frame(&mut self, frame: &[u8], flags: u32) -> Result<(), Error> {
+        if frame.len() > self.buffer_len {
+            self.stream_sink.end_of_stream()?;
+            return Err(format_err!("frame is too large for buffer"));
+        }
+
+        trace::duration!("bt-a2dp-sink", "Media:PacketSent");
+
+        self.tx_count += 1;
+        trace::flow_begin!("stream-sink", "SendPacket", self.tx_count);
+
+        if self.current_offset + frame.len() > self.buffer_len {
+            self.current_offset = 0;
+        }
+
+        let start_offset = self.current_offset;
+
+        self.buffer.write(frame, self.current_offset as u64)?;
+        let mut packet = StreamPacket {
+            pts: NO_TIMESTAMP,
+            payload_buffer_id: 0,
+            payload_offset: start_offset as u64,
+            payload_size: frame.len() as u64,
+            buffer_config: 0,
+            flags,
+            stream_segment_id: 0,
+        };
+
+        if self.first_packet_sent.is_none() {
+            let now = fasync::Time::now();
+            self.first_packet_sent = Some(now);
+            self.audio_consumer.start(AudioConsumerStartFlags::SupplyDriven, 0, NO_TIMESTAMP)?;
+        }
+        self.stream_sink.send_packet_no_reply(&mut packet)?;
+
+        self.current_offset += frame.len();
+        Ok(())
+    }
+}
+
+impl AsyncWrite for AudioConsumerSink {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        // TODO(48584): check to see if we have a free buffer here
+        let mut flags = 0;
+        loop {
+            match self.flags_receiver.try_next() {
+                Ok(Some(flag)) => flags |= flag,
+                Ok(None) | Err(_) => break,
+            }
+        }
+        match self.send_frame(buf, flags) {
+            Ok(()) => Poll::Ready(Ok(buf.len())),
+            Err(e) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e))),
+        }
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        // TODO(48584): Track the flushing and return when this ie empty
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        // TODO(48584): Actually close the stream.
+        Poll::Ready(Ok(()))
+    }
 }
 
 #[derive(Debug)]
@@ -143,6 +257,18 @@ impl SbcHeader {
     }
 }
 
+/// Players are configured and accept media frames, which are sent to the
+/// media subsystem.
+pub struct Player {
+    codec_config: MediaCodecConfig,
+    audio_sink: Pin<Box<dyn AsyncWrite>>,
+    watch_status_stream: HangingGetStream<AudioConsumerStatus>,
+    playing: bool,
+    next_packet_flags: mpsc::Sender<u32>,
+    last_seq_played: u16,
+    decoder_task: Option<AbortHandle>,
+}
+
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
@@ -161,65 +287,71 @@ impl Player {
         audio_consumer_factory: SessionAudioConsumerFactoryProxy,
     ) -> Result<Player, Error> {
         let mut decoder = None;
-        let mut decoded_stream = Box::new(pending::<DecodedStreamItem>()) as DecodedStream;
         let encoding = codec_config.stream_encoding();
         let mut compression = Some(Compression { type_: encoding.to_string(), parameters: None });
+        let mut decoder_task = None;
         if codec_config.codec_type() == &MediaCodecType::AUDIO_SBC {
-            let mut dec = StreamProcessor::create_decoder(
+            let dec = StreamProcessor::create_decoder(
                 codec_config.mime_type(),
                 Some(codec_config.codec_extra().to_vec()),
             )?;
-            decoded_stream = Box::new(dec.take_output_stream()?);
             compression = None;
             decoder = Some(dec);
         }
 
-        let (audio_consumer, audio_consumer_server) = fidl::endpoints::create_proxy()?;
+        let (mut audio_consumer, audio_consumer_server) = fidl::endpoints::create_proxy()?;
 
         audio_consumer_factory.create_audio_consumer(session_id, audio_consumer_server)?;
 
-        let (stream_sink, stream_sink_server) = fidl::endpoints::create_proxy()?;
+        let (sender, receiver) = mpsc::channel(1);
 
-        let mut audio_stream_type = AudioStreamType {
-            sample_format: AudioSampleFormat::Signed16,
-            channels: 2, // Stereo
-            frames_per_second: codec_config.sampling_frequency().unwrap_or(DEFAULT_SAMPLE_RATE),
-        };
+        let mut audio_sink: Pin<Box<dyn AsyncWrite>> = Box::pin(AudioConsumerSink::build(
+            &mut audio_consumer,
+            codec_config.sampling_frequency().unwrap_or(DEFAULT_SAMPLE_RATE),
+            compression,
+            receiver,
+        )?);
 
-        let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
-        let buffers = vec![buffer.duplicate_handle(
-            zx::Rights::READ
-                | zx::Rights::DUPLICATE
-                | zx::Rights::GET_PROPERTY
-                | zx::Rights::TRANSFER
-                | zx::Rights::MAP,
-        )?];
+        if let Some(mut decoder) = decoder {
+            let mut decoded_stream = decoder.take_output_stream()?;
+            let mut sink = audio_sink;
+            let decoding_task_fut = async move {
+                while let Some(decoded) = decoded_stream.next().await {
+                    let decoded = match decoded {
+                        Ok(decoded) => decoded,
+                        Err(e) => {
+                            fx_log_info!("Decoded stream failed to produce: {:?}", e);
+                            break;
+                        }
+                    };
+                    if let Err(e) = sink.write_all(&decoded).await {
+                        fx_log_info!("AudioConsumer failed to write: {:?}", e);
+                        break;
+                    }
+                }
+            };
+            audio_sink = Box::pin(decoder);
+            let (stop_handle, stop_registration) = AbortHandle::new_pair();
+            let abortable_task_fut = Abortable::new(decoding_task_fut, stop_registration);
+            fuchsia_async::spawn_local(async move {
+                if let Err(Aborted) = abortable_task_fut.await {
+                    fx_log_info!("Decoder forwarding task completed.");
+                }
+            });
+            decoder_task = Some(stop_handle);
+        }
 
-        audio_consumer.create_stream_sink(
-            &mut buffers.into_iter(),
-            &mut audio_stream_type,
-            compression.as_mut(),
-            stream_sink_server,
-        )?;
-
-        let audio_consumer_clone = audio_consumer.clone();
         let watch_status_stream =
-            HangingGetStream::new(Box::new(move || Some(audio_consumer_clone.watch_status())));
+            HangingGetStream::new(Box::new(move || Some(audio_consumer.watch_status())));
 
         Ok(Player {
-            buffer,
-            buffer_len: DEFAULT_BUFFER_LEN,
             codec_config,
-            stream_sink,
-            audio_consumer,
+            audio_sink,
             watch_status_stream,
-            current_offset: 0,
             playing: false,
-            next_packet_flags: 0,
+            next_packet_flags: sender,
             last_seq_played: 0,
-            decoder,
-            decoded_stream,
-            tx_count: 0,
+            decoder_task,
         })
     }
 
@@ -263,8 +395,8 @@ impl Player {
 
         self.last_seq_played = seq;
 
-        if discontinuity > 0 && self.playing() {
-            self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
+        if discontinuity > 0 && self.playing {
+            let _ = self.next_packet_flags.try_send(STREAM_PACKET_FLAG_DISCONTINUITY);
         };
 
         let mut offset = RtpHeader::LENGTH;
@@ -276,98 +408,39 @@ impl Player {
             match self.codec_config.codec_type() {
                 &MediaCodecType::AUDIO_SBC => {
                     let len = Player::find_sbc_frame_len(&payload[offset..]).or_else(|e| {
-                        self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
+                        let _ = self.next_packet_flags.try_send(STREAM_PACKET_FLAG_DISCONTINUITY);
                         Err(e)
                     })?;
                     trace::instant!("bt-a2dp-sink", "SBC frame", trace::Scope::Thread);
                     if offset + len > payload.len() {
-                        self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
+                        let _ = self.next_packet_flags.try_send(STREAM_PACKET_FLAG_DISCONTINUITY);
                         return Err(format_err!("Ran out of buffer for SBC frame"));
                     }
 
-                    match &mut self.decoder {
-                        Some(decoder) => {
-                            decoder
-                                .write(&payload[offset..offset + len])
-                                .await
-                                .context("writing to decoder")?;
-                        }
-                        None => {
-                            self.send_frame(&payload[offset..offset + len])?;
-                        }
+                    if let Err(e) = self.audio_sink.write_all(&payload[offset..offset + len]).await
+                    {
+                        fx_log_info!("Failed to push packet to audio: {:?}", e);
                     }
-
                     offset += len;
                 }
                 &MediaCodecType::AUDIO_AAC => {
                     let element = AudioMuxElement::try_from_bytes(&payload[offset..])?;
 
                     let frame = element.get_payload(0).ok_or(format_err!("Payload not found"))?;
-                    self.send_frame(frame)?;
+                    if let Err(e) = self.audio_sink.write_all(frame).await {
+                        fx_log_info!("Failed to write packet to sink: {:?}", e);
+                    }
                     // Only one payload per AAC RTP Pakcet.
                     break;
                 }
                 _ => return Err(format_err!("Unrecognized codec!")),
             }
         }
-
-        // Flush the decoder if we have one.
-        self.decoder.as_mut().map_or(Ok(()), |d| {
-            d.send_packet().map_err(|e| format_err!("failed flush: {:?}", e))
-        })?;
-        trace::duration_end!("bt-a2dp-sink", "Media:PacketReceived");
-        Ok(())
-    }
-
-    /// Push an encoded media frame into the buffer and signal that it's there to media.
-    fn send_frame(&mut self, frame: &[u8]) -> Result<(), Error> {
-        if frame.len() > self.buffer_len {
-            self.stream_sink.end_of_stream()?;
-            return Err(format_err!("frame is too large for buffer"));
+        if let Err(e) = self.audio_sink.flush().await {
+            fx_log_info!("Failed to flush audio packets: {:?}", e);
         }
-
-        trace::duration!("bt-a2dp-sink", "Media:PacketSent");
-
-        self.tx_count += 1;
-        trace::flow_begin!("stream-sink", "SendPacket", self.tx_count);
-
-        if self.current_offset + frame.len() > self.buffer_len {
-            self.current_offset = 0;
-        }
-
-        let start_offset = self.current_offset;
-
-        self.buffer.write(frame, self.current_offset as u64)?;
-        let mut packet = StreamPacket {
-            pts: NO_TIMESTAMP,
-            payload_buffer_id: 0,
-            payload_offset: start_offset as u64,
-            payload_size: frame.len() as u64,
-            buffer_config: 0,
-            flags: self.next_packet_flags,
-            stream_segment_id: 0,
-        };
-
-        self.stream_sink.send_packet_no_reply(&mut packet)?;
-
-        self.current_offset += frame.len();
-        self.next_packet_flags = 0;
-        Ok(())
-    }
-
-    pub fn playing(&self) -> bool {
-        self.playing
-    }
-
-    pub fn play(&mut self) -> Result<(), Error> {
-        self.audio_consumer.start(AudioConsumerStartFlags::SupplyDriven, 0, NO_TIMESTAMP)?;
         self.playing = true;
-        Ok(())
-    }
-
-    pub fn stop(&mut self) -> Result<(), Error> {
-        self.audio_consumer.stop()?;
-        self.playing = false;
+        trace::duration_end!("bt-a2dp-sink", "Media:PacketReceived");
         Ok(())
     }
 
@@ -375,22 +448,13 @@ impl Player {
     /// service went away and the player should be closed/rebuilt
     ///
     /// This function should be always be polled when running
-    pub async fn next_event(&mut self) -> PlayerEvent {
-        loop {
-            select! {
-                event = self.watch_status_stream.next().fuse() => {
-                    return match event {
-                        None => PlayerEvent::Closed,
-                        Some(Err(_)) => PlayerEvent::Closed,
-                        Some(Ok(s)) => PlayerEvent::Status(s),
-                    }
-                },
-                frame = self.decoded_stream.next().fuse() => {
-                    match frame {
-                        Some(Ok(frame)) => self.send_frame(&frame).unwrap_or_else(|e| fx_log_info!("failed to send frame")),
-                        _ => fx_log_info!("error decoding"),
-                    }
-                }
+    pub fn next_event(&mut self) -> impl Future<Output = PlayerEvent> + '_ {
+        let next_fut = self.watch_status_stream.next();
+        async move {
+            match next_fut.await {
+                None => PlayerEvent::Closed,
+                Some(Err(_)) => PlayerEvent::Closed,
+                Some(Ok(s)) => PlayerEvent::Status(s),
             }
         }
     }
@@ -398,14 +462,13 @@ impl Player {
 
 impl Drop for Player {
     fn drop(&mut self) {
-        self.stop().unwrap_or_else(|e| println!("Error in drop: {:}", e));
+        self.decoder_task.take().map(|t| t.abort());
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use futures::future::{self, Either};
     use matches::assert_matches;
 
     use {
@@ -629,6 +692,24 @@ pub(crate) mod tests {
         };
     }
 
+    const AUDIO_MUX_LENGTH: usize = 928;
+    const AAC_RTP_PACKET_LENGTH: usize = RtpHeader::LENGTH + AUDIO_MUX_LENGTH;
+    const AAC_HEADER_LENGTH: usize = 13;
+
+    fn build_rtp_aac_packet(payload: &[u8]) -> [u8; AAC_RTP_PACKET_LENGTH] {
+        // raw rtp header with sequence number of 1 followed by 1 aac AudioMuxElement with 0's for
+        // payload
+        let rtp: &[u8] = &[128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0];
+        let aac_header: &[u8] = &[71, 252, 0, 0, 176, 144, 128, 3, 0, 255, 255, 255, 150];
+        let mut raw: [u8; AAC_RTP_PACKET_LENGTH] = [0; AAC_RTP_PACKET_LENGTH];
+
+        raw[0..RtpHeader::LENGTH].copy_from_slice(rtp);
+        const MUX_ELEMENT_START: usize = RtpHeader::LENGTH + AAC_HEADER_LENGTH;
+        raw[RtpHeader::LENGTH..MUX_ELEMENT_START].copy_from_slice(aac_header);
+        raw[MUX_ELEMENT_START..(MUX_ELEMENT_START + payload.len())].copy_from_slice(payload);
+        raw
+    }
+
     #[test]
     /// Tests that the creation of a player executes with the expected interaction with the
     /// AudioConsumer and stream setup.
@@ -638,18 +719,27 @@ pub(crate) mod tests {
     fn test_send_frame() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
-        let (mut player, mut sink_request_stream, _, sink_vmo) =
+        let (mut player, mut sink_request_stream, _player_request_stream, sink_vmo) =
             setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
-        let payload = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let content = &[1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let payload = build_rtp_aac_packet(content);
 
-        player.send_frame(payload).expect("send happens okay");
+        let payload_fut = player.push_payload(&payload);
+        pin_mut!(payload_fut);
 
-        let complete = exec.run_until_stalled(&mut sink_request_stream.select_next_some());
-        let sink_req = match complete {
-            Poll::Ready(Ok(req)) => req,
-            x => panic!("expected sink request message but got {:?}", x),
-        };
+        match exec.run_singlethreaded(&mut payload_fut) {
+            Ok(()) => {}
+            x => panic!("Expected push_payload Ok(()) but got {:?}", x),
+        }
+
+        let sink_req = exec
+            .run_singlethreaded(&mut sink_request_stream.select_next_some())
+            .expect("got a packet");
+        //let sink_req = match complete {
+        //    Poll::Ready(Ok(req)) => req,
+        //    x => panic!("expected sink request message but got {:?}", x),
+        //};
 
         let (offset, size) = match sink_req {
             StreamSinkRequest::SendPacketNoReply { packet, .. } => {
@@ -663,7 +753,7 @@ pub(crate) mod tests {
 
         sink_vmo.read(recv.as_mut_slice(), offset).expect("should be able to read packet data");
 
-        assert_eq!(recv, payload, "received didn't match payload");
+        assert_eq!(&recv[..content.len()], content, "received didn't match payload");
     }
 
     /// Helper function for pushing payloads to player and returning the packet flags
@@ -678,31 +768,13 @@ pub(crate) mod tests {
             pin_mut!(push_fut);
             exec.run_singlethreaded(&mut push_fut).expect("wrote payload");
         }
-
-        if let Some(_) = player.decoder {
-            // if decoder enabled, drive event stream future till packet is sent to sink.
-            let event_fut = player.next_event();
-            pin_mut!(event_fut);
-
-            let either = exec.run_singlethreaded(&mut future::select(
-                event_fut,
-                sink_request_stream.select_next_some(),
-            ));
-
-            match either {
-                Either::Right((Ok(StreamSinkRequest::SendPacketNoReply { packet, .. }), _)) => {
-                    packet.flags
-                }
-                _ => panic!("should have received a packet"),
-            }
-        } else {
-            let sink_req = exec
-                .run_singlethreaded(&mut sink_request_stream.select_next_some())
-                .expect("sent packet");
-            match sink_req {
-                StreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
-                _ => panic!("should have received a packet"),
-            }
+        // Drive until the sink receives a packet.
+        let sink_req = exec
+            .run_singlethreaded(&mut sink_request_stream.select_next_some())
+            .expect("sent packet");
+        match sink_req {
+            StreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
+            _ => panic!("should have received a packet"),
         }
     }
 
@@ -716,8 +788,13 @@ pub(crate) mod tests {
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
             setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
-        player.play().expect("player plays");
+        let mut raw = build_rtp_aac_packet(&[]);
 
+        let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
+        // should not have a discontinuity yet
+        assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, 0);
+
+        // Should have started the player when the first packet gets pushed.
         let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
         let player_req = match complete {
             Poll::Ready(Ok(req)) => req,
@@ -725,20 +802,6 @@ pub(crate) mod tests {
         };
 
         assert_matches!(player_req, AudioConsumerRequest::Start { .. });
-
-        // raw rtp header with sequence number of 1 followed by 1 aac AudioMuxElement with 0's for
-        // payload
-        const AUDIO_MUX_LENGTH: usize = 928;
-        let rtp: &[u8] = &[128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0];
-        let aac_header: &[u8] = &[71, 252, 0, 0, 176, 144, 128, 3, 0, 255, 255, 255, 150];
-        let raw: &mut [u8] = &mut [0; RtpHeader::LENGTH + AUDIO_MUX_LENGTH];
-
-        raw[0..RtpHeader::LENGTH].copy_from_slice(rtp);
-        raw[RtpHeader::LENGTH..(RtpHeader::LENGTH + aac_header.len())].copy_from_slice(aac_header);
-
-        let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
-        // should not have a discontinuity yet
-        assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, 0);
 
         // increment sequence number
         raw[3] = 2;
@@ -760,8 +823,10 @@ pub(crate) mod tests {
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
             setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
-        player.play().expect("player plays");
+        let mut raw = build_rtp_aac_packet(&[]);
+        push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
 
+        // Should have started the player
         let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
         let player_req = match complete {
             Poll::Ready(Ok(req)) => req,
@@ -770,22 +835,10 @@ pub(crate) mod tests {
 
         assert_matches!(player_req, AudioConsumerRequest::Start { .. });
 
-        // raw rtp header with sequence number of 1 followed by 1 aac AudioMuxElement with 0's for
-        // payload
-        const AUDIO_MUX_LENGTH: usize = 928;
-        let rtp: &[u8] = &[128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0];
-        let aac_header: &[u8] = &[71, 252, 0, 0, 176, 144, 128, 3, 0, 255, 255, 255, 150];
-        let raw: &mut [u8] = &mut [0; RtpHeader::LENGTH + AUDIO_MUX_LENGTH];
-
-        raw[0..RtpHeader::LENGTH].copy_from_slice(rtp);
-        raw[RtpHeader::LENGTH..(RtpHeader::LENGTH + aac_header.len())].copy_from_slice(aac_header);
-
-        push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
-
         // corrupt AudioMuxElement
         raw[RtpHeader::LENGTH + 1] = 0xff;
 
-        let push_fut = player.push_payload(raw);
+        let push_fut = player.push_payload(&raw);
         pin_mut!(push_fut);
         exec.run_singlethreaded(&mut push_fut).expect_err("fail to write corrupted payload");
     }
@@ -798,16 +851,6 @@ pub(crate) mod tests {
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
             setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_SBC));
 
-        player.play().expect("player plays");
-
-        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
-        let player_req = match complete {
-            Poll::Ready(Ok(req)) => req,
-            x => panic!("expected player req message but got {:?}", x),
-        };
-
-        assert_matches!(player_req, AudioConsumerRequest::Start { .. });
-
         // raw rtp header with sequence number of 1 followed by 1 sbc frame
         let raw = [
             128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x9c, 0xb1, 0x20, 0x3b, 0x80, 0x00, 0x00,
@@ -819,5 +862,14 @@ pub(crate) mod tests {
         ];
 
         push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
+
+        // Should have started the player
+        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
+        let player_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player req message but got {:?}", x),
+        };
+
+        assert_matches!(player_req, AudioConsumerRequest::Start { .. });
     }
 }
