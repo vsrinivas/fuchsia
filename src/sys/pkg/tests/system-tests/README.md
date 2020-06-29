@@ -18,7 +18,7 @@ Then, login to luci by running:
 
 ```
 % cd depot_tools
-% ./luci-auth login -scopes "https://www.googleapis.com/auth/devstorage.read_write"
+% ./luci-auth login -scopes "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/devstorage.read_write"
 ...
 ```
 
