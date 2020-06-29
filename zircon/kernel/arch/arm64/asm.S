@@ -78,6 +78,8 @@ FUNCTION(arm64_context_switch)
     pop_regs x29, x30
 
     ret
+    // Prevent speculation through RET
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_context_switch)
 
 FUNCTION(arm64_elX_to_el1)
@@ -155,6 +157,7 @@ FUNCTION(arm64_elX_to_el1)
 
 .Ltarget:
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_elX_to_el1)
 
 FUNCTION(arm64_get_secondary_sp)
@@ -176,10 +179,12 @@ FUNCTION(arm64_get_secondary_sp)
     mov     x1, xzr
     mov     x2, xzr
     ret
+    SPECULATION_POSTFENCE
 
 .Lsp_found:
     ldr     x0, [x11, #8]
     ldr     x2, [x11, #16]
     add     x1, x11, #40
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_get_secondary_sp)

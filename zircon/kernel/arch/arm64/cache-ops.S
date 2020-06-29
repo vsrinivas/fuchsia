@@ -34,18 +34,21 @@
 FUNCTION(arch_clean_cache_range)
     cache_range_op dc cvac arm64_dcache_size // clean cache to PoC by MVA
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arch_clean_cache_range)
 
     // void arch_flush_invalidate_cache_range(vaddr_t start, size_t len);
 FUNCTION(arch_clean_invalidate_cache_range)
     cache_range_op dc civac arm64_dcache_size // clean & invalidate dcache to PoC by MVA
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arch_clean_invalidate_cache_range)
 
     // void arch_invalidate_cache_range(vaddr_t start, size_t len);
 FUNCTION(arch_invalidate_cache_range)
     cache_range_op dc ivac arm64_dcache_size // invalidate dcache to PoC by MVA
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arch_invalidate_cache_range)
 
     // void arch_sync_cache_range(vaddr_t start, size_t len);
@@ -54,6 +57,7 @@ FUNCTION(arch_sync_cache_range)
     cache_range_op ic ivau arm64_icache_size // invalidate icache to PoU by MVA
     isb
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arch_sync_cache_range)
 
 // Below are 3 variants of cache flushing routines by way/set for
@@ -68,6 +72,7 @@ FUNCTION(arm64_local_invalidate_cache_all)
     isb
 
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_local_invalidate_cache_all)
 
     // void arm64_local_clean_cache_all()
@@ -79,6 +84,7 @@ FUNCTION(arm64_local_clean_cache_all)
     isb
 
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_local_clean_cache_all)
 
     // void arm64_local_clean_invalidate_cache_all()
@@ -90,5 +96,6 @@ FUNCTION(arm64_local_clean_invalidate_cache_all)
     isb
 
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_local_clean_invalidate_cache_all)
 

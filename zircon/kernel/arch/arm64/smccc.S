@@ -37,6 +37,7 @@
     stp       x2, x3, [x8, #16]
     str       x6, [x8, #32]
     ret
+    SPECULATION_POSTFENCE
 .endm
 
 // arm_smccc_result_t arm_smccc_smc(uint32_t w0, uint64_t x1, uint64_t x2, uint64_t x3,

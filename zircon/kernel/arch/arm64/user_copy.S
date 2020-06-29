@@ -53,6 +53,7 @@ FUNCTION(_arm64_user_copy)
     mov lr, saved_lr
     .cfi_same_value lr
     ret
+    SPECULATION_POSTFENCE
 END_FUNCTION(_arm64_user_copy)
 
 .section .text.cold._arm64_user_copy,"ax"

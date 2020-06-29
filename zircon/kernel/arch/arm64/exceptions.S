@@ -421,6 +421,8 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     adr  x12, .Lsyscall_table
     add  x12, x12, x16, lsl #4
     br   x12
+    // Prevent speculation through BR
+    SPECULATION_POSTFENCE
 
 .Lunknown_syscall:
     mov x0, x16 // move the syscall number into the 0 arg slot
