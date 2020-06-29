@@ -4,6 +4,7 @@
 
 #include "src/storage/lib/paver/x64.h"
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/validation.h"
@@ -11,9 +12,13 @@
 namespace paver {
 
 namespace {
+
+using uuid::Uuid;
+
 constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
 constexpr size_t kGibibyte = kMebibyte * 1024;
+
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> EfiDevicePartitioner::Initialize(
@@ -107,7 +112,7 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(
   if (type.is_error()) {
     return type.take_error();
   }
-  return gpt_->AddPartition(name, type->data(), minimum_size_bytes, /*optional_reserve_bytes*/ 0);
+  return gpt_->AddPartition(name, type.value(), minimum_size_bytes, /*optional_reserve_bytes*/ 0);
 }
 
 zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::FindPartition(
@@ -120,8 +125,7 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::FindPartition
   switch (spec.partition) {
     case Partition::kBootloader: {
       const auto filter = [](const gpt_partition_t& part) {
-        const std::array<uint8_t, GPT_GUID_LEN> partition_type = GUID_EFI_VALUE;
-        return FilterByTypeAndName(part, partition_type, GUID_EFI_NAME);
+        return FilterByTypeAndName(part, GUID_EFI_VALUE, GUID_EFI_NAME);
       };
       auto status = gpt_->FindPartition(filter);
       if (status.is_error()) {
@@ -183,7 +187,7 @@ zx::status<> EfiDevicePartitioner::InitPartitionTables() const {
     for (auto& partition : partitions_to_add) {
       // Get the partition type GUID, and compare it.
       auto status = GptPartitionType(partition);
-      if (status.is_error() || memcmp(part.type, status->data(), GPT_GUID_LEN) != 0) {
+      if (status.is_error() || status.value() != Uuid(part.type)) {
         continue;
       }
       // If we are wiping any non-bootloader partition, we are done.

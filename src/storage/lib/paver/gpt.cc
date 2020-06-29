@@ -17,6 +17,8 @@ namespace paver {
 
 namespace {
 
+using uuid::Uuid;
+
 namespace block = ::llcpp::fuchsia::hardware::block;
 namespace device = ::llcpp::fuchsia::device;
 
@@ -27,37 +29,36 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
 
 }  // namespace
 
-zx::status<GptGuid> GptPartitionType(Partition type) {
+zx::status<Uuid> GptPartitionType(Partition type) {
   switch (type) {
     case Partition::kBootloader:
-      return zx::ok(GptGuid(GUID_EFI_VALUE));
+      return zx::ok(Uuid(GUID_EFI_VALUE));
     case Partition::kZirconA:
-      return zx::ok(GptGuid(GUID_ZIRCON_A_VALUE));
+      return zx::ok(Uuid(GUID_ZIRCON_A_VALUE));
     case Partition::kZirconB:
-      return zx::ok(GptGuid(GUID_ZIRCON_B_VALUE));
+      return zx::ok(Uuid(GUID_ZIRCON_B_VALUE));
     case Partition::kZirconR:
-      return zx::ok(GptGuid(GUID_ZIRCON_R_VALUE));
+      return zx::ok(Uuid(GUID_ZIRCON_R_VALUE));
     case Partition::kVbMetaA:
-      return zx::ok(GptGuid(GUID_VBMETA_A_VALUE));
+      return zx::ok(Uuid(GUID_VBMETA_A_VALUE));
     case Partition::kVbMetaB:
-      return zx::ok(GptGuid(GUID_VBMETA_B_VALUE));
+      return zx::ok(Uuid(GUID_VBMETA_B_VALUE));
     case Partition::kVbMetaR:
-      return zx::ok(GptGuid(GUID_VBMETA_R_VALUE));
+      return zx::ok(Uuid(GUID_VBMETA_R_VALUE));
     case Partition::kAbrMeta:
-      return zx::ok(GptGuid(GUID_ABR_META_VALUE));
+      return zx::ok(Uuid(GUID_ABR_META_VALUE));
     case Partition::kFuchsiaVolumeManager:
-      return zx::ok(GptGuid(GUID_FVM_VALUE));
+      return zx::ok(Uuid(GUID_FVM_VALUE));
     default:
       ERROR("Partition type is invalid\n");
       return zx::error(ZX_ERR_INVALID_ARGS);
   }
 }
 
-bool FilterByTypeAndName(const gpt_partition_t& part, const std::array<uint8_t, GPT_GUID_LEN>& type,
-                         fbl::StringPiece name) {
+bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, fbl::StringPiece name) {
   char cstring_name[GPT_NAME_LEN];
   ::utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name), GPT_NAME_LEN);
-  return memcmp(part.type, type.data(), GPT_GUID_LEN) == 0 &&
+  return type == Uuid(part.type) &&
          // We use a case-insenstive comparison to be compatible with the previous naming scheme.
          // On a ChromeOS device, all of the kernel partitions share a common GUID type, so we
          // distinguish Zircon kernel partitions based on name.
@@ -336,13 +337,12 @@ zx::status<GptDevicePartitioner::FindFirstFitResult> GptDevicePartitioner::FindF
   return zx::error(ZX_ERR_NO_RESOURCES);
 }
 
-zx::status<std::array<uint8_t, GPT_GUID_LEN>> GptDevicePartitioner::CreateGptPartition(
-    const char* name, const uint8_t* type, uint64_t offset, uint64_t blocks) const {
-  std::array<uint8_t, GPT_GUID_LEN> guid;
-  zx_cprng_draw(guid.data(), GPT_GUID_LEN);
+zx::status<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, const Uuid& type,
+                                                          uint64_t offset, uint64_t blocks) const {
+  Uuid guid = Uuid::Generate();
 
   zx_status_t status;
-  if ((status = gpt_->AddPartition(name, type, guid.data(), offset, blocks, 0)) != ZX_OK) {
+  if ((status = gpt_->AddPartition(name, type.bytes(), guid.bytes(), offset, blocks, 0)) != ZX_OK) {
     ERROR("Failed to add partition\n");
     return zx::error(ZX_ERR_IO);
   }
@@ -363,7 +363,7 @@ zx::status<std::array<uint8_t, GPT_GUID_LEN>> GptDevicePartitioner::CreateGptPar
 }
 
 zx::status<std::unique_ptr<PartitionClient>> GptDevicePartitioner::AddPartition(
-    const char* name, const uint8_t* type, size_t minimum_size_bytes,
+    const char* name, const Uuid& type, size_t minimum_size_bytes,
     size_t optional_reserve_bytes) const {
   auto status = FindFirstFit(minimum_size_bytes);
   if (status.is_error()) {
@@ -396,8 +396,7 @@ zx::status<std::unique_ptr<PartitionClient>> GptDevicePartitioner::AddPartition(
   }
   LOG("Added partition, waiting for bind\n");
 
-  auto status_or_part =
-      OpenBlockPartition(devfs_root_, status_or_guid.value().data(), type, ZX_SEC(15));
+  auto status_or_part = OpenBlockPartition(devfs_root_, status_or_guid.value(), type, ZX_SEC(15));
   if (status_or_part.is_error()) {
     ERROR("Added partition, waiting for bind - NOT FOUND\n");
     return status_or_part.take_error();
@@ -417,7 +416,7 @@ zx::status<GptDevicePartitioner::FindPartitionResult> GptDevicePartitioner::Find
 
     if (filter(*p)) {
       LOG("Found partition in GPT, partition %u\n", i);
-      auto status = OpenBlockPartition(devfs_root_, p->guid, p->type, ZX_SEC(5));
+      auto status = OpenBlockPartition(devfs_root_, Uuid(p->guid), Uuid(p->type), ZX_SEC(5));
       if (status.is_error()) {
         ERROR("Couldn't open partition\n");
         return status.take_error();
@@ -443,7 +442,7 @@ zx::status<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
     modify = true;
 
     // Ignore the return status; wiping is a best-effort approach anyway.
-    WipeBlockPartition(devfs_root_, p->guid, p->type).status_value();
+    WipeBlockPartition(devfs_root_, Uuid(p->guid), Uuid(p->type)).status_value();
 
     if (gpt_->RemovePartition(p->guid) != ZX_OK) {
       ERROR("Warning: Could not remove partition\n");

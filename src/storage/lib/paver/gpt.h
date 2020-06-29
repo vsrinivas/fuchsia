@@ -11,6 +11,7 @@
 #include <fbl/function.h>
 #include <gpt/gpt.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/device-partitioner.h"
 
 namespace paver {
@@ -58,7 +59,8 @@ class GptDevicePartitioner {
 
   // Creates a partition, adds an entry to the GPT, and returns a file descriptor to it.
   // Assumes that the partition does not already exist.
-  zx::status<std::unique_ptr<PartitionClient>> AddPartition(const char* name, const uint8_t* type,
+  zx::status<std::unique_ptr<PartitionClient>> AddPartition(const char* name,
+                                                            const uuid::Uuid& type,
                                                             size_t minimum_size_bytes,
                                                             size_t optional_reserve_bytes) const;
 
@@ -105,10 +107,8 @@ class GptDevicePartitioner {
         gpt_(std::move(gpt)),
         block_info_(block_info) {}
 
-  zx::status<std::array<uint8_t, GPT_GUID_LEN>> CreateGptPartition(const char* name,
-                                                                   const uint8_t* type,
-                                                                   uint64_t offset,
-                                                                   uint64_t blocks) const;
+  zx::status<uuid::Uuid> CreateGptPartition(const char* name, const uuid::Uuid& type,
+                                            uint64_t offset, uint64_t blocks) const;
 
   fbl::unique_fd devfs_root_;
   zx::channel svc_root_;
@@ -117,9 +117,7 @@ class GptDevicePartitioner {
   ::llcpp::fuchsia::hardware::block::BlockInfo block_info_;
 };
 
-using GptGuid = std::array<uint8_t, GPT_GUID_LEN>;
-
-zx::status<GptGuid> GptPartitionType(Partition type);
+zx::status<uuid::Uuid> GptPartitionType(Partition type);
 
 zx::status<> RebindGptDriver(const zx::channel& svc_root, zx::unowned_channel chan);
 
@@ -131,17 +129,15 @@ inline void utf16_to_cstring(char* dst, const uint8_t* src, size_t charcount) {
   }
 }
 
-inline bool FilterByType(const gpt_partition_t& part,
-                         const std::array<uint8_t, GPT_GUID_LEN>& type) {
-  return memcmp(part.type, type.data(), GPT_GUID_LEN) == 0;
+inline bool FilterByType(const gpt_partition_t& part, const uuid::Uuid& type) {
+  return type == uuid::Uuid(part.type);
 }
 
-bool FilterByTypeAndName(const gpt_partition_t& part, const std::array<uint8_t, GPT_GUID_LEN>& type,
+bool FilterByTypeAndName(const gpt_partition_t& part, const uuid::Uuid& type,
                          fbl::StringPiece name);
 
 inline bool IsFvmPartition(const gpt_partition_t& part) {
-  const std::array<uint8_t, GPT_GUID_LEN> partition_type = GUID_FVM_VALUE;
-  return FilterByType(part, partition_type);
+  return FilterByType(part, GUID_FVM_VALUE);
 }
 
 // Returns true if the spec partition is Zircon A/B/R.

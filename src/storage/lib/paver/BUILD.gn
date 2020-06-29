@@ -47,6 +47,7 @@ source_set("paver-core") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//src/lib/uuid",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
@@ -71,6 +72,7 @@ source_set("gpt") {
 
 source_set("skip-block") {
   sources = [ "skip-block.cc" ]
+  deps = [ "//src/lib/uuid" ]
   public_deps = [
     ":paver-core",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
@@ -93,6 +95,7 @@ source_set("as370") {
   deps = [
     ":paver-core",
     ":skip-block",
+    "//src/lib/uuid",
     "//zircon/system/ulib/gpt",
   ]
 }
@@ -104,6 +107,7 @@ source_set("astro") {
     ":sysconfig",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//src/devices/lib/amlogic",
+    "//src/lib/uuid",
     "//zircon/system/ulib/gpt",
   ]
   public_deps = [
@@ -117,6 +121,7 @@ source_set("chromebook-x64") {
   deps = [
     ":gpt",
     ":paver-core",
+    "//src/lib/uuid",
     "//zircon/system/ulib/chromeos-disk-setup",
   ]
 }
@@ -128,6 +133,7 @@ source_set("sherlock") {
     ":paver-core",
     ":sysconfig",
     "//src/devices/lib/amlogic",
+    "//src/lib/uuid",
     "//zircon/system/ulib/gpt",
   ]
 }
@@ -137,6 +143,7 @@ source_set("x64") {
   deps = [
     ":gpt",
     ":paver-core",
+    "//src/lib/uuid",
   ]
 }
 

@@ -13,6 +13,7 @@
 #include <fbl/string_buffer.h>
 #include <gpt/gpt.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/fvm.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
@@ -20,13 +21,17 @@
 namespace paver {
 
 namespace {
+
+using uuid::Uuid;
+
 namespace block = ::llcpp::fuchsia::hardware::block;
 namespace device = ::llcpp::fuchsia::device;
 namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
+
 }  // namespace
 
 zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindPartition(
-    const uint8_t* type) const {
+    const Uuid& type) const {
   zx::status<zx::channel> status = OpenSkipBlockPartition(devfs_root_, type, ZX_SEC(5));
   if (status.is_error()) {
     return status.take_error();
@@ -36,9 +41,9 @@ zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindPar
 }
 
 zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindFvmPartition() const {
-  const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
   // FVM partition is managed so it should expose a normal block device.
-  zx::status<zx::channel> status = OpenBlockPartition(devfs_root_, nullptr, fvm_type, ZX_SEC(5));
+  zx::status<zx::channel> status =
+      OpenBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE), ZX_SEC(5));
   if (status.is_error()) {
     return status.take_error();
   }
@@ -48,7 +53,8 @@ zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindFvm
 
 zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
   const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-  zx::status<zx::channel> status = OpenBlockPartition(devfs_root_, nullptr, fvm_type, ZX_SEC(3));
+  zx::status<zx::channel> status =
+      OpenBlockPartition(devfs_root_, std::nullopt, Uuid(fvm_type), ZX_SEC(3));
   if (status.is_error()) {
     ERROR("Warning: Could not open partition to wipe: %s\n", status.status_string());
     return zx::ok();

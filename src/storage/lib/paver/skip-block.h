@@ -8,6 +8,7 @@
 
 #include "src/storage/lib/paver/device-partitioner.h"
 #include "src/storage/lib/paver/partition-client.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace paver {
 
@@ -20,7 +21,7 @@ class SkipBlockDevicePartitioner {
  public:
   SkipBlockDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
 
-  zx::status<std::unique_ptr<PartitionClient>> FindPartition(const uint8_t* guid) const;
+  zx::status<std::unique_ptr<PartitionClient>> FindPartition(const uuid::Uuid& type) const;
 
   zx::status<std::unique_ptr<PartitionClient>> FindFvmPartition() const;
 

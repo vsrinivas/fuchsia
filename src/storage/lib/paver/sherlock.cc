@@ -8,14 +8,18 @@
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
 
 namespace paver {
-
 namespace {
+
+using uuid::Uuid;
+
 constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
+
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> SherlockPartitioner::Initialize(
@@ -95,20 +99,20 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  uint8_t type[GPT_GUID_LEN];
+  Uuid type;
 
   switch (spec.partition) {
     case Partition::kBootloader: {
-      const uint8_t boot0_type[GPT_GUID_LEN] = GUID_EMMC_BOOT1_VALUE;
-      auto boot0_part = OpenBlockPartition(gpt_->devfs_root(), nullptr, boot0_type, ZX_SEC(5));
+      auto boot0_part = OpenBlockPartition(gpt_->devfs_root(), std::nullopt,
+                                           Uuid(GUID_EMMC_BOOT1_VALUE), ZX_SEC(5));
       if (boot0_part.is_error()) {
         return boot0_part.take_error();
       }
       auto boot0 =
           std::make_unique<SherlockBootloaderPartitionClient>(std::move(boot0_part.value()));
 
-      const uint8_t boot1_type[GPT_GUID_LEN] = GUID_EMMC_BOOT2_VALUE;
-      auto boot1_part = OpenBlockPartition(gpt_->devfs_root(), nullptr, boot1_type, ZX_SEC(5));
+      auto boot1_part = OpenBlockPartition(gpt_->devfs_root(), std::nullopt,
+                                           Uuid(GUID_EMMC_BOOT2_VALUE), ZX_SEC(5));
       if (boot1_part.is_error()) {
         return boot1_part.take_error();
       }
@@ -121,53 +125,37 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
 
       return zx::ok(std::make_unique<PartitionCopyClient>(std::move(partitions)));
     }
-    case Partition::kZirconA: {
-      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
-      memcpy(type, zircon_a_type, GPT_GUID_LEN);
+    case Partition::kZirconA:
+      type = GUID_ZIRCON_A_VALUE;
       break;
-    }
-    case Partition::kZirconB: {
-      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
-      memcpy(type, zircon_b_type, GPT_GUID_LEN);
+    case Partition::kZirconB:
+      type = GUID_ZIRCON_B_VALUE;
       break;
-    }
-    case Partition::kZirconR: {
-      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
-      memcpy(type, zircon_r_type, GPT_GUID_LEN);
+    case Partition::kZirconR:
+      type = GUID_ZIRCON_R_VALUE;
       break;
-    }
-    case Partition::kVbMetaA: {
-      const uint8_t vbmeta_a_type[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
-      memcpy(type, vbmeta_a_type, GPT_GUID_LEN);
+    case Partition::kVbMetaA:
+      type = GUID_VBMETA_A_VALUE;
       break;
-    }
-    case Partition::kVbMetaB: {
-      const uint8_t vbmeta_b_type[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
-      memcpy(type, vbmeta_b_type, GPT_GUID_LEN);
+    case Partition::kVbMetaB:
+      type = GUID_VBMETA_B_VALUE;
       break;
-    }
-    case Partition::kVbMetaR: {
-      const uint8_t vbmeta_r_type[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
-      memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
+    case Partition::kVbMetaR:
+      type = GUID_VBMETA_R_VALUE;
       break;
-    }
-    case Partition::kAbrMeta: {
-      const uint8_t abr_meta_type[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
-      memcpy(type, abr_meta_type, GPT_GUID_LEN);
+    case Partition::kAbrMeta:
+      type = GUID_ABR_META_VALUE;
       break;
-    }
-    case Partition::kFuchsiaVolumeManager: {
-      const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-      memcpy(type, fvm_type, GPT_GUID_LEN);
+    case Partition::kFuchsiaVolumeManager:
+      type = GUID_FVM_VALUE;
       break;
-    }
     default:
       ERROR("Partition type is invalid\n");
       return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  const auto filter = [type](const gpt_partition_t& part) {
-    return memcmp(part.type, type, GPT_GUID_LEN) == 0;
+  const auto filter = [&type](const gpt_partition_t& part) {
+    return type == Uuid(part.type);
   };
   auto status = gpt_->FindPartition(std::move(filter));
   if (status.is_error()) {
@@ -181,7 +169,7 @@ zx::status<> SherlockPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 zx::status<> SherlockPartitioner::InitPartitionTables() const {
   struct Partition {
     const char* name;
-    uint8_t type[GPT_GUID_LEN];
+    Uuid type;
     size_t min_size;
   };
 

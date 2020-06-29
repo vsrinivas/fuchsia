@@ -9,6 +9,7 @@
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <gpt/cros.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/validation.h"
@@ -17,18 +18,20 @@ namespace paver {
 
 namespace {
 
+using uuid::Uuid;
+
 namespace block = ::llcpp::fuchsia::hardware::block;
 
 constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
 constexpr size_t kGibibyte = kMebibyte * 1024;
 
-zx::status<GptGuid> CrosPartitionType(Partition type) {
+zx::status<Uuid> CrosPartitionType(Partition type) {
   switch (type) {
     case Partition::kZirconA:
     case Partition::kZirconB:
     case Partition::kZirconR:
-      return zx::ok(GptGuid(GUID_CROS_KERNEL_VALUE));
+      return zx::ok(Uuid(GUID_CROS_KERNEL_VALUE));
     default:
       return GptPartitionType(type);
   }
@@ -141,7 +144,7 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition
   if (type.is_error()) {
     return type.take_error();
   }
-  return gpt_->AddPartition(name, type->data(), minimum_size_bytes, /*optional_reserve_bytes*/ 0);
+  return gpt_->AddPartition(name, type.value(), minimum_size_bytes, /*optional_reserve_bytes*/ 0);
 }
 
 zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartition(
@@ -191,10 +194,9 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
   }
 
   // Find the Zircon A kernel partition.
-  const std::array<uint8_t, GPT_GUID_LEN> cros_kernel_type = GUID_CROS_KERNEL_VALUE;
   const char* name = PartitionName(Partition::kZirconA);
-  const auto filter = [cros_kernel_type, name](const gpt_partition_t& part) {
-    return FilterByTypeAndName(part, cros_kernel_type, name);
+  const auto filter = [name](const gpt_partition_t& part) {
+    return FilterByTypeAndName(part, GUID_CROS_KERNEL_VALUE, name);
   };
   auto status = gpt_->FindPartition(filter);
   if (status.is_error()) {
@@ -212,7 +214,7 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
     }
     const uint8_t priority = gpt_cros_attr_get_priority(part->flags);
     // Ignore anything not of type CROS KERNEL.
-    if (memcmp(part->type, cros_kernel_type.data(), GPT_GUID_LEN)) {
+    if (Uuid(part->type) != Uuid(GUID_CROS_KERNEL_VALUE)) {
       continue;
     }
 

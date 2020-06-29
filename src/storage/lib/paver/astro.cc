@@ -10,6 +10,7 @@
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/sysconfig.h"
 #include "src/storage/lib/paver/utils.h"
@@ -17,6 +18,8 @@
 namespace paver {
 
 namespace {
+
+using uuid::Uuid;
 
 std::optional<::llcpp::fuchsia::boot::Arguments::SyncClient> OpenBootArgumentClient(
     const zx::channel& svc_root) {
@@ -228,11 +231,10 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
     case Partition::kBootloader: {
       if (spec.content_type.empty()) {
         // Default type = TPL.
-        const uint8_t tpl_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
+        Uuid tpl_type = GUID_BOOTLOADER_VALUE;
         return skip_block_->FindPartition(tpl_type);
       } else if (spec.content_type == "bl2") {
-        const uint8_t bl2_type[GPT_GUID_LEN] = GUID_BL2_VALUE;
-        if (auto status = skip_block_->FindPartition(bl2_type); status.is_error()) {
+        if (auto status = skip_block_->FindPartition(GUID_BL2_VALUE); status.is_error()) {
           return status.take_error();
         } else {
           std::unique_ptr<PartitionClient>& bl2_skip_block = status.value();
@@ -247,18 +249,15 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
       ERROR("Unimplemeneted partition '%s'\n", spec.ToString().c_str());
       return zx::error(ZX_ERR_INTERNAL);
     }
-    case Partition::kZirconA: {
-      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
-      return skip_block_->FindPartition(zircon_a_type);
-    }
-    case Partition::kZirconB: {
-      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
-      return skip_block_->FindPartition(zircon_b_type);
-    }
-    case Partition::kZirconR: {
-      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
-      return skip_block_->FindPartition(zircon_r_type);
-    }
+    case Partition::kZirconA:
+      return skip_block_->FindPartition(GUID_ZIRCON_A_VALUE);
+
+    case Partition::kZirconB:
+      return skip_block_->FindPartition(GUID_ZIRCON_B_VALUE);
+
+    case Partition::kZirconR:
+      return skip_block_->FindPartition(GUID_ZIRCON_R_VALUE);
+
     case Partition::kVbMetaA:
     case Partition::kVbMetaB:
     case Partition::kVbMetaR:

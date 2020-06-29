@@ -36,9 +36,12 @@
 #include <zxcrypt/fdio-volume.h>
 
 #include "pave-logging.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace paver {
 namespace {
+
+using uuid::Uuid;
 
 namespace block = ::llcpp::fuchsia::hardware::block;
 namespace partition = ::llcpp::fuchsia::hardware::block::partition;
@@ -564,14 +567,13 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
                                fbl::Array<PartitionInfo>* parts) {
   for (size_t p = 0; p < parts->size(); p++) {
     fvm::extent_descriptor_t* ext = GetExtent((*parts)[p].pd, 0);
-    alloc_req_t alloc;
-    memset(&alloc, 0, sizeof(alloc));
+    alloc_req_t alloc = {};
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
     alloc.flags = (*parts)[p].active ? 0 : volume::ALLOCATE_PARTITION_FLAG_INACTIVE;
     alloc.slice_count = ext->slice_count;
     memcpy(&alloc.type, (*parts)[p].pd->type, sizeof(alloc.type));
-    zx_cprng_draw(alloc.guid, GPT_GUID_LEN);
+    memcpy(&alloc.guid, uuid::Uuid::Generate().bytes(), uuid::kUuidSize);
     memcpy(&alloc.name, (*parts)[p].pd->name, sizeof(alloc.name));
     LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
     (*parts)[p].new_part.reset(

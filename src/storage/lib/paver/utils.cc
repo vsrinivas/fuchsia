@@ -18,14 +18,19 @@
 
 #include <gpt/gpt.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/partition-client.h"
 #include "src/storage/lib/paver/pave-logging.h"
 
 namespace paver {
 
 namespace {
+
+using uuid::Uuid;
+
 namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
+
 }  // namespace
 
 // Not static so test can manipulate it.
@@ -126,8 +131,8 @@ zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const ch
 constexpr char kBlockDevPath[] = "class/block/";
 
 zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
-                                           const uint8_t* unique_guid, const uint8_t* type_guid,
-                                           zx_duration_t timeout) {
+                                           std::optional<Uuid> unique_guid,
+                                           std::optional<Uuid> type_guid, zx_duration_t timeout) {
   ZX_ASSERT(unique_guid || type_guid);
 
   auto cb = [&](const zx::channel& chan) {
@@ -137,8 +142,7 @@ zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
         return true;
       }
       auto& response = result.value();
-      if (response.status != ZX_OK ||
-          memcmp(response.guid->value.data(), type_guid, partition::GUID_LENGTH) != 0) {
+      if (response.status != ZX_OK || type_guid != Uuid(response.guid->value.data())) {
         return true;
       }
     }
@@ -148,8 +152,7 @@ zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
         return true;
       }
       const auto& response = result.value();
-      if (response.status != ZX_OK ||
-          memcmp(response.guid->value.data(), unique_guid, partition::GUID_LENGTH) != 0) {
+      if (response.status != ZX_OK || unique_guid != Uuid(response.guid->value.data())) {
         return true;
       }
     }
@@ -162,17 +165,16 @@ zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
 constexpr char kSkipBlockDevPath[] = "class/skip-block/";
 
 zx::status<zx::channel> OpenSkipBlockPartition(const fbl::unique_fd& devfs_root,
-                                               const uint8_t* type_guid, zx_duration_t timeout) {
-  ZX_ASSERT(type_guid);
-
+                                               const Uuid& type_guid,
+                                               zx_duration_t timeout) {
   auto cb = [&](const zx::channel& chan) {
     auto result = skipblock::SkipBlock::Call::GetPartitionInfo(zx::unowned(chan));
     if (!result.ok()) {
       return true;
     }
     const auto& response = result.value();
-    if (response.status != ZX_OK || memcmp(response.partition_info.partition_guid.data(), type_guid,
-                                           skipblock::GUID_LEN) != 0) {
+    if (response.status != ZX_OK ||
+        type_guid != Uuid(response.partition_info.partition_guid.data())) {
       return true;
     }
     return false;
@@ -184,16 +186,15 @@ zx::status<zx::channel> OpenSkipBlockPartition(const fbl::unique_fd& devfs_root,
 bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root) {
   // Our proxy for detected a skip-block device is by checking for the
   // existence of a device enumerated under the skip-block class.
-  const uint8_t type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
-  return OpenSkipBlockPartition(devfs_root, type, ZX_SEC(1)).is_ok();
+  return OpenSkipBlockPartition(devfs_root, GUID_ZIRCON_A_VALUE, ZX_SEC(1)).is_ok();
 }
 
 // Attempts to open and overwrite the first block of the underlying
 // partition. Does not rebind partition drivers.
 //
 // At most one of |unique_guid| and |type_guid| may be nullptr.
-zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* unique_guid,
-                                const uint8_t* type_guid) {
+zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<Uuid> unique_guid,
+                                std::optional<Uuid> type_guid) {
   auto status = OpenBlockPartition(devfs_root, unique_guid, type_guid, g_wipe_timeout);
   if (status.is_error()) {
     ERROR("Warning: Could not open partition to wipe: %s\n", status.status_string());

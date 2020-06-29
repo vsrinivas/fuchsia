@@ -53,25 +53,16 @@ zx::status<std::unique_ptr<PartitionClient>> As370Partitioner::FindPartition(
   }
 
   switch (spec.partition) {
-    case Partition::kBootloader: {
-      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
-      return skip_block_->FindPartition(bootloader_type);
-    }
-    case Partition::kZirconA: {
-      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
-      return skip_block_->FindPartition(zircon_a_type);
-    }
-    case Partition::kZirconB: {
-      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
-      return skip_block_->FindPartition(zircon_b_type);
-    }
-    case Partition::kZirconR: {
-      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
-      return skip_block_->FindPartition(zircon_r_type);
-    }
-    case Partition::kFuchsiaVolumeManager: {
+    case Partition::kBootloader:
+      return skip_block_->FindPartition(GUID_BOOTLOADER_VALUE);
+    case Partition::kZirconA:
+      return skip_block_->FindPartition(GUID_ZIRCON_A_VALUE);
+    case Partition::kZirconB:
+      return skip_block_->FindPartition(GUID_ZIRCON_B_VALUE);
+    case Partition::kZirconR:
+      return skip_block_->FindPartition(GUID_ZIRCON_R_VALUE);
+    case Partition::kFuchsiaVolumeManager:
       return skip_block_->FindFvmPartition();
-    }
     default:
       ERROR("partition_type is invalid!\n");
       return zx::error(ZX_ERR_NOT_SUPPORTED);

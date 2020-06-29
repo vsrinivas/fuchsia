@@ -9,10 +9,13 @@
 #include <lib/zx/status.h>
 
 #include <memory>
+#include <optional>
 
 #include <fbl/function.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
+
+#include "src/lib/uuid/uuid.h"
 
 namespace paver {
 
@@ -52,11 +55,12 @@ zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const ch
                                       zx_duration_t timeout);
 
 zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
-                                           const uint8_t* unique_guid, const uint8_t* type_guid,
+                                           std::optional<uuid::Uuid> unique_guid,
+                                           std::optional<uuid::Uuid> type_guid,
                                            zx_duration_t timeout);
 
 zx::status<zx::channel> OpenSkipBlockPartition(const fbl::unique_fd& devfs_root,
-                                               const uint8_t* type_guid, zx_duration_t timeout);
+                                               const uuid::Uuid& type_guid, zx_duration_t timeout);
 
 bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root);
 
@@ -64,8 +68,9 @@ bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root);
 // partition. Does not rebind partition drivers.
 //
 // At most one of |unique_guid| and |type_guid| may be nullptr.
-zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* unique_guid,
-                                const uint8_t* type_guid);
+zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root,
+                                std::optional<uuid::Uuid> unique_guid,
+                                std::optional<uuid::Uuid> type_guid);
 
 zx::status<> IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_name);
 

@@ -16,10 +16,13 @@
 #include <fbl/string_printf.h>
 #include <gpt/gpt.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
 
 namespace paver {
+
+using uuid::Uuid;
 
 const char* PartitionName(Partition type) {
   switch (type) {
@@ -46,6 +49,31 @@ const char* PartitionName(Partition type) {
   }
 }
 
+zx::status<Uuid> PartitionUuid(Partition type) {
+  switch (type) {
+    case Partition::kBootloader:
+      return zx::ok(Uuid(GUID_BOOTLOADER_VALUE));
+    case Partition::kZirconA:
+      return zx::ok(Uuid(GUID_ZIRCON_A_VALUE));
+    case Partition::kZirconB:
+      return zx::ok(Uuid(GUID_ZIRCON_B_VALUE));
+    case Partition::kZirconR:
+      return zx::ok(Uuid(GUID_ZIRCON_R_VALUE));
+    case Partition::kVbMetaA:
+      return zx::ok(Uuid(GUID_VBMETA_A_VALUE));
+    case Partition::kVbMetaB:
+      return zx::ok(Uuid(GUID_VBMETA_B_VALUE));
+    case Partition::kVbMetaR:
+      return zx::ok(Uuid(GUID_VBMETA_R_VALUE));
+    case Partition::kAbrMeta:
+      return zx::ok(Uuid(GUID_ABR_META_VALUE));
+    case Partition::kFuchsiaVolumeManager:
+      return zx::ok(Uuid(GUID_FVM_VALUE));
+    default:
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+}
+
 fbl::String PartitionSpec::ToString() const {
   if (content_type.empty()) {
     return PartitionName(partition);
@@ -55,7 +83,7 @@ fbl::String PartitionSpec::ToString() const {
 }
 
 std::vector<std::unique_ptr<DevicePartitionerFactory>>*
-    DevicePartitionerFactory::registered_factory_list() {
+DevicePartitionerFactory::registered_factory_list() {
   static std::vector<std::unique_ptr<DevicePartitionerFactory>>* registered_factory_list = nullptr;
   if (registered_factory_list == nullptr) {
     registered_factory_list = new std::vector<std::unique_ptr<DevicePartitionerFactory>>();
@@ -138,60 +166,15 @@ zx::status<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::FindPartiti
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  uint8_t type[GPT_GUID_LEN];
-
-  switch (spec.partition) {
-    case Partition::kBootloader: {
-      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
-      memcpy(type, bootloader_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kZirconA: {
-      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
-      memcpy(type, zircon_a_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kZirconB: {
-      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
-      memcpy(type, zircon_b_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kZirconR: {
-      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
-      memcpy(type, zircon_r_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kVbMetaA: {
-      const uint8_t vbmeta_a_type[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
-      memcpy(type, vbmeta_a_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kVbMetaB: {
-      const uint8_t vbmeta_b_type[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
-      memcpy(type, vbmeta_b_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kVbMetaR: {
-      const uint8_t vbmeta_r_type[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
-      memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kAbrMeta: {
-      const uint8_t abr_meta_type[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
-      memcpy(type, abr_meta_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kFuchsiaVolumeManager: {
-      const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-      memcpy(type, fvm_type, GPT_GUID_LEN);
-      break;
-    }
-    default:
-      ERROR("partition_type is invalid!\n");
-      return zx::error(ZX_ERR_NOT_SUPPORTED);
+  zx::status<Uuid> type_or = PartitionUuid(spec.partition);
+  if (type_or.is_error()) {
+    ERROR("partition_type is invalid!\n");
+    return type_or.take_error();
   }
+  Uuid type = type_or.value();
 
-  zx::status<zx::channel> partition = OpenBlockPartition(devfs_root_, nullptr, type, ZX_SEC(5));
+  zx::status<zx::channel> partition =
+      OpenBlockPartition(devfs_root_, std::nullopt, type, ZX_SEC(5));
   if (partition.is_error()) {
     return partition.take_error();
   }
@@ -200,8 +183,8 @@ zx::status<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::FindPartiti
 }
 
 zx::status<> FixedDevicePartitioner::WipeFvm() const {
-  const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-  if (auto status = WipeBlockPartition(devfs_root_, nullptr, fvm_type); status.is_error()) {
+  if (auto status = WipeBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE));
+      status.is_error()) {
     ERROR("Failed to wipe FVM.\n");
   } else {
     LOG("Wiped FVM successfully.\n");
