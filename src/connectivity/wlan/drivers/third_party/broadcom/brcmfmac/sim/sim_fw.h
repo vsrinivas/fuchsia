@@ -50,6 +50,8 @@ constexpr zx::duration kBeaconTimeout = zx::sec(5);
 constexpr zx::duration kStartAPConfDelay = zx::msec(10);
 // Delay between events E_LINK and E_SSID.
 constexpr zx::duration kSsidEventDelay = zx::msec(100);
+// Delay in sending E_LINK event during disassoc.
+constexpr zx::duration kLinkEventDelay = zx::msec(1);
 
 // Size allocated to hold association frame IEs in SIM FW
 #define ASSOC_IES_MAX_LEN 1000
@@ -381,11 +383,15 @@ class SimFirmware {
   // ifidx.
   wlan_channel_t GetIfChannel(bool is_ap);
 
+  // Get IF idx of matching bsscfgidx.
+  int16_t GetIfidxByBsscfgidx(int32_t bsscfgidx);
+
   zx_status_t SetIFChanspec(uint16_t ifidx, uint16_t chanspec);
   bool FindAndRemoveClient(const uint16_t ifidx, const common::MacAddr client_mac, uint16_t reason);
   bool FindClient(const uint16_t ifidx, const common::MacAddr client_mac);
   void ScheduleLinkEvent(zx::duration when, uint16_t ifidx);
   void SendAPStartLinkEvent(uint16_t ifidx);
+  zx_status_t StopInterface(const int32_t bsscfgidx);
 
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.

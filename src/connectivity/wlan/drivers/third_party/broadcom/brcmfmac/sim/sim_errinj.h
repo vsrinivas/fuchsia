@@ -38,7 +38,7 @@ class SimErrorInjector {
   bool CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_status, uint16_t ifidx);
 
   // Iovar string command specific
-  void AddErrInjIovar(const char* iovar, zx_status_t ret_status,
+  void AddErrInjIovar(const char* iovar, zx_status_t ret_status, bool bsscfg = false,
                       std::optional<uint16_t> ifidx = {});
   void DelErrInjIovar(const char* iovar);
   bool CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status, uint16_t ifidx);
@@ -60,9 +60,11 @@ class SimErrorInjector {
     std::optional<uint16_t> ifidx;
     std::vector<uint8_t> iovar;
     zx_status_t ret_status;
+    bool bsscfg;
 
-    ErrInjIovar(const char* iovar_str, zx_status_t status, std::optional<uint16_t> ifidx)
-        : ifidx(ifidx), iovar(strlen(iovar_str) + 1), ret_status(status) {
+    ErrInjIovar(const char* iovar_str, zx_status_t status, bool bsscfg = false,
+                std::optional<uint16_t> ifidx = {})
+        : ifidx(ifidx), iovar(strlen(iovar_str) + 1), ret_status(status), bsscfg(bsscfg) {
       memcpy(iovar.data(), iovar_str, strlen(iovar_str) + 1);
     }
   };

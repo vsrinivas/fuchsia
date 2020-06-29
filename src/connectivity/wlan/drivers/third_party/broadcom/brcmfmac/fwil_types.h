@@ -966,4 +966,9 @@ struct brcmf_gscan_config {
   struct brcmf_gscan_bucket_config bucket[1];
 };
 
+// BSS control
+struct brcmf_bss_ctrl {
+  int32_t bsscfgidx;
+  int32_t value;  // 0 - bring down, 1 - bring up
+};
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_

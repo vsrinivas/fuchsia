@@ -2819,17 +2819,27 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
     result = WLAN_STOP_RESULT_INTERNAL_ERROR;
   }
 
-  // C_DOWN appears to be the only reliable means to bring down an AP successfully.
-  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+  // Issue "bss" iovar to bring down the SoftAP IF.
+  brcmf_bss_ctrl bss_down;
+  bss_down.bsscfgidx = ifp->bsscfgidx;
+  bss_down.value = 0;
+  status = brcmf_fil_bsscfg_data_set(ifp, "bss", &bss_down, sizeof(bss_down));
   if (status != ZX_OK) {
-    BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
-  }
+    BRCMF_ERR("bss down failed %s. Issue C_DOWN (will take down client IF too)",
+              zx_status_get_string(status));
+    // If bss down does not work, use C_DOWN which has the side effect of
+    // taking down all active IFs
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+    }
 
-  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
-  if (status != ZX_OK) {
-    BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+    }
   }
 
   brcmf_vif_clear_mgmt_ies(ifp->vif);

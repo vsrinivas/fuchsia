@@ -1066,7 +1066,8 @@ void SimFirmware::SetStateToDisassociated(const uint16_t ifidx) {
   DisableBeaconWatchdog();
 
   // Proprogate disassociation to driver code
-  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0,
+                    assoc_state_.opts->bssid, kLinkEventDelay);
 }
 
 // Assoc Request from Client for the SoftAP IF
@@ -1219,6 +1220,29 @@ zx_status_t SimFirmware::SetIFChanspec(uint16_t ifidx, uint16_t chanspec) {
   return ZX_OK;
 }
 
+// Get the index of IF with the given bsscfgidx
+int16_t SimFirmware::GetIfidxByBsscfgidx(int32_t bsscfgidx) {
+  for (uint8_t i = 0; i < kMaxIfSupported; i++) {
+    if (iface_tbl_[i].allocated && (bsscfgidx == iface_tbl_[i].bsscfgidx)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// Stop the specified bss
+zx_status_t SimFirmware::StopInterface(const int32_t bsscfgidx) {
+  int16_t ifidx = GetIfidxByBsscfgidx(bsscfgidx);
+  if (ifidx == -1)
+    return ZX_ERR_IO;
+  if (iface_tbl_[ifidx].ap_mode) {
+    StopSoftAP(ifidx);
+  } else {
+    DisassocLocalClient(BRCMF_E_REASON_LINK_DISASSOC);
+  }
+  return ZX_OK;
+}
+
 zx_status_t SimFirmware::HandleBssCfgSet(const uint16_t ifidx, const char* name, const void* value,
                                          size_t value_len) {
   if (!std::strcmp(name, "interface_remove")) {
@@ -1278,6 +1302,16 @@ zx_status_t SimFirmware::HandleBssCfgSet(const uint16_t ifidx, const char* name,
     }
   }
 
+  if (!std::strcmp(name, "bss")) {
+    if (value_len < sizeof(brcmf_bss_ctrl)) {
+      return ZX_ERR_IO;
+    }
+    auto data_buf = static_cast<const uint8_t*>(value);
+    auto bss_info = reinterpret_cast<const struct brcmf_bss_ctrl*>(data_buf + sizeof(uint32_t));
+    // We do not know how non-zero value is handled in real FW.
+    ZX_ASSERT(bss_info->value == 0);
+    return StopInterface(bss_info->bsscfgidx);
+  }
   BRCMF_DBG(SIM, "Ignoring request to set bsscfg iovar '%s'", name);
   return ZX_OK;
 }
@@ -1432,6 +1466,15 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     iface_tbl_[ifidx].tlv = *tlv;
   }
 
+  if (!std::strcmp(name, "bss")) {
+    if (value_len < sizeof(brcmf_bss_ctrl)) {
+      return ZX_ERR_IO;
+    }
+    auto bss_info = static_cast<const brcmf_bss_ctrl*>(value);
+    // We do not know how non-zero value is handled in real FW.
+    ZX_ASSERT(bss_info->value == 0);
+    return StopInterface(bss_info->bsscfgidx);
+  }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'", name);
   return ZX_OK;

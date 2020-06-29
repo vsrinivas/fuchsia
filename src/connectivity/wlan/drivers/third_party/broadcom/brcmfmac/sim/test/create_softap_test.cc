@@ -33,8 +33,10 @@ class CreateSoftAPTest : public SimTest {
   void VerifyAssoc();
   void VerifyDisassoc();
   void VerifyStartAPConf(uint8_t status);
+  void VerifyStopAPConf(uint8_t status);
   void ClearAssocInd();
   void InjectStartAPError();
+  void InjectStopAPError();
 
  protected:
   simulation::WlanTxInfo tx_info_ = {.channel = kDefaultChannel};
@@ -50,12 +52,15 @@ class CreateSoftAPTest : public SimTest {
   bool deauth_ind_recv_ = false;
   bool disassoc_ind_recv_ = false;
   bool start_conf_received_ = false;
+  bool stop_conf_received_ = false;
   uint8_t start_conf_status_;
+  uint8_t stop_conf_status_;
   void OnAuthInd(const wlanif_auth_ind_t* ind);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
   void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
   void OnStartConf(const wlanif_start_confirm_t* resp);
+  void OnStopConf(const wlanif_stop_confirm_t* resp);
   void OnChannelSwitch(const wlanif_channel_switch_info_t* info);
   uint16_t CreateRsneIe(uint8_t* buffer);
 };
@@ -84,7 +89,7 @@ wlanif_impl_ifc_protocol_ops_t CreateSoftAPTest::sme_ops_ = {
         },
     .stop_conf =
         [](void* cookie, const wlanif_stop_confirm_t* resp) {
-          ASSERT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
+          static_cast<CreateSoftAPTest*>(cookie)->OnStopConf(resp);
         },
     .on_channel_switch =
         [](void* cookie, const wlanif_channel_switch_info_t* info) {
@@ -180,6 +185,11 @@ void CreateSoftAPTest::InjectStartAPError() {
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_ERR_IO, softap_ifc_.iface_id_);
 }
 
+void CreateSoftAPTest::InjectStopAPError() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, true, softap_ifc_.iface_id_);
+}
+
 zx_status_t CreateSoftAPTest::StopSoftAP() {
   wlanif_stop_req_t stop_req{
       .ssid = {.len = 6, .data = "Sim_AP"},
@@ -204,9 +214,15 @@ void CreateSoftAPTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, kFakeMac.byte, ETH_ALEN), 0);
   disassoc_ind_recv_ = true;
 }
+
 void CreateSoftAPTest::OnStartConf(const wlanif_start_confirm_t* resp) {
   start_conf_received_ = true;
   start_conf_status_ = resp->result_code;
+}
+
+void CreateSoftAPTest::OnStopConf(const wlanif_stop_confirm_t* resp) {
+  stop_conf_received_ = true;
+  stop_conf_status_ = resp->result_code;
 }
 
 void CreateSoftAPTest::OnChannelSwitch(const wlanif_channel_switch_info_t* info) {}
@@ -260,6 +276,11 @@ void CreateSoftAPTest::VerifyStartAPConf(uint8_t status) {
   ASSERT_EQ(start_conf_status_, status);
 }
 
+void CreateSoftAPTest::VerifyStopAPConf(uint8_t status) {
+  ASSERT_EQ(stop_conf_received_, true);
+  ASSERT_EQ(stop_conf_status_, status);
+}
+
 TEST_F(CreateSoftAPTest, SetDefault) {
   Init();
   CreateInterface();
@@ -291,6 +312,17 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
   VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
 }
 
+// Fail the iovar bss but Stop AP should still succeed
+TEST_F(CreateSoftAPTest, BssIovarFail) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  InjectStopAPError();
+  // Start SoftAP
+  StartSoftAP();
+  StopSoftAP();
+  VerifyStopAPConf(WLAN_START_RESULT_SUCCESS);
+}
 // Start SoftAP in secure mode and then restart in open mode.
 // Appropriate secure mode is checked in StartSoftAP() after SoftAP
 // is started
