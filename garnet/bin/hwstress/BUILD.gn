@@ -11,7 +11,9 @@ source_set("lib") {
     "cpu_stress.cc",
     "cpu_stressor.cc",
     "cpu_workloads.cc",
+    "device.cc",
     "hwstress.cc",
+    "light_stress.cc",
     "memory_patterns.cc",
     "memory_range.cc",
     "memory_stats.cc",
@@ -23,6 +25,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.light",
     "//sdk/fidl/fuchsia.hardware.thermal",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.scheduler",
@@ -71,6 +74,7 @@ executable("hwstress_test") {
     "cpu_stressor_test.cc",
     "cpu_workloads_test.cc",
     "hwstress_test.cc",
+    "light_stress_test.cc",
     "memory_patterns_test.cc",
     "memory_range_test.cc",
     "memory_stats_test.cc",

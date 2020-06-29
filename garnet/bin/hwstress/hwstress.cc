@@ -15,6 +15,7 @@
 
 #include "args.h"
 #include "cpu_stress.h"
+#include "light_stress.h"
 #include "memory_stress.h"
 #include "util.h"
 
@@ -60,6 +61,9 @@ int Run(int argc, const char** argv) {
       break;
     case StressTest::kFlash:
       fprintf(stderr, "Error: flash test not yet implemented\n");
+      break;
+    case StressTest::kLight:
+      success = StressLight(&status, args, duration);
       break;
     case StressTest::kMemory:
       success = StressMemory(&status, args, duration, sensor.get());

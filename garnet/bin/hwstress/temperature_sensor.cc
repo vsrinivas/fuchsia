@@ -20,31 +20,12 @@
 
 #include <fbl/unique_fd.h>
 
+#include "device.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "status.h"
 #include "util.h"
 
 namespace hwstress {
-
-namespace {
-
-// Open the given path as a FIDL channel.
-zx::status<zx::channel> OpenDeviceChannel(std::string_view path) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  status = fdio_service_connect(std::string(path).c_str(), server.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  return zx::success(std::move(client));
-}
-
-}  // namespace
 
 class SystemTemperatureSensor : public TemperatureSensor {
  public:

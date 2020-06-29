@@ -22,6 +22,7 @@ namespace hwstress {
 enum class StressTest {
   kCpu,
   kFlash,
+  kLight,
   kMemory,
 };
 

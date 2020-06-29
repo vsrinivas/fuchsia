@@ -52,6 +52,7 @@ Attempts to stress hardware components by placing them under high load.
 Subcommands:
   cpu                    Perform a CPU stress test.
   flash                  Perform a flash stress test.
+  light                  Perform a device light / LED stress test.
   memory                 Perform a RAM stress test.
 
 Global options:
@@ -101,6 +102,8 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
     subcommand = StressTest::kFlash;
   } else if (first_arg == std::string_view("memory")) {
     subcommand = StressTest::kMemory;
+  } else if (first_arg == std::string_view("light")) {
+    subcommand = StressTest::kLight;
   } else {
     return fitx::error(
         fxl::StringPrintf("Unknown subcommand or option: '%s'.", std::string(first_arg).data())
