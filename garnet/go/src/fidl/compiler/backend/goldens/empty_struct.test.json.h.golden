@@ -237,6 +237,12 @@ template <>
 struct CodingTraits<::fidl::test::json::Empty>
     : public EncodableCodingTraits<::fidl::test::json::Empty, 1> {};
 
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::Empty>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::Empty>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
+
 inline zx_status_t Clone(const ::fidl::test::json::Empty& value,
                          ::fidl::test::json::Empty* result) {
   return ::fidl::test::json::Clone(value, result);

@@ -151,7 +151,6 @@
       "methods": [
         {
           "ordinal": 257584335957785512,
-          "generated_ordinal": 257584335957785512,
           "name": "NoRequestNoResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -176,7 +175,6 @@
         },
         {
           "ordinal": 8101632395109729785,
-          "generated_ordinal": 8101632395109729785,
           "name": "NoRequestEmptyResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -212,7 +210,6 @@
         },
         {
           "ordinal": 5054636755429784136,
-          "generated_ordinal": 5054636755429784136,
           "name": "NoRequestWithResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -267,7 +264,6 @@
         },
         {
           "ordinal": 5108499630221504549,
-          "generated_ordinal": 5108499630221504549,
           "name": "WithRequestNoResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -311,7 +307,6 @@
         },
         {
           "ordinal": 108302452954061159,
-          "generated_ordinal": 108302452954061159,
           "name": "WithRequestEmptyResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -366,7 +361,6 @@
         },
         {
           "ordinal": 383797738148261568,
-          "generated_ordinal": 383797738148261568,
           "name": "WithRequestWithResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -440,7 +434,6 @@
         },
         {
           "ordinal": 301337558307652787,
-          "generated_ordinal": 301337558307652787,
           "name": "OnEmptyResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -465,7 +458,6 @@
         },
         {
           "ordinal": 3069035692499413769,
-          "generated_ordinal": 3069035692499413769,
           "name": "OnWithResponse",
           "location": {
             "filename": "protocols.test.fidl",
@@ -520,7 +512,6 @@
       "methods": [
         {
           "ordinal": 6422511116044938191,
-          "generated_ordinal": 6422511116044938191,
           "name": "ResponseAsStruct",
           "location": {
             "filename": "protocols.test.fidl",
@@ -576,7 +567,6 @@
         },
         {
           "ordinal": 2364249812017832126,
-          "generated_ordinal": 2364249812017832126,
           "name": "ErrorAsPrimitive",
           "location": {
             "filename": "protocols.test.fidl",
@@ -632,7 +622,6 @@
         },
         {
           "ordinal": 4597390537870356095,
-          "generated_ordinal": 4597390537870356095,
           "name": "ErrorAsEnum",
           "location": {
             "filename": "protocols.test.fidl",
@@ -705,7 +694,6 @@
       "methods": [
         {
           "ordinal": 1954005452660588540,
-          "generated_ordinal": 1954005452660588540,
           "name": "MethodA",
           "location": {
             "filename": "protocols.test.fidl",
@@ -766,7 +754,6 @@
         },
         {
           "ordinal": 2691096518916888736,
-          "generated_ordinal": 2691096518916888736,
           "name": "EventA",
           "location": {
             "filename": "protocols.test.fidl",
@@ -827,7 +814,6 @@
         },
         {
           "ordinal": 6751311874614576291,
-          "generated_ordinal": 6751311874614576291,
           "name": "MethodB",
           "location": {
             "filename": "protocols.test.fidl",
@@ -918,7 +904,6 @@
         },
         {
           "ordinal": 3948151641640179063,
-          "generated_ordinal": 3948151641640179063,
           "name": "MutateSocket",
           "location": {
             "filename": "protocols.test.fidl",
@@ -1007,7 +992,6 @@
       "methods": [
         {
           "ordinal": 8417059970765918690,
-          "generated_ordinal": 8417059970765918690,
           "name": "Request",
           "location": {
             "filename": "protocols.test.fidl",
@@ -1087,7 +1071,6 @@
         },
         {
           "ordinal": 4736529736500432226,
-          "generated_ordinal": 4736529736500432226,
           "name": "OneWay",
           "location": {
             "filename": "protocols.test.fidl",
@@ -1137,7 +1120,6 @@
         },
         {
           "ordinal": 1744293851714922796,
-          "generated_ordinal": 1744293851714922796,
           "name": "Event",
           "location": {
             "filename": "protocols.test.fidl",

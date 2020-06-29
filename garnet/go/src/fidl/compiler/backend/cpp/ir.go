@@ -63,8 +63,9 @@ type Type struct {
 	// Identifier() will add a type qualifier to the class name so that the compiler will resolve
 	// the class, even if any locally non-type declarations are present (e.g. "enum Foo"). Google
 	// for "C++ elaborated type specifier" for more details.
-	Decl   string
-	LLDecl string
+	Decl     string
+	FullDecl string // Decl but with full type name
+	LLDecl   string
 
 	// Defines what operation we should use to pass a value without a move (LLCPP). It also
 	// defines the way we should initialize a field.
@@ -223,6 +224,11 @@ type Struct struct {
 	IsResource    bool
 	Result        *Result
 	Kind          structKind
+	// Full decls needed to check if a type is memcpy compatible.
+	// Only set if it may be possible for a type to be memcpy compatible,
+	// e.g. has no padding.
+	// See the struct template for usage.
+	FullDeclMemcpyCompatibleDeps []string
 }
 
 type StructMember struct {
@@ -655,6 +661,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
+		r.FullDecl = fmt.Sprintf("::std::array<%s, %v>", t.FullDecl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.LLFamily = Reference
 		r.NeedsDtor = true
@@ -667,8 +674,10 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLFamily = Vector
 		if val.Nullable {
 			r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
+			r.FullDecl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.FullDecl)
 		} else {
 			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
+			r.FullDecl = fmt.Sprintf("::std::vector<%s>", t.FullDecl)
 		}
 		r.NeedsDtor = true
 		r.IsVector = true
@@ -681,21 +690,26 @@ func (c *compiler) compileType(val types.Type) Type {
 		} else {
 			r.Decl = "::std::string"
 		}
+		r.FullDecl = r.Decl
 		r.NeedsDtor = true
 	case types.HandleType:
 		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
+		r.FullDecl = r.Decl
 		r.LLDecl = r.Decl
 		r.LLFamily = Reference
 		r.NeedsDtor = true
 	case types.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
+		r.FullDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
+			c.compileCompoundIdentifier(val.RequestSubtype, "", "", true))
 		r.LLDecl = "::zx::channel"
 		r.LLFamily = Reference
 		r.NeedsDtor = true
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
+		r.FullDecl = r.Decl
 		r.LLDecl = r.Decl
 		r.LLFamily = TrivialCopy
 		r.IsPrimitive = true
@@ -727,6 +741,7 @@ func (c *compiler) compileType(val types.Type) Type {
 
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
+				r.FullDecl = fmt.Sprintf("::std::unique_ptr<%s>", ft)
 				if declType == types.UnionDeclType {
 					r.LLDecl = fmt.Sprintf("%s", ft)
 				} else {
@@ -735,6 +750,7 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.NeedsDtor = true
 			} else {
 				r.Decl = t
+				r.FullDecl = ft
 				r.LLDecl = ft
 				r.NeedsDtor = true
 			}
@@ -745,6 +761,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			}
 		case types.ProtocolDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
+			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
 			r.LLDecl = "::zx::channel"
 			r.LLFamily = Reference
 			r.NeedsDtor = true
@@ -1049,6 +1066,24 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 			c.compileStructMember(types.EmptyStructMember("__reserved"), appendNamespace),
 		}
 	}
+
+	// Construct a deduped list of decls for IsMemcpyCompatible template definitions.
+	memcpyCompatibleDepMap := map[string]bool{}
+	for _, member := range r.Members {
+		// The dangerous identifiers test package contains identifiers that won't compile.
+		// e.g. ::fidl::test::dangerous::struct::types::camel::Interface gives an
+		// "expected unqualified-id" error because of "struct".
+		// There isn't an easily accessible dangerous identifiers list to replace identifiers.
+		if strings.Contains(member.Type.FullDecl, "::fidl::test::dangerous::") {
+			memcpyCompatibleDepMap = nil
+			break
+		}
+		memcpyCompatibleDepMap[member.Type.FullDecl] = true
+	}
+	for decl := range memcpyCompatibleDepMap {
+		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, decl)
+	}
+	sort.Strings(r.FullDeclMemcpyCompatibleDeps)
 
 	return r
 }

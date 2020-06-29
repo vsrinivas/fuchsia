@@ -12,6 +12,7 @@
 #include <array>
 #include <functional>
 #include <ostream>
+#include <type_traits>
 
 #ifdef __Fuchsia__
 #include <lib/zx/bti.h>

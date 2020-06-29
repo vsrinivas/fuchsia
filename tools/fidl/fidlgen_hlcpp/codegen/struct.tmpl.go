@@ -73,15 +73,23 @@ extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  {{- range .Members }}
-  ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .Offset }});
-  {{- end }}
+  if (::fidl::IsMemcpyCompatible<{{ .Name }}>::value) {
+    memcpy(_encoder->template GetPtr<{{ .Name }}>(_offset), this, sizeof({{ .Name }}));
+  } else {
+    {{- range .Members }}
+    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .Offset }});
+    {{- end }}
+  }
 }
 
-void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset) {
-  {{- range .Members }}
-  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .Offset }});
-  {{- end }}
+void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<{{ .Name }}>::value) {
+    memcpy(_value, _decoder->template GetPtr<{{ .Name }}>(_offset), sizeof({{ .Name }}));
+  } else {
+    {{- range .Members }}
+    ::fidl::Decode(_decoder, &_value->{{ .Name }}, _offset + {{ .Offset }});
+    {{- end }}
+  }
 }
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
@@ -100,6 +108,21 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
+
+{{ if .HasPadding }}
+template<>
+struct HasPadding<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+{{ end }}
+
+{{ if .FullDeclMemcpyCompatibleDeps }}
+template<>
+struct IsMemcpyCompatible<{{ .Namespace }}::{{ .Name }}> : public internal::BoolConstant<
+    !HasPadding<{{ .Namespace }}::{{ .Name }}>::value
+{{- range .FullDeclMemcpyCompatibleDeps }}
+    && IsMemcpyCompatible<{{ . }}>::value
+  {{- end -}}
+> {};
+{{ end }}
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {

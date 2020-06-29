@@ -268,22 +268,32 @@ extern "C" const fidl_type_t test_name_HandlesInTypesTable;
 const fidl_type_t* HandlesInTypes::FidlType = &test_name_HandlesInTypesTable;
 
 void HandlesInTypes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &normal_handle, _offset + 0);
-  ::fidl::Encode(_encoder, &handle_in_vec, _offset + 8);
-  ::fidl::Encode(_encoder, &handle_in_array, _offset + 24);
-  ::fidl::Encode(_encoder, &handle_in_mixed_vec_array, _offset + 48);
-  ::fidl::Encode(_encoder, &table_with_handle, _offset + 64);
-  ::fidl::Encode(_encoder, &union_with_handle, _offset + 80);
+  if (::fidl::IsMemcpyCompatible<HandlesInTypes>::value) {
+    memcpy(_encoder->template GetPtr<HandlesInTypes>(_offset), this,
+           sizeof(HandlesInTypes));
+  } else {
+    ::fidl::Encode(_encoder, &normal_handle, _offset + 0);
+    ::fidl::Encode(_encoder, &handle_in_vec, _offset + 8);
+    ::fidl::Encode(_encoder, &handle_in_array, _offset + 24);
+    ::fidl::Encode(_encoder, &handle_in_mixed_vec_array, _offset + 48);
+    ::fidl::Encode(_encoder, &table_with_handle, _offset + 64);
+    ::fidl::Encode(_encoder, &union_with_handle, _offset + 80);
+  }
 }
 
-void HandlesInTypes::Decode(::fidl::Decoder* _decoder, HandlesInTypes* value,
+void HandlesInTypes::Decode(::fidl::Decoder* _decoder, HandlesInTypes* _value,
                             size_t _offset) {
-  ::fidl::Decode(_decoder, &value->normal_handle, _offset + 0);
-  ::fidl::Decode(_decoder, &value->handle_in_vec, _offset + 8);
-  ::fidl::Decode(_decoder, &value->handle_in_array, _offset + 24);
-  ::fidl::Decode(_decoder, &value->handle_in_mixed_vec_array, _offset + 48);
-  ::fidl::Decode(_decoder, &value->table_with_handle, _offset + 64);
-  ::fidl::Decode(_decoder, &value->union_with_handle, _offset + 80);
+  if (::fidl::IsMemcpyCompatible<HandlesInTypes>::value) {
+    memcpy(_value, _decoder->template GetPtr<HandlesInTypes>(_offset),
+           sizeof(HandlesInTypes));
+  } else {
+    ::fidl::Decode(_decoder, &_value->normal_handle, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->handle_in_vec, _offset + 8);
+    ::fidl::Decode(_decoder, &_value->handle_in_array, _offset + 24);
+    ::fidl::Decode(_decoder, &_value->handle_in_mixed_vec_array, _offset + 48);
+    ::fidl::Decode(_decoder, &_value->table_with_handle, _offset + 64);
+    ::fidl::Decode(_decoder, &_value->union_with_handle, _offset + 80);
+  }
 }
 
 zx_status_t HandlesInTypes::Clone(HandlesInTypes* _result) const {

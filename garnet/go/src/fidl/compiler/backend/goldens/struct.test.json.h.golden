@@ -68,6 +68,13 @@ template <>
 struct CodingTraits<::fidl::test::json::Simple>
     : public EncodableCodingTraits<::fidl::test::json::Simple, 2> {};
 
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::Simple>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::Simple>::value &&
+          IsMemcpyCompatible<bool>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
+
 inline zx_status_t Clone(const ::fidl::test::json::Simple& value,
                          ::fidl::test::json::Simple* result) {
   return ::fidl::test::json::Clone(value, result);
@@ -89,6 +96,16 @@ struct Equality<::fidl::test::json::Simple> {
 template <>
 struct CodingTraits<::fidl::test::json::BasicStruct>
     : public EncodableCodingTraits<::fidl::test::json::BasicStruct, 24> {};
+
+template <>
+struct HasPadding<::fidl::test::json::BasicStruct> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::BasicStruct>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::BasicStruct>::value &&
+          IsMemcpyCompatible<::std::string>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::fidl::test::json::BasicStruct& value,
                          ::fidl::test::json::BasicStruct* result) {

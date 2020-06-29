@@ -595,6 +595,11 @@ template <>
 struct CodingTraits<::test::name::Struct>
     : public EncodableCodingTraits<::test::name::Struct, 4> {};
 
+template <>
+struct IsMemcpyCompatible<::test::name::Struct>
+    : public internal::BoolConstant<!HasPadding<::test::name::Struct>::value &&
+                                    IsMemcpyCompatible<int32_t>::value> {};
+
 inline zx_status_t Clone(const ::test::name::Struct& value,
                          ::test::name::Struct* result) {
   return ::test::name::Clone(value, result);

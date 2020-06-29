@@ -37,6 +37,12 @@ template <>
 struct CodingTraits<::top::Baz> : public EncodableCodingTraits<::top::Baz, 4> {
 };
 
+template <>
+struct IsMemcpyCompatible<::top::Baz>
+    : public internal::BoolConstant<!HasPadding<::top::Baz>::value &&
+                                    IsMemcpyCompatible<::middle::Bar>::value> {
+};
+
 inline zx_status_t Clone(const ::top::Baz& value, ::top::Baz* result) {
   return ::top::Clone(value, result);
 }

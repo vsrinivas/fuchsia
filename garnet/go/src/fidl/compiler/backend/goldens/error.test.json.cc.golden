@@ -12,12 +12,23 @@ const fidl_type_t* Example_foo_Response::FidlType =
     &fidl_test_json_Example_foo_ResponseTable;
 
 void Example_foo_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &y, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<Example_foo_Response>::value) {
+    memcpy(_encoder->template GetPtr<Example_foo_Response>(_offset), this,
+           sizeof(Example_foo_Response));
+  } else {
+    ::fidl::Encode(_encoder, &y, _offset + 0);
+  }
 }
 
 void Example_foo_Response::Decode(::fidl::Decoder* _decoder,
-                                  Example_foo_Response* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->y, _offset + 0);
+                                  Example_foo_Response* _value,
+                                  size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Example_foo_Response>::value) {
+    memcpy(_value, _decoder->template GetPtr<Example_foo_Response>(_offset),
+           sizeof(Example_foo_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->y, _offset + 0);
+  }
 }
 
 zx_status_t Example_foo_Response::Clone(Example_foo_Response* _result) const {

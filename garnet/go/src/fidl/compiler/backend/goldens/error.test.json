@@ -18,7 +18,6 @@
       "methods": [
         {
           "ordinal": 841977834905137819,
-          "generated_ordinal": 841977834905137819,
           "name": "foo",
           "location": {
             "filename": "error.test.fidl",

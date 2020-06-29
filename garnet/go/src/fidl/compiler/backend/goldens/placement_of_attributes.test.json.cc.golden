@@ -513,12 +513,22 @@ extern "C" const fidl_type_t example_ExampleStructTable;
 const fidl_type_t* ExampleStruct::FidlType = &example_ExampleStructTable;
 
 void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &member, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
+    memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this,
+           sizeof(ExampleStruct));
+  } else {
+    ::fidl::Encode(_encoder, &member, _offset + 0);
+  }
 }
 
-void ExampleStruct::Decode(::fidl::Decoder* _decoder, ExampleStruct* value,
+void ExampleStruct::Decode(::fidl::Decoder* _decoder, ExampleStruct* _value,
                            size_t _offset) {
-  ::fidl::Decode(_decoder, &value->member, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
+    memcpy(_value, _decoder->template GetPtr<ExampleStruct>(_offset),
+           sizeof(ExampleStruct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->member, _offset + 0);
+  }
 }
 
 zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {

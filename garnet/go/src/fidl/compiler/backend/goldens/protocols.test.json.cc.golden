@@ -13,17 +13,32 @@ const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlType =
 
 void WithErrorSyntax_ResponseAsStruct_Response::Encode(
     ::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &a, _offset + 0);
-  ::fidl::Encode(_encoder, &b, _offset + 8);
-  ::fidl::Encode(_encoder, &c, _offset + 16);
+  if (::fidl::IsMemcpyCompatible<
+          WithErrorSyntax_ResponseAsStruct_Response>::value) {
+    memcpy(_encoder->template GetPtr<WithErrorSyntax_ResponseAsStruct_Response>(
+               _offset),
+           this, sizeof(WithErrorSyntax_ResponseAsStruct_Response));
+  } else {
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
+    ::fidl::Encode(_encoder, &c, _offset + 16);
+  }
 }
 
 void WithErrorSyntax_ResponseAsStruct_Response::Decode(
-    ::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Response* value,
-    size_t _offset) {
-  ::fidl::Decode(_decoder, &value->a, _offset + 0);
-  ::fidl::Decode(_decoder, &value->b, _offset + 8);
-  ::fidl::Decode(_decoder, &value->c, _offset + 16);
+    ::fidl::Decoder* _decoder,
+    WithErrorSyntax_ResponseAsStruct_Response* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          WithErrorSyntax_ResponseAsStruct_Response>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<WithErrorSyntax_ResponseAsStruct_Response>(
+               _offset),
+           sizeof(WithErrorSyntax_ResponseAsStruct_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 8);
+    ::fidl::Decode(_decoder, &_value->c, _offset + 16);
+  }
 }
 
 zx_status_t WithErrorSyntax_ResponseAsStruct_Response::Clone(
@@ -236,13 +251,28 @@ const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlType =
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(
     ::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<
+          WithErrorSyntax_ErrorAsPrimitive_Response>::value) {
+    memcpy(_encoder->template GetPtr<WithErrorSyntax_ErrorAsPrimitive_Response>(
+               _offset),
+           this, sizeof(WithErrorSyntax_ErrorAsPrimitive_Response));
+  } else {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  }
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Decode(
-    ::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Response* value,
-    size_t _offset) {
-  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+    ::fidl::Decoder* _decoder,
+    WithErrorSyntax_ErrorAsPrimitive_Response* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          WithErrorSyntax_ErrorAsPrimitive_Response>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<WithErrorSyntax_ErrorAsPrimitive_Response>(
+               _offset),
+           sizeof(WithErrorSyntax_ErrorAsPrimitive_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->__reserved, _offset + 0);
+  }
 }
 
 zx_status_t WithErrorSyntax_ErrorAsPrimitive_Response::Clone(
@@ -451,13 +481,26 @@ const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlType =
 
 void WithErrorSyntax_ErrorAsEnum_Response::Encode(::fidl::Encoder* _encoder,
                                                   size_t _offset) {
-  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<WithErrorSyntax_ErrorAsEnum_Response>::value) {
+    memcpy(_encoder->template GetPtr<WithErrorSyntax_ErrorAsEnum_Response>(
+               _offset),
+           this, sizeof(WithErrorSyntax_ErrorAsEnum_Response));
+  } else {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  }
 }
 
 void WithErrorSyntax_ErrorAsEnum_Response::Decode(
-    ::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Response* value,
+    ::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Response* _value,
     size_t _offset) {
-  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<WithErrorSyntax_ErrorAsEnum_Response>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<WithErrorSyntax_ErrorAsEnum_Response>(
+               _offset),
+           sizeof(WithErrorSyntax_ErrorAsEnum_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->__reserved, _offset + 0);
+  }
 }
 
 zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(

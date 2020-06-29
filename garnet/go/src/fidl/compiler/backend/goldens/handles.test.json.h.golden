@@ -341,6 +341,42 @@ template <>
 struct CodingTraits<::fidl::test::handles::Handles>
     : public EncodableCodingTraits<::fidl::test::handles::Handles, 132> {};
 
+template <>
+struct IsMemcpyCompatible<::fidl::test::handles::Handles>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::handles::Handles>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceHandle<
+              class ::fidl::test::handles::SomeProtocol>>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceRequest<
+              ::fidl::test::handles::SomeProtocol>>::value &&
+          IsMemcpyCompatible<::zx::bti>::value &&
+          IsMemcpyCompatible<::zx::channel>::value &&
+          IsMemcpyCompatible<::zx::clock>::value &&
+          IsMemcpyCompatible<::zx::debuglog>::value &&
+          IsMemcpyCompatible<::zx::event>::value &&
+          IsMemcpyCompatible<::zx::eventpair>::value &&
+          IsMemcpyCompatible<::zx::exception>::value &&
+          IsMemcpyCompatible<::zx::fifo>::value &&
+          IsMemcpyCompatible<::zx::guest>::value &&
+          IsMemcpyCompatible<::zx::handle>::value &&
+          IsMemcpyCompatible<::zx::interrupt>::value &&
+          IsMemcpyCompatible<::zx::iommu>::value &&
+          IsMemcpyCompatible<::zx::job>::value &&
+          IsMemcpyCompatible<::zx::pager>::value &&
+          IsMemcpyCompatible<::zx::pcidevice>::value &&
+          IsMemcpyCompatible<::zx::pmt>::value &&
+          IsMemcpyCompatible<::zx::port>::value &&
+          IsMemcpyCompatible<::zx::process>::value &&
+          IsMemcpyCompatible<::zx::profile>::value &&
+          IsMemcpyCompatible<::zx::resource>::value &&
+          IsMemcpyCompatible<::zx::socket>::value &&
+          IsMemcpyCompatible<::zx::suspendtoken>::value &&
+          IsMemcpyCompatible<::zx::thread>::value &&
+          IsMemcpyCompatible<::zx::timer>::value &&
+          IsMemcpyCompatible<::zx::vcpu>::value &&
+          IsMemcpyCompatible<::zx::vmar>::value &&
+          IsMemcpyCompatible<::zx::vmo>::value> {};
+
 inline zx_status_t Clone(const ::fidl::test::handles::Handles& value,
                          ::fidl::test::handles::Handles* result) {
   return ::fidl::test::handles::Clone(value, result);

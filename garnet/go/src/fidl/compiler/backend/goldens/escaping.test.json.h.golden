@@ -38,6 +38,12 @@ template <>
 struct CodingTraits<::escapeme::DocCommentWithQuotes>
     : public EncodableCodingTraits<::escapeme::DocCommentWithQuotes, 1> {};
 
+template <>
+struct IsMemcpyCompatible<::escapeme::DocCommentWithQuotes>
+    : public internal::BoolConstant<
+          !HasPadding<::escapeme::DocCommentWithQuotes>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
+
 inline zx_status_t Clone(const ::escapeme::DocCommentWithQuotes& value,
                          ::escapeme::DocCommentWithQuotes* result) {
   return ::escapeme::Clone(value, result);

@@ -136,7 +136,6 @@
       "methods": [
         {
           "ordinal": 6908179439377953782,
-          "generated_ordinal": 6908179439377953782,
           "name": "LibfuzzerNeedsNonemptyProtocol",
           "location": {
             "filename": "bindings_denylist.test.fidl",

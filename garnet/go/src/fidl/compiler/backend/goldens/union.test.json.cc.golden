@@ -231,13 +231,23 @@ const fidl_type_t* StructWithNullableXUnion::FidlType =
 
 void StructWithNullableXUnion::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
-  ::fidl::Encode(_encoder, &x1, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableXUnion>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableXUnion>(_offset), this,
+           sizeof(StructWithNullableXUnion));
+  } else {
+    ::fidl::Encode(_encoder, &x1, _offset + 0);
+  }
 }
 
 void StructWithNullableXUnion::Decode(::fidl::Decoder* _decoder,
-                                      StructWithNullableXUnion* value,
+                                      StructWithNullableXUnion* _value,
                                       size_t _offset) {
-  ::fidl::Decode(_decoder, &value->x1, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableXUnion>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableXUnion>(_offset),
+           sizeof(StructWithNullableXUnion));
+  } else {
+    ::fidl::Decode(_decoder, &_value->x1, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableXUnion::Clone(
@@ -1149,11 +1159,19 @@ extern "C" const fidl_type_t fidl_test_json_PizzaTable;
 const fidl_type_t* Pizza::FidlType = &fidl_test_json_PizzaTable;
 
 void Pizza::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &toppings, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<Pizza>::value) {
+    memcpy(_encoder->template GetPtr<Pizza>(_offset), this, sizeof(Pizza));
+  } else {
+    ::fidl::Encode(_encoder, &toppings, _offset + 0);
+  }
 }
 
-void Pizza::Decode(::fidl::Decoder* _decoder, Pizza* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->toppings, _offset + 0);
+void Pizza::Decode(::fidl::Decoder* _decoder, Pizza* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Pizza>::value) {
+    memcpy(_value, _decoder->template GetPtr<Pizza>(_offset), sizeof(Pizza));
+  } else {
+    ::fidl::Decode(_decoder, &_value->toppings, _offset + 0);
+  }
 }
 
 zx_status_t Pizza::Clone(Pizza* _result) const {
@@ -1165,11 +1183,19 @@ extern "C" const fidl_type_t fidl_test_json_PastaTable;
 const fidl_type_t* Pasta::FidlType = &fidl_test_json_PastaTable;
 
 void Pasta::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &sauce, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<Pasta>::value) {
+    memcpy(_encoder->template GetPtr<Pasta>(_offset), this, sizeof(Pasta));
+  } else {
+    ::fidl::Encode(_encoder, &sauce, _offset + 0);
+  }
 }
 
-void Pasta::Decode(::fidl::Decoder* _decoder, Pasta* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->sauce, _offset + 0);
+void Pasta::Decode(::fidl::Decoder* _decoder, Pasta* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Pasta>::value) {
+    memcpy(_value, _decoder->template GetPtr<Pasta>(_offset), sizeof(Pasta));
+  } else {
+    ::fidl::Decode(_decoder, &_value->sauce, _offset + 0);
+  }
 }
 
 zx_status_t Pasta::Clone(Pasta* _result) const {
@@ -2394,12 +2420,22 @@ const fidl_type_t* NullableUnionStruct::FidlType =
     &fidl_test_json_NullableUnionStructTable;
 
 void NullableUnionStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &the_union, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<NullableUnionStruct>::value) {
+    memcpy(_encoder->template GetPtr<NullableUnionStruct>(_offset), this,
+           sizeof(NullableUnionStruct));
+  } else {
+    ::fidl::Encode(_encoder, &the_union, _offset + 0);
+  }
 }
 
 void NullableUnionStruct::Decode(::fidl::Decoder* _decoder,
-                                 NullableUnionStruct* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->the_union, _offset + 0);
+                                 NullableUnionStruct* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<NullableUnionStruct>::value) {
+    memcpy(_value, _decoder->template GetPtr<NullableUnionStruct>(_offset),
+           sizeof(NullableUnionStruct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->the_union, _offset + 0);
+  }
 }
 
 zx_status_t NullableUnionStruct::Clone(NullableUnionStruct* _result) const {
@@ -3906,11 +3942,19 @@ extern "C" const fidl_type_t fidl_test_json_EmptyTable;
 const fidl_type_t* Empty::FidlType = &fidl_test_json_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<Empty>::value) {
+    memcpy(_encoder->template GetPtr<Empty>(_offset), this, sizeof(Empty));
+  } else {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  }
 }
 
-void Empty::Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+void Empty::Decode(::fidl::Decoder* _decoder, Empty* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Empty>::value) {
+    memcpy(_value, _decoder->template GetPtr<Empty>(_offset), sizeof(Empty));
+  } else {
+    ::fidl::Decode(_decoder, &_value->__reserved, _offset + 0);
+  }
 }
 
 zx_status_t Empty::Clone(Empty* _result) const {

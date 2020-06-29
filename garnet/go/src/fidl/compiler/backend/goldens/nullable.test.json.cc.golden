@@ -13,13 +13,23 @@ const fidl_type_t* StructWithNullableVector::FidlType =
 
 void StructWithNullableVector::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableVector>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableVector>(_offset), this,
+           sizeof(StructWithNullableVector));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
 void StructWithNullableVector::Decode(::fidl::Decoder* _decoder,
-                                      StructWithNullableVector* value,
+                                      StructWithNullableVector* _value,
                                       size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableVector>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableVector>(_offset),
+           sizeof(StructWithNullableVector));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableVector::Clone(
@@ -34,13 +44,23 @@ const fidl_type_t* StructWithNullableUnion::FidlType =
 
 void StructWithNullableUnion::Encode(::fidl::Encoder* _encoder,
                                      size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableUnion>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableUnion>(_offset), this,
+           sizeof(StructWithNullableUnion));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
 void StructWithNullableUnion::Decode(::fidl::Decoder* _decoder,
-                                     StructWithNullableUnion* value,
+                                     StructWithNullableUnion* _value,
                                      size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableUnion>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableUnion>(_offset),
+           sizeof(StructWithNullableUnion));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableUnion::Clone(
@@ -55,13 +75,23 @@ const fidl_type_t* StructWithNullableStruct::FidlType =
 
 void StructWithNullableStruct::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableStruct>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableStruct>(_offset), this,
+           sizeof(StructWithNullableStruct));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
 void StructWithNullableStruct::Decode(::fidl::Decoder* _decoder,
-                                      StructWithNullableStruct* value,
+                                      StructWithNullableStruct* _value,
                                       size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableStruct>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableStruct>(_offset),
+           sizeof(StructWithNullableStruct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableStruct::Clone(
@@ -76,13 +106,23 @@ const fidl_type_t* StructWithNullableString::FidlType =
 
 void StructWithNullableString::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableString>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableString>(_offset), this,
+           sizeof(StructWithNullableString));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
 void StructWithNullableString::Decode(::fidl::Decoder* _decoder,
-                                      StructWithNullableString* value,
+                                      StructWithNullableString* _value,
                                       size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableString>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableString>(_offset),
+           sizeof(StructWithNullableString));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableString::Clone(
@@ -97,13 +137,24 @@ const fidl_type_t* StructWithNullableRequest::FidlType =
 
 void StructWithNullableRequest::Encode(::fidl::Encoder* _encoder,
                                        size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableRequest>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableRequest>(_offset), this,
+           sizeof(StructWithNullableRequest));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
 void StructWithNullableRequest::Decode(::fidl::Decoder* _decoder,
-                                       StructWithNullableRequest* value,
+                                       StructWithNullableRequest* _value,
                                        size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<StructWithNullableRequest>(_offset),
+           sizeof(StructWithNullableRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableRequest::Clone(
@@ -118,13 +169,24 @@ const fidl_type_t* StructWithNullableProtocol::FidlType =
 
 void StructWithNullableProtocol::Encode(::fidl::Encoder* _encoder,
                                         size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableProtocol>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableProtocol>(_offset), this,
+           sizeof(StructWithNullableProtocol));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
 void StructWithNullableProtocol::Decode(::fidl::Decoder* _decoder,
-                                        StructWithNullableProtocol* value,
+                                        StructWithNullableProtocol* _value,
                                         size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableProtocol>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<StructWithNullableProtocol>(_offset),
+           sizeof(StructWithNullableProtocol));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableProtocol::Clone(
@@ -139,13 +201,23 @@ const fidl_type_t* StructWithNullableHandle::FidlType =
 
 void StructWithNullableHandle::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableHandle>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableHandle>(_offset), this,
+           sizeof(StructWithNullableHandle));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
 void StructWithNullableHandle::Decode(::fidl::Decoder* _decoder,
-                                      StructWithNullableHandle* value,
+                                      StructWithNullableHandle* _value,
                                       size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<StructWithNullableHandle>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableHandle>(_offset),
+           sizeof(StructWithNullableHandle));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t StructWithNullableHandle::Clone(
@@ -497,12 +569,22 @@ const fidl_type_t* Int32Wrapper::FidlType =
     &fidl_test_nullable_Int32WrapperTable;
 
 void Int32Wrapper::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<Int32Wrapper>::value) {
+    memcpy(_encoder->template GetPtr<Int32Wrapper>(_offset), this,
+           sizeof(Int32Wrapper));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
 }
 
-void Int32Wrapper::Decode(::fidl::Decoder* _decoder, Int32Wrapper* value,
+void Int32Wrapper::Decode(::fidl::Decoder* _decoder, Int32Wrapper* _value,
                           size_t _offset) {
-  ::fidl::Decode(_decoder, &value->val, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<Int32Wrapper>::value) {
+    memcpy(_value, _decoder->template GetPtr<Int32Wrapper>(_offset),
+           sizeof(Int32Wrapper));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
 }
 
 zx_status_t Int32Wrapper::Clone(Int32Wrapper* _result) const {

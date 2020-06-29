@@ -320,6 +320,12 @@ struct CodingTraits<::fidl::test::json::Example_foo_Response>
     : public EncodableCodingTraits<::fidl::test::json::Example_foo_Response,
                                    8> {};
 
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::Example_foo_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::Example_foo_Response>::value &&
+          IsMemcpyCompatible<int64_t>::value> {};
+
 inline zx_status_t Clone(const ::fidl::test::json::Example_foo_Response& value,
                          ::fidl::test::json::Example_foo_Response* result) {
   return ::fidl::test::json::Clone(value, result);

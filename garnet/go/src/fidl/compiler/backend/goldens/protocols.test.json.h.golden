@@ -1555,6 +1555,14 @@ struct CodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Response>
     : public EncodableCodingTraits<
           ::test::name::WithErrorSyntax_ResponseAsStruct_Response, 24> {};
 
+template <>
+struct IsMemcpyCompatible<
+    ::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value &&
+          IsMemcpyCompatible<int64_t>::value> {};
+
 inline zx_status_t Clone(
     const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& value,
     ::test::name::WithErrorSyntax_ResponseAsStruct_Response* result) {
@@ -1657,6 +1665,14 @@ struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public EncodableCodingTraits<
           ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, 1> {};
 
+template <>
+struct IsMemcpyCompatible<
+    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
+
 inline zx_status_t Clone(
     const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& value,
     ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* result) {
@@ -1752,6 +1768,13 @@ template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Response>
     : public EncodableCodingTraits<
           ::test::name::WithErrorSyntax_ErrorAsEnum_Response, 1> {};
+
+template <>
+struct IsMemcpyCompatible<::test::name::WithErrorSyntax_ErrorAsEnum_Response>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(
     const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& value,

@@ -476,6 +476,17 @@ struct CodingTraits<::fidl::test::nullable::StructWithNullableVector>
     : public EncodableCodingTraits<
           ::fidl::test::nullable::StructWithNullableVector, 16> {};
 
+template <>
+struct HasPadding<::fidl::test::nullable::StructWithNullableVector>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableVector>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::fidl::test::nullable::StructWithNullableVector>::value &&
+          IsMemcpyCompatible<::fidl::VectorPtr<int32_t>>::value> {};
+
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableVector& value,
     ::fidl::test::nullable::StructWithNullableVector* result) {
@@ -497,6 +508,18 @@ template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableUnion>
     : public EncodableCodingTraits<
           ::fidl::test::nullable::StructWithNullableUnion, 24> {};
+
+template <>
+struct HasPadding<::fidl::test::nullable::StructWithNullableUnion>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableUnion>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::nullable::StructWithNullableUnion>::value &&
+          IsMemcpyCompatible<
+              ::std::unique_ptr<::fidl::test::nullable::SimpleUnion>>::value> {
+};
 
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableUnion& value,
@@ -520,6 +543,19 @@ struct CodingTraits<::fidl::test::nullable::StructWithNullableStruct>
     : public EncodableCodingTraits<
           ::fidl::test::nullable::StructWithNullableStruct, 8> {};
 
+template <>
+struct HasPadding<::fidl::test::nullable::StructWithNullableStruct>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableStruct>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::fidl::test::nullable::StructWithNullableStruct>::value &&
+          IsMemcpyCompatible<
+              ::std::unique_ptr<::fidl::test::nullable::Int32Wrapper>>::value> {
+};
+
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableStruct& value,
     ::fidl::test::nullable::StructWithNullableStruct* result) {
@@ -541,6 +577,17 @@ template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableString>
     : public EncodableCodingTraits<
           ::fidl::test::nullable::StructWithNullableString, 16> {};
+
+template <>
+struct HasPadding<::fidl::test::nullable::StructWithNullableString>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableString>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::fidl::test::nullable::StructWithNullableString>::value &&
+          IsMemcpyCompatible<::fidl::StringPtr>::value> {};
 
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableString& value,
@@ -564,6 +611,14 @@ struct CodingTraits<::fidl::test::nullable::StructWithNullableRequest>
     : public EncodableCodingTraits<
           ::fidl::test::nullable::StructWithNullableRequest, 4> {};
 
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::fidl::test::nullable::StructWithNullableRequest>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceRequest<
+              ::fidl::test::nullable::SimpleProtocol>>::value> {};
+
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableRequest& value,
     ::fidl::test::nullable::StructWithNullableRequest* result) {
@@ -586,6 +641,14 @@ struct CodingTraits<::fidl::test::nullable::StructWithNullableProtocol>
     : public EncodableCodingTraits<
           ::fidl::test::nullable::StructWithNullableProtocol, 4> {};
 
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableProtocol>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::fidl::test::nullable::StructWithNullableProtocol>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceHandle<
+              class ::fidl::test::nullable::SimpleProtocol>>::value> {};
+
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableProtocol& value,
     ::fidl::test::nullable::StructWithNullableProtocol* result) {
@@ -607,6 +670,13 @@ template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableHandle>
     : public EncodableCodingTraits<
           ::fidl::test::nullable::StructWithNullableHandle, 4> {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableHandle>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::fidl::test::nullable::StructWithNullableHandle>::value &&
+          IsMemcpyCompatible<::zx::vmo>::value> {};
 
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableHandle& value,
@@ -693,6 +763,12 @@ struct Equality<::fidl::test::nullable::SimpleUnion> {
 template <>
 struct CodingTraits<::fidl::test::nullable::Int32Wrapper>
     : public EncodableCodingTraits<::fidl::test::nullable::Int32Wrapper, 4> {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::nullable::Int32Wrapper>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::nullable::Int32Wrapper>::value &&
+          IsMemcpyCompatible<int32_t>::value> {};
 
 inline zx_status_t Clone(const ::fidl::test::nullable::Int32Wrapper& value,
                          ::fidl::test::nullable::Int32Wrapper* result) {

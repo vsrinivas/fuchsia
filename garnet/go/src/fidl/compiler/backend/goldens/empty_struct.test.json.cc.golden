@@ -11,11 +11,19 @@ extern "C" const fidl_type_t fidl_test_json_EmptyTable;
 const fidl_type_t* Empty::FidlType = &fidl_test_json_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<Empty>::value) {
+    memcpy(_encoder->template GetPtr<Empty>(_offset), this, sizeof(Empty));
+  } else {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  }
 }
 
-void Empty::Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+void Empty::Decode(::fidl::Decoder* _decoder, Empty* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Empty>::value) {
+    memcpy(_value, _decoder->template GetPtr<Empty>(_offset), sizeof(Empty));
+  } else {
+    ::fidl::Decode(_decoder, &_value->__reserved, _offset + 0);
+  }
 }
 
 zx_status_t Empty::Clone(Empty* _result) const {

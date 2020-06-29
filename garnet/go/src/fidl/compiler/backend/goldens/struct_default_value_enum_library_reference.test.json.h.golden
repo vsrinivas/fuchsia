@@ -38,6 +38,12 @@ template <>
 struct CodingTraits<::example::Foo>
     : public EncodableCodingTraits<::example::Foo, 4> {};
 
+template <>
+struct IsMemcpyCompatible<::example::Foo>
+    : public internal::BoolConstant<
+          !HasPadding<::example::Foo>::value &&
+          IsMemcpyCompatible<::dependent::MyEnum>::value> {};
+
 inline zx_status_t Clone(const ::example::Foo& value, ::example::Foo* result) {
   return ::example::Clone(value, result);
 }

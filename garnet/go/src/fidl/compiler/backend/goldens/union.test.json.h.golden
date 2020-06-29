@@ -2330,6 +2330,18 @@ struct CodingTraits<::fidl::test::json::StructWithNullableXUnion>
     : public EncodableCodingTraits<::fidl::test::json::StructWithNullableXUnion,
                                    24> {};
 
+template <>
+struct HasPadding<::fidl::test::json::StructWithNullableXUnion>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::StructWithNullableXUnion>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::StructWithNullableXUnion>::value &&
+          IsMemcpyCompatible<
+              ::std::unique_ptr<::fidl::test::json::OlderSimpleUnion>>::value> {
+};
+
 inline zx_status_t Clone(
     const ::fidl::test::json::StructWithNullableXUnion& value,
     ::fidl::test::json::StructWithNullableXUnion* result) {
@@ -2681,6 +2693,15 @@ template <>
 struct CodingTraits<::fidl::test::json::Pizza>
     : public EncodableCodingTraits<::fidl::test::json::Pizza, 16> {};
 
+template <>
+struct HasPadding<::fidl::test::json::Pizza> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::Pizza>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::Pizza>::value &&
+          IsMemcpyCompatible<::std::vector<::std::string>>::value> {};
+
 inline zx_status_t Clone(const ::fidl::test::json::Pizza& value,
                          ::fidl::test::json::Pizza* result) {
   return ::fidl::test::json::Clone(value, result);
@@ -2699,6 +2720,15 @@ struct Equality<::fidl::test::json::Pizza> {
 template <>
 struct CodingTraits<::fidl::test::json::Pasta>
     : public EncodableCodingTraits<::fidl::test::json::Pasta, 16> {};
+
+template <>
+struct HasPadding<::fidl::test::json::Pasta> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::Pasta>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::Pasta>::value &&
+          IsMemcpyCompatible<::std::string>::value> {};
 
 inline zx_status_t Clone(const ::fidl::test::json::Pasta& value,
                          ::fidl::test::json::Pasta* result) {
@@ -3046,6 +3076,17 @@ template <>
 struct CodingTraits<::fidl::test::json::NullableUnionStruct>
     : public EncodableCodingTraits<::fidl::test::json::NullableUnionStruct,
                                    24> {};
+
+template <>
+struct HasPadding<::fidl::test::json::NullableUnionStruct>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::NullableUnionStruct>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::NullableUnionStruct>::value &&
+          IsMemcpyCompatible<
+              ::std::unique_ptr<::fidl::test::json::Union>>::value> {};
 
 inline zx_status_t Clone(const ::fidl::test::json::NullableUnionStruct& value,
                          ::fidl::test::json::NullableUnionStruct* result) {
@@ -3575,6 +3616,12 @@ struct Equality<::fidl::test::json::ExplicitFoo> {
 template <>
 struct CodingTraits<::fidl::test::json::Empty>
     : public EncodableCodingTraits<::fidl::test::json::Empty, 1> {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::json::Empty>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::json::Empty>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::fidl::test::json::Empty& value,
                          ::fidl::test::json::Empty* result) {

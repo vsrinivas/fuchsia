@@ -10,12 +10,23 @@ const fidl_type_t* DocCommentWithQuotes::FidlType =
     &escapeme_DocCommentWithQuotesTable;
 
 void DocCommentWithQuotes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  if (::fidl::IsMemcpyCompatible<DocCommentWithQuotes>::value) {
+    memcpy(_encoder->template GetPtr<DocCommentWithQuotes>(_offset), this,
+           sizeof(DocCommentWithQuotes));
+  } else {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  }
 }
 
 void DocCommentWithQuotes::Decode(::fidl::Decoder* _decoder,
-                                  DocCommentWithQuotes* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+                                  DocCommentWithQuotes* _value,
+                                  size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<DocCommentWithQuotes>::value) {
+    memcpy(_value, _decoder->template GetPtr<DocCommentWithQuotes>(_offset),
+           sizeof(DocCommentWithQuotes));
+  } else {
+    ::fidl::Decode(_decoder, &_value->__reserved, _offset + 0);
+  }
 }
 
 zx_status_t DocCommentWithQuotes::Clone(DocCommentWithQuotes* _result) const {

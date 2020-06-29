@@ -11,13 +11,21 @@ extern "C" const fidl_type_t fidl_test_json_SimpleTable;
 const fidl_type_t* Simple::FidlType = &fidl_test_json_SimpleTable;
 
 void Simple::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &f1, _offset + 0);
-  ::fidl::Encode(_encoder, &f2, _offset + 1);
+  if (::fidl::IsMemcpyCompatible<Simple>::value) {
+    memcpy(_encoder->template GetPtr<Simple>(_offset), this, sizeof(Simple));
+  } else {
+    ::fidl::Encode(_encoder, &f1, _offset + 0);
+    ::fidl::Encode(_encoder, &f2, _offset + 1);
+  }
 }
 
-void Simple::Decode(::fidl::Decoder* _decoder, Simple* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->f1, _offset + 0);
-  ::fidl::Decode(_decoder, &value->f2, _offset + 1);
+void Simple::Decode(::fidl::Decoder* _decoder, Simple* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Simple>::value) {
+    memcpy(_value, _decoder->template GetPtr<Simple>(_offset), sizeof(Simple));
+  } else {
+    ::fidl::Decode(_decoder, &_value->f1, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->f2, _offset + 1);
+  }
 }
 
 zx_status_t Simple::Clone(Simple* _result) const {
@@ -31,14 +39,24 @@ extern "C" const fidl_type_t fidl_test_json_BasicStructTable;
 const fidl_type_t* BasicStruct::FidlType = &fidl_test_json_BasicStructTable;
 
 void BasicStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &x, _offset + 0);
-  ::fidl::Encode(_encoder, &y, _offset + 8);
+  if (::fidl::IsMemcpyCompatible<BasicStruct>::value) {
+    memcpy(_encoder->template GetPtr<BasicStruct>(_offset), this,
+           sizeof(BasicStruct));
+  } else {
+    ::fidl::Encode(_encoder, &x, _offset + 0);
+    ::fidl::Encode(_encoder, &y, _offset + 8);
+  }
 }
 
-void BasicStruct::Decode(::fidl::Decoder* _decoder, BasicStruct* value,
+void BasicStruct::Decode(::fidl::Decoder* _decoder, BasicStruct* _value,
                          size_t _offset) {
-  ::fidl::Decode(_decoder, &value->x, _offset + 0);
-  ::fidl::Decode(_decoder, &value->y, _offset + 8);
+  if (::fidl::IsMemcpyCompatible<BasicStruct>::value) {
+    memcpy(_value, _decoder->template GetPtr<BasicStruct>(_offset),
+           sizeof(BasicStruct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->x, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->y, _offset + 8);
+  }
 }
 
 zx_status_t BasicStruct::Clone(BasicStruct* _result) const {

@@ -334,6 +334,21 @@ template <>
 struct CodingTraits<::test::name::HandlesInTypes>
     : public EncodableCodingTraits<::test::name::HandlesInTypes, 104> {};
 
+template <>
+struct HasPadding<::test::name::HandlesInTypes> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::name::HandlesInTypes>
+    : public internal::BoolConstant<
+          !HasPadding<::test::name::HandlesInTypes>::value &&
+          IsMemcpyCompatible<::std::array<::zx::vmo, 5>>::value &&
+          IsMemcpyCompatible<
+              ::std::vector<::std::array<::zx::vmo, 5>>>::value &&
+          IsMemcpyCompatible<::std::vector<::zx::vmo>>::value &&
+          IsMemcpyCompatible<::test::name::TableWithHandle>::value &&
+          IsMemcpyCompatible<::test::name::UnionWithHandle>::value &&
+          IsMemcpyCompatible<::zx::vmo>::value> {};
+
 inline zx_status_t Clone(const ::test::name::HandlesInTypes& value,
                          ::test::name::HandlesInTypes* result) {
   return ::test::name::Clone(value, result);

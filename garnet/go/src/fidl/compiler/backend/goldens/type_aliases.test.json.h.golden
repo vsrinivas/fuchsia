@@ -100,6 +100,20 @@ template <>
 struct CodingTraits<::example::ExampleOfUseOfAliases>
     : public EncodableCodingTraits<::example::ExampleOfUseOfAliases, 120> {};
 
+template <>
+struct HasPadding<::example::ExampleOfUseOfAliases> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::example::ExampleOfUseOfAliases>
+    : public internal::BoolConstant<
+          !HasPadding<::example::ExampleOfUseOfAliases>::value &&
+          IsMemcpyCompatible<
+              ::std::vector<::someotherlibrary::ReferenceMe>>::value &&
+          IsMemcpyCompatible<::std::vector<::std::string>>::value &&
+          IsMemcpyCompatible<::std::vector<uint32_t>>::value &&
+          IsMemcpyCompatible<::zx::handle>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
 inline zx_status_t Clone(const ::example::ExampleOfUseOfAliases& value,
                          ::example::ExampleOfUseOfAliases* result) {
   return ::example::Clone(value, result);
