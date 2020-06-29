@@ -178,7 +178,10 @@ class PointerEventsListener extends PointerCaptureListenerHack {
     };
     Timeline.timeSync('PointerEventsListener.onPointerEvent', () {
       if (_kindFromPointerEvent(event) != ui.PointerDeviceKind.touch) {
-        _callback(ui.PointerDataPacket(data: [_getPacket(event)]));
+        final packet = _getPacket(event);
+        if (packet != null) {
+          _callback(ui.PointerDataPacket(data: [packet]));
+        }
         return;
       }
       final frameTime =
@@ -186,12 +189,14 @@ class PointerEventsListener extends PointerCaptureListenerHack {
       // Sanity check event time by clamping to frameTime.
       final eventTime =
           event.eventTime < frameTime ? event.eventTime : frameTime;
-      var data =
+      final packet =
           _getPacket(_clone(event, event.phase, event.x, event.y, eventTime));
-      var resampler =
-          _resamplers.putIfAbsent(data.device, () => PointerDataResampler());
-      resampler.addData(data);
-      _dispatchEvents();
+      if (packet != null) {
+        var resampler = _resamplers.putIfAbsent(
+            packet.device, () => PointerDataResampler());
+        resampler.addData(packet);
+        _dispatchEvents();
+      }
     }, arguments: eventArguments);
   }
 

@@ -288,4 +288,19 @@ void main() {
     expect(result[1].physicalDeltaX, 25.0 * ui.window.devicePixelRatio);
     expect(result[1].physicalDeltaY, 0.0);
   });
+
+  test('outside window', () {
+    final event0 = _createSimulatedPointerEvent(
+        PointerEventPhase.down, 1000, ui.window.physicalSize.width, 0.0);
+    final event1 = _createSimulatedPointerEvent(
+        PointerEventPhase.up, 2000, 0.0, ui.window.physicalSize.height);
+
+    var frameTime = Duration(milliseconds: 16);
+    when(scheduler.currentSystemFrameTimeStamp).thenReturn(frameTime);
+
+    pointerEventsListener..onPointerEvent(event0)..onPointerEvent(event1);
+
+    // No pointer events should have been dispatched as events are outside the window.
+    expect(result.isEmpty, true);
+  });
 }
