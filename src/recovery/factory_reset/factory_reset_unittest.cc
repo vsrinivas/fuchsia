@@ -75,7 +75,6 @@ class FactoryResetTest : public Test {
 
     CreateRamdisk();
     CreateFvmPartition();
-    CreateZxcrypt();
   }
 
   void TearDown() override {
@@ -85,6 +84,68 @@ class FactoryResetTest : public Test {
   bool PartitionHasFormat(disk_format_t format) {
     fbl::unique_fd fd(openat(devmgr_->devfs_root().get(), fvm_block_path_, O_RDONLY));
     return detect_disk_format(fd.get()) == format;
+  }
+
+  void CreateZxcrypt() {
+    std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
+
+    fbl::unique_fd fd;
+    WaitForDevice(fvm_block_path_, &fd);
+    // Use an explicit key for this test volume.  Other key sources may not be
+    // available in the isolated test environment.
+    crypto::Secret key;
+    ASSERT_EQ(key.Generate(kKeyBytes), ZX_OK);
+    ASSERT_EQ(zxcrypt::FdioVolume::Create(fd.duplicate(), devfs_root(), key, &zxcrypt_volume),
+              ZX_OK);
+
+    zx::channel zxc_manager_chan;
+    ASSERT_EQ(zxcrypt_volume->OpenManager(zx::duration::infinite(),
+                                          zxc_manager_chan.reset_and_get_address()),
+              ZX_OK);
+    zxcrypt::FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
+    ASSERT_EQ(volume_manager.Unseal(key.get(), key.len(), 0), ZX_OK);
+    WaitForZxcrypt();
+  }
+
+  void CreateCorruptedZxcrypt() {
+    fbl::unique_fd fd;
+    WaitForDevice(fvm_block_path_, &fd);
+
+    // Write just the zxcrypt magic at the start of the volume.
+    // It will not be possible to unseal this device, but we want to ensure that
+    // factory reset completes anyway and shreds what key material would reside
+    // in that block.
+
+    // Prepare a buffer of the native block size that starts with zxcrypt_magic.
+    // Block reads and writes via fds must match the block size.
+    ssize_t block_size;
+    GetBlockSize(fd, &block_size);
+    std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
+    memset(block.get(), 0, block_size);
+    memcpy(block.get(), zxcrypt_magic, sizeof(zxcrypt_magic));
+
+    ssize_t res = write(fd.get(), block.get(), block_size);
+    ASSERT_EQ(res, block_size);
+  }
+
+  void CreateFakeBlobfs() {
+    // Writes just the blobfs magic at the start of the volume, just as something
+    // else we expect to detect so we can see if the block gets randomized later
+    // or not.
+
+    fbl::unique_fd fd;
+    WaitForDevice(fvm_block_path_, &fd);
+
+    // Prepare a buffer of the native block size that starts with blobfs_magic.
+    // Block reads and writes via fds must match the block size.
+    ssize_t block_size;
+    GetBlockSize(fd, &block_size);
+    std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
+    memset(block.get(), 0, block_size);
+    memcpy(block.get(), blobfs_magic, sizeof(blobfs_magic));
+
+    ssize_t res = write(fd.get(), block.get(), block_size);
+    ASSERT_EQ(res, block_size);
   }
 
   fbl::unique_fd devfs_root() { return devmgr_->devfs_root().duplicate(); }
@@ -97,6 +158,17 @@ class FactoryResetTest : public Test {
              fvm_block_path_);
     fbl::unique_fd fd;
     WaitForDevice(data_block_path, &fd);
+  }
+
+  void GetBlockSize(const fbl::unique_fd& fd, ssize_t* out_size) {
+    zx_status_t call_status;
+    fdio_cpp::UnownedFdioCaller caller(fd.get());
+    ASSERT_TRUE(caller);
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status,
+                                                  &block_info), ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
+    *out_size = block_info.block_size;
   }
 
   void CreateRamdisk() {
@@ -168,27 +240,6 @@ class FactoryResetTest : public Test {
     WaitForDevice(fvm_block_path_, &fd);
   }
 
-  void CreateZxcrypt() {
-    std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
-
-    fbl::unique_fd fd;
-    WaitForDevice(fvm_block_path_, &fd);
-    // Use an explicit key for this test volume.  Other key sources may not be
-    // available in the isolated test environment.
-    crypto::Secret key;
-    ASSERT_EQ(key.Generate(kKeyBytes), ZX_OK);
-    ASSERT_EQ(zxcrypt::FdioVolume::Create(fd.duplicate(), devfs_root(), key, &zxcrypt_volume),
-              ZX_OK);
-
-    zx::channel zxc_manager_chan;
-    ASSERT_EQ(zxcrypt_volume->OpenManager(zx::duration::infinite(),
-                                          zxc_manager_chan.reset_and_get_address()),
-              ZX_OK);
-    zxcrypt::FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
-    ASSERT_EQ(volume_manager.Unseal(key.get(), key.len(), 0), ZX_OK);
-    WaitForZxcrypt();
-  }
-
   void WaitForDevice(const char* path, fbl::unique_fd* fd) {
     printf("wait for device %s\n", path);
     ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path, fd), ZX_OK);
@@ -207,6 +258,9 @@ class FactoryResetTest : public Test {
 TEST_F(FactoryResetTest, CanShredVolume) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
+  // Set up a normal zxcrypt superblock
+  CreateZxcrypt();
+
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
@@ -217,9 +271,60 @@ TEST_F(FactoryResetTest, CanShredVolume) {
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
-  ASSERT_TRUE(mock_admin.suspend_called());
   EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(mock_admin.suspend_called());
   EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_UNKNOWN));
+}
+
+TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
+  // This test ensures that even if we can't unseal the zxcrypt device, we can
+  // still wipe it.
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  // Set up a corrupted zxcrypt superblock -- just enough to recognize the
+  // magic, but not enough to successfully unseal the device.
+  CreateCorruptedZxcrypt();
+
+  MockAdmin mock_admin;
+  fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
+  fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
+      binding.AddBinding(&mock_admin).Bind();
+
+  // Verify that we re-shred that superblock anyway when we run factory reset.
+  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
+  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_ZXCRYPT));
+  zx_status_t status = ZX_ERR_BAD_STATE;
+  reset.Reset([&status](zx_status_t s) { status = s; });
+  loop.RunUntilIdle();
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(mock_admin.suspend_called());
+  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_UNKNOWN));
+}
+
+TEST_F(FactoryResetTest, DoesntShredVolumeIfNotZxcryptFormat) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  // Make this block device look like it contains blobfs.
+  CreateFakeBlobfs();
+
+  MockAdmin mock_admin;
+  fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
+  fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
+      binding.AddBinding(&mock_admin).Bind();
+
+  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
+  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_BLOBFS));
+  zx_status_t status = ZX_ERR_BAD_STATE;
+  reset.Reset([&status](zx_status_t s) { status = s; });
+  loop.RunUntilIdle();
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(mock_admin.suspend_called());
+  // Expect factory reset to still succeed, but to not touch the block device.
+  // In a world where fshost knew more about expected topology, we'd want to
+  // shred this block device anyway, but that won't happen until we have a
+  // clearer block device topology story.
+  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_BLOBFS));
 }
 
 }  // namespace

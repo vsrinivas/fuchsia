@@ -4,7 +4,9 @@
     },
     "sandbox": {
         "dev": [
-            "class/block"
+            "class/block",
+            "sherlock-emmc",
+            "sys/platform"
         ],
         "services": [
             "fuchsia.hardware.power.statecontrol.Admin"

@@ -58,10 +58,6 @@ const size_t kMaxLabelLen = 16;
 const char* kWrapKeyLabel = "wrap key %" PRIu64;
 const char* kWrapIvLabel = "wrap iv %" PRIu64;
 
-static const uint8_t zxcrypt_magic[16] = {
-    0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7, 0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74,
-};
-
 // Header is type GUID | instance GUID | version.
 const size_t kHeaderLen = sizeof(zxcrypt_magic) + BLOCK_GUID_LEN + sizeof(uint32_t);
 
@@ -305,8 +301,6 @@ zx_status_t Volume::CreateBlock() {
   }
 
   // Write the variant 1/version 1 type GUID according to RFC 4122.
-  // TODO(aarongreen): ZX-2106.  This and other magic numbers should be moved to a public/zircon
-  // header, and the dependency removed.
   uint8_t* out = block_.get();
   memcpy(out, zxcrypt_magic, sizeof(zxcrypt_magic));
   out += sizeof(zxcrypt_magic);
