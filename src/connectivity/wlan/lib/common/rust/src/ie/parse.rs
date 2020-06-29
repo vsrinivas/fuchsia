@@ -51,6 +51,21 @@ pub fn parse_tim<B: ByteSlice>(raw_body: B) -> FrameParseResult<TimView<B>> {
     Ok(TimView { header: *header, bitmap })
 }
 
+pub fn parse_country<B: ByteSlice>(raw_body: B) -> FrameParseResult<CountryView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let country_code = reader
+        .read::<[u8; 2]>()
+        .ok_or(FrameParseError::new("Element body is too short to include a country code"))?;
+    let environment = reader.read_byte().ok_or(FrameParseError::new(
+        "Element body is too short to include the whole country string",
+    ))?;
+    Ok(CountryView {
+        country_code: *country_code,
+        environment: CountryEnvironment(environment),
+        subbands: reader.into_remaining(),
+    })
+}
+
 pub fn parse_ht_capabilities<B: ByteSlice>(
     raw_body: B,
 ) -> FrameParseResult<LayoutVerified<B, HtCapabilities>> {
@@ -316,6 +331,35 @@ mod tests {
     pub fn tim_bitmap_too_long() {
         let err = parse_tim(&[0u8; 255][..]).err().expect("expected Err");
         assert_eq!("Bitmap in TIM is too long", err.debug_message());
+    }
+
+    #[test]
+    pub fn country_ok() {
+        // Country element without Element Id and length
+        #[rustfmt::skip]
+        let raw_body = [
+            0x55, 0x53, // Country: US
+            0x20, // Environment: Any
+            0x24, 0x04, 0x24, // Subband triplet 1
+            0x34, 0x04, 0x1e, // Subband triplet 2
+            0x64, 0x0c, 0x1e, // Subband triplet 3
+            0x95, 0x05, 0x24, // Subband triplet 4
+            0x00, // padding
+        ];
+        let country = parse_country(&raw_body[..]).expect("valid frame should result in OK");
+
+        assert_eq!(country.country_code, [0x55, 0x53]);
+        assert_eq!(country.environment, CountryEnvironment::ANY);
+        assert_eq!(country.subbands, &raw_body[3..]);
+    }
+
+    #[test]
+    pub fn country_too_short() {
+        let err = parse_country(&[0x55, 0x53][..]).err().expect("expected Err");
+        assert_eq!(
+            "Element body is too short to include the whole country string",
+            err.debug_message()
+        );
     }
 
     #[test]

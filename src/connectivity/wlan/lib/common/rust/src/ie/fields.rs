@@ -135,6 +135,23 @@ pub struct WmmAciAifsn(pub u8);
 #[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
 pub struct EcwMinMax(pub u8);
 
+// IEEE Std 802.11-2016, 9.4.2.9
+pub struct CountryView<B> {
+    pub country_code: [u8; 2],
+    pub environment: CountryEnvironment,
+    // the rest are unparsed currently
+    pub subbands: B,
+}
+
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct CountryEnvironment(pub u8);
+
+impl CountryEnvironment {
+    pub const INDOOR: Self = Self(b'I');
+    pub const OUTDOOR: Self = Self(b'O');
+    pub const ANY: Self = Self(b' ');
+}
+
 // IEEE Std 802.11-2016, 9.4.2.56
 #[repr(C, packed)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
