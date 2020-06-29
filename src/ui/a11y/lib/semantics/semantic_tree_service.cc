@@ -69,6 +69,10 @@ void SemanticTreeService::PerformAccessibilityAction(
 zx_koid_t SemanticTreeService::view_ref_koid() const { return koid_; }
 
 void SemanticTreeService::CommitUpdates(CommitUpdatesCallback callback) {
+  if (!semantic_updates_enabled_) {
+    FX_LOGS(INFO) << "Ignoring Commit while semantics are disabled.";
+    return;
+  }
   if (tree_->Update(std::move(updates_))) {
     callback();
     updates_.clear();
@@ -82,12 +86,21 @@ void SemanticTreeService::CommitUpdates(CommitUpdatesCallback callback) {
 }
 
 void SemanticTreeService::UpdateSemanticNodes(std::vector<Node> nodes) {
+  if (!semantic_updates_enabled_) {
+    FX_LOGS(INFO) << "Ignoring Update while semantics are disabled.";
+    return;
+  }
   for (auto& node : nodes) {
     updates_.emplace_back(std::move(node));
   }
 }
 
 void SemanticTreeService::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
+  if (!semantic_updates_enabled_) {
+    FX_LOGS(INFO) << "Ignoring Delete while semantics are disabled.";
+    return;
+  }
+
   for (const auto& node_id : node_ids) {
     updates_.emplace_back(node_id);
   }

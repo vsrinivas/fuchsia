@@ -50,6 +50,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // closed, which deletes all the semantic tree data.
   void SetSemanticsEnabled(bool enabled);
 
+  bool GetSemanticsEnabled() { return semantics_enabled_; }
+
   // |FocusHighlightManager|
   void SetAnnotationsEnabled(bool annotations_enabled) override;
 

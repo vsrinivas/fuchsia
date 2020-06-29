@@ -57,7 +57,6 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
         std::move(semantic_tree_), koid, std::move(semantic_listener), debug_dir,
         std::move(close_channel_callback));
     service_ = service.get();
-
     return service;
   }
 
@@ -91,6 +90,9 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());
     gesture_listener_registry_.Register(mock_gesture_listener_.NewBinding(), []() {});
 
+    semantic_provider_.SetSemanticsEnabled(true);
+    view_manager_.SetSemanticsEnabled(true);
+    factory_ptr_->service()->EnableSemanticsUpdates(true);
     SetupTtsEngine(&mock_tts_engine_);
     AddNodeToSemanticTree();
   }

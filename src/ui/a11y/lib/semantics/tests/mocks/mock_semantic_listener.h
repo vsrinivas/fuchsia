@@ -61,7 +61,7 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   uint32_t GetRequestedActionNodeId() const;
 
   void Bind(fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener);
-
+  void SetSemanticsEnabled(bool enabled) { semantics_enabled_ = enabled; }
   bool GetSemanticsEnabled() const { return semantics_enabled_; }
 
  private:

@@ -107,6 +107,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     semantic_tree_ = std::make_unique<a11y::SemanticTreeService>(
         std::move(tree), koid_, fuchsia::accessibility::semantics::SemanticListenerPtr() /*unused*/,
         debug_dir(), std::move(close_channel_callback));
+    semantic_tree_->EnableSemanticsUpdates(true);
   }
 
   std::vector<Node> BuildUpdatesFromFile(const std::string& file_path) {

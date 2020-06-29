@@ -54,6 +54,10 @@ void MockSemanticProvider::SetHitTestResult(std::optional<uint32_t> hit_test_res
   semantic_listener_.SetHitTestResult(hit_test_result);
 }
 
+void MockSemanticProvider::SetSemanticsEnabled(bool enabled) {
+  semantic_listener_.OnSemanticsModeChanged(enabled, []() {});
+}
+
 bool MockSemanticProvider::GetSemanticsEnabled() {
   return semantic_listener_.GetSemanticsEnabled();
 }

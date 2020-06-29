@@ -149,6 +149,11 @@ TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   fuchsia::ui::views::ViewRef view_ref_connection;
   fidl::Clone(view_ref_, &view_ref_connection);
 
+  // Turn on the screen reader.
+  fuchsia::settings::AccessibilitySettings settings;
+  settings.set_screen_reader(true);
+  mock_setui_.Set(std::move(settings), [](auto) {});
+
   // Create ActionListener.
   accessibility_test::MockSemanticListener semantic_listener(&context_provider_,
                                                              std::move(view_ref_connection));

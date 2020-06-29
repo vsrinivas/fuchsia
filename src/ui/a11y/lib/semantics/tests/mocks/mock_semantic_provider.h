@@ -48,6 +48,8 @@ class MockSemanticProvider {
   // Returns Commit Failed status.
   bool CommitFailedStatus() const { return commit_failed_; };
 
+  void SetSemanticsEnabled(bool enabled);
+
   // Returns Semantics Enabled field from Semantic Listener.
   bool GetSemanticsEnabled();
 
