@@ -52,7 +52,7 @@ bool TestCreateDestroy() {
   // Create and destroy the root job observer.
   Event callback_fired;
   fbl::RefPtr<JobDispatcher> root_job = JobDispatcher::CreateRootJob();
-  RootJobObserver observer{root_job, [&]() { callback_fired.Signal(); }};
+  RootJobObserver observer{root_job, nullptr, [&]() { callback_fired.Signal(); }};
 
   // Ensure the callback fired.
   callback_fired.Wait();
@@ -69,7 +69,7 @@ bool TestCallbackFiresOnRootJobDeath() {
   // Create the root job with a child process, and start watching it.
   fbl::RefPtr<JobDispatcher> root_job = JobDispatcher::CreateRootJob();
   KernelHandle<ProcessDispatcher> child_process = CreateProcess(root_job);
-  RootJobObserver observer{root_job, [&root_job_killed]() { root_job_killed.Signal(); }};
+  RootJobObserver observer{root_job, nullptr, [&root_job_killed]() { root_job_killed.Signal(); }};
 
   // Shouldn't be signalled yet.
   EXPECT_EQ(root_job_killed.Wait(DeadlineAfter(ZX_MSEC(1))), ZX_ERR_TIMED_OUT);
@@ -98,7 +98,7 @@ bool TestChildrenAlreadyDeadWhenCallbackFires() {
   // are both dead when it fires.
   Event callback_fired;
   RootJobObserver observer{
-      root_job, [&]() {
+      root_job, nullptr, [&]() {
         ASSERT(child_process.dispatcher()->state() == ProcessDispatcher::State::DEAD);
         ASSERT(child_thread.dispatcher()->IsDyingOrDead());
         callback_fired.Signal();
@@ -130,7 +130,7 @@ bool TestCallbackFiresWhenNoChildren() {
   // Create a root job observer. The callback ensures that the child process and thread
   // are both dead when it fires.
   Event callback_fired;
-  RootJobObserver observer{root_job, [&]() { callback_fired.Signal(); }};
+  RootJobObserver observer{root_job, nullptr, [&]() { callback_fired.Signal(); }};
 
   // Ensure everything is running.
   ASSERT_EQ(child_process.dispatcher()->state(), ProcessDispatcher::State::RUNNING);

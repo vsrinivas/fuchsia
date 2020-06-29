@@ -34,6 +34,8 @@ class Executor {
 
   const fbl::RefPtr<JobDispatcher>& GetRootJobDispatcher() { return root_job_; }
 
+  Handle* GetRootJobHandle() { return root_job_handle_.get(); }
+
   fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
     return memory_watchdog_.GetMemPressureEvent(kind);
   }
@@ -47,6 +49,7 @@ class Executor {
  private:
   // All jobs and processes of this Executor are rooted at this job.
   fbl::RefPtr<JobDispatcher> root_job_;
+  HandleOwner root_job_handle_;
 
   // Watch the root job, taking action (such as a system reboot) if it ends up
   // with no children.

@@ -45,35 +45,22 @@ __NO_RETURN void Halt() {
 
 }  // anonymous namespace
 
-RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job)
-    : RootJobObserver(ktl::move(root_job), Halt) {}
+RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle_)
+    : RootJobObserver(ktl::move(root_job), root_job_handle_, Halt) {}
 
-RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, fbl::Closure callback)
-    : root_job_(ktl::move(root_job)), callback_(ktl::move(callback)) {
-  root_job_->AddObserver(this);
+RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle,
+                                 fbl::Closure callback)
+    : root_job_(ktl::move(root_job)), callback_(std::move(callback)) {
+  root_job_->AddObserver(this, root_job_handle, ZX_JOB_NO_CHILDREN);
 }
 
 RootJobObserver::~RootJobObserver() { root_job_->RemoveObserver(this); }
 
-StateObserver::Flags RootJobObserver::OnInitialize(zx_signals_t initial_state) {
-  return OnStateChange(initial_state);
-}
-
-StateObserver::Flags RootJobObserver::OnStateChange(zx_signals_t new_state) {
+void RootJobObserver::OnMatch(zx_signals_t signals) {
   // Remember, the |root_job_|'s Dispatcher lock is held for the duration of
   // this method.  Take care to avoid calling anything that might attempt to
   // acquire that lock.
-
-  // If we don't have any children, trigger the callback.
-  //
-  // If the root job is itself killed, all children processes and jobs will
-  // first be removed, also causing the "ZX_JOB_NO_CHILDREN" signal to activate.
-  if ((new_state & ZX_JOB_NO_CHILDREN) != 0) {
-    callback_();
-    return kNeedRemoval;
-  }
-
-  return 0;
+  callback_();
 }
 
-StateObserver::Flags RootJobObserver::OnCancel(const Handle* handle) { return 0; }
+void RootJobObserver::OnCancel(zx_signals_t signals) {}

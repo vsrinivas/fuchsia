@@ -256,6 +256,7 @@ class JobDispatcher final
 
 // Returns the job that is the ancestor of all other tasks.
 fbl::RefPtr<JobDispatcher> GetRootJobDispatcher();
+Handle* GetRootJobHandle();
 
 // Start the RootJobObserver. Must be called after the root job has at
 // least one child process or child job.

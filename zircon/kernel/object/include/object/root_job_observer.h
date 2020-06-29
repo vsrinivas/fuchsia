@@ -9,14 +9,14 @@
 
 #include <fbl/function.h>
 #include <object/job_dispatcher.h>
-#include <object/state_observer.h>
+#include <object/signal_observer.h>
 
-class RootJobObserver final : public StateObserver {
+class RootJobObserver final : public SignalObserver {
  public:
   ~RootJobObserver();
 
   // Create a RootJobObserver that halts the system when the root job terminates.
-  explicit RootJobObserver(fbl::RefPtr<JobDispatcher> root_job);
+  RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle);
 
   // Create a RootJobObserver that calls the given callback when the root job
   // terminates.
@@ -26,12 +26,13 @@ class RootJobObserver final : public StateObserver {
   // lock again, introduce a lock cycle, etc.
   //
   // Exposed for testing.
-  RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, fbl::Closure callback);
+  RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle,
+                  fbl::Closure callback);
 
  private:
-  Flags OnInitialize(zx_signals_t initial_state) final;
-  Flags OnStateChange(zx_signals_t new_state) final;
-  Flags OnCancel(const Handle* handle) final;
+  // |SignalObserver| implementation.
+  void OnMatch(zx_signals_t signals) final;
+  void OnCancel(zx_signals_t signals) final;
 
   fbl::RefPtr<JobDispatcher> root_job_;
   fbl::Closure callback_;
