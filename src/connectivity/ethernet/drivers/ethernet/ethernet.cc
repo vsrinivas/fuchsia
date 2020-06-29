@@ -388,7 +388,7 @@ int EthDev::TransmitThread() {
           break;
         continue;
       } else {
-        zxlogf(ERROR, "eth [%s]: tx_fifo: cannot read: %d", name_, status);
+        zxlogf(WARNING, "eth [%s]: tx_fifo: cannot read: %d", name_, status);
         break;
       }
     }
