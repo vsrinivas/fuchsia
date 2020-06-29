@@ -7,7 +7,6 @@ package syslog
 import (
 	"context"
 	"io"
-	"log"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -54,10 +53,11 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		// We need not attempt to reconnect if the context was canceled or if we
 		// hit an error unrelated to the connection.
 		if err != nil {
-			log.Printf(err.Error())
+			logger.Debugf(ctx, "error streaming syslog: %v", err)
 		}
+
 		if err == nil || ctx.Err() != nil || !sshutil.IsConnectionError(err) {
-			log.Printf("exiting")
+			logger.Debugf(ctx, "syslog streaming complete")
 			return err
 		}
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)
