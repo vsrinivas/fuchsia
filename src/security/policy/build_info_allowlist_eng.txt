@@ -1,5 +1,6 @@
 fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx
 fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx
+fuchsia-pkg://fuchsia.com/cast_agent#meta/cast-auth.cmx
 fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx
 fuchsia-pkg://fuchsia.com/comms_agent#meta/comms_agent.cmx
 fuchsia-pkg://fuchsia.com/crash-reports#meta/crash_reports.cmx
