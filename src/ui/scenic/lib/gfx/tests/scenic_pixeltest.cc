@@ -1211,6 +1211,12 @@ class ParameterizedYuvPixelTest
 
 // Test that exercies sampling from YUV textures.
 TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
+  auto escher_ptr = escher::test::GetEscher()->GetWeakPtr();
+  if (!escher_ptr->device()->caps().allow_ycbcr) {
+    FX_LOGS(WARNING) << "YUV images not supported. Test skipped.";
+    GTEST_SKIP();
+  }
+
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
