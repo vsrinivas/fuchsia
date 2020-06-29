@@ -7,28 +7,23 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
-        drawing::path_for_rectangle,
         make_app_assistant,
-        render::{
-            BlendMode, Composition, Context, CopyRegion, Fill, FillRule, Image, Layer, PostCopy,
-            PreClear, Raster, RenderExt, Style,
-        },
+        render::{Composition, Context, CopyRegion, Image, PreClear, PreCopy, RenderExt},
         App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::default::{Point2D, Rect, Vector2D},
-    fuchsia_trace_provider,
+    euclid::default::{Point2D, Rect},
     fuchsia_zircon::{AsHandleRef, Event, Signals},
-    std::{collections::BTreeMap, fs::File},
+    std::fs::File,
 };
 
 const WHITE_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 
-/// Png.
+/// Display Png.
 #[derive(Debug, FromArgs)]
 #[argh(name = "display_png")]
 struct Args {
-    /// PNG file to load (default is lenna.png)
+    /// PNG file to load
     #[argh(option)]
     file: String,
 
@@ -58,13 +53,13 @@ fn parse_point(value: &str) -> Result<Point2D<f32>, String> {
 }
 
 #[derive(Default)]
-struct PngAppAssistant {
+struct DisplayPngAppAssistant {
     filename: String,
     background: Option<Color>,
     position: Option<Point2D<f32>>,
 }
 
-impl AppAssistant for PngAppAssistant {
+impl AppAssistant for DisplayPngAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         let args: Args = argh::from_env();
         self.filename = args.file;
@@ -74,7 +69,7 @@ impl AppAssistant for PngAppAssistant {
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(PngViewAssistant::new(
+        Ok(Box::new(DisplayPngViewAssistant::new(
             self.filename.clone(),
             self.background.take().unwrap_or(WHITE_COLOR),
             self.position.take(),
@@ -86,39 +81,24 @@ impl AppAssistant for PngAppAssistant {
     }
 }
 
-struct Rendering {
-    size: Size,
-    composition: Composition,
-    clear_raster: Option<Raster>,
-}
-
-impl Rendering {
-    fn new(background: Color) -> Rendering {
-        let composition = Composition::new(background);
-
-        Rendering { size: Size::zero(), composition, clear_raster: None }
-    }
-}
-
-struct PngViewAssistant {
+struct DisplayPngViewAssistant {
     filename: String,
     background: Color,
-    renderings: BTreeMap<u64, Rendering>,
-    png: Option<(Size, Image, Raster)>,
+    png: Option<(Size, Image)>,
     composition: Composition,
     position: Option<Point2D<f32>>,
 }
 
-impl PngViewAssistant {
+impl DisplayPngViewAssistant {
     pub fn new(filename: String, background: Color, position: Option<Point2D<f32>>) -> Self {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
         let composition = Composition::new(background);
 
-        Self { filename, background, renderings: BTreeMap::new(), png: None, composition, position }
+        Self { filename, background, png: None, composition, position }
     }
 }
 
-impl ViewAssistant for PngViewAssistant {
+impl ViewAssistant for DisplayPngViewAssistant {
     fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
@@ -129,20 +109,9 @@ impl ViewAssistant for PngViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        let background = self.background;
-        let image_id = context.image_id;
-        let rendering =
-            self.renderings.entry(image_id).or_insert_with(|| Rendering::new(background));
-        let ext = if rendering.size != context.size {
-            rendering.size = context.size;
-            RenderExt { pre_clear: Some(PreClear { color: background }), ..Default::default() }
-        } else {
-            RenderExt::default()
-        };
-
-        // Create image from PNG and raster for clearing.
+        // Create image from PNG.
         let filename = &self.filename;
-        let (png_size, png_image, png_raster) = self.png.take().unwrap_or_else(|| {
+        let (png_size, png_image) = self.png.take().unwrap_or_else(|| {
             let file = File::open(format!("{}", filename))
                 .expect(&format!("failed to open file {}", filename));
             let decoder = png::Decoder::new(file);
@@ -151,45 +120,25 @@ impl ViewAssistant for PngViewAssistant {
                 .new_image_from_png(&mut reader)
                 .expect(&format!("failed to decode file {}", filename));
             let size = Size::new(info.width as f32, info.height as f32);
-            let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-            raster_builder
-                .add(&path_for_rectangle(&Rect::new(Point2D::zero(), size), render_context), None);
-            (size, image, raster_builder.build())
+            (size, image)
         });
 
         // Center image if position has not been specified.
         let position = self.position.take().unwrap_or_else(|| {
-            let x = (rendering.size.width - png_size.width) / 2.0;
-            let y = (rendering.size.height - png_size.height) / 2.0;
+            let x = (context.size.width - png_size.width) / 2.0;
+            let y = (context.size.height - png_size.height) / 2.0;
             Point2D::new(x, y)
         });
 
-        // Clear area where image was previously located.
-        let clear_layer = rendering.clear_raster.iter().map(|raster| Layer {
-            raster: raster.clone(),
-            style: Style {
-                fill_rule: FillRule::WholeTile,
-                fill: Fill::Solid(background),
-                blend_mode: BlendMode::Over,
-            },
-        });
-        rendering.composition.replace(.., clear_layer);
-        let image = render_context.get_current_image(context);
-        render_context.render(&rendering.composition, None, image, &ext);
-
-        // Save clear raster for next frame.
-        let translation = position.to_vector().to_i32();
-        let clear_raster = png_raster.clone().translate(translation);
-        rendering.clear_raster.replace(clear_raster);
-
-        // Determine visible rect and copy |png_image| to |image|.
+        // Determine visible rect.
         let dst_rect = Rect::new(position.to_i32(), png_size.to_i32());
-        let output_rect = Rect::new(Point2D::zero(), rendering.size.to_i32());
+        let output_rect = Rect::new(Point2D::zero(), context.size.to_i32());
+
+        // Clear |image| to background color and copy |png_image| to |image|.
         let ext = RenderExt {
-            post_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PostCopy {
-                image,
-                color: background,
-                exposure_distance: Vector2D::zero(),
+            pre_clear: Some(PreClear { color: self.background }),
+            pre_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PreCopy {
+                image: png_image,
                 copy_region: CopyRegion {
                     src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
                     dst_offset: visible_rect.origin.to_u32(),
@@ -198,10 +147,10 @@ impl ViewAssistant for PngViewAssistant {
             }),
             ..Default::default()
         };
-        // Empty clip to skip rendering and only copy image.
-        render_context.render(&self.composition, Some(Rect::zero()), png_image, &ext);
+        let image = render_context.get_current_image(context);
+        render_context.render(&self.composition, Some(Rect::zero()), image, &ext);
 
-        self.png.replace((png_size, png_image, png_raster));
+        self.png.replace((png_size, png_image));
         self.position.replace(position);
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
@@ -210,6 +159,5 @@ impl ViewAssistant for PngViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    fuchsia_trace_provider::trace_provider_create_with_fdio();
-    App::run(make_app_assistant::<PngAppAssistant>())
+    App::run(make_app_assistant::<DisplayPngAppAssistant>())
 }
