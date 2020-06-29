@@ -10,8 +10,13 @@ import("//src/sys/build/components.gni")
 source_set("test_sources") {
   testonly = true
   sources = [
+    "abi_tests.cc",
+    "cpp_types_tests.cc",
+    "decoding_tests.cc",
+    "encoding_tests.cc",
     "fidl_align_tests.cc",
     "fidl_coded_types.cc",
+    "formatting_tests.cc",
     "handle_closing_tests.cc",
     "llcpp_client_test.cc",
     "llcpp_gen_api_test.cc",
@@ -19,7 +24,9 @@ source_set("test_sources") {
     "llcpp_transaction_tests.cc",
     "llcpp_types_tests.cc",
     "main.cc",
+    "message_tests.cc",
     "on_error_handle_tests.cc",
+    "validating_tests.cc",
   ]
   include_dirs = [ "generated" ]
   public_deps = [
@@ -47,8 +54,12 @@ source_set("host_test_sources") {
   sources = [
     "abi_tests.cc",
     "cpp_types_tests.cc",
+    "decoding_tests.cc",
+    "encoding_tests.cc",
     "fidl_align_tests.cc",
+    "fidl_coded_types.cc",
     "validate_string_tests.cc",
+    "validating_tests.cc",
   ]
   public_deps = [
     "//zircon/public/lib/fidl_base",
@@ -71,6 +82,11 @@ if (is_fuchsia) {
     deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 
+  fuchsia_unittest_package("run-without-handle-policy-tests") {
+    executable_name = "fidl-handle-policy-test-app"
+    deps = [ ":test_bin" ]
+  }
+
   executable("test_launcher_bin") {
     testonly = true
     output_name = "run_with_handle_policy_tests"
@@ -88,7 +104,6 @@ if (is_fuchsia) {
   fuchsia_unittest_package("run-with-handle-policy-tests") {
     manifest = "run_with_handle_policy_tests.cmx"
 
-    # deps = [ ":test_launcher_bin", ":test_bin_resource" ]
     deps = [ ":test_launcher_bin" ]
   }
 }
