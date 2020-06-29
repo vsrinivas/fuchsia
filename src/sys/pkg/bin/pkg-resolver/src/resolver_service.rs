@@ -213,14 +213,6 @@ enum HashSource<TufError> {
     Tuf(BlobId),
     SystemImageCachePackages(BlobId, TufError),
 }
-impl<T> HashSource<T> {
-    fn inner(&self) -> &BlobId {
-        match self {
-            HashSource::Tuf(id) => id,
-            HashSource::SystemImageCachePackages(id, _) => id,
-        }
-    }
-}
 
 async fn hash_from_base_or_repo_or_cache(
     repo_manager: &RwLock<RepositoryManager>,
@@ -232,33 +224,6 @@ async fn hash_from_base_or_repo_or_cache(
 ) -> Result<BlobId, Status> {
     match unpinned_base_package(pkg_url, base_package_index) {
         Some(blob) => {
-            // TODO(52809): delete this warning logic 2 weeks after submission.
-            if let Ok(rewritten_url) = rewrite_url(rewriter, &pkg_url) {
-                let tuf_or_cache_hash = hash_from_repo_or_cache(
-                    repo_manager,
-                    system_cache_list,
-                    pkg_url,
-                    &rewritten_url,
-                    inspect_state,
-                )
-                .await;
-                if let Ok(tuf_or_cache) = tuf_or_cache_hash {
-                    if blob != *tuf_or_cache.inner() {
-                        fx_log_warn!(
-                            "GetHash was called on an unpinned base package, and the base package manifest and \
-                            TUF repository disagree on what the package hash should be. The hash from the base \
-                            package manifest will be used from now on. This behavior changed recently. Contact \
-                            SWD for help if you were relying on ephemeral base packages. \
-                            base hash {}, TUF hash {}, package URL {}, rewritten URL {}",
-                            blob,
-                            tuf_or_cache.inner(),
-                            pkg_url,
-                            rewritten_url,
-                        );
-                    }
-                }
-            }
-
             fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
             Ok(blob)
         }
@@ -357,32 +322,6 @@ async fn package_from_base_or_repo_or_cache(
 ) -> Result<BlobId, Status> {
     match unpinned_base_package(pkg_url, base_package_index) {
         Some(blob) => {
-            // TODO(52809): delete this warning logic 2 weeks after submission.
-            if let Ok(rewritten_url) = rewrite_url(rewriter, &pkg_url) {
-                let tuf_or_cache_hash = hash_from_repo_or_cache(
-                    repo_manager,
-                    system_cache_list,
-                    pkg_url,
-                    &rewritten_url,
-                    inspect_state,
-                )
-                .await;
-                if let Ok(tuf_or_cache) = tuf_or_cache_hash {
-                    if blob != *tuf_or_cache.inner() {
-                        fx_log_warn!(
-                            "Resolve was called on an unpinned base package, and the base package manifest and \
-                            TUF repository disagree on what the package hash should be. The hash from the base \
-                            package manifest will be used from now on. This behavior changed recently. Contact \
-                            SWD for help if you were relying on ephemeral base packages. \
-                            base hash {}, TUF hash {}, package URL {}, rewritten URL {}",
-                            blob,
-                            tuf_or_cache.inner(),
-                            pkg_url,
-                            rewritten_url,
-                        );
-                    }
-                }
-            }
             fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
             Ok(blob)
         }
