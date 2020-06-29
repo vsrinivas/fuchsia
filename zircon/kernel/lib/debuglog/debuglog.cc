@@ -495,3 +495,9 @@ static void dlog_init_hook(uint level) {
 }
 
 LK_INIT_HOOK(debuglog, dlog_init_hook, LK_INIT_LEVEL_PLATFORM)
+
+FILE gDlogSerialFile{[](void*, ktl::string_view str) {
+                       dlog_serial_write(str);
+                       return static_cast<int>(str.size());
+                     },
+                     nullptr};

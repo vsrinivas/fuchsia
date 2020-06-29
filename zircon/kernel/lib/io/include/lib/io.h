@@ -8,6 +8,7 @@
 #ifndef ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
 #define ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
 
+#include <stdio.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
@@ -56,5 +57,8 @@ void unregister_print_callback(PrintCallback* cb);
 // Back doors to directly write to the kernel serial and console, respectively.
 void serial_write(ktl::string_view str);
 void console_write(ktl::string_view str);
+
+extern FILE gSerialFile;
+extern FILE gConsoleFile;
 
 #endif  // ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_

@@ -127,3 +127,15 @@ FILE FILE::stdout_{[](void*, ktl::string_view str) {
                      return static_cast<int>(str.size());
                    },
                    nullptr};
+
+FILE gConsoleFile{[](void*, ktl::string_view str) {
+                    console_write(str);
+                    return static_cast<int>(str.size());
+                  },
+                  nullptr};
+
+FILE gSerialFile{[](void*, ktl::string_view str) {
+                   serial_write(str);
+                   return static_cast<int>(str.size());
+                 },
+                 nullptr};

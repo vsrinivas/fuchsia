@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_
 
 #include <stdint.h>
+#include <stdio.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -93,6 +94,10 @@ zx_status_t dlog_write(uint32_t severity, uint32_t flags, ktl::string_view str);
 
 // used by sys_debug_write()
 void dlog_serial_write(ktl::string_view str);
+
+// Allow FILE*-based APIs, like fprintf, to use the same output
+// backend as dlog_serial_write.
+extern FILE gDlogSerialFile;
 
 // bluescreen_init should be called at the "start" of a fatal fault or
 // panic to ensure that the fault output (via kernel printf/dprintf)
