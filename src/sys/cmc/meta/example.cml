@@ -37,21 +37,21 @@
                 "destroyed",
                 "stopped",
             ],
-            from: "realm",
+            from: "parent",
         },
         {
             event: "capability_ready",
-            from: "realm",
+            from: "parent",
             as: "diagnostics_ready",
             filter: { path: "/diagnostics" },
         },
         {
-            as: "/svc/my_stream",
             event_stream: [
                 "began",
                 "destroyed",
                 "diagnostics_ready",
             ],
+            as: "/svc/my_stream",
         },
     ],
     offer: [
@@ -67,7 +67,7 @@
         },
         {
             event: "stopped",
-            from: "realm",
+            from: "parent",
             as: "stopped-logger",
             to: [ "#logger" ],
         },
@@ -82,12 +82,12 @@
             protocol: "/loggers/fuchsia.logger.LegacyLog",
             from: "#logger",
             as: "/svc/fuchsia.logger.LegacyLog",
-            to: "realm",
+            to: "parent",
         },
         {
             directory: "/volumes/blobfs",
             from: "self",
-            to: "realm",
+            to: "parent",
             rights: [ "rw*" ],
             subdir: "blob",
         },

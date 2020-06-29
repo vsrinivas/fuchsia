@@ -83,14 +83,14 @@ pub enum RoutingError {
     },
 
     #[error(
-        "A `use from realm` declaration was found at `/` for `{}`, \
+        "A `use from parent` declaration was found at `/` for `{}`, \
         but no built-in capability matches",
         capability_id
     )]
     UseFromComponentManagerNotFound { capability_id: String },
 
     #[error(
-        "An `offer from realm` declaration was found at `/` for `{}`, \
+        "An `offer from parent` declaration was found at `/` for `{}`, \
         but no built-in capability matches",
         capability_id
     )]
@@ -104,12 +104,12 @@ pub enum RoutingError {
     StorageFromComponentManagerNotFound { capability_id: String },
 
     #[error(
-        "A `use from realm` declaration was found at `{}` for `{}`, but no matching \
+        "A `use from parent` declaration was found at `{}` for `{}`, but no matching \
         `offer` declaration was found in the parent",
         moniker,
         capability_id
     )]
-    UseFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    UseFromParentNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
     #[error(
         "A `use` declaration was found at `{}` for {} `{}`, but no matching \
@@ -126,13 +126,13 @@ pub enum RoutingError {
     },
 
     #[error(
-        "An `environment` {} registration from `realm` was found at `{}` for `{}`, but no \
+        "An `environment` {} registration from `parent` was found at `{}` for `{}`, but no \
         matching `offer` declaration was found in the parent",
         capability_type,
         moniker,
         capability_id
     )]
-    EnvironmentFromRealmNotFound {
+    EnvironmentFromParentNotFound {
         moniker: AbsoluteMoniker,
         capability_type: String,
         capability_id: String,
@@ -154,20 +154,20 @@ pub enum RoutingError {
     },
 
     #[error(
-        "An `offer from realm` declaration was found at `{}` for `{}`, but no matching \
+        "An `offer from parent` declaration was found at `{}` for `{}`, but no matching \
         `offer` declaration was found in the parent",
         moniker,
         capability_id
     )]
-    OfferFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    OfferFromParentNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
     #[error(
-        "A `storage` declaration with a backing directory from `realm` was found at `{}` for `{}`,
+        "A `storage` declaration with a backing directory from `parent` was found at `{}` for `{}`,
         but no matching `offer` declaration was found in the parent",
         moniker,
         capability_id
     )]
-    StorageFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    StorageFromParentNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
     #[error(
         "An `offer from #{}` declaration was found at `{}` for `{}`, but no matching child was \
@@ -355,11 +355,14 @@ impl RoutingError {
         Self::StorageFromComponentManagerNotFound { capability_id: capability_id.into() }
     }
 
-    pub fn use_from_realm_not_found(
+    pub fn use_from_parent_not_found(
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
-        Self::UseFromRealmNotFound { moniker: moniker.clone(), capability_id: capability_id.into() }
+        Self::UseFromParentNotFound {
+            moniker: moniker.clone(),
+            capability_id: capability_id.into(),
+        }
     }
 
     pub fn use_from_environment_not_found(
@@ -374,12 +377,12 @@ impl RoutingError {
         }
     }
 
-    pub fn environment_from_realm_not_found(
+    pub fn environment_from_parent_not_found(
         moniker: &AbsoluteMoniker,
         capability_type: impl Into<String>,
         capability_id: impl Into<String>,
     ) -> Self {
-        Self::EnvironmentFromRealmNotFound {
+        Self::EnvironmentFromParentNotFound {
             moniker: moniker.clone(),
             capability_type: capability_type.into(),
             capability_id: capability_id.into(),
@@ -400,21 +403,21 @@ impl RoutingError {
         }
     }
 
-    pub fn offer_from_realm_not_found(
+    pub fn offer_from_parent_not_found(
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
-        Self::OfferFromRealmNotFound {
+        Self::OfferFromParentNotFound {
             moniker: moniker.clone(),
             capability_id: capability_id.into(),
         }
     }
 
-    pub fn storage_from_realm_not_found(
+    pub fn storage_from_parent_not_found(
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
-        Self::StorageFromRealmNotFound {
+        Self::StorageFromParentNotFound {
             moniker: moniker.clone(),
             capability_id: capability_id.into(),
         }

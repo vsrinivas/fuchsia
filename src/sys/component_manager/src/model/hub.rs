@@ -831,12 +831,12 @@ mod tests {
                         subdir: None,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
-                        source: UseSource::Realm,
+                        source: UseSource::Parent,
                         source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }))
                     .use_(UseDecl::Directory(UseDirectoryDecl {
-                        source: UseSource::Realm,
+                        source: UseSource::Parent,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
@@ -882,13 +882,13 @@ mod tests {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                        target: ExposeTarget::Realm,
+                        target: ExposeTarget::Parent,
                     }))
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        target: ExposeTarget::Realm,
+                        target: ExposeTarget::Parent,
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }))

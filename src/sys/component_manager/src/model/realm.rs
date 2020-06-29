@@ -1581,7 +1581,7 @@ pub mod tests {
                     .expose(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                         source: cm_rust::ExposeSource::Self_,
                         source_path: "/svc/foo".try_into().expect("bad cap path"),
-                        target: cm_rust::ExposeTarget::Realm,
+                        target: cm_rust::ExposeTarget::Parent,
                         target_path: "/svc/foo".try_into().expect("bad cap path"),
                     }))
                     .build(),

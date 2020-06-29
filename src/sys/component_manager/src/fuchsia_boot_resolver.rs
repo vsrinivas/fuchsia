@@ -204,7 +204,7 @@ mod tests {
             uses: Some(vec![
                 fsys::UseDecl::Runner(fsys::UseRunnerDecl { source_name: Some("elf".to_string()) }),
                 fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                    source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     source_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
                     target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
                 }),

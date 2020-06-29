@@ -264,7 +264,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_inherit_root() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Realm,
+            source: cm_rust::RegistrationSource::Parent,
             source_name: "test-src".into(),
         };
         let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
@@ -320,7 +320,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_inherit_parent() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Realm,
+            source: cm_rust::RegistrationSource::Parent,
             source_name: "test-src".into(),
         };
         let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
@@ -337,7 +337,7 @@ mod tests {
                         .name("env_a")
                         .extends(fsys::EnvironmentExtends::Realm)
                         .add_runner(cm_rust::RunnerRegistration {
-                            source: cm_rust::RegistrationSource::Realm,
+                            source: cm_rust::RegistrationSource::Parent,
                             source_name: "test-src".into(),
                             target_name: "test".into(),
                         }),
@@ -383,7 +383,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_inherit_in_collection() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Realm,
+            source: cm_rust::RegistrationSource::Parent,
             source_name: "test-src".into(),
         };
         let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
@@ -400,7 +400,7 @@ mod tests {
                         .name("env_a")
                         .extends(fsys::EnvironmentExtends::Realm)
                         .add_runner(cm_rust::RunnerRegistration {
-                            source: cm_rust::RegistrationSource::Realm,
+                            source: cm_rust::RegistrationSource::Parent,
                             source_name: "test-src".into(),
                             target_name: "test".into(),
                         }),
@@ -458,7 +458,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_auto_inheritance() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Realm,
+            source: cm_rust::RegistrationSource::Parent,
             source_name: "test-src".into(),
         };
         let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {

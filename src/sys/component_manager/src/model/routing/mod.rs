@@ -388,7 +388,7 @@ async fn route_storage_capability<'a>(
         StorageDirectorySource::Self_ => {
             (storage_decl.source_path, Some(source_realm), pos.cap_state)
         }
-        StorageDirectorySource::Realm => {
+        StorageDirectorySource::Parent => {
             let capability = ComponentCapability::Storage(storage_decl);
             let (source, cap_state) = find_capability_source(capability, &source_realm).await?;
             match source {
@@ -631,7 +631,7 @@ async fn find_environment_component_capability_source<'a>(
             let cap_source = find_capability_source_from_self(&env_realm, &capability, decl);
             Ok((cap_source, cap_state))
         }
-        cm_rust::RegistrationSource::Realm => {
+        cm_rust::RegistrationSource::Parent => {
             let starting_realm = env_realm.try_get_parent()?;
             let mut pos = WalkPosition {
                 capability,
@@ -829,26 +829,26 @@ async fn walk_offer_chain<'a>(
                 .capability
             {
                 ComponentCapability::Use(_) => {
-                    ModelError::from(RoutingError::use_from_realm_not_found(
+                    ModelError::from(RoutingError::use_from_parent_not_found(
                         &pos.abs_last_child_moniker(),
                         pos.capability.source_id(),
                     ))
                 }
                 ComponentCapability::Environment(_) => {
-                    ModelError::from(RoutingError::environment_from_realm_not_found(
+                    ModelError::from(RoutingError::environment_from_parent_not_found(
                         &pos.abs_last_child_moniker(),
                         pos.capability.type_name(),
                         pos.capability.source_id(),
                     ))
                 }
                 ComponentCapability::Offer(_) => {
-                    ModelError::from(RoutingError::offer_from_realm_not_found(
+                    ModelError::from(RoutingError::offer_from_parent_not_found(
                         &pos.abs_last_child_moniker(),
                         pos.capability.source_id(),
                     ))
                 }
                 ComponentCapability::Storage(_) => {
-                    ModelError::from(RoutingError::storage_from_realm_not_found(
+                    ModelError::from(RoutingError::storage_from_parent_not_found(
                         &pos.abs_last_child_moniker(),
                         pos.capability.source_id(),
                     ))
@@ -906,18 +906,18 @@ async fn walk_offer_chain<'a>(
                     scope_moniker: pos.moniker().clone(),
                 }));
             }
-            OfferSource::Protocol(OfferServiceSource::Realm)
-            | OfferSource::Storage(OfferStorageSource::Realm)
-            | OfferSource::Runner(OfferRunnerSource::Realm) => {
-                // The offered capability comes from the realm, so follow the
+            OfferSource::Protocol(OfferServiceSource::Parent)
+            | OfferSource::Storage(OfferStorageSource::Parent)
+            | OfferSource::Runner(OfferRunnerSource::Parent) => {
+                // The offered capability comes from the parent, so follow the
                 // parent
                 pos.capability = ComponentCapability::Offer(offer.clone());
                 pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
                 pos.realm = cur_realm.try_get_parent()?;
                 continue 'offerloop;
             }
-            OfferSource::Event(OfferEventSource::Realm) => {
-                // The offered capability comes from the realm, so follow the
+            OfferSource::Event(OfferEventSource::Parent) => {
+                // The offered capability comes from the parent, so follow the
                 // parent
                 if let CapabilityState::Event { filter_state } = &mut pos.cap_state {
                     *filter_state = filter_state.advance(Some(event_filter))?;
@@ -927,7 +927,7 @@ async fn walk_offer_chain<'a>(
                 pos.realm = cur_realm.try_get_parent()?;
                 continue 'offerloop;
             }
-            OfferSource::Directory(OfferDirectorySource::Realm) => {
+            OfferSource::Directory(OfferDirectorySource::Parent) => {
                 if let CapabilityState::Directory { rights_state, subdir } = &mut pos.cap_state {
                     *rights_state = rights_state.advance(dir_rights)?;
                     CapabilityState::update_subdir(subdir, decl_subdir);
@@ -1098,7 +1098,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
             ExposeDecl::Runner(r) => (CapabilityExposeSource::Runner(&r.source), &r.target),
             ExposeDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
         };
-        if target != &ExposeTarget::Realm {
+        if target != &ExposeTarget::Parent {
             let partial = pos.moniker().leaf().expect("impossible source above root").to_partial();
             return Err(RoutingError::expose_from_child_expose_not_found(
                 &partial,

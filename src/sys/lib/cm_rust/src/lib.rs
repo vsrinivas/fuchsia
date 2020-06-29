@@ -1087,14 +1087,14 @@ impl OfferStorageDecl {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UseSource {
-    Realm,
+    Parent,
     Framework,
 }
 
 impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> UseSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => UseSource::Realm,
+            fsys::Ref::Parent(_) => UseSource::Parent,
             fsys::Ref::Framework(_) => UseSource::Framework,
             _ => panic!("invalid UseSource variant"),
         }
@@ -1104,7 +1104,7 @@ impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for UseSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            UseSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            UseSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             UseSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
         })
     }
@@ -1142,7 +1142,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeSource {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ExposeTarget {
-    Realm,
+    Parent,
     Framework,
 }
 
@@ -1150,11 +1150,11 @@ impl FidlIntoNative<ExposeTarget> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> ExposeTarget {
         match self {
             Some(dest) => match dest {
-                fsys::Ref::Realm(_) => ExposeTarget::Realm,
+                fsys::Ref::Parent(_) => ExposeTarget::Parent,
                 fsys::Ref::Framework(_) => ExposeTarget::Framework,
                 _ => panic!("invalid ExposeTarget variant"),
             },
-            None => ExposeTarget::Realm,
+            None => ExposeTarget::Parent,
         }
     }
 }
@@ -1162,7 +1162,7 @@ impl FidlIntoNative<ExposeTarget> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for ExposeTarget {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            ExposeTarget::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            ExposeTarget::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             ExposeTarget::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
         })
     }
@@ -1203,7 +1203,7 @@ impl NativeIntoFidl<Option<fsys::DependencyType>> for DependencyType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferServiceSource {
-    Realm,
+    Parent,
     Self_,
     Child(String),
 }
@@ -1211,7 +1211,7 @@ pub enum OfferServiceSource {
 impl FidlIntoNative<OfferServiceSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferServiceSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => OfferServiceSource::Realm,
+            fsys::Ref::Parent(_) => OfferServiceSource::Parent,
             fsys::Ref::Self_(_) => OfferServiceSource::Self_,
             fsys::Ref::Child(c) => OfferServiceSource::Child(c.name),
             _ => panic!("invalid OfferServiceSource variant"),
@@ -1222,7 +1222,7 @@ impl FidlIntoNative<OfferServiceSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for OfferServiceSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            OfferServiceSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferServiceSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             OfferServiceSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             OfferServiceSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1267,7 +1267,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeServiceSource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StorageDirectorySource {
-    Realm,
+    Parent,
     Self_,
     Child(String),
 }
@@ -1275,7 +1275,7 @@ pub enum StorageDirectorySource {
 impl FidlIntoNative<StorageDirectorySource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> StorageDirectorySource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => StorageDirectorySource::Realm,
+            fsys::Ref::Parent(_) => StorageDirectorySource::Parent,
             fsys::Ref::Self_(_) => StorageDirectorySource::Self_,
             fsys::Ref::Child(c) => StorageDirectorySource::Child(c.name),
             _ => panic!("invalid OfferDirectorySource variant"),
@@ -1286,7 +1286,7 @@ impl FidlIntoNative<StorageDirectorySource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            StorageDirectorySource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            StorageDirectorySource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             StorageDirectorySource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             StorageDirectorySource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1297,7 +1297,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RunnerSource {
-    Realm,
+    Parent,
     Self_,
     Child(String),
 }
@@ -1305,7 +1305,7 @@ pub enum RunnerSource {
 impl FidlIntoNative<RunnerSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> RunnerSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => RunnerSource::Realm,
+            fsys::Ref::Parent(_) => RunnerSource::Parent,
             fsys::Ref::Self_(_) => RunnerSource::Self_,
             fsys::Ref::Child(c) => RunnerSource::Child(c.name),
             _ => panic!("invalid RunnerSource variant"),
@@ -1316,7 +1316,7 @@ impl FidlIntoNative<RunnerSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            RunnerSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            RunnerSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             RunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             RunnerSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1327,7 +1327,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResolverSource {
-    Realm,
+    Parent,
     Self_,
     Child(String),
 }
@@ -1335,7 +1335,7 @@ pub enum ResolverSource {
 impl FidlIntoNative<ResolverSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> ResolverSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => ResolverSource::Realm,
+            fsys::Ref::Parent(_) => ResolverSource::Parent,
             fsys::Ref::Self_(_) => ResolverSource::Self_,
             fsys::Ref::Child(c) => ResolverSource::Child(c.name),
             _ => panic!("invalid ResolverSource variant"),
@@ -1346,7 +1346,7 @@ impl FidlIntoNative<ResolverSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for ResolverSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            ResolverSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            ResolverSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             ResolverSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             ResolverSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1357,7 +1357,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ResolverSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistrationSource {
-    Realm,
+    Parent,
     Self_,
     Child(String),
 }
@@ -1365,7 +1365,7 @@ pub enum RegistrationSource {
 impl FidlIntoNative<RegistrationSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> RegistrationSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => RegistrationSource::Realm,
+            fsys::Ref::Parent(_) => RegistrationSource::Parent,
             fsys::Ref::Self_(_) => RegistrationSource::Self_,
             fsys::Ref::Child(c) => RegistrationSource::Child(c.name),
             _ => panic!("invalid RegistrationSource variant"),
@@ -1376,7 +1376,7 @@ impl FidlIntoNative<RegistrationSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for RegistrationSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            RegistrationSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            RegistrationSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             RegistrationSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             RegistrationSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1387,7 +1387,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for RegistrationSource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferDirectorySource {
-    Realm,
+    Parent,
     Self_,
     Framework,
     Child(String),
@@ -1396,7 +1396,7 @@ pub enum OfferDirectorySource {
 impl FidlIntoNative<OfferDirectorySource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferDirectorySource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => OfferDirectorySource::Realm,
+            fsys::Ref::Parent(_) => OfferDirectorySource::Parent,
             fsys::Ref::Self_(_) => OfferDirectorySource::Self_,
             fsys::Ref::Framework(_) => OfferDirectorySource::Framework,
             fsys::Ref::Child(c) => OfferDirectorySource::Child(c.name),
@@ -1408,7 +1408,7 @@ impl FidlIntoNative<OfferDirectorySource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for OfferDirectorySource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            OfferDirectorySource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferDirectorySource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             OfferDirectorySource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             OfferDirectorySource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             OfferDirectorySource::Child(child_name) => {
@@ -1420,14 +1420,14 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferDirectorySource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferStorageSource {
-    Realm,
+    Parent,
     Storage(String),
 }
 
 impl FidlIntoNative<OfferStorageSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferStorageSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => OfferStorageSource::Realm,
+            fsys::Ref::Parent(_) => OfferStorageSource::Parent,
             fsys::Ref::Storage(c) => OfferStorageSource::Storage(c.name),
             _ => panic!("invalid OfferStorageSource variant"),
         }
@@ -1437,7 +1437,7 @@ impl FidlIntoNative<OfferStorageSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            OfferStorageSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferStorageSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             OfferStorageSource::Storage(name) => fsys::Ref::Storage(fsys::StorageRef { name }),
         })
     }
@@ -1445,7 +1445,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferRunnerSource {
-    Realm,
+    Parent,
     Self_,
     Child(String),
 }
@@ -1453,7 +1453,7 @@ pub enum OfferRunnerSource {
 impl FidlIntoNative<OfferRunnerSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferRunnerSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => OfferRunnerSource::Realm,
+            fsys::Ref::Parent(_) => OfferRunnerSource::Parent,
             fsys::Ref::Self_(_) => OfferRunnerSource::Self_,
             fsys::Ref::Child(c) => OfferRunnerSource::Child(c.name),
             _ => panic!("invalid OfferRunnerSource variant"),
@@ -1464,7 +1464,7 @@ impl FidlIntoNative<OfferRunnerSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for OfferRunnerSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            OfferRunnerSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferRunnerSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             OfferRunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             OfferRunnerSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1475,7 +1475,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferRunnerSource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferResolverSource {
-    Realm,
+    Parent,
     Self_,
     Child(String),
 }
@@ -1483,7 +1483,7 @@ pub enum OfferResolverSource {
 impl FidlIntoNative<OfferResolverSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferResolverSource {
         match self.unwrap() {
-            fsys::Ref::Realm(_) => OfferResolverSource::Realm,
+            fsys::Ref::Parent(_) => OfferResolverSource::Parent,
             fsys::Ref::Self_(_) => OfferResolverSource::Self_,
             fsys::Ref::Child(c) => OfferResolverSource::Child(c.name),
             _ => panic!("invalid OfferResolverSource variant"),
@@ -1494,7 +1494,7 @@ impl FidlIntoNative<OfferResolverSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for OfferResolverSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            OfferResolverSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferResolverSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             OfferResolverSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             OfferResolverSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1506,14 +1506,14 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferResolverSource {
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferEventSource {
     Framework,
-    Realm,
+    Parent,
 }
 
 impl FidlIntoNative<OfferEventSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferEventSource {
         match self.unwrap() {
             fsys::Ref::Framework(_) => OfferEventSource::Framework,
-            fsys::Ref::Realm(_) => OfferEventSource::Realm,
+            fsys::Ref::Parent(_) => OfferEventSource::Parent,
             _ => panic!("invalid OfferEventSource variant"),
         }
     }
@@ -1523,7 +1523,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferEventSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
             OfferEventSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
-            OfferEventSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferEventSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
         })
     }
 }
@@ -1755,12 +1755,12 @@ mod tests {
                ])}),
                uses: Some(vec![
                    fsys::UseDecl::Service(fsys::UseServiceDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_path: Some("/svc/netstack".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
                    }),
                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_path: Some("/svc/legacy_netstack".to_string()),
                        target_path: Some("/svc/legacy_mynetstack".to_string()),
                    }),
@@ -1783,7 +1783,7 @@ mod tests {
                        source_name: Some("myrunner".to_string()),
                    }),
                    fsys::UseDecl::Event(fsys::UseEventDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_name: Some("capability_ready".to_string()),
                        target_name: Some("diagnostics_ready".to_string()),
                        filter: Some(fdata::Dictionary{
@@ -1804,7 +1804,7 @@ mod tests {
                        })),
                        source_path: Some("/svc/legacy_netstack".to_string()),
                        target_path: Some("/svc/legacy_mynetstack".to_string()),
-                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }),
                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1813,7 +1813,7 @@ mod tests {
                        })),
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
-                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        rights: Some(fio2::Operations::Connect),
                        subdir: Some("foo/bar".to_string()),
                    }),
@@ -1823,7 +1823,7 @@ mod tests {
                            collection: None,
                        })),
                        source_name: Some("elf".to_string()),
-                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        target_name: Some("elf".to_string()),
                    }),
                    fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl{
@@ -1832,7 +1832,7 @@ mod tests {
                            collection: None,
                        })),
                        source_name: Some("pkg".to_string()),
-                       target: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                       target: Some(fsys::Ref::Parent(fsys::ParentRef{})),
                        target_name: Some("pkg".to_string()),
                    }),
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
@@ -1842,7 +1842,7 @@ mod tests {
                        })),
                        source_path: Some("/svc/netstack1".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
-                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }),
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1851,12 +1851,12 @@ mod tests {
                        })),
                        source_path: Some("/svc/netstack2".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
-                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }),
                ]),
                offers: Some(vec![
                    fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_path: Some("/svc/legacy_netstack".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
@@ -1868,7 +1868,7 @@ mod tests {
                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
                    }),
                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_path: Some("/data/dir".to_string()),
                        target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef { name: "modular".to_string() }
@@ -1888,7 +1888,7 @@ mod tests {
                        )),
                    }),
                    fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_name: Some("elf".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
@@ -1899,7 +1899,7 @@ mod tests {
                        target_name: Some("elf2".to_string()),
                    }),
                    fsys::OfferDecl::Resolver(fsys::OfferResolverDecl{
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
                        source_name: Some("pkg".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
@@ -1910,7 +1910,7 @@ mod tests {
                        target_name: Some("pkg".to_string()),
                    }),
                    fsys::OfferDecl::Event(fsys::OfferEventDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_name: Some("started".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
@@ -1929,7 +1929,7 @@ mod tests {
                        }),
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_path: Some("/svc/netstack1".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
@@ -1940,7 +1940,7 @@ mod tests {
                        target_path: Some("/svc/mynetstack".to_string()),
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_path: Some("/svc/netstack2".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
@@ -1995,7 +1995,7 @@ mod tests {
                    fsys::StorageDecl {
                        name: Some("memfs".to_string()),
                        source_path: Some("/memfs".to_string()),
-                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }
                ]),
                runners: Some(vec![
@@ -2028,7 +2028,7 @@ mod tests {
                        resolvers: Some(vec![
                            fsys::ResolverRegistration {
                                resolver: Some("pkg_resolver".to_string()),
-                               source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                               source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
                                scheme: Some("fuchsia-pkg".to_string()),
                            }
                        ]),
@@ -2050,12 +2050,12 @@ mod tests {
                     ])}),
                     uses: vec![
                         UseDecl::Service(UseServiceDecl {
-                            source: UseSource::Realm,
+                            source: UseSource::Parent,
                             source_path: "/svc/netstack".try_into().unwrap(),
                             target_path: "/svc/mynetstack".try_into().unwrap(),
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
-                            source: UseSource::Realm,
+                            source: UseSource::Parent,
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
                         }),
@@ -2072,7 +2072,7 @@ mod tests {
                             source_name: "myrunner".into(),
                         }),
                         UseDecl::Event(UseEventDecl {
-                            source: UseSource::Realm,
+                            source: UseSource::Parent,
                             source_name: "capability_ready".into(),
                             target_name: "diagnostics_ready".into(),
                             filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
@@ -2083,26 +2083,26 @@ mod tests {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
-                            target: ExposeTarget::Realm,
+                            target: ExposeTarget::Parent,
                         }),
                         ExposeDecl::Directory(ExposeDirectoryDecl {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
-                            target: ExposeTarget::Realm,
+                            target: ExposeTarget::Parent,
                             rights: Some(fio2::Operations::Connect),
                             subdir: Some("foo/bar".into()),
                         }),
                         ExposeDecl::Runner(ExposeRunnerDecl {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_name: "elf".try_into().unwrap(),
-                            target: ExposeTarget::Realm,
+                            target: ExposeTarget::Parent,
                             target_name: "elf".try_into().unwrap(),
                         }),
                         ExposeDecl::Resolver(ExposeResolverDecl {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_name: "pkg".try_into().unwrap(),
-                            target: ExposeTarget::Realm,
+                            target: ExposeTarget::Parent,
                             target_name: "pkg".try_into().unwrap(),
                         }),
                         ExposeDecl::Service(ExposeServiceDecl {
@@ -2117,19 +2117,19 @@ mod tests {
                                 },
                             ],
                             target_path: "/svc/mynetstack".try_into().unwrap(),
-                            target: ExposeTarget::Realm,
+                            target: ExposeTarget::Parent,
                         }),
                     ],
                     offers: vec![
                         OfferDecl::Protocol(OfferProtocolDecl {
-                            source: OfferServiceSource::Realm,
+                            source: OfferServiceSource::Parent,
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
                             dependency_type: DependencyType::WeakForMigration,
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferDirectorySource::Realm,
+                            source: OfferDirectorySource::Parent,
                             source_path: "/data/dir".try_into().unwrap(),
                             target: OfferTarget::Collection("modular".to_string()),
                             target_path: "/data".try_into().unwrap(),
@@ -2144,19 +2144,19 @@ mod tests {
                             }
                         )),
                         OfferDecl::Runner(OfferRunnerDecl {
-                            source: OfferRunnerSource::Realm,
+                            source: OfferRunnerSource::Parent,
                             source_name: "elf".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "elf2".try_into().unwrap(),
                         }),
                         OfferDecl::Resolver(OfferResolverDecl {
-                            source: OfferResolverSource::Realm,
+                            source: OfferResolverSource::Parent,
                             source_name: "pkg".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "pkg".try_into().unwrap(),
                         }),
                         OfferDecl::Event(OfferEventDecl {
-                            source: OfferEventSource::Realm,
+                            source: OfferEventSource::Parent,
                             source_name: "started".into(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "mystarted".into(),
@@ -2165,11 +2165,11 @@ mod tests {
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![
                                 ServiceSource::<OfferServiceSource> {
-                                    source: OfferServiceSource::Realm,
+                                    source: OfferServiceSource::Parent,
                                     source_path: "/svc/netstack1".try_into().unwrap(),
                                 },
                                 ServiceSource::<OfferServiceSource> {
-                                    source: OfferServiceSource::Realm,
+                                    source: OfferServiceSource::Parent,
                                     source_path: "/svc/netstack2".try_into().unwrap(),
                                 },
                             ],
@@ -2219,7 +2219,7 @@ mod tests {
                         StorageDecl {
                             name: "memfs".to_string(),
                             source_path: "/memfs".try_into().unwrap(),
-                            source: StorageDirectorySource::Realm,
+                            source: StorageDirectorySource::Parent,
                         },
                     ],
                     runners: vec![
@@ -2249,7 +2249,7 @@ mod tests {
                             resolvers: vec![
                                 ResolverRegistration {
                                     resolver: "pkg_resolver".into(),
-                                    source: RegistrationSource::Realm,
+                                    source: RegistrationSource::Parent,
                                     scheme: "fuchsia-pkg".to_string(),
                                 }
                             ],
@@ -2319,7 +2319,7 @@ mod tests {
         },
         fidl_into_and_from_offer_service_source => {
             input = vec![
-                Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                Some(fsys::Ref::Parent(fsys::ParentRef {})),
                 Some(fsys::Ref::Self_(fsys::SelfRef {})),
                 Some(fsys::Ref::Child(fsys::ChildRef {
                     name: "foo".to_string(),
@@ -2328,21 +2328,21 @@ mod tests {
             ],
             input_type = Option<fsys::Ref>,
             result = vec![
-                OfferServiceSource::Realm,
+                OfferServiceSource::Parent,
                 OfferServiceSource::Self_,
                 OfferServiceSource::Child("foo".to_string()),
             ],
             result_type = OfferServiceSource,
         },
         fidl_into_and_from_offer_event_source => {
-            input = vec![Some(fsys::Ref::Realm(fsys::RealmRef {}))],
+            input = vec![Some(fsys::Ref::Parent(fsys::ParentRef {}))],
             input_type = Option<fsys::Ref>,
-            result = vec![OfferEventSource::Realm],
+            result = vec![OfferEventSource::Parent],
             result_type = OfferEventSource,
         },
         fidl_into_and_from_offer_directory_source => {
             input = vec![
-                Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                Some(fsys::Ref::Parent(fsys::ParentRef {})),
                 Some(fsys::Ref::Self_(fsys::SelfRef {})),
                 Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                 Some(fsys::Ref::Child(fsys::ChildRef {
@@ -2352,7 +2352,7 @@ mod tests {
             ],
             input_type = Option<fsys::Ref>,
             result = vec![
-                OfferDirectorySource::Realm,
+                OfferDirectorySource::Parent,
                 OfferDirectorySource::Self_,
                 OfferDirectorySource::Framework,
                 OfferDirectorySource::Child("foo".to_string()),
@@ -2361,14 +2361,14 @@ mod tests {
         },
         fidl_into_and_from_offer_storage_source => {
             input = vec![
-                Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                Some(fsys::Ref::Parent(fsys::ParentRef {})),
                 Some(fsys::Ref::Storage(fsys::StorageRef {
                     name: "foo".to_string(),
                 })),
             ],
             input_type = Option<fsys::Ref>,
             result = vec![
-                OfferStorageSource::Realm,
+                OfferStorageSource::Parent,
                 OfferStorageSource::Storage("foo".to_string()),
             ],
             result_type = OfferStorageSource,
@@ -2378,7 +2378,7 @@ mod tests {
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
                     source_path: Some("/minfs".to_string()),
-                    source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                 },
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
@@ -2394,7 +2394,7 @@ mod tests {
                 StorageDecl {
                     name: "minfs".to_string(),
                     source_path: CapabilityPath::try_from("/minfs").unwrap(),
-                    source: StorageDirectorySource::Realm,
+                    source: StorageDirectorySource::Parent,
                 },
                 StorageDecl {
                     name: "minfs".to_string(),

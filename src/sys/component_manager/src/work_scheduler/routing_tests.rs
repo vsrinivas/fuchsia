@@ -203,7 +203,7 @@ async fn use_work_scheduler_with_expose_to_realm() {
                     source: ExposeSource::Self_,
                     source_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target_path: (*WORKER_CAPABILITY_PATH).clone(),
-                    target: ExposeTarget::Realm,
+                    target: ExposeTarget::Parent,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
@@ -232,7 +232,7 @@ async fn use_work_scheduler_control_routed() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Realm,
+                    source: OfferServiceSource::Parent,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
                     target: OfferTarget::Child("b".to_string()),
@@ -245,7 +245,7 @@ async fn use_work_scheduler_control_routed() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Realm,
+                    source: UseSource::Parent,
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),
                 }))
@@ -273,7 +273,7 @@ async fn use_work_scheduler_control_error() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Realm,
+                    source: OfferServiceSource::Parent,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
                     target: OfferTarget::Child("b".to_string()),

@@ -675,7 +675,7 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_source(&mut self, source: Option<&fsys::Ref>, decl: &str, field: &str) {
         match source {
-            Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, field));
@@ -845,7 +845,7 @@ impl<'a> ValidationContext<'a> {
         ty: &str,
     ) {
         match source {
-            Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Child(child_ref)) => {
                 // Make sure the child is valid.
@@ -869,7 +869,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_storage_decl(&mut self, storage: &'a fsys::StorageDecl) {
         check_path(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
         let source_child_name = match storage.source.as_ref() {
-            Some(fsys::Ref::Realm(_)) => None,
+            Some(fsys::Ref::Parent(_)) => None,
             Some(fsys::Ref::Self_(_)) => None,
             Some(fsys::Ref::Child(child)) => {
                 self.validate_source_child(child, "StorageDecl");
@@ -1061,7 +1061,7 @@ impl<'a> ValidationContext<'a> {
         }
         match target {
             Some(r) => match r {
-                fsys::Ref::Realm(_) => {}
+                fsys::Ref::Parent(_) => {}
                 fsys::Ref::Framework(_) => {
                     if source != Some(&fsys::Ref::Self_(fsys::SelfRef {})) {
                         self.errors.push(Error::invalid_field(decl, "source"));
@@ -1107,7 +1107,7 @@ impl<'a> ValidationContext<'a> {
         };
     }
 
-    /// Validates that the expose target is to `realm` or `framework`.
+    /// Validates that the expose target is to `parent` or `framework`.
     fn validate_expose_target(
         &mut self,
         target: &Option<fsys::Ref>,
@@ -1115,7 +1115,7 @@ impl<'a> ValidationContext<'a> {
         field_name: &str,
     ) {
         match target.as_ref() {
-            Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Parent(_)) => {}
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl_type, field_name));
             }
@@ -1276,7 +1276,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// Validates that the offer source is from `self`, `framework`, `realm`, or a valid child.
+    /// Validates that the offer source is from `self`, `framework`, `parent`, or a valid child.
     fn validate_offer_source(
         &mut self,
         source: &Option<fsys::Ref>,
@@ -1286,7 +1286,7 @@ impl<'a> ValidationContext<'a> {
         match source.as_ref() {
             Some(fsys::Ref::Self_(_))
             | Some(fsys::Ref::Framework(_))
-            | Some(fsys::Ref::Realm(_)) => {}
+            | Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Child(child)) => {
                 self.validate_source_child(child, decl_type);
             }
@@ -1342,7 +1342,7 @@ impl<'a> ValidationContext<'a> {
         target_path: Option<&'a String>,
     ) {
         match source {
-            Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
             Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
@@ -1378,7 +1378,7 @@ impl<'a> ValidationContext<'a> {
             self.errors.push(Error::missing_field(decl, "type"));
         }
         let storage_source_name = match source {
-            Some(fsys::Ref::Realm(_)) => None,
+            Some(fsys::Ref::Parent(_)) => None,
             Some(fsys::Ref::Storage(s)) => {
                 self.validate_storage_source(s, decl);
                 Some(&s.name as &str)
@@ -1458,9 +1458,9 @@ impl<'a> ValidationContext<'a> {
         let decl = "OfferEventDecl";
         check_name(event.source_name.as_ref(), decl, "source_name", &mut self.errors);
 
-        // Only realm and framework are valid.
+        // Only parent and framework are valid.
         match event.source {
-            Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "source"));
@@ -1841,7 +1841,7 @@ mod tests {
             Durability, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
             ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl,
             FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
-            OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref,
+            OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, ParentRef, Ref,
             ResolverDecl, ResolverRegistration, RunnerDecl, RunnerRegistration, SelfRef,
             StartupMode, StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl,
             UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
@@ -2231,14 +2231,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/abc".to_string()),
                         target_path: Some("/foo/bar/baz".to_string()),
                         rights: Some(fio2::Operations::Connect),
@@ -2263,14 +2263,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/crow".to_string()),
                         target_path: Some("/foo/bar/fuchsia.2".to_string()),
                     }),
@@ -2293,14 +2293,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
                     UseDecl::Service(UseServiceDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/space".to_string()),
                         target_path: Some("/foo/bar/baz/fuchsia.logger.Log".to_string()),
                     }),
@@ -2514,17 +2514,17 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Service(UseServiceDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/s/{}", "b".repeat(1024))),
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/p/{}", "c".repeat(1024))),
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/d/{}", "d".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
@@ -2538,7 +2538,7 @@ mod tests {
                         source_name: Some(format!("{}", "a".repeat(101))),
                     }),
                     UseDecl::Event(UseEventDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "a".repeat(101))),
                         filter: None,
@@ -2564,22 +2564,22 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Service(UseServiceDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/foo".to_string()),
                         target_path: Some("/bar".to_string()),
                     }),
                     UseDecl::Service(UseServiceDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/space".to_string()),
                         target_path: Some("/bar".to_string()),
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/space".to_string()),
                         target_path: Some("/bar".to_string()),
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/crow".to_string()),
                         target_path: Some("/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
@@ -2669,7 +2669,7 @@ mod tests {
                         })),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/logger".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2678,7 +2678,7 @@ mod tests {
                         })),
                         source_path: Some("/svc/legacy_logger".to_string()),
                         target_path: Some("/svc/legacy_logger".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2687,7 +2687,7 @@ mod tests {
                         })),
                         source_path: Some("/data".to_string()),
                         target_path: Some("/data".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
@@ -2697,7 +2697,7 @@ mod tests {
                             collection: Some("modular".to_string()),
                         })),
                         source_name: Some("elf".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
@@ -2706,7 +2706,7 @@ mod tests {
                             collection: Some("modular".to_string()),
                         })),
                         source_name: Some("pkg".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
                     }),
                 ]);
@@ -2750,7 +2750,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2759,7 +2759,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2768,7 +2768,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("/foo".to_string()),
                     }),
@@ -2778,7 +2778,7 @@ mod tests {
                             collection: None,
                         })),
                         source_name: Some("/path".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf!".to_string()),
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
@@ -2787,7 +2787,7 @@ mod tests {
                             collection: None,
                         })),
                         source_name: Some("/path".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg!".to_string()),
                     }),
                 ]);
@@ -2829,7 +2829,7 @@ mod tests {
                         target: None,
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_path: Some("/c".to_string()),
                         target_path: Some("/d".to_string()),
                         target: Some(Ref::Self_(SelfRef {})),
@@ -2903,7 +2903,7 @@ mod tests {
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2912,7 +2912,7 @@ mod tests {
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2921,7 +2921,7 @@ mod tests {
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
@@ -2931,7 +2931,7 @@ mod tests {
                             collection: None,
                         })),
                         source_name: Some("a".repeat(101)),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("b".repeat(101)),
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
@@ -2940,7 +2940,7 @@ mod tests {
                             collection: None,
                         })),
                         source_name: Some("a".repeat(101)),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("b".repeat(101)),
                     }),
                 ]);
@@ -2975,7 +2975,7 @@ mod tests {
                         })),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2984,7 +2984,7 @@ mod tests {
                         })),
                         source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
                         target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2993,7 +2993,7 @@ mod tests {
                         })),
                         source_path: Some("/data/netstack".to_string()),
                         target_path: Some("/data".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
@@ -3003,7 +3003,7 @@ mod tests {
                             collection: None,
                         })),
                         source_name: Some("elf".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
@@ -3012,7 +3012,7 @@ mod tests {
                             collection: None,
                         })),
                         source_name: Some("pkg".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
                     }),
                 ]);
@@ -3043,7 +3043,7 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
@@ -3051,13 +3051,13 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger2".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger3".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
@@ -3065,36 +3065,36 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/netstack".to_string()),
                         target_path: Some("/svc/fuchsia.net.Stack".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/netstack2".to_string()),
                         target_path: Some("/svc/fuchsia.net.Stack".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_elf".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_elf".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_pkg".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_pkg".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
                     }),
                 ]);
@@ -3117,7 +3117,7 @@ mod tests {
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_elf".to_string()),
-                        target: Some(Ref::Realm(RealmRef {})),
+                        target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
                     }),
                 ]);
@@ -3311,7 +3311,7 @@ mod tests {
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         target: Some(Ref::Child(
                             ChildRef {
                                 name: "b".repeat(101),
@@ -3321,7 +3321,7 @@ mod tests {
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         target: Some(Ref::Collection(
                             CollectionRef { name: "b".repeat(101) }
                         )),
@@ -3353,7 +3353,7 @@ mod tests {
                         target_name: Some("d".repeat(101)),
                     }),
                     OfferDecl::Event(OfferEventDecl {
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target: Some(Ref::Child(ChildRef {
                             name: "a".repeat(101),
@@ -3475,7 +3475,7 @@ mod tests {
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
-                        source: Some(Ref::Realm(RealmRef{ })),
+                        source: Some(Ref::Parent(ParentRef{ })),
                         target: Some(Ref::Child(
                             ChildRef {
                                 name: "netstack".to_string(),
@@ -3597,7 +3597,7 @@ mod tests {
                         target_name: Some("pkg!".to_string()),
                     }),
                     OfferDecl::Event(OfferEventDecl {
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("/path".to_string()),
                         target: Some(Ref::Child(ChildRef {
                             name: "%bad".to_string(),
@@ -3910,7 +3910,7 @@ mod tests {
                         dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
@@ -3918,7 +3918,7 @@ mod tests {
                         target_name: Some("duplicated".to_string()),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
@@ -3926,7 +3926,7 @@ mod tests {
                         target_name: Some("duplicated".to_string()),
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("pkg".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
@@ -3934,7 +3934,7 @@ mod tests {
                         target_name: Some("duplicated".to_string()),
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("pkg".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
@@ -3942,7 +3942,7 @@ mod tests {
                         target_name: Some("duplicated".to_string()),
                     }),
                     OfferDecl::Event(OfferEventDecl {
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("stopped".to_string()),
                         target: Some(Ref::Child(ChildRef {
                             name: "netstack".to_string(),
@@ -3952,7 +3952,7 @@ mod tests {
                         filter: None,
                     }),
                     OfferDecl::Event(OfferEventDecl {
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("started_on_x".to_string()),
                         target: Some(Ref::Child(ChildRef {
                             name: "netstack".to_string(),
@@ -4058,7 +4058,7 @@ mod tests {
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         target: Some(Ref::Child(
                             ChildRef {
                                 name: "netstack".to_string(),
@@ -4068,13 +4068,13 @@ mod tests {
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         target: Some(Ref::Collection(
                             CollectionRef { name: "modular".to_string(), }
                         )),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
@@ -4085,7 +4085,7 @@ mod tests {
                         target_name: Some("elf".to_string()),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string(), }
@@ -4093,7 +4093,7 @@ mod tests {
                         target_name: Some("elf".to_string()),
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("pkg".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
@@ -4104,7 +4104,7 @@ mod tests {
                         target_name: Some("pkg".to_string()),
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
-                        source: Some(Ref::Realm(RealmRef{})),
+                        source: Some(Ref::Parent(ParentRef{})),
                         source_name: Some("pkg".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string(), }
@@ -4113,7 +4113,7 @@ mod tests {
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source_name: Some("started".to_string()),
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("started".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
@@ -4125,7 +4125,7 @@ mod tests {
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source_name: Some("started".to_string()),
-                        source: Some(Ref::Realm(RealmRef {})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("started".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string(), }
@@ -4295,14 +4295,14 @@ mod tests {
                     runners: Some(vec![
                         RunnerRegistration {
                             source_name: Some("a".repeat(101)),
-                            source: Some(Ref::Realm(RealmRef{})),
+                            source: Some(Ref::Parent(ParentRef{})),
                             target_name: Some("a".repeat(101)),
                         },
                     ]),
                     resolvers: Some(vec![
                         ResolverRegistration {
                             resolver: Some("a".repeat(101)),
-                            source: Some(Ref::Realm(RealmRef{})),
+                            source: Some(Ref::Parent(ParentRef{})),
                             scheme: Some("a".repeat(101)),
                         },
                     ]),
@@ -4415,24 +4415,24 @@ mod tests {
                     runners: Some(vec![
                         RunnerRegistration {
                             source_name: Some("dart".to_string()),
-                            source: Some(Ref::Realm(RealmRef{})),
+                            source: Some(Ref::Parent(ParentRef{})),
                             target_name: Some("dart".to_string()),
                         },
                         RunnerRegistration {
                             source_name: Some("other-dart".to_string()),
-                            source: Some(Ref::Realm(RealmRef{})),
+                            source: Some(Ref::Parent(ParentRef{})),
                             target_name: Some("dart".to_string()),
                         },
                     ]),
                     resolvers: Some(vec![
                         ResolverRegistration {
                             resolver: Some("pkg_resolver".to_string()),
-                            source: Some(Ref::Realm(RealmRef{})),
+                            source: Some(Ref::Parent(ParentRef{})),
                             scheme: Some("fuchsia-pkg".to_string()),
                         },
                         ResolverRegistration {
                             resolver: Some("base_resolver".to_string()),
-                            source: Some(Ref::Realm(RealmRef{})),
+                            source: Some(Ref::Parent(ParentRef{})),
                             scheme: Some("fuchsia-pkg".to_string()),
                         },
                     ]),
@@ -4927,7 +4927,7 @@ mod tests {
                 decl.exposes = Some(vec![ExposeDecl::Resolver(ExposeResolverDecl{
                     source: Some(Ref::Self_(SelfRef {})),
                     source_name: Some("a".to_string()),
-                    target: Some(Ref::Realm(RealmRef {})),
+                    target: Some(Ref::Parent(ParentRef {})),
                     target_name: Some("a".to_string()),
                 })]);
                 decl

@@ -10,7 +10,7 @@ use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
     Entry, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
     ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef, Object, OfferDecl, OfferEventDecl,
-    OfferProtocolDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, UseDecl,
+    OfferProtocolDecl, OfferServiceDecl, ParentRef, Ref, RunnerDecl, SelfRef, StartupMode, UseDecl,
     UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl, Value,
 };
 use std::fs::File;
@@ -39,12 +39,12 @@ fn main() {
         let uses = vec![
             UseDecl::Runner(UseRunnerDecl { source_name: Some("elf".to_string()) }),
             UseDecl::Service(UseServiceDecl {
-                source: Some(Ref::Realm(RealmRef {})),
+                source: Some(Ref::Parent(ParentRef {})),
                 source_path: Some("/fonts/CoolFonts".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
             }),
             UseDecl::Protocol(UseProtocolDecl {
-                source: Some(Ref::Realm(RealmRef {})),
+                source: Some(Ref::Parent(ParentRef {})),
                 source_path: Some("/fonts/LegacyCoolFonts".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
             }),
@@ -55,19 +55,19 @@ fn main() {
                 filter: None,
             }),
             UseDecl::Event(UseEventDecl {
-                source: Some(Ref::Realm(RealmRef {})),
+                source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("destroyed".to_string()),
                 target_name: Some("destroyed".to_string()),
                 filter: None,
             }),
             UseDecl::Event(UseEventDecl {
-                source: Some(Ref::Realm(RealmRef {})),
+                source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("stopped".to_string()),
                 target_name: Some("stopped".to_string()),
                 filter: None,
             }),
             UseDecl::Event(UseEventDecl {
-                source: Some(Ref::Realm(RealmRef {})),
+                source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("capability_ready".to_string()),
                 target_name: Some("diagnostics_ready".to_string()),
                 filter: Some(fdata::Dictionary {
@@ -98,19 +98,19 @@ fn main() {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                target: Some(Ref::Realm(RealmRef {})),
+                target: Some(Ref::Parent(ParentRef {})),
             }),
             ExposeDecl::Protocol(ExposeProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
                 target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
-                target: Some(Ref::Realm(RealmRef {})),
+                target: Some(Ref::Parent(ParentRef {})),
             }),
             ExposeDecl::Directory(ExposeDirectoryDecl {
                 source: Some(Ref::Self_(SelfRef {})),
                 source_path: Some("/volumes/blobfs".to_string()),
                 target_path: Some("/volumes/blobfs".to_string()),
-                target: Some(Ref::Realm(RealmRef {})),
+                target: Some(Ref::Parent(ParentRef {})),
                 rights: Some(
                     fio2::Operations::Connect
                         | fio2::Operations::ReadBytes
@@ -139,7 +139,7 @@ fn main() {
                 dependency_type: Some(DependencyType::Strong),
             }),
             OfferDecl::Event(OfferEventDecl {
-                source: Some(Ref::Realm(RealmRef {})),
+                source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("stopped".to_string()),
                 target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 target_name: Some("stopped-logger".to_string()),

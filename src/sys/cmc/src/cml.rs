@@ -161,7 +161,7 @@ pub struct OneOrManyExposeFromRefs;
 /// Generates deserializer for `OneOrMany<OfferFromRef>`.
 #[derive(OneOrMany, Debug, Clone)]
 #[one_or_many(
-    expected = "one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\"",
+    expected = "one or an array of \"parent\", \"framework\", \"self\", or \"#<child-name>\"",
     inner_type = "OfferFromRef",
     min_length = 1,
     unique_items = true
@@ -216,8 +216,8 @@ pub enum AnyRef<'a> {
     /// A named reference. Parsed as `#name`, where `name` contains only
     /// alphanumeric characters, `-`, `_`, and `.`.
     Named(&'a Name),
-    /// A reference to the realm. Parsed as `realm`.
-    Realm,
+    /// A reference to the parent. Parsed as `parent`.
+    Parent,
     /// A reference to the framework (component manager). Parsed as `framework`.
     Framework,
     /// A reference to this component. Parsed as `self`.
@@ -229,7 +229,7 @@ impl fmt::Display for AnyRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Named(name) => write!(f, "#{}", name),
-            Self::Realm => write!(f, "realm"),
+            Self::Parent => write!(f, "parent"),
             Self::Framework => write!(f, "framework"),
             Self::Self_ => write!(f, "self"),
         }
@@ -238,10 +238,10 @@ impl fmt::Display for AnyRef<'_> {
 
 /// A reference in a `use from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"realm\", \"framework\", or none")]
+#[reference(expected = "\"parent\", \"framework\", or none")]
 pub enum UseFromRef {
-    /// A reference to the containing realm.
-    Realm,
+    /// A reference to the parent.
+    Parent,
     /// A reference to the framework.
     Framework,
 }
@@ -260,22 +260,22 @@ pub enum ExposeFromRef {
 
 /// A reference in an `expose to`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"realm\", \"framework\", or none")]
+#[reference(expected = "\"parent\", \"framework\", or none")]
 pub enum ExposeToRef {
-    /// A reference to the realm.
-    Realm,
+    /// A reference to the parent.
+    Parent,
     /// A reference to the framework.
     Framework,
 }
 
 /// A reference in an `offer from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"realm\", \"framework\", \"self\", or \"#<child-name>\"")]
+#[reference(expected = "\"parent\", \"framework\", \"self\", or \"#<child-name>\"")]
 pub enum OfferFromRef {
     /// A reference to a child or collection.
     Named(Name),
-    /// A reference to the realm.
-    Realm,
+    /// A reference to the parent.
+    Parent,
     /// A reference to the framework.
     Framework,
     /// A reference to this component.
@@ -285,7 +285,7 @@ pub enum OfferFromRef {
 /// A reference in an `offer to`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
 #[reference(
-    expected = "\"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
+    expected = "\"parent\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
 )]
 pub enum OfferToRef {
     /// A reference to a child or collection.
@@ -302,36 +302,36 @@ pub enum EnvironmentRef {
 
 /// A reference in a `storage from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"realm\", \"self\", or \"#<child-name>\"")]
+#[reference(expected = "\"parent\", \"self\", or \"#<child-name>\"")]
 pub enum StorageFromRef {
     /// A reference to a child.
     Named(Name),
-    /// A reference to the realm.
-    Realm,
+    /// A reference to the parent.
+    Parent,
     /// A reference to this component.
     Self_,
 }
 
 /// A reference in a `runner from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"realm\", \"self\", or \"#<child-name>\"")]
+#[reference(expected = "\"parent\", \"self\", or \"#<child-name>\"")]
 pub enum RunnerFromRef {
     /// A reference to a child.
     Named(Name),
-    /// A reference to the realm.
-    Realm,
+    /// A reference to the parent.
+    Parent,
     /// A reference to this component.
     Self_,
 }
 
 /// A reference in an environment registration.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"realm\", \"self\", or \"#<child-name>\"")]
+#[reference(expected = "\"parent\", \"self\", or \"#<child-name>\"")]
 pub enum RegistrationRef {
     /// A reference to a child.
     Named(Name),
-    /// A reference to the containing realm.
-    Realm,
+    /// A reference to the parent.
+    Parent,
     /// A reference to this component.
     Self_,
 }
@@ -973,8 +973,8 @@ mod tests {
 
     #[test]
     fn test_parse_reference_test() {
-        assert_matches!("realm".parse::<OfferFromRef>(), Ok(OfferFromRef::Realm));
-        assert_matches!("realm".parse::<OfferFromRef>(), Ok(OfferFromRef::Realm));
+        assert_matches!("realm".parse::<OfferFromRef>(), Ok(OfferFromRef::Parent));
+        assert_matches!("parent".parse::<OfferFromRef>(), Ok(OfferFromRef::Parent));
         assert_matches!("framework".parse::<OfferFromRef>(), Ok(OfferFromRef::Framework));
         assert_matches!("self".parse::<OfferFromRef>(), Ok(OfferFromRef::Self_));
         assert_matches!("#child".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "child");
@@ -991,7 +991,8 @@ mod tests {
     #[test]
     fn test_deserialize_ref() -> Result<(), Error> {
         assert_matches!(parse_as_ref("\"self\""), Ok(OfferFromRef::Self_));
-        assert_matches!(parse_as_ref("\"realm\""), Ok(OfferFromRef::Realm));
+        assert_matches!(parse_as_ref("\"realm\""), Ok(OfferFromRef::Parent));
+        assert_matches!(parse_as_ref("\"parent\""), Ok(OfferFromRef::Parent));
         assert_matches!(parse_as_ref("\"#child\""), Ok(OfferFromRef::Named(name)) if name == "child");
 
         assert_matches!(parse_as_ref(r#""invalid""#), Err(_));

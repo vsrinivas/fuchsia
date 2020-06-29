@@ -634,7 +634,7 @@ impl<'a> ValidationContext<'a> {
                     "\"{}\" is a duplicate \"expose\" target {} for \"{}\"",
                     capability_id.as_str(),
                     capability_id.type_str(),
-                    expose.to.as_ref().unwrap_or(&cml::ExposeToRef::Realm)
+                    expose.to.as_ref().unwrap_or(&cml::ExposeToRef::Parent)
                 )));
             }
         }
@@ -1166,7 +1166,7 @@ mod tests {
                   },
                   {
                     "directory": "/data/config",
-                    "from": "realm",
+                    "from": "parent",
                     "rights": ["rx*"],
                     "subdir": "fonts/all",
                   },
@@ -1174,13 +1174,13 @@ mod tests {
                   { "storage": "cache", "as": "/tmp" },
                   { "storage": "meta" },
                   { "runner": "elf" },
-                  { "event": [ "started", "stopped"], "from": "realm" },
+                  { "event": [ "started", "stopped"], "from": "parent" },
                   { "event": [ "launched"], "from": "framework" },
                   { "event": "destroyed", "from": "framework", "as": "destroyed_x" },
                   {
                     "event": "capability_ready_diagnostics",
                     "as": "capability_ready",
-                    "from": "realm",
+                    "from": "parent",
                     "filter": {
                         "path": "/diagnositcs"
                     }
@@ -1224,7 +1224,7 @@ mod tests {
         ),
         test_cml_use_from_with_meta_storage(
             json!({
-                "use": [ { "storage": "cache", "from": "realm" } ]
+                "use": [ { "storage": "cache", "from": "parent" } ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" field cannot be used with \"storage\""
         ),
@@ -1234,7 +1234,7 @@ mod tests {
                   { "service": "/fonts/CoolFonts", "from": "self" }
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"realm\", \"framework\", or none"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", or none"
         ),
         test_cml_use_bad_as(
             json!({
@@ -1279,7 +1279,7 @@ mod tests {
                 "use": [
                   {
                     "directory": "/data/config",
-                    "from": "realm",
+                    "from": "parent",
                     "rights": [ "r*" ],
                     "subdir": "/",
                   },
@@ -1292,7 +1292,7 @@ mod tests {
                 "use": [
                     {
                         "resolver": "pkg_resolver",
-                        "from": "realm",
+                        "from": "parent",
                     },
                 ]
             }),
@@ -1339,7 +1339,7 @@ mod tests {
                 "use": [
                     {
                         "event": ["destroyed", "stopped"],
-                        "from": "realm",
+                        "from": "parent",
                         "as": "gone"
                     }
                 ]
@@ -1351,11 +1351,11 @@ mod tests {
                 "use": [
                     {
                         "event": ["destroyed", "started"],
-                        "from": "realm",
+                        "from": "parent",
                     },
                     {
                         "event": ["destroyed"],
-                        "from": "realm",
+                        "from": "parent",
                     }
                 ]
             }),
@@ -1377,7 +1377,7 @@ mod tests {
                     {
                         "event": ["destroyed", "stopped"],
                         "filter": {"path": "/diagnostics"},
-                        "from": "realm"
+                        "from": "parent"
                     }
                 ]
             }),
@@ -1491,7 +1491,7 @@ mod tests {
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"expose\" target directory for \"realm\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"expose\" target directory for \"parent\""
         ),
         test_cml_expose_invalid_multiple_from(
             json!({
@@ -1511,10 +1511,10 @@ mod tests {
         test_cml_expose_bad_from(
             json!({
                 "expose": [ {
-                    "service": "/loggers/fuchsia.logger.Log", "from": "realm"
+                    "service": "/loggers/fuchsia.logger.Log", "from": "parent"
                 } ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"realm\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
         ),
         // if "as" is specified, only 1 "protocol" array item is allowed.
         test_cml_expose_bad_as(
@@ -1548,7 +1548,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/A\" is a duplicate \"expose\" target protocol for \"realm\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/A\" is a duplicate \"expose\" target protocol for \"parent\""
         ),
         test_cml_expose_empty_protocols(
             json!({
@@ -1660,12 +1660,12 @@ mod tests {
                     },
                     {
                         "service": "/svc/fuchsia.fonts.Provider",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#echo_server" ]
                     },
                     {
                         "protocol": "/svc/fuchsia.fonts.LegacyProvider",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#echo_server" ],
                         "dependency": "weak_for_migration"
                     },
@@ -1674,7 +1674,7 @@ mod tests {
                             "/svc/fuchsia.settings.Accessibility",
                             "/svc/fuchsia.ui.scenic.Scenic"
                         ],
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#echo_server" ],
                         "dependency": "strong"
                     },
@@ -1687,7 +1687,7 @@ mod tests {
                     {
                         "directory": "/data/index",
                         "subdir": "files",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                         "dependency": "weak_for_migration"
                     },
@@ -1705,17 +1705,17 @@ mod tests {
                     },
                     {
                         "runner": "elf",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular", "#logger" ]
                     },
                     {
                         "resolver": "pkg_resolver",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                     },
                     {
                         "event": "capability_ready",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                         "as": "capability-ready-for-modular",
                         "filter": {
@@ -1742,7 +1742,7 @@ mod tests {
                 "storage": [
                     {
                         "name": "minfs",
-                        "from": "realm",
+                        "from": "parent",
                         "path": "/minfs",
                     },
                 ]
@@ -1839,7 +1839,7 @@ mod tests {
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#invalid@\", expected one or an array of \"realm\", \"framework\", \"self\", or \"#<child-name>\""
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#invalid@\", expected one or an array of \"parent\", \"framework\", \"self\", or \"#<child-name>\""
         ),
         test_cml_offer_invalid_multiple_from(
             json!({
@@ -1865,7 +1865,7 @@ mod tests {
             json!({
                     "offer": [ {
                         "storage": "cache",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#logger" ],
                         "as": "/invalid",
                     } ],
@@ -1929,7 +1929,7 @@ mod tests {
                     "as": "/svc/fuchsia.logger.SysLog",
                 } ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"realm\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
         ),
         test_cml_offer_empty_protocols(
             json!({
@@ -1993,7 +1993,7 @@ mod tests {
                     },
                     {
                         "directory": "/thing",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#echo_server" ]
                     }
                 ],
@@ -2015,7 +2015,7 @@ mod tests {
                 "offer": [
                     {
                         "storage": "cache",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#echo_server" ]
                     },
                     {
@@ -2041,7 +2041,7 @@ mod tests {
                 "offer": [
                     {
                         "runner": "elf",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#echo_server" ]
                     },
                     {
@@ -2083,7 +2083,7 @@ mod tests {
                     {
                         "directory": "/data/index",
                         "subdir": "/",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                     },
                 ],
@@ -2142,7 +2142,7 @@ mod tests {
             json!({
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#echo_server" ],
                         "dependency": "strong"
                     } ],
@@ -2320,11 +2320,11 @@ mod tests {
                     {
                         "name": "logger",
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                        "environment": "realm",
+                        "environment": "parent",
                     }
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"realm\", expected \"#<environment-name>\""
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected \"#<environment-name>\""
         ),
         test_cml_children_unknown_environment(
             json!({
@@ -2361,11 +2361,11 @@ mod tests {
                     {
                         "name": "tests",
                         "durability": "transient",
-                        "environment": "realm",
+                        "environment": "parent",
                     }
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"realm\", expected \"#<environment-name>\""
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected \"#<environment-name>\""
         ),
         test_cml_collections_unknown_environment(
             json!({
@@ -2482,7 +2482,7 @@ mod tests {
                     },
                     {
                         "name": "b",
-                        "from": "realm",
+                        "from": "parent",
                         "path": "/data"
                     },
                     {
@@ -2546,7 +2546,7 @@ mod tests {
                     },
                     {
                         "name": "b",
-                        "from": "realm",
+                        "from": "parent",
                         "path": "/data"
                     },
                     {
@@ -2661,7 +2661,7 @@ mod tests {
                         "runners": [
                             {
                                 "runner": "dart",
-                                "from": "realm",
+                                "from": "parent",
                             }
                         ]
                     }
@@ -2678,7 +2678,7 @@ mod tests {
                         "runners": [
                             {
                                 "runner": "dart",
-                                "from": "realm",
+                                "from": "parent",
                                 "as": "my-dart",
                             }
                         ]
@@ -2705,7 +2705,7 @@ mod tests {
                      {
                          "name": "dart",
                          "path": "/svc/fuchsia.component.Runner",
-                         "from": "realm"
+                         "from": "parent"
                      }
                 ],
             }),
@@ -2720,7 +2720,7 @@ mod tests {
                         "runners": [
                             {
                                 "runner": "elf",
-                                "from": "realm",
+                                "from": "parent",
                                 "as": "#elf",
                             }
                         ]
@@ -2738,11 +2738,11 @@ mod tests {
                         "runners": [
                             {
                                 "runner": "dart",
-                                "from": "realm",
+                                "from": "parent",
                             },
                             {
                                 "runner": "other-dart",
-                                "from": "realm",
+                                "from": "parent",
                                 "as": "dart",
                             }
                         ]
@@ -2805,7 +2805,7 @@ mod tests {
                         "resolvers": [
                             {
                                 "resolver": "pkg_resolver",
-                                "from": "realm",
+                                "from": "parent",
                                 "scheme": "fuchsia-pkg",
                             }
                         ]
@@ -2823,7 +2823,7 @@ mod tests {
                         "resolvers": [
                             {
                                 "resolver": "pkg_resolver",
-                                "from": "realm",
+                                "from": "parent",
                                 "scheme": "9scheme",
                             }
                         ]
@@ -2841,12 +2841,12 @@ mod tests {
                         "resolvers": [
                             {
                                 "resolver": "pkg_resolver",
-                                "from": "realm",
+                                "from": "parent",
                                 "scheme": "fuchsia-pkg",
                             },
                             {
                                 "resolver": "base_resolver",
-                                "from": "realm",
+                                "from": "parent",
                                 "scheme": "fuchsia-pkg",
                             }
                         ]
@@ -3325,7 +3325,7 @@ mod tests {
                     {
                         "name": "logger",
                         "path": "/logs",
-                        "from": "realm"
+                        "from": "parent"
                     }
                 ]
            }),
@@ -3343,7 +3343,7 @@ mod tests {
                     {
                         "name": "logger",
                         "path": "/logs",
-                        "from": "realm"
+                        "from": "parent"
                     }
                 ]
            }),
@@ -3361,7 +3361,7 @@ mod tests {
                     {
                         "name": "logger",
                         "path": "/logs",
-                        "from": "realm"
+                        "from": "parent"
                     }
                 ]
            }),

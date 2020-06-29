@@ -486,7 +486,7 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
 ///
 /// The following enum variants are accepted:
 /// - Named(Name),
-/// - Realm,
+/// - Parent,
 /// - Framework,
 /// - Self_,
 ///
@@ -507,8 +507,8 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
 /// pub enum RegistrationRef {
 ///     /// A reference to a child.
 ///     Named(Name),
-///     /// A reference to the containing realm.
-///     Realm,
+///     /// A reference to the parent.
+///     Parent,
 ///     /// A reference to this component.
 ///     Self_,
 /// }
@@ -536,9 +536,9 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
                         Self::Named(name) => write!(f, "#{}", name),
                     });
                 }
-                if self.variants.contains("Realm") {
+                if self.variants.contains("Parent") {
                     tokens.append_all(quote! {
-                        Self::Realm => write!(f, "realm"),
+                        Self::Parent => write!(f, "parent"),
                     });
                 }
                 if self.variants.contains("Framework") {
@@ -591,9 +591,12 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
                 }
                 let inner = {
                     let mut tokens = quote!();
-                    if self.variants.contains("Realm") {
+                    if self.variants.contains("Parent") {
                         tokens.append_all(quote! {
-                            "realm" => Ok(Self::Realm),
+                            "parent" => Ok(Self::Parent),
+                            // TODO: For compatibility. Remove once all clients are migrated to
+                            // use "parent".
+                            "realm" => Ok(Self::Parent),
                         });
                     }
                     if self.variants.contains("Framework") {
@@ -637,9 +640,9 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
             let name = self.name;
             let inner = {
                 let mut tokens = quote!();
-                if self.variants.contains("Realm") {
+                if self.variants.contains("Parent") {
                     tokens.append_all(quote! {
-                        #name::Realm => Self::Realm,
+                        #name::Parent => Self::Parent,
                     });
                 }
                 if self.variants.contains("Framework") {
@@ -725,7 +728,7 @@ struct ReferenceAttributes {
     name: Ident,
     /// `expecting` string to return from the deserializer.
     expected: syn::LitStr,
-    /// The variants that the reference can be. Valid choices: "named", "self", "realm",
+    /// The variants that the reference can be. Valid choices: "named", "self", "parent",
     /// "framework".
     variants: HashSet<String>,
 }
@@ -738,7 +741,7 @@ fn parse_reference_attributes(ast: &syn::DeriveInput) -> Result<ReferenceAttribu
     };
     let allowed_variants = hashset! {
         "Named",
-        "Realm",
+        "Parent",
         "Framework",
         "Self_",
     };

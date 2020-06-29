@@ -436,22 +436,22 @@ impl From<EnvironmentDeclBuilder> for cm_rust::EnvironmentDecl {
     }
 }
 
-/// Create a fsys::OfferRunnerDecl offering the given cap from the Realm
-/// to the given child component.
+/// Create a fsys::OfferRunnerDecl offering the given cap from the parent to the given child
+/// component.
 pub fn offer_runner_cap_to_child(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
     cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
-        source: cm_rust::OfferRunnerSource::Realm,
+        source: cm_rust::OfferRunnerSource::Parent,
         source_name: runner_cap.into(),
         target: cm_rust::OfferTarget::Child(child.to_string()),
         target_name: runner_cap.into(),
     })
 }
 
-/// Create a fsys::OfferRunnerDecl offering the given cap from the Realm
-/// to the given child collection.
+/// Create a fsys::OfferRunnerDecl offering the given cap from the parent to the given child
+/// collection.
 pub fn offer_runner_cap_to_collection(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
     cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
-        source: cm_rust::OfferRunnerSource::Realm,
+        source: cm_rust::OfferRunnerSource::Parent,
         source_name: runner_cap.into(),
         target: cm_rust::OfferTarget::Collection(child.to_string()),
         target_name: runner_cap.into(),

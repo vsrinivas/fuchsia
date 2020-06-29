@@ -114,7 +114,7 @@ pub fn translate_program(program: &Map<String, Value>) -> Result<Map<String, Val
     return Ok(program_out);
 }
 
-/// `use` rules consume a single capability from one source (realm|framework).
+/// `use` rules consume a single capability from one source (parent|framework).
 fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
@@ -207,7 +207,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
 }
 
 /// `expose` rules route a single capability from one or more sources (self|framework|#<child>) to
-/// one or more targets (realm|framework).
+/// one or more targets (parent|framework).
 fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
@@ -532,15 +532,15 @@ fn translate_resolver_registration(
 
 fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
     match in_obj.from.as_ref() {
-        Some(cml::UseFromRef::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        Some(cml::UseFromRef::Parent) => Ok(cm::Ref::Parent(cm::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-        None => Ok(cm::Ref::Realm(cm::RealmRef {})), // Default value.
+        None => Ok(cm::Ref::Parent(cm::ParentRef {})), // Default value.
     }
 }
 
 fn extract_use_event_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
     match in_obj.from.as_ref() {
-        Some(cml::UseFromRef::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        Some(cml::UseFromRef::Parent) => Ok(cm::Ref::Parent(cm::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
         None => Err(Error::internal(format!("No source \"from\" provided for \"use\""))),
     }
@@ -616,7 +616,7 @@ fn offer_source_from_ref(reference: cml::AnyRef) -> Result<cm::Ref, Error> {
     match reference {
         cml::AnyRef::Named(name) => Ok(cm::Ref::Child(cm::ChildRef { name: name.clone() })),
         cml::AnyRef::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-        cml::AnyRef::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        cml::AnyRef::Parent => Ok(cm::Ref::Parent(cm::ParentRef {})),
         cml::AnyRef::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
     }
 }
@@ -651,7 +651,7 @@ fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<cm::Ref, E
         }
     };
     match reference {
-        cml::OfferFromRef::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        cml::OfferFromRef::Parent => Ok(cm::Ref::Parent(cm::ParentRef {})),
         cml::OfferFromRef::Named(name) => {
             Ok(cm::Ref::Storage(cm::StorageRef { name: name.clone() }))
         }
@@ -772,9 +772,9 @@ where
 
 fn extract_expose_target(in_obj: &cml::Expose) -> Result<cm::ExposeTarget, Error> {
     match &in_obj.to {
-        Some(cml::ExposeToRef::Realm) => Ok(cm::ExposeTarget::Realm),
+        Some(cml::ExposeToRef::Parent) => Ok(cm::ExposeTarget::Parent),
         Some(cml::ExposeToRef::Framework) => Ok(cm::ExposeTarget::Framework),
-        None => Ok(cm::ExposeTarget::Realm),
+        None => Ok(cm::ExposeTarget::Parent),
     }
 }
 
@@ -895,7 +895,7 @@ mod tests {
                     { "directory": "/data/assets", "rights" : ["read_bytes"]},
                     {
                         "directory": "/data/config",
-                        "from": "realm",
+                        "from": "parent",
                         "rights": ["read_bytes"],
                         "subdir": "fonts",
                     },
@@ -903,12 +903,12 @@ mod tests {
                     { "storage": "cache", "as": "/tmp" },
                     { "runner": "elf" },
                     { "runner": "web" },
-                    { "event": "destroyed", "from": "realm" },
+                    { "event": "destroyed", "from": "parent" },
                     { "event": ["started", "stopped"], "from": "framework" },
                     {
                         "event": "capability_ready",
                         "as": "diagnostics",
-                        "from": "realm",
+                        "from": "parent",
                         "filter": { "path": "/diagnostics" }
                     },
                 ],
@@ -918,7 +918,7 @@ mod tests {
         {
             "service": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
@@ -936,7 +936,7 @@ mod tests {
         {
             "protocol": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/LegacyCoolFonts",
                 "target_path": "/svc/fuchsia.fonts.LegacyProvider"
@@ -954,7 +954,7 @@ mod tests {
         {
             "directory": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/data/assets",
                 "target_path": "/data/assets",
@@ -966,7 +966,7 @@ mod tests {
         {
             "directory": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/data/config",
                 "target_path": "/data/config",
@@ -1000,7 +1000,7 @@ mod tests {
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "destroyed",
                 "target_name": "destroyed",
@@ -1030,7 +1030,7 @@ mod tests {
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "capability_ready",
                 "target_name": "diagnostics",
@@ -1059,10 +1059,16 @@ mod tests {
                       "protocol": "/loggers/fuchsia.logger.LegacyLog",
                       "from": "#logger",
                       "as": "/svc/fuchsia.logger.LegacyLog",
-                      "to": "realm"
+                      "to": "parent"
                     },
                     {
                         "protocol": [ "/A", "/B" ],
+                        "from": "self",
+                        "to": "parent"
+                    },
+                    // Test compatibility for "realm"
+                    {
+                        "protocol": [ "/C" ],
                         "from": "self",
                         "to": "realm"
                     },
@@ -1074,8 +1080,8 @@ mod tests {
                     },
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "web", "from": "self" },
-                    { "runner": "web", "from": "#logger", "to": "realm", "as": "web-rename" },
-                    { "resolver": "my_resolver", "from": "#logger", "to": "realm", "as": "pkg_resolver" }
+                    { "runner": "web", "from": "#logger", "to": "parent", "as": "web-rename" },
+                    { "resolver": "my_resolver", "from": "#logger", "to": "parent", "as": "pkg_resolver" }
                 ],
                 "children": [
                     {
@@ -1095,7 +1101,7 @@ mod tests {
                 },
                 "source_path": "/loggers/fuchsia.logger.Log",
                 "target_path": "/svc/fuchsia.logger.Log",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -1107,7 +1113,7 @@ mod tests {
                 },
                 "source_path": "/svc/my.service.Service",
                 "target_path": "/svc/my.service.Service",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -1117,7 +1123,7 @@ mod tests {
                 },
                 "source_path": "/svc/my.service.Service",
                 "target_path": "/svc/my.service.Service",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -1129,7 +1135,7 @@ mod tests {
                 },
                 "source_path": "/loggers/fuchsia.logger.LegacyLog",
                 "target_path": "/svc/fuchsia.logger.LegacyLog",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -1139,7 +1145,7 @@ mod tests {
                 },
                 "source_path": "/A",
                 "target_path": "/A",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -1149,7 +1155,17 @@ mod tests {
                 },
                 "source_path": "/B",
                 "target_path": "/B",
-                "target": "realm"
+                "target": "parent"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/C",
+                "target_path": "/C",
+                "target": "parent"
             }
         },
         {
@@ -1176,7 +1192,7 @@ mod tests {
                 },
                 "source_path": "/hub",
                 "target_path": "/hub",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -1185,7 +1201,7 @@ mod tests {
                     "self": {}
                 },
                 "source_name": "web",
-                "target": "realm",
+                "target": "parent",
                 "target_name": "web"
             }
         },
@@ -1197,7 +1213,7 @@ mod tests {
                     }
                 },
                 "source_name": "web",
-                "target": "realm",
+                "target": "parent",
                 "target_name": "web-rename"
             }
         },
@@ -1209,7 +1225,7 @@ mod tests {
                     }
                 },
                 "source_name": "my_resolver",
-                "target": "realm",
+                "target": "parent",
                 "target_name": "pkg_resolver"
             }
         }
@@ -1261,18 +1277,18 @@ mod tests {
                             "/svc/fuchsia.setui.SetUiService",
                             "/svc/fuchsia.wlan.service.Wlan"
                         ],
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ]
                     },
                     {
                         "directory": "/data/assets",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#netstack" ],
                         "dependency": "weak_for_migration"
                     },
                     {
                         "directory": "/data/assets",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                         "as": "/data",
                         "subdir": "index/file",
@@ -1294,12 +1310,12 @@ mod tests {
                     },
                     {
                         "runner": "web",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                     },
                     {
                         "runner": "elf",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                         "as": "elf-renamed",
                     },
@@ -1311,12 +1327,12 @@ mod tests {
                     },
                     {
                         "event": [ "stopped", "started" ],
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                     },
                     {
                         "event": "capability_ready",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#netstack" ],
                         "as": "net-ready",
                         "filter": {
@@ -1328,7 +1344,7 @@ mod tests {
                     },
                     {
                         "resolver": "my_resolver",
-                        "from": "realm",
+                        "from": "parent",
                         "to": [ "#modular" ],
                         "as": "pkg_resolver",
                     },
@@ -1458,7 +1474,7 @@ mod tests {
         {
             "protocol": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/svc/fuchsia.setui.SetUiService",
                 "target": {
@@ -1473,7 +1489,7 @@ mod tests {
         {
             "protocol": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/svc/fuchsia.wlan.service.Wlan",
                 "target": {
@@ -1488,7 +1504,7 @@ mod tests {
         {
             "directory": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/data/assets",
                 "target": {
@@ -1503,7 +1519,7 @@ mod tests {
         {
             "directory": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/data/assets",
                 "target": {
@@ -1564,7 +1580,7 @@ mod tests {
         {
             "runner": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "web",
                 "target": {
@@ -1578,7 +1594,7 @@ mod tests {
         {
             "runner": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "elf",
                 "target": {
@@ -1607,7 +1623,7 @@ mod tests {
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "stopped",
                 "target": {
@@ -1622,7 +1638,7 @@ mod tests {
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "started",
                 "target": {
@@ -1637,7 +1653,7 @@ mod tests {
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "capability_ready",
                 "target": {
@@ -1657,7 +1673,7 @@ mod tests {
         {
             "resolver": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "my_resolver",
                 "target": {
@@ -1922,13 +1938,13 @@ mod tests {
                         "runners": [
                             {
                                 "runner": "dart",
-                                "from": "realm",
+                                "from": "parent",
                             }
                         ],
                         "resolvers": [
                             {
                                 "resolver": "pkg_resolver",
-                                "from": "realm",
+                                "from": "parent",
                                 "scheme": "fuchsia-pkg",
                             }
                         ],
@@ -1944,7 +1960,7 @@ mod tests {
                 {
                     "source_name": "dart",
                     "source": {
-                        "realm": {}
+                        "parent": {}
                     },
                     "target_name": "dart"
                 }
@@ -1953,7 +1969,7 @@ mod tests {
                 {
                     "resolver": "pkg_resolver",
                     "source": {
-                        "realm": {}
+                        "parent": {}
                     },
                     "scheme": "fuchsia-pkg"
                 }
@@ -1970,7 +1986,7 @@ mod tests {
                         "runners": [
                             {
                                 "runner": "dart",
-                                "from": "realm",
+                                "from": "parent",
                                 "as": "my-dart",
                             }
                         ],
@@ -1986,7 +2002,7 @@ mod tests {
                 {
                     "source_name": "dart",
                     "source": {
-                        "realm": {}
+                        "parent": {}
                     },
                     "target_name": "my-dart"
                 }
@@ -2071,7 +2087,7 @@ mod tests {
         {
             "service": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
@@ -2080,7 +2096,7 @@ mod tests {
         {
             "protocol": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/LegacyCoolFonts",
                 "target_path": "/svc/fuchsia.fonts.LegacyProvider"
@@ -2089,7 +2105,7 @@ mod tests {
         {
             "protocol": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/ReallyGoodFonts",
                 "target_path": "/fonts/ReallyGoodFonts"
@@ -2098,7 +2114,7 @@ mod tests {
         {
             "protocol": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/IWouldNeverUseTheseFonts",
                 "target_path": "/fonts/IWouldNeverUseTheseFonts"
@@ -2118,7 +2134,7 @@ mod tests {
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs",
-                "target": "realm",
+                "target": "parent",
                 "rights": [
                     "connect",
                     "enumerate",
@@ -2253,7 +2269,7 @@ mod tests {
                 { "directory": "/data/assets", "rights": ["read_bytes"] }
             ]
         });
-        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"protocol":{"source":{"realm":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
+        let output = r#"{"uses":[{"service":{"source":{"parent":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"protocol":{"source":{"parent":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"parent":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
         compile_test(input, &output, false);
     }
 
@@ -2265,7 +2281,7 @@ mod tests {
 
         let input = json!({
             "expose": [
-                { "directory": "/volumes/blobfs", "from": "realm" }
+                { "directory": "/volumes/blobfs", "from": "parent" }
             ]
         });
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
@@ -2273,7 +2289,7 @@ mod tests {
             let result = compile(&tmp_in_path, false, Some(tmp_out_path.clone()));
             assert_matches!(
                 result,
-                Err(Error::Parse { err, ..  }) if &err == "invalid value: string \"realm\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
+                Err(Error::Parse { err, ..  }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
             );
         }
         // Compilation failed so output should not exist.

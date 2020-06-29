@@ -286,7 +286,7 @@ mod tests {
                         source_path: "/data".try_into().unwrap(),
                         source: ExposeSource::Self_,
                         target_path: "/data".try_into().unwrap(),
-                        target: ExposeTarget::Realm,
+                        target: ExposeTarget::Parent,
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }))
@@ -405,7 +405,7 @@ mod tests {
                         source_path: "/data".try_into().unwrap(),
                         source: ExposeSource::Self_,
                         target_path: "/data".try_into().unwrap(),
-                        target: ExposeTarget::Realm,
+                        target: ExposeTarget::Parent,
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }))

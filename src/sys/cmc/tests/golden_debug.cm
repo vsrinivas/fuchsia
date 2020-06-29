@@ -12,7 +12,7 @@
         {
             "service": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
@@ -21,7 +21,7 @@
         {
             "protocol": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_path": "/fonts/LegacyCoolFonts",
                 "target_path": "/svc/fuchsia.fonts.LegacyProvider"
@@ -40,7 +40,7 @@
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "destroyed",
                 "target_name": "destroyed",
@@ -50,7 +50,7 @@
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "stopped",
                 "target_name": "stopped",
@@ -60,7 +60,7 @@
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "capability_ready",
                 "target_name": "diagnostics_ready",
@@ -90,7 +90,7 @@
                 },
                 "source_path": "/loggers/fuchsia.logger.Log",
                 "target_path": "/svc/fuchsia.logger.Log",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -102,7 +102,7 @@
                 },
                 "source_path": "/loggers/fuchsia.logger.LegacyLog",
                 "target_path": "/svc/fuchsia.logger.LegacyLog",
-                "target": "realm"
+                "target": "parent"
             }
         },
         {
@@ -112,7 +112,7 @@
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs",
-                "target": "realm",
+                "target": "parent",
                 "rights": [
                     "connect",
                     "enumerate",
@@ -164,7 +164,7 @@
         {
             "event": {
                 "source": {
-                    "realm": {}
+                    "parent": {}
                 },
                 "source_name": "stopped",
                 "target": {

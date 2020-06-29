@@ -9,7 +9,7 @@ using fuchsia.component;
 /// A reference to a capability source or destination relative to this
 /// component.
 flexible union Ref {
-    1: RealmRef realm;
+    1: ParentRef parent;
     2: SelfRef self;
     3: ChildRef child;
     4: CollectionRef collection;
@@ -17,8 +17,8 @@ flexible union Ref {
     6: FrameworkRef framework;
 };
 
-/// A reference to a component’s containing realm, i.e. the parent component.
-struct RealmRef {
+/// A reference to a component’s parent instance.
+struct ParentRef {
 };
 
 /// A reference to the component itself.

@@ -33,7 +33,7 @@ async fn storage_dir_from_cm_namespace() {
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/tmp".try_into().unwrap(),
-                    source: StorageDirectorySource::Realm,
+                    source: StorageDirectorySource::Parent,
                 })
                 .build(),
         ),
@@ -181,7 +181,7 @@ async fn storage_from_parent_dir_from_grandparent() {
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
-                    source: StorageDirectorySource::Realm,
+                    source: StorageDirectorySource::Parent,
                 })
                 .build(),
         ),
@@ -237,7 +237,7 @@ async fn storage_and_dir_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                    source: OfferStorageSource::Realm,
+                    source: OfferStorageSource::Parent,
                     target: OfferTarget::Child("c".to_string()),
                 })))
                 .add_lazy_child("c")
@@ -295,7 +295,7 @@ async fn meta_storage_and_dir_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                    source: OfferStorageSource::Realm,
+                    source: OfferStorageSource::Parent,
                     target: OfferTarget::Child("c".to_string()),
                 })))
                 .add_lazy_child("c")
@@ -350,7 +350,7 @@ async fn storage_from_parent_dir_from_sibling() {
                     source_path: "/data".try_into().unwrap(),
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
-                    target: ExposeTarget::Realm,
+                    target: ExposeTarget::Parent,
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }))
@@ -429,7 +429,7 @@ async fn use_in_collection_from_parent() {
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
-                    source: StorageDirectorySource::Realm,
+                    source: StorageDirectorySource::Parent,
                 })
                 .add_transient_collection("coll")
                 .build(),
@@ -547,15 +547,15 @@ async fn use_in_collection_from_grandparent() {
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                    source: OfferStorageSource::Realm,
+                    source: OfferStorageSource::Parent,
                     target: OfferTarget::Collection("coll".to_string()),
                 })))
                 .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
-                    source: OfferStorageSource::Realm,
+                    source: OfferStorageSource::Parent,
                     target: OfferTarget::Collection("coll".to_string()),
                 })))
                 .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                    source: OfferStorageSource::Realm,
+                    source: OfferStorageSource::Parent,
                     target: OfferTarget::Collection("coll".to_string()),
                 })))
                 .add_transient_collection("coll")
@@ -690,7 +690,7 @@ async fn storage_multiple_types() {
                     source_path: "/data".try_into().unwrap(),
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
-                    target: ExposeTarget::Realm,
+                    target: ExposeTarget::Parent,
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }))
@@ -700,11 +700,11 @@ async fn storage_multiple_types() {
             "c",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                    source: OfferStorageSource::Realm,
+                    source: OfferStorageSource::Parent,
                     target: OfferTarget::Child("d".to_string()),
                 })))
                 .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                    source: OfferStorageSource::Realm,
+                    source: OfferStorageSource::Parent,
                     target: OfferTarget::Child("d".to_string()),
                 })))
                 .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
@@ -959,7 +959,7 @@ async fn dir_offered_from_nonexecutable() {
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
-                    source: StorageDirectorySource::Realm,
+                    source: StorageDirectorySource::Parent,
                 })
                 .build(),
         ),

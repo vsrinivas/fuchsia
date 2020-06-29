@@ -32,7 +32,7 @@ pub enum DependencyNode {
 /// Examines a group of StorageDecls looking for one whose name matches the
 /// String passed in and whose source is a child. `None` is returned if either
 /// no declaration has the specified name or the declaration represents an
-/// offer from Self or Realm.
+/// offer from Self or Parent.
 fn find_storage_provider(storage_decls: &Vec<StorageDecl>, name: &str) -> Option<String> {
     for decl in storage_decls {
         if decl.name == name {
@@ -40,7 +40,7 @@ fn find_storage_provider(storage_decls: &Vec<StorageDecl>, name: &str) -> Option
                 StorageDirectorySource::Child(child) => {
                     return Some(child.to_string());
                 }
-                StorageDirectorySource::Self_ | StorageDirectorySource::Realm => {
+                StorageDirectorySource::Self_ | StorageDirectorySource::Parent => {
                     return None;
                 }
             }
@@ -350,7 +350,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                             DependencyNode::Collection(target.clone()),
                         )],
                     },
-                    OfferServiceSource::Self_ | OfferServiceSource::Realm => {
+                    OfferServiceSource::Self_ | OfferServiceSource::Parent => {
                         // Capabilities offered by the parent or routed in from
                         // the realm are not relevant.
                         continue;
@@ -371,7 +371,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                                 DependencyNode::Collection(target.clone()),
                             )),
                         },
-                        OfferServiceSource::Self_ | OfferServiceSource::Realm => {
+                        OfferServiceSource::Self_ | OfferServiceSource::Parent => {
                             // Capabilities offered by the parent or routed in
                             // from the realm are not relevant.
                             continue;
@@ -398,7 +398,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                         )],
                     },
                     OfferDirectorySource::Self_
-                    | OfferDirectorySource::Realm
+                    | OfferDirectorySource::Parent
                     | OfferDirectorySource::Framework => {
                         // Capabilities offered by the parent or routed in from
                         // the realm are not relevant.
@@ -427,7 +427,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                             }
                         }
                     }
-                    OfferStorageSource::Realm => {
+                    OfferStorageSource::Parent => {
                         // Capabilities coming from the parent aren't tracked.
                         continue;
                     }
@@ -445,7 +445,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                             DependencyNode::Collection(target.clone()),
                         )],
                     },
-                    OfferRunnerSource::Self_ | OfferRunnerSource::Realm => {
+                    OfferRunnerSource::Self_ | OfferRunnerSource::Parent => {
                         // Capabilities coming from the parent aren't tracked.
                         continue;
                     }
@@ -463,7 +463,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                             DependencyNode::Collection(target.clone()),
                         )],
                     },
-                    OfferResolverSource::Self_ | OfferResolverSource::Realm => {
+                    OfferResolverSource::Self_ | OfferResolverSource::Parent => {
                         // Capabilities coming from the parent aren't tracked.
                         continue;
                     }
@@ -631,7 +631,7 @@ mod tests {
     fn test_service_from_child() -> Result<(), Error> {
         let decl = ComponentDecl {
             exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
-                target: ExposeTarget::Realm,
+                target: ExposeTarget::Parent,
                 source_path: CapabilityPath::try_from("/svc/serviceFromChild").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/serviceFromChild").unwrap(),
                 source: ExposeSource::Child("childA".to_string()),
@@ -703,7 +703,7 @@ mod tests {
             environments: vec![EnvironmentDeclBuilder::new()
                 .name("env")
                 .add_runner(cm_rust::RunnerRegistration {
-                    source: RegistrationSource::Realm,
+                    source: RegistrationSource::Parent,
                     source_name: "foo".into(),
                     target_name: "foo".into(),
                 })

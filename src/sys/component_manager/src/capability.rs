@@ -153,16 +153,16 @@ impl InternalCapability {
 
     pub fn builtin_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
         match decl {
-            UseDecl::Service(s) if s.source == UseSource::Realm => {
+            UseDecl::Service(s) if s.source == UseSource::Parent => {
                 Ok(InternalCapability::Service(s.source_path.clone()))
             }
-            UseDecl::Protocol(s) if s.source == UseSource::Realm => {
+            UseDecl::Protocol(s) if s.source == UseSource::Parent => {
                 Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
-            UseDecl::Directory(d) if d.source == UseSource::Realm => {
+            UseDecl::Directory(d) if d.source == UseSource::Parent => {
                 Ok(InternalCapability::Directory(d.source_path.clone()))
             }
-            UseDecl::Event(e) if e.source == UseSource::Realm => {
+            UseDecl::Event(e) if e.source == UseSource::Parent => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
             }
             UseDecl::Runner(s) => Ok(InternalCapability::Runner(s.source_name.clone())),
@@ -172,16 +172,16 @@ impl InternalCapability {
 
     pub fn builtin_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
-            OfferDecl::Protocol(s) if s.source == OfferServiceSource::Realm => {
+            OfferDecl::Protocol(s) if s.source == OfferServiceSource::Parent => {
                 Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
-            OfferDecl::Directory(d) if d.source == OfferDirectorySource::Realm => {
+            OfferDecl::Directory(d) if d.source == OfferDirectorySource::Parent => {
                 Ok(InternalCapability::Directory(d.source_path.clone()))
             }
-            OfferDecl::Runner(s) if s.source == OfferRunnerSource::Realm => {
+            OfferDecl::Runner(s) if s.source == OfferRunnerSource::Parent => {
                 Ok(InternalCapability::Runner(s.source_name.clone()))
             }
-            OfferDecl::Event(e) if e.source == OfferEventSource::Realm => {
+            OfferDecl::Event(e) if e.source == OfferEventSource::Parent => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
             }
             _ => {
@@ -191,7 +191,7 @@ impl InternalCapability {
     }
 
     pub fn builtin_from_storage_decl(decl: &StorageDecl) -> Result<Self, Error> {
-        if decl.source == StorageDirectorySource::Realm {
+        if decl.source == StorageDirectorySource::Parent {
             Ok(InternalCapability::Directory(decl.source_path.clone()))
         } else {
             Err(Error::InvalidBuiltinCapability {})
@@ -220,7 +220,7 @@ impl InternalCapability {
 
     pub fn framework_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
-            OfferDecl::Protocol(s) if s.source == OfferServiceSource::Realm => {
+            OfferDecl::Protocol(s) if s.source == OfferServiceSource::Parent => {
                 Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
@@ -768,12 +768,12 @@ mod tests {
                     },
                 },
             ],
-            target: ExposeTarget::Realm,
+            target: ExposeTarget::Parent,
             target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
         }));
         let net_service = ExposeServiceDecl {
             sources: vec![],
-            target: ExposeTarget::Realm,
+            target: ExposeTarget::Parent,
             target_path: CapabilityPath {
                 dirname: "/svc".to_string(),
                 basename: "net".to_string(),
@@ -781,7 +781,7 @@ mod tests {
         };
         let log_service = ExposeServiceDecl {
             sources: vec![],
-            target: ExposeTarget::Realm,
+            target: ExposeTarget::Parent,
             target_path: CapabilityPath {
                 dirname: "/svc".to_string(),
                 basename: "log".to_string(),
@@ -789,7 +789,7 @@ mod tests {
         };
         let unmatched_service = ExposeServiceDecl {
             sources: vec![],
-            target: ExposeTarget::Realm,
+            target: ExposeTarget::Parent,
             target_path: CapabilityPath {
                 dirname: "/svc".to_string(),
                 basename: "unmatched-target".to_string(),
@@ -813,7 +813,7 @@ mod tests {
     fn find_expose_service_sources_with_unexpected_capability() {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),
-            source: StorageDirectorySource::Realm,
+            source: StorageDirectorySource::Parent,
             source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
         });
         capability.find_expose_service_sources(&default_component_decl());
@@ -925,7 +925,7 @@ mod tests {
         // Parent offers event named "started" to "child"
         let parent_decl = ComponentDecl {
             offers: vec![OfferDecl::Event(cm_rust::OfferEventDecl {
-                source: cm_rust::OfferEventSource::Realm,
+                source: cm_rust::OfferEventSource::Parent,
                 source_name: "started".into(),
                 target: cm_rust::OfferTarget::Child("child".to_string()),
                 target_name: "started".into(),
@@ -937,7 +937,7 @@ mod tests {
         // A child named "child" uses the event "started" offered by its parent. Should
         // successfully match the declaration.
         let child_cap = ComponentCapability::Use(UseDecl::Event(UseEventDecl {
-            source: cm_rust::UseSource::Realm,
+            source: cm_rust::UseSource::Parent,
             source_name: "started".into(),
             target_name: "started-x".into(),
             filter: None,
@@ -953,7 +953,7 @@ mod tests {
 
         // Mismatched capability name.
         let misnamed_child_cap = ComponentCapability::Use(UseDecl::Event(UseEventDecl {
-            source: cm_rust::UseSource::Realm,
+            source: cm_rust::UseSource::Parent,
             source_name: "foo".into(),
             target_name: "started".into(),
             filter: None,
@@ -970,7 +970,7 @@ mod tests {
                 ExposeDecl::Runner(cm_rust::ExposeRunnerDecl {
                     source: cm_rust::ExposeSource::Self_,
                     source_name: "source".into(),
-                    target: cm_rust::ExposeTarget::Realm,
+                    target: cm_rust::ExposeTarget::Parent,
                     target_name: "elf".into(),
                 }),
             ],
@@ -982,7 +982,7 @@ mod tests {
         let parent_cap = ComponentCapability::Expose(ExposeDecl::Runner(ExposeRunnerDecl {
             source: ExposeSource::Child("child".into()),
             source_name: "elf".into(),
-            target: ExposeTarget::Realm,
+            target: ExposeTarget::Parent,
             target_name: "parent_elf".into(),
         }));
         assert_eq!(parent_cap.find_expose_source(&child_decl), Some(&child_decl.exposes[0]));
@@ -992,7 +992,7 @@ mod tests {
             ComponentCapability::Expose(ExposeDecl::Runner(ExposeRunnerDecl {
                 source: ExposeSource::Child("child".into()),
                 source_name: "dwarf".into(),
-                target: ExposeTarget::Realm,
+                target: ExposeTarget::Parent,
                 target_name: "parent_elf".into(),
             }));
         assert_eq!(misnamed_parent_cap.find_expose_source(&child_decl), None);
@@ -1004,7 +1004,7 @@ mod tests {
     fn find_offer_service_sources_with_unexpected_capability() {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),
-            source: StorageDirectorySource::Realm,
+            source: StorageDirectorySource::Parent,
             source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
         });
         let moniker = ChildMoniker::new("".to_string(), None, 0);

@@ -775,7 +775,7 @@ mod tests {
                             source: ExposeSource::Self_,
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            target: ExposeTarget::Realm,
+                            target: ExposeTarget::Parent,
                         }))
                         .add_eager_child("eager")
                         .build(),
@@ -832,7 +832,7 @@ mod tests {
                             source: ExposeSource::Self_,
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            target: ExposeTarget::Realm,
+                            target: ExposeTarget::Parent,
                         }))
                         .build(),
                 ),

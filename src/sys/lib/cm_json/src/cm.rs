@@ -293,7 +293,7 @@ pub struct UseEventStream {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum ExposeTarget {
-    Realm,
+    Parent,
     Framework,
 }
 
@@ -475,7 +475,7 @@ pub struct OfferEvent {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum Ref {
-    Realm(RealmRef),
+    Parent(ParentRef),
     #[serde(rename = "self")]
     Self_(SelfRef),
     Child(ChildRef),
@@ -484,11 +484,11 @@ pub enum Ref {
     Framework(FrameworkRef),
 }
 
-/// A reference to a component's containing realm. See [`RealmRef`].
+/// A reference to a component's parent. See [`ParentRef`].
 ///
-/// [`RealmRef`]: ../../fidl_fuchsia_sys2/struct.RealmRef.html
+/// [`ParentRef`]: ../../fidl_fuchsia_sys2/struct.ParentRef.html
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RealmRef {}
+pub struct ParentRef {}
 
 /// A reference to the component itself. See [`SelfRef`].
 ///

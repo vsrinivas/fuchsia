@@ -90,7 +90,7 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
 impl CmInto<fsys::Ref> for cm::ExposeTarget {
     fn cm_into(self) -> Result<fsys::Ref, Error> {
         Ok(match self {
-            cm::ExposeTarget::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            cm::ExposeTarget::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             cm::ExposeTarget::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
         })
     }
@@ -430,9 +430,9 @@ impl CmInto<fsys::ResolverRegistration> for cm::ResolverRegistration {
     }
 }
 
-impl CmInto<fsys::RealmRef> for cm::RealmRef {
-    fn cm_into(self) -> Result<fsys::RealmRef, Error> {
-        Ok(fsys::RealmRef {})
+impl CmInto<fsys::ParentRef> for cm::ParentRef {
+    fn cm_into(self) -> Result<fsys::ParentRef, Error> {
+        Ok(fsys::ParentRef {})
     }
 }
 
@@ -469,7 +469,7 @@ impl CmInto<fsys::FrameworkRef> for cm::FrameworkRef {
 impl CmInto<fsys::Ref> for cm::Ref {
     fn cm_into(self) -> Result<fsys::Ref, Error> {
         Ok(match self {
-            cm::Ref::Realm(r) => fsys::Ref::Realm(r.cm_into()?),
+            cm::Ref::Parent(r) => fsys::Ref::Parent(r.cm_into()?),
             cm::Ref::Self_(s) => fsys::Ref::Self_(s.cm_into()?),
             cm::Ref::Child(c) => fsys::Ref::Child(c.cm_into()?),
             cm::Ref::Collection(c) => fsys::Ref::Collection(c.cm_into()?),
@@ -750,7 +750,7 @@ mod tests {
                     {
                         "service": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_path": "/fonts/CoolFonts",
                             "target_path": "/svc/fuchsia.fonts.Provider"
@@ -768,7 +768,7 @@ mod tests {
                     {
                         "protocol": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_path": "/fonts/CoolFonts",
                             "target_path": "/svc/fuchsia.fonts.Provider2"
@@ -786,7 +786,7 @@ mod tests {
                     {
                         "directory": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_path": "/data/assets",
                             "target_path": "/data",
@@ -818,7 +818,7 @@ mod tests {
                     {
                         "event": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_name": "capability_ready",
                             "target_name": "capability_ready_from_realm",
@@ -847,7 +847,7 @@ mod tests {
             output = {
                 let uses = vec![
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),
@@ -857,7 +857,7 @@ mod tests {
                         target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                     }),
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider2".to_string()),
                     }),
@@ -867,7 +867,7 @@ mod tests {
                         target_path: Some("/svc/fuchsia.sys2.Realm2".to_string()),
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/data/assets".to_string()),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect | fio2::Operations::WriteBytes),
@@ -888,7 +888,7 @@ mod tests {
                         source_name: Some("elf".to_string()),
                     }),
                     fsys::UseDecl::Event(fsys::UseEventDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("capability_ready".to_string()),
                         target_name: Some("capability_ready_from_realm".to_string()),
                         filter: Some(fdata::Dictionary {
@@ -926,7 +926,7 @@ mod tests {
                             },
                             "source_path": "/loggers/fuchsia.logger.Log1",
                             "target_path": "/svc/fuchsia.logger.Log",
-                            "target": "realm"
+                            "target": "parent"
                         }
                     },
                     {
@@ -936,7 +936,7 @@ mod tests {
                             },
                             "source_path": "/loggers/fuchsia.logger.Log2",
                             "target_path": "/svc/fuchsia.logger.Log",
-                            "target": "realm"
+                            "target": "parent"
                         }
                     },
                     {
@@ -948,7 +948,7 @@ mod tests {
                             },
                             "source_path": "/loggers/fuchsia.logger.LegacyLog",
                             "target_path": "/svc/fuchsia.logger.LegacyLog",
-                            "target": "realm"
+                            "target": "parent"
                         }
                     },
                     {
@@ -971,7 +971,7 @@ mod tests {
                             },
                             "source_path": "/data",
                             "target_path": "/data",
-                            "target": "realm",
+                            "target": "parent",
                             "rights": ["connect"],
                             "subdir": "logs"
                         }
@@ -984,7 +984,7 @@ mod tests {
                                 }
                             },
                             "source_name": "elf",
-                            "target": "realm",
+                            "target": "parent",
                             "target_name": "elf"
                         }
                     },
@@ -996,7 +996,7 @@ mod tests {
                                 }
                             },
                             "source_name": "pkg_resolver",
-                            "target": "realm",
+                            "target": "parent",
                             "target_name": "pkg_resolver",
                         }
                     },
@@ -1018,13 +1018,13 @@ mod tests {
                             collection: None,
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                         source_path: Some("/loggers/fuchsia.logger.Log2".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
                         source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
@@ -1033,7 +1033,7 @@ mod tests {
                             collection: None,
                         })),
                         target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
-                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                         source_path: Some("/volumes/blobfs".to_string()),
@@ -1050,7 +1050,7 @@ mod tests {
                             collection: None,
                         })),
                         target_path: Some("/data".to_string()),
-                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("logs".to_string()),
                     }),
@@ -1061,7 +1061,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("elf".to_string()),
-                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl {
                         source_name: Some("pkg_resolver".to_string()),
@@ -1070,7 +1070,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("pkg_resolver".to_string()),
-                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                 ];
                 let children = vec![
@@ -1093,7 +1093,7 @@ mod tests {
                     {
                         "directory": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_path": "/data/assets",
                             "target": {
@@ -1232,7 +1232,7 @@ mod tests {
                         "storage": {
                             "type": "meta",
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "target": {
                                 "collection": {
@@ -1245,7 +1245,7 @@ mod tests {
                         "storage": {
                             "type": "meta",
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "target": {
                                 "child": {
@@ -1257,7 +1257,7 @@ mod tests {
                     {
                         "runner": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_name": "elf",
                             "target": {
@@ -1271,7 +1271,7 @@ mod tests {
                     {
                         "resolver": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_name": "pkg_resolver",
                             "target": {
@@ -1286,7 +1286,7 @@ mod tests {
                         "event": {
                             "source_name": "capability_ready",
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "target": {
                                 "child": {
@@ -1331,7 +1331,7 @@ mod tests {
             output = {
                 let offers = vec![
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/data/assets".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
@@ -1437,20 +1437,20 @@ mod tests {
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Meta),
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef { })),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef { })),
                         target: Some(fsys::Ref::Collection(
                             fsys::CollectionRef { name: "modular".to_string() }
                         )),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Meta),
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef { })),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef { })),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef { name: "logger".to_string(), collection: None }
                         )),
                     }),
                     fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("elf".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
@@ -1461,7 +1461,7 @@ mod tests {
                         target_name: Some("elf".to_string()),
                     }),
                     fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("pkg_resolver".to_string()),
                         target: Some(fsys::Ref::Child(
                             fsys::ChildRef {
@@ -1473,7 +1473,7 @@ mod tests {
                     }),
                     fsys::OfferDecl::Event(fsys::OfferEventDecl {
                         source_name: Some("capability_ready".to_string()),
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         target: Some(fsys::Ref::Child(
                             fsys::ChildRef {
                                 name: "logger".to_string(),
@@ -1566,7 +1566,7 @@ mod tests {
                             {
                                 "resolver": "pkg_resolver",
                                 "source": {
-                                    "realm": {},
+                                    "parent": {},
                                 },
                                 "scheme": "fuchsia-pkg"
                             }
@@ -1618,7 +1618,7 @@ mod tests {
                         resolvers: Some(vec![
                             fsys::ResolverRegistration {
                                 resolver: Some("pkg_resolver".to_string()),
-                                source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                                source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                                 scheme: Some("fuchsia-pkg".to_string()),
                             }
                         ]),
@@ -1821,7 +1821,7 @@ mod tests {
                     {
                         "service": {
                             "source": {
-                                "realm": {}
+                                "parent": {}
                             },
                             "source_path": "/fonts/CoolFonts",
                             "target_path": "/svc/fuchsia.fonts.Provider",
@@ -1836,7 +1836,7 @@ mod tests {
                             },
                             "source_path": "/volumes/blobfs",
                             "target_path": "/volumes/blobfs",
-                            "target": "realm",
+                            "target": "parent",
                             "rights": ["connect"]
                         }
                     }
@@ -1907,7 +1907,7 @@ mod tests {
                             {
                                 "resolver": "pkg_resolver",
                                 "source": {
-                                    "realm": {},
+                                    "parent": {},
                                 },
                                 "scheme": "fuchsia-pkg",
                             }
@@ -1930,7 +1930,7 @@ mod tests {
                 ])};
                 let uses = vec![
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),
@@ -1940,7 +1940,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         source_path: Some("/volumes/blobfs".to_string()),
                         target_path: Some("/volumes/blobfs".to_string()),
-                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
@@ -2014,7 +2014,7 @@ mod tests {
                         resolvers: Some(vec![
                             fsys::ResolverRegistration {
                                 resolver: Some("pkg_resolver".to_string()),
-                                source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                                source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
                                 scheme: Some("fuchsia-pkg".to_string()),
                             }
                         ]),
