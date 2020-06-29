@@ -72,14 +72,14 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
   auto hci_dev = std::make_unique<::bt::hci::FidlDeviceWrapper>(std::move(local));
   auto hci_result = ::bt::hci::Transport::Create(std::move(hci_dev));
   if (hci_result.is_error()) {
     return EXIT_FAILURE;
   }
   auto hci = hci_result.take_value();
-
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   bluetooth_tools::CommandDispatcher dispatcher;
   hcitool::CommandData cmd_data(hci->command_channel(), loop.dispatcher());
