@@ -167,11 +167,11 @@ class MemoryBandwidthInspectTest: public gtest::TestLoopFixture {
       : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(), fxl::CommandLine{},
                                            dispatcher(), false, false)),
         executor_(dispatcher()),
-        ram_binding_(&fake_device_) {
+        ram_binding_(&fake_device_),
+        logger_factory_(new MockLoggerFactory()) {
     // Create metrics
     auto service_provider = context_provider_.service_directory_provider();
-    logger_factory_ = new MockLoggerFactory();
-    service_provider->AddService(factory_bindings_.GetHandler(logger_factory_, dispatcher()));
+    service_provider->AddService(factory_bindings_.GetHandler(logger_factory_.get(), dispatcher()));
     CreateMetrics();
 
     // Set RamDevice
@@ -218,7 +218,7 @@ class MemoryBandwidthInspectTest: public gtest::TestLoopFixture {
   async::Executor executor_;
   FakeRamDevice fake_device_;
   fidl::Binding<fuchsia::hardware::ram::metrics::Device> ram_binding_;
-  MockLoggerFactory* logger_factory_;
+  std::unique_ptr<MockLoggerFactory> logger_factory_;
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
 };
 
