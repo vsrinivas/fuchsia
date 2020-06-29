@@ -41,8 +41,7 @@ class DummyFsProvider : public FsProvider {
   zx::channel CloneFs(const char* path) override { return zx::channel(); }
 };
 
-CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
-                                async_dispatcher_t* bootargs_dispatcher,
+CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
                                 mock_boot_arguments::Server* boot_args,
                                 llcpp::fuchsia::boot::Arguments::SyncClient* client);
 void InitializeCoordinator(Coordinator* coordinator);

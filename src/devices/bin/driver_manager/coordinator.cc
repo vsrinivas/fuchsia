@@ -122,14 +122,15 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 namespace power_manager_fidl = llcpp::fuchsia::power::manager;
 
-Coordinator::Coordinator(CoordinatorConfig config)
+Coordinator::Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatcher)
     : config_(std::move(config)),
-      inspect_manager_(config_.dispatcher),
-      reboot_watcher_manager_(config_.dispatcher) {
+      dispatcher_(dispatcher),
+      inspect_manager_(dispatcher),
+      reboot_watcher_manager_(dispatcher) {
   if (config_.oom_event) {
     wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
-    wait_on_oom_event_.Begin(config_.dispatcher);
+    wait_on_oom_event_.Begin(dispatcher);
   }
   shutdown_system_state_ = config_.default_shutdown_system_state;
 }
@@ -1310,7 +1311,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
     auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
 
     auto status = async::PostDelayedTask(
-        dispatcher(),
+        dispatcher_,
         [this, callback_info] {
           if (!InSuspend()) {
             return;  // Suspend failed to complete.
@@ -1412,7 +1413,7 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
         return;
       }
       if (ctx.pending_tasks_is_empty()) {
-        async::PostTask(dispatcher(), [this, callback] {
+        async::PostTask(dispatcher_, [this, callback] {
           resume_context().reset_completed_tasks();
           callback(ZX_OK);
         });
@@ -1436,7 +1437,7 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
 
   // Post a delayed task in case drivers do not complete the resume.
   auto status = async::PostDelayedTask(
-      dispatcher(),
+      dispatcher_,
       [this, callback] {
         if (!InResume()) {
           return;
@@ -1482,7 +1483,7 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
   if (!driver) {
     return;
   }
-  async::PostTask(dispatcher(), [this, drv = std::move(driver)]() mutable {
+  async::PostTask(dispatcher_, [this, drv = std::move(driver)]() mutable {
     Driver* borrow_ref = drv.get();
     drivers_.push_back(std::move(drv));
     zx_status_t status = BindDriver(borrow_ref);
@@ -1684,7 +1685,7 @@ zx_status_t Coordinator::ScanSystemDrivers() {
     auto coordinator = static_cast<Coordinator*>(arg);
     find_loadable_drivers("/system/driver",
                           fit::bind_member(coordinator, &Coordinator::DriverAddedSys));
-    async::PostTask(coordinator->dispatcher(), [coordinator] { coordinator->BindSystemDrivers(); });
+    async::PostTask(coordinator->dispatcher_, [coordinator] { coordinator->BindSystemDrivers(); });
     return 0;
   };
   int ret = thrd_create_with_name(&t, callback, this, "system-driver-loader");
@@ -1990,7 +1991,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     };
 
     zx_status_t status =
-        fidl_bind(this->config_.dispatcher, request.release(),
+        fidl_bind(dispatcher_, request.release(),
                   reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_Administrator_dispatch),
                   this, &kOps);
     if (status != ZX_OK) {
@@ -2007,7 +2008,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   const auto admin2 = [this](zx::channel request) {
     auto status = fidl::Bind<llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface>(
-        this->config_.dispatcher, std::move(request), this);
+        dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            power_fidl::statecontrol::Admin::Name, zx_status_get_string(status));
@@ -2023,7 +2024,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   const auto reboot_methods_watcher_register = [this](zx::channel request) {
     auto status = fidl::Bind<
         llcpp::fuchsia::hardware::power::statecontrol::RebootMethodsWatcherRegister::Interface>(
-        this->config_.dispatcher, std::move(request), &(this->reboot_watcher_manager_));
+        dispatcher_, std::move(request), &(this->reboot_watcher_manager_));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            power_fidl::statecontrol::RebootMethodsWatcherRegister::Name,
@@ -2043,7 +2044,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   const auto system_state_manager_register = [this](zx::channel request) {
     auto status = fidl::Bind<llcpp::fuchsia::device::manager::SystemStateTransition::Interface>(
-        this->config_.dispatcher, std::move(request), std::make_unique<SystemStateManager>(this));
+        dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            llcpp::fuchsia::device::manager::SystemStateTransition::Name,
@@ -2062,7 +2063,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   const auto bind_debugger = [this](zx::channel request) {
     auto status = fidl::Bind<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
-        this->config_.dispatcher, std::move(request), this);
+        dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            llcpp::fuchsia::device::manager::BindDebugger::Name, zx_status_get_string(status));
@@ -2101,7 +2102,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     };
 
     auto status =
-        fidl_bind(this->config_.dispatcher, request.release(),
+        fidl_bind(dispatcher_, request.release(),
                   reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_DebugDumper_dispatch),
                   this, &kOps);
     if (status != ZX_OK) {

@@ -230,7 +230,6 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   CoordinatorConfig config;
   SystemInstance system_instance;
-  config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
   config.require_system = driver_manager_params.require_system;
   config.asan_drivers = driver_manager_params.driver_host_asan;
@@ -267,7 +266,7 @@ int main(int argc, char** argv) {
     config.oom_event = zx::event(oom_event);
   }
 
-  Coordinator coordinator(std::move(config));
+  Coordinator coordinator(std::move(config), loop.dispatcher());
 
   // Services offered to the rest of the system.
   svc::Outgoing outgoing{loop.dispatcher()};

@@ -9,8 +9,7 @@
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
-CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
-                                async_dispatcher_t* bootargs_dispatcher,
+CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
                                 mock_boot_arguments::Server* boot_args,
                                 llcpp::fuchsia::boot::Arguments::SyncClient* client) {
   // The DummyFsProvider is stateless.  Create a single static one here so that we don't need to
@@ -23,7 +22,6 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
     *boot_args = mock_boot_arguments::Server{{{"key1", "new-value"}, {"key2", "value2"}}};
     boot_args->CreateClient(bootargs_dispatcher, client);
   }
-  config.dispatcher = dispatcher;
   config.require_system = false;
   config.asan_drivers = false;
   config.boot_args = client;

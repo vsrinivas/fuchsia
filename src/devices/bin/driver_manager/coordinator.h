@@ -173,8 +173,6 @@ struct CoordinatorConfig {
   zx::job driver_host_job;
   // Event that is signaled by the kernel in OOM situation.
   zx::event oom_event;
-  // Async dispatcher for the coordinator.
-  async_dispatcher_t* dispatcher = nullptr;
   // Client for the Arguments service.
   llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
   // If true, netsvc is disabled and will not start.
@@ -220,7 +218,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   Coordinator(Coordinator&&) = delete;
   Coordinator& operator=(Coordinator&&) = delete;
 
-  explicit Coordinator(CoordinatorConfig config);
+  Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatcher);
   ~Coordinator();
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
@@ -302,8 +300,8 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
 
   void DumpState(VmoWriter* vmo) const;
 
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
-  async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
   llcpp::fuchsia::boot::Arguments::SyncClient* boot_args() const { return config_.boot_args; }
   bool disable_netsvc() const { return config_.disable_netsvc; }
   bool require_system() const { return config_.require_system; }
@@ -409,6 +407,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
 
  private:
   CoordinatorConfig config_;
+  async_dispatcher_t* const dispatcher_;
   bool running_ = false;
   bool launched_first_driver_host_ = false;
   bool system_available_ = false;

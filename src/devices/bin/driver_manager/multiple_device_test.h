@@ -49,7 +49,8 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
 
 class CoordinatorForTest : public Coordinator {
  public:
-  CoordinatorForTest(CoordinatorConfig config) : Coordinator(std::move(config)) {}
+  CoordinatorForTest(CoordinatorConfig config, async_dispatcher_t* dispatcher)
+      : Coordinator(std::move(config), dispatcher) {}
 
   void SetFshostAdminClient(std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> client) {
     fshost_admin_client_ = std::move(client);
@@ -165,8 +166,9 @@ class MultipleDeviceTestCase : public zxtest::Test {
   // for itself to respond to its requests.
   async::Loop mock_server_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  CoordinatorForTest coordinator_{DefaultConfig(
-      coordinator_loop_.dispatcher(), mock_server_loop_.dispatcher(), &boot_args_, &args_client_)};
+  CoordinatorForTest coordinator_{
+      DefaultConfig(mock_server_loop_.dispatcher(), &boot_args_, &args_client_),
+      coordinator_loop_.dispatcher()};
 
   // The fake driver_host that the platform bus is put into
   fbl::RefPtr<DriverHost> driver_host_;

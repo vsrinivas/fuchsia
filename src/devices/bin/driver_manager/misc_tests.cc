@@ -32,6 +32,8 @@ constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
 constexpr char kLogMessage[] = "log message text";
 constexpr char kLogTestCaseName[] = "log test case";
 
+static CoordinatorConfig NullConfig() { return DefaultConfig(nullptr, nullptr, nullptr); }
+
 // Reads a BindDriver request from remote, checks that it is for the expected
 // driver, and then sends a ZX_OK response.
 void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
@@ -59,8 +61,7 @@ void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
   // Write the BindDriver response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid,
-                       fuchsia_device_manager_DeviceControllerBindDriverOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerBindDriverOrdinal);
   resp->status = ZX_OK;
   resp->test_output = test_output.release();
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
@@ -153,8 +154,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
   // Write the BindDriver response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid,
-                       fuchsia_device_manager_DeviceControllerBindDriverOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerBindDriverOrdinal);
   resp->status = ZX_OK;
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
                        sizeof(*resp), handles, std::size(handles), &actual_handles, nullptr);
@@ -204,14 +204,14 @@ class TestDriverTestReporter : public DriverTestReporter {
 };
 
 TEST(MiscTestCase, InitCoreDevices) {
-  Coordinator coordinator(DefaultConfig(nullptr, nullptr, nullptr, nullptr));
+  Coordinator coordinator(NullConfig(), nullptr);
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 }
 
 TEST(MiscTestCase, DumpState) {
-  Coordinator coordinator(DefaultConfig(nullptr, nullptr, nullptr, nullptr));
+  Coordinator coordinator(NullConfig(), nullptr);
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -245,7 +245,7 @@ TEST(MiscTestCase, LoadDriver) {
 
 TEST(MiscTestCase, BindDrivers) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
+  Coordinator coordinator(NullConfig(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -265,7 +265,7 @@ TEST(MiscTestCase, BindDrivers) {
 // Test binding drivers against the root/test/misc devices
 TEST(MiscTestCase, BindDriversForBuiltins) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
+  Coordinator coordinator(NullConfig(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -363,7 +363,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
 
 TEST(MiscTestCase, BindDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
+  Coordinator coordinator(NullConfig(), loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -415,7 +415,7 @@ TEST(MiscTestCase, BindDevices) {
 
 TEST(MiscTestCase, TestOutput) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
+  Coordinator coordinator(NullConfig(), loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -495,7 +495,7 @@ TEST(MiscTestCase, TestOutput) {
 void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
                              size_t props_count) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
+  Coordinator coordinator(NullConfig(), loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
