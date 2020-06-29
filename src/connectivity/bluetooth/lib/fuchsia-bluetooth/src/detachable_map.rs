@@ -18,6 +18,12 @@ pub struct DetachableWeak<K, V> {
     key: K,
 }
 
+impl<K: Clone, V> Clone for DetachableWeak<K, V> {
+    fn clone(&self) -> Self {
+        Self { inner: self.inner.clone(), parent: self.parent.clone(), key: self.key.clone() }
+    }
+}
+
 impl<K: Hash + Eq, V> DetachableWeak<K, V> {
     fn new(item: &Arc<V>, parent: Arc<RwLock<HashMap<K, Arc<V>>>>, key: K) -> Self {
         Self { inner: Arc::downgrade(item), parent, key }
@@ -129,8 +135,10 @@ impl<K: Hash + Eq + Clone, V> DetachableMap<K, V> {
         })
     }
 
-    /// Returns a lazy entry. Lazy Entries can be used later to attempt to insert into the map if the key doesn't eixst.
-    /// They can also be resolved to a detachable refernece (as returned by `DetachableMap::get`) if the key already exists.
+    /// Returns a lazy entry. Lazy Entries can be used later to attempt to insert into the map if
+    /// the key doesn't exist.
+    /// They can also be resolved to a detachable reference (as returned by `DetachableMap::get`) if
+    /// the key already exists.
     pub fn lazy_entry(&self, key: &K) -> LazyEntry<K, V> {
         LazyEntry::new(self.map.clone(), key.clone())
     }
@@ -170,6 +178,7 @@ mod test {
         let detached = map.get(&0);
         assert!(detached.is_some());
         let detached = detached.unwrap();
+        let detached_clone = detached.clone();
 
         let second = map.get(&0);
         assert!(second.is_some());
@@ -182,16 +191,18 @@ mod test {
 
         assert!(map.get(&0).is_none());
 
-        // We can still upgrade because it's stlll around from the strong ref.
+        // We can still upgrade because it's still around from the strong ref.
         let second_up = detached.upgrade().expect("should be able to upgrade");
+        let third_up = detached_clone.upgrade().expect("should be able to upgrade");
 
         // Dropping all the strong refs means neither can upgrade anymore though.
         drop(upgraded);
         drop(second_up);
+        drop(third_up);
 
         assert!(detached.upgrade().is_none());
 
-        // Detatching twice doesn't do anyting (and doesn't panic)
+        // Detaching twice doesn't do anything (and doesn't panic)
         detached.detach();
     }
 
