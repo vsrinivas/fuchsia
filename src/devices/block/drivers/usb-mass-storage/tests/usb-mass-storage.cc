@@ -105,6 +105,12 @@ class Binder : public fake_ddk::Bind {
     delete ctx;
     return ZX_OK;
   }
+
+  void DeviceInitReply(zx_device_t* device, zx_status_t status,
+                       const device_init_reply_args_t* args) {
+    init_reply_ = status;
+  }
+
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) {
     Context* context = reinterpret_cast<Context*>(parent);
@@ -119,6 +125,12 @@ class Binder : public fake_ddk::Bind {
     outctx->parent = context;
     outctx->block_device = reinterpret_cast<ums::UmsBlockDevice*>(args->ctx);
     *out = reinterpret_cast<zx_device_t*>(outctx);
+    // This needs to come after setting |out|, as this sets the device's internal |zxdev_|,
+    // which needs to be present for the InitTxn.
+    if (args->ops->init) {
+      has_init_hook_ = true;
+      args->ops->init(args->ctx);
+    }
     return ZX_OK;
   }
 };

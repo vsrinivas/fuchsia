@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <memory>
+#include <thread>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -71,7 +72,8 @@ struct UsbRequestContext {
   usb_request_complete_t completion;
 };
 
-using MassStorageDeviceType = ddk::Device<UsbMassStorageDevice, ddk::UnbindableDeprecated>;
+using MassStorageDeviceType =
+    ddk::Device<UsbMassStorageDevice, ddk::UnbindableDeprecated, ddk::Initializable>;
 class UsbMassStorageDevice : public MassStorageDeviceType {
  public:
   explicit UsbMassStorageDevice(fbl::RefPtr<WaiterInterface> waiter, zx_device_t* parent = nullptr)
@@ -82,6 +84,7 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   void QueueTransaction(Transaction* txn);
 
   void DdkRelease();
+  void DdkInit(ddk::InitTxn txn);
 
   void DdkUnbindDeprecated();
 
@@ -133,7 +136,7 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
 
   zx_status_t CheckLunsReady();
 
-  int WorkerThread();
+  int WorkerThread(ddk::InitTxn&& txn);
 
   void RequestQueue(usb_request_t* request, const usb_request_complete_t* completion);
 
@@ -148,7 +151,7 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   size_t max_transfer_;  // maximum transfer size reported by usb_get_max_transfer_size()
 
   uint8_t interface_number_;
-
+  std::optional<std::thread> worker_thread_;
   uint8_t bulk_in_addr_;
 
   uint8_t bulk_out_addr_;
@@ -166,8 +169,6 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   usb_request_t* data_transfer_req_;  // for use in DataTransfer
 
   size_t parent_req_size_;
-
-  thrd_t worker_thread_;
 
   std::atomic_size_t pending_requests_ = 0;
 

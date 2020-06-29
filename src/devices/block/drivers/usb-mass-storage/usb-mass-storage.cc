@@ -78,7 +78,9 @@ void UsbMassStorageDevice::DdkUnbindDeprecated() {
   sync_completion_signal(&txn_completion_);
 
   // wait for worker thread to finish before removing devices
-  thrd_join(worker_thread_, NULL);
+  if (worker_thread_.has_value() && worker_thread_->joinable()) {
+    worker_thread_->join();
+  }
   for (uint8_t lun = 0; lun <= max_lun_; lun++) {
     auto dev = block_devs_[lun];
     const auto& params = dev->GetBlockDeviceParameters();
@@ -120,22 +122,27 @@ zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
   is_test_mode_ = is_test_mode;
   zxlogf(INFO, "UMS: parent: '%s'", device_get_name(parent()));
   // Add root device, which will contain block devices for logical units
-  zx_status_t status = DdkAdd("ums", DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INVISIBLE);
+  zx_status_t status = DdkAdd("ums", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
     delete this;
     return status;
   }
+  return status;
+}
+void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
   auto call = fbl::MakeAutoCall([&]() { DdkRemoveDeprecated(); });
   usb::UsbDevice usb(parent());
   if (!usb.is_valid()) {
-    return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+    txn.Reply(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+    return;
   }
 
   // find our endpoints
   std::optional<usb::InterfaceList> interfaces;
-  status = usb::InterfaceList::Create(usb, true, &interfaces);
+  zx_status_t status = usb::InterfaceList::Create(usb, true, &interfaces);
   if (status != ZX_OK) {
-    return status;
+    txn.Reply(status);
+    return;
   }
   auto interface = interfaces->begin();
   const usb_interface_descriptor_t* interface_descriptor = interface->descriptor();
@@ -146,12 +153,15 @@ zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
   size_t bulk_out_max_packet = 0;
 
   if (interface == interfaces->end()) {
-    return ZX_ERR_NOT_SUPPORTED;
+    txn.Reply(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
+
   if (interface_descriptor->bNumEndpoints < 2) {
     DEBUG_PRINT(
         ("UMS:ums_bind wrong number of endpoints: %d\n", interface_descriptor->bNumEndpoints));
-    return ZX_ERR_NOT_SUPPORTED;
+    txn.Reply(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
 
   for (auto ep_itr : interfaces->begin()->GetEndpointList()) {
@@ -171,7 +181,8 @@ zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
 
   if (!is_test_mode_ && (!bulk_in_max_packet || !bulk_out_max_packet)) {
     DEBUG_PRINT(("UMS:ums_bind could not find endpoints\n"));
-    return ZX_ERR_NOT_SUPPORTED;
+    txn.Reply(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
 
   uint8_t max_lun;
@@ -186,15 +197,18 @@ zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
     zxlogf(INFO, "Device does not support multiple LUNs");
     max_lun = 0;
   } else if (status != ZX_OK) {
-    return status;
+    txn.Reply(status);
+    return;
   } else if (out_length != sizeof(max_lun)) {
-    return ZX_ERR_BAD_STATE;
+    txn.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
   fbl::AllocChecker checker;
   fbl::RefPtr<UmsBlockDevice>* raw_array;
   raw_array = new (&checker) fbl::RefPtr<UmsBlockDevice>[max_lun + 1];
   if (!checker.check()) {
-    return ZX_ERR_NO_MEMORY;
+    txn.Reply(ZX_ERR_NO_MEMORY);
+    return;
   }
   block_devs_ = fbl::Array(raw_array, max_lun + 1);
   DEBUG_PRINT(("UMS:Max lun is: %u\n", max_lun));
@@ -203,7 +217,8 @@ zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
     auto dev = fbl::MakeRefCountedChecked<UmsBlockDevice>(
         &checker, zxdev(), lun, [this](ums::Transaction* txn) { QueueTransaction(txn); });
     if (!checker.check()) {
-      return ZX_ERR_NO_MEMORY;
+      txn.Reply(ZX_ERR_NO_MEMORY);
+      return;
     }
     block_devs_[lun] = dev;
   }
@@ -226,37 +241,35 @@ zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
   size_t usb_request_size = parent_req_size_ + sizeof(UsbRequestContext);
   status = usb_request_alloc(&cbw_req_, sizeof(ums_cbw_t), bulk_out_addr, usb_request_size);
   if (status != ZX_OK) {
-    return status;
+    txn.Reply(status);
+    return;
   }
   status = usb_request_alloc(&data_req_, PAGE_SIZE, bulk_in_addr, usb_request_size);
   if (status != ZX_OK) {
-    return status;
+    txn.Reply(status);
+    return;
   }
   status = usb_request_alloc(&csw_req_, sizeof(ums_csw_t), bulk_in_addr, usb_request_size);
   if (status != ZX_OK) {
-    return status;
+    txn.Reply(status);
+    return;
   }
 
   status = usb_request_alloc(&data_transfer_req_, 0, bulk_in_addr, usb_request_size);
   if (status != ZX_OK) {
-    return status;
+    txn.Reply(status);
+    return;
   }
 
   tag_send_ = tag_receive_ = 8;
 
   if (status != ZX_OK) {
-    return status;
-  }
-
-  int ret = thrd_create(
-      &worker_thread_,
-      [](void* thisptr) { return static_cast<UsbMassStorageDevice*>(thisptr)->WorkerThread(); },
-      this);
-  if (ret != thrd_success) {
-    return ZX_ERR_NO_MEMORY;
+    txn.Reply(status);
+    return;
   }
   call.cancel();
-  return status;
+  worker_thread_.emplace(
+      [this, init_txn = std::move(txn)]() mutable { WorkerThread(std::move(init_txn)); });
 }
 
 zx_status_t UsbMassStorageDevice::Reset() {
@@ -802,7 +815,7 @@ zx_status_t UsbMassStorageDevice::CheckLunsReady() {
   return status;
 }
 
-int UsbMassStorageDevice::WorkerThread() {
+int UsbMassStorageDevice::WorkerThread(ddk::InitTxn&& init_txn) {
   zx_status_t status = ZX_OK;
   for (uint8_t lun = 0; lun <= max_lun_; lun++) {
     uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
@@ -810,7 +823,8 @@ int UsbMassStorageDevice::WorkerThread() {
     if (status < 0) {
       zxlogf(ERROR, "Inquiry failed for lun %d status: %d", lun, status);
       DdkRemoveDeprecated();
-      return status;
+      init_txn.Reply(status);
+      return 0;
     }
     uint8_t rmb = inquiry_data[1] & 0x80;  // Removable Media Bit
     if (rmb) {
@@ -820,7 +834,7 @@ int UsbMassStorageDevice::WorkerThread() {
     }
   }
 
-  DdkMakeVisible();
+  init_txn.Reply(ZX_OK);
   bool wait = true;
   if (CheckLunsReady() != ZX_OK) {
     return status;
