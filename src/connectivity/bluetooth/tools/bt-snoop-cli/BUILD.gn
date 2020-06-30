@@ -5,7 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("bt-snoop-cli") {
+rustc_binary("bin") {
   name = "bt_snoop_cli"
   edition = "2018"
 
@@ -19,5 +19,19 @@ rustc_binary("bt-snoop-cli") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("bt-snoop-cli") {
+  name = "bt_snoop_cli"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt_snoop_cli"
+      dest = "bt-snoop-cli"
+      shell = true
+    },
   ]
 }

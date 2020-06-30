@@ -8,8 +8,8 @@
 #include <lib/async/dispatcher.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/hci/command_channel.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/connectivity/bluetooth/tools/lib/command_dispatcher.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace hcitool {
 

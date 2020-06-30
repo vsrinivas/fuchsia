@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_binary("bt-fct-hci") {
+rustc_binary("bin") {
   name = "bt_fct_hci"
   edition = "2018"
   with_unit_tests = true
@@ -30,10 +30,24 @@ rustc_binary("bt-fct-hci") {
   ]
 }
 
+package("bt-fct-hci") {
+  name = "bt_fct_hci"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt_fct_hci"
+      dest = "bt-fct-hci"
+      shell = true
+    },
+  ]
+}
+
 test_package("tests") {
   package_name = "bt-fct-hci-tests"
 
-  deps = [ ":bt-fct-hci_test" ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bt-intel-tool") {
+import("//build/package.gni")
+
+executable("bin") {
   output_name = "bt-intel-tool"
 
   sources = [
@@ -27,5 +29,18 @@ executable("bt-intel-tool") {
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/fzl",
+  ]
+}
+
+package("bt-intel-tool") {
+  name = "bt_intel_tool"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt-intel-tool"
+      shell = true
+    },
   ]
 }

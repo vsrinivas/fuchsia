@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_binary("bt-avrcp-controller") {
+rustc_binary("bin") {
   name = "bt_avrcp_controller"
   edition = "2018"
   with_unit_tests = true
@@ -29,10 +29,24 @@ rustc_binary("bt-avrcp-controller") {
   ]
 }
 
+package("bt-avrcp-controller") {
+  name = "bt_avrcp_controller"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt_avrcp_controller"
+      dest = "bt-avrcp-controller"
+      shell = true
+    },
+  ]
+}
+
 test_package("tests") {
   package_name = "bt-avrcp-controller-tests"
 
-  deps = [ ":bt-avrcp-controller_test" ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

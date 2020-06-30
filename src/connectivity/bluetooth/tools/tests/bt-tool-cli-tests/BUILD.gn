@@ -24,8 +24,8 @@ rustc_library("lib") {
 test_package("bt-tool-cli-tests") {
   deps = [
     ":lib_test",
-    "//src/connectivity/bluetooth/tools/bt-avrcp-controller",
-    "//src/connectivity/bluetooth/tools/bt-snoop-cli",
+    "//src/connectivity/bluetooth/tools/bt-avrcp-controller:bin",
+    "//src/connectivity/bluetooth/tools/bt-snoop-cli:bin",
   ]
 
   # include these binaries in our package so we aren't dependent on the /bin ones.

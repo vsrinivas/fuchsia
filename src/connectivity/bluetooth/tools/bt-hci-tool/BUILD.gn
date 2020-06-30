@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bt-hci-tool") {
+import("//build/package.gni")
+
+executable("bin") {
   output_name = "bt-hci-tool"
 
   sources = [
@@ -18,5 +20,18 @@ executable("bt-hci-tool") {
     "//src/connectivity/bluetooth/core/bt-host/gap",
     "//src/connectivity/bluetooth/core/bt-host/hci",
     "//zircon/public/lib/fbl",
+  ]
+}
+
+package("bt-hci-tool") {
+  name = "bt_hci_tool"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt-hci-tool"
+      shell = true
+    },
   ]
 }

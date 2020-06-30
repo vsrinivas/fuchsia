@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_binary("bt-bredr-profile") {
+rustc_binary("bin") {
   name = "bt_bredr_profile"
   edition = "2018"
   with_unit_tests = true
@@ -28,10 +28,24 @@ rustc_binary("bt-bredr-profile") {
   ]
 }
 
+package("bt-bredr-profile") {
+  name = "bt_bredr_profile"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt_bredr_profile"
+      dest = "bt-bredr-profile"
+      shell = true
+    },
+  ]
+}
+
 test_package("tests") {
   package_name = "bt-bredr-profile-tests"
 
-  deps = [ ":bt-bredr-profile_test" ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

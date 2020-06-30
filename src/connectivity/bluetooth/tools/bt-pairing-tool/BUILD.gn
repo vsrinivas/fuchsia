@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("bt-pairing-tool") {
+rustc_binary("bin") {
   name = "bt_pairing_tool"
   edition = "2018"
 
@@ -18,5 +19,19 @@ rustc_binary("bt-pairing-tool") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("bt-pairing-tool") {
+  name = "bt_pairing_tool"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt_pairing_tool"
+      dest = "bt-pairing-tool"
+      shell = true
+    },
   ]
 }

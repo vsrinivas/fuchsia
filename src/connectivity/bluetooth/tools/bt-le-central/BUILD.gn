@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_binary("bt-le-central") {
+rustc_binary("bin") {
   name = "bt_le_central"
   with_unit_tests = true
   edition = "2018"
@@ -32,10 +32,24 @@ rustc_binary("bt-le-central") {
   ]
 }
 
+package("bt-le-central") {
+  name = "bt_le_central"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bt_le_central"
+      dest = "bt-le-central"
+      shell = true
+    },
+  ]
+}
+
 test_package("tests") {
   package_name = "bt-le-central-tests"
 
-  deps = [ ":bt-le-central_test" ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

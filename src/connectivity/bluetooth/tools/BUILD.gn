@@ -4,95 +4,52 @@
 
 import("//build/package.gni")
 
-# Package containing command-line developer tools. bt-snoop lives in a separate
-# package defined under the bt-snoop/ directory.
-package("bluetooth-tools") {
-  name = "bluetooth_tools"
-
+group("core") {
   deps = [
-    "bt-avdtp-tool",
-    "bt-avrcp-controller",
     "bt-bredr-profile",
     "bt-cli",
-    "bt-fct-hci",
-    "bt-hci-emulator",
-    "bt-hci-tool",
-    "bt-intel-tool",
     "bt-le-central",
     "bt-le-peripheral",
     "bt-pairing-tool",
     "bt-snoop-cli",
   ]
+}
 
-  binaries = [
-    {
-      name = "bt_avdtp_tool"
-      dest = "bt-avdtp-tool"
-      shell = true
-    },
-    {
-      name = "bt_avrcp_controller"
-      dest = "bt-avrcp-controller"
-      shell = true
-    },
-    {
-      name = "bt_bredr_profile"
-      dest = "bt-bredr-profile"
-      shell = true
-    },
-    {
-      name = "bt_cli"
-      dest = "bt-cli"
-      shell = true
-    },
-    {
-      name = "bt_fct_hci"
-      dest = "bt-fct-hci"
-      shell = true
-    },
-    {
-      name = "bt_snoop_cli"
-      dest = "bt-snoop-cli"
-      shell = true
-    },
-    {
-      name = "bt_hci_emulator"
-      dest = "bt-hci-emulator"
-      shell = true
-    },
-    {
-      name = "bt-hci-tool"
-      shell = true
-    },
-    {
-      name = "bt-intel-tool"
-      shell = true
-    },
-    {
-      name = "bt_le_central"
-      dest = "bt-le-central"
-      shell = true
-    },
-    {
-      name = "bt_le_peripheral"
-      dest = "bt-le-peripheral"
-      shell = true
-    },
-    {
-      name = "bt_pairing_tool"
-      dest = "bt-pairing-tool"
-      shell = true
-    },
+group("profile") {
+  deps = [
+    "bt-avdtp-tool",
+    "bt-avrcp-controller",
+  ]
+}
+
+group("hci") {
+  deps = [
+    "bt-hci-emulator",
+    "bt-hci-tool",
+    "bt-intel-tool",
+  ]
+}
+
+group("fct") {
+  deps = [
+    "bt-fct-hci",
+    "bt-hci-tool",
+    "bt-snoop-cli",
   ]
 }
 
 group("tools") {
-  testonly = true
-  deps = [ ":bluetooth-tools" ]
+  deps = [
+    ":core",
+    ":fct",
+    ":hci",
+    ":profile",
+  ]
 }
 
 group("tests") {
   testonly = true
+
   deps = [
     "bt-avdtp-tool:tests",
     "bt-avrcp-controller:tests",
