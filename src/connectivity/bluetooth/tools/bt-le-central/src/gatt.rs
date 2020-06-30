@@ -15,7 +15,9 @@ use {
     fuchsia_bluetooth::error::Error as BTError,
     fuchsia_bluetooth::types::Uuid,
     futures::{TryFutureExt, TryStreamExt},
+    num::Num,
     parking_lot::RwLock,
+    std::num::ParseIntError,
     std::str::FromStr,
     std::sync::Arc,
 };
@@ -277,7 +279,7 @@ async fn do_connect<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Resul
         return Ok(());
     }
 
-    let index: usize = match args[0].parse() {
+    let index: usize = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid index: {}", args[0]);
             return Ok(());
@@ -317,7 +319,7 @@ async fn do_read_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Resu
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -340,7 +342,7 @@ async fn do_read_long_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -348,7 +350,7 @@ async fn do_read_long_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
         Ok(i) => i,
     };
 
-    let offset: u16 = match args[1].parse() {
+    let offset: u16 = match parse_int(args[1]) {
         Err(_) => {
             println!("invalid offset: {}", args[1]);
             return Ok(());
@@ -356,7 +358,7 @@ async fn do_read_long_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
         Ok(i) => i,
     };
 
-    let max_bytes: u16 = match args[2].parse() {
+    let max_bytes: u16 = match parse_int(args[2]) {
         Err(_) => {
             println!("invalid max bytes: {}", args[2]);
             return Ok(());
@@ -384,7 +386,7 @@ async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> 
         args.remove(0);
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -392,7 +394,7 @@ async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> 
         Ok(i) => i,
     };
 
-    let value: Result<Vec<u8>, _> = args[1..].iter().map(|arg| arg.parse()).collect();
+    let value: Result<Vec<u8>, _> = args[1..].iter().map(|arg| parse_int(arg)).collect();
 
     match value {
         Err(_) => {
@@ -431,7 +433,7 @@ async fn do_write_long_chr<'a>(
         ReliableMode::Disabled
     };
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -439,7 +441,7 @@ async fn do_write_long_chr<'a>(
         Ok(i) => i,
     };
 
-    let offset: u16 = match args[1].parse() {
+    let offset: u16 = match parse_int(args[1]) {
         Err(_) => {
             println!("invalid offset: {}", args[1]);
             return Ok(());
@@ -447,7 +449,7 @@ async fn do_write_long_chr<'a>(
         Ok(i) => i,
     };
 
-    let value: Result<Vec<u8>, _> = args[2..].iter().map(|arg| arg.parse()).collect();
+    let value: Result<Vec<u8>, _> = args[2..].iter().map(|arg| parse_int(arg)).collect();
 
     match value {
         Err(_) => {
@@ -470,7 +472,7 @@ async fn do_read_desc<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Res
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -496,7 +498,7 @@ async fn do_read_long_desc<'a>(
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -504,7 +506,7 @@ async fn do_read_long_desc<'a>(
         Ok(i) => i,
     };
 
-    let offset: u16 = match args[1].parse() {
+    let offset: u16 = match parse_int(args[1]) {
         Err(_) => {
             println!("invalid offset: {}", args[1]);
             return Ok(());
@@ -512,7 +514,7 @@ async fn do_read_long_desc<'a>(
         Ok(i) => i,
     };
 
-    let max_bytes: u16 = match args[2].parse() {
+    let max_bytes: u16 = match parse_int(args[2]) {
         Err(_) => {
             println!("invalid max bytes: {}", args[2]);
             return Ok(());
@@ -535,7 +537,7 @@ async fn do_write_desc<'a>(args: Vec<&'a str>, client: &'a GattClientPtr) -> Res
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -543,7 +545,7 @@ async fn do_write_desc<'a>(args: Vec<&'a str>, client: &'a GattClientPtr) -> Res
         Ok(i) => i,
     };
 
-    let value: Result<Vec<u8>, _> = args[1..].iter().map(|arg| arg.parse()).collect();
+    let value: Result<Vec<u8>, _> = args[1..].iter().map(|arg| parse_int(arg)).collect();
 
     match value {
         Err(_) => {
@@ -569,7 +571,7 @@ async fn do_write_long_desc<'a>(
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -577,7 +579,7 @@ async fn do_write_long_desc<'a>(
         Ok(i) => i,
     };
 
-    let offset: u16 = match args[1].parse() {
+    let offset: u16 = match parse_int(args[1]) {
         Err(_) => {
             println!("invalid offset: {}", args[1]);
             return Ok(());
@@ -585,7 +587,7 @@ async fn do_write_long_desc<'a>(
         Ok(i) => i,
     };
 
-    let value: Result<Vec<u8>, _> = args[2..].iter().map(|arg| arg.parse()).collect();
+    let value: Result<Vec<u8>, _> = args[2..].iter().map(|arg| parse_int(arg)).collect();
 
     match value {
         Err(_) => {
@@ -671,7 +673,7 @@ async fn do_enable_notify<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -707,7 +709,7 @@ async fn do_disable_notify<'a>(
         return Ok(());
     }
 
-    let id: u64 = match args[0].parse() {
+    let id: u64 = match parse_int(args[0]) {
         Err(_) => {
             println!("invalid id: {}", args[0]);
             return Ok(());
@@ -742,6 +744,19 @@ fn decoded_string_value(value: &[u8]) -> String {
         decoded_value.replace("�", ".")
     } else {
         String::new()
+    }
+}
+
+/// Attempt to parse a string into an integer.  If the string begins with 0x, treat the rest
+/// of the string as a hex value, otherwise treat it as decimal.
+fn parse_int<N>(input: &str) -> Result<N, ParseIntError>
+where
+    N: Num<FromStrRadixErr = ParseIntError>,
+{
+    if input.starts_with("0x") {
+        N::from_str_radix(&input[2..], 16)
+    } else {
+        N::from_str_radix(input, 10)
     }
 }
 
