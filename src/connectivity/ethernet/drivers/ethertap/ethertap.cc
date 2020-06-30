@@ -286,11 +286,7 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
   if (status != ZX_OK) {
     zxlogf(ERROR, "ethertap: EthernetImplSetParam error encoding: %d %s", status, err);
   } else {
-    status = msg.Write(channel_.get(), 0);
-
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "ethertap: EthernetImplSetParam error writing: %d", status);
-    }
+    msg.Write(channel_.get(), 0);
   }
 
   return ZX_OK;
