@@ -97,7 +97,7 @@ async fn test_intl_e2e() {
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.
-    let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
+    let settings = intl_service.watch2().await.expect("watch completed");
     assert_eq!(
         settings.time_zone_id,
         Some(fidl_fuchsia_intl::TimeZoneId { id: "UTC".to_string() })
@@ -239,13 +239,6 @@ async fn test_intl_invalid_timezone() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch() {
-    let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
-    let result = intl_service.watch().await.ok();
-    assert_eq!(result, Some(Err(Error::Failed)));
-}
-
-#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch2() {
     let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = intl_service.watch2().await;
@@ -254,13 +247,4 @@ async fn test_channel_failure_watch2() {
         ClientChannelClosed(Status::INTERNAL).to_string(),
         result.err().unwrap().to_string()
     );
-}
-
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_simultaneous_watch() {
-    let intl_service = create_test_intl_env(InMemoryStorageFactory::create()).await;
-
-    let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
-    let settings2 = intl_service.watch2().await.expect("watch completed");
-    assert_eq!(settings, settings2);
 }

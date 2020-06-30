@@ -99,13 +99,8 @@ impl SetUiFacade {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Intl service {:?}.", e),
         };
-        match intl_service_proxy.watch().await? {
-            Ok(intl_setting) => {
-                let intl_info: IntlInfo = intl_setting.into();
-                return Ok(to_value(&intl_info)?);
-            }
-            Err(err) => Err(format_err!("Get intl settings failed with err {:#?}", err)),
-        }
+        let intl_info: IntlInfo = intl_service_proxy.watch2().await?.into();
+        return Ok(to_value(&intl_info)?);
     }
 }
 

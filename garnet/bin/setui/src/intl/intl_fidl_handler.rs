@@ -1,25 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use fidl_fuchsia_settings::{
-    IntlMarker, IntlRequest, IntlSettings, IntlWatch2Responder, IntlWatchResponder,
-};
+use fidl_fuchsia_settings::{IntlMarker, IntlRequest, IntlSettings, IntlWatch2Responder};
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
-use crate::fidl_hanging_get_result_responder;
-use crate::fidl_process;
+use crate::fidl_process_2;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(IntlSettings, IntlWatch2Responder, IntlMarker::DEBUG_NAME);
-
-// TODO(fxb/52593): Remove when clients are ported to watch2.
-fidl_hanging_get_result_responder!(IntlSettings, IntlWatchResponder, IntlMarker::DEBUG_NAME);
 
 impl From<SettingResponse> for IntlSettings {
     fn from(response: SettingResponse) -> Self {
@@ -37,24 +31,7 @@ impl From<IntlSettings> for SettingRequest {
     }
 }
 
-fidl_process!(Intl, SettingType::Intl, process_request, IntlWatch2Responder, process_request_2);
-
-// TODO(fxb/52593): Replace with logic from process_request_2
-// and remove process_request_2 when clients ported to Watch2 and back.
-async fn process_request(
-    context: RequestContext<IntlSettings, IntlWatchResponder>,
-    req: IntlRequest,
-) -> Result<Option<IntlRequest>, anyhow::Error> {
-    // Support future expansion of FIDL
-    #[allow(unreachable_patterns)]
-    match req {
-        IntlRequest::Watch { responder } => context.watch(responder, false).await,
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-    return Ok(None);
-}
+fidl_process_2!(Intl, SettingType::Intl, process_request_2);
 
 async fn process_request_2(
     context: RequestContext<IntlSettings, IntlWatch2Responder>,
