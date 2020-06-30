@@ -78,7 +78,7 @@ class FakeAudioOutput : public AudioOutput {
                        fuchsia::media::AudioGainValidFlags set_flags) override {}
   void OnWakeup() override {}
 
-  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start) override {
+  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time) override {
     return std::nullopt;
   }
 

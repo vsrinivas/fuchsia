@@ -22,7 +22,7 @@ class PacketFactory {
  public:
   PacketFactory(async_dispatcher_t* dispatcher, const Format& format, size_t vmo_size);
 
-  fbl::RefPtr<Packet> CreatePacket(float sample, zx::duration duration = zx::msec(1),
+  fbl::RefPtr<Packet> CreatePacket(float val, zx::duration duration = zx::msec(1),
                                    fit::closure callback = nullptr);
 
   const Format& format() const { return format_; }

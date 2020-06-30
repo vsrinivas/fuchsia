@@ -69,8 +69,8 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
       // Is the sink currently mixing?  If so, the flush cannot complete until the mix operation has
       // finished.  Move the 'waiting to be rendered' packets to the back of the 'waiting to be
       // flushed queue', and append our flush token (if any) to the pending flush token queue.  The
-      // sink's thread will take are of releasing these objects back to the service thread for
-      // cleanup when it has finished it's current job.
+      // sink's thread will take care of releasing these objects back to the service thread for
+      // cleanup when it has finished its current job.
       for (auto& packet : pending_packet_queue_) {
         pending_flush_packet_queue_.emplace_back(std::move(packet));
       }
@@ -97,7 +97,7 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time ref_time, int64_t frame,
+std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time dest_ref_time, int64_t frame,
                                                             uint32_t frame_count) {
   TRACE_DURATION("audio", "PacketQueue::ReadLock");
   std::lock_guard<std::mutex> locker(pending_mutex_);
@@ -147,9 +147,9 @@ void PacketQueue::ReadUnlock(bool fully_consumed) {
   }
 }
 
-void PacketQueue::Trim(zx::time ref_time) {
+void PacketQueue::Trim(zx::time dest_ref_time) {
   TRACE_DURATION("audio", "PacketQueue::Trim");
-  int64_t local_now_ticks = (ref_time - zx::time(0)).to_nsecs();
+  int64_t local_now_ticks = (dest_ref_time - zx::time(0)).to_nsecs();
   auto trim_threshold =
       FractionalFrames<int64_t>::FromRaw(timeline_function_->get().first(local_now_ticks));
 

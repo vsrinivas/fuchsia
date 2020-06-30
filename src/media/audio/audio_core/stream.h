@@ -128,11 +128,11 @@ class ReadableStream : public BaseStream {
   //
   // TODO(50669): Some implementations (e.g., PacketQueue) disregard the requested time range and
   // can return data from any time range. Specify if this is allowed and fix implementations if not.
-  virtual std::optional<Buffer> ReadLock(zx::time ref_time, int64_t frame,
+  virtual std::optional<Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                          uint32_t frame_count) = 0;
 
   // Trims the stream by releasing any frames before |trim_threshold|.
-  virtual void Trim(zx::time ref_time) = 0;
+  virtual void Trim(zx::time dest_ref_time) = 0;
 
   // Hooks to add logging or metrics for [Partial] Underflow events.
   virtual void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,

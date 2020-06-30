@@ -78,6 +78,8 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
       return;
     }
   } else {
+    // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
+    //
     // If ref_clock doesn't have DUPLICATE or READ or TRANSFER rights, return (i.e. shutdown).
     status = ref_clock.replace(kRequiredClockRights, &ref_clock);
     if (status != ZX_OK) {

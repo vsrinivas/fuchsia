@@ -83,12 +83,12 @@ class AudioOutput : public AudioDevice {
   // task for this output. Implementations can control mix behavior in the following ways:
   //
   // If |std::nullopt| is returned, then no frames will be mixed. Instead all inputs will be trimmed
-  // such that any client audio packets that will have been fully consumed by |process_start| will
+  // such that any client audio packets that will have been fully consumed by |device_ref_time| will
   // still be released. There will be no call to |FinishMixJob|.
   //
   // If the retuned optional contains a FrameSpan with |is_mute| set to true, then no frames will
   // be mixed. Instead all inputs will be trimmed such that any client audio packets that will have
-  // been fully consumed by |process_start| will still be released. |FinishMixJob| will be called
+  // been fully consumed by |device_ref_time| will still be released. |FinishMixJob| will be called
   // with the returned FrameSpan and a null payload buffer. It is the responsibility of
   // |FinishMixJob| to produce the silence for the FrameSpan.
   //
@@ -98,7 +98,7 @@ class AudioOutput : public AudioDevice {
   // reduced if the pipeline is unable to fill a single, contiguous buffer will all the frames
   // requested. If the entire region in StartMixJob is unable to be populated in a single pass, then
   // StartMixJob will be called again to process any remaining frames.
-  virtual std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start)
+  virtual std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time device_ref_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
 
   // Finish a mix job by moving the frame range span |span| into the hardware ring buffer using

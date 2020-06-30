@@ -14,10 +14,10 @@ TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<Writa
   FX_DCHECK(source_->format() == tap_->format());
 }
 
-std::optional<ReadableStream::Buffer> TapStage::ReadLock(zx::time ref_time, int64_t frame,
+std::optional<ReadableStream::Buffer> TapStage::ReadLock(zx::time dest_ref_time, int64_t frame,
                                                          uint32_t frame_count) {
   TRACE_DURATION("audio", "TapStage::ReadLock", "frame", frame, "length", frame_count);
-  auto input_buffer = source_->ReadLock(ref_time, frame, frame_count);
+  auto input_buffer = source_->ReadLock(dest_ref_time, frame, frame_count);
   if (!input_buffer) {
     return std::nullopt;
   }
@@ -29,7 +29,8 @@ std::optional<ReadableStream::Buffer> TapStage::ReadLock(zx::time ref_time, int6
   uint32_t output_frames_outstanding = input_buffer->length().Floor();
 
   while (output_frames_outstanding > 0) {
-    auto output_buffer = tap_->WriteLock(ref_time, output_buffer_frame, output_frames_outstanding);
+    auto output_buffer =
+        tap_->WriteLock(dest_ref_time, output_buffer_frame, output_frames_outstanding);
     if (!output_buffer) {
       break;
     }

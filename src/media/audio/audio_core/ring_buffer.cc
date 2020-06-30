@@ -234,9 +234,10 @@ std::shared_ptr<WritableRingBuffer> BaseRingBuffer::CreateWritableHardwareBuffer
       frame_count, offset_frames, true);
 }
 
-std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(zx::time ref_time, int64_t frame,
+std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(zx::time dest_ref_time,
+                                                                   int64_t frame,
                                                                    uint32_t frame_count) {
-  return LockBuffer<ReadableRingBuffer>(this, ref_time, frame, frame_count, true,
+  return LockBuffer<ReadableRingBuffer>(this, dest_ref_time, frame, frame_count, true,
                                         is_hardware_buffer_);
 }
 

@@ -82,12 +82,12 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   streams_.erase(it);
 }
 
-std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time ref_time, int64_t frame,
+std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time, int64_t frame,
                                                          uint32_t frame_count) {
   TRACE_DURATION("audio", "MixStage::ReadLock", "frame", frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-  auto output_buffer = output_stream_->WriteLock(ref_time, frame, frame_count);
+  auto output_buffer = output_stream_->WriteLock(dest_ref_time, frame, frame_count);
   if (!output_buffer) {
     return std::nullopt;
   }
@@ -105,7 +105,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time ref_time, int6
   // Fill the output buffer with silence.
   size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
-  ForEachSource(TaskType::Mix, ref_time);
+  ForEachSource(TaskType::Mix, dest_ref_time);
 
   // Transfer output_buffer ownership to the read lock via this destructor.
   // TODO(50669): If this buffer is not fully consumed, we should save this buffer and reuse it for
@@ -136,12 +136,12 @@ void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
   }
 }
 
-void MixStage::Trim(zx::time ref_time) {
+void MixStage::Trim(zx::time dest_ref_time) {
   TRACE_DURATION("audio", "MixStage::Trim");
-  ForEachSource(TaskType::Trim, ref_time);
+  ForEachSource(TaskType::Trim, dest_ref_time);
 }
 
-void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
+void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
   TRACE_DURATION("audio", "MixStage::ForEachSource");
 
   std::vector<std::pair<std::shared_ptr<ReadableStream>, std::shared_ptr<Mixer>>> streams;
@@ -157,14 +157,14 @@ void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
   for (const auto& [stream, mixer] : streams) {
     FX_CHECK(stream);
     if (task_type == TaskType::Mix) {
-      MixStream(stream.get(), mixer.get(), ref_time);
+      MixStream(stream.get(), mixer.get(), dest_ref_time);
     } else {
-      stream->Trim(ref_time);
+      stream->Trim(dest_ref_time);
     }
   }
 }
 
-void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time) {
+void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref_time) {
   TRACE_DURATION("audio", "MixStage::MixStream");
   // Ensure the mapping from source-frame to local-time is up-to-date.
   UpdateSourceTrans(*stream, &mixer->bookkeeping());
@@ -198,8 +198,8 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time
         mixer->pos_filter_width();
 
     // Try to grab the packet queue's front.
-    auto stream_buffer = stream->ReadLock(ref_time, frac_source_for_first_mix_job_frame.Floor(),
-                                          source_frames.Ceiling());
+    auto stream_buffer = stream->ReadLock(
+        dest_ref_time, frac_source_for_first_mix_job_frame.Floor(), source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
     if (!stream_buffer) {

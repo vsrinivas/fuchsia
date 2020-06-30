@@ -80,16 +80,16 @@ class OutputPipelineImpl : public OutputPipeline {
       const std::string& instance_name, const std::string& config) override;
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override {
     TRACE_DURATION("audio", "OutputPipeline::ReadLock");
     FX_DCHECK(state_.stream);
-    return state_.stream->ReadLock(ref_time, frame, frame_count);
+    return state_.stream->ReadLock(dest_ref_time, frame, frame_count);
   }
-  void Trim(zx::time ref_time) override {
+  void Trim(zx::time dest_ref_time) override {
     TRACE_DURATION("audio", "OutputPipeline::Trim");
     FX_CHECK(state_.stream);
-    state_.stream->Trim(ref_time);
+    state_.stream->Trim(dest_ref_time);
   }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
     TRACE_DURATION("audio", "OutputPipeline::ReferenceClockToFractionalFrames");

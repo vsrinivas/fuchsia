@@ -19,7 +19,7 @@ FakeStream::FakeStream(const Format& format, size_t max_buffer_size)
   memset(buffer_.get(), 0, buffer_size_);
 }
 
-std::optional<ReadableStream::Buffer> FakeStream::ReadLock(zx::time ref_time, int64_t frame,
+std::optional<ReadableStream::Buffer> FakeStream::ReadLock(zx::time dest_ref_time, int64_t frame,
                                                            uint32_t frame_count) {
   FX_CHECK(frame_count * format().bytes_per_frame() < buffer_size_);
   return std::make_optional<ReadableStream::Buffer>(frame, frame_count, buffer_.get(), true,

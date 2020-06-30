@@ -23,7 +23,7 @@ class TestOutputPipeline : public OutputPipeline {
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override {
     if (buffers_.empty()) {
       return std::nullopt;
@@ -32,7 +32,7 @@ class TestOutputPipeline : public OutputPipeline {
     buffers_.pop_front();
     return buffer;
   }
-  void Trim(zx::time trim_threshold) override {}
+  void Trim(zx::time dest_ref_time) override {}
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
     return TimelineFunctionSnapshot{
         .timeline_function = TimelineFunction(),
@@ -104,9 +104,9 @@ class TestAudioOutput : public AudioOutput {
   }
 
   // |AudioOutput|
-  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start) override {
+  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time device_ref_time) override {
     if (start_mix_delegate_) {
-      return start_mix_delegate_(process_start);
+      return start_mix_delegate_(device_ref_time);
     } else {
       return std::nullopt;
     }
@@ -150,7 +150,7 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
 
   // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.
-  audio_output_->set_start_mix_delegate([this, audio_output = audio_output_.get()](zx::time now) {
+  audio_output_->set_start_mix_delegate([this, audio_output = audio_output_.get()](zx::time) {
     audio_output->SetNextSchedTime(Now() + zx::msec(1));
     return std::nullopt;
   });

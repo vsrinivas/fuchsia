@@ -19,7 +19,7 @@ PacketFactory::PacketFactory(async_dispatcher_t* dispatcher, const Format& forma
   FX_CHECK(status == ZX_OK);
 }
 
-fbl::RefPtr<Packet> PacketFactory::CreatePacket(float sample, zx::duration duration,
+fbl::RefPtr<Packet> PacketFactory::CreatePacket(float val, zx::duration duration,
                                                 fit::closure callback) {
   uint32_t frame_count = format().frames_per_ns().Scale(duration.to_nsecs());
   size_t payload_offset = buffer_offset_;
@@ -33,7 +33,7 @@ fbl::RefPtr<Packet> PacketFactory::CreatePacket(float sample, zx::duration durat
       reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(vmo_ref_->start()) + payload_offset);
   auto sample_count = frame_count * format().channels();
   for (uint32_t i = 0; i < sample_count; ++i) {
-    samples[i] = sample;
+    samples[i] = val;
   }
 
   auto packet_ref =

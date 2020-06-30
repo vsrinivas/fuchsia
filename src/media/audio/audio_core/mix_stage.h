@@ -28,9 +28,9 @@ class MixStage : public ReadableStream {
            ClockReference ref_clock);
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
-  void Trim(zx::time ref_time) override;
+  void Trim(zx::time dest_ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   ClockReference reference_clock() const override { return output_ref_clock_; }
   void SetMinLeadTime(zx::duration min_lead_time) override;
@@ -49,8 +49,8 @@ class MixStage : public ReadableStream {
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
     uint32_t reference_clock_to_fractional_destination_frame_gen;
-    bool accumulate;
     TimelineFunction reference_clock_to_fractional_destination_frame;
+    bool accumulate;
     StreamUsageMask usages_mixed;
     float applied_gain_db;
 
@@ -64,11 +64,11 @@ class MixStage : public ReadableStream {
 
   enum class TaskType { Mix, Trim };
 
-  void ForEachSource(TaskType task_type, zx::time ref_time);
+  void ForEachSource(TaskType task_type, zx::time dest_ref_time);
 
   void SetupMix(Mixer* mixer);
   bool ProcessMix(ReadableStream* stream, Mixer* mixer, const ReadableStream::Buffer& buffer);
-  void MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time);
+  void MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref_time);
 
   struct StreamHolder {
     std::shared_ptr<ReadableStream> stream;

@@ -34,9 +34,9 @@ class EffectsStage : public ReadableStream {
   const EffectsProcessor& effects_processor() const { return *effects_processor_; }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
-  void Trim(zx::time ref_time) override { source_->Trim(ref_time); }
+  void Trim(zx::time dest_ref_time) override { source_->Trim(dest_ref_time); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   ClockReference reference_clock() const override { return source_->reference_clock(); }
 

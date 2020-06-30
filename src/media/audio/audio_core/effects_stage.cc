@@ -144,7 +144,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::DupCurrentBlock() {
       });
 }
 
-std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, int64_t frame,
+std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_time, int64_t frame,
                                                              uint32_t frame_count) {
   TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", frame, "length", frame_count);
 
@@ -167,7 +167,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, 
     aligned_frame_count = std::min<uint32_t>(aligned_frame_count, max_batch_size);
   }
 
-  auto source_buffer = source_->ReadLock(ref_time, aligned_first_frame, aligned_frame_count);
+  auto source_buffer = source_->ReadLock(dest_ref_time, aligned_first_frame, aligned_frame_count);
   if (source_buffer) {
     // TODO(50669): We assume that ReadLock always returns exactly the frames we request. This is
     // not true in general, but in practice it's true because source_ is always a MixStage that

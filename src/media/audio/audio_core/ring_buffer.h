@@ -88,9 +88,9 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
                      uint32_t frame_count, uint32_t offset_frames, bool is_hardware_buffer);
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
-  void Trim(zx::time ref_time) override {}
+  void Trim(zx::time dest_ref_time) override {}
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 
   ClockReference reference_clock() const override { return reference_clock_; }

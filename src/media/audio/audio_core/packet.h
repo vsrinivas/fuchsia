@@ -56,6 +56,10 @@ class Packet : public fbl::SlabAllocated<internal::PacketAllocatorTraits>,
 
   void* payload() { return reinterpret_cast<uint8_t*>(vmo_ref_->start()) + vmo_offset_bytes_; }
 
+  void Display() {
+    FX_LOGS(INFO) << "Packet start " << start_.Round() << ", length " << length_.Round();
+  }
+
  protected:
   friend Allocator;
 

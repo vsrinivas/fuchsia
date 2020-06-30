@@ -53,7 +53,7 @@ class Mixer {
     Gain gain;
 
     // This 19.13 fixed-point value represents how much to increment our sampling position in the
-    // input (src) stream, for each output (dest) frame produced.
+    // source (src) stream, for each output (dest) frame produced.
     uint32_t step_size = Mixer::FRAC_ONE;
 
     // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
@@ -81,7 +81,7 @@ class Mixer {
     uint32_t src_pos_modulo = 0;
 
     // This translates a destination frame value into a source subframe value. The output values of
-    // this function is in 19.13 input subframes.
+    // this function are in 19.13 source subframes.
     TimelineFunction dest_frames_to_frac_source_frames;
 
     // dest_frames_to_frac_source_frames may change over time; this value represents the current
@@ -89,7 +89,7 @@ class Mixer {
     uint32_t dest_trans_gen_id = kInvalidGenerationId;
 
     // This translates a CLOCK_MONOTONIC value into a source subframe value. The output values of
-    // this function is in 19.13 input subframes.
+    // this function are in 19.13 source subframes.
     TimelineFunction clock_mono_to_frac_source_frames;
 
     // clock_mono_to_frac_source_frames may change over time; this value represents the current
@@ -113,7 +113,7 @@ class Mixer {
   // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select
   // optionally use this enum to specify a resampler type. Default allows an
   // algorithm to select a resampler based on the ratio of incoming and outgoing
-  // rates, using Linear for all except "Integer-to-One" resampling ratios.
+  // rates, using WindowedSinc for all except "Integer-to-One" resampling ratios.
   enum class Resampler {
     Default = 0,
     SampleAndHold,
@@ -167,8 +167,8 @@ class Mixer {
   // Total number (in 19.13 fixed) of incoming subframes in the source buffer.
   //
   // @param frac_src_offset
-  // A pointer to the offset (in fractional input frames) from start of src
-  // buffer, at which the first input frame should be sampled. When Mix has
+  // A pointer to the offset (in fractional source frames) from start of src
+  // buffer, at which the first source frame should be sampled. When Mix has
   // finished, frac_src_offset will be updated to indicate the offset of the
   // sampling position of the next frame to be sampled.
   //
@@ -199,8 +199,8 @@ class Mixer {
   // Filter widths
   //
   // The positive and negative widths of the filter for this mixer, expressed in
-  // fractional (19.13 fixed) input subframe units. These widths convey which
-  // input frames will be referenced by the filter, when producing output for a
+  // fractional (19.13 fixed) source subframe units. These widths convey which
+  // source frames will be referenced by the filter, when producing output for a
   // specific instant in time. Positive filter width refers to how far forward
   // (positively) the filter looks, from the PTS in question; negative filter
   // width refers to how far backward (negatively) the filter looks, from that
@@ -209,13 +209,13 @@ class Mixer {
   // Let:
   // P = pos_filter_width()
   // N = neg_filter_width()
-  // S = An arbitrary point in time at which the input stream will be sampled.
-  // X = The PTS of an input frame.
+  // S = An arbitrary point in time at which the source stream will be sampled.
+  // X = The PTS of an source frame.
   //
   // If (X >= (S - N)) && (X <= (S + P))
-  // Then input frame X is within the filter and contributes to mix operation.
+  // Then source frame X is within the filter and contributes to mix operation.
   //
-  // Conversely, input frame X contributes to the output samples S where
+  // Conversely, source frame X contributes to the output samples S where
   //  (S >= X - P)  and  (S <= X + N)
   //
   inline FractionalFrames<uint32_t> pos_filter_width() const { return pos_filter_width_; }
