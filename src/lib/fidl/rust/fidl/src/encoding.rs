@@ -1934,6 +1934,69 @@ macro_rules! fidl_struct {
     }
 }
 
+/// A macro which implements the FIDL `Encodable` and `Decodable` traits
+/// for an existing struct by doing a direct copy using zerocopy::AsBytes.
+#[macro_export]
+macro_rules! fidl_struct_copy {
+    (
+        name: $name:ty,
+        members: [$(
+            $member_name:ident {
+                ty: $member_ty:ty,
+                offset_v1: $member_offset_v1:expr,
+            },
+        )*],
+        size_v1: $size_v1:expr,
+        align_v1: $align_v1:expr,
+    ) => {
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize {
+                $align_v1
+            }
+
+            fn inline_size(_context: &$crate::encoding::Context) -> usize {
+                $size_v1
+            }
+            
+            fn slice_as_bytes(slice: &mut [Self]) -> Option<&mut [u8]> {
+                Some(zerocopy::AsBytes::as_bytes_mut(slice))
+            }
+        }
+
+        impl $crate::encoding::Encodable for $name {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
+                let bytes = zerocopy::AsBytes::as_bytes(self);
+                encoder.buf[offset..offset + bytes.len()].copy_from_slice(bytes);
+                Ok(())
+            }
+        }
+
+        impl $crate::encoding::Decodable for $name {
+            fn new_empty() -> Self {
+                Self {
+                    $(
+                        $member_name: $crate::fidl_new_empty!($member_ty),
+                    )*
+                }
+            }
+
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
+                let bytes: &mut [u8] = zerocopy::AsBytes::as_bytes_mut(self);
+                let size = bytes.len();
+                let offset = decoder.next_offset(size);
+                bytes.copy_from_slice(&decoder.buf[offset..offset + size]);
+                Ok(())
+            }
+        }
+
+        impl $crate::encoding::Autonull for $name {
+            fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
+                false
+            }
+        }
+    }
+}
+
 /// A macro which creates an empty struct and implements the FIDL `Encodable` and `Decodable`
 /// traits for it.
 #[macro_export]
@@ -3797,6 +3860,67 @@ mod test {
             Decoder::decode_with_context(ctx, buf, &mut Vec::new(), &mut out).unwrap();
             assert_eq!(out.second, Some(2));
             assert_eq!(out.fourth, None);
+        }
+    }
+
+    #[derive(Debug, PartialEq, zerocopy::AsBytes, zerocopy::FromBytes)]
+    #[repr(C)]
+    pub struct DirectCopyStruct {
+        a: u64,
+        b: u32,
+        c: u16,
+        d: u16,
+    }
+    fidl_struct_copy! {
+        name: DirectCopyStruct,
+        members: [
+            a {
+                ty: u64,
+                offset_v1: 0,
+            },
+            b {
+                ty: u32,
+                offset_v1: 8,
+            },
+            c {
+                ty: u16,
+                offset_v1: 12,
+            },
+            d {
+                ty: u16,
+                offset_v1: 14,
+            },
+        ],
+        size_v1: 16,
+        align_v1: 8,
+    }
+
+    #[test]
+    fn direct_copy_struct_encode() {
+        let bytes = &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, //
+            0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, //
+        ];
+        let mut obj =
+            DirectCopyStruct { a: 0x0807060504030201, b: 0x0c0b0a09, c: 0x0e0d, d: 0x100f };
+
+        for ctx in CONTEXTS {
+            encode_assert_bytes(ctx, &mut obj, bytes);
+        }
+    }
+
+    #[test]
+    fn direct_copy_struct_decode() {
+        let bytes = &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, //
+            0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, //
+        ];
+        let obj = DirectCopyStruct { a: 0x0807060504030201, b: 0x0c0b0a09, c: 0x0e0d, d: 0x100f };
+
+        for ctx in CONTEXTS {
+            let mut out = DirectCopyStruct::new_empty();
+            Decoder::decode_with_context(ctx, bytes, &mut [], &mut out).expect("Decoding failed");
+            assert_eq!(out, obj);
         }
     }
 
