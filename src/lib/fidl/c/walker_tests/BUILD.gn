@@ -17,7 +17,6 @@ source_set("test_sources") {
     "fidl_align_tests.cc",
     "fidl_coded_types.cc",
     "formatting_tests.cc",
-    "handle_closing_tests.cc",
     "llcpp_client_test.cc",
     "llcpp_gen_api_test.cc",
     "llcpp_server_test.cc",
@@ -28,7 +27,6 @@ source_set("test_sources") {
     "on_error_handle_tests.cc",
     "validating_tests.cc",
   ]
-  include_dirs = [ "generated" ]
   public_deps = [
     ":fidl.test.coding_llcpp",
     "//sdk/lib/fdio",
@@ -49,6 +47,64 @@ source_set("test_sources") {
   ]
 }
 
+if (is_fuchsia) {
+  executable("walker_tests_bin") {
+    output_name = "walker-tests"
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+    testonly = true
+    sources = []
+    deps = [ ":test_sources" ]
+
+    # TODO(46873): Fix the leaks and remove this.
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  }
+
+  fuchsia_unittest_package("fidl-walker-tests") {
+    executable_name = "walker-tests"
+    deps = [ ":walker_tests_bin" ]
+  }
+
+  executable("tests_to_run_under_handle_policy") {
+    # this must match the requested binary in run_with_handle_policy_tests.cc
+    output_name = "fidl-handle-policy-test-app"
+    testonly = true
+    sources = [
+      "fidl_coded_types.cc",
+      "handle_closing_tests.cc",
+      "main.cc",
+    ]
+    public_deps = [
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
+      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/unittest",
+    ]
+  }
+
+  executable("test_launcher_bin") {
+    testonly = true
+    output_name = "run_with_handle_policy_tests"
+    sources = [ "run_with_handle_policy_tests.cc" ]
+    deps = [
+      ":fidl.test.coding_llcpp",
+      ":tests_to_run_under_handle_policy",
+      "//third_party/googletest:gtest_main",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
+    ]
+  }
+
+  fuchsia_unittest_package("fidl-handle-closing-tests") {
+    manifest = "run_with_handle_policy_tests.cmx"
+    deps = [ ":test_launcher_bin" ]
+  }
+}
+
 source_set("host_test_sources") {
   testonly = true
   sources = [
@@ -67,50 +123,9 @@ source_set("host_test_sources") {
   ]
 }
 
-if (is_fuchsia) {
-  executable("test_bin") {
-    output_name = "fidl-handle-policy-test-app"
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-    testonly = true
-    sources = []
-    deps = [ ":test_sources" ]
-
-    # TODO(46873): Fix the leaks and remove this.
-    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-  }
-
-  fuchsia_unittest_package("run-without-handle-policy-tests") {
-    executable_name = "fidl-handle-policy-test-app"
-    deps = [ ":test_bin" ]
-  }
-
-  executable("test_launcher_bin") {
-    testonly = true
-    output_name = "run_with_handle_policy_tests"
-    sources = [ "run_with_handle_policy_tests.cc" ]
-    deps = [
-      ":fidl.test.coding_llcpp",
-      ":test_bin",
-      "//third_party/googletest:gtest_main",
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/fdio",
-      "//zircon/public/lib/zx",
-    ]
-  }
-
-  fuchsia_unittest_package("run-with-handle-policy-tests") {
-    manifest = "run_with_handle_policy_tests.cmx"
-
-    deps = [ ":test_launcher_bin" ]
-  }
-}
-
 if (is_linux || is_mac) {
   # Some of the tests can run on host.
-  test("fidl_walker_tests") {
+  test("fidl-walker-host-tests") {
     if (is_fuchsia) {
       fdio_config = [ "//build/config/fuchsia:fdio_config" ]
       if (configs + fdio_config - fdio_config != configs) {

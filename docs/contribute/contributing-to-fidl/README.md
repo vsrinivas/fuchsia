@@ -381,7 +381,7 @@ fx build
 | fidlgen rust             | `fx test fidlgen_rust_test`         | //tools/fidl/fidlgen_rust                                                 |
 | fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | //tools/fidl/fidlgen_syzkaller                                            |
 | fidlgen dart             | `fx test fidlgen_dart_backend_test` | //topaz/bin/fidlgen_dart                                                  |
-| fidl c runtime host test | `fx test fidl_walker_tests`         | //zircon/system/ulib/fidl                                                 |
+| fidl c runtime test      | `fx test //src/lib/fidl/c`          | //zircon/system/ulib/fidl                                                 |
 | c++ host unittests       | `fx test fidl_cpp_host_unittests`   | //sdk/lib/fidl                                                            |
 | c++ bindings tests       | `fx test fidl_tests`                | //sdk/lib/fidl                                                            |
 | llcpp bindings tests     | `fx test fidl_llcpp_types_test`     | //tools/fidl/fidlgen_llcpp //zircon/system/ulib/fidl                      |

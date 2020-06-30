@@ -32,9 +32,8 @@ group("tests") {
 
   deps = [
     ":fidl-c-tests",
-    "walker_tests:fidl_walker_tests($host_toolchain)",
-
-    # TODO(fxb/55236): s/without/with
-    "walker_tests:run-without-handle-policy-tests",
+    "walker_tests:fidl-handle-closing-tests",
+    "walker_tests:fidl-walker-host-tests($host_toolchain)",
+    "walker_tests:fidl-walker-tests",
   ]
 }
