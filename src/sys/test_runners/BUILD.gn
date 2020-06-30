@@ -65,7 +65,7 @@ rustc_library("test_lib") {
 
 fuchsia_unittest_package("test-runner-unit-tests") {
   deps = [ ":lib_test" ]
-  executable_name = "test_runners_lib_lib_test"
+  executable_path = "bin/test_runners_lib_lib_test"
 }
 
 group("test_runners") {

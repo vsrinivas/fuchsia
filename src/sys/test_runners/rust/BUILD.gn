@@ -70,7 +70,7 @@ fuchsia_unittest_package("rust-test-runner-unit-test") {
     ":bin_test",
     "test_data",
   ]
-  executable_name = "rust_test_runner_bin_test"
+  executable_path = "bin/rust_test_runner_bin_test"
 }
 
 group("tests") {

@@ -46,7 +46,7 @@ executable("hidctl-test") {
 }
 
 fuchsia_unittest_package("hidctl-test-package") {
-  executable_name = "hidctl-test"
+  executable_path = "bin/hidctl-test"
   deps = [ ":hidctl-test" ]
   test_specs = {
     environments = basic_envs

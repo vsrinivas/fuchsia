@@ -60,7 +60,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_unittest_package("dns-resolver-tests") {
-  executable_name = "dns_resolver_bin_test"
+  executable_path = "bin/dns_resolver_bin_test"
   deps = [ ":bin_test" ]
 }
 

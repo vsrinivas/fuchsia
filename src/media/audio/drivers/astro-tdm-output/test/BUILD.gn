@@ -42,7 +42,7 @@ executable("astro-audio-out-test-bin") {
 }
 
 fuchsia_unittest_package("astro-audio-out-test") {
-  executable_name = "astro-audio-out-test-bin"
+  executable_path = "bin/astro-audio-out-test-bin"
   deps = [ ":astro-audio-out-test-bin" ]
   test_specs = {
     environments = basic_envs

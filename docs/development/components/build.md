@@ -302,7 +302,7 @@ Since unit tests are very common, a simplified template
 [`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni)
 is provided to define a package with a single component to be run as a test.
 
-#### Unit tests with manifests
+#### Unit tests with manifests {#unit-tests-with-manifests}
 
 The examples below demonstrate building a test executable and defining a
 package and component for the test.
@@ -381,8 +381,8 @@ Below s an example for a test that performs ROT13 encryption and decryption.
 The algorithm under test is pure logic that can be tested in complete
 isolation. If we were to write a manifest for these tests, it would only
 contain the test binary to be executed. In such cases, we can simply specify
-the test executable, and the template will generate the trivial manifest for
-us.
+the test executable path, and the template will generate the trivial manifest
+for us.
 
    * {C++}
 
@@ -399,7 +399,7 @@ us.
    }
 
    fuchsia_unittest_package("rot13-test") {
-     executable_name = "rot13_test"
+     executable_path = "bin/rot13_test"
      deps = [ ":rot13_test" ]
    }
    ```
@@ -413,7 +413,7 @@ us.
    rustc_test("rot13_test") {}
 
    fuchsia_unittest_package("rot13-test") {
-     executable_name = "rot13_test"
+     executable_path = "bin/rot13_test"
      deps = [ ":rot13_test" ]
    }
    ```
@@ -427,7 +427,7 @@ us.
    go_test("rot13_test") {}
 
    fuchsia_unittest_package("rot13-test") {
-     executable_name = "rot13_test"
+     executable_path = "bin/rot13_test"
      deps = [ ":rot13_test" ]
    }
    ```
@@ -450,6 +450,18 @@ may not exist or may be stale if you haven't built.
 The launch URL for the test will be
 `fuchsia-pkg://fuchsia.com/rot13-test#meta/rot13-test.cmx`. It can be launched
 using `fx test` followed by the launch URL, or followed by the GN target name.
+
+Finally, if `executable_path` references a file that is not present in the
+package then a helpful error message will be printed at build time. For
+example:
+
+```
+Error found in obj/src/path/to/your/target/target-unittest.cmx
+program.binary="bin/target-unittest-bin" but bin/target-unittest-bin is not in
+the package!
+
+Did you mean "test/target-unittest-bin"?
+```
 
 ## Additional packaged resources {#additional-packaged-resources}
 
