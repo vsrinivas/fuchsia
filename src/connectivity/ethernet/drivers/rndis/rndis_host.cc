@@ -591,7 +591,9 @@ zx_status_t RndisHost::AddDevice() {
   }
 
   fbl::AutoLock lock(&mutex_);
-  status = DdkAdd("rndishost", DEVICE_ADD_INVISIBLE, nullptr, 0, ZX_PROTOCOL_ETHERNET_IMPL);
+  status = DdkAdd(ddk::DeviceAddArgs("rndishost")
+                      .set_flags(DEVICE_ADD_INVISIBLE)
+                      .set_proto_id(ZX_PROTOCOL_ETHERNET_IMPL));
   if (status != ZX_OK) {
     lock.release();
     zxlogf(ERROR, "rndishost: failed to create device: %d", status);

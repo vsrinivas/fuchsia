@@ -176,7 +176,8 @@ zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, zx::chann
   }
 
   auto device = std::make_unique<TestDevice>(zxdev());
-  zx_status_t status = device->DdkAdd(devname, 0, nullptr, 0, 0, nullptr, client_remote.release());
+  zx_status_t status =
+      device->DdkAdd(ddk::DeviceAddArgs(devname).set_client_remote(std::move(client_remote)));
   if (status != ZX_OK) {
     return status;
   }

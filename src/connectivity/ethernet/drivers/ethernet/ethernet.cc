@@ -861,7 +861,9 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
     free_transmit_buffers_.push(*std::move(buffer));
   }
 
-  if ((status = DdkAdd("ethernet", DEVICE_ADD_INSTANCE, nullptr, 0, ZX_PROTOCOL_ETHERNET)) < 0) {
+  if ((status = DdkAdd(ddk::DeviceAddArgs("ethernet")
+                           .set_flags(DEVICE_ADD_INSTANCE)
+                           .set_proto_id(ZX_PROTOCOL_ETHERNET))) != ZX_OK) {
     return status;
   }
   if (out) {
@@ -974,7 +976,7 @@ zx_status_t EthDev0::AddDevice() {
   }
   info_.netbuf_size = ZX_ROUNDUP(info_.netbuf_size, 8);
 
-  if ((status = DdkAdd("ethernet", 0, nullptr, 0, ZX_PROTOCOL_ETHERNET)) < 0) {
+  if ((status = DdkAdd(ddk::DeviceAddArgs("ethernet").set_proto_id(ZX_PROTOCOL_ETHERNET))) < 0) {
     return status;
   }
   // Make sure device starts with expected settings.

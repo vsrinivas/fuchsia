@@ -339,14 +339,9 @@ zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
 
   // Add a child `OpteeClient` device instance and have it immediately start serving
   // `tee_device_request`
-  zx_status_t status = client->DdkAdd("optee-client",               // name
-                                      DEVICE_ADD_INSTANCE,          // flags
-                                      nullptr,                      // props
-                                      0,                            // prop_count
-                                      0,                            // proto_id
-                                      nullptr,                      // proxy_args
-                                      tee_device_request.release()  // client_remote
-  );
+  zx_status_t status = client->DdkAdd(ddk::DeviceAddArgs("optee-client")
+                                          .set_flags(DEVICE_ADD_INSTANCE)
+                                          .set_client_remote(std::move(tee_device_request)));
   if (status != ZX_OK) {
     return status;
   }
@@ -372,14 +367,9 @@ void OpteeController::ConnectToDeviceInfo(
 
   // Add a child `OpteeDeviceInfo` instance device and have it immediately start serving
   // `device_info_request`.
-  zx_status_t status = device_info->DdkAdd("optee-client",                // name
-                                           DEVICE_ADD_INSTANCE,           // flags
-                                           nullptr,                       // props
-                                           0,                             // prop_count
-                                           0,                             // proto_id
-                                           nullptr,                       // proxy_args
-                                           device_info_request.release()  // client_remote
-  );
+  zx_status_t status = device_info->DdkAdd(ddk::DeviceAddArgs("optee-client")
+                                               .set_flags(DEVICE_ADD_INSTANCE)
+                                               .set_client_remote(std::move(device_info_request)));
   if (status != ZX_OK) {
     LOG(ERROR, "failed to create device info child");
     return;
@@ -401,14 +391,9 @@ void OpteeController::ConnectToApplication(
 
   // Add a child `OpteeClient` device instance and have it immediately start serving
   // `device_request`
-  zx_status_t status = client->DdkAdd("optee-client",                // name
-                                      DEVICE_ADD_INSTANCE,           // flags
-                                      nullptr,                       // props
-                                      0,                             // prop_count
-                                      0,                             // proto_id
-                                      nullptr,                       // proxy_args
-                                      application_request.release()  // client_remote
-  );
+  zx_status_t status = client->DdkAdd(ddk::DeviceAddArgs("optee-client")
+                                          .set_flags(DEVICE_ADD_INSTANCE)
+                                          .set_client_remote(std::move(application_request)));
   if (status != ZX_OK) {
     LOG(ERROR, "failed to create device info child (status: %d)", status);
     return;

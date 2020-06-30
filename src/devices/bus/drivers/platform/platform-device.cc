@@ -500,8 +500,11 @@ zx_status_t PlatformDevice::Start() {
       {BIND_PLATFORM_DEV_PID, 0, pid_},
       {BIND_PLATFORM_DEV_DID, 0, did_},
   };
-  zx_status_t status = DdkAdd(name, device_add_flags, props, std::size(props), ZX_PROTOCOL_PDEV,
-                              (type_ == Isolated ? argstr : nullptr));
+  zx_status_t status = DdkAdd(ddk::DeviceAddArgs(name)
+                                  .set_flags(device_add_flags)
+                                  .set_props(props)
+                                  .set_proto_id(ZX_PROTOCOL_PDEV)
+                                  .set_proxy_args((type_ == Isolated ? argstr : nullptr)));
   if (status != ZX_OK) {
     return status;
   }

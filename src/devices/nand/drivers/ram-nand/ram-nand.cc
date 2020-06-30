@@ -143,7 +143,7 @@ zx_status_t NandDevice::Bind(const fuchsia_hardware_nand_RamNandInfo& info) {
       {BIND_NAND_CLASS, 0, params_.nand_class},
   };
 
-  status = DdkAdd(name, DEVICE_ADD_INVISIBLE, props, std::size(props));
+  status = DdkAdd(ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_INVISIBLE).set_props(props));
   if (status != ZX_OK) {
     return status;
   }

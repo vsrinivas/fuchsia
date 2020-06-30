@@ -139,14 +139,14 @@ void I2cDevice::AddChildren() {
           {BIND_PLATFORM_DEV_DID, 0, did},
       };
 
-      status = dev->DdkAdd(name, 0, props, countof(props));
+      status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
     } else {
       zx_device_prop_t props[] = {
           {BIND_I2C_BUS_ID, 0, bus_id},
           {BIND_I2C_ADDRESS, 0, address},
       };
 
-      status = dev->DdkAdd(name, 0, props, countof(props));
+      status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
     }
 
     if (status != ZX_OK) {

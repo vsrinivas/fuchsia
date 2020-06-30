@@ -38,7 +38,7 @@ zx_status_t SdioFunctionDevice::AddDevice(const sdio_func_hw_info_t& hw_info, ui
 
   char name[kNameBufferSize];
   snprintf(name, sizeof(name), "sdmmc-sdio-%u", func);
-  zx_status_t st = DdkAdd(name, 0, props, countof(props));
+  zx_status_t st = DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
   if (st != ZX_OK) {
     zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d", st);
   }

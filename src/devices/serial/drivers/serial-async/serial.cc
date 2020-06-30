@@ -226,7 +226,7 @@ zx_status_t SerialDevice::Bind() {
       {BIND_SERIAL_CLASS, 0, serial_class_},
   };
 
-  return DdkAdd("serial-async", 0, props, std::size(props));
+  return DdkAdd(ddk::DeviceAddArgs("serial-async").set_props(props));
 }
 
 static constexpr zx_driver_ops_t serial_driver_ops = []() {

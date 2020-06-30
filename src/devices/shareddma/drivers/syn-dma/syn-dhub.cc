@@ -87,7 +87,9 @@ zx_status_t SynDhub::Bind() {
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_SHARED_DMA},
   };
-  status = DdkAdd("synaptics-dhub", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
+  status = DdkAdd(ddk::DeviceAddArgs("synaptics-dhub")
+                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                      .set_props(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAdd failed %d", __func__, status);
     return status;

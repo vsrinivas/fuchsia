@@ -603,7 +603,7 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
   };
-  status = DdkAdd("platform", DEVICE_ADD_INVISIBLE, props, std::size(props));
+  status = DdkAdd(ddk::DeviceAddArgs("platform").set_flags(DEVICE_ADD_INVISIBLE).set_props(props));
   if (status != ZX_OK) {
     return status;
   }

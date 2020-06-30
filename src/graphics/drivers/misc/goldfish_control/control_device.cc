@@ -282,7 +282,7 @@ zx_status_t Control::Bind() {
     Heap::CreateChannelOwned(std::move(request), this, heap_loop_.dispatcher());
   });
 
-  return DdkAdd("goldfish-control", 0, nullptr, 0, ZX_PROTOCOL_GOLDFISH_CONTROL);
+  return DdkAdd(ddk::DeviceAddArgs("goldfish-control").set_proto_id(ZX_PROTOCOL_GOLDFISH_CONTROL));
 }
 
 void Control::RegisterColorBuffer(zx_koid_t koid) {

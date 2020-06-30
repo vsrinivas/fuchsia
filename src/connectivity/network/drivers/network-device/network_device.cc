@@ -64,7 +64,8 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
     }
   }
 
-  if ((status = netdev->DdkAdd("network-device", 0, nullptr, 0, ZX_PROTOCOL_NETWORK_DEVICE)) !=
+  if ((status = netdev->DdkAdd(
+           ddk::DeviceAddArgs("network-device").set_proto_id(ZX_PROTOCOL_NETWORK_DEVICE))) !=
       ZX_OK) {
     zxlogf(ERROR, "network-device: Failed to bind %d", status);
     return status;

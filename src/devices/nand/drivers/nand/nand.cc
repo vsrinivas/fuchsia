@@ -341,7 +341,7 @@ zx_status_t NandDevice::Bind() {
       {BIND_NAND_CLASS, 0, fuchsia_hardware_nand_Class_PARTMAP},
   };
 
-  return DdkAdd("nand", 0, props, std::size(props));
+  return DdkAdd(ddk::DeviceAddArgs("nand").set_props(props));
 }
 
 #ifndef TEST

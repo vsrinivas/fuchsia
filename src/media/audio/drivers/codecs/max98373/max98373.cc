@@ -137,7 +137,7 @@ zx_status_t Max98373::Bind() {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373},
   };
-  return DdkAdd("max98373", 0, props, countof(props));
+  return DdkAdd(ddk::DeviceAddArgs("max98373").set_props(props));
 }
 
 void Max98373::Shutdown() { thrd_join(thread_, NULL); }

@@ -871,9 +871,9 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return status;
   }
 
-  status = client->DdkAdd(is_vc ? "dc-vc" : "dc", DEVICE_ADD_INSTANCE, nullptr /* props */,
-                          0 /* prop_count */, 0 /* proto_id */, nullptr /* proxy_args */,
-                          device_channel.release());
+  status = client->DdkAdd(ddk::DeviceAddArgs(is_vc ? "dc-vc" : "dc")
+                              .set_flags(DEVICE_ADD_INSTANCE)
+                              .set_client_remote(std::move(device_channel)));
   if (status != ZX_OK) {
     zxlogf(DEBUG, "Failed to add client %d", status);
     return status;

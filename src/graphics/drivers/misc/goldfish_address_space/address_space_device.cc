@@ -98,14 +98,9 @@ class Instance : public InstanceType {
     auto child_driver = std::make_unique<AddressSpaceChildDriver>(type, device_, dma_region_paddr_,
                                                                   std::move(io_buffer), handle);
 
-    status = child_driver->DdkAdd("address-space-child",  // name
-                                  DEVICE_ADD_INSTANCE,    // flags
-                                  nullptr,                // props
-                                  0,                      // prop_count
-                                  0,                      // proto_id
-                                  nullptr,                // proxy_args
-                                  request.release()       // client_remote
-    );
+    status = child_driver->DdkAdd(ddk::DeviceAddArgs("address-space-child")
+                                      .set_flags(DEVICE_ADD_INSTANCE)
+                                      .set_client_remote(std::move(request)));
 
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: failed to DdkAdd child driver: %d", kTag, status);
@@ -216,7 +211,8 @@ zx_status_t AddressSpaceDevice::Bind() {
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_), REGISTER_PHYS_START_LOW);
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_ >> 32), REGISTER_PHYS_START_HIGH);
 
-  return DdkAdd("goldfish-address-space", 0, nullptr, 0, ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE);
+  return DdkAdd(ddk::DeviceAddArgs("goldfish-address-space")
+                    .set_proto_id(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE));
 }
 
 uint32_t AddressSpaceDevice::AllocateBlock(uint64_t* size, uint64_t* offset) {

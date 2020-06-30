@@ -98,7 +98,7 @@ zx_status_t Tas5782::Bind() {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5782},
   };
-  return DdkAdd("tas5782", 0, props, countof(props));
+  return DdkAdd(ddk::DeviceAddArgs("tas5782").set_props(props));
 }
 
 void Tas5782::Shutdown() {

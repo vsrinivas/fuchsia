@@ -107,7 +107,7 @@ zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
         {BIND_GPIO_PIN, 0, pin},
     };
 
-    status = dev->DdkAdd(name, 0, props, countof(props));
+    status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
     if (status != ZX_OK) {
       return status;
     }

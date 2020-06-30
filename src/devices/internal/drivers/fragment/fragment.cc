@@ -51,8 +51,9 @@ zx_status_t Fragment::Bind(void* ctx, zx_device_t* parent) {
   // The thing before the comma will become the process name, if a new process
   // is created
   const char* proxy_args = "composite-device,";
-  auto status = dev->DdkAdd(name, DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_MUST_ISOLATE,
-                            nullptr /* props */, 0 /* prop count */, 0 /* proto id */, proxy_args);
+  auto status = dev->DdkAdd(ddk::DeviceAddArgs(name)
+                                .set_flags(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_MUST_ISOLATE)
+                                .set_proxy_args(proxy_args));
   if (status == ZX_OK) {
     // devmgr owns the memory now
     __UNUSED auto ptr = dev.release();

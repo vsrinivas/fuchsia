@@ -148,7 +148,7 @@ zx_status_t PipeDevice::Bind() {
   mmio_->Write32(upper_32_bits(pa_open_command_buffer), PIPE_V2_REG_OPEN_BUFFER_HIGH);
   mmio_->Write32(lower_32_bits(pa_open_command_buffer), PIPE_V2_REG_OPEN_BUFFER);
 
-  return DdkAdd("goldfish-pipe", 0, nullptr, 0, ZX_PROTOCOL_GOLDFISH_PIPE);
+  return DdkAdd(ddk::DeviceAddArgs("goldfish-pipe").set_proto_id(ZX_PROTOCOL_GOLDFISH_PIPE));
 }
 
 zx_status_t PipeDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {

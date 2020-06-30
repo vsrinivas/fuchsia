@@ -761,7 +761,7 @@ zx_status_t DsiMt::Bind() {
       {BIND_PLATFORM_DEV_DID, 0, display_info.did},
   };
 
-  status = DdkAdd("mt-dsi", 0, props, countof(props));
+  status = DdkAdd(ddk::DeviceAddArgs("mt-dsi").set_props(props));
   if (status != ZX_OK) {
     DSI_ERROR("could not add device %d\n", status);
   }

@@ -120,15 +120,10 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(thermal_fidl_client));
 
-  status = cpu_device->DdkAdd("cpu",                         // name
-                              DEVICE_ADD_NON_BINDABLE,       // flags
-                              nullptr, 0,                    // props & propcount
-                              ZX_PROTOCOL_CPU_CTRL,          // protocol id
-                              nullptr,                       // proxy_args
-                              ZX_HANDLE_INVALID,             // client remote
-                              nullptr, 0,                    // Power states & count
-                              perf_states, perf_state_count  // Perf states & count
-  );
+  status = cpu_device->DdkAdd(ddk::DeviceAddArgs("cpu")
+                                  .set_flags(DEVICE_ADD_NON_BINDABLE)
+                                  .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
+                                  .set_performance_states({perf_states, perf_state_count}));
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to add cpu device, st = %d", status);
     return status;

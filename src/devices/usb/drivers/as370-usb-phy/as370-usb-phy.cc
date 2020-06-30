@@ -128,7 +128,8 @@ zx_status_t UsbPhy::AddDwc2Device() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_DWC2},
   };
 
-  return dwc2_device_->DdkAdd("dwc2", 0, props, countof(props), ZX_PROTOCOL_USB_PHY);
+  return dwc2_device_->DdkAdd(
+      ddk::DeviceAddArgs("dwc2").set_props(props).set_proto_id(ZX_PROTOCOL_USB_PHY));
 }
 
 zx_status_t UsbPhy::RemoveDwc2Device() {

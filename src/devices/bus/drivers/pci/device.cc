@@ -103,8 +103,11 @@ zx_status_t Device::CreateProxy() {
 
   // Create an isolated devhost to load the proxy pci driver containing the DeviceProxy
   // instance which will talk to this device.
-  return DdkAdd(cfg_->addr(), DEVICE_ADD_MUST_ISOLATE, device_props, countof(device_props),
-                ZX_PROTOCOL_PCI, proxy_arg);
+  return DdkAdd(ddk::DeviceAddArgs(cfg_->addr())
+                    .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                    .set_props(device_props)
+                    .set_proto_id(ZX_PROTOCOL_PCI)
+                    .set_proxy_args(proxy_arg));
 }
 
 zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,

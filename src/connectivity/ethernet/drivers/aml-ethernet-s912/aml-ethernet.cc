@@ -161,7 +161,7 @@ zx_status_t AmlEthernet::Bind() {
       {BIND_PLATFORM_DEV_DID, 0, mac_info.did},
   };
 
-  return DdkAdd("aml-ethernet", 0, props, std::size(props));
+  return DdkAdd(ddk::DeviceAddArgs("aml-ethernet").set_props(props));
 }
 
 void AmlEthernet::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }

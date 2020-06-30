@@ -564,7 +564,7 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
       {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_GDC},
   };
 
-  status = gdc_device->DdkAdd("gdc", 0, props, countof(props));
+  status = gdc_device->DdkAdd(ddk::DeviceAddArgs("gdc").set_props(props));
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Could not add gdc device";
     return status;

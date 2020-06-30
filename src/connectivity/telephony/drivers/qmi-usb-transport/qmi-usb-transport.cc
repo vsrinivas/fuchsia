@@ -949,7 +949,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
   }
 
-  status = DdkAdd("qmi-usb-transport", 0, nullptr, 0, ZX_PROTOCOL_QMI_TRANSPORT);
+  status = DdkAdd(ddk::DeviceAddArgs("qmi-usb-transport").set_proto_id(ZX_PROTOCOL_QMI_TRANSPORT));
   if (status < 0) {
     QmiBindFailedErr(status, int_buf);
     return status;

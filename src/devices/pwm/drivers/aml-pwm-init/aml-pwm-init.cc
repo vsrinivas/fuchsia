@@ -52,7 +52,9 @@ zx_status_t PwmInitDevice::Create(void* ctx, zx_device_t* parent) {
   zx_device_prop_t props[] = {
       {BIND_INIT_STEP, 0, BIND_INIT_STEP_PWM},
   };
-  status = dev->DdkAdd("aml-pwm-init", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
+  status = dev->DdkAdd(ddk::DeviceAddArgs("aml-pwm-init")
+                           .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                           .set_props(props));
   if (status != ZX_OK) {
     return status;
   }

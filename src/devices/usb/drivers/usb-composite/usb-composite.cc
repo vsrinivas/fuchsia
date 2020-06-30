@@ -75,7 +75,7 @@ zx_status_t UsbComposite::AddInterface(const usb_interface_descriptor_t* interfa
       {BIND_USB_PROTOCOL, 0, interface->usb_protocol()},
   };
 
-  status = interface->DdkAdd(name, 0, props, countof(props));
+  status = interface->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
   if (status == ZX_OK) {
     // Hold a reference while devmgr has a pointer to this object.
     interface->AddRef();
@@ -113,7 +113,7 @@ zx_status_t UsbComposite::AddInterfaceAssoc(const usb_interface_assoc_descriptor
       {BIND_USB_PROTOCOL, 0, interface->usb_protocol()},
   };
 
-  status = interface->DdkAdd(name, 0, props, countof(props));
+  status = interface->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
   if (status == ZX_OK) {
     // Hold a reference while devmgr has a pointer to this object.
     interface->AddRef();

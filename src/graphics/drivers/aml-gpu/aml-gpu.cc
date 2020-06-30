@@ -236,7 +236,7 @@ zx_status_t AmlGpu::Bind() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ARM_MALI},
   };
 
-  status = DdkAdd("aml-gpu", 0, props, countof(props));
+  status = DdkAdd(ddk::DeviceAddArgs("aml-gpu").set_props(props));
 
   if (status != ZX_OK) {
     return status;

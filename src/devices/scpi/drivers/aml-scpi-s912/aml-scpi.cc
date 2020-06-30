@@ -258,7 +258,7 @@ zx_status_t AmlSCPI::Bind() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_SCPI},
   };
 
-  return DdkAdd("aml-scpi", 0, props, std::size(props));
+  return DdkAdd(ddk::DeviceAddArgs("aml-scpi").set_props(props));
 }
 
 zx_status_t AmlSCPI::Create(zx_device_t* parent) {

@@ -163,8 +163,10 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
 
   zx_status_t status;
   if (!add_invisible) {
-    status = child2->DdkAdd("power-test-child-2", 0, nullptr, 0, 0, nullptr, ZX_HANDLE_INVALID,
-                            states.get(), count, performance_states.get(), perf_state_count);
+    status =
+        child2->DdkAdd(ddk::DeviceAddArgs("power-test-child-2")
+                           .set_power_states({states.get(), count})
+                           .set_performance_states({performance_states.get(), perf_state_count}));
   } else {
     child2->SavePowerStateInfo(std::move(states), count, std::move(performance_states),
                                perf_state_count);

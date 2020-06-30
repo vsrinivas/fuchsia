@@ -346,7 +346,8 @@ zx_status_t FakeOtRadioDevice::Create(void* ctx, zx_device_t* parent,
 }
 
 zx_status_t FakeOtRadioDevice::Bind() {
-  zx_status_t status = DdkAdd("fake-ot-radio", 0, nullptr, 0, ZX_PROTOCOL_OT_RADIO);
+  zx_status_t status =
+      DdkAdd(ddk::DeviceAddArgs("fake-ot-radio").set_proto_id(ZX_PROTOCOL_OT_RADIO));
   if (status != ZX_OK) {
     zxlogf(ERROR, "fake-ot-radio: Could not create device: %d", status);
     return status;

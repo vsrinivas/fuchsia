@@ -187,7 +187,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  status = thermal_device->DdkAdd("thermal", 0, nullptr, 0, ZX_PROTOCOL_THERMAL);
+  status = thermal_device->DdkAdd(ddk::DeviceAddArgs("thermal").set_proto_id(ZX_PROTOCOL_THERMAL));
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not create thermal device: %d", status);
     return status;

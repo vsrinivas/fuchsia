@@ -921,7 +921,7 @@ zx_status_t UsbDevice::Init() {
       {BIND_USB_SUBCLASS, 0, device_desc_.bDeviceSubClass},
       {BIND_USB_PROTOCOL, 0, device_desc_.bDeviceProtocol},
   };
-  status = DdkAdd(name, 0, props, countof(props), ZX_PROTOCOL_USB_DEVICE);
+  status = DdkAdd(ddk::DeviceAddArgs(name).set_props(props).set_proto_id(ZX_PROTOCOL_USB_DEVICE));
   if (status != ZX_OK) {
     return status;
   }

@@ -67,8 +67,7 @@ zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, con
   }
   payload.reset();
 
-  zx_status_t status =
-      sysdev->DdkAdd("sys", DEVICE_ADD_NON_BINDABLE, nullptr /* props */, 0 /* prop_count */);
+  zx_status_t status = sysdev->DdkAdd(ddk::DeviceAddArgs("sys").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     return status;
   }

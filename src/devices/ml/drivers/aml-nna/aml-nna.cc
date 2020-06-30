@@ -126,7 +126,7 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GPU_VSL_GC},
   };
 
-  status = device->DdkAdd("aml-nna", 0, props, countof(props));
+  status = device->DdkAdd(ddk::DeviceAddArgs("aml-nna").set_props(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml_nna: Could not create aml nna device: %d\n", status);
     return status;

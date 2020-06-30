@@ -69,7 +69,7 @@ zx_status_t HikeyUsb::Init() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_DWC3},
   };
 
-  return DdkAdd("dwc3", 0, props, countof(props));
+  return DdkAdd(ddk::DeviceAddArgs("dwc3").set_props(props));
 }
 
 zx_status_t HikeyUsb::UsbModeSwitchSetMode(usb_mode_t mode) {

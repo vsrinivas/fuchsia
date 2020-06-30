@@ -121,8 +121,8 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
 
   device->Bind(pbus);
 
-  if ((status = device->DdkAdd("aml-axg-gpio", 0, nullptr, 0, ZX_PROTOCOL_GPIO_IMPL, nullptr,
-                               ZX_HANDLE_INVALID, nullptr, 0)) != ZX_OK) {
+  if ((status = device->DdkAdd(
+           ddk::DeviceAddArgs("aml-axg-gpio").set_proto_id(ZX_PROTOCOL_GPIO_IMPL))) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::Create: DdkAdd failed");
     return status;
   }
