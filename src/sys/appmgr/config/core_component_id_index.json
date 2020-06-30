@@ -68,6 +68,16 @@
             }
         },
         {
+            instance_id: "18f6b0d52208bab5e5dd65ef6021b7e47d7a6b3d09f6668dcea18f93161e9b1d",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
+        {
             instance_id: "796fc46a1898539f901c909c1ccf61c98660692fa45dabe474afaec84be6d720",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
