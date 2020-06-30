@@ -156,3 +156,42 @@ package("setui_service") {
     },
   ]
 }
+
+rustc_binary("setui-config-test") {
+  testonly = true
+  edition = "2018"
+  name = "setui-config-test"
+  deps = [
+    ":lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde_json",
+  ]
+  source_root = "src/setui_config_test.rs"
+}
+
+unittest_package("sample-setui-config-test") {
+  deps = [ "//garnet/bin/setui:setui-config-test" ]
+
+  resources = [
+    {
+      path = rebase_path("src/tests/testdata/service_configuration.json")
+      dest = "service_configuration.json"
+    },
+  ]
+
+  tests = [
+    {
+      name = "setui_config_test"
+      args = [ "/pkg/data/service_configuration.json" ]
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":sample-setui-config-test",
+    ":setui-config-test",
+    ":setui_service_tests",
+  ]
+}

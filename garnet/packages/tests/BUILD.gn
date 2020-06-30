@@ -42,7 +42,7 @@ group("all") {
     "//garnet/bin/run_test_component:tests",
     "//garnet/bin/sched:tests",
     "//garnet/bin/scpi:scpi_server_tests",
-    "//garnet/bin/setui:setui_service_tests",
+    "//garnet/bin/setui:tests",
     "//garnet/bin/setui_client:tests",
     "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
