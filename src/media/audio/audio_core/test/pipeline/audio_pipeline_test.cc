@@ -51,10 +51,8 @@ TEST_F(AudioPipelineTest, RenderWithPts) {
   auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
   auto num_frames = num_packets * kPacketFrames;
 
-  // TODO(49981): Don't send an extra silent packet, once 49980 is fixed
   auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
-  auto silent_buffer = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  auto packets = renderer_->AppendPackets({&input_buffer, &silent_buffer});
+  auto packets = renderer_->AppendPackets({&input_buffer});
   auto start_time = output_->NextSynchronizedTimestamp(this);
   renderer_->Play(this, start_time, 0);
 
@@ -158,9 +156,7 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   const int16_t restart_data_value = 0x4000;
   auto second_input =
       GenerateSequentialAudio<kSampleFormat>(format_, num_frames, restart_data_value);
-  auto silent_data = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  // TODO(49981): Don't send an extra packet, once 49980 is fixed
-  auto second_packets = renderer_->AppendPackets({&second_input, &silent_data}, restart_pts);
+  auto second_packets = renderer_->AppendPackets({&second_input}, restart_pts);
   auto second_time = first_time + ZX_MSEC(restart_packet * RendererShimImpl::kPacketMs);
   renderer_->WaitForPackets(this, second_time, second_packets);
 
@@ -224,9 +220,7 @@ TEST_F(AudioPipelineEffectsTest, RenderWithEffects) {
   auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
-  // TODO(49981): Don't send an extra packet, once 49980 is fixed
-  auto silent_buffer = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  auto packets = renderer_->AppendPackets({&input_buffer, &silent_buffer});
+  auto packets = renderer_->AppendPackets({&input_buffer});
   auto start_time = output_->NextSynchronizedTimestamp(this);
   renderer_->Play(this, start_time, 0);
 
@@ -281,9 +275,7 @@ TEST_F(AudioPipelineEffectsTest, EffectsControllerUpdateEffect) {
   auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
-  // TODO(49981): Don't send an extra packet, once 49980 is fixed
-  auto silent_buffer = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
-  auto packets = renderer_->AppendPackets({&input_buffer, &silent_buffer});
+  auto packets = renderer_->AppendPackets({&input_buffer});
   auto start_time = output_->NextSynchronizedTimestamp(this);
   renderer_->Play(this, start_time, 0);
 
