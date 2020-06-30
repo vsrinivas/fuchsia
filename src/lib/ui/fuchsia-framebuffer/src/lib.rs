@@ -429,7 +429,7 @@ pub struct VSyncMessage {
 pub struct FrameBuffer {
     #[allow(unused)]
     display_controller: zx::Channel,
-    controller: ControllerProxy,
+    pub controller: ControllerProxy,
     sysmem: fidl_fuchsia_sysmem::AllocatorProxy,
     pub local_token: Option<fidl_fuchsia_sysmem::BufferCollectionTokenProxy>,
     config: Config,

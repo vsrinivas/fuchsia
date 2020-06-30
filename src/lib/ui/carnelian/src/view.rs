@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::MessageInternal,
+    app::{FrameBufferPtr, MessageInternal},
     geometry::Size,
     input::{self},
     message::Message,
@@ -63,6 +63,9 @@ pub struct ViewAssistantContext {
     /// being used as the contents of the image specified in
     /// `image_id`.
     pub image_index: u32,
+
+    /// Frame buffer
+    pub frame_buffer: Option<FrameBufferPtr>,
 
     messages: Vec<Message>,
 }

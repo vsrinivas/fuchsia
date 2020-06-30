@@ -237,6 +237,7 @@ impl ScenicViewStrategy {
             buffer_count: None,
             image_id,
             image_index,
+            frame_buffer: None,
         }
     }
 

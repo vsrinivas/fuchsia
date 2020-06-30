@@ -149,6 +149,7 @@ impl FrameBufferViewStrategy {
                 buffer_count: Some(self.frame_buffer.borrow().get_frame_count()),
                 image_id: actual_image_id,
                 image_index,
+                frame_buffer: Some(self.frame_buffer.clone()),
             },
             render_context,
         )
