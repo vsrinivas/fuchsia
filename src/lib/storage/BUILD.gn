@@ -46,13 +46,15 @@ test_package("vfs_tests") {
       environments = basic_envs
     },
     {
-      name = "vfs_lib_test"
-      dest = "vfs_test"
-      environments = basic_envs
-    },
-    {
       name = "fuchsia_watch_lib_test"
       dest = "fuchsia_watch_test"
+      environments = basic_envs
+    },
+  ]
+  v2_tests = [
+    {
+      name = "vfs_lib_test"
+      dest = "vfs_test"
       environments = basic_envs
     },
   ]

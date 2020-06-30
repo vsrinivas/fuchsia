@@ -63,6 +63,9 @@ struct Executor {
     /// When we initiate a task shutdown by sending a message over the channel, but as we need to
     /// consume the sender in the process, we use `Option`s turning the consumed ones into `None`s.
     running: Slab<Option<oneshot::Sender<()>>>,
+
+    /// Waiters waiting for all connections to be closed.
+    waiters: std::vec::Vec<oneshot::Sender<()>>,
 }
 
 impl ExecutionScope {
@@ -146,6 +149,23 @@ impl ExecutionScope {
         let mut this = self.executor.lock();
         this.shutdown();
     }
+
+    /// Wait for all tasks to complete.
+    pub async fn wait(&self) {
+        let receiver = {
+            let mut this = self.executor.lock();
+            if this.running.is_empty() {
+                None
+            } else {
+                let (sender, receiver) = oneshot::channel::<()>();
+                this.waiters.push(sender);
+                Some(receiver)
+            }
+        };
+        if let Some(receiver) = receiver {
+            receiver.await.unwrap();
+        }
+    }
 }
 
 impl Clone for ExecutionScope {
@@ -190,6 +210,7 @@ impl ExecutionScopeParams {
             executor: Arc::new(Mutex::new(Executor {
                 upstream: self.upstream,
                 running: Slab::new(),
+                waiters: Vec::new(),
             })),
             token_registry: self.token_registry,
             inode_registry: self.inode_registry,
@@ -239,8 +260,7 @@ where
     Wrapped: Future<Output = ()> + Send,
 {
     fn drop(&mut self) {
-        let mut this = self.executor.lock();
-        this.running.remove(self.id);
+        self.executor.lock().task_did_finish(self.id);
     }
 }
 
@@ -288,7 +308,7 @@ impl Executor {
         match this.upstream.spawn_obj(Box::pin(task).into()) {
             Ok(()) => Ok(()),
             Err(err) => {
-                this.running.remove(task_id);
+                this.task_did_finish(task_id);
                 Err(err)
             }
         }
@@ -298,8 +318,8 @@ impl Executor {
         for (_key, task) in self.running.iter_mut() {
             let sender = match task.take() {
                 None => {
-                    // As the task removal is processed by they task itself, we may see cases when
-                    // we have already sent the stop message, but the task did not remove it'se
+                    // As the task removal is processed by the task itself, we may see cases when
+                    // we have already sent the stop message, but the task did not remove its
                     // entry from the list just yet.  There is a race condition with the task
                     // shutdown process.  Shutdown happens in one thread, while task execution - in
                     // another.  So, we need to tolerate "double" removal either here, or in the
@@ -321,6 +341,15 @@ impl Executor {
             debug_assert!(false, "Execution scope has an entry that it can not communicate with.");
         }
     }
+
+    fn task_did_finish(&mut self, task_id: usize) {
+        self.running.remove(task_id);
+        if self.running.is_empty() {
+            for waiter in self.waiters.drain(..) {
+                let _ = waiter.send(());
+            }
+        }
+    }
 }
 
 impl Drop for Executor {
@@ -339,7 +368,8 @@ mod tests {
     };
 
     use {
-        fuchsia_async::Executor,
+        fuchsia_async::{Executor, Time, Timer},
+        fuchsia_zircon::prelude::*,
         futures::{
             channel::{mpsc, oneshot},
             select,
@@ -377,7 +407,7 @@ mod tests {
 
                 scope.spawn(task).unwrap();
 
-                // Make sure our task hand a change to execute.
+                // Make sure our task had a chance to execute.
                 receiver.await.unwrap();
 
                 assert_eq!(counters.drop_call(), 1);
@@ -406,14 +436,46 @@ mod tests {
 
                 drop_receiver.await.unwrap();
 
-                // poll might be called one or two times, and it seems to be called differnet number of
-                // times depending on the run...  Not sure why is this happaning.  As this test is
-                // single threaded and just async I would imagine the execution to be deterministic.
+                // poll might be called one or two times depending on the order in which the
+                // executor decides to poll the two tasks (this one and the one we spawned).
                 let poll_count = counters.poll_call();
                 assert!(poll_count >= 1, "poll was not called");
 
                 assert_eq!(counters.drop_call(), 1);
             }
+        });
+    }
+
+    #[test]
+    fn test_wait_waits_for_tasks_to_finish() {
+        let mut executor = Executor::new().expect("Executor creation failed");
+        let scope = ExecutionScope::from_executor(Box::new(executor.ehandle()));
+        executor.run_singlethreaded(async {
+            let (poll_sender, poll_receiver) = oneshot::channel();
+            let (processing_done_sender, processing_done_receiver) = oneshot::channel();
+            let (drop_sender, _drop_receiver) = oneshot::channel();
+            let (_, task) =
+                mocks::ControlledTask::new(poll_sender, processing_done_receiver, drop_sender);
+
+            scope.spawn(task).unwrap();
+
+            poll_receiver.await.unwrap();
+
+            // We test that wait is working correctly by concurrently waiting and telling the
+            // task to complete, and making sure that the order is correct.
+            let done = std::sync::Mutex::new(false);
+            futures::join!(
+                async {
+                    scope.wait().await;
+                    assert_eq!(*done.lock().unwrap(), true);
+                },
+                async {
+                    // This is a Turing halting problem so the sleep is justified.
+                    Timer::new(Time::after(100.millis())).await;
+                    *done.lock().unwrap() = true;
+                    processing_done_sender.send(()).unwrap();
+                }
+            );
         });
     }
 
@@ -628,9 +690,8 @@ mod tests {
             poll_call_count: Arc<AtomicUsize>,
             drop_call_count: Arc<AtomicUsize>,
 
-            poll_sender: Option<oneshot::Sender<()>>,
-            processing_complete: Option<oneshot::Receiver<()>>,
             drop_sender: Option<oneshot::Sender<()>>,
+            future: Pin<Box<dyn Future<Output = ()> + Send>>,
         }
 
         impl ControlledTask {
@@ -645,9 +706,11 @@ mod tests {
                     Self {
                         poll_call_count,
                         drop_call_count,
-                        poll_sender: Some(poll_sender),
-                        processing_complete: Some(processing_complete),
                         drop_sender: Some(drop_sender),
+                        future: Box::pin(async move {
+                            poll_sender.send(()).unwrap();
+                            processing_complete.await.unwrap();
+                        }),
                     },
                 )
             }
@@ -658,34 +721,16 @@ mod tests {
 
             fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
                 self.poll_call_count.fetch_add(1, Ordering::Relaxed);
-
-                if let Some(sender) = self.poll_sender.take() {
-                    sender.send(()).unwrap();
-                }
-
-                match self.processing_complete.take() {
-                    Some(mut processing_complete) => match processing_complete.poll_unpin(cx) {
-                        Poll::Ready(done) => done.unwrap(),
-                        Poll::Pending => self.processing_complete = Some(processing_complete),
-                    },
-                    None => return Poll::Ready(()),
-                }
-
-                Poll::Pending
+                self.future.as_mut().poll(cx)
             }
         }
 
         impl Drop for ControlledTask {
             fn drop(&mut self) {
                 self.drop_call_count.fetch_add(1, Ordering::Relaxed);
-
-                if let Some(sender) = self.drop_sender.take() {
-                    sender.send(()).unwrap();
-                }
+                self.drop_sender.take().unwrap().send(()).unwrap();
             }
         }
-
-        impl Unpin for ControlledTask {}
 
         pub(super) struct MockEntryConstructor {}
 
