@@ -1,6 +1,6 @@
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_settings::ConfigurationInterfaces,
+    fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue},
     fuchsia_component::client::connect_to_service,
     structopt::StructOpt,
 };
@@ -12,6 +12,7 @@ pub mod display;
 pub mod do_not_disturb;
 pub mod input;
 pub mod intl;
+pub mod light;
 pub mod night_mode;
 pub mod privacy;
 pub mod setup;
@@ -92,6 +93,15 @@ pub enum SettingClient {
         #[structopt(long)]
         /// If set, this flag will set locales as an empty list. Overrides the locales arguments.
         clear_locales: bool,
+    },
+
+    #[structopt(name = "light")]
+    /// To get the value of all light types, omit all arguments. If setting the value for a light group,
+    /// name is required, then only one type of value between simple, brightness, or rgb should be
+    /// specified.
+    Light {
+        #[structopt(flatten)]
+        light_group: LightGroup,
     },
 
     #[structopt(name = "night_mode")]
@@ -213,6 +223,61 @@ pub struct AudioInput {
     input_muted: Option<bool>,
 }
 
+#[derive(StructOpt, Debug, Clone)]
+pub struct LightGroup {
+    #[structopt(short, long)]
+    /// Name of a light group to set values for. Required if setting the value of a light group.
+    pub name: Option<String>,
+
+    #[structopt(short, long)]
+    /// Repeated parameter for a list of simple on/off values to set for a light group.
+    pub simple: Vec<bool>,
+
+    #[structopt(short, long)]
+    /// Repeated parameter for a list of integer brightness values from 0-255 inclusive to set for a
+    /// light group.
+    pub brightness: Vec<u8>,
+
+    #[structopt(short, long, parse(try_from_str = "str_to_rgb"))]
+    /// Repeated parameter for a list of RGB values to set for a light group. Values should be in
+    /// the range of 0-255 inclusive and should be specified as a comma-separated list of the red,
+    /// green, and blue components. Ex. 100,20,23
+    pub rgb: Vec<fidl_fuchsia_ui_types::ColorRgb>,
+}
+
+impl Into<Vec<LightState>> for LightGroup {
+    fn into(self) -> Vec<LightState> {
+        if self.simple.len() > 0 {
+            return self
+                .simple
+                .clone()
+                .into_iter()
+                .map(|val| LightState { value: Some(LightValue::On(val)) })
+                .collect::<Vec<_>>();
+        }
+
+        if self.brightness.len() > 0 {
+            return self
+                .brightness
+                .clone()
+                .into_iter()
+                .map(|val| LightState { value: Some(LightValue::Brightness(val)) })
+                .collect::<Vec<_>>();
+        }
+
+        if self.rgb.len() > 0 {
+            return self
+                .rgb
+                .clone()
+                .into_iter()
+                .map(|val| LightState { value: Some(LightValue::Color(val)) })
+                .collect::<Vec<_>>();
+        }
+
+        return Vec::new();
+    }
+}
+
 pub async fn run_command(command: SettingClient) -> Result<(), Error> {
     match command {
         SettingClient::Device { build_tag } => {
@@ -257,6 +322,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
             println!("Intl: {}", output);
+        }
+        SettingClient::Light { light_group } => {
+            let light_mode_service = connect_to_service::<fidl_fuchsia_settings::LightMarker>()
+                .context("Failed to connect to light service")?;
+            let output = light::command(light_mode_service, light_group).await?;
+            println!("Light: {}", output);
         }
         SettingClient::NightMode { night_mode_enabled } => {
             let night_mode_service = connect_to_service::<fidl_fuchsia_settings::NightModeMarker>()
@@ -359,6 +430,20 @@ fn str_to_color(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgba, &str> {
         }
         _ => return Err("Couldn't parse color"),
     })
+}
+
+/// Converts a comma-separated string of RGB values into a fidl_fuchsia_ui_types::ColorRgb.
+fn str_to_rgb(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgb, &str> {
+    let mut part_iter =
+        src.split(',').map(|p| p.parse::<f32>().map_err(|_| "failed to parse color value"));
+
+    const WRONG_COUNT: &str = "wrong number of values";
+    let color = fidl_fuchsia_ui_types::ColorRgb {
+        red: part_iter.next().unwrap_or_else(|| Err(WRONG_COUNT))?,
+        green: part_iter.next().unwrap_or_else(|| Err(WRONG_COUNT))?,
+        blue: part_iter.next().unwrap_or_else(|| Err(WRONG_COUNT))?,
+    };
+    part_iter.next().map(|_| Err(WRONG_COUNT)).unwrap_or(Ok(color))
 }
 
 fn str_to_font_family(src: &str) -> Result<fidl_fuchsia_settings::CaptionFontFamily, &str> {

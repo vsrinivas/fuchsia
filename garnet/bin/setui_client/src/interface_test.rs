@@ -17,6 +17,7 @@ use {
     setui_client_lib::do_not_disturb,
     setui_client_lib::input,
     setui_client_lib::intl,
+    setui_client_lib::light,
     setui_client_lib::night_mode,
     setui_client_lib::privacy,
     setui_client_lib::setup,
@@ -32,6 +33,7 @@ enum Services {
     DoNotDisturb(DoNotDisturbRequestStream),
     Input(InputRequestStream),
     Intl(IntlRequestStream),
+    Light(LightRequestStream),
     NightMode(NightModeRequestStream),
     Privacy(PrivacyRequestStream),
     Setup(SetupRequestStream),
@@ -147,6 +149,13 @@ async fn main() -> Result<(), Error> {
 
     println!("  client calls set low light mode");
     validate_display(None, None, None, Some(LowLightMode::Enable)).await?;
+
+    println!("light tests");
+    println!(" client calls light set");
+    validate_light_set().await?;
+
+    println!(" client calls light watch");
+    validate_light_watch().await?;
 
     println!("  client calls watch light sensor");
     validate_light_sensor().await?;
@@ -666,6 +675,93 @@ async fn validate_dnd(
 
     do_not_disturb::command(do_not_disturb_service, expected_user_dnd, expected_night_mode_dnd)
         .await?;
+
+    Ok(())
+}
+
+async fn validate_light_set() -> Result<(), Error> {
+    const TEST_NAME: &str = "test_name";
+    const LIGHT_VAL_1: u8 = 20;
+    const LIGHT_VAL_2: u8 = 42;
+
+    let env = create_service!(Services::Light,
+        LightRequest::SetLightGroupValues { name, state, responder } => {
+            assert_eq!(name, TEST_NAME);
+            assert_eq!(state, vec![LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
+            LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }]);
+            responder.send(&mut Ok(()))?;
+        }
+    );
+
+    let light_service =
+        env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
+
+    light::command(
+        light_service,
+        setui_client_lib::LightGroup {
+            name: Some(TEST_NAME.to_string()),
+            simple: vec![],
+            brightness: vec![LIGHT_VAL_1, LIGHT_VAL_2],
+            rgb: vec![],
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+async fn validate_light_watch() -> Result<(), Error> {
+    const TEST_NAME: &str = "test_name";
+    const ENABLED: bool = false;
+    const LIGHT_TYPE: LightType = LightType::Simple;
+    const LIGHT_VAL_1: u8 = 20;
+    const LIGHT_VAL_2: u8 = 42;
+
+    let env = create_service!(Services::Light,
+        LightRequest::WatchLightGroups { responder } => {
+            responder.send(&mut vec![
+                LightGroup {
+                    name: Some(TEST_NAME.to_string()),
+                    enabled: Some(ENABLED),
+                    type_: Some(LIGHT_TYPE),
+                    lights: Some(vec![
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
+                    ])
+                }
+            ].into_iter())?;
+        }
+    );
+
+    let light_service =
+        env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
+
+    let output = light::command(
+        light_service,
+        setui_client_lib::LightGroup {
+            name: None,
+            simple: vec![],
+            brightness: vec![],
+            rgb: vec![],
+        },
+    )
+    .await?;
+
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            vec![LightGroup {
+                name: Some(TEST_NAME.to_string()),
+                enabled: Some(ENABLED),
+                type_: Some(LIGHT_TYPE),
+                lights: Some(vec![
+                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
+                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
+                ])
+            }]
+        )
+    );
 
     Ok(())
 }
