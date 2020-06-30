@@ -214,8 +214,8 @@ impl PlayerApplicationSettings {
     }
 }
 
-impl From<fidl_avrcp::PlayerApplicationSettings> for PlayerApplicationSettings {
-    fn from(src: fidl_avrcp::PlayerApplicationSettings) -> PlayerApplicationSettings {
+impl From<&fidl_avrcp::PlayerApplicationSettings> for PlayerApplicationSettings {
+    fn from(src: &fidl_avrcp::PlayerApplicationSettings) -> PlayerApplicationSettings {
         let mut equalizer: Option<Equalizer> = None;
         let mut repeat_status_mode: Option<RepeatStatusMode> = None;
         let mut shuffle_mode: Option<ShuffleMode> = None;

@@ -10,14 +10,15 @@ use {
     fuchsia_zircon::Duration,
     futures::future::Either,
     parking_lot::Mutex,
+    std::collections::hash_map::Entry::{Occupied, Vacant},
     std::collections::VecDeque,
 };
 
 pub mod browse_channel;
+
 mod decoders;
 
 use decoders::*;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 // Abstraction to assist with unit testing with mocks.
 trait IncomingTargetCommand: std::fmt::Debug {
@@ -279,8 +280,8 @@ fn notification_response(
     // Unsupported events:
     // Probably never: TrackReachedEnd, TrackReachedStart,
     // TODO(47597): Battery/power notifications: BattStatusChanged, SystemStatusChanged,
-    // TODO(2744): Browse channel notifcations: PlayerApplicationSettingChanged,
-    //             NowPlayingContentChanged, AvailablePlayersChanged, and UidsChanged
+    // TODO(2744): Browse channel notifcations: NowPlayingContentChanged, AvailablePlayersChanged,
+    //             and UidsChanged
 
     Ok(match notify_event_id {
         &NotificationEventId::EventPlaybackStatusChanged => {
@@ -308,6 +309,11 @@ fn notification_response(
                 notification.volume.ok_or(StatusCode::InternalError)?,
             ))
         }
+        &NotificationEventId::EventPlayerApplicationSettingChanged => Box::new(
+            PlayerApplicationSettingChangedResponse::from(PlayerApplicationSettings::from(
+                notification.application_settings.as_ref().ok_or(StatusCode::InternalError)?,
+            )),
+        ),
         _ => return Err(StatusCode::InvalidParameter),
     })
 }
@@ -521,7 +527,7 @@ async fn handle_get_current_player_application_setting_value(
             cmd.attribute_ids.into_iter().map(|id| id.into()).collect(),
         )
         .await
-        .map(|v| v.into())
+        .map(|v| PlayerApplicationSettings::from(&v))
         .map_err(|e| StatusCode::from(e))?;
 
     let response: GetCurrentPlayerApplicationSettingValueResponse = current_values.into();

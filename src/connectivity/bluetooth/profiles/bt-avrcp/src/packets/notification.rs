@@ -499,6 +499,120 @@ impl Encodable for AddressedPlayerChangedNotificationResponse {
     }
 }
 
+#[derive(Debug)]
+/// AVRCP 1.6.1 section 6.7.2 RegisterNotification
+pub struct PlayerApplicationSettingChangedResponse {
+    attribute_values: Vec<(PlayerApplicationSettingAttributeId, u8)>,
+}
+
+impl PlayerApplicationSettingChangedResponse {
+    pub fn new(
+        attribute_values: Vec<(PlayerApplicationSettingAttributeId, u8)>,
+    ) -> PlayerApplicationSettingChangedResponse {
+        Self { attribute_values }
+    }
+}
+
+impl VendorDependentPdu for PlayerApplicationSettingChangedResponse {
+    fn pdu_id(&self) -> PduId {
+        PduId::RegisterNotification
+    }
+}
+
+impl Decodable for PlayerApplicationSettingChangedResponse {
+    fn decode(buf: &[u8]) -> PacketResult<Self> {
+        if buf.len() < 2 {
+            return Err(Error::InvalidMessage);
+        }
+
+        if buf[0] != u8::from(&NotificationEventId::EventPlayerApplicationSettingChanged) {
+            return Err(Error::InvalidMessage);
+        }
+
+        let num_values = buf[1];
+        // There must be at least 1 attribute (ID,Value) pair provided.
+        // See AVRCP Sec 6.5.3
+        if num_values < 1 {
+            return Err(Error::InvalidMessageLength);
+        }
+
+        let mut idx = 2;
+        let mut attribute_values = vec![];
+
+        while idx + 1 < buf.len() {
+            let attribute_id: u8 = buf[idx];
+            let value: u8 = buf[idx + 1];
+            attribute_values
+                .push((PlayerApplicationSettingAttributeId::try_from(attribute_id)?, value));
+            idx += 2;
+        }
+
+        if attribute_values.len() != num_values as usize {
+            return Err(Error::InvalidMessage);
+        }
+
+        Ok(Self { attribute_values })
+    }
+}
+
+impl Encodable for PlayerApplicationSettingChangedResponse {
+    fn encoded_len(&self) -> usize {
+        2 + (2 * self.attribute_values.len()) as usize
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
+        if buf.len() < self.encoded_len() {
+            return Err(Error::InvalidMessageLength);
+        }
+
+        buf[0] = u8::from(&NotificationEventId::EventPlayerApplicationSettingChanged);
+
+        let num_values =
+            u8::try_from(self.attribute_values.len()).map_err(|_| Error::ParameterEncodingError)?;
+
+        buf[1] = num_values;
+        let mut idx: usize = 0;
+        let mut buf_idx: usize = 2;
+
+        while idx < num_values as usize {
+            let (id, val) = self.attribute_values[idx];
+            buf[buf_idx] = u8::from(&id);
+            buf[buf_idx + 1] = val;
+            idx += 1;
+            buf_idx += 2;
+        }
+
+        Ok(())
+    }
+}
+
+impl From<PlayerApplicationSettings> for PlayerApplicationSettingChangedResponse {
+    fn from(src: PlayerApplicationSettings) -> PlayerApplicationSettingChangedResponse {
+        let mut values = vec![];
+
+        if let Some(eq) = src.equalizer {
+            values.push((PlayerApplicationSettingAttributeId::Equalizer, u8::from(&eq)))
+        }
+
+        if let Some(repeat_mode) = src.repeat_status_mode {
+            values.push((
+                PlayerApplicationSettingAttributeId::RepeatStatusMode,
+                u8::from(&repeat_mode),
+            ))
+        }
+
+        if let Some(shuffle_mode) = src.shuffle_mode {
+            values.push((PlayerApplicationSettingAttributeId::ShuffleMode, u8::from(&shuffle_mode)))
+        }
+
+        if let Some(scan_mode) = src.scan_mode {
+            values.push((PlayerApplicationSettingAttributeId::ScanMode, u8::from(&scan_mode)))
+        }
+
+        PlayerApplicationSettingChangedResponse::new(values)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -693,5 +807,40 @@ mod tests {
     fn test_addressed_player_changed_invalid() {
         let cmd = AddressedPlayerChangedNotificationResponse::decode(&[0x13, 0xF1]);
         assert_eq!(cmd.unwrap_err(), Error::InvalidMessage);
+    }
+
+    #[test]
+    fn test_player_application_settings_changed_response_encode() {
+        let response_vals = vec![
+            (PlayerApplicationSettingAttributeId::Equalizer, 0x02),
+            (PlayerApplicationSettingAttributeId::RepeatStatusMode, 0x01),
+            (PlayerApplicationSettingAttributeId::ShuffleMode, 0x01),
+        ];
+        let response = PlayerApplicationSettingChangedResponse::new(response_vals);
+        assert_eq!(response.raw_pdu_id(), u8::from(&PduId::RegisterNotification));
+        assert_eq!(response.encoded_len(), 8);
+        let mut buf = vec![0; response.encoded_len()];
+        assert!(response.encode(&mut buf[..]).is_ok());
+        assert_eq!(buf, vec![0x08, 0x03, 0x01, 0x02, 0x02, 0x01, 0x03, 0x01]);
+    }
+
+    #[test]
+    fn test_player_application_settings_changed_response_response_decode() {
+        let result = PlayerApplicationSettingChangedResponse::decode(&[0x08, 0x01, 0x04, 0x02]);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.attribute_values.len(), 1);
+        assert_eq!(
+            result.attribute_values,
+            vec![(PlayerApplicationSettingAttributeId::ScanMode, 0x02)]
+        );
+    }
+
+    #[test]
+    fn test_player_application_settings_changed_response_decode_invalid() {
+        // Malformed result, contains two attributes, but missing second value.
+        let result =
+            PlayerApplicationSettingChangedResponse::decode(&[0x08, 0x02, 0x04, 0x02, 0x03]);
+        assert_eq!(result.unwrap_err(), Error::InvalidMessage);
     }
 }

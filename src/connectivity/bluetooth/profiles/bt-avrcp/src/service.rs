@@ -115,7 +115,9 @@ impl AvrcpClientController {
                 responder.send(
                     &mut self
                         .controller
-                        .set_player_application_settings(requested_settings.into())
+                        .set_player_application_settings(
+                            crate::packets::PlayerApplicationSettings::from(&requested_settings),
+                        )
                         .await
                         .map(|res| res.into())
                         .map_err(ControllerError::from),
