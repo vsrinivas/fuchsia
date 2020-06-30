@@ -161,6 +161,7 @@ pub struct Route {
     pub id: i32,
     pub src_id: i32,
     pub dst_id: i32,
+    pub service_name: String,
     pub protocol_id: i32,
 }
 

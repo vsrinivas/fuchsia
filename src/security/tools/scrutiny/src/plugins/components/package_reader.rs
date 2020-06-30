@@ -114,10 +114,7 @@ impl PackageReader for PackageServerReader {
     }
 
     fn read_builtins(&self) -> Result<BuiltinsJson> {
-        let file = File::open(&format!(
-            "{}/scripts/component_graph/server/static/builtins.json",
-            self.fuchsia_root
-        ))?;
+        let file = File::open(&format!("{}/scripts/scrutiny/builtins.json", self.fuchsia_root))?;
         let mut reader = BufReader::new(file);
 
         Ok(serde_json::from_reader(&mut reader)?)

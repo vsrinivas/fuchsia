@@ -130,7 +130,7 @@ mod tests {
     }
 
     fn make_route(id: i32, src: i32, dst: i32) -> Route {
-        Route { id: id, src_id: src, dst_id: dst, protocol_id: 0 }
+        Route { id, src_id: src, dst_id: dst, service_name: "service".to_string(), protocol_id: 0 }
     }
 
     #[test]

@@ -126,9 +126,9 @@ mod tests {
         assert_eq!(hooks.collectors.len(), 1);
         assert_eq!(hooks.controllers.len(), 1);
         let model = test_model();
-        assert_eq!(hooks.controllers.contains_key("/foo/bar"), true);
+        assert_eq!(hooks.controllers.contains_key("/api/foo/bar"), true);
         assert_eq!(
-            hooks.controllers.get("/foo/bar").unwrap().query(model, json!("")).unwrap(),
+            hooks.controllers.get("/api/foo/bar").unwrap().query(model, json!("")).unwrap(),
             json!("foo")
         );
     }

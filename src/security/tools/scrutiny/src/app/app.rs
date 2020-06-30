@@ -14,17 +14,22 @@ use {
         },
         model::model::DataModel,
         rest::service,
+        rest::visualizer::Visualizer,
     },
     simplelog::{Config, LevelFilter, TermLogger, TerminalMode},
+    std::env,
     std::io::{self, ErrorKind},
     std::sync::{Arc, Mutex, RwLock},
 };
+
+const FUCHSIA_DIR: &str = "FUCHSIA_DIR";
 
 /// Holds a reference to core objects required by the application to run.
 pub struct ScrutinyApp {
     manager: PluginManager,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
     collector: Arc<Mutex<CollectorScheduler>>,
+    visualizer: Arc<RwLock<Visualizer>>,
     args: ArgMatches<'static>,
 }
 
@@ -47,7 +52,11 @@ impl ScrutinyApp {
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         let manager = PluginManager::new(Arc::clone(&collector), Arc::clone(&dispatcher));
-        Ok(Self { manager, dispatcher, collector, args })
+        let visualizer = Arc::new(RwLock::new(Visualizer::new(
+            env::var(FUCHSIA_DIR).expect("Unable to retrieve $FUCHSIA_DIR, has it been set?"),
+            args.value_of("visualizer").unwrap().to_string(),
+        )));
+        Ok(Self { manager, dispatcher, collector, visualizer, args })
     }
 
     /// Parses all the commond line arguments passed in and returns.
@@ -75,6 +84,16 @@ impl ScrutinyApp {
                     .possible_values(&["off", "error", "warn", "info", "debug", "trace"])
                     .default_value("info"),
             )
+            .arg(
+                Arg::with_name("visualizer")
+                    .short("i")
+                    .help(
+                        "The root path (relative to $FUCHSIA_DIR) for the visualizer interface. \
+                    .html, .css, and .json files relative to this root path will \
+                    be served relative to the scrutiny service root.",
+                    )
+                    .default_value("/scripts/scrutiny"),
+            )
             .get_matches()
     }
 
@@ -88,7 +107,7 @@ impl ScrutinyApp {
         self.collector.lock().unwrap().schedule()?;
 
         if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {
-            service::run(self.dispatcher.clone(), port);
+            service::run(self.dispatcher.clone(), self.visualizer.clone(), port);
             Ok(())
         } else {
             error!("Port provided was not a valid port number.");

@@ -36,7 +36,11 @@ macro_rules! controller_hooks {
             let mut _hooks: ::std::collections::HashMap<String,
             std::sync::Arc<dyn crate::model::controller::DataController>> = ::std::collections::HashMap::new();
             $(
-                _hooks.insert(String::from($ns), Arc::new($ctrl));
+                if $ns.starts_with("/") {
+                    _hooks.insert(format!("/api{}", $ns), Arc::new($ctrl));
+                } else {
+                    _hooks.insert(format!("/api/{}", $ns), Arc::new($ctrl));
+                }
             )*
             _hooks
         }}
@@ -65,10 +69,10 @@ mod tests {
     fn test_controller_hooks() {
         let hooks = controller_hooks! {
             "/foo/bar" => FakeController::default(),
-            "/foo/baz" => FakeController::default(),
+            "foo/baz" => FakeController::default(),
         };
-        assert_eq!(hooks.contains_key("/foo/bar"), true);
-        assert_eq!(hooks.contains_key("/foo/baz"), true);
+        assert_eq!(hooks.contains_key("/api/foo/bar"), true);
+        assert_eq!(hooks.contains_key("/api/foo/baz"), true);
         assert_eq!(hooks.len(), 2);
     }
 }

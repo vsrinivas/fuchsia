@@ -152,7 +152,6 @@ impl PackageDataCollector {
 
     /// Function to build the component graph model out of the packages and services retrieved
     /// by this collector.
-    /// TODO: Move this to a DataModel.
     fn build_model(
         served_pkgs: Vec<PackageDefinition>,
         _builtin_pkgs: Vec<PackageDefinition>,
@@ -260,6 +259,7 @@ impl PackageDataCollector {
                     id: route_idx,
                     src_id: mani.component_id,
                     dst_id: target_id,
+                    service_name: service_name.to_string(),
                     protocol_id: 0, // FIXME:
                 });
             }
