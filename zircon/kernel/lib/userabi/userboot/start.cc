@@ -18,6 +18,7 @@
 #include <sys/param.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
 
 #include <array>
@@ -196,11 +197,16 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
     // Map in the bootfs so we can look for files in it.
     zx::vmo bootfs_vmo_dup;
     zx::debuglog log_dup;
+    zx::resource vmex_resource;
     zx_status_t status = bootfs_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &bootfs_vmo_dup);
     check(log, status, "zx_handle_duplicate failed on bootfs VMO handle");
     status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
     check(log, status, "zx_handle_duplicate failed on debuglog handle");
-    Bootfs bootfs{std::move(vmar_self), std::move(bootfs_vmo_dup), std::move(log_dup)};
+    status =
+        zx::resource::create(root_resource, ZX_RSRC_KIND_VMEX, 0, 0, nullptr, 0, &vmex_resource);
+    check(log, status, "zx_resource_create failed");
+    Bootfs bootfs{std::move(vmar_self), std::move(bootfs_vmo_dup), std::move(vmex_resource),
+                  std::move(log_dup)};
 
     // Pass the decompressed bootfs VMO on.
     handles[kBootfsVmo] = bootfs_vmo.release();

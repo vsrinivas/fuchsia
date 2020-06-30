@@ -9,16 +9,16 @@
 #include <string.h>
 #include <zircon/boot/bootfs.h>
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/resource.h>
 
 #include "util.h"
 #include "zircon/rights.h"
 #include "zircon/types.h"
 
-Bootfs::Bootfs(zx::vmar vmar_self, zx::vmo vmo, zx::debuglog log)
-    : vmar_self_(std::move(vmar_self)), log_(std::move(log)) {
-  zx_status_t status =
-      vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY, &vmo_);
+Bootfs::Bootfs(zx::vmar vmar_self, zx::vmo vmo, zx::resource vmex_resource, zx::debuglog log)
+    : vmar_self_(std::move(vmar_self)),
+      vmex_resource_(std::move(vmex_resource)),
+      log_(std::move(log)) {
+  zx_status_t status = vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, &vmo_);
   check(log_, status, "zx_handle_replace failed on bootfs VMO handle");
 
   size_t size;
@@ -87,24 +87,15 @@ zx::vmo Bootfs::Open(const char* root_prefix, const char* filename, const char* 
     fail(log_, "bogus size in bootfs header!");
   }
 
-  // Clone a private copy of the file's subset of the bootfs VMO.
-  // TODO(mcgrathr): Create a plain read-only clone when the feature
-  // is implemented in the VM.
+  // Clone a private, read-only snapshot of the file's subset of the bootfs VMO.
   zx::vmo file_vmo;
-  zx_status_t status =
-      vmo_.create_child(ZX_VMO_CLONE_COPY_ON_WRITE, e->data_off, e->data_len, &file_vmo);
+  zx_status_t status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE, e->data_off,
+                                         e->data_len, &file_vmo);
   check(log_, status, "zx_vmo_create_child failed");
 
   file_vmo.set_property(ZX_PROP_NAME, filename, strlen(filename));
 
-  // Drop unnecessary ZX_RIGHT_WRITE rights.
-  // TODO(mcgrathr): Should be superfluous with read-only zx_vmo_create_child.
-  status = file_vmo.replace(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
-                            &file_vmo);
-  check(log_, status, "zx_handle_replace to remove ZX_RIGHT_WRITE failed");
-
-  // TODO(mdempsky): Restrict to bin/ and lib/.
-  status = file_vmo.replace_as_executable(zx::resource{}, &file_vmo);
+  status = file_vmo.replace_as_executable(vmex_resource_, &file_vmo);
   check(log_, status, "zx_vmo_replace_as_executable failed");
 
   return file_vmo;

@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_USERABI_USERBOOT_BOOTFS_H_
 
 #include <lib/zx/debuglog.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/bootfs.h>
@@ -17,7 +18,7 @@
 
 class Bootfs {
  public:
-  Bootfs(zx::vmar vmar_self, zx::vmo vmo, zx::debuglog log);
+  Bootfs(zx::vmar vmar_self, zx::vmo vmo, zx::resource vmex_resource, zx::debuglog log);
   ~Bootfs();
 
   zx::vmo Open(const char* root_prefix, const char* filename, const char* purpose) const;
@@ -27,6 +28,7 @@ class Bootfs {
 
   zx::vmar vmar_self_;
   zx::vmo vmo_;
+  zx::resource vmex_resource_;
   zx::debuglog log_;
   std::basic_string_view<std::byte> contents_;
 };
