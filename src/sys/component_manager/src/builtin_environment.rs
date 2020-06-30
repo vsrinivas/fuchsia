@@ -64,6 +64,8 @@ use {
 
 // Re-export so that the component_manager binary can see it.
 pub use crate::builtin::time::create_and_start_utc_clock;
+// Allow shutdown to take up to an hour.
+pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60);
 
 // TODO(viktard): Merge Arguments, RuntimeConfig and root_component_url from ModelParams
 #[derive(Default)]
@@ -358,7 +360,7 @@ impl BuiltinEnvironment {
         }
 
         // Set up System Controller service.
-        let system_controller = Arc::new(SystemController::new(model.clone()));
+        let system_controller = Arc::new(SystemController::new(model.clone(), SHUTDOWN_TIMEOUT));
         model.root_realm.hooks.install(system_controller.hooks()).await;
 
         // Set up work scheduler.

@@ -27,6 +27,7 @@ use {
         convert::TryInto,
         path::PathBuf,
         sync::{Arc, Weak},
+        time::Duration,
     },
 };
 
@@ -38,11 +39,12 @@ lazy_static! {
 #[derive(Clone)]
 pub struct SystemController {
     model: Arc<Model>,
+    shutdown_timeout: Duration,
 }
 
 impl SystemController {
-    pub fn new(model: Arc<Model>) -> Self {
-        Self { model }
+    pub fn new(model: Arc<Model>, shutdown_timeout: Duration) -> Self {
+        Self { model, shutdown_timeout }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -62,8 +64,10 @@ impl SystemController {
             InternalCapability::Protocol(capability_path)
                 if *capability_path == *SYSTEM_CONTROLLER_CAPABILITY_PATH =>
             {
-                Ok(Some(Box::new(SystemControllerCapabilityProvider::new(self.model.clone()))
-                    as Box<dyn CapabilityProvider>))
+                Ok(Some(Box::new(SystemControllerCapabilityProvider::new(
+                    self.model.clone(),
+                    self.shutdown_timeout.clone(),
+                )) as Box<dyn CapabilityProvider>))
             }
             _ => Ok(capability_provider),
         }
@@ -89,11 +93,13 @@ impl Hook for SystemController {
 
 pub struct SystemControllerCapabilityProvider {
     model: Arc<Model>,
+    request_timeout: Duration,
 }
 
 impl SystemControllerCapabilityProvider {
-    pub fn new(model: Arc<Model>) -> Self {
-        Self { model }
+    // TODO (jmatt) allow timeout to be supplied in the constructor
+    pub fn new(model: Arc<Model>, request_timeout: Duration) -> Self {
+        Self { model, request_timeout }
     }
 
     async fn open_async(self, mut stream: SystemControllerRequestStream) -> Result<(), Error> {
@@ -112,6 +118,11 @@ impl SystemControllerCapabilityProvider {
                 // exit. main.rs waits on the model to observe the root realm
                 // disappear.
                 SystemControllerRequest::Shutdown { responder } => {
+                    let timeout = zx::Duration::from(self.request_timeout);
+                    fasync::spawn(async move {
+                        fasync::Timer::new(fasync::Time::after(timeout)).await;
+                        panic!("Component manager did not complete shutdown in allowed time.");
+                    });
                     ActionSet::register(self.model.root_realm.clone(), Action::Shutdown)
                         .await
                         .await
@@ -162,14 +173,17 @@ mod tests {
         super::*,
         crate::model::{
             binding::Binder,
+            hooks::{EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
             realm::BindReason,
             testing::test_helpers::{
                 component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder, ComponentInfo,
             },
         },
+        async_trait::async_trait,
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
+        std::{boxed::Box, convert::TryFrom, sync::Arc, time::Duration},
     };
 
     /// Use SystemController to shut down a system whose root has the child `a`
@@ -200,7 +214,11 @@ mod tests {
             .expect("could not bind to a");
 
         // Wire up connections to SystemController
-        let sys_controller = Box::new(SystemControllerCapabilityProvider::new(test.model.clone()));
+        let sys_controller = Box::new(SystemControllerCapabilityProvider::new(
+            test.model.clone(),
+            // allow simulated shutdown to take up to 30 days
+            Duration::from_secs(60 * 60 * 24 * 30),
+        ));
         let (client_channel, server_channel) =
             endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                 .expect("failed creating channel endpoints");
@@ -237,5 +255,90 @@ mod tests {
         realm_b_info.check_is_shut_down(&test.runner).await;
         realm_c_info.check_is_shut_down(&test.runner).await;
         realm_d_info.check_is_shut_down(&test.runner).await;
+    }
+
+    #[test]
+    #[should_panic(expected = "Component manager did not complete shutdown in allowed time.")]
+    fn test_timeout() {
+        const TIMEOUT_SECONDS: i64 = 6;
+        const EVENT_PAUSE_SECONDS: i64 = TIMEOUT_SECONDS + 1;
+        struct StopHook;
+        #[async_trait]
+        impl Hook for StopHook {
+            async fn on(self: Arc<Self>, _event: &Event) -> Result<(), ModelError> {
+                fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(
+                    EVENT_PAUSE_SECONDS.into(),
+                )))
+                .await;
+                Ok(())
+            }
+        }
+
+        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let mut test_logic = Box::pin(async {
+            // Configure and start realm
+            let components = vec![
+                ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),
+                ("a", ComponentDeclBuilder::new().build()),
+            ];
+
+            let s = StopHook {};
+            let s_hook: Arc<dyn Hook> = Arc::new(s);
+            let hooks_reg = HooksRegistration::new(
+                "stop hook",
+                vec![EventType::Stopped],
+                Arc::downgrade(&s_hook),
+            );
+
+            let test = ActionsTest::new_with_hooks("root", components, None, vec![hooks_reg]).await;
+            let realm_a = test.look_up(vec!["a:0"].into()).await;
+            test.model
+                .bind(
+                    &realm_a.abs_moniker,
+                    &BindReason::BindChild { parent: AbsoluteMoniker::root() },
+                )
+                .await
+                .expect("could not bind to a");
+
+            // Wire up connections to SystemController
+            let sys_controller = Box::new(SystemControllerCapabilityProvider::new(
+                test.model.clone(),
+                // require shutdown in a second
+                Duration::from_secs(u64::try_from(TIMEOUT_SECONDS).unwrap()),
+            ));
+            let (client_channel, server_channel) =
+                endpoints::create_endpoints::<fsys::SystemControllerMarker>()
+                    .expect("failed creating channel endpoints");
+            let mut server_channel = server_channel.into_channel();
+            sys_controller
+                .open(0, 0, PathBuf::new(), &mut server_channel)
+                .await
+                .expect("failed to open capability");
+            let controller_proxy =
+                client_channel.into_proxy().expect("failed converting endpoint into proxy");
+
+            let root_realm_info = ComponentInfo::new(test.model.root_realm.clone()).await;
+            let realm_a_info = ComponentInfo::new(realm_a.clone()).await;
+
+            // Check that the root realm is still here
+            root_realm_info.check_not_shut_down(&test.runner).await;
+            realm_a_info.check_not_shut_down(&test.runner).await;
+
+            // Ask the SystemController to shut down the system and wait to be
+            // notified that the room realm stopped.
+            let _completion = test.builtin_environment.wait_for_root_realm_stop();
+            controller_proxy.shutdown().await.expect("shutdown request failed");
+        });
+
+        assert_eq!(std::task::Poll::Pending, exec.run_until_stalled(&mut test_logic));
+
+        let new_time = fasync::Time::from_nanos(
+            exec.now().into_nanos() + zx::Duration::from_seconds(TIMEOUT_SECONDS).into_nanos(),
+        );
+
+        exec.set_fake_time(new_time);
+        exec.wake_expired_timers();
+
+        assert_eq!(std::task::Poll::Pending, exec.run_until_stalled(&mut test_logic));
     }
 }
