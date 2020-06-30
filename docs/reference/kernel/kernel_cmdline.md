@@ -842,6 +842,12 @@ Set the system nodename, as used by `bootserver`, `loglistener`, and the
 human-readable nodename from its MAC address.  This cmdline is honored by
 GigaBoot and Zircon.
 
+## zvb.current\_slot=\<\_a|\_b|\_r>
+
+Makes Fuchsia aware of the slot booted by the bootloader. Setting this also
+informs the paver that ABR is supported, and that it should update the ABR
+metadata.
+
 ## console.path=\<path>
 
 Specify console device path. If not specified device manager will open
