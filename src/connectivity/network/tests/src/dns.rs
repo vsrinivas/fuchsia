@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_netstack as netstack;
-
 use anyhow::Context as _;
 use futures;
 use futures::future::FutureExt;
@@ -124,19 +122,10 @@ async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
         .context("dhcp/Server.SetOption returned error")?;
 
     // Start networking on client environment.
-    let client_iface = client_environment
+    let _client_iface = client_environment
         .join_network::<E, _>(&network, "client-ep", InterfaceConfig::Dhcp)
         .await
         .context("failed to configure client networking")?;
-    let client_netstack = client_environment
-        .connect_to_service::<netstack::NetstackMarker>()
-        .context("failed to connect to netstack service")?;
-    let () = wait_for_interface_up(
-        client_netstack.take_event_stream(),
-        client_iface.id(),
-        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
-    )
-    .await?;
 
     // Send a Router Advertisement with DNS server configurations.
     let fake_ep = network.create_fake_endpoint()?;

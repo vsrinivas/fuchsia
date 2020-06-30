@@ -81,22 +81,18 @@ where
     let environment = sandbox
         .create_netstack_environment::<Netstack2, _>(name)
         .context("failed to create netstack environment")?;
+    // It is important that we create the fake endpoint before we join the
+    // network so no frames transmitted by Netstack are lost.
+    let fake_ep = network.create_fake_endpoint()?;
+
     let iface = environment
         .join_network::<E, _>(&network, name.ethertap_compatible_name(), InterfaceConfig::None)
         .await
         .context("failed to configure networking")?;
-    let fake_ep = network.create_fake_endpoint()?;
 
-    // Wait for the interface to be up.
     let netstack = environment
         .connect_to_service::<netstack::NetstackMarker>()
         .context("failed to connect to netstack service")?;
-    let () = wait_for_interface_up(
-        netstack.take_event_stream(),
-        iface.id(),
-        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
-    )
-    .await?;
 
     return Ok((network, environment, netstack, iface, fake_ep));
 }
