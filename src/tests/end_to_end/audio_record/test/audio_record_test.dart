@@ -126,8 +126,8 @@ void main() {
     // 'audio' utility will capture audio directly from the audio driver for
     // kCaptureDurationSeconds and save it to a WAV file.
     final proc1 = await sl4fDriver.ssh.run(
-        'audio -r $kFramesPerSecond -c $kSamplesPerFrame -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameOne)} $kCaptureDurationSeconds');
-    expect(proc1.exitCode, equals(235)); // ZX_ERR_TIMED_OUT
+        'audio-driver-ctl -r $kFramesPerSecond -c $kSamplesPerFrame -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameOne)} $kCaptureDurationSeconds');
+    expect(proc1.exitCode, equals(0));
 
     File fileOne =
         await _downloadAudioFile(sl4fDriver, dumpDriver, fileNameOne);
@@ -135,8 +135,8 @@ void main() {
 
     String fileNameTwo = 'test_2';
     final proc2 = await sl4fDriver.ssh.run(
-        'audio -r $kFramesPerSecond -c $kSamplesPerFrame -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameTwo)} $kCaptureDurationSeconds');
-    expect(proc2.exitCode, equals(235)); // ZX_ERR_TIMED_OUT
+        'audio-driver-ctl -r $kFramesPerSecond -c $kSamplesPerFrame -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameTwo)} $kCaptureDurationSeconds');
+    expect(proc2.exitCode, equals(0));
     File fileTwo =
         await _downloadAudioFile(sl4fDriver, dumpDriver, fileNameTwo);
     _validateFile(fileTwo);

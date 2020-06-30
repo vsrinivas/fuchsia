@@ -19,7 +19,6 @@ dart_test("audio_record_test") {
       dimensions = {
         device_type = "Astro"
       }
-      tags = [ "e2e-fyi" ]
     },
   ]
 }
