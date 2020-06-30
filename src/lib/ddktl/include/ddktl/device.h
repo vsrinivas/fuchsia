@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 
+#include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
@@ -17,6 +18,7 @@
 #include <ddktl/resume-txn.h>
 #include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
+#include <fbl/span.h>
 
 // ddk::Device<D, ...>
 //
@@ -394,6 +396,79 @@ class Multibindable : public base_mixin {
   }
 };
 
+class DeviceAddArgs {
+ public:
+  DeviceAddArgs(const char* name) { args_.name = name; }
+
+  DeviceAddArgs& set_name(const char* name) {
+    args_.name = name;
+    return *this;
+  }
+  DeviceAddArgs& set_flags(uint32_t flags) {
+    args_.flags = flags;
+    return *this;
+  }
+  DeviceAddArgs& set_props(fbl::Span<zx_device_prop_t> props) {
+    args_.props = props.data();
+    args_.prop_count = static_cast<uint32_t>(props.size());
+    return *this;
+  }
+  DeviceAddArgs& set_proto_id(uint32_t proto_id) {
+    args_.proto_id = proto_id;
+    return *this;
+  }
+  DeviceAddArgs& set_proxy_args(const char* proxy_args) {
+    args_.proxy_args = proxy_args;
+    return *this;
+  }
+  DeviceAddArgs& set_client_remote(zx::channel client_remote) {
+    args_.client_remote = client_remote.release();
+    return *this;
+  }
+  DeviceAddArgs& set_inspect_vmo(zx::vmo inspect_vmo) {
+    args_.inspect_vmo = inspect_vmo.release();
+    return *this;
+  }
+  DeviceAddArgs& set_power_states(fbl::Span<const device_power_state_info_t> power_states) {
+    args_.power_states = power_states.data();
+    args_.power_state_count = static_cast<uint8_t>(power_states.size());
+    return *this;
+  }
+  DeviceAddArgs& set_performance_states(
+      fbl::Span<const device_performance_state_info_t> performance_states) {
+    args_.performance_states = performance_states.data();
+    args_.performance_state_count = static_cast<uint8_t>(performance_states.size());
+    return *this;
+  }
+
+  const device_add_args_t& get() const { return args_; }
+
+ private:
+  device_add_args_t args_ = {};
+};
+
+class DeviceMakeVisibleArgs {
+ public:
+  DeviceMakeVisibleArgs() {}
+
+  DeviceMakeVisibleArgs& set_power_states(fbl::Span<const device_power_state_info_t> power_states) {
+    args_.power_states = power_states.data();
+    args_.power_state_count = static_cast<uint8_t>(power_states.size());
+    return *this;
+  }
+  DeviceMakeVisibleArgs& set_performance_states(
+      fbl::Span<const device_performance_state_info_t> performance_states) {
+    args_.performance_states = performance_states.data();
+    args_.performance_state_count = static_cast<uint8_t>(performance_states.size());
+    return *this;
+  }
+
+  const device_make_visible_args_t& get() const { return args_; }
+
+ private:
+  device_make_visible_args_t args_ = {};
+};
+
 // Device is templated on the list of mixins that define which DDK device
 // methods are implemented. Note that internal::base_device *must* be the
 // left-most base class in order to ensure that its constructor runs before the
@@ -417,6 +492,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
     return device_add(this->parent_, &args, &this->zxdev_);
   }
+
+  zx_status_t DdkAdd(DeviceAddArgs args) { return DdkAdd(args.get().name, args.get()); }
 
   zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
                      uint32_t prop_count = 0, uint32_t proto_id = 0,
@@ -446,15 +523,12 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_add_composite(this->parent_, name, comp_desc);
   }
 
-  void DdkMakeVisible(const device_power_state_info_t* power_states = nullptr,
-                      const uint8_t power_state_count = 0,
-                      const device_performance_state_info_t* perf_power_states = nullptr,
-                      const uint8_t perf_power_state_count = 0) {
+  void DdkMakeVisible(const DeviceMakeVisibleArgs& args) {
+    device_make_visible(zxdev(), &args.get());
+  }
+
+  void DdkMakeVisible() {
     device_make_visible_args_t args = {};
-    args.power_states = power_states;
-    args.power_state_count = power_state_count;
-    args.performance_states = perf_power_states;
-    args.performance_state_count = perf_power_state_count;
     device_make_visible(zxdev(), &args);
   }
 
