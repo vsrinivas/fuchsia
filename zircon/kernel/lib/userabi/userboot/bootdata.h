@@ -8,9 +8,11 @@
 #define ZIRCON_KERNEL_LIB_USERABI_USERBOOT_BOOTDATA_H_
 
 #include <lib/zx/debuglog.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
-zx_handle_t bootdata_get_bootfs(const zx::debuglog& log, zx_handle_t vmar_self, zx_handle_t job,
-                                zx_handle_t bootdata_vmo);
+zx::vmo bootdata_get_bootfs(const zx::debuglog& log, const zx::vmar& vmar_self,
+                            const zx::vmo& bootdata_vmo);
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_BOOTDATA_H_

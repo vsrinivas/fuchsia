@@ -23,9 +23,9 @@
 
 #define INTERP_PREFIX "lib/"
 
-static zx_vaddr_t load(const zx::debuglog& log, const char* what, zx_handle_t vmar,
+static zx_vaddr_t load(const zx::debuglog& log, const char* what, const zx::vmar& vmar,
                        const zx::vmo& vmo, uintptr_t* interp_off, size_t* interp_len,
-                       zx_handle_t* segments_vmar, size_t* stack_size, bool return_entry) {
+                       zx::vmar* segments_vmar, size_t* stack_size, bool return_entry) {
   elf_load_header_t header;
   uintptr_t phoff;
   zx_status_t status = elf_load_prepare(vmo.get(), NULL, 0, &header, &phoff);
@@ -46,14 +46,15 @@ static zx_vaddr_t load(const zx::debuglog& log, const char* what, zx_handle_t vm
   }
 
   zx_vaddr_t base, entry;
-  status = elf_load_map_segments(vmar, &header, phdrs, vmo.get(), segments_vmar, &base, &entry);
+  zx_handle_t* vmar_ptr = (segments_vmar) ? segments_vmar->reset_and_get_address() : NULL;
+  status = elf_load_map_segments(vmar.get(), &header, phdrs, vmo.get(), vmar_ptr, &base, &entry);
   check(log, status, "elf_load_map_segments failed");
 
   printl(log, "userboot: loaded %s at %p, entry point %p\n", what, (void*)base, (void*)entry);
   return return_entry ? entry : base;
 }
 
-zx_vaddr_t elf_load_vmo(const zx::debuglog& log, zx_handle_t vmar, const zx::vmo& vmo) {
+zx_vaddr_t elf_load_vdso(const zx::debuglog& log, const zx::vmar& vmar, const zx::vmo& vmo) {
   return load(log, "vDSO", vmar, vmo, NULL, NULL, NULL, NULL, false);
 }
 
@@ -77,10 +78,10 @@ struct loader_bootstrap_message {
   char env[sizeof(LOADER_BOOTSTRAP_ENVIRON)];
 };
 
-static void stuff_loader_bootstrap(const zx::debuglog& log, zx_handle_t proc, zx_handle_t root_vmar,
-                                   zx_handle_t thread, zx_handle_t to_child,
-                                   zx_handle_t segments_vmar, zx::vmo vmo,
-                                   zx_handle_t* loader_svc) {
+static void stuff_loader_bootstrap(const zx::debuglog& log, const zx::process& proc,
+                                   const zx::vmar& root_vmar, const zx::thread& thread,
+                                   const zx::channel& to_child, zx::vmar segments_vmar, zx::vmo vmo,
+                                   zx::channel* loader_svc) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
   struct loader_bootstrap_message msg = {
@@ -105,37 +106,36 @@ static void stuff_loader_bootstrap(const zx::debuglog& log, zx_handle_t proc, zx
       .env = LOADER_BOOTSTRAP_ENVIRON,
   };
 #pragma GCC diagnostic pop
-  // clang-format off
   zx_handle_t handles[] = {
       [BOOTSTRAP_EXEC_VMO] = vmo.release(),
       [BOOTSTRAP_LOGGER] = ZX_HANDLE_INVALID,
       [BOOTSTRAP_PROC] = ZX_HANDLE_INVALID,
       [BOOTSTRAP_ROOT_VMAR] = ZX_HANDLE_INVALID,
-      [BOOTSTRAP_SEGMENTS_VMAR] = segments_vmar,
+      [BOOTSTRAP_SEGMENTS_VMAR] = segments_vmar.release(),
       [BOOTSTRAP_THREAD] = ZX_HANDLE_INVALID,
       [BOOTSTRAP_LOADER_SVC] = ZX_HANDLE_INVALID,
   };
-  // clang-format on
   check(log, zx_handle_duplicate(log.get(), ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_LOGGER]),
         "zx_handle_duplicate failed");
-  check(log, zx_handle_duplicate(proc, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_PROC]),
+  check(log, zx_handle_duplicate(proc.get(), ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_PROC]),
         "zx_handle_duplicate failed");
-  check(log, zx_handle_duplicate(root_vmar, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_ROOT_VMAR]),
+  check(log,
+        zx_handle_duplicate(root_vmar.get(), ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_ROOT_VMAR]),
         "zx_handle_duplicate failed");
-  check(log, zx_handle_duplicate(thread, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_THREAD]),
+  check(log, zx_handle_duplicate(thread.get(), ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_THREAD]),
         "zx_handle_duplicate failed");
-  check(log, zx_channel_create(0, loader_svc, &handles[BOOTSTRAP_LOADER_SVC]),
+  check(log,
+        zx_channel_create(0, loader_svc->reset_and_get_address(), &handles[BOOTSTRAP_LOADER_SVC]),
         "zx_channel_create failed");
 
-  zx_status_t status =
-      zx_channel_write(to_child, 0, &msg, sizeof(msg), handles, std::size(handles));
+  zx_status_t status = to_child.write(0, &msg, sizeof(msg), handles, std::size(handles));
   check(log, status, "zx_channel_write of loader bootstrap message failed");
 }
 
 zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs, const char* root_prefix,
-                           zx_handle_t proc, zx_handle_t vmar, zx_handle_t thread,
-                           const char* filename, zx_handle_t to_child, size_t* stack_size,
-                           zx_handle_t* loader_svc) {
+                           const zx::process& proc, const zx::vmar& vmar, const zx::thread& thread,
+                           const char* filename, const zx::channel& to_child, size_t* stack_size,
+                           zx::channel* loader_svc) {
   zx::vmo vmo = bootfs.Open(root_prefix, filename, "program");
 
   uintptr_t interp_off = 0;
@@ -153,11 +153,11 @@ zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs, const 
     printl(log, "'%s' has PT_INTERP \"%s\"", filename, interp);
 
     zx::vmo interp_vmo = bootfs.Open(root_prefix, interp, "dynamic linker");
-    zx_handle_t interp_vmar;
+    zx::vmar interp_vmar;
     entry = load(log, interp, vmar, interp_vmo, NULL, NULL, &interp_vmar, NULL, true);
 
-    stuff_loader_bootstrap(log, proc, vmar, thread, to_child, interp_vmar, std::move(vmo),
-                           loader_svc);
+    stuff_loader_bootstrap(log, proc, vmar, thread, to_child, std::move(interp_vmar),
+                           std::move(vmo), loader_svc);
   }
   return entry;
 }

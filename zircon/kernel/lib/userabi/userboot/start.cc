@@ -40,7 +40,7 @@ constexpr const char kStackVmoName[] = "userboot-child-initial-stack";
 
 using namespace userboot;
 
-[[noreturn]] void do_powerctl(const zx::debuglog& log, zx_handle_t rroot, uint32_t reason) {
+[[noreturn]] void do_powerctl(const zx::debuglog& log, const zx::resource& rroot, uint32_t reason) {
   const char* r_str = (reason == ZX_SYSTEM_POWERCTL_SHUTDOWN) ? "poweroff" : "reboot";
   if (reason == ZX_SYSTEM_POWERCTL_REBOOT) {
     printl(log, "Waiting 3 seconds...");
@@ -48,24 +48,24 @@ using namespace userboot;
   }
 
   printl(log, "Process exited.  Executing \"%s\".", r_str);
-  zx_system_powerctl(rroot, reason, NULL);
+  zx_system_powerctl(rroot.get(), reason, NULL);
   printl(log, "still here after %s!", r_str);
   while (true)
     __builtin_trap();
 }
 
 void load_child_process(const zx::debuglog& log, const struct options* o, const Bootfs& bootfs,
-                        const char* root_prefix, const zx::vmo& vdso_vmo, zx_handle_t proc,
-                        zx_handle_t vmar, zx_handle_t thread, zx_handle_t to_child,
+                        const char* root_prefix, const zx::vmo& vdso_vmo, const zx::process& proc,
+                        const zx::vmar& vmar, const zx::thread& thread, const zx::channel& to_child,
                         zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
-                        zx_handle_t* loader_svc) {
+                        zx::channel* loader_svc) {
   // Examine the bootfs image and find the requested file in it.
   // This will handle a PT_INTERP by doing a second lookup in bootfs.
   *entry = elf_load_bootfs(log, bootfs, root_prefix, proc, vmar, thread, o->value[OPTION_FILENAME],
                            to_child, stack_size, loader_svc);
 
   // Now load the vDSO into the child, so it has access to system calls.
-  *vdso_base = elf_load_vmo(log, vmar, vdso_vmo);
+  *vdso_base = elf_load_vdso(log, vmar, vdso_vmo);
 }
 
 // Reserve roughly the low half of the address space, so the initial
@@ -75,18 +75,19 @@ void load_child_process(const zx::debuglog& log, const struct options* o, const 
 // allocating the initial stack) stay out of this area, and then destroyed.
 // The process's own allocations can then use the full address space; if
 // it's using a sanitizer, it will set up its shadow memory first thing.
-zx_handle_t reserve_low_address_space(const zx::debuglog& log, zx_handle_t root_vmar) {
+zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root_vmar) {
   zx_info_vmar_t info;
-  check(log, zx_object_get_info(root_vmar, ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
+  check(log, root_vmar.get_info(ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
         "zx_object_get_info failed on child root VMAR handle");
-  zx_handle_t vmar;
+  zx::vmar vmar;
   uintptr_t addr;
   size_t reserve_size = (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
   zx_status_t status =
-      zx_vmar_allocate(root_vmar, ZX_VM_SPECIFIC, 0, reserve_size - info.base, &vmar, &addr);
+      root_vmar.allocate2(ZX_VM_SPECIFIC, 0, reserve_size - info.base, &vmar, &addr);
   check(log, status, "zx_vmar_allocate failed for low address space reservation");
-  if (addr != info.base)
+  if (addr != info.base) {
     fail(log, "zx_vmar_allocate gave wrong address?!?");
+  }
   return vmar;
 }
 
@@ -187,7 +188,7 @@ zx_handle_t reserve_low_address_space(const zx::debuglog& log, zx_handle_t root_
   // Locate the first bootfs bootdata section and decompress it.
   // We need it to load devmgr and libc from.
   // Later bootfs sections will be processed by devmgr.
-  zx::vmo bootfs_vmo{bootdata_get_bootfs(log, vmar_self.get(), handles[kRootJob], handles[kZbi])};
+  zx::vmo bootfs_vmo{bootdata_get_bootfs(log, vmar_self, *zx::unowned_vmo{handles[kZbi]})};
 
   zx::process proc;
   {
@@ -237,14 +238,13 @@ zx_handle_t reserve_low_address_space(const zx::debuglog& log, zx_handle_t root_
 
     // Create the process itself.
     zx::vmar vmar;
-    zx::unowned_job root_job{handles[kRootJob]};
     const char* filename = o.value[OPTION_FILENAME];
-    status = zx::process::create(*root_job, filename, static_cast<uint32_t>(strlen(filename)), 0,
-                                 &proc, &vmar);
+    status = zx::process::create(*zx::unowned_job{handles[kRootJob]}, filename,
+                                 static_cast<uint32_t>(strlen(filename)), 0, &proc, &vmar);
     check(log, status, "zx_process_create");
 
     // Squat on some address space before we start loading it up.
-    zx::vmar reserve_vmar{reserve_low_address_space(log, vmar.get())};
+    zx::vmar reserve_vmar{reserve_low_address_space(log, vmar)};
 
     // Create the initial thread in the new process
     zx::thread thread;
@@ -256,9 +256,9 @@ zx_handle_t reserve_low_address_space(const zx::debuglog& log, zx_handle_t root_
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     zx::channel loader_service_channel;
-    load_child_process(log, &o, bootfs, root_prefix, *zx::unowned_vmo{handles[kFirstVdso]},
-                       proc.get(), vmar.get(), thread.get(), to_child.get(), &entry, &vdso_base,
-                       &stack_size, loader_service_channel.reset_and_get_address());
+    load_child_process(log, &o, bootfs, root_prefix, *zx::unowned_vmo{handles[kFirstVdso]}, proc,
+                       vmar, thread, to_child, &entry, &vdso_base, &stack_size,
+                       &loader_service_channel);
 
     // Allocate the stack for the child.
     uintptr_t sp;
@@ -338,9 +338,9 @@ zx_handle_t reserve_low_address_space(const zx::debuglog& log, zx_handle_t root_
       printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
     }
     if (o.value[OPTION_REBOOT]) {
-      do_powerctl(log, root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT);
+      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_REBOOT);
     } else if (o.value[OPTION_SHUTDOWN]) {
-      do_powerctl(log, root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN);
+      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
     }
   }
 
@@ -349,7 +349,7 @@ zx_handle_t reserve_low_address_space(const zx::debuglog& log, zx_handle_t root_
 
   printl(log, "finished!");
   zx_process_exit(0);
-}
+}  // namespace
 
 }  // anonymous namespace
 
