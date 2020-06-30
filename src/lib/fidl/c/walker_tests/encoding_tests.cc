@@ -348,38 +348,48 @@ bool encode_single_present_handle_unaligned_error() {
   END_TEST;
 }
 
-// TODO(fxb/55300): This test fails under UBSan
-// template <Mode mode>
-// bool encode_present_nonnullable_string_unaligned_error() {
-//   BEGIN_TEST;
+template <Mode mode>
+bool encode_present_nonnullable_string_unaligned_error() {
+  BEGIN_TEST;
 
-//   unbounded_nonnullable_string_message_layout message = {};
-//   message.inline_struct.string = fidl_string_t{6, &message.data[0]};
-//   memcpy(message.data, "hello!", 6);
+  unbounded_nonnullable_string_message_layout message = {};
+  message.inline_struct.string = fidl_string_t{6, &message.data[0]};
+  memcpy(message.data, "hello!", 6);
 
-//   // Copy the message to unaligned storage one byte off from true alignment
-//   unbounded_nonnullable_string_message_layout message_storage[2];
-//   uint8_t* unaligned_ptr = reinterpret_cast<uint8_t*>(&message_storage[0]) + 1;
-//   memcpy(unaligned_ptr, &message, sizeof(message));
-//   auto unaligned_msg =
-//       reinterpret_cast<unbounded_nonnullable_string_message_layout*>(unaligned_ptr);
-//   unaligned_msg->inline_struct.string.data = &unaligned_msg->data[0];
+  // Copy the message to unaligned storage one byte off from true alignment
+  uint8_t message_storage[sizeof(unbounded_nonnullable_string_message_layout) + 1];
+  auto* unaligned_ptr = &message_storage[0] + 1;
+  memcpy(unaligned_ptr, &message, sizeof(message));
 
-//   uint8_t buf[sizeof(unbounded_nonnullable_string_message_layout)];
+  // Pointer patch the copied message
+  // NOTE: this code must be kept in sync with the layout in fidl_structs.h.
+  // The offset is calculated manually because casting to the layout type and
+  // accessing its members leads to an unaligned access error with UBSan
+  // (see fxb/55300)
+  auto* string_data_ptr = unaligned_ptr +
+                          offsetof(unbounded_nonnullable_string_inline_data, string) +
+                          offsetof(fidl_string_t, data);
+  auto patched_ptr_val = reinterpret_cast<uintptr_t>(
+      unaligned_ptr + offsetof(unbounded_nonnullable_string_message_layout, data));
+  memcpy(string_data_ptr, &patched_ptr_val, sizeof(patched_ptr_val));
 
-//   const char* error = nullptr;
-//   uint32_t actual_bytes = 0u;
-//   uint32_t actual_handles = 0u;
-//   auto status =
-//       encode_helper<mode>(&unbounded_nonnullable_string_message_type, unaligned_msg, buf,
-//                           ArrayCount(buf), nullptr, 0, &actual_bytes, &actual_handles, &error);
+  uint8_t buf[sizeof(unbounded_nonnullable_string_message_layout)];
 
-//   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-//   EXPECT_NONNULL(error);
-//   ASSERT_STR_STR(error, "must be aligned to FIDL_ALIGNMENT");
+  const char* error = nullptr;
+  uint32_t actual_bytes = 0u;
+  uint32_t actual_handles = 0u;
+  auto unaligned_msg =
+      reinterpret_cast<unbounded_nonnullable_string_message_layout*>(unaligned_ptr);
+  auto status =
+      encode_helper<mode>(&unbounded_nonnullable_string_message_type, unaligned_msg, buf,
+                          ArrayCount(buf), nullptr, 0, &actual_bytes, &actual_handles, &error);
 
-//   END_TEST;
-// }
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_NONNULL(error);
+  ASSERT_STR_STR(error, "must be aligned to FIDL_ALIGNMENT");
+
+  END_TEST;
+}
 
 template <Mode mode>
 bool encode_single_present_handle() {
@@ -2390,12 +2400,11 @@ RUN_TEST(encode_too_many_bytes_specified_should_close_handles);
 #endif
 END_TEST_CASE(buffer_sizes)
 
-// TODO(fxb/55300): Some alignment errors are caught by UBSan
 BEGIN_TEST_CASE(unaligned)
 RUN_TEST(encode_single_present_handle_unaligned_error<Mode::EncodeOnly>)
-// RUN_TEST(encode_present_nonnullable_string_unaligned_error<Mode::EncodeOnly>)
+RUN_TEST(encode_present_nonnullable_string_unaligned_error<Mode::EncodeOnly>)
 RUN_TEST(encode_single_present_handle_unaligned_error<Mode::LinearizeAndEncode>)
-// RUN_TEST(encode_present_nonnullable_string_unaligned_error<Mode::LinearizeAndEncode>)
+RUN_TEST(encode_present_nonnullable_string_unaligned_error<Mode::LinearizeAndEncode>)
 END_TEST_CASE(unaligned)
 
 BEGIN_TEST_CASE(handles)
