@@ -7,7 +7,6 @@
             "hub"
         ],
         "services": [
-            "fuchsia.device.manager.Administrator",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher"
         ]
