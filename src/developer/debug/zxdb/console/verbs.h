@@ -54,6 +54,7 @@ enum class Verb {
   kEnable,
   kFinish,
   kGet,
+  kHandle,
   kHelp,
   kJump,
   kKill,

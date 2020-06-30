@@ -58,7 +58,6 @@ Err RunVerbPrint(ConsoleContext* context, const Command& cmd) {
   if (options.has_error())
     return options.err();
 
-  auto data_provider = eval_context->GetDataProvider();
   return EvalCommandExpression(
       cmd, "print", eval_context, false, false,
       [options = options.value(), eval_context](ErrOrValue value) {

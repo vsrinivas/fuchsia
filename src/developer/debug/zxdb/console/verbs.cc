@@ -24,6 +24,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_down.h"
 #include "src/developer/debug/zxdb/console/commands/verb_enable.h"
 #include "src/developer/debug/zxdb/console/commands/verb_finish.h"
+#include "src/developer/debug/zxdb/console/commands/verb_handle.h"
 #include "src/developer/debug/zxdb/console/commands/verb_help.h"
 #include "src/developer/debug/zxdb/console/commands/verb_jump.h"
 #include "src/developer/debug/zxdb/console/commands/verb_kill.h"
@@ -130,6 +131,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kDown] = GetDownVerbRecord();
     all_verbs[Verb::kEnable] = GetEnableVerbRecord();
     all_verbs[Verb::kFinish] = GetFinishVerbRecord();
+    all_verbs[Verb::kHandle] = GetHandleVerbRecord();
     all_verbs[Verb::kHelp] = GetHelpVerbRecord();
     all_verbs[Verb::kJump] = GetJumpVerbRecord();
     all_verbs[Verb::kKill] = GetKillVerbRecord();

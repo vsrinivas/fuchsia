@@ -15,6 +15,8 @@ static_library("shared") {
     "buffered_fd.h",
     "component_utils.cc",
     "component_utils.h",
+    "handle_info.cc",
+    "handle_info.h",
     "message_loop.cc",
     "message_loop.h",
     "regex.cc",
@@ -76,6 +78,7 @@ source_set("tests") {
   sources = [
     "address_range_unittest.cc",
     "component_utils_unittest.cc",
+    "handle_info_unittest.cc",
     "message_loop_unittest.cc",
     "regex_unittest.cc",
     "stream_buffer_unittest.cc",
