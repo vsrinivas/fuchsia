@@ -24,6 +24,7 @@ class PerfTestHelper {
   sl4f.Sl4f sl4fDriver;
   sl4f.Performance performance;
   sl4f.Storage storage;
+  sl4f.Component component;
 
   Future<void> setUp() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
@@ -34,6 +35,7 @@ class PerfTestHelper {
     });
     performance = sl4f.Performance(sl4fDriver);
     storage = sl4f.Storage(sl4fDriver);
+    component = sl4f.Component(sl4fDriver);
   }
 
   static Future<PerfTestHelper> make() async {
