@@ -5,6 +5,7 @@
                 "fuchsia.accessibility.ColorTransform": "fuchsia-pkg://fuchsia.com/a11_manager#meta/a11_manager.cmx",
                 "fuchsia.accessibility.Magnifier": "fuchsia-pkg://fuchsia.com/a11_manager#meta/a11_manager.cmx",
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
+                "fuchsia.memorypressure.Provider": "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx",
                 "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.InputDeviceRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
@@ -15,6 +16,8 @@
                 "fuchsia.web.ContextProvider": "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"
             },
             "system-services": [
+                "fuchsia.device.NameProvider",
+                "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
                 "fuchsia.posix.socket.Provider",
@@ -33,9 +36,12 @@
         "services": [
             "fuchsia.accessibility.ColorTransform",
             "fuchsia.accessibility.Magnifier",
+            "fuchsia.device.NameProvider",
             "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
             "fuchsia.process.Launcher",
