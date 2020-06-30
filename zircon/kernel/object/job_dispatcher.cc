@@ -124,7 +124,7 @@ fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
   return job;
 }
 
-zx_status_t JobDispatcher::Create(uint32_t flags, fbl::RefPtr<JobDispatcher> parent,
+zx_status_t JobDispatcher::Create(uint32_t flags, const fbl::RefPtr<JobDispatcher>& parent,
                                   KernelHandle<JobDispatcher>* handle, zx_rights_t* rights) {
   if (parent != nullptr && parent->max_height() == 0) {
     // The parent job cannot have children.
@@ -529,14 +529,15 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
     // analysis.
     AssertHeld(*get_lock());
 
-    proc_refs = ForEachChildInLocked(procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
-      return je->OnProcess(proc.get()) ? ZX_OK : ZX_ERR_STOP;
-    });
+    proc_refs =
+        ForEachChildInLocked(procs_, &result, [&](const fbl::RefPtr<ProcessDispatcher>& proc) {
+          return je->OnProcess(proc.get()) ? ZX_OK : ZX_ERR_STOP;
+        });
     if (result != ZX_OK) {
       return false;
     }
 
-    jobs_refs = ForEachChildInLocked(jobs_, &result, [&](fbl::RefPtr<JobDispatcher> job) {
+    jobs_refs = ForEachChildInLocked(jobs_, &result, [&](const fbl::RefPtr<JobDispatcher>& job) {
       if (!je->OnJob(job.get())) {
         return ZX_ERR_STOP;
       }

@@ -83,7 +83,7 @@ class JobDispatcher final
   using ListTag = internal::JobDispatcherListTag;
 
   static fbl::RefPtr<JobDispatcher> CreateRootJob();
-  static zx_status_t Create(uint32_t flags, fbl::RefPtr<JobDispatcher> parent,
+  static zx_status_t Create(uint32_t flags, const fbl::RefPtr<JobDispatcher>& parent,
                             KernelHandle<JobDispatcher>* handle, zx_rights_t* rights);
 
   ~JobDispatcher() final;
