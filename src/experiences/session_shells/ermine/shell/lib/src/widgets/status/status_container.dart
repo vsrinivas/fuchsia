@@ -25,42 +25,39 @@ class StatusContainer extends StatelessWidget {
         : MediaQuery.of(context).size.height -
             ErmineStyle.kTopBarHeight -
             ErmineStyle.kStoryTitleHeight;
-    final status = Material(
-      key: model.statusModel.key,
-      color: ErmineStyle.kBackgroundColor,
-      elevation: Elevations.systemOverlayElevation,
-      child: Container(
-        width: 450,
-        height: 300,
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(color: ErmineStyle.kOverlayBorderColor),
-        ),
-        child: Status(model: model.statusModel),
-      ),
-    );
-    return RepaintBoundary(
-      child: Stack(
-        children: <Widget>[
-          AnimatedBuilder(
-            animation: model.statusVisibility,
-            builder: (context, child) => model.statusVisibility.value
-                ? Positioned(
-                    bottom: bottom(),
-                    right: model.topbarModel.statusButtonRect.right,
-                    child: AnimationDriver(
-                      tween:
-                          Tween<Offset>(begin: Offset(0, 0), end: Offset(0, 1)),
-                      builder: (context, animation) => FractionalTranslation(
-                        translation: animation.value,
-                        child: status,
-                      ),
-                    ),
-                  )
-                : Offstage(),
+    return AnimatedBuilder(
+      animation: model.statusVisibility,
+      child: Material(
+        key: model.statusModel.key,
+        color: ErmineStyle.kBackgroundColor,
+        elevation: Elevations.systemOverlayElevation,
+        child: Container(
+          width: 450,
+          height: 300,
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: ErmineStyle.kOverlayBorderColor),
           ),
-        ],
+          child: Status(model: model.statusModel),
+        ),
       ),
+      builder: (context, child) {
+        return model.statusVisibility.value
+            ? Positioned(
+                bottom: bottom(),
+                right: model.topbarModel.statusButtonRect.right,
+                child: AnimationDriver(
+                  tween: Tween<Offset>(begin: Offset.zero, end: Offset(0, 1)),
+                  curve: ErmineStyle.kScreenAnimationCurve,
+                  duration: ErmineStyle.kScreenAnimationDuration,
+                  builder: (context, animation) => FractionalTranslation(
+                    translation: animation.value,
+                    child: child,
+                  ),
+                ),
+              )
+            : Offstage();
+      },
     );
   }
 }
