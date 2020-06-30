@@ -3373,10 +3373,6 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // official way, especially if doing so would print a timestamp automatically
   // and/or provide filtering goodness etc.
   const char* message = is_fatal ? "devhost will fail" : "Codec channel will close async";
-  // Logs to syslog for non-driver clients
-  FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
-  // Default logging to stderr for both driver and non-driver clients
-  LOG(ERROR, "%s -- %s", buffer.get(), message);
 
   // TODO(dustingreen): Send string in buffer via epitaph, when possible.  First
   // we should switch to events so we'll only have the Codec channel not the
@@ -3384,8 +3380,18 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // with trying to send.
 
   if (is_fatal) {
+    // Logs to syslog for non-driver clients
+    FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
+    // Default logging to stderr for both driver and non-driver clients
+    LOG(ERROR, "%s -- %s", buffer.get(), message);
+
     abort();
   } else {
+    // Logs to syslog for non-driver clients
+    FX_LOGS(WARNING) << buffer.get() << " -- " << message << "\n";
+    // Default logging to stderr for both driver and non-driver clients
+    LOG(WARNING, "%s -- %s", buffer.get(), message);
+
     UnbindLocked();
   }
 
