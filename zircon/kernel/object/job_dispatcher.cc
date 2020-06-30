@@ -30,13 +30,13 @@ static constexpr uint32_t kRootJobMaxHeight = 32;
 static constexpr char kRootJobName[] = "root";
 
 template <>
-uint32_t JobDispatcher::ChildCountLocked<JobDispatcher>() const {
-  return job_count_;
+uint64_t JobDispatcher::ChildCountLocked<JobDispatcher>() const {
+  return jobs_.size();
 }
 
 template <>
-uint32_t JobDispatcher::ChildCountLocked<ProcessDispatcher>() const {
-  return process_count_;
+uint64_t JobDispatcher::ChildCountLocked<ProcessDispatcher>() const {
+  return procs_.size();
 }
 
 // To come up with an order on our recursive locks we take advantage of the fact that our
@@ -77,7 +77,7 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(T& children, zx
   //   - alive, with refcount > 0
   //   - in destruction process but blocked, refcount == 0
 
-  const uint32_t count = ChildCountLocked<typename T::ValueType>();
+  const uint64_t count = ChildCountLocked<typename T::ValueType>();
 
   if (!count) {
     *result = ZX_OK;
@@ -152,8 +152,6 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/, fbl::RefPtr<JobDispatcher> pare
       parent_(ktl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),
-      process_count_(0u),
-      job_count_(0u),
       return_code_(0),
       kill_on_oom_(false),
       policy_(policy),
@@ -176,8 +174,7 @@ bool JobDispatcher::AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& proces
   if (state_ != State::READY)
     return false;
   procs_.push_back(process.get());
-  ++process_count_;
-  UpdateSignalsIncrementLocked();
+  UpdateSignalsLocked();
   return true;
 }
 
@@ -201,8 +198,7 @@ bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
   DEBUG_ASSERT(neighbor != job.get());
 
   jobs_.push_back(job.get());
-  ++job_count_;
-  UpdateSignalsIncrementLocked();
+  UpdateSignalsLocked();
   return true;
 }
 
@@ -218,8 +214,7 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
       return;
     }
     procs_.erase(*process);
-    --process_count_;
-    UpdateSignalsDecrementLocked();
+    UpdateSignalsLocked();
     should_die = IsReadyForDeadTransitionLocked();
 
     // Aggregate runtime stats from exiting process.
@@ -241,8 +236,8 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
     }
 
     jobs_.erase(*job);
-    --job_count_;
-    UpdateSignalsDecrementLocked();
+    jobs_.size();
+    UpdateSignalsLocked();
     should_die = IsReadyForDeadTransitionLocked();
   }
 
@@ -264,7 +259,7 @@ void JobDispatcher::RemoveFromJobTreesUnlocked() {
 
 bool JobDispatcher::IsReadyForDeadTransitionLocked() {
   canary_.Assert();
-  return state_ == State::KILLING && job_count_ == 0 && process_count_ == 0;
+  return state_ == State::KILLING && jobs_.is_empty() && procs_.is_empty();
 }
 
 void JobDispatcher::FinishDeadTransitionUnlocked() {
@@ -288,46 +283,25 @@ void JobDispatcher::FinishDeadTransitionUnlocked() {
   RemoveFromJobTreesUnlocked();
 }
 
-void JobDispatcher::UpdateSignalsDecrementLocked() {
-  canary_.Assert();
+void JobDispatcher::UpdateSignalsLocked() {
+  // Clear all signals, and mark the appropriate ones active.
+  //
+  // The active signals take precedence over the clear signals.
+  zx_signals_t clear = (ZX_JOB_NO_JOBS | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_CHILDREN);
 
-  DEBUG_ASSERT(get_lock()->lock().IsHeld());
-
-  // removing jobs or processes.
+  // Removing jobs or processes.
   zx_signals_t set = 0u;
-  if (process_count_ == 0u) {
-    DEBUG_ASSERT(procs_.is_empty());
+  if (procs_.is_empty()) {
     set |= ZX_JOB_NO_PROCESSES;
   }
-  if (job_count_ == 0u) {
-    DEBUG_ASSERT(jobs_.is_empty());
+  if (jobs_.is_empty()) {
     set |= ZX_JOB_NO_JOBS;
   }
-  if (job_count_ == 0u && process_count_ == 0u) {
+  if (jobs_.is_empty() && procs_.is_empty()) {
     set |= ZX_JOB_NO_CHILDREN;
   }
 
-  UpdateStateLocked(0u, set);
-}
-
-void JobDispatcher::UpdateSignalsIncrementLocked() {
-  canary_.Assert();
-
-  DEBUG_ASSERT(get_lock()->lock().IsHeld());
-
-  // Adding jobs or processes.
-  zx_signals_t clear = 0u;
-  if (process_count_ == 1u) {
-    DEBUG_ASSERT(!procs_.is_empty());
-    clear |= ZX_JOB_NO_PROCESSES;
-    clear |= ZX_JOB_NO_CHILDREN;
-  }
-  if (job_count_ == 1u) {
-    DEBUG_ASSERT(!jobs_.is_empty());
-    clear |= ZX_JOB_NO_JOBS;
-    clear |= ZX_JOB_NO_CHILDREN;
-  }
-  UpdateStateLocked(clear, 0u);
+  UpdateStateLocked(clear, set);
 }
 
 JobPolicy JobDispatcher::GetPolicy() const {

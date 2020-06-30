@@ -192,8 +192,8 @@ class JobDispatcher final
   bool IsReadyForDeadTransitionLocked() TA_REQ(get_lock());
   void FinishDeadTransitionUnlocked() TA_EXCL(get_lock());
 
-  void UpdateSignalsIncrementLocked() TA_REQ(get_lock());
-  void UpdateSignalsDecrementLocked() TA_REQ(get_lock());
+  // Set or clear the JobDispatcher's signals to reflect its current state.
+  void UpdateSignalsLocked() TA_REQ(get_lock());
 
   template <typename T, typename Fn>
   __attribute__((warn_unused_result)) LiveRefsArray ForEachChildInLocked(T& children,
@@ -202,7 +202,7 @@ class JobDispatcher final
       TA_REQ(get_lock());
 
   template <typename T>
-  uint32_t ChildCountLocked() const TA_REQ(get_lock());
+  uint64_t ChildCountLocked() const TA_REQ(get_lock());
 
   bool CanSetPolicy() TA_REQ(get_lock());
 
@@ -224,17 +224,18 @@ class JobDispatcher final
 
   // The common |get_lock()| protects all members below.
   State state_ TA_GUARDED(get_lock());
-  uint32_t process_count_ TA_GUARDED(get_lock());
-  uint32_t job_count_ TA_GUARDED(get_lock());
   int64_t return_code_ TA_GUARDED(get_lock());
   // TODO(cpu): The OOM kill system is incomplete, see ZX-2731 for details.
   bool kill_on_oom_ TA_GUARDED(get_lock());
 
-  using RawJobList = fbl::TaggedDoublyLinkedList<JobDispatcher*, RawListTag>;
+  template <typename Ptr, typename Tag>
+  using SizedDoublyLinkedList = fbl::DoublyLinkedList<Ptr, Tag, fbl::SizeOrder::Constant,
+                                                      fbl::DefaultDoublyLinkedListTraits<Ptr, Tag>>;
+
+  using RawJobList = SizedDoublyLinkedList<JobDispatcher*, RawListTag>;
   using JobList = fbl::TaggedSinglyLinkedList<fbl::RefPtr<JobDispatcher>, ListTag>;
 
-  using RawProcessList =
-      fbl::TaggedDoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::RawJobListTag>;
+  using RawProcessList = SizedDoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::RawJobListTag>;
   using ProcessList =
       fbl::TaggedSinglyLinkedList<fbl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTag>;
 
