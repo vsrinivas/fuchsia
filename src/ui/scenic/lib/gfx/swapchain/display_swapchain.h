@@ -111,10 +111,6 @@ class DisplaySwapchain : public Swapchain {
   void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> image_ids,
                uint64_t cookie);
 
-  // Generates or releases an event ID that can be used with the display interface. The event can be
-  // signaled even after ReleaseEvent if it was referenced in a Flip that's pending.
-  uint64_t ImportEvent(const zx::event& event);
-
   // Sets the config which will be used for all imported images.
   void SetImageConfig(uint64_t layer_id, int32_t width, int32_t height, zx_pixel_format_t format);
 
@@ -145,7 +141,6 @@ class DisplaySwapchain : public Swapchain {
 
   // Ids used to talk to display controller. If we use |display_controller_|
   // in multiple places, we'll have to centralize this logic.
-  uint64_t next_event_id_ = fuchsia::hardware::display::INVALID_DISP_ID + 1;
   uint64_t next_buffer_collection_id_ = fuchsia::hardware::display::INVALID_DISP_ID + 1;
 
   size_t next_frame_index_ = 0;

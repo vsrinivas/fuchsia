@@ -160,7 +160,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   }
 
   // Set display buffer constraints.
-  auto display_collection_id = scenic::ImportBufferCollection(
+  auto display_collection_id = scenic_impl::ImportBufferCollection(
       *environment->display_controller.get(), std::move(tokens[1]), image_config_);
   if (!display_collection_id) {
     FX_LOGS(ERROR) << "Setting buffer collection constraints failed.";

@@ -17,6 +17,7 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
+#include "src/ui/scenic/lib/common/display_util.h"
 
 #define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 
@@ -177,7 +178,8 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 
   zx::event render_finished_event =
       GetEventForSemaphore(escher_->device(), render_finished_escher_semaphore);
-  uint64_t render_finished_event_id = ImportEvent(render_finished_event);
+  uint64_t render_finished_event_id =
+      scenic_impl::ImportEvent(*display_controller_.get(), render_finished_event);
 
   if (!render_finished_escher_semaphore ||
       render_finished_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
@@ -192,7 +194,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     return std::unique_ptr<FrameRecord>();
   }
 
-  uint64_t retired_event_id = ImportEvent(retired_event);
+  uint64_t retired_event_id = scenic_impl::ImportEvent(*display_controller_.get(), retired_event);
   if (retired_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
     FX_LOGS(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
     return std::unique_ptr<FrameRecord>();
@@ -450,24 +452,6 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
     }
   }
   FX_DCHECK(match) << "Unhandled vsync image_id=" << image_id;
-}
-
-uint64_t DisplaySwapchain::ImportEvent(const zx::event& event) {
-  zx::event dup;
-  uint64_t event_id = next_event_id_++;
-  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to duplicate display controller event.";
-    return fuchsia::hardware::display::INVALID_DISP_ID;
-  }
-
-  auto before = zx::clock::get_monotonic();
-  if ((*display_controller_)->ImportEvent(std::move(dup), event_id) != ZX_OK) {
-    auto after = zx::clock::get_monotonic();
-    FX_LOGS(ERROR) << "Failed to import display controller event. Waited "
-                   << (after - before).to_msecs() << "msecs";
-    return fuchsia::hardware::display::INVALID_DISP_ID;
-  }
-  return event_id;
 }
 
 void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,

@@ -52,6 +52,25 @@ class DisplayTest : public gtest::RealLoopFixture {
     gtest::RealLoopFixture::TearDown();
   }
 
+  uint64_t InitializeDisplayLayer(fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+                                  Display* display) {
+    uint64_t layer_id;
+    zx_status_t create_layer_status;
+    zx_status_t transport_status = display_controller->CreateLayer(&create_layer_status, &layer_id);
+    if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to create layer, " << create_layer_status;
+      return 0;
+    }
+
+    zx_status_t status = display_controller->SetDisplayLayers(display->display_id(), {layer_id});
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to configure display layers. Error code: " << status;
+      return 0;
+    }
+
+    return layer_id;
+  }
+
   std::unique_ptr<display::DisplayManager> display_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
@@ -96,7 +115,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
       .height = kHeight,
       .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
   };
-  auto display_collection_id = scenic::ImportBufferCollection(
+  auto display_collection_id = scenic_impl::ImportBufferCollection(
       *display_controller.get(), std::move(display_token), image_config);
   EXPECT_NE(display_collection_id, 0U);
 
@@ -129,5 +148,116 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   EXPECT_TRUE(buffer_metadata.has_value());
 }
 
+// Test out event signaling on the Display Controller by importing a buffer collection and its 2
+// images, setting the first image to a display layer with a signal event, and
+// then setting the second image on the layer which has a wait event. When the wait event is
+// signaled, this will cause the second layer image to go up, which in turn will cause the first
+// layer image's event to be signaled.
+// TODO(55167): Check to see if there is a more appropriate place to test display controller
+// events and/or if there already exist adequate tests that cover all of the use cases being
+// covered by this test.
+VK_TEST_F(DisplayTest, SetDisplayImageTest) {
+  // Grab the display controller.
+  auto display_controller = display_manager_->default_display_controller();
+  ASSERT_TRUE(display_controller);
+
+  auto display = display_manager_->default_display();
+  ASSERT_TRUE(display);
+
+  auto layer_id = InitializeDisplayLayer(*display_controller.get(), display);
+  ASSERT_NE(layer_id, 0U);
+
+  const uint32_t kWidth = display->width_in_px();
+  const uint32_t kHeight = display->height_in_px();
+  const uint32_t kNumVmos = 2;
+
+  // First create the pair of sysmem tokens, one for the client, one for the display.
+  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+
+  // Set the display constraints on the display controller.
+  fuchsia::hardware::display::ImageConfig image_config = {
+      .width = kWidth,
+      .height = kHeight,
+      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+  };
+  auto display_collection_id = scenic_impl::ImportBufferCollection(
+      *display_controller.get(), std::move(tokens.dup_token), image_config);
+  ASSERT_NE(display_collection_id, 0U);
+
+  flatland::SetClientConstraintsAndWaitForAllocated(
+      sysmem_allocator_.get(), std::move(tokens.local_token), kNumVmos, kWidth, kHeight);
+
+  // Import the images to the display.
+  uint64_t image_ids[kNumVmos];
+  for (uint64_t i = 0; i < kNumVmos; i++) {
+    zx_status_t import_image_status = ZX_OK;
+    auto transport_status = (*display_controller.get())
+                                ->ImportImage(image_config, display_collection_id, i,
+                                              &import_image_status, &image_ids[i]);
+    ASSERT_EQ(transport_status, ZX_OK);
+    ASSERT_EQ(import_image_status, ZX_OK);
+    ASSERT_NE(image_ids[i], fuchsia::hardware::display::INVALID_DISP_ID);
+  }
+
+  // Create the events used by the display.
+  zx::event display_wait_fence, display_signal_fence;
+  auto status = zx::event::create(0, &display_wait_fence);
+  status |= zx::event::create(0, &display_signal_fence);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Import the above events to the display.
+  auto display_wait_event_id =
+      scenic_impl::ImportEvent(*display_controller.get(), display_wait_fence);
+  auto display_signal_event_id =
+      scenic_impl::ImportEvent(*display_controller.get(), display_signal_fence);
+  EXPECT_NE(display_wait_event_id, fuchsia::hardware::display::INVALID_DISP_ID);
+  EXPECT_NE(display_signal_event_id, fuchsia::hardware::display::INVALID_DISP_ID);
+  EXPECT_NE(display_wait_event_id, display_signal_event_id);
+
+  // Set the layer image and apply the config.
+  (*display_controller.get())->SetLayerPrimaryConfig(layer_id, image_config);
+
+  status = (*display_controller.get())
+               ->SetLayerImage(layer_id, image_ids[0], 0, display_signal_event_id);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Apply the config.
+  fuchsia::hardware::display::ConfigResult result;
+  std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+  (*display_controller.get())->CheckConfig(/*discard=*/false, &result, &ops);
+  EXPECT_EQ(result, fuchsia::hardware::display::ConfigResult::OK);
+  status = (*display_controller.get())->ApplyConfig();
+  EXPECT_EQ(status, ZX_OK);
+
+  // Attempt to wait here...this should time out because the event has not yet been signaled.
+  status =
+      display_signal_fence.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(3000)), nullptr);
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+
+  // Set the layer image again, to the second image, so that our first call to SetLayerImage()
+  // above will signal.
+  status =
+      (*display_controller.get())->SetLayerImage(layer_id, image_ids[1], display_wait_event_id, 0);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Apply the config to display the second image.
+  (*display_controller.get())->CheckConfig(/*discard=*/false, &result, &ops);
+  EXPECT_EQ(result, fuchsia::hardware::display::ConfigResult::OK);
+  status = (*display_controller.get())->ApplyConfig();
+  EXPECT_EQ(status, ZX_OK);
+
+  // Attempt to wait again, this should also time out because we haven't signaled our wait fence.
+  status =
+      display_signal_fence.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(3000)), nullptr);
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+
+  // Now we signal wait on the second layer.
+  display_wait_fence.signal(0, ZX_EVENT_SIGNALED);
+
+  // Now we wait for the display to signal again, and this time it should go through.
+  status =
+      display_signal_fence.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(3000)), nullptr);
+  EXPECT_EQ(status, ZX_OK);
+}
 }  // namespace display
 }  // namespace scenic_impl

@@ -5,8 +5,10 @@
 #include "src/ui/scenic/lib/common/display_util.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/event.h>
 
-namespace scenic {
+namespace scenic_impl {
 DisplayBufferCollectionId ImportBufferCollection(
     const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
@@ -38,4 +40,29 @@ DisplayBufferCollectionId ImportBufferCollection(
   return buffer_collection_id;
 }
 
-}  // namespace scenic
+DisplayEventId ImportEvent(const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+                           const zx::event& event) {
+  static DisplayEventId id_generator = fuchsia::hardware::display::INVALID_DISP_ID + 1;
+
+  zx::event dup;
+  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to duplicate display controller event.";
+    return fuchsia::hardware::display::INVALID_DISP_ID;
+  }
+
+  // Generate a new display ID after we've determined the event can be duplicated as to not
+  // waste an id.
+  DisplayEventId event_id = id_generator++;
+
+  auto before = zx::clock::get_monotonic();
+  auto status = display_controller->ImportEvent(std::move(dup), event_id);
+  if (status != ZX_OK) {
+    auto after = zx::clock::get_monotonic();
+    FX_LOGS(ERROR) << "Failed to import display controller event. Waited "
+                   << (after - before).to_msecs() << "msecs. Error code: " << status;
+    return fuchsia::hardware::display::INVALID_DISP_ID;
+  }
+  return event_id;
+}
+
+}  // namespace scenic_impl
