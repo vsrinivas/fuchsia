@@ -124,6 +124,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   void SignalBufferReleaseFence();
 
  private:
+  void ReportError();
+
   // Users are not allowed to use zero as a transform ID.
   static constexpr TransformId kInvalidId = 0;
 
@@ -149,8 +151,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A Sysmem allocator to faciliate buffer allocation with the Renderer.
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
-  // The set of operations that are pending a call to Present().
-  std::vector<fit::function<bool()>> pending_operations_;
+  // True if any function has failed since the previous call to Present(), false otherwise.
+  bool failure_since_previous_present_ = false;
 
   // The number of pipelined Present() operations available to the client.
   uint32_t num_presents_remaining_ = kMaxPresents;
@@ -175,6 +177,12 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // Attaching Content to a Transform consists of setting one of these "Content Handles" as the
   // priority child of the Transform.
   std::unordered_map<ContentId, TransformHandle> content_handles_;
+
+  // The set of link operations that are pending a call to Present(). Unlike other operations,
+  // whose effects are only visible when a new UberStruct is published, Link destruction operations
+  // result in immediate changes in the LinkSystem. To avoid having these changes visible before
+  // Present() is called, the actual destruction of Links happens in the following Present().
+  std::vector<fit::function<void()>> pending_link_operations_;
 
   // Wraps a LinkSystem::ChildLink and the properties currently associated with that link.
   struct ChildLinkData {

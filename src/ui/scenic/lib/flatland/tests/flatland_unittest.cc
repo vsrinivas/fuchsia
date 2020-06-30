@@ -1614,7 +1614,7 @@ TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
 
   CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
 
-  flatland.ReleaseLink(kLinkId1, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+  flatland.ReleaseLink(kImageId, [](ContentLinkToken token) { EXPECT_TRUE(false); });
   PRESENT(flatland, false);
 }
 
