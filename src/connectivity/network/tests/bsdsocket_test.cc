@@ -251,6 +251,10 @@ class SocketOptsTest : public SocketKindTest {
     }
     return {.level = IPPROTO_IP, .option = IP_RECVTOS};
   }
+
+  SockOption GetNoChecksum() {
+    return {.level = SOL_SOCKET, .option = SO_NO_CHECK};
+  }
 };
 
 // The SocketOptsTest is adapted from gvisor/tests/syscalls/linux/socket_ip_unbound.cc
@@ -1040,6 +1044,52 @@ TEST_P(SocketOptsTest, SetReceiveTOSChar) {
     ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), 0)
         << strerror(errno);
   }
+
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, NoChecksumDefault) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip NoChecksum tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  SockOption t = GetNoChecksum();
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetNoChecksum) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip NoChecksum tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  SockOption t = GetNoChecksum();
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
+      << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOn);
+
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
+      << strerror(errno);
 
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));

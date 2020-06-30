@@ -237,6 +237,14 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 
 		return int32(v), nil
 
+	case C.SO_NO_CHECK:
+		v, err := ep.GetSockOptBool(tcpip.NoChecksumOption)
+		if err != nil {
+			return nil, err
+		}
+
+		return boolToInt32(v), nil
+
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_SOCKET name=%d", name)
 
@@ -597,6 +605,14 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOpt(tcpip.OutOfBandInlineOption(v))
+
+	case C.SO_NO_CHECK:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		v := binary.LittleEndian.Uint32(optVal)
+		return ep.SetSockOptBool(tcpip.NoChecksumOption, v != 0)
 
 	default:
 		syslog.Infof("unimplemented setsockopt: SOL_SOCKET name=%d optVal=%x", name, optVal)
