@@ -3238,12 +3238,12 @@ void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req) {
   BRCMF_DBG(WLANIF, "Set keys request from SME. num_keys: %zu", req->num_keys);
   zx_status_t result;
 
-  // TODO(WLAN-733)
-  if (req->num_keys != 1) {
-    BRCMF_ERR("Help! num_keys needs to be 1! But it's %ld.", req->num_keys);
-    return;
+  for (size_t i = 0; i < req->num_keys; i++) {
+    result = brcmf_cfg80211_add_key(ndev, &req->keylist[i]);
+    if (result != ZX_OK) {
+      BRCMF_WARN("Error setting key %zu: %s.", i, zx_status_get_string(result));
+    }
   }
-  result = brcmf_cfg80211_add_key(ndev, &req->keylist[0]);
 }
 
 void brcmf_if_del_keys_req(net_device* ndev, const wlanif_del_keys_req_t* req) {
