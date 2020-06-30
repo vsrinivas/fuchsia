@@ -167,21 +167,18 @@ class TestsConfig {
   final TestArguments testArguments;
   final IFxEnv fxEnv;
   final List<List<MatchableArgument>> testArgumentGroups;
-  final Fx fx;
   TestsConfig({
     @required this.flags,
-    @required this.fx,
     @required this.runnerTokens,
     @required this.testArguments,
     @required this.testArgumentGroups,
     @required this.fxEnv,
-  }) : assert(fx != null);
+  });
 
   factory TestsConfig.fromRawArgs({
     @required IFxEnv fxEnv,
     @required List<String> rawArgs,
     Map<String, String> defaultRawArgs,
-    Fx fx,
   }) {
     if (fxEnv == null) {
       throw Exception('TestsConfig requires an FxEnv instance');
@@ -211,7 +208,6 @@ class TestsConfig {
     return TestsConfig(
       flags: flags,
       fxEnv: fxEnv,
-      fx: fx ?? Fx(fxEnv: fxEnv),
       runnerTokens: runnerTokens,
       testArguments: _testArguments,
       testArgumentGroups: _testArgumentsCollector.collect(),

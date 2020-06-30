@@ -102,8 +102,5 @@ class FakeTestRunner extends TestRunner {
 
 class AlwaysAllowChecklist implements Checklist {
   @override
-  Future<bool> isPackageServerRunning() => Future.value(true);
-  @override
-  Future<bool> maybeUpdateBasePackages(List<TestBundle> testBundles) =>
-      Future.value(true);
+  Future<bool> isDeviceReady(List<TestBundle> bundles) => Future.value(true);
 }

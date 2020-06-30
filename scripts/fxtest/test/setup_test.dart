@@ -1,26 +1,13 @@
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
 import 'package:meta/meta.dart';
-import 'package:pedantic/pedantic.dart';
 import 'package:test/test.dart';
 import 'fake_fx_env.dart';
 import 'helpers.dart';
 
-/// Helper which always reports that no package server is running.
-class NoPackageServerChecklist implements Checklist {
-  @override
-  Future<bool> maybeUpdateBasePackages(List<TestBundle> bundles) =>
-      Future.value(true);
-  @override
-  Future<bool> isPackageServerRunning() => Future.value(false);
-}
-
 class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
-  // Supply this to avoid attempting to read the real file.
-  ParsedManifest parsedManifest;
-  FuchsiaTestCommandCliFake({
-    this.parsedManifest,
-  }) : super(
+  FuchsiaTestCommandCliFake()
+      : super(
           ['--no-build'],
           usage: (parser) => null,
           fxEnv: FakeFxEnv.shared,
@@ -31,37 +18,26 @@ class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
     return FuchsiaTestCommandFake(
       testsConfig: testsConfig,
       outputFormatters: [StdOutClosingFormatter()],
-      parsedManifest: parsedManifest,
     );
   }
 }
 
 class FuchsiaTestCommandFake extends FuchsiaTestCommand {
-  // Supply this to avoid attempting to read the real file.
-  ParsedManifest parsedManifest;
   FuchsiaTestCommandFake({
-    Checklist checklist,
     List<OutputFormatter> outputFormatters,
     TestsConfig testsConfig,
-    this.parsedManifest,
   }) : super(
           analyticsReporter: AnalyticsFaker(),
-          checklist: checklist ?? AlwaysAllowChecklist(),
+          checklist: AlwaysAllowChecklist(),
           directoryBuilder: (String path, {bool recursive}) => null,
           outputFormatters: outputFormatters,
           testsConfig: testsConfig,
           testRunnerBuilder: (testsConfig) => TestRunner(),
         );
   @override
-  Future<void> runTestSuite(ParsedManifest parsedManifest) async {
+  Future<void> runTestSuite([TestsManifestReader manifestReader]) async {
     emitEvent(BeginningTests());
   }
-
-  @override
-  Future<ParsedManifest> readManifest(TestsManifestReader manifestReader) =>
-      parsedManifest != null
-          ? Future.value(parsedManifest)
-          : super.readManifest(manifestReader);
 }
 
 class StdOutClosingFormatter extends OutputFormatter {
@@ -231,90 +207,11 @@ void main() {
       // Component tests are definitely device tests
       expect(TestBundle.hasDeviceTests(bundles), true);
     });
-
-    test('throws fatal error if package server is not running', () async {
-      final outputFormatter = StandardOutputFormatter(
-        buffer: OutputBuffer.locMemIO(),
-        wrapWith: (str, codes, {bool forScript}) => str,
-        isVerbose: false,
-        hasRealTimeOutput: false,
-      );
-
-      final testsConfig = TestsConfig.fromRawArgs(
-        fx: Fx.mock(MockProcess(), FakeFxEnv.shared),
-        rawArgs: [],
-        fxEnv: FakeFxEnv.shared,
-      );
-      final cmd = FuchsiaTestCommand.fromConfig(
-        testsConfig,
-        checklist: NoPackageServerChecklist(),
-        outputFormatter: outputFormatter,
-        testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
-      );
-      final parsedManifest = TestsManifestReader().aggregateTests(
-        eventEmitter: (event) => null,
-        matchLength: testsConfig.flags.matchLength,
-        testBundleBuilder: cmd.testBundleBuilder,
-        testsConfig: testsConfig,
-        testDefinitions: [
-          // Any device test
-          TestDefinition(
-            buildDir: '/whatever',
-            os: 'fuchsia',
-            name: 'fuchsia-pkg://fuchsia.com/some_pkg#meta/some_comp.cmx',
-            packageUrl: PackageUrl.fromString(
-                'fuchsia-pkg://fuchsia.com/some_pkg#meta/some_comp.cmx'),
-          ),
-        ],
-      );
-      unawaited(cmd.runTestSuite(parsedManifest));
-      await Future(() async {
-        // ignore: unused_local_variable
-        await for (var event in cmd.stream) {/* no-op */}
-      });
-      expect(
-        outputFormatter.allEvents.any((event) => event is FatalError),
-        true,
-      );
-    });
   });
 
   group('command cli-wrapper', () {
     test('throws OutputClosedException exception stdout is closed', () async {
-      final testsConfig = TestsConfig.fromRawArgs(
-        rawArgs: [],
-        fxEnv: FakeFxEnv.shared,
-      );
-      final testDef = TestDefinition.fromJson(
-        {
-          'environments': [],
-          'test': {
-            'cpu': 'x64',
-            'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
-            'name': 'lib_tests',
-            'os': 'fuchsia',
-            'package_url':
-                'fuchsia-pkg://fuchsia.com/lib-pkg-name#meta/lib-component-name.cmx',
-            'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
-          }
-        },
-        buildDir: '/whatever',
-      );
-      final testBundle = TestBundle.build(
-        testsConfig: testsConfig,
-        testDefinition: testDef,
-        workingDirectory: '/whatever',
-        timeElapsedSink: (a, b, c) => null,
-        testRunnerBuilder: (config) => FakeTestRunner.passing(),
-        directoryBuilder: (path, {bool recursive}) => null,
-      );
-
-      var cmdCli = FuchsiaTestCommandCliFake(
-        parsedManifest: ParsedManifest(
-          testBundles: [testBundle],
-          testDefinitions: [testDef],
-        ),
-      );
+      var cmdCli = FuchsiaTestCommandCliFake();
       expect(
         cmdCli.run(),
         throwsA(TypeMatcher<OutputClosedException>()),

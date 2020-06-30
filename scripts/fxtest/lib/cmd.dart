@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
@@ -42,8 +41,6 @@ class FuchsiaTestCommand {
   // ignore: close_sinks
   final _eventStreamController = StreamController<TestEvent>();
 
-  Stream<TestEvent> _stream;
-
   final AnalyticsReporter analyticsReporter;
 
   /// Bundle of configuration options for this invocation.
@@ -78,7 +75,6 @@ class FuchsiaTestCommand {
     ExitCodeSetter exitCodeSetter,
   })  : _exitCodeSetter = exitCodeSetter ?? setExitCode,
         _numberOfTests = 0 {
-    _stream = _eventStreamController.stream.asBroadcastStream();
     if (outputFormatters == null || outputFormatters.isEmpty) {
       throw AssertionError('Must provide at least one OutputFormatter');
     }
@@ -92,7 +88,6 @@ class FuchsiaTestCommand {
   factory FuchsiaTestCommand.fromConfig(
     TestsConfig testsConfig, {
     @required TestRunner Function(TestsConfig) testRunnerBuilder,
-    Checklist checklist,
     DirectoryBuilder directoryBuilder,
     ExitCodeSetter exitCodeSetter,
     OutputFormatter outputFormatter,
@@ -104,11 +99,10 @@ class FuchsiaTestCommand {
       analyticsReporter: testsConfig.flags.dryRun
           ? AnalyticsReporter.noop()
           : AnalyticsReporter(fxEnv: testsConfig.fxEnv),
-      checklist: checklist ??
-          PreChecker.fromConfig(
-            testsConfig,
-            eventSink: _outputFormatter.update,
-          ),
+      checklist: PreChecker.fromConfig(
+        testsConfig,
+        eventSink: _outputFormatter.update,
+      ),
       directoryBuilder: directoryBuilder ?? (path, {recursive}) => null,
       outputFormatters: [
         _outputFormatter,
@@ -120,7 +114,7 @@ class FuchsiaTestCommand {
     );
   }
 
-  Stream<TestEvent> get stream => _stream;
+  Stream<TestEvent> get stream => _eventStreamController.stream;
 
   void emitEvent(TestEvent event) {
     if (!_eventStreamController.isClosed) {
@@ -135,22 +129,28 @@ class FuchsiaTestCommand {
     _eventStreamController.close();
   }
 
-  Future<void> runTestSuite(ParsedManifest parsedManifest) async {
-    if (parsedManifest.testBundles.isNotEmpty) {
-      advertiseLogFile();
-    }
+  Future<void> runTestSuite([TestsManifestReader manifestReader]) async {
+    manifestReader ??= TestsManifestReader();
+    advertiseLogFile();
+    var parsedManifest = await readManifest(manifestReader);
 
-    reportOnTestBundles(
+    manifestReader.reportOnTestBundles(
       userFriendlyBuildDir: testsConfig.fxEnv.userFriendlyOutputDir,
       eventEmitter: emitEvent,
       parsedManifest: parsedManifest,
       testsConfig: testsConfig,
     );
 
-    final testBundles = applyLimit(parsedManifest.testBundles);
+    if (parsedManifest.testBundles.isEmpty) {
+      return noMatchesHelp(
+        manifestReader: manifestReader,
+        testDefinitions: parsedManifest.testDefinitions,
+        testsConfig: testsConfig,
+      );
+    }
 
     if (testsConfig.flags.shouldRandomizeTestOrder) {
-      testBundles.shuffle();
+      parsedManifest.testBundles.shuffle();
     }
 
     if (testsConfig.flags.shouldRebuild) {
@@ -159,20 +159,11 @@ class FuchsiaTestCommand {
       emitEvent(TestInfo(testsConfig.wrapWith(
           '> fx build ${buildTargets?.join(' ') ?? ''}', [green, styleBold])));
       try {
-        await testsConfig.fx
-            .runFxSubCommand('build', args: buildTargets.toList());
+        await fxCommandRun(
+            testsConfig.fxEnv.fx, 'build', buildTargets?.toList());
       } on FxRunException {
         emitEvent(FatalError(
             '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
-      }
-    }
-    if (parsedManifest.hasDeviceTests) {
-      if (!await checklist.isPackageServerRunning()) {
-        final _error = testsConfig.wrapWith('ERROR:', [red]);
-        emitEvent(
-            FatalError('$_error It looks like serve-updates is not running.'
-                '\n$_error You probably need to start "fx serve".'));
-        dispose();
         return;
       }
     }
@@ -181,7 +172,7 @@ class FuchsiaTestCommand {
       // Let the output formatter know that we're done parsing and
       // emitting preliminary events
       emitEvent(BeginningTests());
-      await runTests(testBundles);
+      await runTests(parsedManifest.testBundles);
     } on FailFastException catch (_) {
       // Non-zero exit code indicates generic but fatal failure
       _exitCodeSetter(failureExitCode);
@@ -207,55 +198,17 @@ class FuchsiaTestCommand {
     );
   }
 
-  Future<void> runTests(List<TestBundle> testBundles) async {
-    // set merkle root hash on component tests
-    // TODO: This should not require checking if `buildDir != null`, as that is
-    // a temporary workaround to get tests passing on CQ. The correct
-    // implementation is to abstract file-reading just as we have process-launching.
-    PackageRepository packageRepository;
-    if (testsConfig.flags.shouldUsePackageHash &&
-        testsConfig.fxEnv.outputDir != null) {
-      packageRepository = await PackageRepository.fromManifest(
-          buildDir: testsConfig.fxEnv.outputDir);
-    }
-
-    for (TestBundle testBundle in testBundles) {
-      if (packageRepository != null &&
-          testBundle.testDefinition.packageUrl != null) {
-        String packageName = testBundle.testDefinition.packageUrl.packageName;
-        testBundle.testDefinition.hash = packageRepository[packageName].merkle;
-      }
-      await testBundle.run().forEach((TestEvent event) {
-        emitEvent(event);
-        if (event is FatalError) {
-          _exitCodeSetter(failureExitCode);
-        } else if (event is TestResult && !event.isSuccess) {
-          _exitCodeSetter(event.exitCode ?? failureExitCode);
-        }
-      });
-      _numberOfTests += 1;
-    }
-  }
-
-  List<TestBundle> applyLimit(List<TestBundle> testBundles) =>
-      testsConfig.flags.limit > 0 &&
-              testsConfig.flags.limit < testBundles.length
-          ? testBundles.sublist(0, testsConfig.flags.limit)
-          : testBundles;
-
   void noMatchesHelp({
     @required TestsManifestReader manifestReader,
     @required List<TestDefinition> testDefinitions,
     @required TestsConfig testsConfig,
   }) {
     emitEvent(GeneratingHintsEvent());
-    final fxSet = testsConfig.wrapWith('`fx set`', [styleBold]);
     emitEvent(TestInfo(
       testsConfig.wrapWith(
-          'No tests found and could not find any suggestions for the '
-          'arguments you provided.\nVerify that you have spelled the test\'s '
-          'name correctly and included it via $fxSet.',
-          [lightRed]),
+          'Could not find any tests to run with the '
+          'arguments you provided.',
+          [lightYellow]),
     ));
     var manifestOfHints = manifestReader.aggregateTests(
       comparer: FuzzyComparer(threshold: testsConfig.flags.fuzzyThreshold),
@@ -302,42 +255,44 @@ class FuchsiaTestCommand {
         workingDirectory: testsConfig.fxEnv.outputDir,
       );
 
-  void reportOnTestBundles({
-    @required ParsedManifest parsedManifest,
-    @required TestsConfig testsConfig,
-    @required void Function(TestEvent) eventEmitter,
-    @required String userFriendlyBuildDir,
-  }) {
-    if (testsConfig.flags.shouldPrintSkipped) {
-      for (var testDef in parsedManifest.skippedTests) {
-        eventEmitter(TestInfo('Skipped test:\n$testDef'));
+  Future<void> runTests(List<TestBundle> testBundles) async {
+    // Enforce a limit
+    var _testBundles = testsConfig.flags.limit > 0 &&
+            testsConfig.flags.limit < testBundles.length
+        ? testBundles.sublist(0, testsConfig.flags.limit)
+        : testBundles;
+
+    if (!await checklist.isDeviceReady(_testBundles)) {
+      emitEvent(FatalError('Device is not ready for running device tests'));
+      return;
+    }
+
+    // set merkle root hash on component tests
+    // TODO: This should not require checking if `buildDir != null`, as that is
+    // a temporary workaround to get tests passing on CQ. The correct
+    // implementation is to abstract file-reading just as we have process-launching.
+    PackageRepository packageRepository;
+    if (testsConfig.flags.shouldUsePackageHash &&
+        testsConfig.fxEnv.outputDir != null) {
+      packageRepository = await PackageRepository.fromManifest(
+          buildDir: testsConfig.fxEnv.outputDir);
+    }
+
+    for (TestBundle testBundle in _testBundles) {
+      if (packageRepository != null &&
+          testBundle.testDefinition.packageUrl != null) {
+        String packageName = testBundle.testDefinition.packageUrl.packageName;
+        testBundle.testDefinition.hash = packageRepository[packageName].merkle;
       }
-    }
-    String duplicates = '';
-    if (parsedManifest.numDuplicateTests > 0) {
-      String duplicateWord =
-          parsedManifest.numDuplicateTests == 1 ? 'duplicate' : 'duplicates';
-      duplicates = testsConfig.wrapWith(
-          ' (with ${parsedManifest.numDuplicateTests} $duplicateWord)',
-          [darkGray]);
-    }
-
-    String manifestName =
-        testsConfig.wrapWith('$userFriendlyBuildDir/tests.json', [green]);
-    eventEmitter(TestInfo(
-      'Found ${parsedManifest.testDefinitions.length} total '
-      '${parsedManifest.testDefinitions.length != 1 ? "tests" : "test"} in '
-      '$manifestName$duplicates',
-    ));
-
-    int numTests = testsConfig.flags.limit == 0
-        ? parsedManifest.testBundles.length
-        : min(testsConfig.flags.limit, parsedManifest.testBundles.length);
-    if (numTests > 0) {
-      eventEmitter(TestInfo(
-        'Will run $numTests '
-        '${parsedManifest.testBundles.length != 1 ? "tests" : "test"}',
-      ));
+      await testBundle.run().forEach((TestEvent event) {
+        emitEvent(event);
+        if (event is FatalError) {
+          _exitCodeSetter(failureExitCode);
+        } else if (event is TestResult && !event.isSuccess) {
+          _exitCodeSetter(event.exitCode ?? failureExitCode);
+        }
+      });
+      _numberOfTests += 1;
     }
   }
 

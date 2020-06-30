@@ -21,9 +21,6 @@ dependencies:
   path: ^1.6.4
   pedantic: ^1.8.0+1
 
-  fxutils:
-    path: ../fxutils
-
 dev_dependencies:
   test: ^1.9.3
   mockito: ^4.1.1
