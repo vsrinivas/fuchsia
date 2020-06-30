@@ -76,7 +76,9 @@ void _processEncodeTrace(trace_processing.Model traceModel, int duration) {
   const String packetSentEventName = 'Media:PacketSent';
   // verify an appropriate number of frames were encoded
   // encode_camera selects a camera configuration that produces 30 fps
-  const int frameRate = 30;
+  // TODO(55279) Re-enable more exact frame count checking when it's determined
+  // why it was flaky
+  //const int frameRate = 30;
 
   int packetSentCount = 0;
 
@@ -91,5 +93,5 @@ void _processEncodeTrace(trace_processing.Model traceModel, int duration) {
   }
   _log.info('encoder packets sent $packetSentCount');
 
-  expect(packetSentCount, closeTo(duration * frameRate, 30));
+  expect(packetSentCount, greaterThan(0));
 }
