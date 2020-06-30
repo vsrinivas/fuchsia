@@ -343,9 +343,9 @@ static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len
   // We could be panicking whilst already holding the thread_lock. If so we must avoid calling
   // functions that will grab it again.
   if (thread_lock.IsHeld()) {
-    vmm_set_active_aspace_locked(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+    vmm_set_active_aspace_locked(efi_aspace.get());
   } else {
-    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+    vmm_set_active_aspace(efi_aspace.get());
   }
 
   efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
@@ -644,7 +644,7 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t 
   static_assert(kNumL4PageTables == 1, "Only 1 L4 page table is supported at this time.");
   DEBUG_ASSERT(mexec_identity_aspace);
 
-  vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(mexec_identity_aspace.get()));
+  vmm_set_active_aspace(mexec_identity_aspace.get());
 
   size_t safe_page_id = 0;
   volatile pt_entry_t* ptl4 = (pt_entry_t*)paddr_to_physmap(mexec_safe_pages[safe_page_id++]);

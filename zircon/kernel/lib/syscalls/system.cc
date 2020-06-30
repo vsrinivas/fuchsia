@@ -189,7 +189,7 @@ void IdentityPageAllocator::Activate() {
   if (!aspace_) {
     panic("Cannot Activate 1:1 Aspace with no 1:1 mappings!");
   }
-  vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace_.get()));
+  vmm_set_active_aspace(aspace_.get());
 }
 
 /* Takes all the pages in a VMO and creates a copy of them where all the pages

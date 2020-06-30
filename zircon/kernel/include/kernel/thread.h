@@ -39,8 +39,8 @@
 struct Thread;
 class OwnedWaitQueue;
 class ThreadDispatcher;
-struct vmm_aspace;
 class WaitQueue;
+class VmAspace;
 
 // These forward declarations are needed so that Thread can friend
 // them before they are defined.
@@ -867,7 +867,7 @@ struct Thread {
 
  public:
   // pointer to the kernel address space this thread is associated with
-  struct vmm_aspace* aspace_;
+  VmAspace* aspace_;
 
   // Strong reference to user thread if one exists for this thread.
   // In the common case freeing Thread will also free ThreadDispatcher when this

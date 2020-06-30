@@ -246,13 +246,4 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
 void DumpAllAspaces(bool verbose);
 
-// hack to convert from vmm_aspace_t to VmAspace
-static inline VmAspace* vmm_aspace_to_obj(vmm_aspace_t* aspace) {
-  return reinterpret_cast<VmAspace*>(aspace);
-}
-
-static inline const VmAspace* vmm_aspace_to_obj(const vmm_aspace_t* aspace) {
-  return reinterpret_cast<const VmAspace*>(aspace);
-}
-
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ASPACE_H_

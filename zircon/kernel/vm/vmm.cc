@@ -32,15 +32,11 @@
 // This file mostly contains C wrappers around the underlying C++ objects, conforming to
 // the older api.
 
-static inline void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace) {
+void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace) {
   DEBUG_ASSERT(thread_lock_held());
 
   ArchVmAspace::ContextSwitch(oldspace ? &oldspace->arch_aspace() : nullptr,
                               newaspace ? &newaspace->arch_aspace() : nullptr);
-}
-
-void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace) {
-  vmm_context_switch(reinterpret_cast<VmAspace*>(oldspace), reinterpret_cast<VmAspace*>(newaspace));
 }
 
 zx_status_t vmm_accessed_fault_handler(vaddr_t addr) {
@@ -97,7 +93,7 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 }
 
 template <typename GuardType, typename Lock>
-static void vmm_set_active_aspace_internal(vmm_aspace_t* aspace, Lock lock) {
+static void vmm_set_active_aspace_internal(VmAspace* aspace, Lock lock) {
   LTRACEF("aspace %p\n", aspace);
 
   Thread* t = Thread::Current::Get();
@@ -110,21 +106,17 @@ static void vmm_set_active_aspace_internal(vmm_aspace_t* aspace, Lock lock) {
   // grab the thread lock and switch to the new address space
   GuardType __UNUSED lock_guard{lock};
 
-  vmm_aspace_t* old = t->aspace_;
+  VmAspace* old = t->aspace_;
   t->aspace_ = aspace;
   vmm_context_switch(old, t->aspace_);
 }
 
-void vmm_set_active_aspace(vmm_aspace_t* aspace) {
+void vmm_set_active_aspace(VmAspace* aspace) {
   vmm_set_active_aspace_internal<Guard<SpinLock, IrqSave>>(aspace, ThreadLock::Get());
 }
 
-void vmm_set_active_aspace_locked(vmm_aspace_t* aspace) {
+void vmm_set_active_aspace_locked(VmAspace* aspace) {
   vmm_set_active_aspace_internal<fbl::NullLock>(aspace, fbl::NullLock());
-}
-
-vmm_aspace_t* vmm_get_kernel_aspace(void) {
-  return reinterpret_cast<vmm_aspace_t*>(VmAspace::kernel_aspace());
 }
 
 static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
@@ -201,7 +193,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     printf("VmAspace::Create aspace %p\n", aspace.get());
 
     test_aspace = aspace;
-    Thread::Current::Get()->aspace_ = reinterpret_cast<vmm_aspace_t*>(aspace.get());
+    Thread::Current::Get()->aspace_ = aspace.get();
     Thread::Current::Sleep(1);  // XXX hack to force it to reschedule and thus load the aspace
   } else if (!strcmp(argv[1].str, "free_aspace")) {
     if (argc < 2) {
@@ -213,7 +205,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
       test_aspace = nullptr;
     }
 
-    if (Thread::Current::Get()->aspace_ == reinterpret_cast<vmm_aspace_t*>(aspace.get())) {
+    if (Thread::Current::Get()->aspace_ == aspace.get()) {
       Thread::Current::Get()->aspace_ = nullptr;
       Thread::Current::Sleep(1);  // hack
     }
@@ -226,7 +218,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     test_aspace = fbl::RefPtr((VmAspace*)(void*)argv[2].u);
-    Thread::Current::Get()->aspace_ = reinterpret_cast<vmm_aspace_t*>(test_aspace.get());
+    Thread::Current::Get()->aspace_ = test_aspace.get();
     Thread::Current::Sleep(1);  // XXX hack to force it to reschedule and thus load the aspace
   } else {
     printf("unknown command\n");

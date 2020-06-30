@@ -21,6 +21,8 @@
 #include <ktl/span.h>
 #include <vm/arch_vm_aspace.h>
 
+class VmAspace;
+
 // kernel address space
 static_assert(KERNEL_ASPACE_BASE + (KERNEL_ASPACE_SIZE - 1) > KERNEL_ASPACE_BASE, "");
 
@@ -81,21 +83,17 @@ struct kernel_region {
 };
 extern const ktl::span<const kernel_region> kernel_regions;
 
-// C friendly opaque handle to the internals of the VMM.
-// Never defined, just used as a handle for C apis.
-typedef struct vmm_aspace vmm_aspace_t;
-
 // internal kernel routines below, do not call directly
 
 // internal routine by the scheduler to swap mmu contexts
-void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace);
+void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace);
 
 // set the current user aspace as active on the current thread.
 // NULL is a valid argument, which unmaps the current user address space
-void vmm_set_active_aspace(vmm_aspace_t* aspace);
+void vmm_set_active_aspace(VmAspace* aspace);
 
 // specialized version of above function that must be called with the thread_lock already held.
 // This is only intended for use by panic handlers.
-void vmm_set_active_aspace_locked(vmm_aspace_t* aspace);
+void vmm_set_active_aspace_locked(VmAspace* aspace);
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_

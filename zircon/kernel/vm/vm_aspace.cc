@@ -540,14 +540,14 @@ void VmAspace::AttachToThread(Thread* t) {
   canary_.Assert();
   DEBUG_ASSERT(t);
 
-  // point the lk thread at our object via the dummy C vmm_aspace_t struct
+  // point the lk thread at our object
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // not prepared to handle setting a new address space or one on a running thread
   DEBUG_ASSERT(!t->aspace_);
   DEBUG_ASSERT(t->state_ != THREAD_RUNNING);
 
-  t->aspace_ = reinterpret_cast<vmm_aspace_t*>(this);
+  t->aspace_ = this;
 }
 
 zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
@@ -634,7 +634,7 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
   if (is_kernel_address(address)) {
     return kernel_aspace();
   } else if (is_user_address(address)) {
-    return vmm_aspace_to_obj(Thread::Current::Get()->aspace_);
+    return Thread::Current::Get()->aspace_;
   } else {
     return nullptr;
   }
