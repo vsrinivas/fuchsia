@@ -106,8 +106,7 @@ void AgentTest::Renew(const DnsResource& resource) {
   renew_calls_.push(RenewCall{.resource_ = resource});
 }
 
-void AgentTest::RemoveAgent(const MdnsAgent* agent,
-                            const std::string& published_instance_full_name) {
+void AgentTest::RemoveAgent(const MdnsAgent* agent) {
   EXPECT_EQ(agent_, agent);
   remove_agent_called_ = true;
 }

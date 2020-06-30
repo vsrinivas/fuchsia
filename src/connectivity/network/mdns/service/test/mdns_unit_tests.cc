@@ -18,9 +18,7 @@ static const ReplyAddress kReplyAddress({192, 168, 78, 9, inet::IpPort::From_in_
                                         {192, 168, 1, 1});
 
 // Unit tests for the |Mdns| class.
-class MdnsUnitTests : public gtest::RealLoopFixture,
-                      public Mdns::Transceiver,
-                      public Mdns::Subscriber {
+class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
  public:
   MdnsUnitTests() : under_test_(*this) {}
 
@@ -40,24 +38,6 @@ class MdnsUnitTests : public gtest::RealLoopFixture,
   void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) override {}
 
   void LogTraffic() override {}
-
-  // Mdns::Subscriber implementation.
-  void InstanceDiscovered(const std::string& service, const std::string& instance,
-                          const inet::SocketAddress& v4_address,
-                          const inet::SocketAddress& v6_address,
-                          const std::vector<std::string>& text, uint16_t srv_priority,
-                          uint16_t srv_weight) override {
-    instance_discoved_called_ = true;
-  }
-
-  void InstanceChanged(const std::string& service, const std::string& instance,
-                       const inet::SocketAddress& v4_address, const inet::SocketAddress& v6_address,
-                       const std::vector<std::string>& text, uint16_t srv_priority,
-                       uint16_t srv_weight) override {}
-
-  void InstanceLost(const std::string& service, const std::string& instance) override {}
-
-  void Query(DnsType type_queried) override {}
 
  protected:
   // The |Mdns| instance under test.
@@ -90,14 +70,6 @@ class MdnsUnitTests : public gtest::RealLoopFixture,
   void ReceiveMessage(std::unique_ptr<DnsMessage> message, const ReplyAddress& reply_address) {
     EXPECT_TRUE(inbound_message_callback_);
     inbound_message_callback_(std::move(message), reply_address);
-  }
-
-  // Indicates whether the subscriber's 'instance discovered' callback was called, resetting the
-  // indication if it was.
-  bool InstanceDiscoveredCalled() {
-    bool result = instance_discoved_called_;
-    instance_discoved_called_ = false;
-    return result;
   }
 
   // Makes an address resource.
@@ -149,9 +121,56 @@ class MdnsUnitTests : public gtest::RealLoopFixture,
   bool start_called_ = false;
   bool stop_called_ = false;
   bool ready_ = false;
-  bool instance_discoved_called_ = false;
   fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
+};
+
+class Subscriber : public Mdns::Subscriber {
+ public:
+  Subscriber() {}
+
+  // Mdns::Subscriber implementation.
+  void InstanceDiscovered(const std::string& service, const std::string& instance,
+                          const inet::SocketAddress& v4_address,
+                          const inet::SocketAddress& v6_address,
+                          const std::vector<std::string>& text, uint16_t srv_priority,
+                          uint16_t srv_weight) override {
+    instance_discovered_called_ = true;
+  }
+
+  void InstanceChanged(const std::string& service, const std::string& instance,
+                       const inet::SocketAddress& v4_address, const inet::SocketAddress& v6_address,
+                       const std::vector<std::string>& text, uint16_t srv_priority,
+                       uint16_t srv_weight) override {}
+
+  void InstanceLost(const std::string& service, const std::string& instance) override {}
+
+  void Query(DnsType type_queried) override {}
+
+  // Indicates whether the subscriber's 'instance discovered' callback was called, resetting the
+  // indication if it was.
+  bool InstanceDiscoveredCalled() {
+    bool result = instance_discovered_called_;
+    instance_discovered_called_ = false;
+    return result;
+  }
+
+ private:
+  bool instance_discovered_called_ = false;
+};
+
+class Publisher : public Mdns::Publisher {
+ public:
+  Publisher() {}
+
+  // Mdns::Publisher implementation.
+  void ReportSuccess(bool success) override {}
+
+  void GetPublication(bool query, const std::string& subtype,
+                      const std::vector<inet::SocketAddress>& source_addresses,
+                      fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
+    callback(nullptr);
+  }
 };
 
 // Tests a subscription.
@@ -160,48 +179,78 @@ TEST_F(MdnsUnitTests, Subscribe) {
   SetHasInterfaces(true);
   Start(false);
 
+  Subscriber subscriber;
+
   // Subscribe.
-  under_test().SubscribeToService(kServiceName, this);
+  under_test().SubscribeToService(kServiceName, &subscriber);
   RunLoopUntilIdle();
-  EXPECT_FALSE(InstanceDiscoveredCalled());
+  EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
   // Receive a response to the query.
   ReceiveQueryResponse();
   RunLoopUntilIdle();
-  EXPECT_TRUE(InstanceDiscoveredCalled());
+  EXPECT_TRUE(subscriber.InstanceDiscoveredCalled());
 
   // Clean up.
-  Unsubscribe();
+  subscriber.Unsubscribe();
   under_test().Stop();
   RunLoopUntilIdle();
 }
 
 // Regression test for fxb/55116.
-TEST_F(MdnsUnitTests, DISABLED_Regression55116) {
+TEST_F(MdnsUnitTests, Regression55116) {
   // Start.
   SetHasInterfaces(true);
   Start(false);
 
+  Subscriber subscriber;
+
   // Subscribe.
-  under_test().SubscribeToService(kServiceName, this);
+  under_test().SubscribeToService(kServiceName, &subscriber);
   RunLoopUntilIdle();
-  EXPECT_FALSE(InstanceDiscoveredCalled());
+  EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
   // Unsubscribe.
-  Unsubscribe();
+  subscriber.Unsubscribe();
   RunLoopUntilIdle();
 
   // Subscribe again.
-  under_test().SubscribeToService(kServiceName, this);
+  under_test().SubscribeToService(kServiceName, &subscriber);
   RunLoopUntilIdle();
-  EXPECT_FALSE(InstanceDiscoveredCalled());
+  EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
   // Receive a response to the query.
   ReceiveQueryResponse();
-  EXPECT_TRUE(InstanceDiscoveredCalled());  // TODO(55116): Currently fails.
+  EXPECT_TRUE(subscriber.InstanceDiscoveredCalled());
 
   // Clean up.
-  Unsubscribe();
+  subscriber.Unsubscribe();
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests publish/unpublish logic.
+TEST_F(MdnsUnitTests, PublishUnpublish) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher0;
+  Publisher publisher1;
+
+  // Publish should work the first time.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher0));
+
+  // A second atemp should fail.
+  EXPECT_FALSE(
+      under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher1));
+
+  // We should be able to unpublish and publish again.
+  publisher0.Unpublish();
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher1));
+
+  // Clean up.
+  publisher1.Unpublish();
   under_test().Stop();
   RunLoopUntilIdle();
 }

@@ -52,11 +52,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     // Registers the resource for renewal. See |MdnsAgent::Renew|.
     virtual void Renew(const DnsResource& resource) = 0;
 
-    // Removes the specified agent. |published_instance_full_name| is used for
-    // instance publishers only and indicates the full name of a published
-    // instance.
-    virtual void RemoveAgent(const MdnsAgent* agent,
-                             const std::string& published_instance_full_name) = 0;
+    // Removes the specified agent.
+    virtual void RemoveAgent(const MdnsAgent* agent) = 0;
   };
 
   virtual ~MdnsAgent() {}
@@ -131,11 +128,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // simply refrain from renewing the incoming records.
   void Renew(const DnsResource& resource) const { host_->Renew(resource); }
 
-  // Removes this agent. |published_instance_full_name| is used for instance
-  // publishers only and indicates the full name of a published instance.
-  void RemoveSelf(const std::string& published_instance_full_name = "") const {
-    host_->RemoveAgent(this, published_instance_full_name);
-  }
+  // Removes this agent.
+  void RemoveSelf() const { host_->RemoveAgent(this); }
 
  private:
   Host* host_;

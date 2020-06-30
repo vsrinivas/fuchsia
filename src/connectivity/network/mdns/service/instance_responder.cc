@@ -71,7 +71,7 @@ void InstanceResponder::Quit() {
     SendGoodbye();
   }
 
-  RemoveSelf(instance_full_name_);
+  RemoveSelf();
 
   publisher_ = nullptr;
 }

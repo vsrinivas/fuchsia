@@ -116,8 +116,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
 
   void Renew(const DnsResource& resource) override;
 
-  void RemoveAgent(const MdnsAgent* agent,
-                   const std::string& published_instance_full_name) override;
+  void RemoveAgent(const MdnsAgent* agent) override;
 
   const MdnsAgent* agent_;
   std::shared_ptr<DnsResource> address_placeholder_ =
