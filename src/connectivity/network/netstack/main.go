@@ -40,6 +40,7 @@ import (
 	"fidl/fuchsia/posix/socket"
 	"fidl/fuchsia/stash"
 
+	glog "gvisor.dev/gvisor/pkg/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
@@ -154,6 +155,19 @@ func init() {
 	atomic.StoreUint32(&sniffer.LogPackets, 0)
 }
 
+type glogEmitter struct{}
+
+func (*glogEmitter) Emit(depth int, level glog.Level, timestamp time.Time, format string, v ...interface{}) {
+	switch level {
+	case glog.Warning:
+		syslog.Warnf(format, v...)
+	case glog.Info:
+		syslog.Infof(format, v...)
+	case glog.Debug:
+		syslog.Debugf(format, v...)
+	}
+}
+
 func Main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -192,6 +206,7 @@ func Main() {
 	syslog.SetDefaultLogger(l)
 	log.SetOutput(&syslog.Writer{Logger: l})
 	log.SetFlags(log.Lshortfile)
+	glog.SetTarget(&glogEmitter{})
 
 	secretKeyForOpaqueIID, err := getSecretKeyForOpaqueIID(appCtx)
 	if err != nil {
