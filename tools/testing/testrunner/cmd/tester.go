@@ -111,11 +111,11 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	return nil, err
 }
 
-func (t *subprocessTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+func (t *subprocessTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
 	return nil
 }
 
-func (t *subprocessTester) RunBugreport(ctx context.Context, bugreportFile string) error {
+func (t *subprocessTester) RunBugreport(_ context.Context, _ string) error {
 	return nil
 }
 
@@ -312,7 +312,7 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 	}, nil
 }
 
-func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer) (runtests.DataSinkReference, error) {
 	setCommand(&test, true, dataOutputDir, t.perTestTimeout)
 	cmd := strings.Join(test.Command, " ")
 	logger.Debugf(ctx, "starting: %s\n", cmd)
@@ -331,11 +331,11 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	return nil, nil
 }
 
-func (t *fuchsiaSerialTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+func (t *fuchsiaSerialTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
 	return nil
 }
 
-func (t *fuchsiaSerialTester) RunBugreport(ctx context.Context, bugreportFile string) error {
+func (t *fuchsiaSerialTester) RunBugreport(_ context.Context, _ string) error {
 	return nil
 }
 
