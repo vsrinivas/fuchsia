@@ -38,7 +38,7 @@ test("lazy_init-test") {
   sources = []
   deps = [
     "//zircon/public/lib/lazy_init",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
 
   if (is_fuchsia) {

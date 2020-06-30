@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/lazy_init/lazy_init.h>
-#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 
 #include <atomic>
 #include <cstring>
+
+#include <zxtest/zxtest.h>
 
 using lazy_init::CheckType;
 using lazy_init::Destructor;
@@ -41,10 +42,15 @@ union Storage {
   T value;
 };
 
-template <CheckType Check, Destructor Enabled>
-bool lazy_init_test() {
-  BEGIN_TEST;
+template <typename Type>
+inline void DoNotOptimize(const Type& value) {
+  // The "memory" constraint tells the compiler that the inline assembly
+  // must be assumed to access memory that |value| points to.
+  asm volatile("" : : "g"(value) : "memory");
+}
 
+template <CheckType Check, Destructor Enabled>
+void lazy_init_test() {
   // Define a unique test type for this test instantiation.
   using Type = TestType<Check, Enabled>;
 
@@ -63,52 +69,48 @@ bool lazy_init_test() {
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
 
-  const auto dereference_test = [](void* arg) {
-    auto& lazy = *static_cast<LazyInitType*>(arg);
-    lazy->Method();
-  };
+  // Work around a bug in the LazyInit implementation which causes the
+  // compiler to optimize away an assertion.
+  // TODO(fxbug.dev/55268): Fix the bug and remove this workaround.
+  DoNotOptimize(&test_value);
+
+  const auto dereference_test = [] { test_value->Method(); };
 
   if (Check != CheckType::None) {
-    ASSERT_DEATH(dereference_test, &test_value, "Testing assert before initialization.\n");
+    ASSERT_DEATH(dereference_test, "Testing assert before initialization.\n");
   } else {
-    ASSERT_NO_DEATH(dereference_test, &test_value, "Testing assert before initialization.\n");
+    ASSERT_NO_DEATH(dereference_test, "Testing assert before initialization.\n");
   }
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
 
-  const auto initialization_test = [](void* arg) {
-    auto& lazy = *static_cast<LazyInitType*>(arg);
-    lazy.Initialize();
-  };
+  const auto initialization_test = [] { test_value.Initialize(); };
 
-  ASSERT_NO_DEATH(initialization_test, &test_value, "Testing intialization.\n");
+  ASSERT_NO_DEATH(initialization_test, "Testing intialization.\n");
   ++expected_constructions;
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
 
   if (Check == CheckType::None) {
-    ASSERT_NO_DEATH(initialization_test, &test_value, "Testing re-intialization.\n");
+    ASSERT_NO_DEATH(initialization_test, "Testing re-intialization.\n");
     ++expected_constructions;
   } else {
-    ASSERT_DEATH(initialization_test, &test_value, "Testing re-intialization.\n");
+    ASSERT_DEATH(initialization_test, "Testing re-intialization.\n");
   }
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
 
-  ASSERT_NO_DEATH(dereference_test, &test_value, "Testing assert after initialization.\n");
+  ASSERT_NO_DEATH(dereference_test, "Testing assert after initialization.\n");
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
 
-  const auto destruction_test = [](void* arg) {
-    auto& lazy = *static_cast<LazyInitType*>(arg);
-    lazy.LazyInitType::~LazyInitType();
-  };
+  const auto destruction_test = [] { test_value.LazyInitType::~LazyInitType(); };
 
-  ASSERT_NO_DEATH(destruction_test, &test_value, "Testing destruction.\n");
+  ASSERT_NO_DEATH(destruction_test, "Testing destruction.\n");
 
   if (Enabled == Destructor::Enabled) {
     ++expected_destructions;
@@ -118,45 +120,44 @@ bool lazy_init_test() {
   EXPECT_EQ(expected_destructions, Type::destructions());
 
   if (Check == CheckType::None || Enabled == Destructor::Disabled) {
-    ASSERT_NO_DEATH(dereference_test, &test_value, "Testing assert after destruction.\n");
+    ASSERT_NO_DEATH(dereference_test, "Testing assert after destruction.\n");
   } else {
-    ASSERT_DEATH(dereference_test, &test_value, "Testing assert after destruction.\n");
+    ASSERT_DEATH(dereference_test, "Testing assert after destruction.\n");
   }
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
 
   if (Check == CheckType::None || Enabled == Destructor::Disabled) {
-    ASSERT_NO_DEATH(destruction_test, &test_value, "Testing re-destruction.\n");
+    ASSERT_NO_DEATH(destruction_test, "Testing re-destruction.\n");
     if (Enabled == Destructor::Enabled) {
       ++expected_destructions;
     }
   } else {
-    ASSERT_DEATH(destruction_test, &test_value, "Testing re-destruction.\n");
+    ASSERT_DEATH(destruction_test, "Testing re-destruction.\n");
   }
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
-
-  END_TEST;
 }
 
 // TODO(eieio): Does it make sense to try to create races to test the atomic
 // check specialization more thoroughly?
 
-}  // anonymous namespace
+TEST(LazyInitTest, NoCheckNoDtor) { lazy_init_test<CheckType::None, Destructor::Disabled>(); }
 
-BEGIN_TEST_CASE(lazy_init_tests)
-RUN_NAMED_TEST("Lazy init (no checks / no dtor)",
-               (lazy_init_test<CheckType::None, Destructor::Disabled>))
-RUN_NAMED_TEST("Lazy init (basic checks / no dtor)",
-               (lazy_init_test<CheckType::Basic, Destructor::Disabled>))
-RUN_NAMED_TEST("Lazy init (atomic checks / no dtor)",
-               (lazy_init_test<CheckType::Atomic, Destructor::Disabled>))
-RUN_NAMED_TEST("Lazy init (no checks / with dtor)",
-               (lazy_init_test<CheckType::None, Destructor::Enabled>))
-RUN_NAMED_TEST("Lazy init (basic checks / with dtor)",
-               (lazy_init_test<CheckType::Basic, Destructor::Enabled>))
-RUN_NAMED_TEST("Lazy init (atomic checks / with dtor)",
-               (lazy_init_test<CheckType::Atomic, Destructor::Enabled>))
-END_TEST_CASE(lazy_init_tests)
+TEST(LazyInitTest, BasicChecksNoDtor) { lazy_init_test<CheckType::Basic, Destructor::Disabled>(); }
+
+TEST(LazyInitTest, AtomicChecksNoDtor) {
+  lazy_init_test<CheckType::Atomic, Destructor::Disabled>();
+}
+
+TEST(LazyInitTest, NoChecksWithDtor) { lazy_init_test<CheckType::None, Destructor::Enabled>(); }
+
+TEST(LazyInitTest, BasicChecksWithDtor) { lazy_init_test<CheckType::Basic, Destructor::Enabled>(); }
+
+TEST(LazyInitTest, AtomicChecksWithDtor) {
+  lazy_init_test<CheckType::Atomic, Destructor::Enabled>();
+}
+
+}  // anonymous namespace
