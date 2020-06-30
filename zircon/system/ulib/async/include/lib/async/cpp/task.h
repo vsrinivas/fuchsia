@@ -78,8 +78,7 @@ class TaskBase {
   // Posts a task to invoke the handler with a deadline of now.
   //
   // Returns |ZX_OK| if the task was successfully posted.
-  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down or if the
-  // task is already pending.
+  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
   // Returns |ZX_ERR_ALREADY_EXISTS| if the task is already pending.
   // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
   zx_status_t Post(async_dispatcher_t* dispatcher);
@@ -87,8 +86,7 @@ class TaskBase {
   // Posts a task to invoke the handler with a deadline expressed as a |delay| from now.
   //
   // Returns |ZX_OK| if the task was successfully posted.
-  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down or if the
-  // task is already pending.
+  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
   // Returns |ZX_ERR_ALREADY_EXISTS| if the task is already pending.
   // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
   zx_status_t PostDelayed(async_dispatcher_t* dispatcher, zx::duration delay);
@@ -100,8 +98,7 @@ class TaskBase {
   // See |async_now()| for details.
   //
   // Returns |ZX_OK| if the task was successfully posted.
-  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down or if the
-  // task is already pending.
+  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
   // Returns |ZX_ERR_ALREADY_EXISTS| if the task is already pending.
   // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
   zx_status_t PostForTime(async_dispatcher_t* dispatcher, zx::time deadline);
