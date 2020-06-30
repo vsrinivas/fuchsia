@@ -14,16 +14,9 @@
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
 
-// kernel counters. The following counters never decrease.
-// counts the number of times a dispatcher has been created and destroyed.
+// Counts the number of times a dispatcher has been created and destroyed.
 KCOUNTER(dispatcher_create_count, "dispatcher.create")
 KCOUNTER(dispatcher_destroy_count, "dispatcher.destroy")
-// counts the number of times observers have been added to a kernel object.
-KCOUNTER(dispatcher_observe_count, "dispatcher.observer.add")
-// counts the number of times observers have been canceled.
-KCOUNTER(dispatcher_cancel_count, "dispatcher.observer.cancel")
-KCOUNTER(dispatcher_cancel_bk_count, "dispatcher.observer.cancel.by_key.handled")
-KCOUNTER(dispatcher_cancel_bk_nh_count, "dispatcher.observer.cancel.by_key.not_handled")
 
 namespace {
 ktl::atomic<zx_koid_t> global_koid(ZX_KOID_FIRST);
@@ -96,8 +89,6 @@ zx_status_t Dispatcher::AddObserver(SignalObserver* observer, const Handle* hand
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  kcounter_add(dispatcher_observe_count, 1);
-
   Guard<Mutex> guard{get_lock()};
 
   // If the currently active signals already match the desired signals,
@@ -138,66 +129,47 @@ bool Dispatcher::RemoveObserver(SignalObserver* observer, zx_signals_t* signals)
 void Dispatcher::Cancel(const Handle* handle) {
   canary_.Assert();
   ZX_DEBUG_ASSERT(is_waitable());
-  int32_t cancel_count = 0;
 
-  {
-    Guard<Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
-    // Cancel all observers that registered on "handle".
-    for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
-      if (it->handle_ != handle) {
-        ++it;
-        continue;
-      }
-
-      // Remove the element.
-      auto to_remove = it;
+  // Cancel all observers that registered on "handle".
+  for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
+    if (it->handle_ != handle) {
       ++it;
-      observers_.erase(to_remove);
-      to_remove->OnCancel(signals_);
-      cancel_count++;
+      continue;
     }
-  }
 
-  kcounter_add(dispatcher_cancel_count, cancel_count);
+    // Remove the element.
+    auto to_remove = it;
+    ++it;
+    observers_.erase(to_remove);
+    to_remove->OnCancel(signals_);
+  }
 }
 
 bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t key) {
   canary_.Assert();
   ZX_DEBUG_ASSERT(is_waitable());
 
+  Guard<Mutex> guard{get_lock()};
+
+  // Cancel all observers that registered on "handle" that match the given key.
   bool remove_performed = false;
-  uint32_t cancel_count = 0;
-
-  {
-    Guard<Mutex> guard{get_lock()};
-
-    // Cancel all observers that registered on "handle" that match the given key.
-    for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
-      if (it->handle_ != handle || !it->MatchesKey(port, key)) {
-        ++it;
-        continue;
-      }
-
-      // Remove the element.
-      auto to_remove = it;
+  for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
+    if (it->handle_ != handle || !it->MatchesKey(port, key)) {
       ++it;
-      observers_.erase(to_remove);
-      to_remove->OnCancel(signals_);
-      remove_performed = true;
-      cancel_count++;
+      continue;
     }
+
+    // Remove the element.
+    auto to_remove = it;
+    ++it;
+    observers_.erase(to_remove);
+    to_remove->OnCancel(signals_);
+    remove_performed = true;
   }
 
-  kcounter_add(dispatcher_cancel_count, cancel_count);
-
-  if (remove_performed) {
-    kcounter_add(dispatcher_cancel_bk_count, 1);
-    return true;
-  }
-
-  kcounter_add(dispatcher_cancel_bk_nh_count, 1);
-  return false;
+  return remove_performed;
 }
 
 void Dispatcher::UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask) {
