@@ -14,6 +14,7 @@ package("bluetooth-tools") {
     "bt-avrcp-controller",
     "bt-bredr-profile",
     "bt-cli",
+    "bt-fct-hci",
     "bt-hci-emulator",
     "bt-hci-tool",
     "bt-intel-tool",
@@ -42,6 +43,11 @@ package("bluetooth-tools") {
     {
       name = "bt_cli"
       dest = "bt-cli"
+      shell = true
+    },
+    {
+      name = "bt_fct_hci"
+      dest = "bt-fct-hci"
       shell = true
     },
     {
@@ -92,6 +98,7 @@ group("tests") {
     "bt-avrcp-controller:tests",
     "bt-bredr-profile:tests",
     "bt-cli:tests",
+    "bt-fct-hci:tests",
     "bt-le-central:tests",
     "bt-le-peripheral:tests",
     "bt-snoop:tests",
