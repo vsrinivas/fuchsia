@@ -94,6 +94,10 @@ WEAVE_ERROR ConfigurationManagerImpl::GetBleDeviceNamePrefix(char* device_name_p
 
 bool ConfigurationManagerImpl::IsWoBLEEnabled() { return delegate_->IsWoBLEEnabled(); }
 
+bool ConfigurationManagerImpl::IsWoBLEAdvertisementEnabled() {
+  return delegate_->IsWoBLEAdvertisementEnabled();
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

@@ -79,7 +79,10 @@ WEAVE_ERROR BLEManagerImpl::_Init() {
 
   memset(device_name_, 0, sizeof(device_name_));
 
-  flags_ = kFlag_AdvertisingEnabled;
+  flags_ = 0;
+  if (ConfigurationMgrImpl().IsWoBLEAdvertisementEnabled()) {
+    flags_ = kFlag_AdvertisingEnabled;
+  }
 
   // Initialize the Weave BleLayer.
   err = BleLayer::Init(this, this, &SystemLayer);
@@ -367,7 +370,7 @@ void BLEManagerImpl::DriveBLEState() {
       WEAVE_ERROR err = ConfigurationMgrImpl().GetBleDeviceNamePrefix(
           device_name_prefix, kMaxDeviceNameLength - 4, &out_len);
       if (err != WEAVE_NO_ERROR) {
-        FX_LOGS(ERROR) << "Failed to get BLE device name prefix";
+        FX_LOGS(ERROR) << "Failed to get BLE device name prefix: " << err;
       }
       snprintf(device_name_, sizeof(device_name_), "%s%04" PRIX32, device_name_prefix,
                (uint32_t)FabricState.LocalNodeId);

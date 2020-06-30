@@ -115,7 +115,14 @@ class ConfigurationManagerImpl final
                                                size_t device_name_prefix_size, size_t* out_len) = 0;
 
     // Returns whether WoBLE is enabled.
+    //
+    // When enabled, weavestack will publish GATT service for WoBLE.
     virtual bool IsWoBLEEnabled() = 0;
+
+    // Returns whether WoBLE advertisement enabled.
+    //
+    // When enabled, weavestack will do WoBLE advertisement on startup.
+    virtual bool IsWoBLEAdvertisementEnabled() = 0;
 
     // Acquires the device descriptor in Weave TLV format and populates it in
     // |buf|, with the length in |encoded_len|. If the provided |buf_size| is
@@ -143,6 +150,9 @@ class ConfigurationManagerImpl final
 
   // Returns whether WoBLE is enabled, see definition in delegate.
   bool IsWoBLEEnabled();
+
+  // Returns whether WoBLE advertisement is enabled on startup, see definition in delegate.
+  bool IsWoBLEAdvertisementEnabled();
 
  private:
   using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;

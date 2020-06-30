@@ -157,6 +157,12 @@ class BLEManagerTest : public WeaveTestFixture {
   void InitBleMgr() {
     EXPECT_EQ(ble_mgr_->_Init(), WEAVE_NO_ERROR);
     event_loop_.RunUntilIdle();
+    EXPECT_EQ(GetBLEMgrServiceMode(), ConnectivityManager::kWoBLEServiceMode_Enabled);
+    if (ConfigurationMgrImpl().IsWoBLEAdvertisementEnabled()) {
+      EXPECT_EQ(IsBLEMgrAdvertising(), true);
+    } else {
+      EXPECT_EQ(IsBLEMgrAdvertising(), false);
+    }
   }
 
   BLEManager::WoBLEServiceMode GetBLEMgrServiceMode() { return ble_mgr_->_GetWoBLEServiceMode(); }
@@ -208,11 +214,6 @@ class BLEManagerTest : public WeaveTestFixture {
   async::Loop event_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
-TEST_F(BLEManagerTest, Init) {
-  EXPECT_EQ(GetBLEMgrServiceMode(), ConnectivityManager::kWoBLEServiceMode_Enabled);
-  EXPECT_EQ(IsBLEMgrAdvertising(), true);
-}
-
 TEST_F(BLEManagerTest, SetAndGetDeviceName) {
   constexpr char kLargeDeviceName[] = "TOO_LARGE_DEVICE_NAME_FUCHSIA";
   constexpr char kDeviceName[] = "FUCHSIATEST";
@@ -225,8 +226,6 @@ TEST_F(BLEManagerTest, SetAndGetDeviceName) {
 }
 
 TEST_F(BLEManagerTest, EnableAndDisableAdvertising) {
-  EXPECT_EQ(GetBLEMgrServiceMode(), ConnectivityManager::kWoBLEServiceMode_Enabled);
-  EXPECT_EQ(IsBLEMgrAdvertising(), true);
   // Disable Weave service advertising
   SetWoBLEAdvertising(false);
   EXPECT_EQ(IsBLEMgrAdvertising(), false);
@@ -238,10 +237,7 @@ TEST_F(BLEManagerTest, EnableAndDisableAdvertising) {
   EXPECT_EQ(IsBLEMgrAdvertising(), true);
 }
 
-TEST_F(BLEManagerTest, TestWeaveConnect) {
-  EXPECT_EQ(GetBLEMgrServiceMode(), ConnectivityManager::kWoBLEServiceMode_Enabled);
-  WeaveConnect();
-}
+TEST_F(BLEManagerTest, TestWeaveConnect) { WeaveConnect(); }
 
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal

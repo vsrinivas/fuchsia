@@ -39,6 +39,7 @@ constexpr char kDeviceInfoConfigKey_BleDeviceNamePrefix[] = "ble-device-name-pre
 constexpr char kDeviceInfoConfigKey_DeviceId[] = "device-id";
 constexpr char kDeviceInfoConfigKey_DeviceIdPath[] = "device-id-path";
 constexpr char kDeviceInfoConfigKey_EnableWoBLE[] = "enable-woble";
+constexpr char kDeviceInfoConfigKey_EnableWoBLEAdvertisement[] = "enable-woble-advertisement";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
 constexpr char kDeviceInfoConfigKey_MfrDeviceCertPath[] = "mfr-device-cert-path";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
@@ -207,6 +208,14 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetBleDeviceNamePrefix(char* devic
 bool ConfigurationManagerDelegateImpl::IsWoBLEEnabled() {
   bool is_enabled = false;
   device_info_->ReadConfigValue(kDeviceInfoConfigKey_EnableWoBLE, &is_enabled);
+  return is_enabled;
+}
+
+bool ConfigurationManagerDelegateImpl::IsWoBLEAdvertisementEnabled() {
+  bool is_enabled = IsWoBLEEnabled();
+  if (is_enabled) {
+    device_info_->ReadConfigValue(kDeviceInfoConfigKey_EnableWoBLEAdvertisement, &is_enabled);
+  }
   return is_enabled;
 }
 
