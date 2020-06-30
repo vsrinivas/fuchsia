@@ -43,7 +43,7 @@ async fn create_event_environment(
     let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
         .event_subscribers(&[Blueprint::create(create_subscriber)])
-        .settings(&[SettingType::System])
+        .settings(&[SettingType::Setup])
         .agents(&[restore_agent::blueprint::create()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -129,6 +129,6 @@ async fn test_unimplemented() {
     if let Some(MessageEvent::Message(event::Payload::Event(received_event), ..)) =
         event_receptor.next().await
     {
-        assert_eq!(received_event, Event::Restore(restore::Event::NoOp(SettingType::System)));
+        assert_eq!(received_event, Event::Restore(restore::Event::NoOp(SettingType::Setup)));
     }
 }

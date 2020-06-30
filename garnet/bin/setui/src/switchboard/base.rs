@@ -75,7 +75,6 @@ pub enum SettingType {
     Power,
     Privacy,
     Setup,
-    System,
 }
 
 /// Returns all known setting types. New additions to SettingType should also
@@ -95,7 +94,6 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::Power,
         SettingType::Privacy,
         SettingType::Setup,
-        SettingType::System,
     ]
     .into_iter()
     .collect();
@@ -111,7 +109,6 @@ pub fn get_default_setting_types() -> HashSet<SettingType> {
         SettingType::Power,
         SettingType::Privacy,
         SettingType::Setup,
-        SettingType::System,
     ]
     .into_iter()
     .collect();
@@ -164,9 +161,6 @@ pub enum SettingRequest {
 
     // Setup info requests.
     SetConfigurationInterfaces(ConfigurationInterfaceFlags),
-
-    // System login requests.
-    SetLoginOverrideMode(SystemLoginOverrideMode),
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -308,18 +302,6 @@ pub struct PrivacyInfo {
     pub user_data_sharing_consent: Option<bool>,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum SystemLoginOverrideMode {
-    None,
-    AutologinGuest,
-    AuthProvider,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct SystemInfo {
-    pub login_override_mode: SystemLoginOverrideMode,
-}
-
 #[derive(PartialEq, Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct SetupInfo {
     pub configuration_interfaces: ConfigurationInterfaceFlags,
@@ -351,7 +333,6 @@ pub enum SettingResponse {
     NightMode(NightModeInfo),
     Privacy(PrivacyInfo),
     Setup(SetupInfo),
-    System(SystemInfo),
 }
 
 impl SettingResponse {
@@ -372,7 +353,6 @@ impl SettingResponse {
             SettingResponse::NightMode(info) => ("NightMode", format!("{:?}", info)),
             SettingResponse::Privacy(info) => ("Privacy", format!("{:?}", info)),
             SettingResponse::Setup(info) => ("Setup", format!("{:?}", info)),
-            SettingResponse::System(info) => ("System", format!("{:?}", info)),
         }
     }
 }
