@@ -1,5 +1,3 @@
-cdinn@google.com
-rvargas@google.com
-gevalentino@google.com
+include /src/storage/OWNERS
 
-# COMPONENT: TBD
+# COMPONENT: Zircon>Storage

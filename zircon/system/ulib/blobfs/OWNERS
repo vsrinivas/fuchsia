@@ -1,6 +1,4 @@
-auradkar@google.com
-cdinn@google.com
-rvargas@google.com
+include /src/storage/OWNERS
 *
 
 # COMPONENT: Zircon>storage
