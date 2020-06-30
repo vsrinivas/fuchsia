@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_USERABI_USERBOOT_OPTION_H_
 #define ZIRCON_KERNEL_LIB_USERABI_USERBOOT_OPTION_H_
 
+#include <lib/zx/debuglog.h>
 #include <zircon/types.h>
 
 enum option {
@@ -29,7 +30,7 @@ struct options {
   const char* value[OPTION_MAX];
 };
 
-uint32_t parse_options(zx_handle_t log, const char* cmdline, size_t cmdline_size,
+uint32_t parse_options(const zx::debuglog& log, const char* cmdline, size_t cmdline_size,
                        struct options* o);
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_OPTION_H_

@@ -52,7 +52,7 @@ static zx_status_t decompress_with_zstd(const zx::vmar& vmar, std::byte* input_d
   return ZX_OK;
 }
 
-zx_status_t zbi_decompress(zx_handle_t log, const zx::vmar& vmar, const zx::vmo& input_vmo,
+zx_status_t zbi_decompress(const zx::debuglog& log, const zx::vmar& vmar, const zx::vmo& input_vmo,
                            uint64_t input_offset, size_t input_size, const zx::vmo& output_vmo,
                            uint64_t output_offset, size_t output_size) {
   // Magic number at the start of a compressed image.

@@ -40,7 +40,7 @@ constexpr const char kStackVmoName[] = "userboot-child-initial-stack";
 
 using namespace userboot;
 
-[[noreturn]] void do_powerctl(zx_handle_t log, zx_handle_t rroot, uint32_t reason) {
+[[noreturn]] void do_powerctl(const zx::debuglog& log, zx_handle_t rroot, uint32_t reason) {
   const char* r_str = (reason == ZX_SYSTEM_POWERCTL_SHUTDOWN) ? "poweroff" : "reboot";
   if (reason == ZX_SYSTEM_POWERCTL_REBOOT) {
     printl(log, "Waiting 3 seconds...");
@@ -54,7 +54,7 @@ using namespace userboot;
     __builtin_trap();
 }
 
-void load_child_process(zx_handle_t log, const struct options* o, const Bootfs& bootfs,
+void load_child_process(const zx::debuglog& log, const struct options* o, const Bootfs& bootfs,
                         const char* root_prefix, const zx::vmo& vdso_vmo, zx_handle_t proc,
                         zx_handle_t vmar, zx_handle_t thread, zx_handle_t to_child,
                         zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
@@ -75,7 +75,7 @@ void load_child_process(zx_handle_t log, const struct options* o, const Bootfs& 
 // allocating the initial stack) stay out of this area, and then destroyed.
 // The process's own allocations can then use the full address space; if
 // it's using a sanitizer, it will set up its shadow memory first thing.
-zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
+zx_handle_t reserve_low_address_space(const zx::debuglog& log, zx_handle_t root_vmar) {
   zx_info_vmar_t info;
   check(log, zx_object_get_info(root_vmar, ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
         "zx_object_get_info failed on child root VMAR handle");
@@ -129,9 +129,9 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   zx_status_t status =
       channel.read(0, child_message.cmdline, handles.data(), sizeof(child_message.cmdline),
                    handles.size(), &cmdline_len, &nhandles);
-  check(log.get(), status, "cannot read bootstrap message");
+  check(log, status, "cannot read bootstrap message");
   if (nhandles != kHandleCount) {
-    fail(log.get(), "read %u handles instead of %u", nhandles, kHandleCount);
+    fail(log, "read %u handles instead of %u", nhandles, kHandleCount);
   }
 
   // All done with the channel from the kernel now.  Let it go.
@@ -140,21 +140,19 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   // Now that we have the root resource, we can use it to get a debuglog.
   status = zx::debuglog::create(*zx::unowned_resource{handles[kRootResource]}, 0, &log);
   if (status != ZX_OK || !log) {
-    printl(ZX_HANDLE_INVALID, "zx_debuglog_create failed: %d, using zx_debug_write instead",
-           status);
+    printl(log, "zx_debuglog_create failed: %d, using zx_debug_write instead", status);
   }
 
   // Hang on to the resource root handle in case we call powerctl below.
   zx::resource root_resource;
   status = zx::unowned_resource { handles[kRootResource] }
   ->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_resource);
-  check(log.get(), status, "zx_handle_duplicate");
+  check(log, status, "zx_handle_duplicate");
 
   // Process the kernel command line, which gives us options and also
   // becomes the environment strings for our child.
   options o;
-  child_message.pargs.environ_num =
-      parse_options(log.get(), child_message.cmdline, cmdline_len, &o);
+  child_message.pargs.environ_num = parse_options(log, child_message.cmdline, cmdline_len, &o);
 
   // Fill in the child message header.
   child_message.pargs.protocol = ZX_PROCARGS_PROTOCOL;
@@ -189,8 +187,7 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   // Locate the first bootfs bootdata section and decompress it.
   // We need it to load devmgr and libc from.
   // Later bootfs sections will be processed by devmgr.
-  zx::vmo bootfs_vmo{
-      bootdata_get_bootfs(log.get(), vmar_self.get(), handles[kRootJob], handles[kZbi])};
+  zx::vmo bootfs_vmo{bootdata_get_bootfs(log, vmar_self.get(), handles[kRootJob], handles[kZbi])};
 
   zx::process proc;
   {
@@ -222,8 +219,7 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
     size_t root_len = strlen(root_option);
     char root_prefix[NAME_MAX + 1];
     if (root_len >= sizeof(root_prefix) - 1) {
-      fail(log.get(), "`userboot.root` string too long (%zu > %zu)", root_len,
-           sizeof(root_prefix) - 1);
+      fail(log, "`userboot.root` string too long (%zu > %zu)", root_len, sizeof(root_prefix) - 1);
     }
     memcpy(root_prefix, root_option, root_len);
     while (root_len > 0 && root_prefix[root_len - 1] == '/') {
@@ -237,7 +233,7 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
     // Make the channel for the bootstrap message.
     zx::channel to_child, child_start_handle;
     status = zx::channel::create(0, &to_child, &child_start_handle);
-    check(log.get(), status, "zx_channel_create failed");
+    check(log, status, "zx_channel_create failed");
 
     // Create the process itself.
     zx::vmar vmar;
@@ -245,22 +241,22 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
     const char* filename = o.value[OPTION_FILENAME];
     status = zx::process::create(*root_job, filename, static_cast<uint32_t>(strlen(filename)), 0,
                                  &proc, &vmar);
-    check(log.get(), status, "zx_process_create");
+    check(log, status, "zx_process_create");
 
     // Squat on some address space before we start loading it up.
-    zx::vmar reserve_vmar{reserve_low_address_space(log.get(), vmar.get())};
+    zx::vmar reserve_vmar{reserve_low_address_space(log, vmar.get())};
 
     // Create the initial thread in the new process
     zx::thread thread;
     status =
         zx::thread::create(proc, filename, static_cast<uint32_t>(strlen(filename)), 0, &thread);
-    check(log.get(), status, "zx_thread_create");
+    check(log, status, "zx_thread_create");
 
     // Map in the code.
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     zx::channel loader_service_channel;
-    load_child_process(log.get(), &o, bootfs, root_prefix, *zx::unowned_vmo{handles[kFirstVdso]},
+    load_child_process(log, &o, bootfs, root_prefix, *zx::unowned_vmo{handles[kFirstVdso]},
                        proc.get(), vmar.get(), thread.get(), to_child.get(), &entry, &vdso_base,
                        &stack_size, loader_service_channel.reset_and_get_address());
 
@@ -270,17 +266,17 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
       stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
       zx::vmo stack_vmo;
       status = zx::vmo::create(stack_size, 0, &stack_vmo);
-      check(log.get(), status, "zx_vmo_create failed for child stack");
+      check(log, status, "zx_vmo_create failed for child stack");
       stack_vmo.set_property(ZX_PROP_NAME, kStackVmoName, sizeof(kStackVmoName) - 1);
       zx_vaddr_t stack_base;
       status =
           vmar.map(0, stack_vmo, 0, stack_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &stack_base);
-      check(log.get(), status, "zx_vmar_map failed for child stack");
+      check(log, status, "zx_vmar_map failed for child stack");
       sp = compute_initial_stack_pointer(stack_base, stack_size);
     }
 
     // We're done doing mappings, so clear out the reservation VMAR.
-    check(log.get(), reserve_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
+    check(log, reserve_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
     reserve_vmar.reset();
 
     // Pass along the child's root VMAR.  We're done with it.
@@ -288,35 +284,39 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
 
     // Duplicate the child's process handle to pass to it.
     status = zx_handle_duplicate(proc.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kProcSelf]);
-    check(log.get(), status, "zx_handle_duplicate failed on child process handle");
+    check(log, status, "zx_handle_duplicate failed on child process handle");
 
     // Duplicate the child's thread handle to pass to it.
     status = zx_handle_duplicate(thread.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kThreadSelf]);
-    check(log.get(), status, "zx_handle_duplicate failed on child thread handle");
+    check(log, status, "zx_handle_duplicate failed on child thread handle");
 
     for (const auto& h : handles) {
       zx_info_handle_basic_t info;
       status = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-      check(log.get(), status, "bad handle %d is %x", (int)(&h - &handles[0]), h);
+      check(log, status, "bad handle %d is %x", (int)(&h - &handles[0]), h);
     }
 
     // Now send the bootstrap message.  This transfers away all the handles
     // we have left except the process and thread themselves.
     status =
         to_child.write(0, &child_message, sizeof(child_message), handles.data(), handles.size());
-    check(log.get(), status, "zx_channel_write to child failed");
+    check(log, status, "zx_channel_write to child failed");
     to_child.reset();
 
     // Start the process going.
     status = proc.start(thread, entry, sp, std::move(child_start_handle), vdso_base);
-    check(log.get(), status, "zx_process_start failed");
+    check(log, status, "zx_process_start failed");
     thread.reset();
 
-    printl(log.get(), "process %s started.", o.value[OPTION_FILENAME]);
+    printl(log, "process %s started.", o.value[OPTION_FILENAME]);
 
     // Now become the loader service for as long as that's needed.
     if (loader_service_channel) {
-      LoaderService ldsvc(log.get(), &bootfs, root_prefix);
+      zx::debuglog log_dup;
+      status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
+      check(log, status, "zx_handle_duplicate failed on debuglog handle");
+
+      LoaderService ldsvc(std::move(log_dup), &bootfs, root_prefix);
       ldsvc.Serve(std::move(loader_service_channel));
     }
 
@@ -324,30 +324,30 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   }
 
   if (o.value[OPTION_SHUTDOWN] || o.value[OPTION_REBOOT]) {
-    printl(log.get(), "Waiting for %s to exit...", o.value[OPTION_FILENAME]);
+    printl(log, "Waiting for %s to exit...", o.value[OPTION_FILENAME]);
     status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-    check(log.get(), status, "zx_object_wait_one on process failed");
+    check(log, status, "zx_object_wait_one on process failed");
     zx_info_process_t info;
     status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-    check(log.get(), status, "zx_object_get_info on process failed");
-    printl(log.get(), "*** Exit status %zd ***\n", info.return_code);
+    check(log, status, "zx_object_get_info on process failed");
+    printl(log, "*** Exit status %zd ***\n", info.return_code);
     if (info.return_code == 0) {
       // The test runners match this exact string on the console log
       // to determine that the test succeeded since shutting the
       // machine down doesn't return a value to anyone for us.
-      printl(log.get(), "%s\n", ZBI_TEST_SUCCESS_STRING);
+      printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
     }
     if (o.value[OPTION_REBOOT]) {
-      do_powerctl(log.get(), root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT);
+      do_powerctl(log, root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT);
     } else if (o.value[OPTION_SHUTDOWN]) {
-      do_powerctl(log.get(), root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN);
+      do_powerctl(log, root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN);
     }
   }
 
   // Now we've accomplished our purpose in life, and we can die happy.
   proc.reset();
 
-  printl(log.get(), "finished!");
+  printl(log, "finished!");
   zx_process_exit(0);
 }
 

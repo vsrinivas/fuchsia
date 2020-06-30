@@ -19,7 +19,7 @@ namespace {
 constexpr const char kBootfsVmoName[] = "uncompressed-bootfs";
 }  // namespace
 
-zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handle_t job,
+zx_handle_t bootdata_get_bootfs(const zx::debuglog& log, zx_handle_t vmar_self, zx_handle_t job,
                                 zx_handle_t bootdata_vmo) {
   size_t off = 0;
   for (;;) {

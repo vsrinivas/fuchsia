@@ -55,7 +55,7 @@ static void apply_option(struct options* o, const char* arg) {
   }
 }
 
-uint32_t parse_options(zx_handle_t log, const char* cmdline, size_t cmdline_size,
+uint32_t parse_options(const zx::debuglog& log, const char* cmdline, size_t cmdline_size,
                        struct options* o) {
   initialize_options(o);
 

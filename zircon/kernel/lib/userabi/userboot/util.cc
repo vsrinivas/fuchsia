@@ -151,10 +151,6 @@ void vprintl(const zx::debuglog& log, const char* fmt, va_list ap) {
   }
 }
 
-void vprintl(zx_handle_t log, const char* fmt, va_list ap) {
-  vprintl(*zx::unowned_debuglog{log}, fmt, ap);
-}
-
 void printl(const zx::debuglog& log, const char* fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -162,25 +158,10 @@ void printl(const zx::debuglog& log, const char* fmt, ...) {
   va_end(ap);
 }
 
-void printl(zx_handle_t log, const char* fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  vprintl(*zx::unowned_debuglog{log}, fmt, ap);
-  va_end(ap);
-}
-
 void fail(const zx::debuglog& log, const char* fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   vprintl(log, fmt, ap);
-  va_end(ap);
-  zx_process_exit(-1);
-}
-
-void fail(zx_handle_t log, const char* fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  vprintl(*zx::unowned_debuglog{log}, fmt, ap);
   va_end(ap);
   zx_process_exit(-1);
 }

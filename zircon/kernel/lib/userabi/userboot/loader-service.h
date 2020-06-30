@@ -18,9 +18,8 @@ class Bootfs;
 
 class LoaderService {
  public:
-  LoaderService() = delete;
-
-  LoaderService(zx_handle_t log, Bootfs* fs, const char* root) : fs_(fs), root_(root), log_(log) {}
+  LoaderService(zx::debuglog log, Bootfs* fs, const char* root)
+      : log_(std::move(log)), fs_(fs), root_(root) {}
 
   // Handle loader-service RPCs on channel until there are no more.
   // Consumes the channel.
@@ -28,9 +27,9 @@ class LoaderService {
 
  private:
   static constexpr const char kLoadObjectFilePrefix[] = "lib/";
+  zx::debuglog log_;
   Bootfs* fs_;
   const char* root_;
-  zx::unowned_debuglog log_;
   char prefix_[32];
   size_t prefix_len_ = 0;
   bool exclusive_ = false;

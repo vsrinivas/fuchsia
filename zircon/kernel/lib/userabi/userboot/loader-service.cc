@@ -24,7 +24,7 @@ void LoaderService::Config(const char* string, size_t len) {
     exclusive_ = true;
   }
   if (len >= sizeof(prefix_) - 1) {
-    fail(log_->get(), "loader-service config string too long");
+    fail(log_, "loader-service config string too long");
   }
   memcpy(prefix_, string, len);
   prefix_[len++] = '/';
@@ -47,7 +47,7 @@ zx::vmo LoaderService::LoadObject(const char* name, size_t len) {
     vmo = TryLoadObject(name, len, false);
   }
   if (!vmo) {
-    fail(log_->get(), "cannot find shared library '%s'", name);
+    fail(log_, "cannot find shared library '%s'", name);
   }
   return vmo;
 }
@@ -64,17 +64,17 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
   // This is the normal error for the other end going away,
   // which happens when the process dies.
   if (status == ZX_ERR_PEER_CLOSED) {
-    printl(log_->get(), "loader-service channel peer closed on read");
+    printl(log_, "loader-service channel peer closed on read");
     return false;
   }
 
-  check(log_->get(), status, "zx_channel_read on loader-service channel failed");
+  check(log_, status, "zx_channel_read on loader-service channel failed");
 
   const char* string;
   size_t string_len;
   status = ldmsg_req_decode(&req, size, &string, &string_len);
   if (status != ZX_OK) {
-    fail(log_->get(), "loader-service request invalid");
+    fail(log_, "loader-service request invalid");
   }
 
   ldmsg_rsp_t rsp;
@@ -83,7 +83,7 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
   zx::vmo vmo;
   switch (req.header.ordinal) {
     case LDMSG_OP_DONE:
-      printl(log_->get(), "loader-service received DONE request");
+      printl(log_, "loader-service received DONE request");
       return false;
 
     case LDMSG_OP_CONFIG:
@@ -99,7 +99,7 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
       goto error_reply;
 
     default:
-      fail(log_->get(), "loader-service received invalid opcode");
+      fail(log_, "loader-service received invalid opcode");
       break;
   }
 
@@ -114,13 +114,13 @@ error_reply:
   } else {
     status = channel.write(0, &rsp, static_cast<uint32_t>(ldmsg_rsp_get_size(&rsp)), nullptr, 0);
   }
-  check(log_->get(), status, "zx_channel_write on loader-service channel failed");
+  check(log_, status, "zx_channel_write on loader-service channel failed");
 
   return true;
 }
 
 void LoaderService::Serve(zx::channel channel) {
-  printl(log_->get(), "waiting for loader-service requests...");
+  printl(log_, "waiting for loader-service requests...");
   do {
     zx_signals_t signals;
     zx_status_t status = channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -130,13 +130,13 @@ void LoaderService::Serve(zx::channel channel) {
       // which happens when the process dies.
       break;
     }
-    check(log_->get(), status, "zx_object_wait_one failed on loader-service channel");
+    check(log_, status, "zx_object_wait_one failed on loader-service channel");
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
-      printl(log_->get(), "loader-service channel peer closed");
+      printl(log_, "loader-service channel peer closed");
       break;
     }
     if (!(signals & ZX_CHANNEL_READABLE)) {
-      fail(log_->get(), "unexpected signal state on loader-service channel");
+      fail(log_, "unexpected signal state on loader-service channel");
     }
   } while (HandleRequest(channel));
 }

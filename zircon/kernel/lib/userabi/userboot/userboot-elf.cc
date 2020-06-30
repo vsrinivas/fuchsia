@@ -23,9 +23,9 @@
 
 #define INTERP_PREFIX "lib/"
 
-static zx_vaddr_t load(zx_handle_t log, const char* what, zx_handle_t vmar, const zx::vmo& vmo,
-                       uintptr_t* interp_off, size_t* interp_len, zx_handle_t* segments_vmar,
-                       size_t* stack_size, bool return_entry) {
+static zx_vaddr_t load(const zx::debuglog& log, const char* what, zx_handle_t vmar,
+                       const zx::vmo& vmo, uintptr_t* interp_off, size_t* interp_len,
+                       zx_handle_t* segments_vmar, size_t* stack_size, bool return_entry) {
   elf_load_header_t header;
   uintptr_t phoff;
   zx_status_t status = elf_load_prepare(vmo.get(), NULL, 0, &header, &phoff);
@@ -53,7 +53,7 @@ static zx_vaddr_t load(zx_handle_t log, const char* what, zx_handle_t vmar, cons
   return return_entry ? entry : base;
 }
 
-zx_vaddr_t elf_load_vmo(zx_handle_t log, zx_handle_t vmar, const zx::vmo& vmo) {
+zx_vaddr_t elf_load_vmo(const zx::debuglog& log, zx_handle_t vmar, const zx::vmo& vmo) {
   return load(log, "vDSO", vmar, vmo, NULL, NULL, NULL, NULL, false);
 }
 
@@ -77,7 +77,7 @@ struct loader_bootstrap_message {
   char env[sizeof(LOADER_BOOTSTRAP_ENVIRON)];
 };
 
-static void stuff_loader_bootstrap(zx_handle_t log, zx_handle_t proc, zx_handle_t root_vmar,
+static void stuff_loader_bootstrap(const zx::debuglog& log, zx_handle_t proc, zx_handle_t root_vmar,
                                    zx_handle_t thread, zx_handle_t to_child,
                                    zx_handle_t segments_vmar, zx::vmo vmo,
                                    zx_handle_t* loader_svc) {
@@ -116,7 +116,7 @@ static void stuff_loader_bootstrap(zx_handle_t log, zx_handle_t proc, zx_handle_
       [BOOTSTRAP_LOADER_SVC] = ZX_HANDLE_INVALID,
   };
   // clang-format on
-  check(log, zx_handle_duplicate(log, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_LOGGER]),
+  check(log, zx_handle_duplicate(log.get(), ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_LOGGER]),
         "zx_handle_duplicate failed");
   check(log, zx_handle_duplicate(proc, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_PROC]),
         "zx_handle_duplicate failed");
@@ -132,7 +132,7 @@ static void stuff_loader_bootstrap(zx_handle_t log, zx_handle_t proc, zx_handle_
   check(log, status, "zx_channel_write of loader bootstrap message failed");
 }
 
-zx_vaddr_t elf_load_bootfs(zx_handle_t log, const Bootfs& bootfs, const char* root_prefix,
+zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs, const char* root_prefix,
                            zx_handle_t proc, zx_handle_t vmar, zx_handle_t thread,
                            const char* filename, zx_handle_t to_child, size_t* stack_size,
                            zx_handle_t* loader_svc) {
