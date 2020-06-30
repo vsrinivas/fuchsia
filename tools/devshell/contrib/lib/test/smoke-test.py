@@ -76,7 +76,9 @@ def main():
     git_base = subprocess.check_output(
         ["git", "rev-parse", "--show-toplevel"], encoding="UTF-8").strip()
     for path in modified.splitlines():
-        pathlib.Path(git_base, path).touch()
+        p = pathlib.Path(git_base, path)
+        if p.exists():
+            p.touch()
 
     # Find all stale stamps
     ninja = []
