@@ -610,12 +610,24 @@ table H264EncoderSettings {
     7: H264QuantizationParameters quantization_params;
 };
 
+/// Settings for HEVC/H265 Encoders.
+table HevcEncoderSettings {
+    /// Target bits per second for encoded stream. Defaults to 200,000 if
+    /// omitted.
+    1: uint32 bit_rate;
+    /// Target frames per second for encoded stream. Defaults to 30 if omitted.
+    2: uint32 frame_rate;
+    /// Number of pictures per keyframe. Defaults to 8 if omitted.
+    3: uint32 gop_size;
+};
+
 /// Settings for encoders that tell them how to encode raw
 /// formats.
 flexible union EncoderSettings {
     1: SbcEncoderSettings sbc;
     2: AacEncoderSettings aac;
     3: H264EncoderSettings h264;
+    4: HevcEncoderSettings hevc;
 };
 
 /// FormatDetails
