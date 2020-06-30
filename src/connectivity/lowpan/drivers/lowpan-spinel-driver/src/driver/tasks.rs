@@ -49,7 +49,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                             other => other,
                         })
                         .cancel_upon(exit_criteria.boxed(), Ok(()))
-                        .map_err(|x| x.context("offline_task"))
+                        .map_err(|x| x.context("online_task"))
                         .await?;
 
                     fx_log_info!("main_task: online_task terminated");

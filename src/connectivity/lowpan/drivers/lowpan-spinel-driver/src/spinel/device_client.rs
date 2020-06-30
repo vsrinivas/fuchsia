@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::flow_window::FlowWindow;
-use anyhow::Error;
+use crate::prelude::*;
+use anyhow::{Context as _, Error};
 use core::fmt::Debug;
 use core::pin::Pin;
 use fidl_fuchsia_lowpan_spinel::DeviceEvent as SpinelDeviceEvent;
@@ -74,9 +75,16 @@ where
     DP: fidl_fuchsia_lowpan_spinel::DeviceProxyInterface + Unpin + Clone,
 {
     async fn open(&self) -> Result<(), Error> {
-        self.device_proxy.open().await?.map_err(SpinelError)?;
+        self.device_proxy
+            .open()
+            .await
+            .context("device_proxy.open(): FIDL Error")?
+            .map_err(SpinelError)
+            .context("device_proxy.open(): Spinel Error")?;
         self.send_window.reset();
-        self.device_proxy.ready_to_receive_frames(INBOUND_FRAME_WINDOW_SIZE.try_into().unwrap())?;
+        self.device_proxy
+            .ready_to_receive_frames(INBOUND_FRAME_WINDOW_SIZE.try_into().unwrap())
+            .context("device_proxy.ready_to_receive_frames(): FIDL Error")?;
         Ok(())
     }
 
@@ -185,11 +193,15 @@ where
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         match self.send_window.poll_dec(cx, 1) {
             Poll::Ready(()) => Poll::Ready(Ok(())),
-            Poll::Pending => Poll::Pending,
+            Poll::Pending => {
+                traceln!("SPINEL_WAITING_TO_SEND: {:?}", self.send_window);
+                Poll::Pending
+            }
         }
     }
 
     fn start_send(self: Pin<&mut Self>, frame: &'b [u8]) -> Result<(), Self::Error> {
+        traceln!("SPINEL_SEND: {:x?}", frame);
         Ok(self.device_proxy.send_frame(frame)?)
     }
 
@@ -231,10 +243,12 @@ where
         let self_mut = self.get_mut();
         match self_mut.event_stream.poll_next_unpin(cx) {
             Poll::Ready(Some(Ok(SpinelDeviceEvent::OnReadyForSendFrames { number_of_frames }))) => {
+                traceln!("SPINEL_READY_FOR_SEND: {}", number_of_frames);
                 self_mut.send_window.inc(number_of_frames);
                 Poll::Pending
             }
             Poll::Ready(Some(Ok(SpinelDeviceEvent::OnReceiveFrame { data }))) => {
+                traceln!("SPINEL_RECV: {:x?}", data);
                 self_mut.device_proxy.ready_to_receive_frames(1)?;
                 Poll::Ready(Some(Ok(data)))
             }

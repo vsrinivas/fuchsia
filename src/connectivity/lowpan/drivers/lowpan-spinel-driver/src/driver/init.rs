@@ -58,7 +58,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 
             // Open/Reset the NCP
             traceln!("init_task: Waiting to open.");
-            self.device_sink.open().await?;
+            self.device_sink.open().await.context("Call to `open()` on Spinel device failed.")?;
 
             traceln!("init_task: Did open.");
 
@@ -87,8 +87,10 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 
         traceln!("init_task: Sending get protocol version request...");
 
-        let protocol_version =
-            self.get_property_simple::<ProtocolVersion, _>(Prop::ProtocolVersion).await?;
+        let protocol_version = self
+            .get_property_simple::<ProtocolVersion, _>(Prop::ProtocolVersion)
+            .await
+            .context("Waiting on protocol version")?;
 
         traceln!("init_task: Protocol version = {:?}", protocol_version);
 
