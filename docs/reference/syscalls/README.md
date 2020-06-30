@@ -51,11 +51,12 @@
 
 ## Channels
 + [channel_call](channel_call.md) - synchronously send a message and receive a reply
++ [channel_call_etc](channel_call_etc.md) - synchronously send a message and receive a reply with handle information
 + [channel_create](channel_create.md) - create a new channel
 + [channel_read](channel_read.md) - receive a message from a channel
 + [channel_read_etc](channel_read_etc.md) - receive a message from a channel with handle information
 + [channel_write](channel_write.md) - write a message to a channel
-+ [channel_write_etc](channel_write_etc.md) - write a message to the channel and modify the handles.
++ [channel_write_etc](channel_write_etc.md) - write a message to the channel and modify the handles
 
 ## Sockets
 + [socket_create](socket_create.md) - create a new socket
