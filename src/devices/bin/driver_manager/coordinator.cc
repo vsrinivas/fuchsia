@@ -212,19 +212,19 @@ zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_clie
 
 zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
   root_device_ = fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
-                                             ZX_PROTOCOL_ROOT, zx::channel());
+                                             ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
   misc_device_ = fbl::MakeRefCounted<Device>(this, "misc", fbl::String(), "misc,", root_device_,
-                                             ZX_PROTOCOL_MISC_PARENT, zx::channel());
+                                             ZX_PROTOCOL_MISC_PARENT, zx::vmo(), zx::channel());
   misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
   sys_device_ = fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
-                                            zx::channel());
+                                            zx::vmo(), zx::channel());
   sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 
   test_device_ = fbl::MakeRefCounted<Device>(this, "test", fbl::String(), "test,", root_device_,
-                                             ZX_PROTOCOL_TEST_PARENT, zx::channel());
+                                             ZX_PROTOCOL_TEST_PARENT, zx::vmo(), zx::channel());
   test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
   return ZX_OK;
 }
@@ -491,7 +491,7 @@ zx_status_t Coordinator::AddDevice(
     const fbl::RefPtr<Device>& parent, zx::channel device_controller, zx::channel coordinator,
     const llcpp::fuchsia::device::manager::DeviceProperty* props_data, size_t props_count,
     fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
-    fbl::StringPiece args, bool invisible, bool has_init, bool always_init,
+    fbl::StringPiece args, bool invisible, bool has_init, bool always_init, zx::vmo inspect,
     zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
@@ -551,7 +551,7 @@ zx_status_t Coordinator::AddDevice(
   zx_status_t status = Device::Create(
       this, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
       protocol_id, std::move(props), std::move(coordinator), std::move(device_controller),
-      init_wait_make_visible, want_init_task, std::move(client_remote), &dev);
+      init_wait_make_visible, want_init_task, std::move(inspect), std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }

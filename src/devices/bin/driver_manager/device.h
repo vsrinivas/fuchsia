@@ -22,6 +22,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
+#include <fs/vmo_file.h>
 
 #include "async_loop_ref_counted_rpc_handler.h"
 #include "composite_device.h"
@@ -265,8 +266,8 @@ class Device
   };
 
   Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
-         fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote,
-         bool wait_make_visible = false);
+         fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
+         zx::channel client_remote, bool wait_make_visible = false);
   ~Device();
 
   // Create a new device with the given parameters.  This sets up its
@@ -277,8 +278,8 @@ class Device
                             fbl::String name, fbl::String driver_path, fbl::String args,
                             uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                             zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                            bool wait_make_visible, bool want_init_task, zx::channel client_remote,
-                            fbl::RefPtr<Device>* device);
+                            bool wait_make_visible, bool want_init_task, zx::vmo inspect,
+                            zx::channel client_remote, fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
                                      const CompositeDevice& composite, zx::channel coordinator_rpc,
                                      zx::channel device_controller_rpc,
@@ -468,6 +469,11 @@ class Device
 
   Devnode* devnode() { return self; }
 
+  const fbl::String& link_name() const { return link_name_; }
+  void set_link_name(fbl::String link_name) { link_name_ = std::move(link_name); }
+
+  fbl::RefPtr<fs::VmoFile>& inspect_file() { return inspect_file_; }
+
   // TODO(teisenbe): We probably want more states.
 #define STATE_VALUES(macro)                                                                        \
   macro(kActive)                                                                                   \
@@ -649,6 +655,11 @@ class Device
   // completed. It will likely mark |active_remove_| as completed and clear
   // it.
   RemoveCompletion remove_completion_;
+
+  // Name of the inspect vmo file as it appears in diagnostics class directory
+  fbl::String link_name_;
+
+  fbl::RefPtr<fs::VmoFile> inspect_file_;
 
   // For attaching as an open connection to the proxy device,
   // or once the device becomes visible.

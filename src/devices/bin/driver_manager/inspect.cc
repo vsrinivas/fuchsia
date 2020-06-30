@@ -4,8 +4,143 @@
 
 #include "inspect.h"
 
+#include <ddk/driver.h>
 #include <driver-info/driver-info.h>
+#include <fs/vfs_types.h>
 #include <fs/vmo_file.h>
+#include <fs/vnode.h>
+
+#include "device.h"
+#include "init_task.h"
+#include "resume_task.h"
+#include "suspend_task.h"
+#include "unbind_task.h"
+
+zx::status<> InspectDevfs::InitInspectFile(const fbl::RefPtr<Device>& dev) {
+  if (dev->inspect_file() != nullptr) {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  if (!dev->inspect().vmo()) {
+    // Device doesn't have an inspect VMO to publish.
+    return zx::ok();
+  }
+
+  dev->inspect_file() = fbl::MakeRefCounted<fs::VmoFile>(dev->inspect().vmo(), 0, ZX_PAGE_SIZE);
+  return zx::ok();
+}
+
+zx::status<> InspectDevfs::Publish(const fbl::RefPtr<Device>& dev) {
+  if (!dev->inspect().vmo()) {
+    // Device doesn't have an inspect VMO to publish.
+    return zx::ok();
+  }
+
+  if (dev->inspect_file() == nullptr) {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  return AddClassDirEntry(dev);
+}
+
+zx::status<> InspectDevfs::InitInspectFileAndPublish(const fbl::RefPtr<Device>& dev) {
+  zx::status<> status = InitInspectFile(dev);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  return Publish(dev);
+}
+
+// TODO(surajmalhotra): Ideally this would take a RefPtr, but currently this is
+// invoked in the dtor for Device.
+void InspectDevfs::Unpublish(Device* dev) {
+  // Remove reference in class directory if it exists
+  auto [dir, seqcount] = GetProtoDir(dev->protocol_id());
+  if (dir != nullptr) {
+    dir->RemoveEntry(dev->link_name(), dev->inspect_file().get());
+  }
+
+  dev->inspect_file() = nullptr;
+}
+
+InspectDevfs::InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir) : root_dir_(root_dir) {
+  std::copy(std::begin(kProtoInfos), std::end(kProtoInfos), proto_infos_.begin());
+}
+
+zx::status<InspectDevfs> InspectDevfs::Create(const fbl::RefPtr<fs::PseudoDir>& root_dir) {
+  InspectDevfs devfs(root_dir);
+
+  zx::status<> status = devfs.PrepopulateProtocolDirs();
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  return zx::ok(std::move(devfs));
+}
+
+zx::status<> InspectDevfs::PrepopulateProtocolDirs() {
+  auto class_devnode = fbl::MakeRefCounted<fs::PseudoDir>();
+  zx::status<> status = zx::make_status(root_dir_->AddEntry("class", class_devnode));
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  for (auto& info : proto_infos_) {
+    if (!(info.flags & PF_NOPUB)) {
+      auto node = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto status = zx::make_status(class_devnode->AddEntry(info.name, node));
+      if (status.is_error()) {
+        return status.take_error();
+      }
+      info.devnode = std::move(node);
+    }
+  }
+  return zx::ok();
+}
+
+std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> InspectDevfs::GetProtoDir(uint32_t id) {
+  for (auto& info : proto_infos_) {
+    if (info.id == id) {
+      return {info.devnode, &info.seqcount};
+    }
+  }
+  return {nullptr, nullptr};
+}
+
+zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
+  // Create link in /dev/class/... if this id has a published class
+  auto [dir, seqcount] = GetProtoDir(dev->protocol_id());
+  if (dir == nullptr) {
+    // No class dir for this type, so ignore it
+    return zx::ok();
+  }
+
+  char tmp[32];
+  const char* name = nullptr;
+
+  if (dev->protocol_id() != ZX_PROTOCOL_CONSOLE) {
+    for (unsigned n = 0; n < 1000; n++) {
+      snprintf(tmp, sizeof(tmp), "%03u", ((*seqcount)++) % 1000);
+      fbl::RefPtr<fs::Vnode> node;
+      if (dir->Lookup(&node, tmp) == ZX_ERR_NOT_FOUND) {
+        name = tmp;
+        break;
+      }
+    }
+    if (name == nullptr) {
+      return zx::error(ZX_ERR_ALREADY_EXISTS);
+    }
+  } else {
+    name = dev->name().data();
+  }
+
+  zx::status<> status = zx::make_status(dir->AddEntry(name, dev->inspect_file()));
+  if (status.is_error()) {
+    return status;
+  }
+  dev->set_link_name(name);
+  return zx::ok();
+}
 
 InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   inspect_vmo_ = inspect_.DuplicateVmo();
@@ -23,6 +158,10 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(inspect_vmo_, 0, vmo_size);
   driver_manager_dir->AddEntry("dm.inspect", vmo_file);
 
+  auto status = InspectDevfs::Create(diagnostics_dir_);
+  ZX_ASSERT(status.is_ok());
+  devfs_ = std::move(status.value());
+
   if (dispatcher) {
     zx::channel local;
     zx::channel::create(0, &diagnostics_client_, &local);
@@ -35,8 +174,8 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
 }
 
 DeviceInspect::DeviceInspect(inspect::Node& devices, inspect::UintProperty& device_count,
-                             std::string name)
-    : device_count_node_(device_count) {
+                             std::string name, zx::vmo inspect_vmo)
+    : device_count_node_(device_count), vmo_(std::move(inspect_vmo)) {
   device_node_ = devices.CreateChild(name);
   // Increment device count.
   device_count_node_.Add(1);

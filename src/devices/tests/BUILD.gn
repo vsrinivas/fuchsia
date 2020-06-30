@@ -9,6 +9,7 @@ group("tests") {
     "bind-fail-test",
     "ddk-instance-lifecycle-test",
     "ddk-metadata-test",
+    "driver-inspect-test",
     "libdriver-integration-test",
     "pwrbtn-monitor-integration-test",
   ]

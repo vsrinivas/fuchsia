@@ -137,7 +137,7 @@ void MultipleDeviceTestCase::SetUp() {
         coordinator_.sys_device()->proxy(), std::move(local), std::move(local2),
         /* props_data */ nullptr, /* props_count */ 0, "platform-bus", 0, /* driver_path */ {},
         /* args */ {}, /* invisible */ false, /* has_init */ false, /* always_init */ true,
-        /* client_remote */ zx::channel(), &platform_bus_.device);
+        /*inspect*/ zx::vmo(), /* client_remote */ zx::channel(), &platform_bus_.device);
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
 
@@ -186,7 +186,7 @@ void MultipleDeviceTestCase::TearDown() {
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, bool invisible,
                                        bool has_init, bool reply_to_init, bool always_init,
-                                       size_t* index) {
+                                       zx::vmo inspect, size_t* index) {
   DeviceState state;
 
   zx::channel local, local2;
@@ -199,7 +199,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
   status = coordinator_.AddDevice(
       parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
       name, /* driver_path */ protocol_id, driver.data(), /* args */ {}, invisible, has_init,
-      always_init, /* client_remote */ zx::channel(), &state.device);
+      always_init, std::move(inspect), /* client_remote */ zx::channel(), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -216,7 +216,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, size_t* index) {
   AddDevice(parent, name, protocol_id, driver, /* invisible */ false, /* has_init */ false,
-            /* reply_to_init */ true, /* always_init */ true, index);
+            /* reply_to_init */ true, /* always_init */ true, /* inspect */ zx::vmo(), index);
 }
 
 void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {

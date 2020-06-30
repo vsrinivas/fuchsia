@@ -7,12 +7,57 @@
 
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 
 #include <ddk/binding.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo_dir.h>
 #include <fs/synchronous_vfs.h>
+
+class Device;
+
+struct ProtocolInfo {
+  const char* name;
+  fbl::RefPtr<fs::PseudoDir> devnode;
+  uint32_t id;
+  uint32_t flags;
+  uint32_t seqcount;
+};
+
+static const inline ProtocolInfo kProtoInfos[] = {
+#define DDK_PROTOCOL_DEF(tag, val, name, flags) {name, nullptr, val, flags, 0},
+#include <ddk/protodefs.h>
+};
+
+class InspectDevfs {
+ public:
+  // Use Create instead.
+  explicit InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir);
+
+  static zx::status<InspectDevfs> Create(const fbl::RefPtr<fs::PseudoDir>& root_dir);
+
+  std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> GetProtoDir(uint32_t id);
+  zx::status<> AddClassDirEntry(const fbl::RefPtr<Device>& dev);
+
+  // Initialize |dev|'s devfs state
+  zx::status<> InitInspectFile(const fbl::RefPtr<Device>& dev);
+
+  zx::status<> Publish(const fbl::RefPtr<Device>& dev);
+
+  // Convenience method for initializing |dev| and publishing it to devfs immediately.
+  zx::status<> InitInspectFileAndPublish(const fbl::RefPtr<Device>& dev);
+
+  void Unpublish(Device* dev);
+
+ private:
+  // Fill out the "class" subdirectory.
+  zx::status<> PrepopulateProtocolDirs();
+
+  fbl::RefPtr<fs::PseudoDir> root_dir_;
+
+  std::array<ProtocolInfo, std::size(kProtoInfos)> proto_infos_;
+};
 
 class InspectManager {
  public:
@@ -35,6 +80,8 @@ class InspectManager {
   // Public method for test purpose
   inspect::Inspector& inspector() { return inspect_; }
 
+  std::optional<InspectDevfs>& devfs() { return devfs_; }
+
  private:
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
   std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
@@ -47,16 +94,22 @@ class InspectManager {
 
   inspect::UintProperty device_count_;
   inspect::Node devices_;
+
+  // The inspect devfs instance
+  std::optional<InspectDevfs> devfs_;
 };
 
 class DeviceInspect {
  public:
   // |devices| and |device_count| should outlive DeviceInspect class
-  DeviceInspect(inspect::Node& devices, inspect::UintProperty& device_count, std::string name);
+  DeviceInspect(inspect::Node& devices, inspect::UintProperty& device_count, std::string name,
+                zx::vmo inspect_vmo);
 
   ~DeviceInspect();
 
   inspect::Node& device_node() { return device_node_; }
+
+  zx::vmo& vmo() { return vmo_; }
 
   void set_state(std::string state) { state_.Set(state); }
 
@@ -93,6 +146,9 @@ class DeviceInspect {
   inspect::StringProperty state_;
   // Unique id of the device in a driver host
   inspect::UintProperty local_id_;
+
+  // Inspect VMO returned via devfs's inspect nodes.
+  zx::vmo vmo_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_INSPECT_H_

@@ -30,8 +30,8 @@
 static constexpr bool kEnableAlwaysInit = false;
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
-               fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote,
-               bool wait_make_visible)
+               fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect_vmo,
+               zx::channel client_remote, bool wait_make_visible)
     : coordinator(coord),
       name_(std::move(name)),
       libname_(std::move(libname)),
@@ -43,7 +43,7 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       wait_make_visible_(wait_make_visible) {
   test_reporter = std::make_unique<DriverTestReporter>(name_);
   inspect_.emplace(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
-                   name_.c_str());
+                   name_.c_str(), std::move(inspect_vmo));
   set_state(Device::State::kActive);  // set default state
 }
 
@@ -55,6 +55,12 @@ Device::~Device() {
   // the flag is only used to modify the proxy library loading behavior.
 
   devfs_unpublish(this);
+
+  // If we destruct early enough, we may have created the core devices and devfs might not exist
+  // yet.
+  if (coordinator->inspect_manager().devfs()) {
+    coordinator->inspect_manager().devfs()->Unpublish(this);
+  }
 
   // Drop our reference to our driver_host if we still have it
   set_host(nullptr);
@@ -78,8 +84,8 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
                            fbl::String name, fbl::String driver_path, fbl::String args,
                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                            zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                           bool wait_make_visible, bool want_init_task, zx::channel client_remote,
-                           fbl::RefPtr<Device>* device) {
+                           bool wait_make_visible, bool want_init_task, zx::vmo inspect,
+                           zx::channel client_remote, fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -89,12 +95,19 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     real_parent = parent;
   }
 
-  auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
-                                         std::move(args), real_parent, protocol_id,
-                                         std::move(client_remote), wait_make_visible);
+  auto dev = fbl::MakeRefCounted<Device>(
+      coordinator, std::move(name), std::move(driver_path), std::move(args), real_parent,
+      protocol_id, std::move(inspect), std::move(client_remote), wait_make_visible);
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  // Initialise and publish device inspect
+  if (auto status = coordinator->inspect_manager().devfs()->InitInspectFileAndPublish(dev);
+      status.is_error()) {
+    return status.error_value();
+  }
+
   zx_status_t status = dev->SetProps(std::move(props));
   if (status != ZX_OK) {
     return status;
@@ -152,9 +165,14 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Driver
 
   auto dev =
       fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(), fbl::String(),
-                                  nullptr, ZX_PROTOCOL_COMPOSITE, zx::channel());
+                                  nullptr, ZX_PROTOCOL_COMPOSITE, zx::vmo(), zx::channel());
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  if (auto status = coordinator->inspect_manager().devfs()->InitInspectFileAndPublish(dev);
+      status.is_error()) {
+    return status.error_value();
   }
 
   zx_status_t status = dev->SetProps(std::move(props));
@@ -205,7 +223,7 @@ zx_status_t Device::CreateProxy() {
 
   auto dev =
       fbl::MakeRefCounted<Device>(this->coordinator, name_, std::move(driver_path), fbl::String(),
-                                  fbl::RefPtr(this), protocol_id_, zx::channel());
+                                  fbl::RefPtr(this), protocol_id_, zx::vmo(), zx::channel());
   if (dev == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -802,7 +820,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
       props.count(), name, protocol_id, driver_path, args, false /* invisible */, has_init,
-      kEnableAlwaysInit, std::move(client_remote), &device);
+      kEnableAlwaysInit, std::move(inspect), std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config &
        llcpp::fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
@@ -856,7 +874,7 @@ void Device::AddDeviceInvisible(
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
       props.count(), name, protocol_id, driver_path, args, true /* invisible */, has_init,
-      kEnableAlwaysInit, std::move(client_remote), &device);
+      kEnableAlwaysInit, std::move(inspect), std::move(client_remote), &device);
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
   if (status != ZX_OK) {

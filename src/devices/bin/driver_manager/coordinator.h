@@ -15,6 +15,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -27,6 +28,7 @@
 #include <fbl/vector.h>
 
 #include "composite_device.h"
+#include "devfs.h"
 #include "device.h"
 #include "driver.h"
 #include "driver_host.h"
@@ -223,6 +225,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx_status_t InitCoreDevices(std::string_view sys_device_driver);
+  zx::status<> InitInspect();
   bool InSuspend() const;
   bool InResume() const;
 
@@ -260,7 +263,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
                         const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
                         size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
                         fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
-                        bool has_init, bool always_init, zx::channel client_remote,
+                        bool has_init, bool always_init, zx::vmo inspect, zx::channel client_remote,
                         fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);

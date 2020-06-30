@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 
+#include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
 #include <type_traits>
@@ -424,7 +425,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
                      const device_power_state_info_t* power_states = nullptr,
                      const uint8_t power_state_count = 0,
                      const device_performance_state_info_t* perf_power_states = nullptr,
-                     const uint8_t perf_power_state_count = 0) {
+                     const uint8_t perf_power_state_count = 0, zx::vmo inspect_vmo = zx::vmo()) {
     device_add_args_t args{
         .props = props,
         .prop_count = prop_count,
@@ -436,6 +437,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
         .proxy_args = proxy_args,
         .flags = flags,
         .client_remote = client_remote,
+        .inspect_vmo = inspect_vmo.release(),
     };
     return DdkAdd(name, args);
   }

@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/driver-inspect-test"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

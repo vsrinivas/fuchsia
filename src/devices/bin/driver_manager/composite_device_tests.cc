@@ -1140,9 +1140,10 @@ TEST_F(CompositeTestCase, FragmentDeviceInit) {
   for (size_t i = 0; i < std::size(device_indexes); ++i) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
-    ASSERT_NO_FATAL_FAILURES(AddDevice(
-        platform_bus(), name, protocol_id[i], "", false /* invisible */, true /* has_init */,
-        false /* reply_to_init */, true /* always_init */, &device_indexes[i]));
+    ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), name, protocol_id[i], "",
+                                       false /* invisible */, true /* has_init */,
+                                       false /* reply_to_init */, true /* always_init */,
+                                       zx::vmo() /* inspect */, &device_indexes[i]));
     auto index = device_indexes[i];
     ASSERT_FALSE(device(index)->device->is_visible());
     ASSERT_NO_FATAL_FAILURES(CheckInitReceived(device(index)->controller_remote, &txns[i]));

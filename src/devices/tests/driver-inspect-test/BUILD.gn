@@ -1,0 +1,83 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+
+fidl("fuchsia.device.inspect.test") {
+  testonly = true
+  sources = [ "inspect.test.fidl" ]
+  visibility = [ ":*" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+driver_module("driver") {
+  output_name = "inspect-test"
+  testonly = true
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+  sources = [ "test-driver.cc" ]
+  deps = [
+    ":fuchsia.device.inspect.test_llcpp",
+    "//sdk/lib/fdio",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/inspect",
+  ]
+  visibility = [ ":*" ]
+}
+
+test("tests") {
+  output_name = "driver-inspect-test"
+
+  testonly = true
+  sources = [ "test.cc" ]
+  deps = [
+    ":fuchsia.device.inspect.test_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/inspect",
+  ]
+  visibility = [ ":*" ]
+}
+
+devmgr_manifest("devmgr-manifest") {
+}
+
+test_package("driver-inspect-test") {
+  deps = [
+    ":devmgr-manifest",
+    ":driver",
+    ":tests",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  tests = [
+    {
+      name = "driver-inspect-test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("${root_build_dir}/inspect-test.so")
+      dest = "inspect-test.so"
+    },
+  ]
+}

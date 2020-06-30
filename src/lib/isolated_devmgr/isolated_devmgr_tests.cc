@@ -211,6 +211,8 @@ TEST_F(DevmgrTest, DiagnosticsFiles) {
   fbl::unique_fd fd;
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(devmgr->devfs_root(),
                                                                          "diagnostics", &fd));
+  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(devmgr->devfs_root(),
+                                                                         "diagnostics/class", &fd));
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
                        devmgr->devfs_root(), "diagnostics/driver_manager", &fd));
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(

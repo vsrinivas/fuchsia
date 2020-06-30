@@ -40,6 +40,7 @@ TEST_F(InspectManagerTestCase, DirectoryEntries) {
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("driver_manager", V_TYPE_DIR);
+    dc.ExpectEntry("class", V_TYPE_DIR);
     dc.ExpectEnd();
   }
 
@@ -212,4 +213,55 @@ TEST_F(DeviceInspectTestCase, PropertyChange) {
   ASSERT_TRUE(test_device);
   CheckProperty<inspect::StringPropertyValue>(test_device->node(), "state",
                                               inspect::StringPropertyValue("kResumed"));
+}
+
+class InspectDevfsTestCase : public MultipleDeviceTestCase {};
+
+TEST_F(InspectDevfsTestCase, DevfsEntries) {
+  size_t test_index;
+  zx::vmo inspect_vmo, inspect_vmo_duplicate;
+  uint32_t test_device_protocol = ZX_PROTOCOL_BLOCK;
+  ASSERT_OK(zx::vmo::create(8 * 1024, 0, &inspect_vmo));
+  ASSERT_OK(inspect_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
+                                  &inspect_vmo_duplicate));
+
+  ASSERT_NO_FATAL_FAILURES(AddDevice(
+      platform_bus(), "test-device", test_device_protocol /* protocol id */, "",
+      false /* invisible */, false /* has_init */, false /* reply_to_init */,
+      false /* always_init */, std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
+
+  // Check that device vmo is listed in devfs
+  uint8_t buffer[4096];
+  size_t length;
+  {
+    auto [dir, seqcount] =
+        coordinator()->inspect_manager().devfs()->GetProtoDir(test_device_protocol);
+    ASSERT_NE(dir, nullptr);
+    ASSERT_NE(seqcount, nullptr);
+    ASSERT_EQ(*seqcount, 1);
+    fs::vdircookie_t cookie = {};
+    EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+    fs::DirentChecker dc(buffer, length);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEntry("000", V_TYPE_FILE);
+    dc.ExpectEnd();
+  }
+
+  // remove device
+  RemoveDevice(test_index);
+
+  // Check that inspect vmo is unlisted
+  {
+    auto [dir, seqcount] =
+        coordinator()->inspect_manager().devfs()->GetProtoDir(test_device_protocol);
+    ASSERT_NE(dir, nullptr);
+    ASSERT_NE(seqcount, nullptr);
+    // sequence count is only always incremented
+    ASSERT_EQ(*seqcount, 1);
+    fs::vdircookie_t cookie = {};
+    EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+    fs::DirentChecker dc(buffer, length);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEnd();
+  }
 }

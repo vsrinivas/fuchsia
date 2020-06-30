@@ -20,6 +20,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <ddk/driver.h>
