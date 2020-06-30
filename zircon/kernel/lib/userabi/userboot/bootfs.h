@@ -7,20 +7,28 @@
 #ifndef ZIRCON_KERNEL_LIB_USERABI_USERBOOT_BOOTFS_H_
 #define ZIRCON_KERNEL_LIB_USERABI_USERBOOT_BOOTFS_H_
 
+#include <lib/zx/debuglog.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
+#include <zircon/boot/bootfs.h>
 #include <zircon/types.h>
 
-#include <cstddef>
+#include <string_view>
 
-struct bootfs {
-  zx_handle_t vmo;
-  const std::byte* contents;
-  size_t len;
+class Bootfs {
+ public:
+  Bootfs(zx::vmar vmar_self, zx::vmo vmo, zx::debuglog log);
+  ~Bootfs();
+
+  zx::vmo Open(const char* root_prefix, const char* filename, const char* purpose) const;
+
+ private:
+  const zbi_bootfs_dirent_t* Search(const char* root_prefix, const char* filename) const;
+
+  zx::vmar vmar_self_;
+  zx::vmo vmo_;
+  zx::debuglog log_;
+  std::basic_string_view<std::byte> contents_;
 };
-
-void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs* fs);
-void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs* fs);
-
-zx_handle_t bootfs_open(zx_handle_t log, const char* purpose, struct bootfs* fs,
-                        const char* root_prefix, const char* filename);
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_BOOTFS_H_

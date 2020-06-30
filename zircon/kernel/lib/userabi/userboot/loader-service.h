@@ -14,13 +14,13 @@
 
 #include <cstddef>
 
-struct bootfs;
+class Bootfs;
 
 class LoaderService {
  public:
   LoaderService() = delete;
 
-  LoaderService(zx_handle_t log, bootfs* fs, const char* root) : fs_(fs), root_(root), log_(log) {}
+  LoaderService(zx_handle_t log, Bootfs* fs, const char* root) : fs_(fs), root_(root), log_(log) {}
 
   // Handle loader-service RPCs on channel until there are no more.
   // Consumes the channel.
@@ -28,7 +28,7 @@ class LoaderService {
 
  private:
   static constexpr const char kLoadObjectFilePrefix[] = "lib/";
-  bootfs* fs_;
+  Bootfs* fs_;
   const char* root_;
   zx::unowned_debuglog log_;
   char prefix_[32];

@@ -9,102 +9,103 @@
 #include <string.h>
 #include <zircon/boot/bootfs.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/resource.h>
 
 #include "util.h"
+#include "zircon/rights.h"
+#include "zircon/types.h"
 
-void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs* fs) {
-  uint64_t size;
-  zx_status_t status = zx_vmo_get_size(vmo, &size);
-  check(log, status, "zx_vmo_get_size failed on bootfs vmo\n");
+Bootfs::Bootfs(zx::vmar vmar_self, zx::vmo vmo, zx::debuglog log)
+    : vmar_self_(std::move(vmar_self)), log_(std::move(log)) {
+  zx_status_t status =
+      vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY, &vmo_);
+  check(log_, status, "zx_handle_replace failed on bootfs VMO handle");
+
+  size_t size;
+  status = vmo_.get_size(&size);
+  check(log_, status, "zx_vmo_get_size failed on bootfs vmo");
+
   uintptr_t addr = 0;
-  status = zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, size, &addr);
-  check(log, status, "zx_vmar_map failed on bootfs vmo\n");
-  fs->contents = reinterpret_cast<const std::byte*>(addr);
-  fs->len = size;
-  status = zx_handle_duplicate(
-      vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY, &fs->vmo);
-  check(log, status, "zx_handle_duplicate failed on bootfs VMO handle\n");
+  status = vmar_self_.map(ZX_VM_PERM_READ, 0, vmo_, 0, size, &addr);
+  check(log_, status, "zx_vmar_map failed on bootfs vmo");
+  contents_ = std::basic_string_view(reinterpret_cast<const std::byte*>(addr), size);
 }
 
-void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs* fs) {
-  zx_status_t status = zx_vmar_unmap(vmar, (uintptr_t)fs->contents, fs->len);
-  check(log, status, "zx_vmar_unmap failed\n");
-  status = zx_handle_close(fs->vmo);
-  check(log, status, "zx_handle_close failed\n");
+Bootfs::~Bootfs() {
+  uintptr_t addr = reinterpret_cast<uintptr_t>(contents_.data());
+  zx_status_t status = vmar_self_.unmap(addr, contents_.size());
+  check(log_, status, "zx_vmar_unmap failed on bootfs mapping");
 }
 
-static const zbi_bootfs_dirent_t* bootfs_search(zx_handle_t log, struct bootfs* fs,
-                                                const char* root_prefix, const char* filename) {
-  const std::byte* p = fs->contents;
+const zbi_bootfs_dirent_t* Bootfs::Search(const char* root_prefix, const char* filename) const {
+  std::basic_string_view<std::byte> p = contents_;
 
-  if (fs->len < sizeof(zbi_bootfs_header_t))
-    fail(log, "bootfs is too small");
+  if (p.size() < sizeof(zbi_bootfs_header_t)) {
+    fail(log_, "bootfs is too small");
+  }
 
-  const zbi_bootfs_header_t* hdr = reinterpret_cast<const zbi_bootfs_header_t*>(p);
-  if ((hdr->magic != ZBI_BOOTFS_MAGIC) || (hdr->dirsize > fs->len))
-    fail(log, "bootfs bad magic or size");
+  const zbi_bootfs_header_t* hdr = reinterpret_cast<const zbi_bootfs_header_t*>(p.data());
+  if ((hdr->magic != ZBI_BOOTFS_MAGIC) || (hdr->dirsize > p.size())) {
+    fail(log_, "bootfs bad magic or size");
+  }
 
   size_t prefix_len = strlen(root_prefix);
   size_t filename_len = strlen(filename) + 1;
 
-  p += sizeof(zbi_bootfs_header_t);
-  size_t avail = hdr->dirsize;
-
-  while (avail > sizeof(zbi_bootfs_dirent_t)) {
-    auto e = reinterpret_cast<const zbi_bootfs_dirent_t*>(p);
+  p = p.substr(sizeof(zbi_bootfs_header_t));
+  while (p.size() > sizeof(zbi_bootfs_dirent_t)) {
+    auto e = reinterpret_cast<const zbi_bootfs_dirent_t*>(p.data());
 
     size_t sz = ZBI_BOOTFS_DIRENT_SIZE(e->name_len);
-    if ((e->name_len < 1) || (sz > avail))
-      fail(log, "bootfs has bogus namelen in header");
+    if ((e->name_len < 1) || (sz > p.size())) {
+      fail(log_, "bootfs has bogus namelen in header");
+    }
 
     if (e->name_len == prefix_len + filename_len && !memcmp(e->name, root_prefix, prefix_len) &&
         !memcmp(&e->name[prefix_len], filename, filename_len)) {
       return e;
     }
 
-    p += sz;
-    avail -= sz;
+    p = p.substr(sz);
   }
 
   return NULL;
 }
 
-zx_handle_t bootfs_open(zx_handle_t log, const char* purpose, struct bootfs* fs,
-                        const char* root_prefix, const char* filename) {
-  printl(log, "searching bootfs for '%s%s'", root_prefix, filename);
+zx::vmo Bootfs::Open(const char* root_prefix, const char* filename, const char* purpose) const {
+  printl(log_, "searching bootfs for '%s%s' (%s)", root_prefix, filename, purpose);
 
-  const zbi_bootfs_dirent_t* e = bootfs_search(log, fs, root_prefix, filename);
+  const zbi_bootfs_dirent_t* e = Search(root_prefix, filename);
   if (e == NULL) {
-    printl(log, "file not found");
-    return ZX_HANDLE_INVALID;
+    printl(log_, "file not found");
+    return zx::vmo{};
   }
-  if (e->data_off > fs->len)
-    fail(log, "bogus offset in bootfs header!");
-  if (fs->len - e->data_off < e->data_len)
-    fail(log, "bogus size in bootfs header!");
+  if (e->data_off > contents_.size()) {
+    fail(log_, "bogus offset in bootfs header!");
+  }
+  if (contents_.size() - e->data_off < e->data_len) {
+    fail(log_, "bogus size in bootfs header!");
+  }
 
   // Clone a private copy of the file's subset of the bootfs VMO.
   // TODO(mcgrathr): Create a plain read-only clone when the feature
   // is implemented in the VM.
-  zx_handle_t vmo;
+  zx::vmo file_vmo;
   zx_status_t status =
-      zx_vmo_create_child(fs->vmo, ZX_VMO_CHILD_COPY_ON_WRITE, e->data_off, e->data_len, &vmo);
-  if (status != ZX_OK)
-    fail(log, "zx_vmo_create_child failed: %d", status);
+      vmo_.create_child(ZX_VMO_CLONE_COPY_ON_WRITE, e->data_off, e->data_len, &file_vmo);
+  check(log_, status, "zx_vmo_create_child failed");
 
-  zx_object_set_property(vmo, ZX_PROP_NAME, filename, strlen(filename));
+  file_vmo.set_property(ZX_PROP_NAME, filename, strlen(filename));
 
   // Drop unnecessary ZX_RIGHT_WRITE rights.
   // TODO(mcgrathr): Should be superfluous with read-only zx_vmo_create_child.
-  status = zx_handle_replace(
-      vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY, &vmo);
-  if (status != ZX_OK)
-    fail(log, "zx_handle_replace failed: %d", status);
+  status = file_vmo.replace(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
+                            &file_vmo);
+  check(log_, status, "zx_handle_replace to remove ZX_RIGHT_WRITE failed");
 
   // TODO(mdempsky): Restrict to bin/ and lib/.
-  status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
-  if (status != ZX_OK)
-    fail(log, "zx_vmo_replace_as_executable failed: %d", status);
+  status = file_vmo.replace_as_executable(zx::resource{}, &file_vmo);
+  check(log_, status, "zx_vmo_replace_as_executable failed");
 
-  return vmo;
+  return file_vmo;
 }

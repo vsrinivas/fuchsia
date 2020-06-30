@@ -7,16 +7,22 @@
 #ifndef ZIRCON_KERNEL_LIB_USERABI_USERBOOT_UTIL_H_
 #define ZIRCON_KERNEL_LIB_USERABI_USERBOOT_UTIL_H_
 
+#include <lib/zx/debuglog.h>
 #include <stdarg.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 // printl() is printf-like, understanding %s %p %d %u %x %zu %zd %zx.
 // No other formatting features are supported.
+void __PRINTFLIKE(2, 3) printl(const zx::debuglog& log, const char* fmt, ...);
+void vprintl(const zx::debuglog& log, const char* fmt, va_list ap);
+// TODO: Update all printl/vprintl callers to use zx::debuglog instead of raw handle
 void __PRINTFLIKE(2, 3) printl(zx_handle_t log, const char* fmt, ...);
 void vprintl(zx_handle_t log, const char* fmt, va_list ap);
 
 // fail() combines printl() with process exit
+[[noreturn]] void __PRINTFLIKE(2, 3) fail(const zx::debuglog& log, const char* fmt, ...);
+// TODO: Update all check/fail callers to use zx::debuglog instead of raw handle
 [[noreturn]] void __PRINTFLIKE(2, 3) fail(zx_handle_t log, const char* fmt, ...);
 
 #define check(log, status, fmt, ...)                                      \

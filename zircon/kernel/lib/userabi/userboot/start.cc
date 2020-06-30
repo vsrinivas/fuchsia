@@ -23,6 +23,7 @@
 #include <array>
 #include <climits>
 #include <cstring>
+#include <optional>
 #include <utility>
 
 #include "bootdata.h"
@@ -52,8 +53,8 @@ using namespace userboot;
     __builtin_trap();
 }
 
-void load_child_process(zx_handle_t log, const struct options* o, struct bootfs* bootfs,
-                        const char* root_prefix, zx_handle_t vdso_vmo, zx_handle_t proc,
+void load_child_process(zx_handle_t log, const struct options* o, const Bootfs& bootfs,
+                        const char* root_prefix, const zx::vmo& vdso_vmo, zx_handle_t proc,
                         zx_handle_t vmar, zx_handle_t thread, zx_handle_t to_child,
                         zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
                         zx_handle_t* loader_svc) {
@@ -187,125 +188,134 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   // Locate the first bootfs bootdata section and decompress it.
   // We need it to load devmgr and libc from.
   // Later bootfs sections will be processed by devmgr.
-  zx::vmo bootfs_vmo{bootdata_get_bootfs(log.get(), vmar_self.get(), handles[kRootJob],
-                                         handles[kFirstVdso], handles[kZbi])};
+  zx::vmo bootfs_vmo{
+      bootdata_get_bootfs(log.get(), vmar_self.get(), handles[kRootJob], handles[kZbi])};
 
-  // Map in the bootfs so we can look for files in it.
-  struct bootfs bootfs;
-  bootfs_mount(vmar_self.get(), log.get(), bootfs_vmo.get(), &bootfs);
-
-  // Pass the decompressed bootfs VMO on.
-  handles[kBootfsVmo] = bootfs_vmo.release();
-
-  // Canonicalize the (possibly empty) userboot.root option string so that
-  // it never starts with a slash but always ends with a slash unless it's
-  // empty.  That lets us use it as a simple prefix on the full file name
-  // strings in the BOOTFS directory.
-  const char* root_option = o.value[OPTION_ROOT];
-  while (*root_option == '/') {
-    ++root_option;
-  }
-  size_t root_len = strlen(root_option);
-  char root_prefix[NAME_MAX + 1];
-  if (root_len >= sizeof(root_prefix) - 1) {
-    fail(log.get(), "`userboot.root` string too long (%zu > %zu)", root_len,
-         sizeof(root_prefix) - 1);
-  }
-  memcpy(root_prefix, root_option, root_len);
-  while (root_len > 0 && root_prefix[root_len - 1] == '/') {
-    --root_len;
-  }
-  if (root_len > 0) {
-    root_prefix[root_len++] = '/';
-  }
-  root_prefix[root_len] = '\0';
-
-  // Make the channel for the bootstrap message.
-  zx::channel to_child, child_start_handle;
-  status = zx::channel::create(0, &to_child, &child_start_handle);
-  check(log.get(), status, "zx_channel_create failed");
-
-  // Create the process itself.
   zx::process proc;
-  zx::vmar vmar;
-  zx::unowned_job root_job{handles[kRootJob]};
-  const char* filename = o.value[OPTION_FILENAME];
-  status = zx::process::create(*root_job, filename, static_cast<uint32_t>(strlen(filename)), 0,
-                               &proc, &vmar);
-  check(log.get(), status, "zx_process_create");
-
-  // Squat on some address space before we start loading it up.
-  zx::vmar reserve_vmar{reserve_low_address_space(log.get(), vmar.get())};
-
-  // Create the initial thread in the new process
-  zx::thread thread;
-  status = zx::thread::create(proc, filename, static_cast<uint32_t>(strlen(filename)), 0, &thread);
-  check(log.get(), status, "zx_thread_create");
-
-  // Map in the code.
-  zx_vaddr_t entry, vdso_base;
-  size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
-  zx::channel loader_service_channel;
-  load_child_process(log.get(), &o, &bootfs, root_prefix, handles[kFirstVdso], proc.get(),
-                     vmar.get(), thread.get(), to_child.get(), &entry, &vdso_base, &stack_size,
-                     loader_service_channel.reset_and_get_address());
-
-  // Allocate the stack for the child.
-  uintptr_t sp;
   {
-    stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
-    zx::vmo stack_vmo;
-    status = zx::vmo::create(stack_size, 0, &stack_vmo);
-    check(log.get(), status, "zx_vmo_create failed for child stack");
-    stack_vmo.set_property(ZX_PROP_NAME, kStackVmoName, sizeof(kStackVmoName) - 1);
-    zx_vaddr_t stack_base;
-    status = vmar.map(0, stack_vmo, 0, stack_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &stack_base);
-    check(log.get(), status, "zx_vmar_map failed for child stack");
-    sp = compute_initial_stack_pointer(stack_base, stack_size);
+    // Map in the bootfs so we can look for files in it.
+    zx::vmo bootfs_vmo_dup;
+    zx::debuglog log_dup;
+    zx_status_t status = bootfs_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &bootfs_vmo_dup);
+    check(log, status, "zx_handle_duplicate failed on bootfs VMO handle");
+    status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
+    check(log, status, "zx_handle_duplicate failed on debuglog handle");
+    Bootfs bootfs{std::move(vmar_self), std::move(bootfs_vmo_dup), std::move(log_dup)};
+
+    // Pass the decompressed bootfs VMO on.
+    handles[kBootfsVmo] = bootfs_vmo.release();
+
+    // Canonicalize the (possibly empty) userboot.root option string so that
+    // it never starts with a slash but always ends with a slash unless it's
+    // empty.  That lets us use it as a simple prefix on the full file name
+    // strings in the BOOTFS directory.
+    const char* root_option = o.value[OPTION_ROOT];
+    while (*root_option == '/') {
+      ++root_option;
+    }
+    size_t root_len = strlen(root_option);
+    char root_prefix[NAME_MAX + 1];
+    if (root_len >= sizeof(root_prefix) - 1) {
+      fail(log.get(), "`userboot.root` string too long (%zu > %zu)", root_len,
+           sizeof(root_prefix) - 1);
+    }
+    memcpy(root_prefix, root_option, root_len);
+    while (root_len > 0 && root_prefix[root_len - 1] == '/') {
+      --root_len;
+    }
+    if (root_len > 0) {
+      root_prefix[root_len++] = '/';
+    }
+    root_prefix[root_len] = '\0';
+
+    // Make the channel for the bootstrap message.
+    zx::channel to_child, child_start_handle;
+    status = zx::channel::create(0, &to_child, &child_start_handle);
+    check(log.get(), status, "zx_channel_create failed");
+
+    // Create the process itself.
+    zx::vmar vmar;
+    zx::unowned_job root_job{handles[kRootJob]};
+    const char* filename = o.value[OPTION_FILENAME];
+    status = zx::process::create(*root_job, filename, static_cast<uint32_t>(strlen(filename)), 0,
+                                 &proc, &vmar);
+    check(log.get(), status, "zx_process_create");
+
+    // Squat on some address space before we start loading it up.
+    zx::vmar reserve_vmar{reserve_low_address_space(log.get(), vmar.get())};
+
+    // Create the initial thread in the new process
+    zx::thread thread;
+    status =
+        zx::thread::create(proc, filename, static_cast<uint32_t>(strlen(filename)), 0, &thread);
+    check(log.get(), status, "zx_thread_create");
+
+    // Map in the code.
+    zx_vaddr_t entry, vdso_base;
+    size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
+    zx::channel loader_service_channel;
+    load_child_process(log.get(), &o, bootfs, root_prefix, *zx::unowned_vmo{handles[kFirstVdso]},
+                       proc.get(), vmar.get(), thread.get(), to_child.get(), &entry, &vdso_base,
+                       &stack_size, loader_service_channel.reset_and_get_address());
+
+    // Allocate the stack for the child.
+    uintptr_t sp;
+    {
+      stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+      zx::vmo stack_vmo;
+      status = zx::vmo::create(stack_size, 0, &stack_vmo);
+      check(log.get(), status, "zx_vmo_create failed for child stack");
+      stack_vmo.set_property(ZX_PROP_NAME, kStackVmoName, sizeof(kStackVmoName) - 1);
+      zx_vaddr_t stack_base;
+      status =
+          vmar.map(0, stack_vmo, 0, stack_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &stack_base);
+      check(log.get(), status, "zx_vmar_map failed for child stack");
+      sp = compute_initial_stack_pointer(stack_base, stack_size);
+    }
+
+    // We're done doing mappings, so clear out the reservation VMAR.
+    check(log.get(), reserve_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
+    reserve_vmar.reset();
+
+    // Pass along the child's root VMAR.  We're done with it.
+    handles[kVmarRootSelf] = vmar.release();
+
+    // Duplicate the child's process handle to pass to it.
+    status = zx_handle_duplicate(proc.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kProcSelf]);
+    check(log.get(), status, "zx_handle_duplicate failed on child process handle");
+
+    // Duplicate the child's thread handle to pass to it.
+    status = zx_handle_duplicate(thread.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kThreadSelf]);
+    check(log.get(), status, "zx_handle_duplicate failed on child thread handle");
+
+    for (const auto& h : handles) {
+      zx_info_handle_basic_t info;
+      status = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      check(log.get(), status, "bad handle %d is %x", (int)(&h - &handles[0]), h);
+    }
+
+    // Now send the bootstrap message.  This transfers away all the handles
+    // we have left except the process and thread themselves.
+    status =
+        to_child.write(0, &child_message, sizeof(child_message), handles.data(), handles.size());
+    check(log.get(), status, "zx_channel_write to child failed");
+    to_child.reset();
+
+    // Start the process going.
+    status = proc.start(thread, entry, sp, std::move(child_start_handle), vdso_base);
+    check(log.get(), status, "zx_process_start failed");
+    thread.reset();
+
+    printl(log.get(), "process %s started.", o.value[OPTION_FILENAME]);
+
+    // Now become the loader service for as long as that's needed.
+    if (loader_service_channel) {
+      LoaderService ldsvc(log.get(), &bootfs, root_prefix);
+      ldsvc.Serve(std::move(loader_service_channel));
+    }
+
+    // All done with bootfs! Let it go out of scope.
   }
-
-  // We're done doing mappings, so clear out the reservation VMAR.
-  check(log.get(), reserve_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
-  reserve_vmar.reset();
-
-  // Pass along the child's root VMAR.  We're done with it.
-  handles[kVmarRootSelf] = vmar.release();
-
-  // Duplicate the child's process handle to pass to it.
-  status = zx_handle_duplicate(proc.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kProcSelf]);
-  check(log.get(), status, "zx_handle_duplicate failed on child process handle");
-
-  // Duplicate the child's thread handle to pass to it.
-  status = zx_handle_duplicate(thread.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kThreadSelf]);
-  check(log.get(), status, "zx_handle_duplicate failed on child thread handle");
-
-  for (const auto& h : handles) {
-    zx_info_handle_basic_t info;
-    status = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-    check(log.get(), status, "bad handle %d is %x", (int)(&h - &handles[0]), h);
-  }
-
-  // Now send the bootstrap message.  This transfers away all the handles
-  // we have left except the process and thread themselves.
-  status = to_child.write(0, &child_message, sizeof(child_message), handles.data(), handles.size());
-  check(log.get(), status, "zx_channel_write to child failed");
-  to_child.reset();
-
-  // Start the process going.
-  status = proc.start(thread, entry, sp, std::move(child_start_handle), vdso_base);
-  check(log.get(), status, "zx_process_start failed");
-  thread.reset();
-
-  printl(log.get(), "process %s started.", o.value[OPTION_FILENAME]);
-
-  // Now become the loader service for as long as that's needed.
-  if (loader_service_channel) {
-    LoaderService ldsvc(log.get(), &bootfs, root_prefix);
-    ldsvc.Serve(std::move(loader_service_channel));
-  }
-
-  // All done with bootfs!
-  bootfs_unmount(vmar_self.get(), log.get(), &bootfs);
 
   if (o.value[OPTION_SHUTDOWN] || o.value[OPTION_REBOOT]) {
     printl(log.get(), "Waiting for %s to exit...", o.value[OPTION_FILENAME]);

@@ -6,9 +6,9 @@
 
 #include "loader-service.h"
 
+#include <lib/fidl/txn_header.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <lib/fidl/txn_header.h>
 
 #include <cstring>
 
@@ -38,7 +38,7 @@ zx::vmo LoaderService::TryLoadObject(const char* name, size_t len, bool use_pref
   memcpy(&file[sizeof(kLoadObjectFilePrefix) - 1], prefix_, prefix_len);
   memcpy(&file[sizeof(kLoadObjectFilePrefix) - 1 + prefix_len], name, len);
   file[sizeof(kLoadObjectFilePrefix) - 1 + prefix_len + len] = '\0';
-  return zx::vmo(bootfs_open(log_->get(), "shared library", fs_, root_, file));
+  return fs_->Open(root_, file, "shared library");
 }
 
 zx::vmo LoaderService::LoadObject(const char* name, size_t len) {

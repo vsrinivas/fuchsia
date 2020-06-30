@@ -62,7 +62,7 @@ static char* i64string(char* s, size_t len, int64_t n) {
   return u64string(s, len, n);
 }
 
-void vprintl(zx_handle_t log, const char* fmt, va_list ap) {
+void vprintl(const zx::debuglog& log, const char* fmt, va_list ap) {
   char buffer[ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t)];
   static_assert(sizeof(LOG_PREFIX) < sizeof(buffer), "buffer too small");
 
@@ -145,23 +145,42 @@ void vprintl(zx_handle_t log, const char* fmt, va_list ap) {
     fmt++;
   }
 
-  if ((log == ZX_HANDLE_INVALID) || (zx_debuglog_write(log, 0, buffer, p - buffer) != ZX_OK)) {
+  if (!log.is_valid() || (log.write(0, buffer, p - buffer) != ZX_OK)) {
     zx_debug_write(buffer, p - buffer);
     zx_debug_write("\n", 1);
   }
 }
 
-void printl(zx_handle_t log, const char* fmt, ...) {
+void vprintl(zx_handle_t log, const char* fmt, va_list ap) {
+  vprintl(*zx::unowned_debuglog{log}, fmt, ap);
+}
+
+void printl(const zx::debuglog& log, const char* fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   vprintl(log, fmt, ap);
   va_end(ap);
 }
 
-void fail(zx_handle_t log, const char* fmt, ...) {
+void printl(zx_handle_t log, const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vprintl(*zx::unowned_debuglog{log}, fmt, ap);
+  va_end(ap);
+}
+
+void fail(const zx::debuglog& log, const char* fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   vprintl(log, fmt, ap);
+  va_end(ap);
+  zx_process_exit(-1);
+}
+
+void fail(zx_handle_t log, const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vprintl(*zx::unowned_debuglog{log}, fmt, ap);
   va_end(ap);
   zx_process_exit(-1);
 }
