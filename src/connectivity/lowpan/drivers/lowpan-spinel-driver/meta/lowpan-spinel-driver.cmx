@@ -3,9 +3,13 @@
         "binary": "bin/lowpan_spinel_driver"
     },
     "sandbox": {
+        "dev": [
+            "class/ot-radio"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.lowpan.Register"
+            "fuchsia.lowpan.device.Register",
+            "fuchsia.lowpan.spinel.Device"
         ]
     }
 }
