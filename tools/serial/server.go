@@ -21,7 +21,7 @@ import (
 // sound match for the behavior we're matching against.
 var ErrNetClosing = errors.New("use of closed network connection")
 
-func isErrNetClosing(err error) bool {
+func IsErrNetClosing(err error) bool {
 	if e, ok := err.(*net.OpError); ok {
 		return e.Err.Error() == ErrNetClosing.Error()
 	}
@@ -78,7 +78,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 			conn, err := listener.Accept()
 			if err != nil {
 				// if the listener was closed, we don't care.
-				if isErrNetClosing(err) {
+				if IsErrNetClosing(err) {
 					return
 				}
 				s.logf("error: serial: accept: %s", err)

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -37,7 +38,9 @@ import (
 )
 
 const (
-	netstackTimeout time.Duration = 1 * time.Minute
+	netstackTimeout     time.Duration = 1 * time.Minute
+	serialSocketEnvKey                = "FUCHSIA_SERIAL_SOCKET"
+	serialAuxFileEnvKey               = "FUCHSIA_SERIAL_FILE"
 )
 
 // Target represents a fuchsia instance.
@@ -181,8 +184,56 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	r.zirconArgs = append(r.zirconArgs, "driver.usb_xhci.disable")
 
 	eg, ctx := errgroup.WithContext(ctx)
-	var socketPath string
-	if t0.Serial() != nil {
+	socketPath := os.Getenv(serialSocketEnvKey)
+	var conn net.Conn
+	if socketPath != "" && r.serialLogFile != "" {
+		// If a serial server was created earlier in the stack, use
+		// the socket to copy to the serial log file.
+		serialLog, err := os.Create(r.serialLogFile)
+		if err != nil {
+			return err
+		}
+		defer serialLog.Close()
+		conn, err = net.Dial("unix", socketPath)
+		if err != nil {
+			return err
+		}
+		eg.Go(func() error {
+			logger.Debugf(ctx, "starting serial collection")
+			// Read and ignore any data from before this task run started.
+			// We need to do this because the serial server starts each
+			// connection at the beginning of the serial log.
+			serialAuxFilePath := os.Getenv(serialAuxFileEnvKey)
+			if serialAuxFilePath == "" {
+				return errors.New("serial mux did not provide aux file path in env")
+			}
+			info, err := os.Stat(serialAuxFilePath)
+			if err != nil {
+				return err
+			}
+			offset := info.Size()
+			b := bufio.NewReader(conn)
+			if _, err := io.CopyN(ioutil.Discard, b, offset); err != nil {
+				return err
+			}
+			logger.Debugf(ctx, "forwarding past %d bytes in the serial log file", offset)
+			// Once we're at the right place, copy each line into the
+			// serial log.
+			for {
+				line, err := b.ReadString('\n')
+				if err != nil {
+					if !serial.IsErrNetClosing(err) {
+						return err
+					}
+					return nil
+				}
+				if _, err := io.WriteString(serialLog, line); err != nil {
+					return err
+				}
+			}
+		})
+	} else if t0.Serial() != nil {
+		// Otherwise, spin up a serial server now.
 		defer t0.Serial().Close()
 
 		sOpts := serial.ServerOptions{}
@@ -231,6 +282,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			defer canceltime()
 			r.stopTargets(ctxtime, targets)
 		}()
+		if conn != nil {
+			defer conn.Close()
+		}
 		return r.runAgainstTarget(ctx, t0, args, socketPath)
 	})
 

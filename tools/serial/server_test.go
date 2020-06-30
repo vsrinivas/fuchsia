@@ -257,7 +257,7 @@ func TestServerSerialClosing(t *testing.T) {
 	}
 }
 
-func TestisErrNetClosing(t *testing.T) {
+func TestIsErrNetClosing(t *testing.T) {
 	// see golang issue 4373, this is the sad story from upstream, and the pattern
 	// we follow is similar to that of the net/http and net/http2 package. There's
 	// a variable stashed away in internal/poll, but it's not actually exported to
@@ -270,7 +270,7 @@ func TestisErrNetClosing(t *testing.T) {
 	l.Close()
 	_, err = l.Accept()
 
-	if !isErrNetClosing(err) {
+	if !IsErrNetClosing(err) {
 		t.Fatalf("expected a wrapped errnetclosing, got: %#v", err)
 	}
 }
