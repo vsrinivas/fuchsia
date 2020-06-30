@@ -429,10 +429,10 @@ logical OR of the values.
 
 ## Further Reading
 
-See
-[Triage (fx triage)](/src/diagnostics/triage/README.md)
-for the latest features and options - Triage will keep improving!
+See [`fx triage`][fx-triage] for the latest features and options - Triage will
+keep improving!
 
+[fx-triage]: https://www.fuchsia.dev/reference/tools/fx/cmd/triage
 [triage-inspect-example]: /src/diagnostics/examples/triage/bugreport/inspect.json
 [triage-rules-example]: /src/diagnostics/examples/triage/rules.triage
 [triage-codelab-solution]: /src/diagnostics/examples/triage/solution
