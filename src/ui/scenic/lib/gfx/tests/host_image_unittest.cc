@@ -162,8 +162,8 @@ VK_TEST_F(HostImageTest, FindResource) {
 
   ASSERT_TRUE(Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
 
-  fidl::InterfacePtr<fuchsia::images::ImagePipe> image_pipe;
-  ASSERT_TRUE(Apply(scenic::NewCreateImagePipeCmd(kImagePipeId, image_pipe.NewRequest())));
+  fidl::InterfacePtr<fuchsia::images::ImagePipe2> image_pipe;
+  ASSERT_TRUE(Apply(scenic::NewCreateImagePipe2Cmd(kImagePipeId, image_pipe.NewRequest())));
 
   // Host images should be findable as their concrete sub-class.
   auto host_image_resource = FindResource<HostImage>(kImageId);
