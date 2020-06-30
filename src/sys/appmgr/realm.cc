@@ -147,15 +147,15 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
   // some v1 components assert on being able to clone stdin when creating new
   // processes. Appmgr no longer receives a stdin (or stdout) handle as of
   // fxrev.dev/370683, so as to not break v1 components that assume a valid
-  // stdin we clone appmgr's stdout to give to launched processes as their
-  // stdin.
+  // stdin we clone appmgr's stdin handle which is a closed socket set at
+  // startup.
   //
   // Appmgr's stdout handle is populated on startup using
   // StdoutToDebuglog::Init, which installs a write-only debuglog as stdout and
   // stderr, so cloning this handle for new processes gives the same handle
   // (albeit without read rights) as appmgr used to hand out.
   actions.push_back({.action = FDIO_SPAWN_ACTION_CLONE_FD,
-                     .fd = {.local_fd = STDOUT_FILENO, .target_fd = STDIN_FILENO}});
+                     .fd = {.local_fd = STDIN_FILENO, .target_fd = STDIN_FILENO}});
   PushFileDescriptor(std::move(launch_info.out), STDOUT_FILENO, &actions);
   PushFileDescriptor(std::move(launch_info.err), STDERR_FILENO, &actions);
 

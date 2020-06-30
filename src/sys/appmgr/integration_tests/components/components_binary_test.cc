@@ -126,5 +126,14 @@ TEST_F(ComponentsBinaryTest, UnallowedDeprecatedShellFailsToLaunch) {
   EXPECT_NE(TerminationReason::EXITED, termination_reason);
 }
 
+TEST_F(ComponentsBinaryTest, EchoStdin) {
+  int64_t return_code = -1;
+  TerminationReason termination_reason;
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo_stdin.cmx"), &return_code,
+               &termination_reason, {std::string("hello world")});
+  EXPECT_EQ(0, return_code);
+  EXPECT_EQ(TerminationReason::EXITED, termination_reason);
+}
+
 }  // namespace
 }  // namespace component

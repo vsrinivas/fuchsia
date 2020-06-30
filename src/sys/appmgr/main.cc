@@ -33,6 +33,36 @@ std::vector<std::string> RootRealmServices() {
   return res;
 }
 
+// Creates a zircon socket and sets it to appmgr's stdin.
+zx_status_t InitStdinSocket() {
+  zx::socket reader, writer;
+  // Create a socket pair for stdin. We'll just discard the writer so stdin always looks like it's
+  // closed.
+  zx_status_t status = zx::socket::create(0, &writer, &reader);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to create stdin socket: " << zx_status_get_string(status);
+    return status;
+  }
+  status = reader.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &reader);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to replace stdin reader: " << zx_status_get_string(status);
+    return status;
+  }
+  fdio_t* io;
+  status = fdio_create(reader.release(), &io);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to create fdio struct for stdin reader: "
+                   << zx_status_get_string(status);
+  }
+  int fd = fdio_bind_to_fd(io, STDIN_FILENO, STDIN_FILENO);
+  if (fd != STDIN_FILENO) {
+    FX_LOGS(ERROR) << "failed to bind socket to stdin";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -48,20 +78,25 @@ int main(int argc, char** argv) {
     return status;
   }
 
+  status = InitStdinSocket();
+  if (status != ZX_OK) {
+    return status;
+  }
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   zx::channel svc_for_sys_server, svc_for_sys_client;
   status = zx::channel::create(0, &svc_for_sys_server, &svc_for_sys_client);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create channel: " << errno;
+    FX_LOGS(ERROR) << "failed to create channel: " << zx_status_get_string(status);
     return status;
   }
   status =
       fdio_open("/svc_for_sys", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_WRITABLE,
                 svc_for_sys_server.release());
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "failed to open /svc_for_sys (" << errno
+    FX_LOGS(WARNING) << "failed to open /svc_for_sys (" << zx_status_get_string(status)
                      << "), not forwarding services to sys realm";
     return status;
   }

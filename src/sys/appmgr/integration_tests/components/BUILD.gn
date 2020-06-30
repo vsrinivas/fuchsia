@@ -27,6 +27,14 @@ executable("echo2") {
   public_deps = [ "//src/lib/fxl" ]
 }
 
+executable("echo_stdin") {
+  output_name = "components_test_echo_stdin"
+
+  sources = [ "echo_stdin.cc" ]
+
+  public_deps = [ "//src/lib/fxl" ]
+}
+
 executable("getenv") {
   output_name = "components_test_getenv"
 
@@ -55,6 +63,7 @@ test_package("components_binary_tests") {
     ":components_binary_test",
     ":echo1",
     ":echo2",
+    ":echo_stdin",
     ":getenv",
   ]
 
@@ -66,6 +75,10 @@ test_package("components_binary_tests") {
     {
       name = "components_test_echo2"
       dest = "echo2"
+    },
+    {
+      name = "components_test_echo_stdin"
+      dest = "echo_stdin"
     },
     {
       name = "components_test_getenv"
@@ -97,6 +110,10 @@ test_package("components_binary_tests") {
     {
       path = rebase_path("meta/getenv2.cmx")
       dest = "getenv2.cmx"
+    },
+    {
+      path = rebase_path("meta/echo_stdin.cmx")
+      dest = "echo_stdin.cmx"
     },
   ]
 
