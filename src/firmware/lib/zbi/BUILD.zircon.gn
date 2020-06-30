@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("zbi") {
+  sdk = "static"
+  sdk_headers = [
+    "lib/zbi/zbi-cpp.h",
+    "lib/zbi/zbi-split.h",
+    "lib/zbi/zbi-zx.h",
+    "lib/zbi/zbi.h",
+  ]
+  host = true
+  kernel = true
+  static = true
+  sources = [ "zbi.c" ]
+  if (is_fuchsia && !is_kernel) {
+    sources += [ "zbi-zx.cc" ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/zx",
+    ]
+  }
+}
