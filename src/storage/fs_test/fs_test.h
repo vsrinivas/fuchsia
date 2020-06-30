@@ -63,6 +63,7 @@ class Filesystem {
     bool can_unmount = false;
     zx::duration timestamp_granularity = zx::nsec(1);
     bool supports_hard_links = true;
+    bool supports_mmap = false;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -94,6 +95,7 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
         .can_unmount = true,
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
+        .supports_mmap = false,
     };
     return traits;
   }
@@ -109,6 +111,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .can_unmount = false,
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
+        .supports_mmap = true,
     };
     return traits;
   }

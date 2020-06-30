@@ -236,6 +236,25 @@ fuchsia_component("minfs-tests") {
   ]
 }
 
+test("mmap_tests") {
+  sources = [ "mmap.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("mmap-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/mmap-tests.cml"
+  deps = [
+    ":manifests",
+    ":mmap_tests",
+  ]
+}
+
 test("overflow_tests") {
   sources = [ "overflow.cc" ]
   deps = [
@@ -283,6 +302,7 @@ fuchsia_test_package("fs-tests") {
     ":fcntl-tests",
     ":link-tests",
     ":minfs-tests",
+    ":mmap-tests",
     ":overflow-tests",
     ":read-write-tests",
   ]
@@ -326,6 +346,7 @@ action("manifests") {
     "$target_gen_dir/link-tests.cml",
     "$target_gen_dir/max-file-tests.cml",
     "$target_gen_dir/minfs-tests.cml",
+    "$target_gen_dir/mmap-tests.cml",
     "$target_gen_dir/overflow-tests.cml",
     "$target_gen_dir/read-write-tests.cml",
   ]
