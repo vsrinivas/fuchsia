@@ -19,7 +19,7 @@ pub fn get_test_settings_types() -> HashSet<SettingType> {
 async fn test_no_configuration_provided() {
     let factory = InMemoryStorageFactory::create();
 
-    let default_configuration = ServiceConfiguration { services: get_test_settings_types() };
+    let default_configuration = ServiceConfiguration::with_services(get_test_settings_types());
 
     // Don't load a real configuration, use the default configuration.
     let configuration =
@@ -43,7 +43,7 @@ async fn test_no_configuration_provided() {
 async fn test_default_configuration_provided() {
     let factory = InMemoryStorageFactory::create();
 
-    let default_configuration = ServiceConfiguration { services: get_test_settings_types() };
+    let default_configuration = ServiceConfiguration::with_services(get_test_settings_types());
 
     // Load test configuration, which only has Accessibility, default will not be used.
     let configuration = DefaultSetting::new(

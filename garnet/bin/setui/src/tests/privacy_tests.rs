@@ -5,8 +5,7 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::{testing::*, DeviceStorage},
-    crate::switchboard::base::PrivacyInfo,
-    crate::switchboard::base::SettingType,
+    crate::switchboard::base::{PrivacyInfo, SettingType},
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,

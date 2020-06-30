@@ -4,8 +4,10 @@
 
 #[cfg(test)]
 use {
-    crate::registry::device_storage::testing::*, crate::switchboard::base::NightModeInfo,
-    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, fidl_fuchsia_settings::*,
+    crate::registry::device_storage::testing::*,
+    crate::switchboard::base::{NightModeInfo, SettingType},
+    crate::EnvironmentBuilder,
+    fidl_fuchsia_settings::*,
 };
 
 const ENV_NAME: &str = "settings_service_night_mode_test_environment";

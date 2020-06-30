@@ -13,6 +13,7 @@ use {
         Authority, BlueprintHandle as AgentBlueprintHandle, InitializationContext, Lifespan,
     },
     crate::audio::audio_controller::AudioController,
+    crate::config::base::ControllerFlag,
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::DisplayController,
     crate::display::light_sensor_controller::LightSensorController,
@@ -51,9 +52,7 @@ use {
     futures::lock::Mutex,
     futures::StreamExt,
     serde::{Deserialize, Serialize},
-    std::collections::HashMap,
-    std::collections::HashSet,
-    std::iter::FromIterator,
+    std::collections::{HashMap, HashSet},
     std::sync::Arc,
 };
 
@@ -99,6 +98,14 @@ enum Runtime {
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceConfiguration {
     pub services: HashSet<SettingType>,
+    #[serde(default)]
+    pub controller_flags: HashSet<ControllerFlag>,
+}
+
+impl ServiceConfiguration {
+    pub fn with_services(services: HashSet<SettingType>) -> Self {
+        Self { services, controller_flags: HashSet::new() }
+    }
 }
 
 /// Environment is handed back when an environment is spawned from the
@@ -184,9 +191,22 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     }
 
     /// Setting types to participate.
-    pub fn settings(self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
+    pub fn settings(mut self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
+        let controller_flags =
+            self.configuration.take().map(|c| c.controller_flags).unwrap_or_else(|| HashSet::new());
         self.configuration(ServiceConfiguration {
             services: settings.to_vec().into_iter().collect(),
+            controller_flags,
+        })
+    }
+
+    /// Setting types to participate with customized controllers.
+    pub fn flags(mut self, controller_flags: &[ControllerFlag]) -> EnvironmentBuilder<T> {
+        let services =
+            self.configuration.take().map(|c| c.services).unwrap_or_else(|| HashSet::new());
+        self.configuration(ServiceConfiguration {
+            services,
+            controller_flags: controller_flags.iter().map(|f| *f).collect(),
         })
     }
 
@@ -214,9 +234,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let service_dir =
             if let Runtime::Service = runtime { fs.dir("svc") } else { fs.root_dir() };
 
-        let settings = match self.configuration {
-            Some(configuration) => HashSet::from_iter(configuration.services),
-            _ => HashSet::new(),
+        let (settings, flags) = match self.configuration {
+            Some(configuration) => (configuration.services, configuration.controller_flags),
+            _ => (HashSet::new(), HashSet::new()),
         };
 
         let service_context = ServiceContext::create(self.generate_service);
@@ -227,7 +247,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.storage_factory.clone(),
         );
 
-        EnvironmentBuilder::get_configuration_handlers(&mut handler_factory);
+        EnvironmentBuilder::get_configuration_handlers(&flags, &mut handler_factory);
 
         // Override the configuration handlers with any custom handlers specified
         // in the environment.
@@ -293,7 +313,10 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         return Err(format_err!("nested environment not created"));
     }
 
-    fn get_configuration_handlers(factory_handle: &mut SettingHandlerFactoryImpl<T>) {
+    fn get_configuration_handlers(
+        _controller_flags: &HashSet<ControllerFlag>,
+        factory_handle: &mut SettingHandlerFactoryImpl<T>,
+    ) {
         // Power
         register_handler!(factory_handle, SettingType::Power, Handler::<PowerController>::spawn);
         // Accessibility
@@ -380,7 +403,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// to support the components specified in the components HashSet.
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
-    components: HashSet<switchboard::base::SettingType>,
+    components: HashSet<SettingType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
@@ -536,9 +559,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // Execute initialization agents sequentially
     if agent_authority
         .execute_lifespan(
-            Lifespan::Initialization(InitializationContext {
-                available_components: components.clone(),
-            }),
+            Lifespan::Initialization(InitializationContext { available_components: components }),
             service_context_handle.clone(),
             true,
         )

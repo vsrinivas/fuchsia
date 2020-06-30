@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
         connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );
 
-    let default_configuration = ServiceConfiguration { services: get_default_setting_types() };
+    let default_configuration = ServiceConfiguration::with_services(get_default_setting_types());
 
     let configuration = DefaultSetting::new(
         default_configuration,
