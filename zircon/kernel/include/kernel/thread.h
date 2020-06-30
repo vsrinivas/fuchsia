@@ -405,6 +405,41 @@ static inline void dump_thread_user_tid_during_panic(uint64_t tid,
   dump_thread_user_tid_locked(tid, full);
 }
 
+// TaskState is responsible for running the task defined by
+// |entry(arg)|, and reporting its value to any joining threads.
+//
+// TODO: the detached state in Thread::flags_ probably belongs here.
+class TaskState {
+ public:
+  TaskState() = default;
+
+  void Init(thread_start_routine entry, void* arg);
+
+  zx_status_t Join(zx_time_t deadline) TA_REQ(thread_lock);
+
+  void WakeJoiners(zx_status_t status) TA_REQ(thread_lock);
+
+  thread_start_routine entry() { return entry_; }
+  void* arg() { return arg_; }
+
+  int retcode() { return retcode_; }
+  void set_retcode(int retcode) { retcode_ = retcode; }
+
+ private:
+  // Dumping routines are allowed to see inside us.
+  friend void dump_thread_locked(Thread* t, bool full_dump);
+
+  // The Thread's entry point, and its argument.
+  thread_start_routine entry_ = nullptr;
+  void* arg_ = nullptr;
+
+  // Storage for the return code.
+  int retcode_ = 0;
+
+  // Other threads waiting to join this Thread.
+  WaitQueue retcode_wait_queue_;
+};
+
 struct Thread {
   // TODO(kulakowski) Are these needed?
   // Default constructor/destructor declared to be not-inline in order to
@@ -744,6 +779,9 @@ struct Thread {
   // Thread API.
   bool has_migrate_fn() const { return migrate_fn_ != nullptr; }
 
+  TaskState& task_state() { return task_state_; }
+  const TaskState& task_state() const { return task_state_; }
+
   SchedulerState& scheduler_state() { return scheduler_state_; }
   const SchedulerState& scheduler_state() const { return scheduler_state_; }
 
@@ -780,6 +818,13 @@ struct Thread {
   // SaveUserStateLocked and RestoreUserStateLocked.
   friend class ScopedThreadExceptionContext;
 
+  // Dumping routines are allowed to see inside us.
+  friend void dump_thread_locked(Thread* t, bool full_dump);
+
+  // The default trampoline used when running the Thread. This can be
+  // replaced by the |alt_trampoline| parameter to CreateEtc().
+  static void Trampoline() TA_REQ(thread_lock) __NO_RETURN;
+
   // Save the arch-specific user state.
   //
   // Returns true when the user state will later need to be restored.
@@ -787,6 +832,8 @@ struct Thread {
 
   // Restore the arch-specific user state.
   void RestoreUserStateLocked() TA_REQ(thread_lock);
+
+  __NO_RETURN void ExitLocked(int retcode) TA_REQ(thread_lock);
 
   // TODO(54383) This should all be private. Until migrated away from
   // list_node, we need Thread to be standard layout. For now,
@@ -835,15 +882,10 @@ struct Thread {
 
   KernelStack stack_;
 
+ private:
+  TaskState task_state_;
+
  public:
-  // entry point
-  thread_start_routine entry_;
-  void* arg_;
-
-  // return code
-  int retcode_;
-  WaitQueue retcode_wait_queue_;
-
   // disable_counts_ contains two fields:
   //
   //  * Bottom 16 bits: the preempt_disable counter.  See

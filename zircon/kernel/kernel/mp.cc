@@ -216,13 +216,13 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   mp.ipi_task_lock.ReleaseIrqRestore(irqstate);
 }
 
-static void mp_unplug_trampoline(void) TA_REQ(thread_lock) __NO_RETURN;
-static void mp_unplug_trampoline(void) {
+static void mp_unplug_trampoline() TA_REQ(thread_lock) __NO_RETURN;
+static void mp_unplug_trampoline() {
   // We're still holding the thread lock from the reschedule that took us
   // here.
 
   Thread* ct = Thread::Current::Get();
-  auto unplug_done = reinterpret_cast<Event*>(ct->arg_);
+  auto unplug_done = reinterpret_cast<Event*>(ct->task_state().arg());
 
   Scheduler::MigrateUnpinnedThreads();
 

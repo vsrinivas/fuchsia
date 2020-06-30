@@ -226,7 +226,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   }
 
  private:
-  ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, Thread* core_thread, uint32_t flags);
+  ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags);
   ThreadDispatcher(const ThreadDispatcher&) = delete;
   ThreadDispatcher& operator=(const ThreadDispatcher&) = delete;
 

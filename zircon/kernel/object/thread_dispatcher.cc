@@ -43,18 +43,25 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
                                      ktl::string_view name,
                                      KernelHandle<ThreadDispatcher>* out_handle,
                                      zx_rights_t* out_rights) {
+  // Create the user-mode thread and attach it to the process and lower level thread.
+  fbl::AllocChecker ac;
+  auto user_thread = fbl::AdoptRef(new (&ac) ThreadDispatcher(process, flags));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
   // Create the lower level thread and attach it to the scheduler.
-  Thread* core_thread = Thread::Create(name.data(), StartRoutine, nullptr, DEFAULT_PRIORITY);
+  Thread* core_thread =
+      Thread::Create(name.data(), StartRoutine, user_thread.get(), DEFAULT_PRIORITY);
   if (!core_thread) {
     return ZX_ERR_NO_MEMORY;
   }
-  // Create the user-mode thread and attach it to the process and lower level thread.
-  fbl::AllocChecker ac;
-  auto user_thread = fbl::AdoptRef(new (&ac) ThreadDispatcher(process, core_thread, flags));
-  if (!ac.check()) {
-    core_thread->Forget();
-    return ZX_ERR_NO_MEMORY;
-  }
+
+  // We haven't yet compeleted initialization of |user_thread|, and
+  // references to it haven't possibly escaped this thread. We can
+  // safely set |core_thread_| outside the lock.
+  [&user_thread, &core_thread]()
+      TA_NO_THREAD_SAFETY_ANALYSIS { user_thread->core_thread_ = core_thread; }();
 
   // The syscall layer will call Initialize(), which used to be called here.
 
@@ -63,11 +70,8 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
   return ZX_OK;
 }
 
-ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, Thread* core_thread,
-                                   uint32_t flags)
-    : process_(ktl::move(process)),
-      core_thread_(core_thread),
-      exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_THREAD) {
+ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags)
+    : process_(ktl::move(process)), exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_THREAD) {
   LTRACE_ENTRY_OBJ;
   kcounter_add(dispatcher_thread_create_count, 1);
 }

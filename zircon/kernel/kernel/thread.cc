@@ -187,16 +187,24 @@ void init_thread_struct(Thread* t, const char* name) {
   init_thread_lock_state(t);
 }
 
-static void initial_thread_func() TA_REQ(thread_lock) __NO_RETURN;
-static void initial_thread_func() {
-  int ret;
+void TaskState::Init(thread_start_routine entry, void* arg) {
+  entry_ = entry;
+  arg_ = arg;
+}
 
-  // release the thread lock that was implicitly held across the reschedule
+zx_status_t TaskState::Join(zx_time_t deadline) {
+  return retcode_wait_queue_.Block(deadline, Interruptible::No);
+}
+
+void TaskState::WakeJoiners(zx_status_t status) { retcode_wait_queue_.WakeAll(false, status); }
+
+void Thread::Trampoline() {
+  // Release the thread lock that was implicitly held across the reschedule.
   thread_lock.Release();
   arch_enable_ints();
 
   Thread* ct = Thread::Current::Get();
-  ret = (ct->arg_) ? ct->entry_(ct->arg_) : ct->entry_(ct->user_thread_.get());
+  int ret = ct->task_state_.entry()(ct->task_state_.arg());
 
   Thread::Current::Exit(ret);
 }
@@ -245,12 +253,10 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
 
   init_thread_struct(t, name);
 
-  t->entry_ = entry;
-  t->arg_ = arg;
+  t->task_state_.Init(entry, arg);
+
   t->state_ = THREAD_INITIAL;
   t->signals_ = 0;
-
-  t->retcode_ = 0;
 
   Scheduler::InitializeThread(t, priority);
 
@@ -265,8 +271,8 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   // save whether or not we need to free the thread struct and/or stack
   t->flags_ = flags;
 
-  if (likely(alt_trampoline == NULL)) {
-    alt_trampoline = initial_thread_func;
+  if (likely(alt_trampoline == nullptr)) {
+    alt_trampoline = &Thread::Trampoline;
   }
 
   // set up the initial stack frame
@@ -446,7 +452,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
 
     // wait for the thread to die
     if (state_ != THREAD_DEATH) {
-      zx_status_t status = retcode_wait_queue_.Block(deadline, Interruptible::No);
+      zx_status_t status = task_state_.Join(deadline);
       if (status != ZX_OK) {
         return status;
       }
@@ -458,7 +464,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
 
     // save the return code
     if (out_retcode) {
-      *out_retcode = retcode_;
+      *out_retcode = task_state_.retcode();
     }
 
     // remove it from global lists
@@ -482,7 +488,7 @@ zx_status_t Thread::Detach() {
 
   // if another thread is blocked inside Join() on this thread,
   // wake them up with a specific return code
-  retcode_wait_queue_.WakeAll(false, ZX_ERR_BAD_STATE);
+  task_state_.WakeJoiners(ZX_ERR_BAD_STATE);
 
   // if it's already dead, then just do what join would have and exit
   if (state_ == THREAD_DEATH) {
@@ -523,7 +529,8 @@ __NO_RETURN void Thread::Current::ExitLocked(int retcode) TA_REQ(thread_lock) {
 
   // enter the dead state
   current_thread->state_ = THREAD_DEATH;
-  current_thread->retcode_ = retcode;
+
+  current_thread->task_state_.set_retcode(retcode);
 
   current_thread->CallMigrateFnLocked(Thread::MigrateStage::Exiting);
 
@@ -552,7 +559,7 @@ __NO_RETURN void Thread::Current::ExitLocked(int retcode) TA_REQ(thread_lock) {
     }
   } else {
     // signal if anyone is waiting
-    current_thread->retcode_wait_queue_.WakeAll(false, ZX_OK);
+    current_thread->task_state_.WakeJoiners(ZX_OK);
   }
 
   // reschedule
@@ -1437,8 +1444,8 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
     t->stack().DumpInfo(INFO);
-    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry_, t->arg_, t->flags_,
-            (t->flags_ & THREAD_FLAG_DETACHED) ? "Dt" : "",
+    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->task_state_.entry_,
+            t->task_state_.arg_, t->flags_, (t->flags_ & THREAD_FLAG_DETACHED) ? "Dt" : "",
             (t->flags_ & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
             (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "", (t->flags_ & THREAD_FLAG_VCPU) ? "Vc" : "");
 
