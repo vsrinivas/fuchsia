@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// NOTE: This file contains the source for FIDL examples used in documentation.
+// Check that associated docs are kept in sync when modifying this file. You
+// can find usages by grepping for
+// `gerrit_path="examples/fidl/fuchsia.examples/types.fidl"`
+
 // [START lib]
 library fuchsia.examples;
 // [END lib]

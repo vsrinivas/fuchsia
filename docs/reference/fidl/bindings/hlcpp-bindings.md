@@ -5,12 +5,12 @@
 Given the library declaration:
 
 ```fidl
-library games.tictactoe;
+library fuchsia.examples;
 ```
 
-All code for this library is generated in the `games::tictactoe` namespace, and
+All code for this library is generated in the `fuchsia::examples` namespace, and
  [test scaffolding](#test-scaffolding) is generated in
- `games::tictactoe::testing`.
+ `fuchsia::examples::testing`.
 
 ## Constants {#constants}
 
@@ -18,8 +18,7 @@ All [constants][lang-constants] are generated as a `constexpr`. For example, the
  following constants:
 
 ```fidl
-const uint8 BOARD_SIZE = 9;
-const string NAME = "Tic-Tac-Toe";
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="consts" %}
 ```
 
 Are generated in the header file as:
@@ -90,12 +89,9 @@ it uses the following rules:
 Given the [bits][lang-bits] definition:
 
 ```fidl
-bits FileMode : uint16 {
-    READ = 0b001;
-    WRITE = 0b010;
-    EXECUTE = 0b100;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="bits" %}
 ```
+
 The FIDL toolchain generates a C++ `enum class` using the specified underlying
 type, or `uint32_t` if none is specified:
 
@@ -118,27 +114,35 @@ rid of any unused bit values from a raw underlying `uint16_t` (or whichever type
 the `bits` are based on). In the above example, `FileModeMask` has a value of
 `0b111`.
 
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="bits" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+```
+
 ### Enums {#enums}
 
 Given the [enum][lang-enums] definition:
 
 ```fidl
-enum Color {
-    RED = 1;
-    GREEN = 2;
-    BLUE = 3;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="enums" %}
 ```
 
 The FIDL toolchain generates an equivalent C++ `enum class` using the specified
 underlying type, or `uint32_t` if none is specified:
 
 ```c++
-enum class Color : uint32_t {
-    RED = 1u;
-    GREEN = 2u;
-    BLUE = 3u;
+enum class LocationType : uint32_t {
+    MUSEUM = 1u;
+    AIRPORT = 2u;
+    RESTAURANT = 3u;
 };
+```
+
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="enums" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Structs {#structs}
@@ -146,10 +150,7 @@ enum class Color : uint32_t {
 Given a [struct][lang-structs] declaration:
 
 ```fidl
-struct Color {
-    uint32 id;
-    string name = "red";
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="structs" %}
 ```
 
 The FIDL toolchain generates a `Color` type with public members and methods.
@@ -173,16 +174,18 @@ destructor, copy and move assignment) are implicitly defined.
 Structs may have additional members if they represent the response variant of a
 [result](#protocols-results).
 
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="structs" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+```
+
 ### Unions {#unions}
 
 Given the union definition:
 
 ```fidl
-union JsonValue {
-    1: reserved;
-    2: int32 int_value;
-    3: string string_value;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="unions" %}
 ```
 
 FIDL generates a `JsonValue` class. `JsonValue` contains a public tag enum
@@ -239,6 +242,12 @@ addition, there is an `Invalid` field which is the initial value used for a
 Unions may have additional methods if they represent the response variant of a
 [result](#protocols-results).
 
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="unions" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+```
+
 #### Flexible unions and unknown variants
 
 This section describes differences in generated code if `JsonValue` were marked
@@ -275,11 +284,7 @@ unknown variant.
 Given the [table][lang-tables] definition:
 
 ```table
-table User {
-    1: reserved;
-    2: uint8 age;
-    3: string name;
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain generates a `User` class with the following methods:
@@ -302,6 +307,12 @@ The FIDL toolchain generates a `User` class with the following methods:
 
 `User` also has the following associated generated values:
 * `UserPtr`: an alias to `unique_ptr<User>`.
+
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="tables" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+```
 
 ## Protocols {#protocols}
 
