@@ -342,7 +342,10 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 			if s.rsvdPort != 0 {
 				// Release the reserved port.
 				netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-				pm.ReleasePort(netProtos, s.transProto, s.rsvdAddr, s.rsvdPort, ports.Flags{}, s.nic)
+				pm.ReleasePort(netProtos, s.transProto, s.rsvdAddr, s.rsvdPort, ports.Flags{}, s.nic, tcpip.FullAddress{
+					Addr: k.dstAddr,
+					Port: k.dstPort,
+				})
 			}
 		}
 		for k, s := range ss.lanToExt {

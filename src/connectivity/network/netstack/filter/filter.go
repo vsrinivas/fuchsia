@@ -286,7 +286,10 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
 			nicID = nat.nic
-			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, ports.Flags{}, nat.nic)
+			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, ports.Flags{}, nat.nic, tcpip.FullAddress{
+				Addr: dstAddr,
+				Port: dstPort,
+			})
 			if e != nil {
 				syslog.VLogTf(syslog.TraceVerbosity, tag, "ReservePort: %v", e)
 				return Drop
@@ -423,7 +426,10 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var err *tcpip.Error
-			newPort, err = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID)
+			newPort, err = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID, tcpip.FullAddress{
+				Addr: dstAddr,
+				Port: dstPort,
+			})
 			if err != nil {
 				syslog.WarnTf(tag, "ReservePort: %s", err)
 				return Drop
