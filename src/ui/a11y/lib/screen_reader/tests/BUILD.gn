@@ -14,10 +14,10 @@ executable("screen_reader_tests") {
     "default_action_unittest.cc",
     "explore_action_unittest.cc",
     "node_describer_unittest.cc",
+    "one_finger_swipe_action_unittest.cc",
     "screen_reader_context_unittest.cc",
     "screen_reader_unittest.cc",
     "speaker_unittest.cc",
-    "swipe_action_unittest.cc",
     "three_finger_swipe_action_unittest.cc",
   ]
 

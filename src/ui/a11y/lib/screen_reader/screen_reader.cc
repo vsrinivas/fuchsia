@@ -11,6 +11,7 @@
 #include "fuchsia/accessibility/gesture/cpp/fidl.h"
 #include "src/ui/a11y/lib/screen_reader/default_action.h"
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
+#include "src/ui/a11y/lib/screen_reader/one_finger_swipe_action.h"
 #include "src/ui/a11y/lib/screen_reader/three_finger_swipe_action.h"
 
 namespace a11y {
@@ -161,12 +162,13 @@ void ScreenReader::InitializeServicesAndAction() {
                                                           action_context_.get(), context_.get())));
   actions_.insert(std::make_pair(kDefaultActionLabel, std::make_unique<a11y::DefaultAction>(
                                                           action_context_.get(), context_.get())));
-  actions_.insert(std::make_pair(kPreviousActionLabel, std::make_unique<a11y::SwipeAction>(
-                                                           action_context_.get(), context_.get(),
-                                                           a11y::SwipeAction::kPreviousAction)));
   actions_.insert(std::make_pair(
-      kNextActionLabel, std::make_unique<a11y::SwipeAction>(action_context_.get(), context_.get(),
-                                                            a11y::SwipeAction::kNextAction)));
+      kPreviousActionLabel,
+      std::make_unique<a11y::OneFingerSwipeAction>(action_context_.get(), context_.get(),
+                                                   a11y::OneFingerSwipeAction::kPreviousAction)));
+  actions_.insert(std::make_pair(kNextActionLabel, std::make_unique<a11y::OneFingerSwipeAction>(
+                                                       action_context_.get(), context_.get(),
+                                                       a11y::OneFingerSwipeAction::kNextAction)));
 
   actions_.insert(
       std::make_pair(kThreeFingerUpSwipeActionLabel,

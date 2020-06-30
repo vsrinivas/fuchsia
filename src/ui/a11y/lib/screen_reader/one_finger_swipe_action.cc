@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/screen_reader/swipe_action.h"
+#include "src/ui/a11y/lib/screen_reader/one_finger_swipe_action.h"
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/scope.h>
@@ -12,13 +12,14 @@
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
 namespace a11y {
-SwipeAction::SwipeAction(ActionContext* action_context, ScreenReaderContext* screen_reader_context,
-                         SwipeActionType action_type)
+OneFingerSwipeAction::OneFingerSwipeAction(ActionContext* action_context,
+                                           ScreenReaderContext* screen_reader_context,
+                                           OneFingerSwipeActionType action_type)
     : ScreenReaderAction(action_context, screen_reader_context), action_type_(action_type) {}
 
-SwipeAction::~SwipeAction() = default;
+OneFingerSwipeAction::~OneFingerSwipeAction() = default;
 
-void SwipeAction::Run(ActionData process_data) {
+void OneFingerSwipeAction::Run(ActionData process_data) {
   auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
   if (!a11y_focus) {
     FX_LOGS(INFO) << "Swipe Action: No view is in focus.";

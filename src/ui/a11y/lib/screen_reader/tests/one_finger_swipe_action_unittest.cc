@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/screen_reader/swipe_action.h"
+#include "src/ui/a11y/lib/screen_reader/one_finger_swipe_action.h"
 
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -34,8 +34,9 @@ const std::string kChildNodeLabel = "Label B";
 constexpr uint32_t kRootNodeId = 0;
 constexpr uint32_t kChildNodeId = 1;
 
-constexpr auto kNextAction = a11y::SwipeAction::SwipeActionType::kNextAction;
-constexpr auto kPreviousAction = a11y::SwipeAction::SwipeActionType::kPreviousAction;
+constexpr auto kNextAction = a11y::OneFingerSwipeAction::OneFingerSwipeActionType::kNextAction;
+constexpr auto kPreviousAction =
+    a11y::OneFingerSwipeAction::OneFingerSwipeActionType::kPreviousAction;
 
 class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
  public:
@@ -62,9 +63,9 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
   MockSemanticTree* semantic_tree_ptr_ = nullptr;
 };
 
-class SwipeActionTest : public gtest::TestLoopFixture {
+class OneFingerSwipeActionTest : public gtest::TestLoopFixture {
  public:
-  SwipeActionTest()
+  OneFingerSwipeActionTest()
       : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
         factory_ptr_(factory_.get()),
         view_manager_(std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
@@ -130,9 +131,10 @@ class SwipeActionTest : public gtest::TestLoopFixture {
 };
 
 // Swipe Action should do nothing if there is no semantic tree in focus.
-TEST_F(SwipeActionTest, NoTreeInFocus) {
-  a11y::SwipeAction next_action(&action_context_, screen_reader_context_.get(), kNextAction);
-  a11y::SwipeAction::ActionData action_data;
+TEST_F(OneFingerSwipeActionTest, NoTreeInFocus) {
+  a11y::OneFingerSwipeAction next_action(&action_context_, screen_reader_context_.get(),
+                                         kNextAction);
+  a11y::OneFingerSwipeAction::ActionData action_data;
 
   // Call NextAction Run().
   next_action.Run(action_data);
@@ -147,7 +149,7 @@ TEST_F(SwipeActionTest, NoTreeInFocus) {
 }
 
 // When next node is not found, the Swipe Action should do nothing.
-TEST_F(SwipeActionTest, NextNodeNotFound) {
+TEST_F(OneFingerSwipeActionTest, NextNodeNotFound) {
   AddNodeToSemanticTree();
 
   // Update focused node.
@@ -156,8 +158,9 @@ TEST_F(SwipeActionTest, NextNodeNotFound) {
   // Set Next Node result.
   factory_ptr_->semantic_tree()->SetNextNode(nullptr);
 
-  a11y::SwipeAction next_action(&action_context_, screen_reader_context_.get(), kNextAction);
-  a11y::SwipeAction::ActionData action_data;
+  a11y::OneFingerSwipeAction next_action(&action_context_, screen_reader_context_.get(),
+                                         kNextAction);
+  a11y::OneFingerSwipeAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
 
   // Call NextAction Run().
@@ -172,7 +175,7 @@ TEST_F(SwipeActionTest, NextNodeNotFound) {
 }
 
 // When Previous node is not found, the Swipe Action should do nothing.
-TEST_F(SwipeActionTest, PreviousNodeNotFound) {
+TEST_F(OneFingerSwipeActionTest, PreviousNodeNotFound) {
   AddNodeToSemanticTree();
 
   // Update focused node.
@@ -181,9 +184,9 @@ TEST_F(SwipeActionTest, PreviousNodeNotFound) {
   // Set Prevous Node result.
   factory_ptr_->semantic_tree()->SetPreviousNode(nullptr);
 
-  a11y::SwipeAction previous_action(&action_context_, screen_reader_context_.get(),
-                                    kPreviousAction);
-  a11y::SwipeAction::ActionData action_data;
+  a11y::OneFingerSwipeAction previous_action(&action_context_, screen_reader_context_.get(),
+                                             kPreviousAction);
+  a11y::OneFingerSwipeAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
 
   // Call PreviousAction Run().
@@ -197,8 +200,8 @@ TEST_F(SwipeActionTest, PreviousNodeNotFound) {
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
 
-// When SetA11yFocus fails then SwipeAction should not call TTS to speak.
-TEST_F(SwipeActionTest, SetA11yFocusFailed) {
+// When SetA11yFocus fails then OneFingerSwipeAction should not call TTS to speak.
+TEST_F(OneFingerSwipeActionTest, SetA11yFocusFailed) {
   uint32_t node_id = 0;
   AddNodeToSemanticTree();
 
@@ -214,8 +217,9 @@ TEST_F(SwipeActionTest, SetA11yFocusFailed) {
   Node next_node = CreateTestNode(next_node_id, next_node_label);
   factory_ptr_->semantic_tree()->SetNextNode(&next_node);
 
-  a11y::SwipeAction next_action(&action_context_, screen_reader_context_.get(), kNextAction);
-  a11y::SwipeAction::ActionData action_data;
+  a11y::OneFingerSwipeAction next_action(&action_context_, screen_reader_context_.get(),
+                                         kNextAction);
+  a11y::OneFingerSwipeAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
 
   // Call NextAction Run().
@@ -233,7 +237,7 @@ TEST_F(SwipeActionTest, SetA11yFocusFailed) {
 // NextAction should get focused node information and then call GetNextNode() to get the next node.
 // Next action should then set focus to the new node and then read the label of the new node in
 // focus using tts.
-TEST_F(SwipeActionTest, NextActionPerformed) {
+TEST_F(OneFingerSwipeActionTest, NextActionPerformed) {
   AddNodeToSemanticTree();
 
   // Update focused node.
@@ -245,8 +249,9 @@ TEST_F(SwipeActionTest, NextActionPerformed) {
   Node next_node = CreateTestNode(next_node_id, next_node_label);
   factory_ptr_->semantic_tree()->SetNextNode(&next_node);
 
-  a11y::SwipeAction next_action(&action_context_, screen_reader_context_.get(), kNextAction);
-  a11y::SwipeAction::ActionData action_data;
+  a11y::OneFingerSwipeAction next_action(&action_context_, screen_reader_context_.get(),
+                                         kNextAction);
+  a11y::OneFingerSwipeAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
 
   // Call NextAction Run().
@@ -270,7 +275,7 @@ TEST_F(SwipeActionTest, NextActionPerformed) {
 // Previous action should get focused node information and then call GetPrevousNode() to get the
 // previous node. Previous action should then set focus to the new node and then read the label of
 // the new node in focus using tts.
-TEST_F(SwipeActionTest, PreviousActionPerformed) {
+TEST_F(OneFingerSwipeActionTest, PreviousActionPerformed) {
   AddNodeToSemanticTree();
 
   // Update focused node.
@@ -282,9 +287,9 @@ TEST_F(SwipeActionTest, PreviousActionPerformed) {
   Node previous_node = CreateTestNode(previous_node_id, previous_node_label);
   factory_ptr_->semantic_tree()->SetPreviousNode(&previous_node);
 
-  a11y::SwipeAction previous_action(&action_context_, screen_reader_context_.get(),
-                                    kPreviousAction);
-  a11y::SwipeAction::ActionData action_data;
+  a11y::OneFingerSwipeAction previous_action(&action_context_, screen_reader_context_.get(),
+                                             kPreviousAction);
+  a11y::OneFingerSwipeAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
 
   // Call PreviousAction Run().
