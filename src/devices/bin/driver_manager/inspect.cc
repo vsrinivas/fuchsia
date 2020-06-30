@@ -120,7 +120,7 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
 
   if (dev->protocol_id() != ZX_PROTOCOL_CONSOLE) {
     for (unsigned n = 0; n < 1000; n++) {
-      snprintf(tmp, sizeof(tmp), "%03u", ((*seqcount)++) % 1000);
+      snprintf(tmp, sizeof(tmp), "%03u.inspect", ((*seqcount)++) % 1000);
       fbl::RefPtr<fs::Vnode> node;
       if (dir->Lookup(&node, tmp) == ZX_ERR_NOT_FOUND) {
         name = tmp;
@@ -131,7 +131,8 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
       return zx::error(ZX_ERR_ALREADY_EXISTS);
     }
   } else {
-    name = dev->name().data();
+    snprintf(tmp, sizeof(tmp), "%.*s.inspect", (int)dev->name().length(), dev->name().data());
+    name = tmp;
   }
 
   zx::status<> status = zx::make_status(dir->AddEntry(name, dev->inspect_file()));

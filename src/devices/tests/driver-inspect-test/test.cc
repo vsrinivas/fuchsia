@@ -92,7 +92,7 @@ TEST_F(InspectTestCase, InspectDevfs) {
                                                                   "diagnostics/class", &fd));
   ASSERT_GT(fd.get(), 0);
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFileReadOnly(
-      devmgr().devfs_root(), "diagnostics/class/test/000", &fd));
+      devmgr().devfs_root(), "diagnostics/class/test/000.inspect", &fd));
   ASSERT_GT(fd.get(), 0);
 }
 
@@ -100,7 +100,7 @@ TEST_F(InspectTestCase, ReadInspectData) {
   fbl::unique_fd fd;
   // Wait for inspect data to appear
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFileReadOnly(
-      devmgr().devfs_root(), "diagnostics/class/test/000", &fd));
+      devmgr().devfs_root(), "diagnostics/class/test/000.inspect", &fd));
   ASSERT_GT(fd.get(), 0);
   zx_handle_t out_vmo = ZX_HANDLE_INVALID;
   ASSERT_OK(fdio_get_vmo_clone(fd.get(), &out_vmo));

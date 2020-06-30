@@ -243,7 +243,7 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
     EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
-    dc.ExpectEntry("000", V_TYPE_FILE);
+    dc.ExpectEntry("000.inspect", V_TYPE_FILE);
     dc.ExpectEnd();
   }
 
