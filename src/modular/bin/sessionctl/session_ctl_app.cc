@@ -12,11 +12,11 @@
 
 namespace modular {
 
-SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
-                             fuchsia::modular::PuppetMaster* const puppet_master,
+SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug,
+                             fuchsia::modular::PuppetMasterPtr puppet_master,
                              const modular::Logger& logger, async_dispatcher_t* const dispatcher)
-    : basemgr_debug_(std::move(basemgr)),
-      puppet_master_(puppet_master),
+    : basemgr_debug_(std::move(basemgr_debug)),
+      puppet_master_(std::move(puppet_master)),
       logger_(logger),
       dispatcher_(dispatcher) {}
 

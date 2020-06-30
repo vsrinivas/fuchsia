@@ -28,15 +28,15 @@ class SessionCtlApp {
  public:
   // Constructs a SessionCtlApp which can read and execute session commands.
   // |puppet_master| The interface used to execute commands.
-  // |basemgr| The basemgr to use to restart sessions.
+  // |basemgr_debug| The BasemgrDebug instance to use to restart sessions.
   // |command_line| The command line used to read commands and arguments.
   // |logger| The logger used to log the results of commands.
   // |dispatcher| The dispatcher which is used to post the command tasks.
   // |on_command_executed| A callback which is called whenever a command has
   // finished executing.
-  explicit SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
-                         fuchsia::modular::PuppetMaster* const puppet_master,
-                         const modular::Logger& logger, async_dispatcher_t* const dispatcher);
+  SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug,
+                fuchsia::modular::PuppetMasterPtr puppet_master, const modular::Logger& logger,
+                async_dispatcher_t* const dispatcher);
 
   // Dispatches the |cmd|. Calls |done| when done with an empty string if
   // execution was successful or with an error string on failure.
@@ -88,7 +88,7 @@ class SessionCtlApp {
   std::string GenerateMissingFlagString(const std::vector<std::string>& missing_flags);
 
   fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug_;
-  fuchsia::modular::PuppetMaster* const puppet_master_;
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   const fxl::CommandLine command_line_;
   const modular::Logger logger_;

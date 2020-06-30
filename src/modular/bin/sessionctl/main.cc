@@ -279,11 +279,9 @@ int main(int argc, const char** argv) {
     std::cout << std::endl;
   }
 
-  // To get a PuppetMaster service for a session, use the following code:
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
-
-  modular::SessionCtlApp app(std::move(basemgr), puppet_master.get(), logger, loop.dispatcher());
-
+  modular::SessionCtlApp app(std::move(basemgr), std::move(puppet_master), logger,
+                             loop.dispatcher());
   app.ExecuteCommand(cmd, command_line, [cmd, logger, &loop](std::string error) {
     if (!error.empty()) {
       if (error == modular::kGetUsageErrorString) {
@@ -297,6 +295,5 @@ int main(int argc, const char** argv) {
   });
 
   loop.Run();
-
   return 0;
 }
