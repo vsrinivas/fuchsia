@@ -40,7 +40,6 @@
                 "/svc/fuchsia.castauth.CastKeySigner",
                 "/svc/fuchsia.castconfig.Provider",
                 "/svc/fuchsia.deprecatedtimezone.Timezone",
-                "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.device.NameProvider",
                 "/svc/fuchsia.devicesettings.DeviceSettingsManager",
                 "/svc/fuchsia.feedback.CrashReporter",

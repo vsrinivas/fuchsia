@@ -30,7 +30,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.NameProvider",
-            "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.feedback.CrashReporter",
             "fuchsia.feedback.DataProvider",
