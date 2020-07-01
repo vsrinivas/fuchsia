@@ -58,8 +58,9 @@ impl Gn for DefaultGn {
         gn_std_in.write_all(serialized_input.as_bytes())?;
 
         let gn_output = gn_child.wait_with_output()?;
-        serde_json::from_slice(&gn_output.stdout)
-            .map_err(|err| Error::new(err).context("Failed to parse GN output"))
+        serde_json::from_slice(&gn_output.stdout).map_err(|err| {
+            Error::new(err).context(format!("Failed to parse GN output: {:?}", &gn_output.stdout))
+        })
     }
 }
 
