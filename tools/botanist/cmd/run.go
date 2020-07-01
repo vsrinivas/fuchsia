@@ -442,19 +442,19 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 
 	cleanUp, err := environment.Ensure()
 	if err != nil {
-		logger.Errorf(ctx, "failed to setup environment: %v\n", err)
+		logger.Errorf(ctx, "failed to setup environment: %v", err)
 		return subcommands.ExitFailure
 	}
 	defer cleanUp()
 
-	var subcmdArgs []string
+	var expandedArgs []string
 	for _, arg := range args {
-		subcmdArgs = append(subcmdArgs, os.ExpandEnv(arg))
+		expandedArgs = append(expandedArgs, os.ExpandEnv(arg))
 	}
 	r.blobURL = os.ExpandEnv(r.blobURL)
 	r.repoURL = os.ExpandEnv(r.repoURL)
-	if err := r.execute(ctx, subcmdArgs); err != nil {
-		logger.Errorf(ctx, "%v\n", err)
+	if err := r.execute(ctx, expandedArgs); err != nil {
+		logger.Errorf(ctx, "command %v failed: %v", expandedArgs, err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
