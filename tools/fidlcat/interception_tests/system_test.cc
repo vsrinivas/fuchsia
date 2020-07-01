@@ -313,11 +313,11 @@ SYSTEM_POWERCTL_ACPI_DISPLAY_TEST(ZxSystemPowerctlAcpi, ZX_OK,
                                   "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                                   "cmd: \x1B[32mzx_system_powerctl_t\x1B[0m = "
                                   "\x1B[34mZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE\x1B[0m)\n"
-                                  "    arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = {\n"
-                                  "      target_s_state: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
-                                  "      sleep_type_a: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m\n"
-                                  "      sleep_type_b: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m\n"
-                                  "    }\n"
+                                  "  arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = {\n"
+                                  "    target_s_state: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
+                                  "    sleep_type_a: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m\n"
+                                  "    sleep_type_b: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m\n"
+                                  "  }\n"
                                   "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define SYSTEM_POWERCTL_PL1_DISPLAY_TEST_CONTENT(result, expected)                          \
@@ -344,12 +344,12 @@ SYSTEM_POWERCTL_PL1_DISPLAY_TEST(ZxSystemPowerctlPl1, ZX_OK,
                                  "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                                  "cmd: \x1B[32mzx_system_powerctl_t\x1B[0m = "
                                  "\x1B[34mZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1\x1B[0m)\n"
-                                 "    arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = {\n"
-                                 "      power_limit: \x1B[32muint32\x1B[0m = \x1B[34m200\x1B[0m\n"
-                                 "      time_window: \x1B[32muint32\x1B[0m = \x1B[34m300\x1B[0m\n"
-                                 "      clamp: \x1B[32muint8\x1B[0m = \x1B[34m0\x1B[0m\n"
-                                 "      enable: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
-                                 "    }\n"
+                                 "  arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = {\n"
+                                 "    power_limit: \x1B[32muint32\x1B[0m = \x1B[34m200\x1B[0m\n"
+                                 "    time_window: \x1B[32muint32\x1B[0m = \x1B[34m300\x1B[0m\n"
+                                 "    clamp: \x1B[32muint8\x1B[0m = \x1B[34m0\x1B[0m\n"
+                                 "    enable: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
+                                 "  }\n"
                                  "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

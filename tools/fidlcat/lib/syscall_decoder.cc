@@ -514,7 +514,6 @@ void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
   printer << ")\n";
 
   {
-    fidl_codec::Indent indent(printer);
     // Displays the outline input arguments.
     for (const auto& input : decoder->syscall()->inputs()) {
       if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
