@@ -39,6 +39,7 @@
     "fuchsia.time.Utc"
   ],
   "update_dependencies": [
+    "fuchsia.posix.socket.Provider",
     "fuchsia.bogus.DoesNotExist"
   ]
 }
