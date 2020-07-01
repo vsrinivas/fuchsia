@@ -4,7 +4,9 @@
             "injected-services": {
                 "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
-                "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
+                "fuchsia.tee.Application.41fe9859-71e4-4bf4-bbaa-d71435b127ae": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
+                "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
+                "fuchsia.tee.DeviceInfo": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
             }
         }
     },
@@ -22,7 +24,9 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
+            "fuchsia.tee.Application.41fe9859-71e4-4bf4-bbaa-d71435b127ae",
             "fuchsia.tee.Device",
+            "fuchsia.tee.DeviceInfo",
             "fuchsia.tracing.provider.Registry"
         ]
     }
