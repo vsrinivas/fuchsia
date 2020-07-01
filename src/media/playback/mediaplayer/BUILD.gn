@@ -232,6 +232,12 @@ test_package("mediaplayer_tests") {
   ]
 }
 
+config_data("player_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "mediaplayer.config" ]
+  sources = [ rebase_path("config/player.config") ]
+}
+
 config_data("audio_consumer_config") {
   for_pkg = "sysmgr"
   outputs = [ "audio_consumer.config" ]

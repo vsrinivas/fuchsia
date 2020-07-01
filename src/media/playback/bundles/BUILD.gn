@@ -18,7 +18,7 @@ group("examples") {
 
 group("config") {
   testonly = true
-  deps = []
+  deps = [ "//src/media/playback/mediaplayer:player_config" ]
 }
 
 group("audio_consumer_config") {
