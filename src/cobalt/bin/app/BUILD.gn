@@ -179,7 +179,6 @@ metrics_registry("testapp_metrics_registry") {
   # third_party/cobalt_config/projects.yaml
   project_id = 657579885
   namespace = "testapp_registry"
-  for_testing = true
   generate_cc = true
   generate_binarypb = true
 }
