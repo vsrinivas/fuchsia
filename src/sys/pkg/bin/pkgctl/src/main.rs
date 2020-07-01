@@ -7,8 +7,8 @@ use {
         Args, Command, ExperimentCommand, ExperimentDisableCommand, ExperimentEnableCommand,
         ExperimentSubCommand, GcCommand, GetHashCommand, OpenCommand, PkgStatusCommand,
         RepoAddCommand, RepoCommand, RepoRemoveCommand, RepoSubCommand, ResolveCommand,
-        RuleClearCommand, RuleCommand, RuleListCommand, RuleReplaceCommand, RuleReplaceFileCommand,
-        RuleReplaceJsonCommand, RuleReplaceSubCommand, RuleSubCommand,
+        RuleClearCommand, RuleCommand, RuleDumpDynamicCommand, RuleListCommand, RuleReplaceCommand,
+        RuleReplaceFileCommand, RuleReplaceJsonCommand, RuleReplaceSubCommand, RuleSubCommand,
     },
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_pkg::{
@@ -235,6 +235,28 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                         Ok(transaction)
                     })
                     .await?;
+                }
+                RuleSubCommand::DumpDynamic(RuleDumpDynamicCommand {}) => {
+                    let (transaction, transaction_server_end) = fidl::endpoints::create_proxy()?;
+                    let () = engine.start_edit_transaction(transaction_server_end)?;
+                    let (iter, iter_server_end) = fidl::endpoints::create_proxy()?;
+                    transaction.list_dynamic(iter_server_end)?;
+                    let mut rules = Vec::new();
+                    loop {
+                        let more = iter.next().await?;
+                        if more.is_empty() {
+                            break;
+                        }
+                        rules.extend(more);
+                    }
+                    let rules = rules.into_iter().map(|rule| rule.try_into()).collect::<Result<
+                        Vec<RewriteRule>,
+                        _,
+                    >>(
+                    )?;
+                    let rule_configs = RuleConfig::Version1(rules);
+                    let dynamic_rules = serde_json::to_string_pretty(&rule_configs)?;
+                    println!("{}", dynamic_rules);
                 }
                 RuleSubCommand::Replace(RuleReplaceCommand { subcommand }) => {
                     let RuleConfig::Version1(ref rules) = match subcommand {

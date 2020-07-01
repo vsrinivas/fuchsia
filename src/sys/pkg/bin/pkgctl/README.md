@@ -31,7 +31,7 @@ it must match the entire URI path.
 
 ## Examples
 
-View all configured rewrite rules:
+View all configured static and dynamic rewrite rules:
 ```
 % pkgctl rule list
 ```
@@ -42,8 +42,20 @@ removed.
 % pkgctl rule clear
 ```
 
-The following set of rewrite rules will redirect the "/rolldice" package from
-"fuchsia.com" to the repository with the hostname "devhost":
+Replace the configured dynamic rewrite rules with the rule config present on
+a device at `/tmp/rules.json`:
+```
+% pkgctl rule replace file /tmp/rules.json
+```
+
+View the configured rewrite rules:
+```
+% pkgctl rule dump-dynamic
+```
+
+**Note**: The following set of rewrite rules will redirect the "/rolldice" package 
+from "fuchsia.com" to the repository with the hostname "devhost".
+
 ```json
 {
     "version": "1",
@@ -56,11 +68,4 @@ The following set of rewrite rules will redirect the "/rolldice" package from
         }
     ]
 }
-```
-
-Assuming the above rule config were present on a device at `/tmp/rules.json`,
-the following command would replace any configured dynamic rewrite rules with
-the rules contained in `rules.json`:
-```
-% pkgctl rule replace file /tmp/rules.json
 ```

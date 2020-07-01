@@ -106,6 +106,7 @@ pub struct RuleCommand {
 #[argh(subcommand)]
 pub enum RuleSubCommand {
     Clear(RuleClearCommand),
+    DumpDynamic(RuleDumpDynamicCommand),
     List(RuleListCommand),
     Replace(RuleReplaceCommand),
 }
@@ -119,6 +120,11 @@ pub struct RuleClearCommand {}
 #[argh(subcommand, name = "list")]
 /// List all URL rewrite rules.
 pub struct RuleListCommand {}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "dump-dynamic")]
+/// Dumps all dynamic rewrite rules.
+pub struct RuleDumpDynamicCommand {}
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "replace")]
@@ -355,6 +361,10 @@ mod tests {
         check(
             &["rule", "clear"],
             RuleCommand { subcommand: RuleSubCommand::Clear(RuleClearCommand {}) },
+        );
+        check(
+            &["rule", "dump-dynamic"],
+            RuleCommand { subcommand: RuleSubCommand::DumpDynamic(RuleDumpDynamicCommand {}) },
         );
         check(
             &["rule", "replace", "file", "foo"],

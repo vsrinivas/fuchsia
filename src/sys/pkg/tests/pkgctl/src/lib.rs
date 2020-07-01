@@ -5,6 +5,7 @@
 #![cfg(test)]
 use {
     anyhow::Error,
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, PackageCacheRequest, PackageCacheRequestStream,
         PackageResolverAdminRequest, PackageResolverAdminRequestStream, PackageResolverRequest,
@@ -14,7 +15,11 @@ use {
     fidl_fuchsia_pkg_ext::{
         MirrorConfig, MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
-    fidl_fuchsia_pkg_rewrite::EngineRequestStream,
+    fidl_fuchsia_pkg_rewrite::{
+        EditTransactionRequest, EngineRequest, EngineRequestStream, RuleIteratorMarker,
+        RuleIteratorRequest,
+    },
+    fidl_fuchsia_pkg_rewrite_ext::Rule,
     fidl_fuchsia_space as fidl_space,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fidl_fuchsia_update as fidl_update, fuchsia_async as fasync,
@@ -39,11 +44,11 @@ use {
 
 struct TestEnv {
     env: NestedEnvironment,
+    engine: Arc<MockEngineService>,
     repository_manager: Arc<MockRepositoryManagerService>,
     package_cache: Arc<MockPackageCacheService>,
     package_resolver: Arc<MockPackageResolverService>,
     package_resolver_admin: Arc<MockPackageResolverAdminService>,
-    rewrite_engine: Arc<MockRewriteEngineService>,
     update_manager: Arc<MockUpdateManagerService>,
     space_manager: Arc<MockSpaceManagerService>,
     _test_dir: TempDir,
@@ -91,14 +96,14 @@ impl TestEnv {
             )
         });
 
-        let rewrite_engine = Arc::new(MockRewriteEngineService::new());
-        let rewrite_engine_clone = rewrite_engine.clone();
+        let engine = Arc::new(MockEngineService::new());
+        let engine_clone = engine.clone();
         fs.add_fidl_service(move |stream: EngineRequestStream| {
-            let rewrite_engine_clone = rewrite_engine_clone.clone();
+            let engine_clone = engine_clone.clone();
             fasync::spawn(
-                rewrite_engine_clone
+                engine_clone
                     .run_service(stream)
-                    .unwrap_or_else(|e| panic!("error running rewrite service: {:?}", e)),
+                    .unwrap_or_else(|e| panic!("error running engine service: {:?}", e)),
             )
         });
 
@@ -147,11 +152,11 @@ impl TestEnv {
 
         Self {
             env,
+            engine,
             repository_manager,
             package_cache,
             package_resolver,
             package_resolver_admin,
-            rewrite_engine,
             update_manager,
             space_manager,
             _test_dir,
@@ -190,8 +195,22 @@ impl TestEnv {
         assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver_admin.take_event(), None);
-        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(*self.repository_manager.captured_args.lock(), expected_args);
+        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
+        assert_eq!(*self.space_manager.call_count.lock(), 0);
+    }
+
+    fn add_rule(&self, rule: Rule) {
+        self.engine.rules.lock().push(rule);
+    }
+
+    fn assert_only_engine_called_with(&self, expected_args: Vec<CapturedEngineRequest>) {
+        assert_eq!(self.package_cache.captured_args.lock().len(), 0);
+        assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
+        assert_eq!(self.package_resolver_admin.take_event(), None);
+        assert_eq!(*self.engine.captured_args.lock(), expected_args);
+        assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
     }
@@ -200,7 +219,7 @@ impl TestEnv {
         assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver_admin.take_event(), None);
-        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 1);
@@ -209,7 +228,7 @@ impl TestEnv {
     fn assert_only_package_resolver_admin_called_with(&self, event: ExperimentEvent) {
         assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
-        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
@@ -219,7 +238,7 @@ impl TestEnv {
     fn assert_only_package_resolver_called_with(&self, reqs: Vec<CapturedPackageResolverRequest>) {
         assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver_admin.take_event(), None);
-        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
@@ -233,11 +252,74 @@ impl TestEnv {
     ) {
         assert_eq!(*self.package_cache.captured_args.lock(), cache_reqs);
         assert_eq!(self.package_resolver_admin.take_event(), None);
-        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.engine.captured_args.lock().len(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
         assert_eq!(*self.package_resolver.captured_args.lock(), resolver_reqs);
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum CapturedEngineRequest {
+    StartEditTransaction,
+}
+
+struct MockEngineService {
+    captured_args: Mutex<Vec<CapturedEngineRequest>>,
+    rules: Mutex<Vec<Rule>>,
+}
+
+impl MockEngineService {
+    fn new() -> Self {
+        Self { captured_args: Mutex::new(vec![]), rules: Mutex::new(vec![]) }
+    }
+    async fn run_service(self: Arc<Self>, mut stream: EngineRequestStream) -> Result<(), Error> {
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                EngineRequest::StartEditTransaction {
+                    transaction,
+                    control_handle: _control_handle,
+                } => {
+                    self.captured_args.lock().push(CapturedEngineRequest::StartEditTransaction);
+                    let mut stream = transaction.into_stream().expect("error here");
+                    while let Some(sub_req) = stream.try_next().await? {
+                        match sub_req {
+                            EditTransactionRequest::ListDynamic {
+                                iterator,
+                                control_handle: _control_handle,
+                            } => {
+                                self.list_dynamic_handler(iterator).await?;
+                            }
+                            EditTransactionRequest::Commit { responder } => {
+                                responder.send(&mut Ok(())).expect("send ok");
+                            }
+                            _ => {
+                                panic!("unhandled request method {:?}", sub_req);
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    panic!("unhandled request method {:?}", req);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn list_dynamic_handler(
+        &self,
+        iterator: ServerEnd<RuleIteratorMarker>,
+    ) -> Result<(), Error> {
+        let mut stream = iterator.into_stream().expect("list iterator into_stream");
+        let mut rules =
+            self.rules.lock().clone().into_iter().map(|rule| rule.into()).collect::<Vec<_>>();
+        let mut iter = rules.iter_mut();
+        while let Some(RuleIteratorRequest::Next { responder }) = stream.try_next().await? {
+            responder.send(&mut iter.by_ref().take(5)).expect("next send")
+        }
+        Ok(())
     }
 }
 
@@ -429,22 +511,6 @@ impl MockPackageCacheService {
     }
 }
 
-struct MockRewriteEngineService {
-    call_count: Mutex<u32>,
-}
-
-impl MockRewriteEngineService {
-    fn new() -> Self {
-        Self { call_count: Mutex::new(0) }
-    }
-    async fn run_service(self: Arc<Self>, mut stream: EngineRequestStream) -> Result<(), Error> {
-        while let Some(_req) = stream.try_next().await? {
-            *self.call_count.lock() += 1;
-        }
-        Ok(())
-    }
-}
-
 #[derive(PartialEq, Debug)]
 enum CapturedUpdateManagerRequest {
     CheckNow { options: fidl_update::CheckOptions },
@@ -606,6 +672,28 @@ async fn test_repo_rm() {
     env.assert_only_repository_manager_called_with(vec![
         CapturedRepositoryManagerRequest::Remove { repo_url: "the-url".to_string() },
     ]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_dump_dynamic() {
+    let env = TestEnv::new();
+    env.add_rule(Rule::new("fuchsia.com", "test", "/", "/").unwrap());
+    let output = env.run_pkgctl(vec!["rule", "dump-dynamic"]).await;
+    let expected_value = serde_json::json!({
+        "version": "1",
+        "content": [
+            {
+            "host_match": "fuchsia.com",
+            "host_replacement": "test",
+            "path_prefix_match": "/",
+            "path_prefix_replacement": "/",
+            }
+        ]
+    });
+    assert_no_errors(&output);
+    let actual_value: serde_json::value::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(expected_value, actual_value);
+    env.assert_only_engine_called_with(vec![CapturedEngineRequest::StartEditTransaction]);
 }
 
 macro_rules! repo_add_tests {
