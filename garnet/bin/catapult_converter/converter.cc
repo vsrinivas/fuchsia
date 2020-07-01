@@ -307,6 +307,9 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output, const Conv
   AddSharedDiagnostic("pointId", std::move(timestamp));
   AddSharedDiagnostic("bots", helper.MakeString(args->bots));
   AddSharedDiagnostic("masters", helper.MakeString(args->masters));
+  if (args->product_versions) {
+    AddSharedDiagnostic("productVersions", helper.MakeString(args->product_versions));
+  }
 
   // The "logUrls" diagnostic contains a list of [name, url] tuples.
   rapidjson::Value log_url_array;
@@ -396,6 +399,8 @@ int ConverterMain(int argc, char** argv) {
       "      Input file: perf test results JSON file (required)\n"
       "  --output FILENAME\n"
       "      Output file: Catapult HistogramSet JSON file (default is stdout)\n"
+      "  --product-versions STRING\n"
+      "      Release version in the format 0.yyyymmdd.a.b if applicable. e.g. 0.20200101.1.2\n"
       "\n"
       "The following are required and specify parameters to copy into the "
       "output file:\n"
@@ -414,6 +419,7 @@ int ConverterMain(int argc, char** argv) {
       {"masters", required_argument, nullptr, 'm'},
       {"bots", required_argument, nullptr, 'b'},
       {"log-url", required_argument, nullptr, 'l'},
+      {"product-versions", required_argument, nullptr, 'v'},
   };
   ConverterArgs args;
   const char* input_filename = nullptr;
@@ -444,6 +450,9 @@ int ConverterMain(int argc, char** argv) {
         break;
       case 'l':
         args.log_url = optarg;
+        break;
+      case 'v':
+        args.product_versions = optarg;
         break;
     }
   }

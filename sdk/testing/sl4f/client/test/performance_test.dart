@@ -152,6 +152,36 @@ void main(List<String> args) {
     expect(capturedArgs[9], 'https://ci.chromium.org/b/8abc123');
     expect(capturedArgs[10], '--bots');
     expect(capturedArgs[11], 'example-fuchsia-x64-nuc');
+
+    // If it is a bot run with release version, should have the product-versions arg.
+    const environmentWithVersion = {
+      'CATAPULT_DASHBOARD_MASTER': 'example.fuchsia.global.ci',
+      'CATAPULT_DASHBOARD_BOT': 'example-fuchsia-x64-nuc',
+      'BUILDBUCKET_ID': '8abc123',
+      'BUILD_CREATE_TIME': '1561234567890',
+      'RELEASE_VERSION': '0.001.20.3',
+    };
+
+    await performance.convertResults('/bin/catapult_converter',
+        File('test3-benchmark.fuchsiaperf.json'), environmentWithVersion);
+    verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
+        argThat(endsWith('catapult_converter')), captureAny))
+      ..called(1);
+    capturedArgs = verifyMockRunProcessObserver.captured.single;
+    expect(capturedArgs[0], '--input');
+    expect(capturedArgs[1], endsWith('test3-benchmark.fuchsiaperf.json'));
+    expect(capturedArgs[2], '--output');
+    expect(capturedArgs[3], endsWith('test3-benchmark.catapult_json'));
+    expect(capturedArgs[4], '--execution-timestamp-ms');
+    expect(capturedArgs[5], '1561234567890');
+    expect(capturedArgs[6], '--masters');
+    expect(capturedArgs[7], 'example.fuchsia.global.ci');
+    expect(capturedArgs[8], '--log-url');
+    expect(capturedArgs[9], 'https://ci.chromium.org/b/8abc123');
+    expect(capturedArgs[10], '--bots');
+    expect(capturedArgs[11], 'example-fuchsia-x64-nuc');
+    expect(capturedArgs[12], '--product-versions');
+    expect(capturedArgs[13], '0.001.20.3');
   });
 
   // convertResults() should raise an error if a non-empty subset of the

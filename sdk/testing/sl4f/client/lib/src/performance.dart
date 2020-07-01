@@ -80,6 +80,7 @@ class Performance {
   static const String _catapultDashboardBotVarName = 'CATAPULT_DASHBOARD_BOT';
   static const String _buildbucketIdVarName = 'BUILDBUCKET_ID';
   static const String _buildCreateTimeVarName = 'BUILD_CREATE_TIME';
+  static const String _releaseVersion = 'RELEASE_VERSION';
 
   final Sl4f _sl4f;
   final Dump _dump;
@@ -287,6 +288,7 @@ class Performance {
     var bot = environment[_catapultDashboardBotVarName];
     final buildbucketId = environment[_buildbucketIdVarName];
     final buildCreateTime = environment[_buildCreateTimeVarName];
+    var releaseVersion = environment[_releaseVersion];
 
     bool uploadEnabled = true;
     String logurl;
@@ -321,7 +323,7 @@ class Performance {
     final outputFileName =
         _removeSuffix(resultsPath, '.fuchsiaperf.json') + catapultExtension;
 
-    final List<String> args = [
+    List<String> args = [
       '--input',
       result.absolute.path,
       '--output',
@@ -335,6 +337,9 @@ class Performance {
       '--bots',
       bot
     ];
+    if (releaseVersion != null) {
+      args.addAll(['--product-versions', releaseVersion]);
+    }
 
     final converter = Platform.script.resolve(converterPath).toFilePath();
 
