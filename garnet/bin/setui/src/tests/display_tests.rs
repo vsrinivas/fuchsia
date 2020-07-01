@@ -14,8 +14,7 @@ use {
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::{
-        DisplayMarker, DisplayProxy, DisplaySettings, Error, IntlMarker,
-        LowLightMode as FidlLowLightMode,
+        DisplayMarker, DisplayProxy, DisplaySettings, IntlMarker, LowLightMode as FidlLowLightMode,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
@@ -285,14 +284,6 @@ async fn test_display_failure() {
 
     let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
     let _settings = intl_service.watch2().await.expect("watch completed");
-}
-
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_channel_failure_watch() {
-    let display_proxy =
-        create_display_test_env_with_failures(InMemoryStorageFactory::create()).await;
-    let result = display_proxy.watch().await.ok();
-    assert_eq!(result, Some(Err(Error::Failed)));
 }
 
 #[fuchsia_async::run_until_stalled(test)]

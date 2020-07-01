@@ -4,37 +4,22 @@
 use {
     crate::fidl_hanging_get_responder,
     crate::fidl_hanging_get_responder_no_imports,
-    crate::fidl_hanging_get_result_responder,
-    crate::fidl_process,
+    crate::fidl_process_2,
     crate::fidl_processor::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{LowLightMode, SettingRequest, SettingResponse, SettingType},
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
-        DisplayWatchLightSensor2Responder, DisplayWatchLightSensorResponder, DisplayWatchResponder,
-        Error, LightSensorData, LowLightMode as FidlLowLightMode,
+        DisplayWatchLightSensor2Responder, Error, LightSensorData,
+        LowLightMode as FidlLowLightMode,
     },
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
 };
 
-// TODO(fxb/52593): Remove when clients are ported to watch2.
-fidl_hanging_get_result_responder!(
-    DisplaySettings,
-    DisplayWatchResponder,
-    DisplayMarker::DEBUG_NAME
-);
-
 fidl_hanging_get_responder!(DisplaySettings, DisplayWatch2Responder, DisplayMarker::DEBUG_NAME);
-
-// TODO(fxb/52593): Remove when clients are ported to watch2.
-fidl_hanging_get_result_responder!(
-    LightSensorData,
-    DisplayWatchLightSensorResponder,
-    DisplayMarker::DEBUG_NAME
-);
 
 fidl_hanging_get_responder_no_imports!(
     LightSensorData,
@@ -98,42 +83,15 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
     request
 }
 
-fidl_process!(
+fidl_process_2!(
     Display,
     SettingType::Display,
-    process_request,
-    SettingType::Display,
-    DisplaySettings,
-    DisplayWatch2Responder,
     process_request_2,
-    SettingType::LightSensor,
-    LightSensorData,
-    DisplayWatchLightSensorResponder,
-    process_sensor_request,
     SettingType::LightSensor,
     LightSensorData,
     DisplayWatchLightSensor2Responder,
     process_sensor_request_2
 );
-
-// TODO(fxb/52593): Replace with logic from process_request_2
-// and remove process_request_2 when clients ported to Watch2 and back.
-async fn process_request(
-    context: RequestContext<DisplaySettings, DisplayWatchResponder>,
-    req: DisplayRequest,
-) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        DisplayRequest::Watch { responder } => {
-            context.watch(responder, false).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-    return Ok(None);
-}
 
 async fn process_request_2(
     context: RequestContext<DisplaySettings, DisplayWatch2Responder>,
@@ -167,38 +125,6 @@ async fn process_request_2(
         _ => {
             return Ok(Some(req));
         }
-    }
-
-    return Ok(None);
-}
-
-// TODO(fxb/52593): Replace with logic from process_request_2
-// and remove process_request_2 when clients ported to Watch2 and back.
-async fn process_sensor_request(
-    context: RequestContext<LightSensorData, DisplayWatchLightSensorResponder>,
-    req: DisplayRequest,
-) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    if let DisplayRequest::WatchLightSensor { delta, responder } = req {
-        context
-            .watch_with_change_fn(
-                // Bucket watch requests to the nearest 0.01.
-                // TODO(fxb/55112): this might be just an integer
-                format!("{:.2}", delta),
-                Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
-                    if let (Some(old_lux), Some(new_lux)) =
-                        (old_data.illuminance_lux, new_data.illuminance_lux)
-                    {
-                        (new_lux - old_lux).abs() >= delta
-                    } else {
-                        true
-                    }
-                }),
-                responder,
-                false,
-            )
-            .await;
-    } else {
-        return Ok(Some(req));
     }
 
     return Ok(None);

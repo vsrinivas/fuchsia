@@ -40,7 +40,7 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else if light_sensor {
-        let data = proxy.watch_light_sensor(0.0).await?;
+        let data = proxy.watch_light_sensor2(0.0).await?;
         output.push_str(&format!("{:?}", data));
     } else if let Some(mode) = low_light_mode {
         let mut settings = DisplaySettings::empty();

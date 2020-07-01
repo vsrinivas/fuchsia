@@ -62,11 +62,7 @@ async fn test_light_sensor() {
         .unwrap();
 
     let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
-    let data = display_service
-        .watch_light_sensor(0.0)
-        .await
-        .expect("watch completed")
-        .expect("watch successful");
+    let data = display_service.watch_light_sensor2(0.0).await.expect("watch completed");
 
     assert_eq!(data.illuminance_lux, Some(TEST_LUX_VAL.into()));
     assert_eq!(

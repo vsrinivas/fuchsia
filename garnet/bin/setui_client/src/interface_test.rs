@@ -416,17 +416,17 @@ async fn validate_light_sensor() -> Result<(), Error> {
     fasync::spawn(async move {
         while let Some(request) = stream.try_next().await.unwrap() {
             match request {
-                DisplayRequest::WatchLightSensor { delta: _, responder } => {
+                DisplayRequest::WatchLightSensor2 { delta: _, responder } => {
                     *watch_called_clone.write() = true;
                     responder
-                        .send(&mut Ok(LightSensorData {
+                        .send(LightSensorData {
                             illuminance_lux: Some(100.0),
                             color: Some(fidl_fuchsia_ui_types::ColorRgb {
                                 red: 25.0,
                                 green: 16.0,
                                 blue: 59.0,
                             }),
-                        }))
+                        })
                         .unwrap();
                 }
                 _ => {}
