@@ -87,8 +87,8 @@ func TestRDROneWayWANToLANUDP(t *testing.T) {
 	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterRDR(t)
 
-	link(sWANLinkEP, sRouterLinkEP2)
-	link(sRouterLinkEP1, sLANLinkEP)
+	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
+	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
 
 	var wqLAN waiter.Queue
 	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
@@ -141,11 +141,11 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterRDR(t)
 
-	link(sWANLinkEP, sRouterLinkEP2)
-	link(sRouterLinkEP1, sLANLinkEP)
+	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
+	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
 
-	link(sLANLinkEP, sRouterLinkEP1)
-	link(sRouterLinkEP2, sWANLinkEP)
+	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
+	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
 
 	var wqLAN waiter.Queue
 	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
@@ -233,11 +233,11 @@ func TestRDRWANToLANTCP(t *testing.T) {
 	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterRDR(t)
 
-	link(sWANLinkEP, sRouterLinkEP2)
-	link(sRouterLinkEP1, sLANLinkEP)
+	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
+	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
 
-	link(sLANLinkEP, sRouterLinkEP1)
-	link(sRouterLinkEP2, sWANLinkEP)
+	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
+	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
 
 	var wqLANMaster waiter.Queue
 	epLANTCPMaster, err := sLAN.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqLANMaster)

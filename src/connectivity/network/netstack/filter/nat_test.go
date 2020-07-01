@@ -229,8 +229,8 @@ func TestNATOneWayLANToWANUDP(t *testing.T) {
 	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterNAT(t)
 
-	link(sLANLinkEP, sRouterLinkEP1)
-	link(sRouterLinkEP2, sWANLinkEP)
+	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
+	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
 
 	var wqLAN waiter.Queue
 	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
@@ -282,11 +282,11 @@ func TestNATRoundtripLANToWANUDP(t *testing.T) {
 	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterNAT(t)
 
-	link(sLANLinkEP, sRouterLinkEP1)
-	link(sRouterLinkEP2, sWANLinkEP)
+	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
+	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
 
-	link(sWANLinkEP, sRouterLinkEP2)
-	link(sRouterLinkEP1, sLANLinkEP)
+	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
+	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
 
 	var wqLAN waiter.Queue
 	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
@@ -371,11 +371,11 @@ func TestNATLANToWANTCP(t *testing.T) {
 	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterNAT(t)
 
-	link(sLANLinkEP, sRouterLinkEP1)
-	link(sRouterLinkEP2, sWANLinkEP)
+	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
+	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
 
-	link(sWANLinkEP, sRouterLinkEP2)
-	link(sRouterLinkEP1, sLANLinkEP)
+	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
+	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
 
 	var wqLAN waiter.Queue
 	epLANTCP, err := sLAN.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
@@ -478,7 +478,7 @@ func TestNATLANToWANTCP(t *testing.T) {
 	}
 }
 
-func link(a, b *syncEndpoint) {
+func linkEndpoints(a, b *syncEndpoint) {
 	a.remote = append(a.remote, b)
 	b.remote = append(b.remote, a)
 }

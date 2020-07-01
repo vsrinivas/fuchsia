@@ -7,6 +7,7 @@ package eth
 import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/nested"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -15,12 +16,11 @@ var _ stack.GSOEndpoint = (*Client)(nil)
 var _ stack.NetworkDispatcher = (*endpoint)(nil)
 
 type endpoint struct {
-	stack.LinkEndpoint
-	dispatcher stack.NetworkDispatcher
+	nested.Endpoint
 }
 
 func (e *endpoint) Capabilities() stack.LinkEndpointCapabilities {
-	return stack.CapabilityResolutionRequired | e.LinkEndpoint.Capabilities()
+	return stack.CapabilityResolutionRequired | e.Endpoint.Capabilities()
 }
 
 func (e *endpoint) MaxHeaderLength() uint16 {
@@ -45,7 +45,7 @@ func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 	h := pkt.Header.Prepend(header.EthernetMinimumSize)
 	header.Ethernet(h).Encode(&fields)
 	pkt.LinkHeader = h
-	return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
+	return e.Endpoint.WritePacket(r, gso, protocol, pkt)
 }
 
 func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
@@ -55,12 +55,7 @@ func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 		header.Ethernet(h).Encode(&fields)
 		pkt.LinkHeader = h
 	}
-	return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
-}
-
-func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
-	e.dispatcher = dispatcher
-	e.LinkEndpoint.Attach(e)
+	return e.Endpoint.WritePackets(r, gso, pkts, protocol)
 }
 
 func (e *endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
@@ -81,16 +76,11 @@ func (e *endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 	if protocol == 0 {
 		protocol = eth.Type()
 	}
-	e.dispatcher.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
-}
-
-func (e *endpoint) GSOMaxSize() uint32 {
-	if e, ok := e.LinkEndpoint.(stack.GSOEndpoint); ok {
-		return e.GSOMaxSize()
-	}
-	return 0
+	e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
 }
 
 func NewLinkEndpoint(ep stack.LinkEndpoint) *endpoint {
-	return &endpoint{LinkEndpoint: ep}
+	e := &endpoint{}
+	e.Endpoint.Init(ep, e)
+	return e
 }

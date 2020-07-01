@@ -13,6 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/packetbuffer"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/link/nested"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -21,19 +22,19 @@ var _ stack.GSOEndpoint = (*Endpoint)(nil)
 var _ stack.NetworkDispatcher = (*Endpoint)(nil)
 
 type Endpoint struct {
-	filter     *Filter
-	dispatcher stack.NetworkDispatcher
-	enabled    uint32
-	stack.LinkEndpoint
+	filter  *Filter
+	enabled uint32
+	nested.Endpoint
 }
 
 // New creates a new Filter endpoint by wrapping a lower LinkEndpoint.
 func NewEndpoint(filter *Filter, lower stack.LinkEndpoint) *Endpoint {
-	return &Endpoint{
-		filter:       filter,
-		LinkEndpoint: lower,
-		enabled:      1,
+	ep := &Endpoint{
+		filter:  filter,
+		enabled: 1,
 	}
+	ep.Endpoint.Init(lower, ep)
+	return ep
 }
 
 func (e *Endpoint) Enable() {
@@ -51,7 +52,7 @@ func (e *Endpoint) IsEnabled() bool {
 // DeliverNetworkPacket implements stack.NetworkDispatcher.
 func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	if atomic.LoadUint32(&e.enabled) == 0 {
-		e.dispatcher.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
+		e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
 		return
 	}
 
@@ -67,19 +68,13 @@ func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 		return
 	}
 
-	e.dispatcher.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, packetbuffer.OutboundToInbound(pkt))
-}
-
-// Attach implements stack.LinkEndpoint.
-func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
-	e.dispatcher = dispatcher
-	e.LinkEndpoint.Attach(e)
+	e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, packetbuffer.OutboundToInbound(pkt))
 }
 
 // WritePacket implements stack.LinkEndpoint.
 func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if atomic.LoadUint32(&e.enabled) == 0 {
-		return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
+		return e.Endpoint.WritePacket(r, gso, protocol, pkt)
 	}
 
 	// The filter expects the packet's header to be in the packet buffer's
@@ -87,9 +82,9 @@ func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 	//
 	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
-	packetbuffer.EnsurePopulatedHeader(pkt, e.LinkEndpoint.MaxHeaderLength())
+	packetbuffer.EnsurePopulatedHeader(pkt, e.MaxHeaderLength())
 	if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
-		return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
+		return e.Endpoint.WritePacket(r, gso, protocol, pkt)
 	}
 
 	return nil
@@ -98,7 +93,7 @@ func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 // WritePackets implements stack.LinkEndpoint.
 func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	if atomic.LoadUint32(&e.enabled) == 0 {
-		return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
+		return e.Endpoint.WritePackets(r, gso, pkts, protocol)
 	}
 
 	var filtered stack.PacketBufferList
@@ -108,18 +103,11 @@ func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 		//
 		// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 		// so we don't need to create a single view here.
-		packetbuffer.EnsurePopulatedHeader(pkt, e.LinkEndpoint.MaxHeaderLength())
+		packetbuffer.EnsurePopulatedHeader(pkt, e.MaxHeaderLength())
 		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
 			filtered.PushBack(pkt)
 		}
 	}
 
-	return e.LinkEndpoint.WritePackets(r, gso, filtered, protocol)
-}
-
-func (e *Endpoint) GSOMaxSize() uint32 {
-	if e, ok := e.LinkEndpoint.(stack.GSOEndpoint); ok {
-		return e.GSOMaxSize()
-	}
-	return 0
+	return e.Endpoint.WritePackets(r, gso, filtered, protocol)
 }

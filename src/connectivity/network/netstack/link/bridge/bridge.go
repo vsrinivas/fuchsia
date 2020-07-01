@@ -251,9 +251,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 			return
 		default:
 			if l, ok := ep.links[dstLinkAddr]; ok {
-				if d := l.Dispatcher(); d != nil {
-					d.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
-				}
+				l.Endpoint.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
 				return
 			}
 		}
@@ -290,9 +288,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	for _, l := range ep.links {
 		if flood {
-			if d := l.Dispatcher(); d != nil {
-				d.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
-			}
+			l.Endpoint.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 		}
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
