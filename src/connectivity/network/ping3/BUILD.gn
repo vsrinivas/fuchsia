@@ -2,10 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "ping3"
@@ -42,31 +40,32 @@ rustc_binary("bin") {
   ]
 }
 
-package("ping3") {
+fuchsia_component("ping3-component") {
+  component_name = "ping3"
+  manifest = "meta/ping3.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "ping3"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ping3.cmx")
-      dest = "ping3.cmx"
-    },
-  ]
 }
 
-test_package("ping3_tests") {
-  deps = [ ":bin_test" ]
+fuchsia_package("ping3") {
+  deps = [ ":ping3-component" ]
+}
 
-  tests = [
-    {
-      name = "ping3_bin_test"
-      environments = [ emu_env ]
-    },
+fuchsia_unittest_package("ping3-tests") {
+  manifest = "meta/ping3-tests.cmx"
+  deps = [ ":bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":ping3",
+    ":ping3-tests",
+
+    # ping3-tests lauches netstack3.
+    "//src/connectivity/network/netstack3",
+
+    # ping3-tests uses netemul to create hermetic test environment.
+    # TODO(brunodalbo): move this to component level when netemul can handle it.
+    "//src/connectivity/network/testing/netemul",
   ]
 }

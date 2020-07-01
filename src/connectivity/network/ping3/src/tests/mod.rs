@@ -4,20 +4,18 @@
 
 mod integration_tests;
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::DiscoverableService;
 use fidl_fuchsia_net::{IpAddress, Subnet};
 use fidl_fuchsia_net_icmp::ProviderMarker;
-use fidl_fuchsia_net_stack::{
-    ForwardingDestination, ForwardingEntry, InterfaceAddress, PhysicalStatus, StackMarker,
-};
+use fidl_fuchsia_net_stack::{ForwardingDestination, ForwardingEntry, PhysicalStatus, StackMarker};
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,
     ManagedEnvironmentProxy, VirtualDevice,
 };
 use fidl_fuchsia_netemul_network::{
-    DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker,
+    DeviceConnection, DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker,
     EndpointManagerProxy, EndpointProxy, NetworkConfig, NetworkContextMarker, NetworkManagerMarker,
     NetworkProxy,
 };
@@ -155,12 +153,20 @@ impl TestSetup {
         env.connect_to_service("fuchsia.net.stack.Stack", stack_server_end.into_channel())
             .context("Can't connect to fuchsia.net.stack")?;
 
-        let eth = endpoint.get_ethernet_device().await.context("Failed to get ethernet device")?;
-        let interface_id = stack
-            .add_ethernet_interface("fake_topo_path", eth)
+        let interface_id = match endpoint
+            .get_device()
             .await
-            .squash_result()
-            .map_err(|e| format_err!("Failed to get ethernet interface: {:?}", e))?;
+            .context("Failed to get ethernet device")?
+        {
+            DeviceConnection::Ethernet(device) => stack
+                .add_ethernet_interface("fake_topo_path", device)
+                .await
+                .squash_result()
+                .context("Failed to get ethernet interface")?,
+            DeviceConnection::NetworkDevice(device) => {
+                todo!("(48860) Support and test NetworkDevice connections. Got unexpected NetworkDevice {:?}", device);
+            }
+        };
 
         // Wait for interface to become online
         //
@@ -171,7 +177,7 @@ impl TestSetup {
                 .get_interface_info(interface_id)
                 .await
                 .squash_result()
-                .map_err(|e| format_err!("Failed to get interface info: {:?}", e))?;
+                .context("Failed to get interface info")?;
             if info.properties.physical_status == PhysicalStatus::Up {
                 break;
             }
@@ -183,11 +189,11 @@ impl TestSetup {
         stack
             .add_interface_address(
                 interface_id,
-                &mut InterfaceAddress { ip_address: addr, prefix_len: self.subnet_prefix },
+                &mut Subnet { addr, prefix_len: self.subnet_prefix },
             )
             .await
             .squash_result()
-            .map_err(|e| format_err!("Failed to add interface address: {:?}", e))?;
+            .context("Failed to add interface address")?;
 
         stack
             .add_forwarding_entry(&mut ForwardingEntry {
@@ -195,8 +201,8 @@ impl TestSetup {
                 destination: ForwardingDestination::DeviceId(interface_id),
             })
             .await
-            .map_err(|e| format_err!("{}", e))?
-            .map_err(|e| format_err!("Failed to add forwarding entry: {:?}", e))?;
+            .squash_result()
+            .context("Failed to add forwarding entry")?;
 
         self.endpoints.push(endpoint);
         Ok(env)

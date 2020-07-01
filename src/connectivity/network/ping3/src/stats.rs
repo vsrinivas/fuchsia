@@ -1,7 +1,7 @@
 use anyhow::{format_err, Error};
 use fuchsia_zircon as zx;
 use std::fmt;
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 use std::vec::Vec;
 
 /// `Stats` centralizes all statistical data for transmit of ICMP echo requests and receival of
@@ -31,14 +31,20 @@ impl Stats {
 
     /// Increment the request count. Returns the new count.
     pub fn inc_request_count(&self) -> Result<u64, Error> {
-        let mut tx = self.tx.lock().map_err(|_| format_err!("Transmit stats has been poisoned"))?;
+        let mut tx = self
+            .tx
+            .lock()
+            .map_err(|e: PoisonError<_>| format_err!("Transmit stats has been poisoned: {}", e))?;
         tx.requests_sent += 1;
         Ok(tx.requests_sent)
     }
 
     /// Increment the reply count. Returns the new count.
     pub fn inc_reply_count(&self, latency: Option<zx::Duration>) -> Result<u64, Error> {
-        let mut rx = self.rx.lock().map_err(|_| format_err!("Receive stats has been poisoned"))?;
+        let mut rx = self
+            .rx
+            .lock()
+            .map_err(|e: PoisonError<_>| format_err!("Receive stats has been poisoned: {}", e))?;
         rx.replies_received += 1;
         if let Some(l) = latency {
             rx.latencies.push(l);
@@ -48,7 +54,10 @@ impl Stats {
 
     /// Check if any replies have been received.
     pub fn has_received_replies(&self) -> Result<bool, Error> {
-        let rx = self.rx.lock().map_err(|_| format_err!("Receive stats has been poisoned"))?;
+        let rx = self
+            .rx
+            .lock()
+            .map_err(|e: PoisonError<_>| format_err!("Receive stats has been poisoned: {}", e))?;
         Ok(rx.replies_received != 0)
     }
 }

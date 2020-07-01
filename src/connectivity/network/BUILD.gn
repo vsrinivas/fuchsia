@@ -49,6 +49,7 @@ group("tests") {
     "netdump:tests",
     "netstack:tests",
     "netstack3:tests",
+    "ping3:tests",
     "testing/netemul:tests",
     "tests",
     "tools:tests",

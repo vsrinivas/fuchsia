@@ -8,10 +8,11 @@ mod store;
 #[cfg(test)]
 mod tests;
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context as _, Error};
 use futures::future::try_join;
 use futures::prelude::*;
 use log::{debug, error, info, Level, LevelFilter, Metadata, Record};
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
 use zerocopy::{AsBytes, LayoutVerified};
@@ -49,7 +50,7 @@ impl log::Log for ConsoleLogger {
         metadata.level() <= self.level
     }
 
-    fn log(&self, record: &Record) {
+    fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
             println!("{}", record.args());
         }
@@ -164,19 +165,13 @@ fn get_config() -> Result<EchoSocketConfig, Error> {
     let Opt { local_addr, remote_addr, packet_size, count, deadline, interval, .. } =
         Opt::from_args();
 
-    let local = match local_addr {
-        Some(addr) => Some(
-            IpAddress(
-                addr.parse().map_err(|e| format_err!("Failed to parse local address: {}", e))?,
-            )
-            .into(),
-        ),
-        None => None,
-    };
+    let local = local_addr
+        .map(|s| std::net::IpAddr::from_str(&s))
+        .transpose()
+        .context("Failed to parse local address")?
+        .map(|addr| IpAddress(addr).into());
 
-    let remote = IpAddress(
-        remote_addr.parse().map_err(|e| format_err!("Failed to parse remote address: {}", e))?,
-    );
+    let remote = IpAddress(remote_addr.parse().context("Failed to parse remote address")?);
 
     if interval < 200 {
         return Err(format_err!("Cannot flood; minimum interval allowed is 200ms."));
@@ -208,48 +203,29 @@ fn get_config() -> Result<EchoSocketConfig, Error> {
 /// Open an ICMP echo socket.
 async fn open_socket(config: EchoSocketConfig) -> Result<EchoSocketProxy, Error> {
     let provider = connect_to_service::<ProviderMarker>()
-        .map_err(|e| format_err!("Failed to connect to the ICMP Provider service: {}", e))?;
+        .context("Failed to connect to the ICMP Provider service")?;
 
     debug!("Connected to fuchsia.net.icmp.Provider service");
 
     let (socket_client, socket_server) = create_endpoints::<EchoSocketMarker>()
-        .map_err(|e| format_err!("Failed to create channel for ICMP echo socket: {}", e))?;
-    let socket = socket_client
-        .into_proxy()
-        .map_err(|e| format_err!("Failed to create proxy to ICMP echo socket: {}", e))?;
+        .context("Failed to create channel for ICMP echo socket")?;
+    let socket =
+        socket_client.into_proxy().context("Failed to create proxy to ICMP echo socket")?;
 
     debug!("Opening ICMP echo socket...");
 
-    provider
-        .open_echo_socket(config, socket_server)
-        .map_err(|e| format_err!("Failed to open ICMP echo socket: {}", e))?;
+    provider.open_echo_socket(config, socket_server).context("Failed to open ICMP echo socket")?;
 
     // Wait until an OnOpen event is received before doing anything with the socket. This is done
     // to circumvent inaccurate first packet latency due to the kernel queuing FIDL requests before
     // the socket is ready to accept requests.
-    let mut event_stream = socket.take_event_stream();
-    while let Some(evt) = event_stream.next().await {
-        match evt {
-            Ok(EchoSocketEvent::OnOpen_ { s }) => {
-                let status = zx::Status::from_raw(s);
-                match status {
-                    zx::Status::OK => debug!("ICMP echo socket successfully opened"),
-                    zx::Status::INVALID_ARGS => {
-                        return Err(format_err!("Passed invalid arguments to ICMP echo socket"))
-                    }
-                    _ => {
-                        return Err(format_err!(
-                            "Received unknown status code from `EchoSocket.OnOpen`: {}",
-                            status
-                        ))
-                    }
-                }
-                break;
-            }
-            Err(e) => return Err(format_err!("Socket error: {:?}", e)),
-        }
-    }
-
+    let EchoSocketEvent::OnOpen_ { s } = socket
+        .take_event_stream()
+        .try_next()
+        .await
+        .context("stream error")?
+        .ok_or(format_err!("socket event stream ended unexpectedly"))?;
+    let () = zx::Status::ok(s).context("ping failed")?;
     Ok(socket)
 }
 
@@ -281,7 +257,7 @@ async fn send_requests(
 
         socket
             .send_request(&mut EchoPacket { sequence_num: num, payload })
-            .map_err(|e| format_err!("Failed to send ICMP echo request: {}", e))?;
+            .context("Failed to send ICMP echo request")?;
 
         let requests = stats.inc_request_count()?;
         if count.map_or(false, |c| c == requests) {
@@ -301,14 +277,12 @@ async fn watch_replies(
 ) -> Result<(), Error> {
     let Opt { count, remote_addr, .. } = Opt::from_args();
     loop {
-        let EchoPacket { payload, sequence_num } = match socket.watch().await {
-            Ok(Ok(packet)) => packet,
-            Ok(Err(e)) => {
-                let status = zx::Status::from_raw(e);
-                return Err(format_err!("Error sending ICMP echo request: {}", status));
-            }
-            Err(e) => return Err(format_err!("FIDL error during watch: {:?}", e)),
-        };
+        let EchoPacket { payload, sequence_num } = socket
+            .watch()
+            .await
+            .context("FIDL error during watch")?
+            .map_err(zx::Status::from_raw)
+            .context("Error sending ICMP echo request")?;
 
         if payload.len() != packet_size as usize {
             return Err(format_err!("Validation error: ICMP payload sizes do not match"));
