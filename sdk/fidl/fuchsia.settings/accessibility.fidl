@@ -12,13 +12,6 @@ using fuchsia.ui.types;
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Accessibility {
-    /// This call may fail if AccessibilitySettings are not accessible, possibly because of file
-    /// system errors, not being supported on this product, or general service failures.
-    ///
-    /// TO BE DEPRECATED: new watches will use Watch2 in the future.
-    [Transitional = "To be deprecated in favor of Watch2"]
-    Watch() -> (AccessibilitySettings settings) error Error;
-
     /// Gets the current value of all accessibility settings. Returns
     /// immediately on first call; subsequent calls return when any of the
     /// values change.
@@ -28,7 +21,6 @@ protocol Accessibility {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    [Transitional = "Future Replacement for Watch"]
     Watch2() -> (AccessibilitySettings settings);
 
     /// Sets [AccessibilitySettings] settings. Any field not explicitly set in the table performs a

@@ -6,11 +6,11 @@ use futures::FutureExt;
 
 use fidl_fuchsia_settings::{
     AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, AccessibilityWatch2Responder,
-    AccessibilityWatchResponder,
 };
 use fuchsia_async as fasync;
 
-use crate::fidl_process;
+use crate::fidl_hanging_get_responder;
+use crate::fidl_process_2;
 use crate::fidl_processor::RequestContext;
 use crate::request_respond;
 use crate::switchboard::accessibility_types::{
@@ -18,18 +18,10 @@ use crate::switchboard::accessibility_types::{
 };
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
-use crate::{fidl_hanging_get_responder, fidl_hanging_get_result_responder};
 
 fidl_hanging_get_responder!(
     AccessibilitySettings,
     AccessibilityWatch2Responder,
-    AccessibilityMarker::DEBUG_NAME
-);
-
-// TODO(fxb/): Remove when clients are ported to watch2.
-fidl_hanging_get_result_responder!(
-    AccessibilitySettings,
-    AccessibilityWatchResponder,
     AccessibilityMarker::DEBUG_NAME
 );
 
@@ -71,33 +63,7 @@ impl From<AccessibilitySettings> for SettingRequest {
     }
 }
 
-fidl_process!(
-    Accessibility,
-    SettingType::Accessibility,
-    process_request,
-    AccessibilityWatch2Responder,
-    process_request_2
-);
-
-// TODO(fxb/52593): Replace with logic from process_request_2
-// and remove process_request_2 when clients ported to Watch2 and back.
-async fn process_request(
-    context: RequestContext<AccessibilitySettings, AccessibilityWatchResponder>,
-    req: AccessibilityRequest,
-) -> Result<Option<AccessibilityRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        AccessibilityRequest::Watch { responder } => {
-            context.watch(responder, false).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    return Ok(None);
-}
+fidl_process_2!(Accessibility, SettingType::Accessibility, process_request_2,);
 
 async fn process_request_2(
     context: RequestContext<AccessibilitySettings, AccessibilityWatch2Responder>,
