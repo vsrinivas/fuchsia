@@ -40,7 +40,7 @@ const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
 protocol Admin {
     /// Ask all devices to enter into the system power state indicated by 'state'. The devices will
     /// get into a low power state, that corresponds to the system power state 'state'.
-    [Transitional = "deprecated in favor of calling individual methods "]
+    [Deprecated, Transitional = "deprecated in favor of calling individual methods "]
     Suspend(SystemPowerState state) -> () error zx.status;
 
     /// Asks the device to enter a fully on state.
