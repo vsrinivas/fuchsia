@@ -3,8 +3,8 @@
 //
 // This file hosts commonly-used components from fuchsia.git. In the future,
 // this file may be split out into several files based on product configuration.
-// 
-// To add entries to this index, see https://fuchsia.dev/fuchsia-src/development/components/component_id_index
+//
+// To add entries to this index, see https://fuchsia.dev/fuchsia-src/development/components/component_id_index#add-to-index
 {
     instances: [
         {

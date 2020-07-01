@@ -11,39 +11,39 @@ architecture.
 ## Scope
 
 This document describes how to define an index that maps instance ids to
-monikers for components that use isolated storage.
+monikers for components which use isolated-persistent-storage.
 
 ## Overview
 
 The goal of an index of component instance IDs is to assign stable identifiers
 to component instances. This is done by mapping an instance ID to a moniker.
 When a component instance is assigned an ID, its persistent resources are
-identified using this instance ID. This allows the component's URL or realm to
-be changed while its resources still remain attributed to it, so long as this
-index is also updated.
+identified on disk using this instance ID. This allows the component's URL or
+realm to be changed while its resources still remain attributed to it, so long
+as this index is also updated.
 
 When the component runtime discovers an instance ID -> moniker mapping, it
 automatically moves the component instance's existing storage directory to be
 keyed under its instance ID.
 
 Only components which use storage capabilities must to be included in the
-index. The following class of components need not be included in the
+index. The following class of components should not be included in the
 index:
 
 * Test components
 * Components whose storage is not managed by appmgr.
 
-## Defining an index
+## Define a new index
 
 An index file is a JSON5 formatted file, mapping a component's instance ID to
-its moniker. There may be multiple index files, but a system build will merge
-them together into a single index file and make it available to the component
-runtime. This merged index file is immutable, and can only be updated through
-another system update.
+its moniker. There may be multiple index files in a build tree, but they will
+be merged together into a single index file, and this merged file will be made
+available to the component runtime. This merged index file is immutable, and
+can only be updated through another system update.
 
 The schema for an index file is described in the following example:
 
-```json
+```json5
 // Index files are written in JSON5, so you may use comments!
 {
   // A list of entries, where each entry maps an instance ID to a moniker.
@@ -51,7 +51,9 @@ The schema for an index file is described in the following example:
     // An entry, mapping an instance ID to a moniker.
     {
       // Instance IDs are randomly generated, 256-bits of base-16 encoded
-      // strings (in lower case).
+      // strings (in lower case). To generate a new instance ID, omit this
+      // field and run the build; the build will fail and suggest a new
+      // instance ID which you can copy-paste here.
       instance_id: "11601233aef81741f7251907d4d2a1a33aa6fec6b2e54abffc21bec29f95fec2",
       // The `instance_id` above is associated to the following moniker:
       appmgr_moniker: {
@@ -91,7 +93,70 @@ component_id_index("my_component_id_index") {
 }
 ```
 
-## Including a Component ID Index in a System Assembly {#system-assembly}
+## Add a component to the index {#add-to-index}
+
+### Locate the appropriate index file
+
+In order to add a component to the index, you must insert an entry into the
+appropriate index file. Currently, `fuchsia.git`'s components are listed in the
+[core_component_id_index.json](/src/sys/appmgr/config/core_component_id_index.json)
+index. Components outside `fuchsia.git` are listed in a separate index file,
+probably located under a `//vendor` repository where the relevant product is
+defined.
+
+### Add an entry to the index
+Append an entry to the `instances` list with the component's moniker. You may
+omit the `instance_id` field to have the build fail and suggest a new one you
+can use.
+
+#### Example
+
+Add `fuchsia-pkg://example.com/my_other_package#meta/my_other_component.cmx` to
+the index by appending this entry to [core_component_id_index.json](/src/sys/appmgr/config/core_component_id_index.json)'s
+`instances` list:
+
+```json5
+  {
+    appmgr_moniker: {
+      // The component's URL
+      url: "fuchsia-pkg://example.com/my_other_package#meta/my_other_component.cmx",
+      // The realm the component is run under.
+      realm_path: [
+        "app",
+        "sys"
+      ]
+    }
+  }
+```
+
+Now run the build.  The build should fail, suggesting a new instance ID:
+
+```bash
+$ fx build
+.
+.
+Error: Could not merge index file ../../src/sys/appmgr/config/core_component_id_index.json
+
+Caused by:
+    Some entries are missing `instance_id` fields. Here are some generated IDs for you:
+[
+  {
+    instance_id: "47c3bf08f3e560c4dee659c28fa8d863dbdc0b1dbb74065e6cb1f38441ac759c",
+    appmgr_moniker: {
+      url: "fuchsia-pkg://example.com/my_other_package#meta/my_other_component.cmx",
+      realm_path: [
+        "app",
+        "sys"
+      ]
+    }
+  }
+]
+```
+
+Update the entry you've added by copying the suggested `instance_id` field. The
+build should now pass.
+
+## Include a Component ID Index in a system assembly {#system-assembly}
 
 _The target audience for this section are product owners who are
 setting up a system assembly_
