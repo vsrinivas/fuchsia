@@ -13,7 +13,6 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-#include <fbl/canary.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
 #include <object/msi_allocation.h>

@@ -10,7 +10,6 @@
 
 #include <sys/types.h>
 
-#include <fbl/canary.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/pci_device_dispatcher.h>

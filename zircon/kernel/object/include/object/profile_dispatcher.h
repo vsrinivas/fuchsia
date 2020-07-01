@@ -11,7 +11,6 @@
 #include <zircon/syscalls/profile.h>
 #include <zircon/types.h>
 
-#include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 

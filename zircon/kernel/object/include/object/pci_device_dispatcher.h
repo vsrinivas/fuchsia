@@ -15,7 +15,6 @@
 
 #include <dev/pci_common.h>
 #include <dev/pcie_device.h>
-#include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

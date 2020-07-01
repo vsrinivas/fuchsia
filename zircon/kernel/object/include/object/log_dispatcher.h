@@ -11,8 +11,6 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-#include <fbl/canary.h>
-#include <kernel/mutex.h>
 #include <ktl/string_view.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>

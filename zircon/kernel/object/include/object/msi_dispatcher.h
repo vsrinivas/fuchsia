@@ -12,7 +12,6 @@
 
 #include <dev/interrupt.h>
 #include <fbl/bits.h>
-#include <fbl/canary.h>
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>

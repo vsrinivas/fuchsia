@@ -10,7 +10,6 @@
 #include <lib/user_copy/user_iovec.h>
 #include <zircon/types.h>
 
-#include <fbl/canary.h>
 #include <fbl/ref_counted.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>

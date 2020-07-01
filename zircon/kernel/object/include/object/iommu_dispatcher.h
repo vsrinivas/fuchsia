@@ -11,7 +11,6 @@
 #include <zircon/rights.h>
 
 #include <dev/iommu.h>
-#include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 

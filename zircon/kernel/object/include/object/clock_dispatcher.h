@@ -13,8 +13,6 @@
 #include <zircon/syscalls/clock.h>
 #include <zircon/types.h>
 
-#include <fbl/canary.h>
-#include <kernel/mutex.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 

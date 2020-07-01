@@ -13,7 +13,6 @@
 
 #include <dev/iommu.h>
 #include <fbl/array.h>
-#include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>

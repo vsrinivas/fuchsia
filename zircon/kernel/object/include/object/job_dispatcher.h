@@ -11,12 +11,10 @@
 #include <zircon/types.h>
 
 #include <fbl/array.h>
-#include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
 #include <kernel/lockdep.h>
-#include <kernel/mutex.h>
 #include <ktl/array.h>
 #include <object/dispatcher.h>
 #include <object/exceptionate.h>
