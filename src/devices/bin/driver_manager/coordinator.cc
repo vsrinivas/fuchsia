@@ -429,7 +429,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 }
 
 zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out) {
-  std::string program = config_.path_prefix + kDriverHostPath;
+  std::string binary = config_.path_prefix + kDriverHostPath;
   std::vector<const char*> env;
   if (config_.asan_drivers) {
     // If there are any ASan drivers, use the ASan-supporting driver_host for
@@ -443,7 +443,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
     // under the alternate name is currently broken.  So things only work
     // if the build chose an asan-ready variant for the "main" driver_host.
     // When this is restored in the build, this should select the right name.
-    // program = kDriverHostAsanPath;
+    // binary = kDriverHostAsanPath;
     env.push_back(kAsanEnvironment);
   }
 
@@ -470,10 +470,18 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 
   env.push_back(nullptr);
 
+  DriverHostConfig config{
+      .name = name,
+      .binary = binary.c_str(),
+      .env = env.data(),
+      .job = zx::unowned_job(config_.driver_host_job),
+      .root_resource = zx::unowned_resource(root_resource()),
+      .loader_service_connector = &loader_service_connector_,
+      .fs_provider = config_.fs_provider,
+      .coordinator = this,
+  };
   fbl::RefPtr<DriverHost> dh;
-  zx_status_t status = DriverHost::Launch(
-      this, loader_service_connector_, program.c_str(), name, env.data(), root_resource(),
-      zx::unowned_job(config_.driver_host_job), config_.fs_provider, &dh);
+  zx_status_t status = DriverHost::Launch(config, &dh);
   if (status != ZX_OK) {
     return status;
   }

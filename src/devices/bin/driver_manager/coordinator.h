@@ -326,7 +326,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   bool power_manager_registered() { return power_manager_registered_; }
   bool system_loaded() const { return system_loaded_; }
 
-  void set_loader_service_connector(DriverHost::LoaderServiceConnector loader_service_connector) {
+  void set_loader_service_connector(LoaderServiceConnector loader_service_connector) {
     loader_service_connector_ = std::move(loader_service_connector);
   }
 
@@ -416,7 +416,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   bool system_available_ = false;
   bool system_loaded_ = false;
   bool power_manager_registered_ = false;
-  DriverHost::LoaderServiceConnector loader_service_connector_;
+  LoaderServiceConnector loader_service_connector_;
 
   // All Drivers
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;

@@ -913,7 +913,7 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
   }
 }
 
-zx::channel SystemInstance::CloneFs(const char* path) {
+zx::channel SystemInstance::CloneFs(const char* path) const {
   if (!strcmp(path, "dev")) {
     return devfs_root_clone();
   }

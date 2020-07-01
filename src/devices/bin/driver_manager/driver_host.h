@@ -20,13 +20,26 @@
 #include "device.h"
 #include "fdio.h"
 
+using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
 class Coordinator;
+
+struct DriverHostConfig {
+  const char* name;
+  const char* binary;
+  const char* const* env;
+
+  const zx::unowned_job job;
+  const zx::unowned_resource root_resource;
+
+  const LoaderServiceConnector* loader_service_connector;
+  const FsProvider* fs_provider;
+
+  Coordinator* coordinator;
+};
 
 class DriverHost : public fbl::RefCounted<DriverHost>,
                    public fbl::DoublyLinkedListable<DriverHost*> {
  public:
-  using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
-
   enum Flags : uint32_t {
     kDying = 1 << 0,
     kSuspend = 1 << 1,
@@ -43,12 +56,7 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
 
   // |coordinator| must outlive this DriverHost object. If |loader_conector| is nullptr, the
   // default loader service is used, which is useful in test environments.
-  static zx_status_t Launch(Coordinator* coordinator,
-                            const LoaderServiceConnector& loader_connector,
-                            const char* driver_host_bin, const char* proc_name,
-                            const char* const* proc_env, const zx::resource& root_resource,
-                            zx::unowned_job driver_host_job, FsProvider* fs_provider,
-                            fbl::RefPtr<DriverHost>* out);
+  static zx_status_t Launch(const DriverHostConfig& config, fbl::RefPtr<DriverHost>* out);
 
   const zx::channel& hrpc() const { return hrpc_; }
   zx::unowned_process proc() const { return zx::unowned_process(proc_); }

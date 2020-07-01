@@ -28,7 +28,7 @@ class SystemInstance : public FsProvider {
   SystemInstance();
 
   // Implementation required to implement FsProvider
-  zx::channel CloneFs(const char* path) override;
+  zx::channel CloneFs(const char* path) const override;
 
   // The heart of the public API, in the order that things get called during
   // startup.
