@@ -13,8 +13,10 @@ use {
         ViewAssistantPtr, ViewKey,
     },
     euclid::default::{Point2D, Rect},
-    fuchsia_zircon::{AsHandleRef, Event, Signals},
+    fuchsia_async as fasync,
+    fuchsia_zircon::{AsHandleRef, Duration, Event, Signals},
     std::fs::File,
+    std::process,
 };
 
 const WHITE_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
@@ -25,7 +27,7 @@ const WHITE_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 struct Args {
     /// PNG file to load
     #[argh(option)]
-    file: String,
+    file: Option<String>,
 
     /// gamma values to apply
     #[argh(option)]
@@ -38,6 +40,10 @@ struct Args {
     /// an optional x,y position for the image (default is center)
     #[argh(option, from_str_fn(parse_point))]
     position: Option<Point2D<f32>>,
+
+    /// seconds of delay before application exits (default is 1 second)
+    #[argh(option, default = "1")]
+    timeout: i64,
 }
 
 fn parse_color(value: &str) -> Result<Color, String> {
@@ -56,10 +62,14 @@ fn parse_point(value: &str) -> Result<Point2D<f32>, String> {
     }
 }
 
-#[derive(Default)]
-struct DisplayPngAppAssistant {
+struct PngSourceInfo {
     png_reader: Option<png::Reader<File>>,
     png_size: IntSize,
+}
+
+#[derive(Default)]
+struct DisplayPngAppAssistant {
+    png_source: Option<PngSourceInfo>,
     gamma_values: Option<Vec<f32>>,
     background: Option<Color>,
     position: Option<Point2D<f32>>,
@@ -71,22 +81,24 @@ impl AppAssistant for DisplayPngAppAssistant {
         self.background = args.background;
         self.position = args.position;
 
-        let filename = args.file;
+        if let Some(filename) = args.file {
+            let file = File::open(format!("{}", filename))
+                .context(format!("failed to open file {}", filename))?;
+            let decoder = png::Decoder::new(file);
+            let (info, png_reader) =
+                decoder.read_info().context(format!("failed to open image file {}", filename))?;
+            ensure!(
+                info.width > 0 && info.height > 0,
+                "Invalid image size for png file {}x{}",
+                info.width,
+                info.height
+            );
 
-        let file = File::open(format!("{}", filename))
-            .context(format!("failed to open file {}", filename))?;
-        let decoder = png::Decoder::new(file);
-        let (info, png_reader) =
-            decoder.read_info().context(format!("failed to open image file {}", filename))?;
-        ensure!(
-            info.width > 0 && info.height > 0,
-            "Invalid image size for png file {}x{}",
-            info.width,
-            info.height
-        );
-
-        self.png_reader = Some(png_reader);
-        self.png_size = IntSize::new(info.width as i32, info.height as i32);
+            self.png_source = Some(PngSourceInfo {
+                png_reader: Some(png_reader),
+                png_size: IntSize::new(info.width as i32, info.height as i32),
+            });
+        }
 
         if let Some(gamma_file) = args.gamma_file {
             let file = File::open(format!("{}", gamma_file))
@@ -117,10 +129,9 @@ impl AppAssistant for DisplayPngAppAssistant {
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        let png_reader = self.png_reader.take().expect("png_reader");
+        let png_source = self.png_source.take();
         Ok(Box::new(DisplayPngViewAssistant::new(
-            self.png_size,
-            png_reader,
+            png_source,
             self.gamma_values.clone(),
             self.background.take().unwrap_or(WHITE_COLOR),
             self.position.take(),
@@ -135,8 +146,7 @@ impl AppAssistant for DisplayPngAppAssistant {
 const GAMMA_TABLE_ID: u64 = 100;
 
 struct DisplayPngViewAssistant {
-    png_reader: Option<png::Reader<File>>,
-    png_size: IntSize,
+    png_source: Option<PngSourceInfo>,
     gamma_values: Option<Vec<f32>>,
     background: Color,
     png: Option<Image>,
@@ -146,28 +156,20 @@ struct DisplayPngViewAssistant {
 
 impl DisplayPngViewAssistant {
     pub fn new(
-        png_size: IntSize,
-        png_reader: png::Reader<File>,
+        png_source: Option<PngSourceInfo>,
         gamma_values: Option<Vec<f32>>,
         background: Color,
         position: Option<Point2D<f32>>,
     ) -> Self {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
         let composition = Composition::new(background);
-        Self {
-            png_size,
-            png_reader: Some(png_reader),
-            gamma_values,
-            background,
-            png: None,
-            composition,
-            position,
-        }
+        Self { png_source, gamma_values, background, png: None, composition, position }
     }
 }
 
 impl ViewAssistant for DisplayPngViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        let args: Args = argh::from_env();
         if let Some(gamma_values) = self.gamma_values.as_ref() {
             if let Some(frame_buffer) = context.frame_buffer.as_ref() {
                 let frame_buffer = frame_buffer.borrow_mut();
@@ -189,6 +191,11 @@ impl ViewAssistant for DisplayPngViewAssistant {
                     .set_display_gamma_table(config.display_id, GAMMA_TABLE_ID)?;
             }
         }
+        let timer = fasync::Timer::new(fasync::Time::after(Duration::from_seconds(args.timeout)));
+        fasync::spawn_local(async move {
+            timer.await;
+            process::exit(1);
+        });
         Ok(())
     }
 
@@ -198,43 +205,66 @@ impl ViewAssistant for DisplayPngViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        // Create image from PNG.
-        let png_image = self.png.take().unwrap_or_else(|| {
-            let mut png_reader = self.png_reader.take().expect("png_reader");
-            render_context
-                .new_image_from_png(&mut png_reader)
-                .expect(&format!("failed to decode file"))
-        });
+        let pre_copy = if let Some(png_source) = self.png_source.as_mut() {
+            let png_size = png_source.png_size;
+            // Create image from PNG.
+            let png_image = self.png.take().unwrap_or_else(|| {
+                let mut png_reader = png_source.png_reader.take().expect("png_reader");
+                render_context
+                    .new_image_from_png(&mut png_reader)
+                    .expect(&format!("failed to decode file"))
+            });
 
-        // Center image if position has not been specified.
-        let position = self.position.take().unwrap_or_else(|| {
-            let x = (context.size.width - self.png_size.width as f32) / 2.0;
-            let y = (context.size.height - self.png_size.height as f32) / 2.0;
-            Point2D::new(x, y)
-        });
+            // Center image if position has not been specified.
+            let position = self.position.take().unwrap_or_else(|| {
+                let x = (context.size.width - png_size.width as f32) / 2.0;
+                let y = (context.size.height - png_size.height as f32) / 2.0;
+                Point2D::new(x, y)
+            });
 
-        // Determine visible rect.
-        let dst_rect = Rect::new(position.to_i32(), self.png_size.to_i32());
-        let output_rect = Rect::new(Point2D::zero(), context.size.to_i32());
+            // Determine visible rect.
+            let dst_rect = Rect::new(position.to_i32(), png_size.to_i32());
+            let output_rect = Rect::new(Point2D::zero(), context.size.to_i32());
 
-        // Clear |image| to background color and copy |png_image| to |image|.
-        let ext = RenderExt {
-            pre_clear: Some(PreClear { color: self.background }),
-            pre_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PreCopy {
+            // Clear |image| to background color and copy |png_image| to |image|.
+            let ext = RenderExt {
+                pre_clear: Some(PreClear { color: self.background }),
+                pre_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PreCopy {
+                    image: png_image,
+                    copy_region: CopyRegion {
+                        src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
+                        dst_offset: visible_rect.origin.to_u32(),
+                        extent: visible_rect.size.to_u32(),
+                    },
+                }),
+                ..Default::default()
+            };
+            let image = render_context.get_current_image(context);
+            render_context.render(&self.composition, Some(Rect::zero()), image, &ext);
+
+            self.png.replace(png_image);
+            self.position.replace(position);
+
+            dst_rect.intersection(&output_rect).map(|visible_rect| PreCopy {
                 image: png_image,
                 copy_region: CopyRegion {
                     src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
                     dst_offset: visible_rect.origin.to_u32(),
                     extent: visible_rect.size.to_u32(),
                 },
-            }),
+            })
+        } else {
+            None
+        };
+
+        // Clear |image| to background color and copy |png_image| to |image|.
+        let ext = RenderExt {
+            pre_clear: Some(PreClear { color: self.background }),
+            pre_copy: pre_copy,
             ..Default::default()
         };
         let image = render_context.get_current_image(context);
         render_context.render(&self.composition, Some(Rect::zero()), image, &ext);
-
-        self.png.replace(png_image);
-        self.position.replace(position);
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         Ok(())
