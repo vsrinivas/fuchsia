@@ -12,7 +12,7 @@ use {
             BlendMode, Composition, Context, Fill, FillRule, Layer, PreClear, Raster, RenderExt,
             Style,
         },
-        AnimationMode, App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
     euclid::{
@@ -154,11 +154,10 @@ impl ViewAssistant for SvgViewAssistant {
         let image = render_context.get_current_image(context);
         render_context.render(&rendering.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
-        Ok(())
-    }
 
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::EveryFrame;
+        context.request_render();
+
+        Ok(())
     }
 
     fn handle_pointer_event(

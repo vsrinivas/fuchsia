@@ -13,7 +13,7 @@ use crate::{
     },
     view::{
         strategies::base::{ViewStrategy, ViewStrategyPtr},
-        View, ViewAssistantContext, ViewAssistantPtr, ViewDetails,
+        View, ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
 };
 use anyhow::{Context, Error, Result};
@@ -151,10 +151,13 @@ pub(crate) struct ScenicViewStrategy {
     #[allow(unused)]
     root_node: EntityNode,
     session: SessionPtr,
+    view_key: ViewKey,
     pending_present_count: usize,
     presentation_interval: u64,
     next_presentation_time: u64,
     last_presentation_time: u64,
+    render_timer_scheduled: bool,
+    missed_frame: bool,
     app_sender: UnboundedSender<MessageInternal>,
     content_node: ShapeNode,
     content_material: Material,
@@ -169,6 +172,7 @@ pub(crate) struct ScenicViewStrategy {
 
 impl ScenicViewStrategy {
     pub(crate) async fn new(
+        key: ViewKey,
         session: &SessionPtr,
         render_options: RenderOptions,
         view_token: ViewToken,
@@ -200,14 +204,32 @@ impl ScenicViewStrategy {
                 delivery_request: true,
             }),
         ));
+
+        let present_sender = app_sender.clone();
+        let info_fut = session.lock().present(0);
+        fasync::spawn_local(async move {
+            match info_fut.await {
+                // TODO: figure out how to recover from this error
+                Err(err) => eprintln!("Present Error: {}", err),
+                Ok(info) => {
+                    present_sender
+                        .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
+                        .expect("unbounded_send");
+                }
+            }
+        });
+
         let strat = ScenicViewStrategy {
             view,
             session: session.clone(),
+            view_key: key,
             app_sender: app_sender.clone(),
-            pending_present_count: 0,
+            pending_present_count: 1,
             presentation_interval: 0,
             next_presentation_time: 0,
             last_presentation_time: 0,
+            render_timer_scheduled: false,
+            missed_frame: false,
             root_node,
             render_options,
             image_pipe_client,
@@ -220,6 +242,7 @@ impl ScenicViewStrategy {
             next_image_id: 1,
             input_handler: ScenicInputHandler::new(),
         };
+
         Ok(Box::new(strat))
     }
 
@@ -227,6 +250,7 @@ impl ScenicViewStrategy {
         view_details: &ViewDetails,
         image_id: ImageId,
         image_index: u32,
+        app_sender: UnboundedSender<MessageInternal>,
     ) -> ViewAssistantContext {
         ViewAssistantContext {
             key: view_details.key,
@@ -238,6 +262,7 @@ impl ScenicViewStrategy {
             image_id,
             image_index,
             frame_buffer: None,
+            app_sender,
         }
     }
 
@@ -260,6 +285,19 @@ impl ScenicViewStrategy {
             .expect("VmoPlumber::new"),
         );
         Ok(())
+    }
+
+    fn schedule_render_timer(&mut self, presentation_time: i64) {
+        if !self.render_timer_scheduled {
+            let timer = fasync::Timer::new(fuchsia_async::Time::from_nanos(presentation_time));
+            let timer_sender = self.app_sender.clone();
+            let key = self.view_key;
+            fasync::spawn_local(async move {
+                timer.await;
+                timer_sender.unbounded_send(MessageInternal::Render(key)).expect("unbounded_send");
+            });
+            self.render_timer_scheduled = true;
+        }
     }
 }
 
@@ -294,21 +332,31 @@ fn make_image_format(
 #[async_trait(?Send)]
 impl ViewStrategy for ScenicViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let render_context = ScenicViewStrategy::make_view_assistant_context(view_details, 0, 0);
+        let render_context = ScenicViewStrategy::make_view_assistant_context(
+            view_details,
+            0,
+            0,
+            self.app_sender.clone(),
+        );
         view_assistant.setup(&render_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
     }
 
-    async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        duration!("gfx", "ScenicViewStrategy::update");
+    async fn render(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+    ) -> bool {
+        duration!("gfx", "ScenicViewStrategy::render");
+        self.render_timer_scheduled = false;
         let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
             if self.plumber.is_none() {
-                duration!("gfx", "ScenicViewStrategy::update.create_plumber");
+                duration!("gfx", "ScenicViewStrategy::render.create_plumber");
                 self.create_plumber(size).await.expect("create_plumber");
             } else {
                 let current_size = self.plumber.as_ref().expect("plumber").size;
                 if current_size != size {
-                    duration!("gfx", "ScenicViewStrategy::update.create_plumber");
+                    duration!("gfx", "ScenicViewStrategy::render.create_plumber");
                     let retired_plumber = self.plumber.take().expect("plumber");
                     self.retiring_plumbers.push(retired_plumber);
                     self.create_plumber(size).await.expect("create_plumber");
@@ -324,7 +372,8 @@ impl ViewStrategy for ScenicViewStrategy {
                 view_details.physical_size.height as f32,
             );
             if let Some(available) = plumber.frame_set.get_available_image() {
-                duration!("gfx", "ScenicViewStrategy::update.render_to_image");
+                self.missed_frame = false;
+                duration!("gfx", "ScenicViewStrategy::render.render_to_image");
                 let available_index =
                     plumber.image_indexes.get(&available).expect("index for image");
                 self.content_node.set_shape(&rectangle);
@@ -332,6 +381,7 @@ impl ViewStrategy for ScenicViewStrategy {
                     view_details,
                     available,
                     *available_index,
+                    self.app_sender.clone(),
                 );
                 let buffer_ready_event = Event::create().expect("Event.create");
                 let buffer_ready_event_for_image_pipe = buffer_ready_event
@@ -367,7 +417,13 @@ impl ViewStrategy for ScenicViewStrategy {
                 });
                 // Image is guaranteed to be presented at this point.
                 plumber.frame_set.mark_presented(available);
+                true
+            } else {
+                self.missed_frame = true;
+                false
             }
+        } else {
+            true
         }
     }
 
@@ -379,10 +435,15 @@ impl ViewStrategy for ScenicViewStrategy {
             let present_event = self.session.lock().present(presentation_time);
             let key = view_details.key;
             fasync::spawn_local(async move {
-                let info = present_event.await.expect("to present");
-                app_sender
-                    .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
-                    .expect("unbounded_send");
+                match present_event.await {
+                    // TODO: figure out how to recover from this error
+                    Err(err) => eprintln!("Present Error: {}", err),
+                    Ok(info) => {
+                        app_sender
+                            .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
+                            .expect("unbounded_send");
+                    }
+                }
             });
             // Advance presentation time.
             self.pending_present_count += 1;
@@ -419,6 +480,23 @@ impl ViewStrategy for ScenicViewStrategy {
         );
     }
 
+    fn handle_focus(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+        focus: bool,
+    ) {
+        let mut render_context = ScenicViewStrategy::make_view_assistant_context(
+            view_details,
+            0,
+            0,
+            self.app_sender.clone(),
+        );
+        view_assistant
+            .handle_focus_event(&mut render_context, focus)
+            .unwrap_or_else(|e| panic!("handle_focus error: {:?}", e));
+    }
+
     fn handle_scenic_input_event(
         &mut self,
         view_details: &ViewDetails,
@@ -427,8 +505,12 @@ impl ViewStrategy for ScenicViewStrategy {
     ) -> Vec<Message> {
         let events = self.input_handler.handle_scenic_input_event(&view_details.metrics, &event);
 
-        let mut render_context =
-            ScenicViewStrategy::make_view_assistant_context(view_details, 0, 0);
+        let mut render_context = ScenicViewStrategy::make_view_assistant_context(
+            view_details,
+            0,
+            0,
+            self.app_sender.clone(),
+        );
         for input_event in events {
             view_assistant
                 .handle_input_event(&mut render_context, &input_event)
@@ -445,6 +527,15 @@ impl ViewStrategy for ScenicViewStrategy {
             fuchsia_trace::Scope::Process,
             "image_freed" => format!("{} in {}", image_id, collection_id).as_str()
         );
+
+        if self.missed_frame {
+            self.next_presentation_time = fasync::Time::after(fuchsia_zircon::Duration::from_nanos(
+                self.presentation_interval as i64,
+            ))
+            .into_nanos() as u64;
+            self.render_requested();
+        }
+
         if let Some(plumber) = self.plumber.as_mut() {
             if plumber.collection_id == collection_id {
                 plumber.frame_set.mark_done_presenting(image_id);
@@ -462,5 +553,9 @@ impl ViewStrategy for ScenicViewStrategy {
         }
 
         self.retiring_plumbers.retain(|plumber| !plumber.frame_set.no_images_in_use());
+    }
+
+    fn render_requested(&mut self) {
+        self.schedule_render_timer(self.next_presentation_time as i64);
     }
 }

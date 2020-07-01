@@ -10,8 +10,8 @@ use {
         input::{self},
         make_app_assistant,
         render::*,
-        AnimationMode, App, AppAssistant, Point, RenderOptions, Size, ViewAssistant,
-        ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        App, AppAssistant, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        ViewAssistantPtr, ViewKey,
     },
     euclid::{
         default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
@@ -1306,11 +1306,9 @@ impl ViewAssistant for InkViewAssistant {
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
-        Ok(())
-    }
+        context.request_render();
 
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::EveryFrame;
+        Ok(())
     }
 
     fn handle_pointer_event(

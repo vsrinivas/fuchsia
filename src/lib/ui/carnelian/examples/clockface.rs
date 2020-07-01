@@ -6,8 +6,8 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        color::Color, make_app_assistant, render::*, AnimationMode, App, AppAssistant, Point,
-        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        color::Color, make_app_assistant, render::*, App, AppAssistant, Point, RenderOptions, Size,
+        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     chrono::{Local, Timelike},
     euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
@@ -393,11 +393,9 @@ impl ViewAssistant for ClockfaceViewAssistant {
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
-        Ok(())
-    }
+        context.request_render();
 
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::EveryFrame;
+        Ok(())
     }
 }
 

@@ -7,13 +7,13 @@ use carnelian::{
     color::Color,
     geometry::Corners,
     input::{self},
-    make_app_assistant, make_message,
+    make_app_assistant,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, Path, PreClear,
         Raster, RenderExt, Style,
     },
-    AnimationMode, App, AppAssistant, Coord, Point, Rect, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    App, AppAssistant, Coord, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use euclid::{Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
@@ -233,16 +233,13 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         };
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        context.request_render();
         Ok(())
-    }
-
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::EveryFrame;
     }
 
     fn handle_keyboard_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        _context: &mut ViewAssistantContext,
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
@@ -251,7 +248,6 @@ impl ViewAssistant for SpinningSquareViewAssistant {
                 self.toggle_rounded();
             }
         }
-        context.queue_message(make_message(ViewMessages::Update));
         Ok(())
     }
 }

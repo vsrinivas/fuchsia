@@ -10,10 +10,8 @@ use {
     carnelian::{
         color::Color,
         input::{self},
-        make_message,
         render::Context as RenderContext,
-        AnimationMode, AppContext, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
-        ViewMessages,
+        AppContext, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
     },
     fidl_fuchsia_hardware_pty::WindowSize,
     fuchsia_async as fasync, fuchsia_trace as ftrace,
@@ -47,16 +45,13 @@ struct AppContextWrapper {
 }
 
 impl AppContextWrapper {
-    fn queue_message(&self, target: ViewKey, message: Message) {
-        // In a real environment we send to the app_context but we can optionally
-        // send to the test_sender for observing what is sent to the framework.
-        // This is needed because the framework does not give us access to observe
-        // messages that are received. The if/else ensures that we do not send to
-        // both places as this will fail the borrow check.
+    fn request_render(&self, target: ViewKey) {
         if let Some(app_context) = &self.app_context {
-            app_context.queue_message(target, message);
+            app_context.request_render(target);
         } else if let Some(sender) = &self.test_sender {
-            sender.unbounded_send(message).expect("Unable queue message to test_sender");
+            sender
+                .unbounded_send(Box::new("request_render"))
+                .expect("Unable queue message to test_sender");
         }
     }
 
@@ -121,7 +116,7 @@ impl EventListener for EventProxy {
     fn send_event(&self, event: Event) {
         match event {
             Event::MouseCursorDirty => {
-                self.app_context.queue_message(self.view_key, make_message(ViewMessages::Update))
+                self.app_context.request_render(self.view_key);
             }
             _ => (),
         }
@@ -153,7 +148,7 @@ struct PointerEventResponseHandlerImpl<'a> {
 
 impl PointerEventResponseHandler for PointerEventResponseHandlerImpl<'_> {
     fn update_view(&mut self) {
-        self.ctx.queue_message(make_message(ViewMessages::Update));
+        self.ctx.request_render();
     }
 
     fn scroll_term(&mut self, scroll: Scroll) {
@@ -321,7 +316,7 @@ impl TerminalViewAssistant {
                             for byte in &read_buf[0..read_count] {
                                 parser.advance(&mut *term, *byte, &mut write_fd);
                             }
-                            app_context.queue_message(view_key, make_message(ViewMessages::Update));
+                            app_context.request_render(view_key);
                         }
                     },
                 result = resize_receiver.next().fuse() => {
@@ -329,7 +324,7 @@ impl TerminalViewAssistant {
                         pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
                             eprintln!("failed to send resize message to pty: {:?}", e)
                         });
-                        app_context.queue_message(view_key, make_message(ViewMessages::Update));
+                        app_context.request_render(view_key);
                     }
                 }
                 );
@@ -450,10 +445,6 @@ impl ViewAssistant for TerminalViewAssistant {
             self.handle_pointer_event_response(response, &mut handler);
         }
         Ok(())
-    }
-
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        AnimationMode::None
     }
 }
 
@@ -763,12 +754,8 @@ mod tests {
                     return Err(anyhow!("wait_until_update_received timed out"));
                 }
                 Either::Right((result, _)) => {
-                    let message = result.expect("result should not be None");
-                    if let Some(view_msg) = message.downcast_ref::<ViewMessages>() {
-                        match view_msg {
-                            ViewMessages::Update => break,
-                        }
-                    }
+                    let _ = result.expect("result should not be None");
+                    break;
                 }
             }
         }

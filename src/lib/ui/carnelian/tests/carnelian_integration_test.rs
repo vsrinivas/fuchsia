@@ -7,10 +7,9 @@ use carnelian::{
     color::Color,
     make_app_assistant,
     render::{Composition, Context as RenderContext, PreClear, RenderExt},
-    AnimationMode, App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
-    ViewKey,
+    App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
+use fuchsia_zircon::{AsHandleRef, Event, Signals};
 
 #[derive(Default)]
 struct IntegrationTestAppAssistant;
@@ -48,11 +47,8 @@ impl ViewAssistant for IntegrationTestViewAssistant {
             RenderExt { pre_clear: Some(PreClear { color: self.bg_color }), ..Default::default() };
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        context.request_render();
         Ok(())
-    }
-
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::RefreshRate(Duration::from_millis(1));
     }
 }
 

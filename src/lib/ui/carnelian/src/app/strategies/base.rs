@@ -118,7 +118,7 @@ pub(crate) async fn create_app_strategy(
                         ))
                         .expect("unbounded_send");
                     vsync_internal_sender
-                        .unbounded_send(MessageInternal::UpdateAllViews)
+                        .unbounded_send(MessageInternal::RenderAllViews)
                         .expect("unbounded_send");
                 }
                 Ok(())

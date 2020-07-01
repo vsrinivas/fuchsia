@@ -31,6 +31,7 @@ use std::collections::BTreeMap;
 type WaitEvents = BTreeMap<ImageId, Event>;
 
 pub(crate) struct FrameBufferViewStrategy {
+    app_sender: UnboundedSender<MessageInternal>,
     frame_buffer: FrameBufferPtr,
     frame_set: FrameSet,
     image_indexes: BTreeMap<ImageId, u32>,
@@ -52,6 +53,8 @@ impl FrameBufferViewStrategy {
         app_sender: UnboundedSender<MessageInternal>,
         frame_buffer: FrameBufferPtr,
     ) -> Result<ViewStrategyPtr, Error> {
+        app_sender.unbounded_send(MessageInternal::Render(key)).expect("unbounded_send");
+        app_sender.unbounded_send(MessageInternal::Focus(key)).expect("unbounded_send");
         let unsize = UintSize::new(size.width as u32, size.height as u32);
         let mut fb = frame_buffer.borrow_mut();
         let context = {
@@ -74,12 +77,14 @@ impl FrameBufferViewStrategy {
                 },
             }
         };
+
+        let image_freed_sender = app_sender.clone();
         let (image_sender, mut image_receiver) = unbounded::<u64>();
         // wait for events from the image freed fence to know when an
         // image can prepared.
         fasync::spawn_local(async move {
             while let Some(image_id) = image_receiver.next().await {
-                app_sender
+                image_freed_sender
                     .unbounded_send(MessageInternal::ImageFreed(key, image_id, 0))
                     .expect("unbounded_send");
             }
@@ -102,6 +107,7 @@ impl FrameBufferViewStrategy {
         }
         let frame_set = FrameSet::new(fb_image_ids);
         Ok(Box::new(FrameBufferViewStrategy {
+            app_sender,
             frame_buffer: frame_buffer.clone(),
             frame_set: frame_set,
             image_indexes,
@@ -150,6 +156,7 @@ impl FrameBufferViewStrategy {
                 image_id: actual_image_id,
                 image_index,
                 frame_buffer: Some(self.frame_buffer.clone()),
+                app_sender: self.app_sender.clone(),
             },
             render_context,
         )
@@ -181,7 +188,11 @@ impl ViewStrategy for FrameBufferViewStrategy {
         }
     }
 
-    async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+    async fn render(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+    ) -> bool {
         duration!("gfx", "FrameBufferViewStrategy::update");
         if let Some(available) = self.frame_set.get_available_image() {
             instant!(
@@ -200,6 +211,9 @@ impl ViewStrategy for FrameBufferViewStrategy {
                 .render(render_context, buffer_ready_event, &framebuffer_context)
                 .unwrap_or_else(|e| panic!("Update error: {:?}", e));
             self.frame_set.mark_prepared(available);
+            true
+        } else {
+            false
         }
     }
 
@@ -217,6 +231,18 @@ impl ViewStrategy for FrameBufferViewStrategy {
                 .unwrap_or_else(|e| panic!("Present error: {:?}", e));
             self.frame_set.mark_presented(prepared);
         }
+    }
+
+    fn handle_focus(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+        focus: bool,
+    ) {
+        let (mut framebuffer_context, ..) = self.make_context(view_details, None);
+        view_assistant
+            .handle_focus_event(&mut framebuffer_context, focus)
+            .unwrap_or_else(|e| panic!("handle_focus error: {:?}", e));
     }
 
     fn handle_scenic_input_event(

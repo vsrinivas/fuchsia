@@ -46,6 +46,12 @@ impl AppContext {
             .expect("AppContext::queue_message - unbounded_send");
     }
 
+    pub fn request_render(&self, target: ViewKey) {
+        self.sender
+            .unbounded_send(MessageInternal::RequestRender(target))
+            .expect("AppContext::queue_message - unbounded_send");
+    }
+
     pub fn new_for_testing_purposes_only() -> AppContext {
         let (internal_sender, _) = unbounded::<MessageInternal>();
         AppContext { sender: internal_sender }
@@ -123,8 +129,10 @@ pub(crate) enum MessageInternal {
     SizeChanged(ViewKey, Size),
     ScenicInputEvent(ViewKey, fidl_fuchsia_ui_input::InputEvent),
     ScenicPresentDone(ViewKey, fidl_fuchsia_images::PresentationInfo),
-    Update(ViewKey),
-    UpdateAllViews,
+    Focus(ViewKey),
+    RequestRender(ViewKey),
+    Render(ViewKey),
+    RenderAllViews,
     ImageFreed(ViewKey, u64, u32),
     HandleVSyncParametersChanged(Time, Duration, u64),
     TargetedMessage(ViewKey, Message),
@@ -189,7 +197,7 @@ impl App {
             }
             MessageInternal::SizeChanged(view_id, new_size) => {
                 let view = self.get_view(view_id);
-                view.handle_size_changed(new_size);
+                view.handle_size_changed(new_size).await;
             }
             MessageInternal::ScenicInputEvent(view_id, event) => {
                 let view = self.get_view(view_id);
@@ -199,11 +207,19 @@ impl App {
                 let view = self.get_view(view_id);
                 view.present_done(info);
             }
-            MessageInternal::Update(view_id) => {
+            MessageInternal::Focus(view_id) => {
                 let view = self.get_view(view_id);
-                view.update_async().await;
+                view.focus(true);
             }
-            MessageInternal::UpdateAllViews => self.update_all_views(),
+            MessageInternal::RequestRender(view_id) => {
+                let view = self.get_view(view_id);
+                view.request_render();
+            }
+            MessageInternal::Render(view_id) => {
+                let view = self.get_view(view_id);
+                view.render().await;
+            }
+            MessageInternal::RenderAllViews => self.render_all_views(),
             MessageInternal::ImageFreed(view_id, image_id, collection_id) => {
                 self.image_freed(view_id, image_id, collection_id)
             }
@@ -263,10 +279,10 @@ impl App {
                     Either::Right((right_result, _)) => {
                         let message = right_result.expect("message");
                         match message {
-                            MessageInternal::Update(_) => {
+                            MessageInternal::Render(_) => {
                                 frame_count += 1;
                             }
-                            MessageInternal::UpdateAllViews => {
+                            MessageInternal::RenderAllViews => {
                                 frame_count += 1;
                             }
                             _ => (),
@@ -294,15 +310,9 @@ impl App {
         }
     }
 
-    fn focus_first_view(&mut self) {
-        if let Some(controller) = self.view_controllers.values_mut().nth(0) {
-            controller.focus(true);
-        }
-    }
-
-    fn update_all_views(&mut self) {
+    fn render_all_views(&mut self) {
         for (_, view_controller) in &mut self.view_controllers {
-            view_controller.update();
+            view_controller.send_update_message();
         }
     }
 
@@ -331,20 +341,16 @@ impl App {
             self.strategy.post_setup(pixel_format, sender).await?;
             view_strat
         };
-        let mut view_controller = ViewController::new_with_strategy(
+        let view_controller = ViewController::new_with_strategy(
             self.next_key,
             view_assistant,
             view_strat,
             sender.clone(),
         )
         .await?;
-        view_controller.setup_animation_mode();
 
-        view_controller.present();
         self.view_controllers.insert(self.next_key, view_controller);
         self.next_key += 1;
-        self.focus_first_view();
-        self.update_all_views();
         Ok(())
     }
 

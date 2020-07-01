@@ -77,8 +77,5 @@ pub use crate::{
     },
     geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size},
     message::{make_message, Message},
-    view::{
-        AnimationMode, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController,
-        ViewKey, ViewMessages,
-    },
+    view::{ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey},
 };

@@ -112,6 +112,7 @@ impl AppStrategy for ScenicAppStrategy {
             _ => bail!("Incorrect ViewStrategyParams passed to create_view_strategy for scenic"),
         };
         Ok(ScenicViewStrategy::new(
+            key,
             &session,
             render_options,
             strategy_params.view_token,

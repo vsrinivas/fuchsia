@@ -11,33 +11,12 @@ use crate::{
     view::strategies::base::ViewStrategyPtr,
 };
 use anyhow::Error;
-use fuchsia_async::{self as fasync, Interval};
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::View;
 use fuchsia_zircon::{Duration, Event, Time};
-use futures::{channel::mpsc::UnboundedSender, StreamExt};
+use futures::channel::mpsc::UnboundedSender;
 
 pub(crate) mod strategies;
-
-/// enum that defines all messages sent with `App::send_message` that
-/// the view struct will understand and process.
-pub enum ViewMessages {
-    /// Message that requests that a view redraw itself.
-    Update,
-}
-
-/// enum that defines the animation behavior of the view
-#[derive(Clone, Copy, Debug)]
-pub enum AnimationMode {
-    /// No automatic update, only on explicit calls to update
-    None,
-
-    /// Call update in preparation for every frame
-    EveryFrame,
-
-    /// Call update periodically based on duration
-    RefreshRate(Duration),
-}
 
 /// parameter struct passed to setup and update trait methods.
 pub struct ViewAssistantContext {
@@ -68,12 +47,21 @@ pub struct ViewAssistantContext {
     pub frame_buffer: Option<FrameBufferPtr>,
 
     messages: Vec<Message>,
+    app_sender: UnboundedSender<MessageInternal>,
 }
 
 impl ViewAssistantContext {
     /// Queue up a message for delivery
     pub fn queue_message(&mut self, message: Message) {
         self.messages.push(message);
+    }
+
+    /// Request that a render occur for this view at the next
+    /// appropriate time to render.
+    pub fn request_render(&self) {
+        self.app_sender
+            .unbounded_send(MessageInternal::RequestRender(self.key))
+            .expect("unbounded_send");
     }
 }
 
@@ -294,7 +282,11 @@ pub trait ViewAssistant {
     /// called once when a Carnelian app is running directly on the frame buffer, as such
     /// views are always focused. See the button sample for an one way to respond to focus.
     #[allow(unused_variables)]
-    fn handle_focus_event(&mut self, focused: bool) -> Result<(), Error> {
+    fn handle_focus_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        focused: bool,
+    ) -> Result<(), Error> {
         Ok(())
     }
 
@@ -327,13 +319,6 @@ pub trait ViewAssistant {
     #[allow(unused_variables)]
     fn handle_message(&mut self, message: Message) {}
 
-    /// Initial animation mode for view. Default to [`AnimationMode::None`], which
-    /// requires an view to be sent an [`ViewMessages::Update`] message when the
-    /// view should be redrawn.
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::None;
-    }
-
     /// Whether this view wants touch and mouse events abstracted as
     /// [`input::pointer::Event`](./input/pointer/struct.Event.html). Defaults to true.
     fn uses_pointer_events(&self) -> bool {
@@ -354,8 +339,6 @@ pub(crate) struct ViewDetails {
     metrics: Size,
     physical_size: Size,
     logical_size: Size,
-    #[allow(unused)]
-    animation_mode: AnimationMode,
 }
 
 /// This struct takes care of all the boilerplate needed for implementing a Fuchsia
@@ -367,7 +350,7 @@ pub struct ViewController {
     metrics: Size,
     physical_size: Size,
     logical_size: Size,
-    animation_mode: AnimationMode,
+    render_requested: bool,
     strategy: ViewStrategyPtr,
     app_sender: UnboundedSender<MessageInternal>,
 }
@@ -375,11 +358,10 @@ pub struct ViewController {
 impl ViewController {
     pub(crate) async fn new_with_strategy(
         key: ViewKey,
-        mut view_assistant: ViewAssistantPtr,
+        view_assistant: ViewAssistantPtr,
         strategy: ViewStrategyPtr,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewController, Error> {
-        let initial_animation_mode = view_assistant.initial_animation_mode();
         let metrics = strategy.initial_metrics();
         let physical_size = strategy.initial_physical_size();
         let logical_size = strategy.initial_logical_size();
@@ -389,7 +371,7 @@ impl ViewController {
             metrics,
             physical_size,
             logical_size,
-            animation_mode: initial_animation_mode,
+            render_requested: true,
             assistant: view_assistant,
             strategy,
             app_sender,
@@ -408,7 +390,6 @@ impl ViewController {
             metrics: self.metrics,
             physical_size: self.physical_size,
             logical_size: self.logical_size,
-            animation_mode: self.animation_mode,
         }
     }
 
@@ -417,19 +398,28 @@ impl ViewController {
         self.strategy.present(&self.make_view_details());
     }
 
-    pub(crate) fn update(&mut self) {
-        self.app_sender.unbounded_send(MessageInternal::Update(self.key)).expect("unbounded_send");
+    pub(crate) fn send_update_message(&mut self) {
+        self.app_sender.unbounded_send(MessageInternal::Render(self.key)).expect("unbounded_send");
     }
 
-    pub(crate) async fn update_async(&mut self) {
-        // Recompute our logical size based on the provided physical size and screen metrics.
-        self.logical_size = Size::new(
-            self.physical_size.width * self.metrics.width,
-            self.physical_size.height * self.metrics.height,
-        );
+    pub(crate) fn request_render(&mut self) {
+        self.render_requested = true;
+        self.strategy.render_requested();
+    }
 
-        self.strategy.update(&self.make_view_details(), &mut self.assistant).await;
-        self.present();
+    pub(crate) async fn render(&mut self) {
+        if self.render_requested {
+            // Recompute our logical size based on the provided physical size and screen metrics.
+            self.logical_size = Size::new(
+                self.physical_size.width * self.metrics.width,
+                self.physical_size.height * self.metrics.height,
+            );
+
+            if self.strategy.render(&self.make_view_details(), &mut self.assistant).await {
+                self.render_requested = false;
+            }
+            self.present();
+        }
     }
 
     pub(crate) fn present_done(&mut self, info: fidl_fuchsia_images::PresentationInfo) {
@@ -438,41 +428,18 @@ impl ViewController {
 
     pub(crate) fn handle_metrics_changed(&mut self, metrics: Size) {
         self.metrics = metrics;
-        self.update();
+        self.render_requested = true;
+        self.send_update_message();
     }
 
-    pub(crate) fn handle_size_changed(&mut self, new_size: Size) {
+    pub(crate) async fn handle_size_changed(&mut self, new_size: Size) {
         self.physical_size = new_size;
-        self.update();
-    }
-
-    fn setup_timer(&self, duration: Duration) {
-        let key = self.key;
-        let timer = Interval::new(duration);
-        let app_sender = self.app_sender.clone();
-        let f = timer
-            .map(move |_| {
-                app_sender.unbounded_send(MessageInternal::Update(key)).expect("unbounded_send");
-            })
-            .collect::<()>();
-        fasync::spawn_local(f);
+        self.render_requested = true;
+        self.send_update_message();
     }
 
     pub(crate) fn focus(&mut self, focus: bool) {
-        self.assistant.handle_focus_event(focus).expect("handle_focus_event");
-        self.update();
-    }
-
-    pub(crate) fn setup_animation_mode(&mut self) {
-        match self.animation_mode {
-            AnimationMode::None => {}
-            AnimationMode::EveryFrame => {
-                self.setup_timer(Duration::from_millis(10));
-            }
-            AnimationMode::RefreshRate(duration) => {
-                self.setup_timer(duration);
-            }
-        }
+        self.strategy.handle_focus(&self.make_view_details(), &mut self.assistant, focus);
     }
 
     /// Handler for Events on this ViewController's Session.
@@ -508,19 +475,10 @@ impl ViewController {
         }
     }
 
-    /// This method sends an arbitrary message to this view. If it is not
-    /// handled directly by `ViewController::send_message` it will be forwarded
-    /// to the view assistant.
+    /// This method sends an arbitrary message to this view to be
+    /// forwarded to the view assistant.
     pub fn send_message(&mut self, msg: Message) {
-        if let Some(view_msg) = msg.downcast_ref::<ViewMessages>() {
-            match view_msg {
-                ViewMessages::Update => {
-                    self.update();
-                }
-            }
-        } else {
-            self.assistant.handle_message(msg);
-        }
+        self.assistant.handle_message(msg);
     }
 
     pub(crate) fn image_freed(&mut self, image_id: u64, collection_id: u32) {

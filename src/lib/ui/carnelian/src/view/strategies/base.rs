@@ -28,7 +28,11 @@ pub(crate) trait ViewStrategy {
     }
 
     fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr);
-    async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr);
+    async fn render(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+    ) -> bool;
     fn present(&mut self, view_details: &ViewDetails);
     fn present_done(
         &mut self,
@@ -53,11 +57,20 @@ pub(crate) trait ViewStrategy {
         Vec::new()
     }
 
+    fn handle_focus(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+        _: bool,
+    );
+
     fn image_freed(&mut self, _image_id: u64, _collection_id: u32) {}
 
     fn handle_vsync_parameters_changed(&mut self, _phase: Time, _interval: Duration) {}
 
     fn handle_vsync_cookie(&mut self, _cookie: u64) {}
+
+    fn render_requested(&mut self) {}
 }
 
 pub(crate) type ViewStrategyPtr = Box<dyn ViewStrategy>;

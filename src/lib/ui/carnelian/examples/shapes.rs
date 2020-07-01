@@ -14,7 +14,7 @@ use carnelian::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
         RenderExt, Style,
     },
-    AnimationMode, App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
+    App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
     ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::default::Vector2D;
@@ -362,11 +362,10 @@ impl ViewAssistant for ShapeDropViewAssistant {
         let ext = RenderExt { pre_clear, ..Default::default() };
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
-        Ok(())
-    }
 
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::EveryFrame;
+        context.request_render();
+
+        Ok(())
     }
 
     fn handle_pointer_event(

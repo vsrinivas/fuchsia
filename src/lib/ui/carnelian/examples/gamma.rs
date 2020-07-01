@@ -13,8 +13,8 @@ use {
             BlendMode, Composition, Context, Fill, FillRule, Layer, Path, PreClear, RenderExt,
             Style,
         },
-        AnimationMode, App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant,
-        ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        ViewAssistantPtr, ViewKey,
     },
     euclid::{Transform2D, Vector2D},
     fuchsia_trace_provider,
@@ -123,11 +123,8 @@ impl ViewAssistant for GammaViewAssistant {
             RenderExt { pre_clear: Some(PreClear { color: WHITE_COLOR }), ..Default::default() };
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        context.request_render();
         Ok(())
-    }
-
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::EveryFrame;
     }
 }
 

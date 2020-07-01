@@ -14,7 +14,7 @@ use {
             BlendMode, Composition, Context, CopyRegion, Fill, FillRule, Image, Layer, PostCopy,
             PreClear, Raster, RenderExt, Style,
         },
-        AnimationMode, App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
     euclid::default::{Point2D, Rect, Vector2D},
@@ -221,11 +221,10 @@ impl ViewAssistant for PngViewAssistant {
         self.position.replace(position);
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
-        Ok(())
-    }
 
-    fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::EveryFrame;
+        context.request_render();
+
+        Ok(())
     }
 
     fn handle_pointer_event(

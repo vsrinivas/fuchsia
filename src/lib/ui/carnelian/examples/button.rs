@@ -21,7 +21,7 @@ use carnelian::{
         RenderExt, Style,
     },
     App, AppAssistant, Coord, IntPoint, Message, Point, Rect, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::Transform2D;
 use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
@@ -463,12 +463,17 @@ impl ViewAssistant for ButtonViewAssistant {
             _ => pointer_event.clone(),
         };
         self.button.handle_pointer_event(context, &translated_pointer_event);
-        context.queue_message(make_message(ViewMessages::Update));
+        context.request_render();
         Ok(())
     }
 
-    fn handle_focus_event(&mut self, focused: bool) -> Result<(), Error> {
+    fn handle_focus_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        focused: bool,
+    ) -> Result<(), Error> {
         self.focused = focused;
+        context.request_render();
         Ok(())
     }
 
@@ -481,7 +486,7 @@ impl ViewAssistant for ButtonViewAssistant {
         if let Some(code_point) = keyboard_event.code_point {
             if code_point == ' ' as u32 && keyboard_event.phase == input::keyboard::Phase::Pressed {
                 self.rotate()?;
-                context.queue_message(make_message(ViewMessages::Update));
+                context.request_render();
             }
         }
         Ok(())
@@ -489,5 +494,6 @@ impl ViewAssistant for ButtonViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     App::run(make_app_assistant::<ButtonAppAssistant>())
 }
