@@ -5,7 +5,7 @@
 use super::*;
 use crate::spinel::*;
 
-use anyhow::Error;
+use anyhow::{Context as _, Error};
 use futures::prelude::*;
 use lowpan_driver_common::FutureExt;
 
@@ -117,12 +117,24 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
         fx_log_info!("offline_loop: Entered");
 
         // Bring down the mesh stack.
-        self.frame_handler.send_request(CmdPropValueSet(PropNet::StackUp.into(), false)).await?;
+        if let Err(err) = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropNet::StackUp.into(), false))
+            .await
+            .context("Setting PropNet::StackUp to False")
+        {
+            fx_log_err!("Unable to set `PropNet::StackUp`: {:?}", err);
+        }
 
         // Bring down the network interface.
-        self.frame_handler
+        if let Err(err) = self
+            .frame_handler
             .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), false))
-            .await?;
+            .await
+            .context("Setting PropNet::InterfaceUp to False")
+        {
+            fx_log_err!("Unable to set `PropNet::InterfaceUp`: {:?}", err);
+        }
 
         futures::future::pending().await
     }
