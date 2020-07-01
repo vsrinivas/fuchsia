@@ -972,7 +972,7 @@ mod test {
     }
 
     /// Creates a simple target handler that responds with error and basic values for most commands.
-    fn create_dumby_target_handler(stall_responses: bool) -> TargetHandlerProxy {
+    fn create_dummy_target_handler(stall_responses: bool) -> TargetHandlerProxy {
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Error creating TargetHandler endpoint");
 
@@ -1069,7 +1069,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_get_element_attribute_cmd() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1345,7 +1345,7 @@ mod test {
     /// send get_capabilities
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_send_get_capabilities() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // get_capabilities
@@ -1376,7 +1376,7 @@ mod test {
         let mut exec = fasync::Executor::new().expect("executor::new failed");
 
         // stall the responses from the target handler by 10 seconds
-        let target_proxy = create_dumby_target_handler(true);
+        let target_proxy = create_dummy_target_handler(true);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // get_capabilities
@@ -1408,7 +1408,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_list_player_application_setting_attributes_cmd() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1440,7 +1440,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_list_player_application_setting_values_cmd() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1473,7 +1473,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_get_player_application_settings_cmd() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1508,7 +1508,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_get_player_application_setting_attribute_text_cmd() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1546,7 +1546,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_get_player_application_setting_value_text_cmd() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1590,7 +1590,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_set_player_application_setting_value() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1623,7 +1623,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_set_addressed_player_command() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // generic vendor status command
@@ -1657,7 +1657,7 @@ mod test {
     /// send passthrough is implemented. expect it's accepted
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_send_passthrough() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // play key
@@ -1682,7 +1682,7 @@ mod test {
     /// Test correctness of response of a passthrough command that is not implemented.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_send_passthrough_not_implemented() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // play key
@@ -1708,7 +1708,7 @@ mod test {
     fn validate_passthrough_reject_timer_fired() {
         let mut exec = fasync::Executor::new().expect("executor::new failed");
 
-        let target_proxy = create_dumby_target_handler(true);
+        let target_proxy = create_dummy_target_handler(true);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         // play key
@@ -1778,7 +1778,7 @@ mod test {
     /// test notifications on target handler
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_register_notification_target() -> Result<(), Error> {
-        let target_proxy = create_dumby_target_handler(false);
+        let target_proxy = create_dummy_target_handler(false);
         let cmd_handler = create_command_handler(Some(target_proxy), None);
 
         let packet_body: Vec<u8> = [
