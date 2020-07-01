@@ -40,6 +40,8 @@
   ],
   "update_dependencies": [
     "fuchsia.posix.socket.Provider",
+    "fuchsia.net.NameLookup",
+    "fuchsia.net.name.LookupAdmin",
     "fuchsia.bogus.DoesNotExist"
   ]
 }
