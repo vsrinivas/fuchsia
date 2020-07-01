@@ -6300,14 +6300,15 @@ rust_library("rust_icu_common-v0_3_0") {
   deps += [ ":rust_icu_sys-v0_3_0" ]
   deps += [ ":thiserror-v1_0_9" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=50dda5c5d811693d",
     "-Cextra-filename=-50dda5c5d811693d",
-    "--cfg=feature=\"icu_version_64_plus\"",
+    "--cfg=feature=\"icu_version_67_plus\"",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6325,14 +6326,15 @@ rust_library("rust_icu_sys-v0_3_0") {
   deps += [ ":libc-v0_2_71" ]
   deps += [ ":paste-v0_1_5" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=fc114ecbf591ecd4",
     "-Cextra-filename=-fc114ecbf591ecd4",
-    "--cfg=feature=\"icu_version_64_plus\"",
+    "--cfg=feature=\"icu_version_67_plus\"",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6354,13 +6356,14 @@ rust_library("rust_icu_ucal-v0_3_0") {
   deps += [ ":rust_icu_uenum-v0_3_0" ]
   deps += [ ":rust_icu_ustring-v0_3_0" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9592e77141dd0fb6",
     "-Cextra-filename=-9592e77141dd0fb6",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6384,13 +6387,14 @@ rust_library("rust_icu_udat-v0_3_0") {
   deps += [ ":rust_icu_uloc-v0_3_0" ]
   deps += [ ":rust_icu_ustring-v0_3_0" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=14ca05ed059866fc",
     "-Cextra-filename=-14ca05ed059866fc",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6410,13 +6414,14 @@ rust_library("rust_icu_udata-v0_3_0") {
   deps += [ ":rust_icu_common-v0_3_0" ]
   deps += [ ":rust_icu_sys-v0_3_0" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=f06b2e6a1330c599",
     "-Cextra-filename=-f06b2e6a1330c599",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6435,14 +6440,15 @@ rust_library("rust_icu_uenum-v0_3_0") {
   deps += [ ":rust_icu_common-v0_3_0" ]
   deps += [ ":rust_icu_sys-v0_3_0" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9e39eea83ccee8b6",
     "-Cextra-filename=-9e39eea83ccee8b6",
-    "--cfg=feature=\"icu_version_64_plus\"",
+    "--cfg=feature=\"icu_version_67_plus\"",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6464,14 +6470,15 @@ rust_library("rust_icu_uloc-v0_3_0") {
   deps += [ ":rust_icu_uenum-v0_3_0" ]
   deps += [ ":rust_icu_ustring-v0_3_0" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=d7c1d6caa67f7acb",
     "-Cextra-filename=-d7c1d6caa67f7acb",
-    "--cfg=feature=\"icu_version_64_plus\"",
+    "--cfg=feature=\"icu_version_67_plus\"",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6491,14 +6498,15 @@ rust_library("rust_icu_ustring-v0_3_0") {
   deps += [ ":rust_icu_common-v0_3_0" ]
   deps += [ ":rust_icu_sys-v0_3_0" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=cd5f8e0d9d6687b1",
     "-Cextra-filename=-cd5f8e0d9d6687b1",
-    "--cfg=feature=\"icu_version_64_plus\"",
+    "--cfg=feature=\"icu_version_67_plus\"",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6517,13 +6525,14 @@ rust_library("rust_icu_utext-v0_3_0") {
   deps += [ ":rust_icu_common-v0_3_0" ]
   deps += [ ":rust_icu_sys-v0_3_0" ]
 
-  rustenv = []
+  rustenv = [ "RUST_ICU_MAJOR_VERSION_NUMBER=67" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=71d8068937586302",
     "-Cextra-filename=-71d8068937586302",
+    "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
