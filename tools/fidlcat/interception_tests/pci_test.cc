@@ -532,10 +532,10 @@ PCI_INIT_DISPLAY_TEST(
              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
              "len: \x1B[32muint32\x1B[0m = \x1B[34m5968\x1B[0m)\n"
              "    init_buf: \x1B[32mzx_pci_init_arg_t\x1B[0m = {\n"
-             "      dev_pin_to_global_irq: \x1B[32muint32\x1B[0m[] = { ",
+             "      dev_pin_to_global_irq: array<\x1B[32muint32\x1B[0m> = { ",
              " }\n"
              "      num_irqs: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m\n"
-             "      irqs:\x1B[32mzx_pci_init_arg_irq_t\x1B[0m[]: {\n"
+             "      irqs: vector<\x1B[32mzx_pci_init_arg_irq_t\x1B[0m> = {\n"
              "        {\n"
              "          global_irq: \x1B[32muint32\x1B[0m = \x1B[34m10\x1B[0m\n"
              "          level_triggered: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
@@ -548,7 +548,7 @@ PCI_INIT_DISPLAY_TEST(
              "        }\n"
              "      }\n"
              "      addr_window_count: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m\n"
-             "      addr_windows:\x1B[32mzx_pci_init_arg_addr_window_t\x1B[0m[]: {\n"
+             "      addr_windows: vector<\x1B[32mzx_pci_init_arg_addr_window_t\x1B[0m> = {\n"
              "        {\n"
              "          base: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m\n"
              "          size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m\n"

@@ -2489,9 +2489,9 @@ void ClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Ar
 template <typename ClassType, typename Type>
 void ArrayField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch /*arch*/,
                                           fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ": " << fidl_codec::Green
+  printer << ClassFieldBase<ClassType>::name() << ": array<" << fidl_codec::Green
           << TypeName(ClassFieldBase<ClassType>::syscall_type()) << fidl_codec::ResetColor
-          << "[] = {";
+          << "> = {";
   const char* separator = " ";
   std::pair<const Type*, int> array = get_(object);
   for (int i = 0; i < array.second; ++i) {
@@ -2515,8 +2515,8 @@ void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ip
 template <typename ClassType, typename Type>
 void ArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
                                                fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ':' << fidl_codec::Green << sub_class_->name()
-          << fidl_codec::ResetColor << "[]: {\n";
+  printer << ClassFieldBase<ClassType>::name() << ": array<" << fidl_codec::Green
+          << sub_class_->name() << fidl_codec::ResetColor << "> = {\n";
   {
     fidl_codec::Indent indent(printer);
     std::pair<const Type*, int> array = get_(object);
@@ -2531,8 +2531,8 @@ void ArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ip
 template <typename ClassType, typename Type>
 void DynamicArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
                                                       fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ':' << fidl_codec::Green << sub_class_->name()
-          << fidl_codec::ResetColor << "[]: {\n";
+  printer << ClassFieldBase<ClassType>::name() << ": vector<" << fidl_codec::Green
+          << sub_class_->name() << fidl_codec::ResetColor << "> = {\n";
   {
     fidl_codec::Indent indent(printer);
     const Type* array = get_(object);
@@ -2761,8 +2761,8 @@ template <typename ClassType, typename SizeType>
 void SyscallInputOutputObjectArray<ClassType, SizeType>::DisplayOutline(
     SyscallDecoder* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
   fidl_codec::Indent indent(printer);
-  printer << name() << ":" << fidl_codec::Green << class_definition_->name()
-          << fidl_codec::ResetColor << "[]: ";
+  printer << name() << ": vector<" << fidl_codec::Green << class_definition_->name()
+          << fidl_codec::ResetColor << "> = ";
   auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
   if (object == nullptr) {
     printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;

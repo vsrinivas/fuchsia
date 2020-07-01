@@ -79,7 +79,7 @@ JOB_SET_POLICY_BASIC_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "topic: \x1B[32mzx_policy_topic_t\x1B[0m = \x1B[34mZX_JOB_POL_BASIC\x1B[0m)\n"
-    "    policy:\x1B[32mzx_policy_basic_t\x1B[0m[]:  {\n"
+    "    policy: vector<\x1B[32mzx_policy_basic_t\x1B[0m> =  {\n"
     "      {\n"
     "        condition: \x1B[32mzx_policy_condition_t\x1B[0m = \x1B[34mZX_POL_VMAR_WX\x1B[0m\n"
     "        policy: \x1B[32mzx_policy_action_t\x1B[0m = \x1B[34mZX_POL_ACTION_ALLOW\x1B[0m\n"
