@@ -2,12 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
+group("all") {
   testonly = true
   deps = [
-    "go:tests",
-    "hlcpp:tests",
-    "rust:tests",
-    "test",
+    "client",
+    "request_pipelining/client",
+    "request_pipelining/server",
+    "server",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "fidl_packages" ]
 }

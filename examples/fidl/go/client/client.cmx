@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/fidl_echo_go_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.examples.Echo"
+        ]
+    }
+}

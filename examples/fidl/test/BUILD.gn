@@ -58,6 +58,7 @@ group("test") {
   testonly = true
   deps = [
     ":examples-integration-test",
+    "//examples/fidl/go:all",
     "//examples/fidl/hlcpp:all",
     "//examples/fidl/llcpp:all",
     "//examples/fidl/rust:all",

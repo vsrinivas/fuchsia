@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/toolchain.gni")
+import("//build/package.gni")
+
+go_binary("bin") {
+  output_name = "fidl_echo_launcher_go_server"
+  gopackage = "echo_server_go"
+  deps = [ ":lib" ]
+}
+
+go_library("lib") {
+  name = "echo_server_go"
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/lib/component",
+  ]
+}
+
+package("server") {
+  package_name = "echo-launcher-go-server"
+  binaries = [
+    {
+      name = "fidl_echo_launcher_go_server"
+      dest = "fidl_echo_launcher_go_server"
+    },
+  ]
+  meta = [
+    {
+      path = "server.cmx"
+      dest = "echo-server.cmx"
+    },
+  ]
+  deps = [ ":bin" ]
+}

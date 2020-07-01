@@ -52,14 +52,6 @@ TEST(IntegrationTest, HlcppService) {
   TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-hlcpp-service-client#meta/echo-client.cmx");
 }
 
-TEST(IntegrationTest, LlcppService) {
-  TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-llcpp-service-client#meta/echo-client.cmx");
-}
-
-TEST(IntegrationTest, RustService) {
-  TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-rust-service-client#meta/echo-client.cmx");
-}
-
 TEST(IntegrationTest, HlcppMultipleClients) {
   ASSERT_EQ(
       LaunchComponents("fuchsia-pkg://fuchsia.com/echo-hlcpp-multi-client#meta/echo-client.cmx",
@@ -74,6 +66,14 @@ TEST(IntegrationTest, HlcppPipelining) {
                        "fuchsia-pkg://fuchsia.com/echo-launcher-hlcpp-server#meta/echo-server.cmx",
                        {"fuchsia.examples.EchoLauncher"}),
       0);
+}
+
+TEST(IntegrationTest, LlcppService) {
+  TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-llcpp-service-client#meta/echo-client.cmx");
+}
+
+TEST(IntegrationTest, RustService) {
+  TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-rust-service-client#meta/echo-client.cmx");
 }
 
 TEST(IntegrationTest, RustSync) {
@@ -94,6 +94,21 @@ TEST(IntegrationTest, RustPipelining) {
   ASSERT_EQ(
       LaunchComponents("fuchsia-pkg://fuchsia.com/echo-launcher-rust-client#meta/echo-client.cmx",
                        "fuchsia-pkg://fuchsia.com/echo-launcher-rust-server#meta/echo-server.cmx",
+                       {"fuchsia.examples.EchoLauncher"}),
+      0);
+}
+
+TEST(IntegrationTest, GoSync) {
+  ASSERT_EQ(LaunchComponents("fuchsia-pkg://fuchsia.com/echo-go-client#meta/echo-client.cmx",
+                             "fuchsia-pkg://fuchsia.com/echo-go-server#meta/echo-server.cmx",
+                             {"fuchsia.examples.Echo"}),
+            0);
+}
+
+TEST(IntegrationTest, GoPipelining) {
+  ASSERT_EQ(
+      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-launcher-go-client#meta/echo-client.cmx",
+                       "fuchsia-pkg://fuchsia.com/echo-launcher-go-server#meta/echo-server.cmx",
                        {"fuchsia.examples.EchoLauncher"}),
       0);
 }
