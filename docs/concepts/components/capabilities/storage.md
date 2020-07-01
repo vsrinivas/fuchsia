@@ -32,7 +32,7 @@ a.cml:
     "offer": [
         {
             "directory": "/example_dir",
-            "from": "realm",
+            "from": "parent",
             "to": [ { "dest": "#b" } ],
         },
     ],
@@ -63,7 +63,7 @@ a.cml:
     "offer": [
         {
             "storage": "data",
-            "from": "realm",
+            "from": "parent",
             "to": [ { "dest": "#b" } ],
         },
     ],

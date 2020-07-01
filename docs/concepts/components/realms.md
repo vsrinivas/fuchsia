@@ -32,8 +32,6 @@ This section contains definitions for basic terminology about realms.
 -   A *child component instance* is a component instance that is owned by
     another instance, the *parent*.
 -   A *sub-realm* is the realm corresponding to a child component instance.
--   A *containing realm* is the realm corresponding to the parent of a component
-    instance.
 
 ## Example
 
@@ -165,10 +163,10 @@ known in advance. This is plausible if you imagine that `ls` and `grep` are
 command-line tools that are instantiated on demand as the user requests them.
 
 The example also illustrates a capability routing path with the red arrows.
-First, `console` [exposes][expose] `/svc/console` to its containing realm
-`shell`, which [offers][offer] it to `(tools)`. `/svc/console` then becomes
-available for any component instance in the collection to [use][use] -- it does
-not need to be routed to the dynamic instances independently.
+First, `console` [exposes][expose] `/svc/console` to its parent `shell`, which
+[offers][offer] it to `(tools)`. `/svc/console` then becomes available for any
+component instance in the collection to [use][use] -- it does not need to be
+routed to the dynamic instances independently.
 
 ## Environments {#environments}
 

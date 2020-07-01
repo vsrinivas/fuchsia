@@ -153,7 +153,7 @@ B.cml:
 {
     "offer": [{
         "protocol": "/intermediary",
-        "from": "realm",
+        "from": "parent",
         "to": [{
             { "dest": "#C", "as": "/intermediary2" },
         }],

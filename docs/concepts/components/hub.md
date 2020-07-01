@@ -5,23 +5,22 @@
 The hub provides access to detailed structural information about component
 instances at runtime. The hub provides information such as:
 
-- Instance name
-- Instance state
-- Instance ID
-- Children
-- Component URL
-- Exposed capabilities
+-   Instance name
+-   Instance state
+-   Instance ID
+-   Children
+-   Component URL
+-   Exposed capabilities
 
 ## Features
 
 ### Immutability
 
-The hub’s structure is mostly read-only. It is not possible to create,
-rename, delete, or otherwise modify directories and files which form the
-structure of the hub itself. However, the
-[outgoing](/docs/concepts/system/abi/system.md) directory of an instance may
-include mutable directories, files, and services which can be accessed through
-the hub.
+The hub’s structure is mostly read-only. It is not possible to create, rename,
+delete, or otherwise modify directories and files which form the structure of
+the hub itself. However, the [outgoing](/docs/concepts/system/abi/system.md)
+directory of an instance may include mutable directories, files, and services
+which can be accessed through the hub.
 
 ### Scoping
 
@@ -29,23 +28,24 @@ The root of a hub directory is always scoped to a particular [realm](realms.md).
 
 The hub of a realm gives information about:
 
-- The realm itself
-- All child realms
-- All component instances
+-   The realm itself
+-   All child realms
+-   All component instances
 
 The hub of a realm cannot give information about the parent realm. This
-structure makes it easy to constrain the parts of the hub particular
-clients can access.
+structure makes it easy to constrain the parts of the hub particular clients can
+access.
 
-If a [realm](realms.md) requests access to its hub, it can also access
-the hub of all of its descendant [realms](realms.md), by traversing down the
-`children/` subdirectory.
+If a [realm](realms.md) requests access to its hub, it can also access the hub
+of all of its descendant [realms](realms.md), by traversing down the `children/`
+subdirectory.
 
 ## Requesting the hub
 
-Like other capabilities, hub access is requested with a `use` declaration in
-the [component manifest](component_manifests.md). This example shows the
-manifest file of a component that accesses its own hub:
+Like other capabilities, hub access is requested with a `use` declaration in the
+[component manifest](component_manifests.md). This example shows the manifest
+file of a component that accesses its own hub.
+
 ```
 {
     "program": {
@@ -90,21 +90,22 @@ realm.
 
 Directories:
 
-- [`/hub/children`](#hub-children)
-- [`/hub/deleting`](#hub-deleting)
-- [`/hub/exec`](#hub-exec)
+-   [`/hub/children`](#hub-children)
+-   [`/hub/deleting`](#hub-deleting)
+-   [`/hub/exec`](#hub-exec)
 
 Files:
 
-- `/hub/component_type`: Contains the string `static` or `dynamic`. A component
-is static when its definition exists in the parent’s component manifest at
-compile time. A component is dynamic when the parent defines the component at
-runtime.
-- `/hub/id`: Contains a non-negative integer corresponding to the version of a
-particular instance. A new instance with the same name is a new version and
-will be given a new ID.
-- `/hub/url`: Contains the URL string corresponding to this component. The URL
-is defined by the parent either in its component manifest file or at runtime.
+-   `/hub/component_type`: Contains the string `static` or `dynamic`. A
+    component is static when its definition exists in the parent’s component
+    manifest at compile time. A component is dynamic when the parent defines the
+    component at runtime.
+-   `/hub/id`: Contains a non-negative integer corresponding to the version of a
+    particular instance. A new instance with the same name is a new version and
+    will be given a new ID.
+-   `/hub/url`: Contains the URL string corresponding to this component. The URL
+    is defined by the parent either in its component manifest file or at
+    runtime.
 
 ### `/hub/children` {#hub-children}
 
@@ -143,8 +144,8 @@ offers the hub capability to it. For more information, see
 
 The hub gives a name to each child’s hub directory based on this format:
 
-- For static instances, the format is `<instance name>`
-- For dynamic instances, the format is `<collection name>:<instance name>`
+-   For static instances, the format is `<instance name>`
+-   For dynamic instances, the format is `<collection name>:<instance name>`
 
 ### `/hub/deleting` {#hub-deleting}
 
@@ -175,8 +176,9 @@ document.
 
 The hub gives a name to each child’s hub directory based on this format:
 
-- For static instances, the format is `<instance name>:<instance id>`
-- For dynamic instances, the format is `<collection name>:<instance name>:<instance id>`
+-   For static instances, the format is `<instance name>:<instance id>`
+-   For dynamic instances, the format is `<collection name>:<instance
+    name>:<instance id>`
 
 Unlike the `/hub/children` directory, the instance ID is a part of the format
 for the `/hub/deleting` directory because multiple versions of the same instance
@@ -202,15 +204,15 @@ contains information about the current execution of the instance.
 
 Directories:
 
-- [`/hub/exec/exposed`](#hub-exec-exposed)
-- [`/hub/exec/in`](#hub-exec-in)
-- [`/hub/exec/out`](#hub-exec-out)
-- [`/hub/exec/runtime`](#hub-exec-runtime)
-- [`/hub/exec/used`](#hub-exec-used)
+-   [`/hub/exec/exposed`](#hub-exec-exposed)
+-   [`/hub/exec/in`](#hub-exec-in)
+-   [`/hub/exec/out`](#hub-exec-out)
+-   [`/hub/exec/runtime`](#hub-exec-runtime)
+-   [`/hub/exec/used`](#hub-exec-used)
 
 Files:
 
-- `/hub/exec/resolved_url`: The component's resolved URL in text format.
+-   `/hub/exec/resolved_url`: The component's resolved URL in text format.
 
 ### `/hub/exec/exposed` {#hub-exec-exposed}
 
@@ -249,19 +251,19 @@ If a component has an [ELF runtime](elf_runner.md), then it will have a
 
 Directories:
 
-- `args`: command-line arguments, presented as a series of files from `0`
-onward.
+-   `args`: command-line arguments, presented as a series of files from `0`
+    onward.
 
 Files:
 
-- `process-id`: the instance's process id in text format.
-- `job-id`: the instance's job id in text format.
+-   `process-id`: the instance's process id in text format.
+-   `job-id`: the instance's job id in text format.
 
 ### `/hub/exec/used` {#hub-exec-used}
 
 Lists services used at least once by the instance. A service is considered
-"used" when it is requested by the instance and has been routed successfully
-by the component manager.
+"used" when it is requested by the instance and has been routed successfully by
+the component manager.
 
 ## Advanced Routing {#advanced-routing}
 
@@ -285,7 +287,7 @@ In the parent component manifest:
         // Route the ELF runner capability to hub_client.
         {
           "runner": "elf",
-          "from": "realm",
+          "from": "parent",
           "to": "#hub_client",
         },
     ],
@@ -309,7 +311,7 @@ In `hub_client.cml`:
         { "runner": "elf" },
         {
           "directory": "/hub",
-          "from": "realm",
+          "from": "parent",
           "as": "/parent_hub"
         }
     ]
@@ -318,10 +320,9 @@ In `hub_client.cml`:
 
 ### Exposing a sibling hub
 
-In this example, `hub_client_sibling` exposes its view of the hub to its
-containing realm. The realm, in turn, offers that view of the hub as
-`/sibling_hub` to `hub_client`. `hub_client` maps that view of the hub to its
-incoming namespace.
+In this example, `hub_client_sibling` exposes its view of the hub to its parent.
+The realm, in turn, offers that view of the hub as `/sibling_hub` to
+`hub_client`. `hub_client` maps that view of the hub to its incoming namespace.
 
 In `hub_client_sibling.cml`:
 
@@ -380,7 +381,7 @@ In hub_client.cml:
     "use": [
         { "runner": "elf" },
         {
-            "directory": "/sibling_hub", "from": "realm",
+            "directory": "/sibling_hub", "from": "parent",
         }
     ]
 }
@@ -396,74 +397,74 @@ To illustrate how the hub changes in response to lifecycle events, consider an
 example involving 3 components named `A`, `B` and `C`. The manifest of each
 component is given below:
 
-- `A.cmx`
+-   `A.cmx`
 
-  ```
-  {
-      "program": {
-          "binary": "bin/A"
-      },
-      "use": [
-          {
-              "directory": "/hub",
-              "from": "framework",
-          },
-      ]
-      "collections": [
-          {
-              "name": "coll",
-              "durability": "transient",
-          },
-      ]
-  }
-  ```
+    ```
+    {
+        "program": {
+            "binary": "bin/A"
+        },
+        "use": [
+            {
+                "directory": "/hub",
+                "from": "framework",
+            },
+        ]
+        "collections": [
+            {
+                "name": "coll",
+                "durability": "transient",
+            },
+        ]
+    }
+    ```
 
-- `B.cmx`
+-   `B.cmx`
 
-  ```
-  {
-      "program": {
-          "binary": "bin/B"
-      },
-      "children": [
-          {
-              "name": "baz",
-              "url": "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-              "startup": "eager",
-          }
-      ]
-  }
-  ```
+    ```
+    {
+        "program": {
+            "binary": "bin/B"
+        },
+        "children": [
+            {
+                "name": "baz",
+                "url": "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
+                "startup": "eager",
+            }
+        ]
+    }
+    ```
 
-- `C.cmx`
+-   `C.cmx`
 
-  ```
-  // C.cmx
-  {
-      "program": {
-          "binary": "bin/C"
-      }
-  }
-  ```
+    ```
+    // C.cmx
+    {
+        "program": {
+            "binary": "bin/C"
+        }
+    }
+    ```
 
 Also consider 3 instances, one for each component:
 
-- `A` -> `foo`
-- `B` -> `bar`
-- `C` -> `baz`
+-   `A` -> `foo`
+-   `B` -> `bar`
+-   `C` -> `baz`
 
 `foo` can perform various actions that modify the hub:
 
-- [View the hub](#view-hub)
-- [Connect to the Realm framework service](#connect-to-realm)
-- [Create a dynamic child](#create-dynamic-child)
-- [Start a dynamic child](#start-dynamic-child)
-- [Destroy a dynamic child](#destroy-dynamic-child)
+-   [View the hub](#view-hub)
+-   [Connect to the Realm framework service](#connect-to-realm)
+-   [Create a dynamic child](#create-dynamic-child)
+-   [Start a dynamic child](#start-dynamic-child)
+-   [Destroy a dynamic child](#destroy-dynamic-child)
 
 ### View the hub {#view-hub}
 
-`foo` can see its own hub by listing the contents of `/hub`. In Rust, this
-looks like:
+`foo` can see its own hub by listing the contents of `/hub`. In Rust, this looks
+like:
 
 ```
 let entries = std::fs::read_dir("/hub")?;
@@ -493,8 +494,8 @@ the following:
 ### Connect to the Realm framework service {#connect-to-realm}
 
 A component must connect to the
-[Realm framework service](realms.md#realm-framework-service) to manipulate
-its dynamic children. In Rust, this looks like:
+[Realm framework service](realms.md#realm-framework-service) to manipulate its
+dynamic children. In Rust, this looks like:
 
 ```
 let realm = connect_to_service::<fsys::RealmMarker>()?;
@@ -541,8 +542,8 @@ After executing this code, the hub changes to the following:
 └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
 ```
 
-Note: The instance `baz` (which is a child of `bar`) does not appear in the
-hub yet.
+Note: The instance `baz` (which is a child of `bar`) does not appear in the hub
+yet.
 
 Note: The instance `bar` has not been started, so it does not have an `exec`
 directory.
@@ -635,185 +636,185 @@ The above code begins the deletion process for `bar`. This process has several
 stages, most of which occur asynchronously. As a result, the hub’s structure
 changes several times.
 
-1. `bar` is marked for deletion. The hub changes to the following:
+1.  `bar` is marked for deletion. The hub changes to the following:
 
-   ```
-   /hub
-   ├── children
-   ├── deleting
-   |    └── coll:bar:1
-   |         ├── children
-   |         |    └── baz
-   |         |         ├── children
-   |         |         ├── deleting
-   |         |         ├── exec
-   |         |         |    ├── exposed
-   |         |         |    ├── in
-   |         |         |    ├── out
-   |         |         |    ├── runtime
-   |         |         |    ├── used
-   |         |         |    └── resolved_url
-   |         |         ├── component_type => "static"
-   |         |         ├── id => "0"
-   |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-   |         ├── deleting
-   |         ├── exec
-   |         |    ├── exposed
-   |         |    ├── in
-   |         |    ├── out
-   |         |    ├── runtime
-   |         |    ├── used
-   |         |    └── resolved_url
-   |         ├── component_type => "dynamic"
-   |         ├── id => "1"
-   |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-   ├── exec
-   |    ├── exposed
-   |    ├── in
-   |    ├── out
-   |    ├── runtime
-   |    ├── used
-   |    └── resolved_url
-   ├── component_type => "static"
-   ├── id => "0"
-   └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-   ```
+    ```
+    /hub
+    ├── children
+    ├── deleting
+    |    └── coll:bar:1
+    |         ├── children
+    |         |    └── baz
+    |         |         ├── children
+    |         |         ├── deleting
+    |         |         ├── exec
+    |         |         |    ├── exposed
+    |         |         |    ├── in
+    |         |         |    ├── out
+    |         |         |    ├── runtime
+    |         |         |    ├── used
+    |         |         |    └── resolved_url
+    |         |         ├── component_type => "static"
+    |         |         ├── id => "0"
+    |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
+    |         ├── deleting
+    |         ├── exec
+    |         |    ├── exposed
+    |         |    ├── in
+    |         |    ├── out
+    |         |    ├── runtime
+    |         |    ├── used
+    |         |    └── resolved_url
+    |         ├── component_type => "dynamic"
+    |         ├── id => "1"
+    |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
+    ├── exec
+    |    ├── exposed
+    |    ├── in
+    |    ├── out
+    |    ├── runtime
+    |    ├── used
+    |    └── resolved_url
+    ├── component_type => "static"
+    ├── id => "0"
+    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
+    ```
 
-1. `baz` is stopped. The hub changes to the following:
+1.  `baz` is stopped. The hub changes to the following:
 
-   ```
-   /hub
-   ├── children
-   ├── deleting
-   |    └── coll:bar:1
-   |         ├── children
-   |         |    └── baz
-   |         |         ├── children
-   |         |         ├── deleting
-   |         |         ├── component_type => "static"
-   |         |         ├── id => "0"
-   |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-   |         ├── deleting
-   |         ├── exec
-   |         |    ├── exposed
-   |         |    ├── in
-   |         |    ├── out
-   |         |    ├── runtime
-   |         |    ├── used
-   |         |    └── resolved_url
-   |         ├── component_type => "dynamic"
-   |         ├── id => "1"
-   |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-   ├── exec
-   |    ├── exposed
-   |    ├── in
-   |    ├── out
-   |    ├── runtime
-   |    ├── used
-   |    └── resolved_url
-   ├── component_type => "static"
-   ├── id => "0"
-   └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-   ```
+    ```
+    /hub
+    ├── children
+    ├── deleting
+    |    └── coll:bar:1
+    |         ├── children
+    |         |    └── baz
+    |         |         ├── children
+    |         |         ├── deleting
+    |         |         ├── component_type => "static"
+    |         |         ├── id => "0"
+    |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
+    |         ├── deleting
+    |         ├── exec
+    |         |    ├── exposed
+    |         |    ├── in
+    |         |    ├── out
+    |         |    ├── runtime
+    |         |    ├── used
+    |         |    └── resolved_url
+    |         ├── component_type => "dynamic"
+    |         ├── id => "1"
+    |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
+    ├── exec
+    |    ├── exposed
+    |    ├── in
+    |    ├── out
+    |    ├── runtime
+    |    ├── used
+    |    └── resolved_url
+    ├── component_type => "static"
+    ├── id => "0"
+    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
+    ```
 
-1. `bar` is stopped. The hub changes to the following:
+1.  `bar` is stopped. The hub changes to the following:
 
-   ```
-   /hub
-   ├── children
-   ├── deleting
-   |    └── coll:bar
-   |         ├── children
-   |         |    └── baz
-   |         |         ├── children
-   |         |         ├── deleting
-   |         |         ├── component_type => "static"
-   |         |         ├── id => "0"
-   |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-   |         ├── deleting
-   |         ├── component_type => "dynamic"
-   |         ├── id => "1"
-   |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-   ├── exec
-   |    ├── exposed
-   |    ├── in
-   |    ├── out
-   |    ├── runtime
-   |    ├── used
-   |    └── resolved_url
-   ├── component_type => "static"
-   ├── id => "0"
-   └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-   ```
+    ```
+    /hub
+    ├── children
+    ├── deleting
+    |    └── coll:bar
+    |         ├── children
+    |         |    └── baz
+    |         |         ├── children
+    |         |         ├── deleting
+    |         |         ├── component_type => "static"
+    |         |         ├── id => "0"
+    |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
+    |         ├── deleting
+    |         ├── component_type => "dynamic"
+    |         ├── id => "1"
+    |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
+    ├── exec
+    |    ├── exposed
+    |    ├── in
+    |    ├── out
+    |    ├── runtime
+    |    ├── used
+    |    └── resolved_url
+    ├── component_type => "static"
+    ├── id => "0"
+    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
+    ```
 
-1. `baz` is marked for deletion. The hub changes to the following:
+1.  `baz` is marked for deletion. The hub changes to the following:
 
-   ```
-   /hub
-   ├── children
-   ├── deleting
-   |    └── coll:bar:1
-   |         ├── children
-   |         ├── deleting
-   |         |    └── baz:0
-   |         |         ├── children
-   |         |         ├── deleting
-   |         |         ├── component_type => "static"
-   |         |         ├── id => "0"
-   |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-   |         ├── component_type => "dynamic"
-   |         ├── id => "1"
-   |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-   ├── exec
-   |    ├── exposed
-   |    ├── in
-   |    ├── out
-   |    ├── runtime
-   |    ├── used
-   |    └── resolved_url
-   ├── component_type => "static"
-   ├── id => "0"
-   └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-   ```
+    ```
+    /hub
+    ├── children
+    ├── deleting
+    |    └── coll:bar:1
+    |         ├── children
+    |         ├── deleting
+    |         |    └── baz:0
+    |         |         ├── children
+    |         |         ├── deleting
+    |         |         ├── component_type => "static"
+    |         |         ├── id => "0"
+    |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
+    |         ├── component_type => "dynamic"
+    |         ├── id => "1"
+    |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
+    ├── exec
+    |    ├── exposed
+    |    ├── in
+    |    ├── out
+    |    ├── runtime
+    |    ├── used
+    |    └── resolved_url
+    ├── component_type => "static"
+    ├── id => "0"
+    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
+    ```
 
-1. `baz` is deleted. The hub changes to the following:
+1.  `baz` is deleted. The hub changes to the following:
 
-   ```
-   /hub
-   ├── children
-   ├── deleting
-   |    └── coll:bar:1
-   |         ├── children
-   |         ├── deleting
-   |         ├── component_type => "dynamic"
-   |         ├── id => "1"
-   |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-   ├── exec
-   |    ├── exposed
-   |    ├── in
-   |    ├── out
-   |    ├── runtime
-   |    ├── used
-   |    └── resolved_url
-   ├── component_type => "static"
-   ├── id => "0"
-   └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-   ```
+    ```
+    /hub
+    ├── children
+    ├── deleting
+    |    └── coll:bar:1
+    |         ├── children
+    |         ├── deleting
+    |         ├── component_type => "dynamic"
+    |         ├── id => "1"
+    |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
+    ├── exec
+    |    ├── exposed
+    |    ├── in
+    |    ├── out
+    |    ├── runtime
+    |    ├── used
+    |    └── resolved_url
+    ├── component_type => "static"
+    ├── id => "0"
+    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
+    ```
 
-1. `bar` is deleted. The hub changes to the following:
+1.  `bar` is deleted. The hub changes to the following:
 
-   ```
-   /hub
-   ├── children
-   ├── deleting
-   ├── exec
-   |    ├── exposed
-   |    ├── in
-   |    ├── out
-   |    ├── runtime
-   |    ├── used
-   |    └── resolved_url
-   ├── component_type => "static"
-   ├── id => "0"
-   └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-   ```
+    ```
+    /hub
+    ├── children
+    ├── deleting
+    ├── exec
+    |    ├── exposed
+    |    ├── in
+    |    ├── out
+    |    ├── runtime
+    |    ├── used
+    |    └── resolved_url
+    ├── component_type => "static"
+    ├── id => "0"
+    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
+    ```

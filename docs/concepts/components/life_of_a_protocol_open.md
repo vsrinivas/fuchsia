@@ -93,7 +93,7 @@ to as _capability routing_.
 Starting at the parent of the component that triggered the capability routing,
 component manager will inspect each component's manifest, looking for an `offer`
 declaration whose destination matches the child. The offer will specify a source
-of either `realm`, `self`, or the name of a child. If the offer came from the
+of either `parent`, `self`, or the name of a child. If the offer came from the
 component's realm it will continue to walk up the tree, and if the offer came
 from one of the component's children it will walk down the tree to that child.
 
@@ -109,7 +109,7 @@ If at any step of the way the chain is invalid, component manager will log an
 error and close the channel it received from the `Open` call. This can be caused
 by various situations, such as:
 
-- A component `C` offered a capability from `realm`, but its parent `R` did not
+- A component `C` offered a capability from `parent`, but its parent `R` did not
   offer the capability to `C`.
 - A component `C` offered a capability from its child `D`, but child `D` did not
   expose the capability to `C`.

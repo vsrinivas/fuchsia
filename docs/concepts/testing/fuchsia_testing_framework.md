@@ -78,13 +78,12 @@ export results under the test suite protocol.
 ## Hermeticity
 
 A test is *hermetic* if it [uses][manifests-use] or [offers][manifests-offer] no
-capabilities from the [test root](#tests-as-components)'s
-[containing realm][realms-definitions]. As a rule of thumb, tests should be
-hermetic, but sometimes a test requires a capability that cannot be injected in
-the test realm.
+capabilities from the [test root](#tests-as-components)'s parent. As a rule of
+thumb, tests should be hermetic, but sometimes a test requires a capability that
+cannot be injected in the test realm.
 
-In the context of hermetic tests, a capability that originates from the test
-root's containing realm is called a *system capability*.
+In the context of hermetic tests, a capability that originates from outside of
+the test's realm is called a *system capability*.
 
 ## Test roles {#test-roles}
 

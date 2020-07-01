@@ -81,7 +81,7 @@ registers them. Examples:
 offer: [
     {
         runner: "web",
-        from: "realm",
+        from: "parent",
         to: [ "#user-shell" ],
     },
 ],
@@ -104,7 +104,7 @@ environments: [
         runners: [
             {
                 runner: "web",
-                from: "realm",
+                from: "parent",
             },
         ],
     },

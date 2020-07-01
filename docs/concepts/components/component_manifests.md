@@ -110,10 +110,10 @@ language of capability routing consists of the following three keywords:
     `offer` it to one of its own targets. Likewise, when a capability is offered
     to a collection, any instance in the collection may `use` the capability or
     `offer` it.
--   `expose`: When a component `exposes` a capability to its
-    [containing realm][doc-realm-definitions], the parent may `offer` the
-    capability to one of its other children. A component may `expose` any
-    capability that it provides, or that one of its children exposes.
+-   `expose`: When a component `exposes` a capability to its parent, the parent
+    may `offer` the capability to one of its other children. A component may
+    `expose` any capability that it provides, or that one of its children
+    exposes.
 
 When you use these keywords together, they express how a capability is routed
 from a component instance's [outgoing directory][doc-outgoing-directory] to
@@ -213,7 +213,7 @@ This example shows usage of a directory use declaration annotated with rights:
 "use": [
   {
     "directory": "/test",
-    "from": "realm",
+    "from": "parent",
     "rights": ["rw*", "admin"],
   },
 ],
@@ -264,7 +264,7 @@ The routing sequence is:
 -   `services` exposes `/svc/echo` from its child `echo` to its parent, `shell`.
 -   `system` offers `/svc/echo` from its child `services` to its other child
     `tools`.
--   `tools` offers `/svc/echo` from `realm` (i.e., its parent) to its child
+-   `tools` offers `/svc/echo` from `parent` (i.e., its parent) to its child
     `echo_tool`.
 -   `echo_tool` uses `/svc/echo`. When `echo_tool` runs, it will find
     `/svc/echo` in its namespace.
@@ -372,8 +372,8 @@ The `collections` section declares collections as described in
 -   `name`: The name of the component collection, which is a string of one or
     more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`.
 -   `durability`: The duration of child component instances in the collection.
-    -   `transient`: The instance exists until its containing realm is stopped
-        or it is explicitly destroyed.
+    -   `transient`: The instance exists until its parent is stopped or it is
+        explicitly destroyed.
     -   `persistent`: The instance exists until it is explicitly destroyed. This
         mode is not yet supported.
 -   `environment` _(optional)_: If present, the environment that will be
@@ -401,15 +401,15 @@ The `environments` section declares environments as describe in
 
 -   `name`: The name of the environment, which is a string of one or more of the
     following characters: `a-z`, `0-9`, `_`, `.`, `-`.
--   `extend`: How the environment should extend its parent environment.
-    -   `realm`: Inherit all properties from the parent environment.
+-   `extend`: How the environment should extend this realm's environment.
+    -   `realm`: Inherit all properties from this realm's environment.
     -   `none`: Start with an empty environment, do not inherit anything.
     -   `runners`: The runners registered in the environment. An array of
         objects with the following properties:
         -   `runner`: The [name](#capability-names) of a runner capability,
             whose source is specified in `from`.
         -   `from`: The source of the runner capability, one of:
-            -   `realm`: The component's containing realm (parent).
+            -   `parent`: The component's parent.
             -   `self`: This component.
             -   `#<child-name>`: A [reference](#references) to a child component
                 instance.
@@ -548,8 +548,8 @@ explained in [Routing terminology](#routing-terminology).
     -   `storage`: The [type](#storage-types) of a storage capability.
     -   `runner`: The [source name](#capability-names) of a runner capability.
 -   `from`: The source of the capability, one of:
-    -   `realm`: The component's containing realm (parent). This source can be
-        used for all capability types.
+    -   `parent`: The component's parent. This source can be used for all
+        capability types.
     -   `self`: This component. This source can only be used when offering
         protocol, directory, or runner capabilities.
     -   `#<child-name>`: A [reference](#references) to a child component
@@ -590,17 +590,17 @@ Example:
     },
     {
         "directory": "/data",
-        "from": "realm",
+        "from": "parent",
         "to": [ "#fshost" ],
     },
     {
         "storage": "meta",
-        "from": "realm",
+        "from": "parent",
         "to": [ "#logger" ],
     },
     {
         "runner": "web",
-        "from": "realm",
+        "from": "parent",
         "to": [ "#user-shell" ],
     }
 ],
@@ -618,7 +618,7 @@ directory capability, as explained in
 -   `name`: A name for this storage section which can be used by an `offer`.
 -   `from`: The source of the directory capability backing the new storage
     capabilities, one of:
-    -   `realm`: The component's containing realm (parent).
+    -   `parent`: The component's parent.
     -   `self`: This component.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance.
