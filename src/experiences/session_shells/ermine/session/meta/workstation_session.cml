@@ -16,7 +16,6 @@
         { runner: "elf" },
         {
             directory: "/dev/class/input-report",
-            from: "realm",
             rights: [ "r*" ],
         },
         {

@@ -6,7 +6,7 @@
         { runner: "rust_test_runner" },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
-            from: "realm",
+            from: "framework",
         },
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
