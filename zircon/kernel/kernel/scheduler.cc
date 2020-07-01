@@ -744,7 +744,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                 deadline_run_queue_.is_empty() ? "[none]" : deadline_run_queue_.front().name());
 
   // Update the state of the current and next thread.
-  current_thread->preempt_pending_ = false;
+  current_thread->preemption_state().preempt_pending() = false;
   next_thread->state_ = THREAD_RUNNING;
   const cpu_num_t last_cpu = next_state->last_cpu_;
   next_state->last_cpu_ = current_cpu;
@@ -1313,8 +1313,8 @@ void Scheduler::Reschedule() {
   SchedulerState* const current_state = &current_thread->scheduler_state();
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
-  if (current_thread->disable_counts_ != 0) {
-    current_thread->preempt_pending_ = true;
+  if (current_thread->preemption_state().PreemptOrReschedDisabled()) {
+    current_thread->preemption_state().preempt_pending() = true;
     return;
   }
 
@@ -1703,7 +1703,7 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
 
 void Scheduler::TimerTick(SchedTime now) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_timer_tick"_stringref};
-  Thread::Current::PreemptSetPending();
+  Thread::Current::preemption_state().PreemptSetPending();
 }
 
 void Scheduler::InheritPriority(Thread* thread, int priority, bool* local_reschedule,

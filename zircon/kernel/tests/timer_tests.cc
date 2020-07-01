@@ -70,7 +70,7 @@ static void timer_diag_all_cpus(void) {
 static void timer_diag_cb2(Timer* timer, zx_time_t now, void* arg) {
   auto timer_count = static_cast<ktl::atomic<size_t>*>(arg);
   timer_count->fetch_add(1);
-  Thread::Current::PreemptSetPending();
+  Thread::Current::preemption_state().PreemptSetPending();
 }
 
 static void timer_diag_coalescing(TimerSlack slack, const zx_time_t* deadline,

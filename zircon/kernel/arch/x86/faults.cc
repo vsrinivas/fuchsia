@@ -102,13 +102,14 @@ __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
 static bool try_dispatch_user_exception(x86_iframe_t* frame, uint exception_type) {
   if (is_from_user(frame)) {
     struct arch_exception_context context = {false, frame, 0};
-    Thread::Current::PreemptReenableNoResched();
+    PreemptionState& preemption_state = Thread::Current::preemption_state();
+    preemption_state.PreemptReenableNoResched();
     arch_set_blocking_disallowed(false);
     arch_enable_ints();
     zx_status_t erc = dispatch_user_exception(exception_type, &context);
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    Thread::Current::PreemptDisable();
+    preemption_state.PreemptDisable();
     if (erc == ZX_OK)
       return true;
   }
@@ -255,15 +256,16 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
   vaddr_t va = x86_get_cr2();
 
   /* reenable interrupts */
-  Thread::Current::PreemptReenableNoResched();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
+  preemption_state.PreemptReenableNoResched();
   arch_set_blocking_disallowed(false);
   arch_enable_ints();
 
   /* make sure we put interrupts back as we exit */
-  auto ac = fbl::MakeAutoCall([]() {
+  auto ac = fbl::MakeAutoCall([&preemption_state]() {
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    Thread::Current::PreemptDisable();
+    preemption_state.PreemptDisable();
   });
 
   /* check for flags we're not prepared to handle */

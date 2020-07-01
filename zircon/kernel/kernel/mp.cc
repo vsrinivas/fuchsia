@@ -418,7 +418,7 @@ interrupt_eoi mp_mbx_reschedule_irq(void*) {
   CPU_STATS_INC(reschedule_ipis);
 
   if (mp.active_cpus & cpu_num_to_mask(cpu)) {
-    Thread::Current::PreemptSetPending();
+    Thread::Current::preemption_state().PreemptSetPending();
   }
 
   return IRQ_EOI_DEACTIVATE;

@@ -405,6 +405,155 @@ static inline void dump_thread_user_tid_during_panic(uint64_t tid,
   dump_thread_user_tid_locked(tid, full);
 }
 
+class PreemptionState {
+ public:
+  volatile bool& preempt_pending() { return preempt_pending_; }
+  const volatile bool& preempt_pending() const { return preempt_pending_; }
+
+  void CheckPreemptPending() const;
+
+  bool PreemptOrReschedDisabled() const {
+    return PreemptDisableCount() > 0 || ReschedDisableCount() > 0;
+  }
+
+  uint32_t PreemptDisableCount() const { return disable_counts_ & 0xffff; }
+
+  uint32_t ReschedDisableCount() const { return disable_counts_ >> 16; }
+
+  // PreemptDisable() increments the preempt_disable counter for the
+  // current thread.  While preempt_disable is non-zero, preemption of the
+  // thread is disabled, including preemption from interrupt handlers.
+  // During this time, any call to Reschedule()
+  // will only record that a reschedule is pending, and won't do a context
+  // switch.
+  //
+  // Note that this does not disallow blocking operations
+  // (e.g. mutex.Acquire()).  Disabling preemption does not prevent switching
+  // away from the current thread if it blocks.
+  //
+  // A call to PreemptDisable() must be matched by a later call to
+  // PreemptReenable() to decrement the preempt_disable counter.
+  void PreemptDisable() {
+    DEBUG_ASSERT(PreemptDisableCount() < 0xffff);
+
+    atomic_signal_fence();
+    ++disable_counts_;
+    atomic_signal_fence();
+  }
+
+  // PreemptReenable() decrements the preempt_disable counter.  See
+  // PreemptDisable().
+  void PreemptReenable() {
+    DEBUG_ASSERT(PreemptDisableCount() > 0);
+
+    atomic_signal_fence();
+    uint32_t new_count = --disable_counts_;
+    atomic_signal_fence();
+
+    if (new_count == 0) {
+      DEBUG_ASSERT(!arch_blocking_disallowed());
+      CheckPreemptPending();
+    }
+  }
+
+  // This is the same as thread_preempt_reenable(), except that it does not
+  // check for any pending reschedules.  This is useful in interrupt handlers
+  // when we know that no reschedules should have become pending since
+  // calling thread_preempt_disable().
+  void PreemptReenableNoResched() {
+    DEBUG_ASSERT(PreemptDisableCount() > 0);
+
+    atomic_signal_fence();
+    --disable_counts_;
+    atomic_signal_fence();
+  }
+
+  // ReschedDisable() increments the resched_disable counter for the
+  // current thread.  When resched_disable is non-zero, preemption of the
+  // thread from outside interrupt handlers is disabled.  However, interrupt
+  // handlers may still preempt the thread.
+  //
+  // This is a weaker version of PreemptDisable().
+  //
+  // As with PreemptDisable, blocking operations are still allowed while
+  // resched_disable is non-zero.
+  //
+  // A call to ReschedDisable() must be matched by a later call to
+  // ReschedReenable() to decrement the preempt_disable counter.
+  void ReschedDisable() {
+    DEBUG_ASSERT(ReschedDisableCount() < 0xffff);
+
+    atomic_signal_fence();
+    disable_counts_ += 1 << 16;
+    atomic_signal_fence();
+  }
+
+  // ReschedReenable() decrements the preempt_disable counter.  See
+  // ReschedDisable().
+  void ReschedReenable() {
+    DEBUG_ASSERT(ReschedDisableCount() > 0);
+
+    atomic_signal_fence();
+    uint32_t new_count = disable_counts_ - (1 << 16);
+    disable_counts_ = new_count;
+    atomic_signal_fence();
+
+    if (new_count == 0) {
+      DEBUG_ASSERT(!arch_blocking_disallowed());
+      CheckPreemptPending();
+    }
+  }
+
+  // PreemptSetPending() marks a preemption as pending for the
+  // current CPU.
+  //
+  // This is similar to Reschedule(), except that it may only be
+  // used inside an interrupt handler while interrupts and preemption
+  // are disabled, between PreemptPisable() and
+  // PreemptReenable().  It is similar to Scheduler::Reschedule(),
+  // except that it does not need to be called with thread_lock held.
+  void PreemptSetPending() {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(arch_blocking_disallowed());
+    DEBUG_ASSERT(PreemptDisableCount() > 0);
+
+    preempt_pending_ = true;
+  }
+
+ private:
+  // disable_counts_ contains two fields:
+  //
+  //  * Bottom 16 bits: the preempt_disable counter.  See
+  //    PreemptDisable().
+  //  * Top 16 bits: the resched_disable counter.  See
+  //    ReschedDisable().
+  //
+  // This is a single field so that both counters can be compared against
+  // zero with a single memory access and comparison.
+  //
+  // disable_counts_ is modified by interrupt handlers, but it is always
+  // restored to its original value before the interrupt handler returns,
+  // so modifications are not visible to the interrupted thread.  Despite
+  // that, "volatile" is still technically needed.  Otherwise the
+  // compiler is technically allowed to compile
+  // "++thread->disable_counts" into code that stores a junk value into
+  // preempt_disable temporarily.
+  volatile uint32_t disable_counts_;
+
+  // preempt_pending_ tracks whether a thread reschedule is pending.
+  //
+  // This is volatile because it can be changed asynchronously by an
+  // interrupt handler: If preempt_disable_ is set, an interrupt handler
+  // may change this from false to true.  Otherwise, if resched_disable_
+  // is set, an interrupt handler may change this from true to false.
+  //
+  // preempt_pending_ should only be true:
+  //  * if preempt_disable_ or resched_disable_ are non-zero, or
+  //  * after preempt_disable_ or resched_disable_ have been decremented,
+  //    while preempt_pending_ is being checked.
+  volatile bool preempt_pending_;
+};
+
 // TaskState is responsible for running the task defined by
 // |entry(arg)|, and reporting its value to any joining threads.
 //
@@ -592,110 +741,8 @@ struct Thread {
 
     static void SetName(const char* name);
 
-    static void CheckPreemptPending();
-    static uint32_t PreemptDisableCount() {
-      return Thread::Current::Get()->disable_counts_ & 0xffff;
-    }
-    static uint32_t ReschedDisableCount() { return Thread::Current::Get()->disable_counts_ >> 16; }
-    // PreemptDisable() increments the preempt_disable counter for the
-    // current thread.  While preempt_disable is non-zero, preemption of the
-    // thread is disabled, including preemption from interrupt handlers.
-    // During this time, any call to Reschedule()
-    // will only record that a reschedule is pending, and won't do a context
-    // switch.
-    //
-    // Note that this does not disallow blocking operations
-    // (e.g. mutex.Acquire()).  Disabling preemption does not prevent switching
-    // away from the current thread if it blocks.
-    //
-    // A call to PreemptDisable() must be matched by a later call to
-    // PreemptReenable() to decrement the preempt_disable counter.
-    static void PreemptDisable() {
-      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() < 0xffff);
-
-      Thread* current_thread = Thread::Current::Get();
-      atomic_signal_fence();
-      ++current_thread->disable_counts_;
-      atomic_signal_fence();
-    }
-    // PreemptReenable() decrements the preempt_disable counter.  See
-    // PreemptDisable().
-    static void PreemptReenable() {
-      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() > 0);
-
-      Thread* current_thread = Thread::Current::Get();
-      atomic_signal_fence();
-      uint32_t new_count = --current_thread->disable_counts_;
-      atomic_signal_fence();
-
-      if (new_count == 0) {
-        DEBUG_ASSERT(!arch_blocking_disallowed());
-        Thread::Current::CheckPreemptPending();
-      }
-    }
-    // This is the same as thread_preempt_reenable(), except that it does not
-    // check for any pending reschedules.  This is useful in interrupt handlers
-    // when we know that no reschedules should have become pending since
-    // calling thread_preempt_disable().
-    static void PreemptReenableNoResched() {
-      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() > 0);
-
-      Thread* current_thread = Thread::Current::Get();
-      atomic_signal_fence();
-      --current_thread->disable_counts_;
-      atomic_signal_fence();
-    }
-    // ReschedDisable() increments the resched_disable counter for the
-    // current thread.  When resched_disable is non-zero, preemption of the
-    // thread from outside interrupt handlers is disabled.  However, interrupt
-    // handlers may still preempt the thread.
-    //
-    // This is a weaker version of PreemptDisable().
-    //
-    // As with PreemptDisable, blocking operations are still allowed while
-    // resched_disable is non-zero.
-    //
-    // A call to ReschedDisable() must be matched by a later call to
-    // ReschedReenable() to decrement the preempt_disable counter.
-    static void ReschedDisable() {
-      DEBUG_ASSERT(Thread::Current::ReschedDisableCount() < 0xffff);
-
-      Thread* current_thread = Thread::Current::Get();
-      atomic_signal_fence();
-      current_thread->disable_counts_ += 1 << 16;
-      atomic_signal_fence();
-    }
-    // ReschedReenable() decrements the preempt_disable counter.  See
-    // ReschedDisable().
-    static void ReschedReenable() {
-      DEBUG_ASSERT(Thread::Current::ReschedDisableCount() > 0);
-
-      Thread* current_thread = Thread::Current::Get();
-      atomic_signal_fence();
-      uint32_t new_count = current_thread->disable_counts_ - (1 << 16);
-      current_thread->disable_counts_ = new_count;
-      atomic_signal_fence();
-
-      if (new_count == 0) {
-        DEBUG_ASSERT(!arch_blocking_disallowed());
-        Thread::Current::CheckPreemptPending();
-      }
-    }
-    // PreemptSetPending() marks a preemption as pending for the
-    // current CPU.
-    //
-    // This is similar to Reschedule(), except that it may only be
-    // used inside an interrupt handler while interrupts and preemption
-    // are disabled, between PreemptPisable() and
-    // PreemptReenable().  It is similar to Scheduler::Reschedule(),
-    // except that it does not need to be called with thread_lock held.
-    static void PreemptSetPending() {
-      DEBUG_ASSERT(arch_ints_disabled());
-      DEBUG_ASSERT(arch_blocking_disallowed());
-      Thread* current_thread = Thread::Current::Get();
-      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() > 0);
-
-      current_thread->preempt_pending_ = true;
+    static PreemptionState& preemption_state() {
+      return Thread::Current::Get()->preemption_state();
     }
 
     // Print the backtrace on the current thread
@@ -781,6 +828,9 @@ struct Thread {
 
   TaskState& task_state() { return task_state_; }
   const TaskState& task_state() const { return task_state_; }
+
+  PreemptionState& preemption_state() { return preemption_state_; }
+  const PreemptionState& preemption_state() const { return preemption_state_; }
 
   SchedulerState& scheduler_state() { return scheduler_state_; }
   const SchedulerState& scheduler_state() const { return scheduler_state_; }
@@ -876,50 +926,17 @@ struct Thread {
   uint64_t user_tid_;
   uint64_t user_pid_;
 
+  // TODO(54383) More of Thread should be private than this.
  private:
   // Architecture-specific stuff.
   struct arch_thread arch_;
 
   KernelStack stack_;
 
- private:
   TaskState task_state_;
 
- public:
-  // disable_counts_ contains two fields:
-  //
-  //  * Bottom 16 bits: the preempt_disable counter.  See
-  //    PreemptDisable().
-  //  * Top 16 bits: the resched_disable counter.  See
-  //    ReschedDisable().
-  //
-  // This is a single field so that both counters can be compared against
-  // zero with a single memory access and comparison.
-  //
-  // disable_counts_ is modified by interrupt handlers, but it is always
-  // restored to its original value before the interrupt handler returns,
-  // so modifications are not visible to the interrupted thread.  Despite
-  // that, "volatile" is still technically needed.  Otherwise the
-  // compiler is technically allowed to compile
-  // "++thread->disable_counts" into code that stores a junk value into
-  // preempt_disable temporarily.
-  volatile uint32_t disable_counts_;
+  PreemptionState preemption_state_;
 
-  // preempt_pending_ tracks whether a thread reschedule is pending.
-  //
-  // This is volatile because it can be changed asynchronously by an
-  // interrupt handler: If preempt_disable_ is set, an interrupt handler
-  // may change this from false to true.  Otherwise, if resched_disable_
-  // is set, an interrupt handler may change this from true to false.
-  //
-  // preempt_pending_ should only be true:
-  //  * if preempt_disable_ or resched_disable_ are non-zero, or
-  //  * after preempt_disable_ or resched_disable_ have been decremented,
-  //    while preempt_pending_ is being checked.
-  volatile bool preempt_pending_;
-
-  // TODO(54383) More of Thread should be private than this.
- private:
   // This is used by dispatcher.cc:SafeDeleter.
   void* recursive_object_deletion_list_ = nullptr;
 
@@ -1012,13 +1029,13 @@ class AutoReschedDisable {
   AutoReschedDisable() {}
   ~AutoReschedDisable() {
     if (started_) {
-      Thread::Current::ReschedReenable();
+      Thread::Current::preemption_state().ReschedReenable();
     }
   }
 
   void Disable() {
     if (!started_) {
-      Thread::Current::ReschedDisable();
+      Thread::Current::preemption_state().ReschedDisable();
       started_ = true;
     }
   }

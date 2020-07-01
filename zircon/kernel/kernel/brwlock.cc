@@ -206,7 +206,7 @@ void BrwLock<PI>::WriteRelease() {
   // highest priority, and so it is fine if acquirers observe writer_ to be null
   // and 'fail' to treat us as the owner.
   if constexpr (PI == BrwLockEnablePi::Yes) {
-    Thread::Current::PreemptDisable();
+    Thread::Current::preemption_state().PreemptDisable();
 
     state_.writer_.store(nullptr, ktl::memory_order_relaxed);
   }
@@ -218,7 +218,7 @@ void BrwLock<PI>::WriteRelease() {
   }
 
   if constexpr (PI == BrwLockEnablePi::Yes) {
-    Thread::Current::PreemptReenable();
+    Thread::Current::preemption_state().PreemptReenable();
   }
 }
 

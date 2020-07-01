@@ -85,7 +85,7 @@ class TA_CAP("mutex") BrwLock {
       // As readers are not recorded and do not receive boosting from blocking
       // writers they must not block or otherwise cease to run, otherwise
       // our PI will be violated.
-      Thread::Current::PreemptDisable();
+      Thread::Current::preemption_state().PreemptDisable();
     }
     // Attempt the optimistic grab
     uint64_t prev = state_.state_.fetch_add(kBrwLockReader, ktl::memory_order_acquire);
@@ -113,7 +113,7 @@ class TA_CAP("mutex") BrwLock {
       ReleaseWakeup();
     }
     if constexpr (PI == BrwLockEnablePi::Yes) {
-      Thread::Current::PreemptReenable();
+      Thread::Current::preemption_state().PreemptReenable();
     }
   }
 

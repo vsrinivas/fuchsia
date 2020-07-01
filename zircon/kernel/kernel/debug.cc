@@ -173,7 +173,7 @@ void RecurringCallback::CallbackWrapper(Timer* t, zx_time_t now, void* arg) {
   }
 
   // reschedule to give the debuglog a chance to run
-  Thread::Current::PreemptSetPending();
+  Thread::Current::preemption_state().PreemptSetPending();
 }
 
 void RecurringCallback::Toggle() {

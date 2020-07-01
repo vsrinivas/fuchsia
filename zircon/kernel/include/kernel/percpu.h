@@ -104,9 +104,10 @@ struct percpu {
   // |Func| should accept a |percpu*|.
   template <typename Func>
   static void WithCurrentPreemptDisable(Func&& func) {
-    Thread::Current::PreemptDisable();
+    PreemptionState& preemption_state = Thread::Current::preemption_state();
+    preemption_state.PreemptDisable();
     ktl::forward<Func>(func)(&Get(arch_curr_cpu_num()));
-    Thread::Current::PreemptReenable();
+    preemption_state.PreemptReenable();
   }
 
   // Call |Func| once per CPU with each CPU's percpu struct with preemption disabled.
@@ -114,11 +115,12 @@ struct percpu {
   // |Func| should accept a |percpu*|.
   template <typename Func>
   static void ForEachPreemptDisable(Func&& func) {
-    Thread::Current::PreemptDisable();
+    PreemptionState& preemption_state = Thread::Current::preemption_state();
+    preemption_state.PreemptDisable();
     for (cpu_num_t cpu_num = 0; cpu_num < processor_count(); ++cpu_num) {
       ktl::forward<Func>(func)(&Get(cpu_num));
     }
-    Thread::Current::PreemptReenable();
+    preemption_state.PreemptReenable();
   }
 
   // Call |Func| once per CPU with each CPU's percpu struct.

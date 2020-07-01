@@ -24,32 +24,32 @@ static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
   // preempt_disable set.
   ASSERT(arch_ints_disabled());
   ASSERT(arch_blocking_disallowed());
-  Thread* thread = Thread::Current::Get();
-  ASSERT(Thread::Current::PreemptDisableCount() > 0);
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
+  ASSERT(preemption_state.PreemptDisableCount() > 0);
 
   // Save and restore the value of preempt_pending so that we can test
   // other functions' behavior with preempt_pending==false.  It is
   // possible that preempt_pending is true now: it might have been set by
   // another timer callback.
-  bool old_preempt_pending = thread->preempt_pending_;
+  bool old_preempt_pending = preemption_state.preempt_pending();
 
   // Test that Scheduler::Reschedule() sets the preempt_pending flag when
   // preempt_disable is set.
-  thread->preempt_pending_ = false;
+  preemption_state.preempt_pending() = false;
   {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     Scheduler::Reschedule();
   }
-  ASSERT(thread->preempt_pending_);
+  ASSERT(preemption_state.preempt_pending());
 
-  // Test that Thread::Current::PreemptSetPending() sets the preempt_pending
+  // Test that preemption_state.PreemptSetPending() sets the preempt_pending
   // flag.
-  thread->preempt_pending_ = false;
-  Thread::Current::PreemptSetPending();
-  ASSERT(thread->preempt_pending_);
+  preemption_state.preempt_pending() = false;
+  preemption_state.PreemptSetPending();
+  ASSERT(preemption_state.preempt_pending());
 
   // Restore value.
-  thread->preempt_pending_ = old_preempt_pending;
+  preemption_state.preempt_pending() = old_preempt_pending;
 
   event->Signal();
 }
@@ -74,41 +74,41 @@ static bool test_in_timer_callback() {
 static bool test_inc_dec_disable_counts() {
   BEGIN_TEST;
 
-  Thread* thread = Thread::Current::Get();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
 
   // Test initial conditions.
-  ASSERT_EQ(Thread::Current::PreemptDisableCount(), 0u);
-  ASSERT_EQ(Thread::Current::ReschedDisableCount(), 0u);
+  ASSERT_EQ(preemption_state.PreemptDisableCount(), 0u);
+  ASSERT_EQ(preemption_state.ReschedDisableCount(), 0u);
   // While preemption is allowed, a preemption should not be pending.
-  ASSERT_EQ(thread->preempt_pending_, false);
+  ASSERT_EQ(preemption_state.preempt_pending(), false);
 
   // Test incrementing and decrementing of preempt_disable.
-  Thread::Current::PreemptDisable();
-  EXPECT_EQ(Thread::Current::PreemptDisableCount(), 1u);
-  Thread::Current::PreemptReenable();
-  EXPECT_EQ(Thread::Current::PreemptDisableCount(), 0u);
+  preemption_state.PreemptDisable();
+  EXPECT_EQ(preemption_state.PreemptDisableCount(), 1u);
+  preemption_state.PreemptReenable();
+  EXPECT_EQ(preemption_state.PreemptDisableCount(), 0u);
 
   // Test incrementing and decrementing of resched_disable.
-  Thread::Current::ReschedDisable();
-  EXPECT_EQ(Thread::Current::ReschedDisableCount(), 1u);
-  Thread::Current::ReschedReenable();
-  EXPECT_EQ(Thread::Current::ReschedDisableCount(), 0u);
+  preemption_state.ReschedDisable();
+  EXPECT_EQ(preemption_state.ReschedDisableCount(), 1u);
+  preemption_state.ReschedReenable();
+  EXPECT_EQ(preemption_state.ReschedDisableCount(), 0u);
 
   // Test nesting: multiple increments and decrements.
-  Thread::Current::PreemptDisable();
-  Thread::Current::PreemptDisable();
-  EXPECT_EQ(Thread::Current::PreemptDisableCount(), 2u);
-  Thread::Current::PreemptReenable();
-  Thread::Current::PreemptReenable();
-  EXPECT_EQ(Thread::Current::PreemptDisableCount(), 0u);
+  preemption_state.PreemptDisable();
+  preemption_state.PreemptDisable();
+  EXPECT_EQ(preemption_state.PreemptDisableCount(), 2u);
+  preemption_state.PreemptReenable();
+  preemption_state.PreemptReenable();
+  EXPECT_EQ(preemption_state.PreemptDisableCount(), 0u);
 
   // Test nesting: multiple increments and decrements.
-  Thread::Current::ReschedDisable();
-  Thread::Current::ReschedDisable();
-  EXPECT_EQ(Thread::Current::ReschedDisableCount(), 2u);
-  Thread::Current::ReschedReenable();
-  Thread::Current::ReschedReenable();
-  EXPECT_EQ(Thread::Current::ReschedDisableCount(), 0u);
+  preemption_state.ReschedDisable();
+  preemption_state.ReschedDisable();
+  EXPECT_EQ(preemption_state.ReschedDisableCount(), 2u);
+  preemption_state.ReschedReenable();
+  preemption_state.ReschedReenable();
+  EXPECT_EQ(preemption_state.ReschedDisableCount(), 0u);
 
   END_TEST;
 }
@@ -116,27 +116,27 @@ static bool test_inc_dec_disable_counts() {
 static bool test_decrement_clears_preempt_pending() {
   BEGIN_TEST;
 
-  Thread* thread = Thread::Current::Get();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
 
-  // Test that Thread::Current::PreemptReenable() clears preempt_pending.
-  Thread::Current::PreemptDisable();
+  // Test that preemption_state.PreemptReenable() clears preempt_pending.
+  preemption_state.PreemptDisable();
   Thread::Current::Reschedule();
   // It should not be possible for an interrupt handler to block or
-  // otherwise cause a reschedule before our Thread::Current::PreemptReenable().
-  EXPECT_EQ(thread->preempt_pending_, true);
-  Thread::Current::PreemptReenable();
-  EXPECT_EQ(thread->preempt_pending_, false);
+  // otherwise cause a reschedule before our preemption_state.PreemptReenable().
+  EXPECT_EQ(preemption_state.preempt_pending(), true);
+  preemption_state.PreemptReenable();
+  EXPECT_EQ(preemption_state.preempt_pending(), false);
 
-  // Test that Thread::Current::ReschedReenable() clears preempt_pending.
-  Thread::Current::ReschedDisable();
+  // Test that preemption_state.ReschedReenable() clears preempt_pending.
+  preemption_state.ReschedDisable();
   arch_disable_ints();
   Thread::Current::Reschedule();
   // Read preempt_pending with interrupts disabled because otherwise an
   // interrupt handler could set it to false.
-  EXPECT_EQ(thread->preempt_pending_, true);
+  EXPECT_EQ(preemption_state.preempt_pending(), true);
   arch_enable_ints();
-  Thread::Current::ReschedReenable();
-  EXPECT_EQ(thread->preempt_pending_, false);
+  preemption_state.ReschedReenable();
+  EXPECT_EQ(preemption_state.preempt_pending(), false);
 
   END_TEST;
 }
@@ -144,28 +144,28 @@ static bool test_decrement_clears_preempt_pending() {
 static bool test_blocking_clears_preempt_pending() {
   BEGIN_TEST;
 
-  Thread* thread = Thread::Current::Get();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
 
   // It is OK to block while preemption is disabled.  In this case,
   // blocking should clear preempt_pending.
-  Thread::Current::PreemptDisable();
+  preemption_state.PreemptDisable();
   Thread::Current::Reschedule();
-  EXPECT_EQ(thread->preempt_pending_, true);
+  EXPECT_EQ(preemption_state.preempt_pending(), true);
   arch_disable_ints();
   Thread::Current::SleepRelative(ZX_MSEC(10));
   // Read preempt_pending with interrupts disabled because otherwise an
   // interrupt handler could set it to true.
-  EXPECT_EQ(thread->preempt_pending_, false);
+  EXPECT_EQ(preemption_state.preempt_pending(), false);
   arch_enable_ints();
-  Thread::Current::PreemptReenable();
+  preemption_state.PreemptReenable();
 
   // It is OK to block while rescheduling is disabled.  In this case,
   // blocking should clear preempt_pending.
-  Thread::Current::ReschedDisable();
+  preemption_state.ReschedDisable();
   Thread::Current::Reschedule();
   Thread::Current::SleepRelative(ZX_MSEC(10));
-  EXPECT_EQ(thread->preempt_pending_, false);
-  Thread::Current::ReschedReenable();
+  EXPECT_EQ(preemption_state.preempt_pending(), false);
+  preemption_state.ReschedReenable();
 
   END_TEST;
 }
@@ -177,9 +177,9 @@ static bool test_blocking_clears_preempt_pending() {
 static bool test_interrupt_preserves_preempt_pending() {
   BEGIN_TEST;
 
-  Thread* thread = Thread::Current::Get();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
 
-  Thread::Current::ReschedDisable();
+  preemption_state.ReschedDisable();
   // Do this with interrupts disabled so that a real interrupt does not
   // clear preempt_pending.
   arch_disable_ints();
@@ -188,14 +188,14 @@ static bool test_interrupt_preserves_preempt_pending() {
   // Simulate an interrupt handler invocation.
   int_handler_saved_state_t state;
   int_handler_start(&state);
-  EXPECT_EQ(Thread::Current::PreemptDisableCount(), 1u);
+  EXPECT_EQ(preemption_state.PreemptDisableCount(), 1u);
   bool do_preempt = int_handler_finish(&state);
 
   EXPECT_EQ(do_preempt, false);
-  EXPECT_EQ(thread->preempt_pending_, true);
+  EXPECT_EQ(preemption_state.preempt_pending(), true);
   arch_enable_ints();
-  Thread::Current::ReschedReenable();
-  EXPECT_EQ(thread->preempt_pending_, false);
+  preemption_state.ReschedReenable();
+  EXPECT_EQ(preemption_state.preempt_pending(), false);
 
   END_TEST;
 }
@@ -205,16 +205,16 @@ static bool test_interrupt_preserves_preempt_pending() {
 static bool test_interrupt_clears_preempt_pending() {
   BEGIN_TEST;
 
-  Thread* thread = Thread::Current::Get();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
 
-  Thread::Current::ReschedDisable();
+  preemption_state.ReschedDisable();
   Thread::Current::Reschedule();
   // Spin until we detect that we have been preempted.  preempt_pending
   // should eventually get set to false because the scheduler should
   // preempt this thread.
-  while (thread->preempt_pending_) {
+  while (preemption_state.preempt_pending()) {
   }
-  Thread::Current::ReschedReenable();
+  preemption_state.ReschedReenable();
 
   END_TEST;
 }
@@ -223,14 +223,14 @@ static bool test_interrupt_clears_preempt_pending() {
 static void timer_set_preempt_pending(Timer* timer, zx_time_t now, void* arg) {
   auto* timer_ran = reinterpret_cast<ktl::atomic<bool>*>(arg);
 
-  Thread::Current::PreemptSetPending();
+  Thread::Current::preemption_state().PreemptSetPending();
   timer_ran->store(true);
 }
 
 static bool test_interrupt_with_preempt_disable() {
   BEGIN_TEST;
 
-  Thread* thread = Thread::Current::Get();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
 
   // Test that interrupt handlers honor preempt_disable.
   //
@@ -242,7 +242,7 @@ static bool test_interrupt_with_preempt_disable() {
   // that we invoked it from.  This also assumes that we don't
   // accidentally call any blocking operations that cause our thread to
   // be rescheduled to another CPU.
-  Thread::Current::PreemptDisable();
+  preemption_state.PreemptDisable();
   ktl::atomic<bool> timer_ran(false);
   Timer timer;
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
@@ -250,8 +250,8 @@ static bool test_interrupt_with_preempt_disable() {
   // Spin until timer_ran is set by the interrupt handler.
   while (!timer_ran.load()) {
   }
-  EXPECT_EQ(thread->preempt_pending_, true);
-  Thread::Current::PreemptReenable();
+  EXPECT_EQ(preemption_state.preempt_pending(), true);
+  preemption_state.PreemptReenable();
 
   END_TEST;
 }
@@ -259,14 +259,14 @@ static bool test_interrupt_with_preempt_disable() {
 static bool test_interrupt_with_resched_disable() {
   BEGIN_TEST;
 
-  Thread* thread = Thread::Current::Get();
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
 
   // Test that resched_disable does not defer preemptions by interrupt
   // handlers.
   //
   // This assumes that timer_set() will run the callback on the same CPU
   // that we invoked it from.
-  Thread::Current::ReschedDisable();
+  preemption_state.ReschedDisable();
   ktl::atomic<bool> timer_ran(false);
   Timer timer;
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
@@ -276,8 +276,8 @@ static bool test_interrupt_with_resched_disable() {
   }
   // preempt_pending should be reset to false either on returning from
   // our timer interrupt, or by some other preemption.
-  EXPECT_EQ(thread->preempt_pending_, false);
-  Thread::Current::ReschedReenable();
+  EXPECT_EQ(preemption_state.preempt_pending(), false);
+  preemption_state.ReschedReenable();
 
   END_TEST;
 }
@@ -285,45 +285,47 @@ static bool test_interrupt_with_resched_disable() {
 static bool test_auto_preempt_disabler() {
   BEGIN_TEST;
 
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
+
   // Make sure that nothing funny is going on with our preempt disable count as
   // it stands now.
-  ASSERT_EQ(0u, Thread::Current::PreemptDisableCount());
+  ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
 
   {
     // Create a disabler inside of a scope, but do not have it immediately
     // request that preemption be disabled.  Our count should still be zero.
     AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler;
-    ASSERT_EQ(0u, Thread::Current::PreemptDisableCount());
+    ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
 
     // Now explicitly disable.  Our count should go to 1.
     ap_disabler.Disable();
-    ASSERT_EQ(1u, Thread::Current::PreemptDisableCount());
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
 
     // Do it again, our count should remain at 1.
     ap_disabler.Disable();
-    ASSERT_EQ(1u, Thread::Current::PreemptDisableCount());
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
 
     {
       // Make another inside of a new scope.  Our count should remain at 1 until
       // we explicitly use the new instance to disable preemption.
       AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler2;
-      ASSERT_EQ(1u, Thread::Current::PreemptDisableCount());
+      ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
 
       ap_disabler2.Disable();
-      ASSERT_EQ(2u, Thread::Current::PreemptDisableCount());
+      ASSERT_EQ(2u, preemption_state.PreemptDisableCount());
     }  // Let it go out of scope, we should drop down to a count of 1.
 
-    ASSERT_EQ(1u, Thread::Current::PreemptDisableCount());
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
   }  // Allow the original to go out of scope.  This should get us back down to a count of 0.
 
-  ASSERT_EQ(0u, Thread::Current::PreemptDisableCount());
+  ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
 
   // Next, do a similar test, but this time with the version which automatically
   // begins life with preemption disabled.  These versions are a bit simpler
   // under the hood as they do not require any internal state tracking.
   {
     AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
-    ASSERT_EQ(1u, Thread::Current::PreemptDisableCount());
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
 
 #if TEST_WILL_NOT_COMPILE || 0
     // Attempting to call disable should fail to build.
@@ -334,13 +336,13 @@ static bool test_auto_preempt_disabler() {
       // Add a second.  Watch the count go up as it comes into scope, and back
       // down again when it goes out.
       AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler2;
-      ASSERT_EQ(2u, Thread::Current::PreemptDisableCount());
+      ASSERT_EQ(2u, preemption_state.PreemptDisableCount());
     }
 
-    ASSERT_EQ(1u, Thread::Current::PreemptDisableCount());
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
   }  // Allow the original to go out of scope.  This should get us back down to a count of 0.
 
-  ASSERT_EQ(0u, Thread::Current::PreemptDisableCount());
+  ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
 
   END_TEST;
 }

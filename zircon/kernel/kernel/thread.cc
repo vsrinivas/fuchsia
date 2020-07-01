@@ -992,18 +992,16 @@ void Thread::Current::Reschedule() {
   Scheduler::Reschedule();
 }
 
-void Thread::Current::CheckPreemptPending() {
-  Thread* current_thread = Thread::Current::Get();
-
+void PreemptionState::CheckPreemptPending() const {
   // First check preempt_pending without the expense of taking the lock.
   // At this point, interrupts could be enabled, so an interrupt handler
   // might preempt us and set preempt_pending to false after we read it.
-  if (unlikely(current_thread->preempt_pending_)) {
+  if (unlikely(preempt_pending_)) {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     // Recheck preempt_pending just in case it got set to false after
     // our earlier check.  Its value now cannot change because
     // interrupts are now disabled.
-    if (likely(current_thread->preempt_pending_)) {
+    if (likely(preempt_pending_)) {
       // This will set preempt_pending = false for us.
       Scheduler::Reschedule();
     }
