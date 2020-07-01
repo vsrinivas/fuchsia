@@ -366,7 +366,7 @@ func (c *Client) ExpectReboot(ctx context.Context, f func() error) error {
 	// We reconnected to the device. Check that the reboot check file doesn't exist.
 	exists, err := c.RemoteFileExists(ctx, rebootCheckPath)
 	if err != nil {
-		return fmt.Errorf(`failed to check if "%s" exists: %w`, err)
+		return fmt.Errorf(`failed to check if %q exists: %w`, rebootCheckPath, err)
 	}
 	if exists {
 		// The reboot file exists. This could have happened because either we
