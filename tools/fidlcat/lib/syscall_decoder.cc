@@ -587,7 +587,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
     }
     printer << '\n';
     {
-      fidl_codec::MultiIndent indent(printer, 2);
+      fidl_codec::Indent indent(printer);
       // Displays the outline output arguments.
       for (const auto& output : decoder->syscall()->outputs()) {
         if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&

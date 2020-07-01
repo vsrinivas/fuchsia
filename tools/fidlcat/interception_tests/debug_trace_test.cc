@@ -149,7 +149,7 @@ KTRACE_READ_DISPLAY_TEST(ZxKtraceRead, ZX_OK,
                          "offset:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                          "  -> \x1B[32mZX_OK\x1B[0m ("
                          "actual:\x1B[32msize_t\x1B[0m: \x1B[34m7\x1B[0m/\x1B[34m100\x1B[0m)\n"
-                         "      data:\x1B[32muint8\x1B[0m: \x1B[31m\"My data\"\x1B[0m\n");
+                         "    data:\x1B[32muint8\x1B[0m: \x1B[31m\"My data\"\x1B[0m\n");
 
 // zx_ktrace_control tests.
 

@@ -151,7 +151,7 @@ SOCKET_READ_DISPLAY_TEST(
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m1024\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual:\x1B[32msize_t\x1B[0m: \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
-    "      buffer:\x1B[32muint8\x1B[0m: "
+    "    buffer:\x1B[32muint8\x1B[0m: "
     "\x1B[34m16\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m32\x1B[0m, \x1B[34m2\x1B[0m, "
     "\x1B[34m48\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m64\x1B[0m, \x1B[34m4\x1B[0m\n");
 
@@ -165,7 +165,7 @@ SOCKET_READ_DISPLAY_TEST(
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m1024\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual:\x1B[32msize_t\x1B[0m: \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
-    "      buffer:\x1B[32muint8\x1B[0m: "
+    "    buffer:\x1B[32muint8\x1B[0m: "
     "\x1B[34m16\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m32\x1B[0m, \x1B[34m2\x1B[0m, "
     "\x1B[34m48\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m64\x1B[0m, \x1B[34m4\x1B[0m\n");
 
@@ -194,7 +194,7 @@ SOCKET_READ_STRING_DISPLAY_TEST(
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m1024\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual:\x1B[32msize_t\x1B[0m: \x1B[34m5\x1B[0m/\x1B[34m1024\x1B[0m)\n"
-    "      buffer:\x1B[32muint8\x1B[0m: \x1B[31m\"hello\"\x1B[0m\n");
+    "    buffer:\x1B[32muint8\x1B[0m: \x1B[31m\"hello\"\x1B[0m\n");
 
 // zx_socket_shutdown tests.
 

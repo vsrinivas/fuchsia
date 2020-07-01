@@ -82,7 +82,7 @@ FIFO_READ_DISPLAY_TEST(
     "elem_size:\x1B[32msize_t\x1B[0m: \x1B[34m4\x1B[0m, "
     "count:\x1B[32msize_t\x1B[0m: \x1B[34m10\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m5\x1B[0m/\x1B[34m10\x1B[0m)\n"
-    "      data:\x1B[32muint8\x1B[0m: "
+    "    data:\x1B[32muint8\x1B[0m: "
     "\x1B[34m00\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m02\x1B[0m, \x1B[34m03\x1B[0m, "
     "\x1B[34m04\x1B[0m, \x1B[34m05\x1B[0m, \x1B[34m06\x1B[0m, \x1B[34m07\x1B[0m, "
     "\x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m, \x1B[34m0a\x1B[0m, \x1B[34m0b\x1B[0m, "

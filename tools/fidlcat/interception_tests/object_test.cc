@@ -101,7 +101,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(
     "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
     "    items:\x1B[32mzx_wait_item_t\x1B[0m[]: \x1B[31mnullptr\x1B[0m\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      items:\x1B[32mzx_wait_item_t\x1B[0m[]: \x1B[31mnullptr\x1B[0m\n");
+    "    items:\x1B[32mzx_wait_item_t\x1B[0m[]: \x1B[31mnullptr\x1B[0m\n");
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(
     ZxObjectWaitManyZero, ZX_OK, 0, false,
@@ -111,7 +111,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(
     "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
     "    items:\x1B[32mzx_wait_item_t\x1B[0m[]: \x1B[31mnullptr\x1B[0m\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      items:\x1B[32mzx_wait_item_t\x1B[0m[]: \x1B[31mnullptr\x1B[0m\n");
+    "    items:\x1B[32mzx_wait_item_t\x1B[0m[]: \x1B[31mnullptr\x1B[0m\n");
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
                               "\n"
@@ -139,29 +139,29 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
                               "      }\n"
                               "    }\n"
                               "  -> \x1B[32mZX_OK\x1B[0m\n"
-                              "      items:\x1B[32mzx_wait_item_t\x1B[0m[]:  {\n"
-                              "        {\n"
-                              "          handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m\n"
-                              "          waitfor:\x1B[32msignals\x1B[0m: "
+                              "    items:\x1B[32mzx_wait_item_t\x1B[0m[]:  {\n"
+                              "      {\n"
+                              "        handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m\n"
+                              "        waitfor:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m\n"
-                              "          pending:\x1B[32msignals\x1B[0m: "
+                              "        pending:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m\n"
-                              "        },\n"
-                              "        {\n"
-                              "          handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db1\x1B[0m\n"
-                              "          waitfor:\x1B[32msignals\x1B[0m: "
+                              "      },\n"
+                              "      {\n"
+                              "        handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db1\x1B[0m\n"
+                              "        waitfor:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m\n"
-                              "          pending:\x1B[32msignals\x1B[0m: "
+                              "        pending:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m\n"
-                              "        },\n"
-                              "        {\n"
-                              "          handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db2\x1B[0m\n"
-                              "          waitfor:\x1B[32msignals\x1B[0m: "
+                              "      },\n"
+                              "      {\n"
+                              "        handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db2\x1B[0m\n"
+                              "        waitfor:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m\n"
-                              "          pending:\x1B[32msignals\x1B[0m: "
+                              "        pending:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m\n"
-                              "        }\n"
-                              "      }\n");
+                              "      }\n"
+                              "    }\n");
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitManyCanceled, ZX_ERR_CANCELED, 1, true,
                               "\n"
@@ -177,15 +177,15 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitManyCanceled, ZX_ERR_CANCELED, 1, true
                               "      }\n"
                               "    }\n"
                               "  -> \x1B[31mZX_ERR_CANCELED\x1B[0m\n"
-                              "      items:\x1B[32mzx_wait_item_t\x1B[0m[]:  {\n"
-                              "        {\n"
-                              "          handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m\n"
-                              "          waitfor:\x1B[32msignals\x1B[0m: "
+                              "    items:\x1B[32mzx_wait_item_t\x1B[0m[]:  {\n"
+                              "      {\n"
+                              "        handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m\n"
+                              "        waitfor:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m\n"
-                              "          pending:\x1B[32msignals\x1B[0m: "
+                              "        pending:\x1B[32msignals\x1B[0m: "
                               "\x1B[34m__ZX_OBJECT_HANDLE_CLOSED\x1B[0m\n"
-                              "        }\n"
-                              "      }\n");
+                              "      }\n"
+                              "    }\n");
 
 // zx_object_wait_async tests.
 
@@ -751,14 +751,14 @@ OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_HANDLE_BASIC\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m32\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_handle_basic_t\x1B[0m: {\n"
-    "        koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m4252\x1B[0m\n"
-    "        rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | "
+    "    info:\x1B[32mzx_info_handle_basic_t\x1B[0m: {\n"
+    "      koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m4252\x1B[0m\n"
+    "      rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | "
     "ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT\x1B[0m\n"
-    "        type:\x1B[32mzx_obj_type_t\x1B[0m: \x1B[34mZX_OBJ_TYPE_LOG\x1B[0m\n"
-    "        related_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
-    "        props:\x1B[32mzx_obj_props_t\x1B[0m: \x1B[34mZX_OBJ_PROP_WAITABLE\x1B[0m\n"
-    "      }\n");
+    "      type:\x1B[32mzx_obj_type_t\x1B[0m: \x1B[34mZX_OBJ_TYPE_LOG\x1B[0m\n"
+    "      related_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
+    "      props:\x1B[32mzx_obj_props_t\x1B[0m: \x1B[34mZX_OBJ_PROP_WAITABLE\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST_CONTENT(result, expected)                \
   zx_info_handle_count_t buffer;                                                           \
@@ -784,9 +784,9 @@ OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_HANDLE_COUNT\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m4\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_handle_count_t\x1B[0m: {\n"
-    "        handle_count:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_handle_count_t\x1B[0m: {\n"
+    "      handle_count:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST_CONTENT(result, expected)        \
   zx_info_process_handle_stats_t buffer;                                                   \
@@ -816,8 +816,8 @@ OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_PROCESS_HANDLE_STATS\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m256\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_process_handle_stats_t\x1B[0m: {\n"
-    "        handle_count:\x1B[32muint32[]\x1B[0m: "
+    "    info:\x1B[32mzx_info_process_handle_stats_t\x1B[0m: {\n"
+    "      handle_count:\x1B[32muint32[]\x1B[0m: "
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, "
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, "
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m2\x1B[0m, "
@@ -831,7 +831,7 @@ OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST(
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, "
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, "
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m\n"
-    "      }\n");
+    "    }\n");
 
 #define OBJECT_GET_INFO_JOB_DISPLAY_TEST_CONTENT(result, expected)                             \
   zx_info_job_t buffer;                                                                        \
@@ -861,12 +861,12 @@ OBJECT_GET_INFO_JOB_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_JOB\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m16\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_job_t\x1B[0m: {\n"
-    "        return_code:\x1B[32mint64\x1B[0m: \x1B[34m-1\x1B[0m\n"
-    "        exited:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
-    "        kill_on_oom:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
-    "        debugger_attached:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_job_t\x1B[0m: {\n"
+    "      return_code:\x1B[32mint64\x1B[0m: \x1B[34m-1\x1B[0m\n"
+    "      exited:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
+    "      kill_on_oom:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
+    "      debugger_attached:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_PROCESS_DISPLAY_TEST_CONTENT(result, expected)                             \
   zx_info_process_t buffer;                                                                        \
@@ -896,12 +896,12 @@ OBJECT_GET_INFO_PROCESS_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_PROCESS\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m16\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_process_t\x1B[0m: {\n"
-    "        return_code:\x1B[32mint64\x1B[0m: \x1B[34m-1\x1B[0m\n"
-    "        started:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
-    "        exited:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
-    "        debugger_attached:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_process_t\x1B[0m: {\n"
+    "      return_code:\x1B[32mint64\x1B[0m: \x1B[34m-1\x1B[0m\n"
+    "      started:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
+    "      exited:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
+    "      debugger_attached:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST_CONTENT(result, expected)      \
   constexpr zx_koid_t kThread1 = 1111;                                              \
@@ -932,7 +932,7 @@ OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_PROCESS_THREADS\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m24\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
-    "      info:\x1B[32mzx_koid_t\x1B[0m: "
+    "    info:\x1B[32mzx_koid_t\x1B[0m: "
     "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m\n");
 
 #define OBJECT_GET_INFO_THREAD_DISPLAY_TEST_CONTENT(result, expected)                             \
@@ -963,20 +963,20 @@ OBJECT_GET_INFO_THREAD_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_THREAD\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m72\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_thread_t\x1B[0m: {\n"
-    "        state:\x1B[32mzx_info_thread_t::state\x1B[0m: "
+    "    info:\x1B[32mzx_info_thread_t\x1B[0m: {\n"
+    "      state:\x1B[32mzx_info_thread_t::state\x1B[0m: "
     "\x1B[34mZX_THREAD_STATE_BLOCKED_EXCEPTION\x1B[0m\n"
-    "        "
+    "      "
     "wait_exception_channel_type:\x1B[32mzx_info_thread_t::wait_exception_channel_type\x1B[0m: "
     "\x1B[34mZX_EXCEPTION_CHANNEL_TYPE_THREAD\x1B[0m\n"
-    "        cpu_affinity_mask:\x1B[32mzx_cpu_set_t\x1B[0m: {\n"
-    "          mask:\x1B[32muint64[]\x1B[0m: "
+    "      cpu_affinity_mask:\x1B[32mzx_cpu_set_t\x1B[0m: {\n"
+    "        mask:\x1B[32muint64[]\x1B[0m: "
     "\x1B[34m000000000000000e\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m\n"
-    "        }\n"
-    "      }\n");
+    "      }\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST_CONTENT(result, expected)                \
   zx_info_thread_stats_t buffer;                                                           \
@@ -1004,11 +1004,11 @@ OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_THREAD_STATS\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m16\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_thread_stats_t\x1B[0m: {\n"
-    "        total_runtime:\x1B[32mduration\x1B[0m: "
+    "    info:\x1B[32mzx_info_thread_stats_t\x1B[0m: {\n"
+    "      total_runtime:\x1B[32mduration\x1B[0m: "
     "\x1B[34m1 hours, 1 minutes, 4 seconds and 1234 nano seconds\x1B[0m\n"
-    "        last_scheduled_cpu:\x1B[32muint32\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "      }\n");
+    "      last_scheduled_cpu:\x1B[32muint32\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST_CONTENT(result, expected)                   \
   constexpr zx_duration_t kIdleTime = ZX_SEC(50) + 567;                                    \
@@ -1060,22 +1060,22 @@ OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_CPU_STATS\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m120\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_cpu_stats_t\x1B[0m: {\n"
-    "        cpu_number:\x1B[32muint32\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "        flags:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
-    "        idle_time:\x1B[32mduration\x1B[0m: \x1B[34m50 seconds and 567 nano seconds\x1B[0m\n"
-    "        reschedules:\x1B[32muint64\x1B[0m: \x1B[34m321\x1B[0m\n"
-    "        context_switches:\x1B[32muint64\x1B[0m: \x1B[34m130\x1B[0m\n"
-    "        irq_preempts:\x1B[32muint64\x1B[0m: \x1B[34m10\x1B[0m\n"
-    "        preempts:\x1B[32muint64\x1B[0m: \x1B[34m20\x1B[0m\n"
-    "        yields:\x1B[32muint64\x1B[0m: \x1B[34m5\x1B[0m\n"
-    "        ints:\x1B[32muint64\x1B[0m: \x1B[34m3\x1B[0m\n"
-    "        timer_ints:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "        timers:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "        syscalls:\x1B[32muint64\x1B[0m: \x1B[34m15\x1B[0m\n"
-    "        reschedule_ipis:\x1B[32muint64\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "        generic_ipis:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_cpu_stats_t\x1B[0m: {\n"
+    "      cpu_number:\x1B[32muint32\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "      flags:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "      idle_time:\x1B[32mduration\x1B[0m: \x1B[34m50 seconds and 567 nano seconds\x1B[0m\n"
+    "      reschedules:\x1B[32muint64\x1B[0m: \x1B[34m321\x1B[0m\n"
+    "      context_switches:\x1B[32muint64\x1B[0m: \x1B[34m130\x1B[0m\n"
+    "      irq_preempts:\x1B[32muint64\x1B[0m: \x1B[34m10\x1B[0m\n"
+    "      preempts:\x1B[32muint64\x1B[0m: \x1B[34m20\x1B[0m\n"
+    "      yields:\x1B[32muint64\x1B[0m: \x1B[34m5\x1B[0m\n"
+    "      ints:\x1B[32muint64\x1B[0m: \x1B[34m3\x1B[0m\n"
+    "      timer_ints:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "      timers:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "      syscalls:\x1B[32muint64\x1B[0m: \x1B[34m15\x1B[0m\n"
+    "      reschedule_ipis:\x1B[32muint64\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "      generic_ipis:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_VMAR_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr uintptr_t kBase = 0x124680aceUL;                                                    \
@@ -1105,10 +1105,10 @@ OBJECT_GET_INFO_VMAR_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_VMAR\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m16\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_vmar_t\x1B[0m: {\n"
-    "        base:\x1B[32muintptr_t\x1B[0m: \x1B[34m0000000124680ace\x1B[0m\n"
-    "        len:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_vmar_t\x1B[0m: {\n"
+    "      base:\x1B[32muintptr_t\x1B[0m: \x1B[34m0000000124680ace\x1B[0m\n"
+    "      len:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_VMO_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr size_t kSizeBytes = 4000;                                                          \
@@ -1147,20 +1147,20 @@ OBJECT_GET_INFO_VMO_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_VMO\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m104\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_vmo_t\x1B[0m: {\n"
-    "        koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m4252\x1B[0m\n"
-    "        name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo\"\x1B[0m\n"
-    "        size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4000\x1B[0m\n"
-    "        parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
-    "        num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "        num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "        share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
-    "        flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
+    "    info:\x1B[32mzx_info_vmo_t\x1B[0m: {\n"
+    "      koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m4252\x1B[0m\n"
+    "      name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo\"\x1B[0m\n"
+    "      size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4000\x1B[0m\n"
+    "      parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
+    "      num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "      num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "      share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
+    "      flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
     "\x1B[34mZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE | ZX_INFO_VMO_CONTIGUOUS\x1B[0m\n"
-    "        committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
-    "        handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
-    "        cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
-    "      }\n");
+    "      committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "      handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
+    "      cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_SOCKET_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr size_t kRxBufMax = 8192;                                                              \
@@ -1197,14 +1197,14 @@ OBJECT_GET_INFO_SOCKET_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_SOCKET\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m48\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_socket_t\x1B[0m: {\n"
-    "        options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
-    "        rx_buf_max:\x1B[32msize_t\x1B[0m: \x1B[34m8192\x1B[0m\n"
-    "        rx_buf_size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
-    "        rx_buf_available:\x1B[32msize_t\x1B[0m: \x1B[34m4002\x1B[0m\n"
-    "        tx_buf_max:\x1B[32msize_t\x1B[0m: \x1B[34m8192\x1B[0m\n"
-    "        tx_buf_size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_socket_t\x1B[0m: {\n"
+    "      options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "      rx_buf_max:\x1B[32msize_t\x1B[0m: \x1B[34m8192\x1B[0m\n"
+    "      rx_buf_size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "      rx_buf_available:\x1B[32msize_t\x1B[0m: \x1B[34m4002\x1B[0m\n"
+    "      tx_buf_max:\x1B[32msize_t\x1B[0m: \x1B[34m8192\x1B[0m\n"
+    "      tx_buf_size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_TIMER_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr int kDeadline = 1000;                                                                \
@@ -1235,11 +1235,11 @@ OBJECT_GET_INFO_TIMER_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mtopic=25\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m24\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_timer_t\x1B[0m: {\n"
-    "        options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
-    "        deadline:\x1B[32mzx_time_t\x1B[0m: \x1B[34m16 minutes, 40 seconds\x1B[0m\n"
-    "        slack:\x1B[32mduration\x1B[0m: \x1B[34m100 nano seconds\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_timer_t\x1B[0m: {\n"
+    "      options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "      deadline:\x1B[32mzx_time_t\x1B[0m: \x1B[34m16 minutes, 40 seconds\x1B[0m\n"
+    "      slack:\x1B[32mduration\x1B[0m: \x1B[34m100 nano seconds\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST_CONTENT(result, expected)         \
   constexpr zx_koid_t kThread1 = 1111;                                              \
@@ -1270,7 +1270,7 @@ OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_JOB_CHILDREN\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m24\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
-    "      info:\x1B[32mzx_koid_t\x1B[0m: "
+    "    info:\x1B[32mzx_koid_t\x1B[0m: "
     "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m\n");
 
 #define OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST_CONTENT(result, expected)        \
@@ -1302,7 +1302,7 @@ OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_JOB_PROCESSES\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m24\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
-    "      info:\x1B[32mzx_koid_t\x1B[0m: "
+    "    info:\x1B[32mzx_koid_t\x1B[0m: "
     "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m\n");
 
 #define OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST_CONTENT(result, expected)                  \
@@ -1337,12 +1337,12 @@ OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_TASK_STATS\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m32\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_task_stats_t\x1B[0m: {\n"
-    "        mem_mapped_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m65536\x1B[0m\n"
-    "        mem_private_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m16000\x1B[0m\n"
-    "        mem_shared_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m20000\x1B[0m\n"
-    "        mem_scaled_shared_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m5000\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_task_stats_t\x1B[0m: {\n"
+    "      mem_mapped_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m65536\x1B[0m\n"
+    "      mem_private_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m16000\x1B[0m\n"
+    "      mem_shared_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m20000\x1B[0m\n"
+    "      mem_scaled_shared_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m5000\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST_CONTENT(result, expected)                       \
   std::vector<zx_info_maps_t> buffer(3);                                                          \
@@ -1385,36 +1385,36 @@ OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m288\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m10\x1B[0m)\n"
-    "      info:\x1B[32mzx_info_maps_t\x1B[0m[]:  {\n"
-    "        {\n"
-    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map1\"\x1B[0m\n"
-    "          base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000010000\x1B[0m\n"
-    "          size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
-    "          depth:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "          type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_NONE\x1B[0m\n"
-    "        },\n"
-    "        {\n"
-    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map2\"\x1B[0m\n"
-    "          base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000020000\x1B[0m\n"
-    "          size:\x1B[32msize_t\x1B[0m: \x1B[34m2048\x1B[0m\n"
-    "          depth:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "          type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_MAPPING\x1B[0m\n"
-    "          mapping:\x1B[32mzx_info_maps_mapping_t\x1B[0m: {\n"
-    "            mmu_flags:\x1B[32mzx_vm_option_t\x1B[0m: "
+    "    info:\x1B[32mzx_info_maps_t\x1B[0m[]:  {\n"
+    "      {\n"
+    "        name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map1\"\x1B[0m\n"
+    "        base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000010000\x1B[0m\n"
+    "        size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "        depth:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "        type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_NONE\x1B[0m\n"
+    "      },\n"
+    "      {\n"
+    "        name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map2\"\x1B[0m\n"
+    "        base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000020000\x1B[0m\n"
+    "        size:\x1B[32msize_t\x1B[0m: \x1B[34m2048\x1B[0m\n"
+    "        depth:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "        type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_MAPPING\x1B[0m\n"
+    "        mapping:\x1B[32mzx_info_maps_mapping_t\x1B[0m: {\n"
+    "          mmu_flags:\x1B[32mzx_vm_option_t\x1B[0m: "
     "\x1B[31mZX_VM_ALIGN_2KB | ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE\x1B[0m\n"
-    "            vmo_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m5555\x1B[0m\n"
-    "            vmo_offset:\x1B[32muint64\x1B[0m: \x1B[34m2048\x1B[0m\n"
-    "            committed_pages:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "          }\n"
-    "        },\n"
-    "        {\n"
-    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map3\"\x1B[0m\n"
-    "          base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000040000\x1B[0m\n"
-    "          size:\x1B[32msize_t\x1B[0m: \x1B[34m2048\x1B[0m\n"
-    "          depth:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "          type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_VMAR\x1B[0m\n"
+    "          vmo_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m5555\x1B[0m\n"
+    "          vmo_offset:\x1B[32muint64\x1B[0m: \x1B[34m2048\x1B[0m\n"
+    "          committed_pages:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
     "        }\n"
-    "      }\n");
+    "      },\n"
+    "      {\n"
+    "        name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map3\"\x1B[0m\n"
+    "        base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000040000\x1B[0m\n"
+    "        size:\x1B[32msize_t\x1B[0m: \x1B[34m2048\x1B[0m\n"
+    "        depth:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "        type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_VMAR\x1B[0m\n"
+    "      }\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST_CONTENT(result, expected)                      \
   std::vector<zx_info_vmo_t> buffer(2);                                                          \
@@ -1465,38 +1465,38 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m208\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m/\x1B[34m2\x1B[0m)\n"
-    "      info:\x1B[32mzx_info_vmo_t\x1B[0m[]:  {\n"
-    "        {\n"
-    "          koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m4252\x1B[0m\n"
-    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo1\"\x1B[0m\n"
-    "          size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4000\x1B[0m\n"
-    "          parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
-    "          num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "          num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "          share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
-    "          flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
+    "    info:\x1B[32mzx_info_vmo_t\x1B[0m[]:  {\n"
+    "      {\n"
+    "        koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m4252\x1B[0m\n"
+    "        name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo1\"\x1B[0m\n"
+    "        size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4000\x1B[0m\n"
+    "        parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
+    "        num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "        num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "        share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
+    "        flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
     "\x1B[34mZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE | ZX_INFO_VMO_CONTIGUOUS\x1B[0m\n"
-    "          committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
-    "          handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
-    "          cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
+    "        committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "        handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
+    "        cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
     "\x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
-    "        },\n"
-    "        {\n"
-    "          koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m5242\x1B[0m\n"
-    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo2\"\x1B[0m\n"
-    "          size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m8000\x1B[0m\n"
-    "          parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
-    "          num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "          num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "          share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
-    "          flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
+    "      },\n"
+    "      {\n"
+    "        koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m5242\x1B[0m\n"
+    "        name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo2\"\x1B[0m\n"
+    "        size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m8000\x1B[0m\n"
+    "        parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
+    "        num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "        num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "        share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
+    "        flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
     "\x1B[34mZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE\x1B[0m\n"
-    "          committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
-    "          handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
-    "          cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
+    "        committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "        handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
+    "        cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
     "\x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
-    "        }\n"
-    "      }\n");
+    "      }\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST_CONTENT(result, expected)                  \
   constexpr size_t kTotalBytes = 16384;                                                    \
@@ -1538,16 +1538,16 @@ OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_KMEM_STATS\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m72\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_kmem_stats_t\x1B[0m: {\n"
-    "        total_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m16384\x1B[0m\n"
-    "        free_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m6334\x1B[0m\n"
-    "        wired_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m\n"
-    "        total_heap_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m800\x1B[0m\n"
-    "        free_heap_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m100\x1B[0m\n"
-    "        vmo_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m8000\x1B[0m\n"
-    "        mmu_overhead_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m200\x1B[0m\n"
-    "        other_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m50\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_kmem_stats_t\x1B[0m: {\n"
+    "      total_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m16384\x1B[0m\n"
+    "      free_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m6334\x1B[0m\n"
+    "      wired_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m1000\x1B[0m\n"
+    "      total_heap_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m800\x1B[0m\n"
+    "      free_heap_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m100\x1B[0m\n"
+    "      vmo_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m8000\x1B[0m\n"
+    "      mmu_overhead_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m200\x1B[0m\n"
+    "      other_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m50\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST_CONTENT(result, expected)                       \
   constexpr uint64_t kBase = 1000;                                                            \
@@ -1576,13 +1576,13 @@ OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_RESOURCE\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m56\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_resource_t\x1B[0m: {\n"
-    "        kind:\x1B[32mzx_rsrc_kind_t\x1B[0m: \x1B[34mZX_RSRC_KIND_ROOT\x1B[0m\n"
-    "        flags:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
-    "        base:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m\n"
-    "        size:\x1B[32msize_t\x1B[0m: \x1B[34m100\x1B[0m\n"
-    "        name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_res\"\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_resource_t\x1B[0m: {\n"
+    "      kind:\x1B[32mzx_rsrc_kind_t\x1B[0m: \x1B[34mZX_RSRC_KIND_ROOT\x1B[0m\n"
+    "      flags:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "      base:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m\n"
+    "      size:\x1B[32msize_t\x1B[0m: \x1B[34m100\x1B[0m\n"
+    "      name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_res\"\x1B[0m\n"
+    "    }\n");
 
 #define OBJECT_GET_INFO_BTI_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr uint64_t kMinimumContiguity = 1024 * 1024;                                         \
@@ -1614,12 +1614,12 @@ OBJECT_GET_INFO_BTI_DISPLAY_TEST(
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_BTI\x1B[0m, "
     "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m32\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "      info:\x1B[32mzx_info_bti_t\x1B[0m: {\n"
-    "        minimum_contiguity:\x1B[32muint64\x1B[0m: \x1B[34m1048576\x1B[0m\n"
-    "        aspace_size:\x1B[32muint64\x1B[0m: \x1B[34m536870912\x1B[0m\n"
-    "        pmo_count:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
-    "        quarantine_count:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
-    "      }\n");
+    "    info:\x1B[32mzx_info_bti_t\x1B[0m: {\n"
+    "      minimum_contiguity:\x1B[32muint64\x1B[0m: \x1B[34m1048576\x1B[0m\n"
+    "      aspace_size:\x1B[32muint64\x1B[0m: \x1B[34m536870912\x1B[0m\n"
+    "      pmo_count:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "      quarantine_count:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "    }\n");
 
 // zx_object_get_child tests.
 
