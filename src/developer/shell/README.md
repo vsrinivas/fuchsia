@@ -35,3 +35,21 @@ implementation currently limits users to 64-bit signed two's complement.
 Integer literals can be sequences of numbers (e.g., `12345`), or can be
 separated into groups of 3 by the `_` character (e.g., `1_001` or
 `123_456`).
+
+## Testing
+
+Changes to the shell can be exercised via the following test components:
+
+| Directory   | Test Name               |
+|-------------|-------------------------|
+| parser      | shell-parser-unittests  |
+| console     | shell-console-unittests |
+| josh        | josh-tests              |
+| mirror      | shell-mirror-tests      |
+| interpreter | shell-interpreter-tests |
+
+For example, this will test the parser:
+
+```
+fx test shell-parser-unittests
+```

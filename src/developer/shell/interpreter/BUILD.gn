@@ -118,7 +118,7 @@ executable("shell_server_test_bin") {
   ]
 }
 
-test_package("shell_interpreter_tests") {
+test_package("shell-interpreter-tests") {
   deps = [
     ":shell_interpreter_test_bin",
     ":shell_server_test_bin",
@@ -138,5 +138,5 @@ test_package("shell_interpreter_tests") {
 group("tests") {
   testonly = true
 
-  deps = [ ":shell_interpreter_tests" ]
+  deps = [ ":shell-interpreter-tests" ]
 }

@@ -46,16 +46,13 @@ action("generate_fidl_json") {
   ]
 }
 
-test_package("shell_tests") {
+test_package("josh-tests") {
   deps = [
     ":generate_fidl_json",
-    "//src/developer/shell/console:console_unittests_bin",
     "//src/developer/shell/josh:bin",
     "//src/developer/shell/josh:josh_tests_bin",
     "//src/developer/shell/josh/lib:js_libs",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
-    "//src/developer/shell/mirror:sh_mirror_tests_bin",
-    "//src/developer/shell/parser:parser_tests_bin",
   ]
 
   binaries = [
@@ -69,19 +66,7 @@ test_package("shell_tests") {
 
   tests = [
     {
-      name = "console_unittests_bin"
-      environments = basic_envs
-    },
-    {
-      name = "sh_mirror_tests_bin"
-      environments = basic_envs
-    },
-    {
       name = "josh_tests_bin"
-      environments = basic_envs
-    },
-    {
-      name = "parser_tests_bin"
       environments = basic_envs
     },
   ]
@@ -93,9 +78,12 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":shell_tests",
+    ":josh-tests",
+    "console:shell-console-unittests",
     "interpreter:shell_server",
     "interpreter:tests",
+    "mirror:shell-mirror-tests",
+    "parser:shell-parser-unittests",
   ]
 }
 

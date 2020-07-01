@@ -12,6 +12,7 @@
     "sandbox": {
         "services": [
             "fuchsia.boot.RootJob",
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]
     }

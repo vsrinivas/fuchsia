@@ -8,10 +8,11 @@
         }
     },
     "program": {
-        "binary": "test/sh_mirror_tests_bin"
+        "binary": "bin/shell_mirror_tests_bin"
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider"
         ]

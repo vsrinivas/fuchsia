@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 
 test("josh_tests_bin") {
   deps = [
