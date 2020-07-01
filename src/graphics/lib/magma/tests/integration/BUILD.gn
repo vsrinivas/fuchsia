@@ -45,6 +45,7 @@ executable("virtmagma_abi_conformance_tests") {
   defines = [ "VIRTMAGMA=1" ]
 
   sources = [
+    "main.cc",
     "test_magma_abi.cc",
     "test_magma_abi_c.c",
   ]
@@ -52,6 +53,7 @@ executable("virtmagma_abi_conformance_tests") {
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma_linux",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
   ]
 }
