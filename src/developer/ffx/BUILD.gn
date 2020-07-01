@@ -25,7 +25,7 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/ffx/discovery:ffx_knock",
       "//src/developer/ffx/discovery:ffx_select",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
-      "//src/developer/ffx/plugins/echo:ffx_echo",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite",
       "//src/developer/ffx/plugins/test:ffx_test",
       "//src/developer/ffx/run-component:ffx_run_component",
     ]
@@ -41,6 +41,9 @@ if (host_toolchain == current_toolchain) {
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/hoist",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_args",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_sub_command",
+      "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",

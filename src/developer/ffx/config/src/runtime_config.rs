@@ -36,14 +36,17 @@ impl ReadConfig for Runtime {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_core::args::DaemonCommand;
     use ffx_lib_sub_command::Subcommand;
 
     fn test_cli_params(test: &str) -> Ffx {
         Ffx {
             target: None,
             config: Some(test.to_string()),
-            subcommand: Subcommand::Daemon(DaemonCommand {}),
+            subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
+                subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
+                    ffx_daemon_start_args::StartCommand {},
+                ),
+            }),
         }
     }
 

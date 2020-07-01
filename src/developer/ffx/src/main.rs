@@ -7,7 +7,7 @@ use {
     crate::target_formatter::TargetFormatter,
     anyhow::{anyhow, format_err, Context, Error},
     ffx_core::constants::DAEMON,
-    ffx_daemon::{find_and_connect, is_daemon_running, start as start_daemon},
+    ffx_daemon::{find_and_connect, is_daemon_running},
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
@@ -22,7 +22,7 @@ mod logger;
 mod target_formatter;
 
 async fn spawn_daemon() -> Result<(), Error> {
-    Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
+    Command::new(env::current_exe().unwrap()).arg(DAEMON).arg("start").spawn()?;
     Ok(())
 }
 
@@ -52,12 +52,6 @@ async fn list_targets(
     }
 }
 
-async fn quit(daemon_proxy: DaemonProxy) -> Result<(), Error> {
-    daemon_proxy.quit().await?;
-    println!("Killed daemon.");
-    Ok(())
-}
-
 async fn get_remote_proxy() -> Result<RemoteControlProxy, Error> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
@@ -74,7 +68,10 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy, Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // main
 fn get_log_name(subcommand: &Subcommand) -> &'static str {
-    if let Subcommand::Daemon(_) = subcommand {
+    if let Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
+        subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(_),
+    }) = subcommand
+    {
         "ffx.daemon"
     } else {
         "ffx"
@@ -101,16 +98,6 @@ async fn run() -> Result<(), Error> {
             }
             Ok(())
         }
-        Subcommand::Quit(_) => {
-            match quit(get_daemon_proxy().await?).await {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("ERROR: {:?}", e);
-                }
-            }
-            Ok(())
-        }
-        Subcommand::Daemon(_) => start_daemon().await,
         _ => ffx_lib::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await,
     }
 }

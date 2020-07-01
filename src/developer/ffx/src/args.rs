@@ -23,5 +23,9 @@ pub struct Ffx {
 pub const DEFAULT_FFX: Ffx = Ffx {
     target: None,
     config: None,
-    subcommand: Subcommand::Daemon(ffx_core::args::DaemonCommand {}),
+    subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
+        subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
+            ffx_daemon_start_args::StartCommand {},
+        ),
+    }),
 };

@@ -29,6 +29,13 @@ template("ffx") {
     not_complete = "True"
     forward_variables_from(invoker, "*", [])
     args_deps = [ "core:lib" ]
+
+    # These are needed only for the DEFAULT_FFX
+    extra_deps = [
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_args",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_sub_command",
+      "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
+    ]
   }
 
   rustc_binary(ffx_name + "_bin") {
@@ -50,23 +57,14 @@ template("ffx") {
     configs += [ "//build/config:rust_panic_abort" ]
   }
 
-  tests_deps = []
-  if (defined(invoker.plugin_deps)) {
-    foreach(d, invoker.plugin_deps) {
-      test = get_label_info(d, "dir")
-      test_name = get_label_info(d, "name")
-      tests_deps += [ test + ":" + test_name + "_tests" ]
-    }
-  }
-
   group(ffx_name + "_tests") {
     testonly = true
 
-    deps = tests_deps + [
-             ":" + ffx_name + "_bin_test($host_toolchain)",
-             ":" + suite_name + "_tests($host_toolchain)",
-             "config:tests($host_toolchain)",
-             "core:tests($host_toolchain)",
-           ]
+    deps = [
+      ":" + ffx_name + "_bin_test($host_toolchain)",
+      ":" + suite_name + "_tests($host_toolchain)",
+      "config:tests($host_toolchain)",
+      "core:tests($host_toolchain)",
+    ]
   }
 }

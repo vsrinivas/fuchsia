@@ -6,5 +6,5 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "daemon", description = "run echo test against the daemon")]
-pub struct EchoCommand {}
+#[argh(subcommand, name = "start", description = "run as daemon")]
+pub struct StartCommand {}

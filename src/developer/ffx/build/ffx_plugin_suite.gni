@@ -120,6 +120,7 @@ template("ffx_plugin_suite") {
                                "name",
                                "deps",
                                "args_deps",
+                               "extra_deps",
                                "args_source_root",
                                "not_complete",
                                "source_root",
@@ -132,13 +133,20 @@ template("ffx_plugin_suite") {
       args_source_root = invoker.args_source_root
     }
 
+    extra_deps = []
+    if (defined(invoker.extra_deps)) {
+      foreach(d, invoker.extra_deps) {
+        extra_deps += [ d ]
+      }
+    }
+
     rustc_library(args) {
       source_root = args_source_root
-      deps = [
-        ":" + sub_cmd,
-        "//src/developer/ffx/core:lib",
-        "//third_party/rust_crates:argh",
-      ]
+      deps = extra_deps + [
+               ":" + sub_cmd,
+               "//src/developer/ffx/core:lib",
+               "//third_party/rust_crates:argh",
+             ]
       non_rust_deps = [ "//third_party/boringssl" ]
       forward_variables_from(invoker,
                              "*",
@@ -206,11 +214,20 @@ template("ffx_plugin_suite") {
     }
   }
 
+  tests_deps = []
+  if (defined(invoker.plugin_deps)) {
+    foreach(d, invoker.plugin_deps) {
+      test = get_label_info(d, "dir")
+      test_name = get_label_info(d, "name")
+      tests_deps += [ test + ":" + test_name + "_tests" ]
+    }
+  }
+
   group(output_name + "_tests") {
     testonly = true
-    deps = [
-      ":" + args + "_test($host_toolchain)",
-      ":" + output_name + "_test($host_toolchain)",
-    ]
+    deps = tests_deps + [
+             ":" + args + "_test($host_toolchain)",
+             ":" + output_name + "_test($host_toolchain)",
+           ]
   }
 }

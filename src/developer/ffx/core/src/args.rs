@@ -5,32 +5,15 @@
 use argh::FromArgs;
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "daemon", description = "run as daemon")]
-pub struct DaemonCommand {}
-
-#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "list", description = "list connected devices")]
 pub struct ListCommand {
     #[argh(positional)]
     pub nodename: Option<String>,
 }
 
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "quit", description = "kills a running daemon")]
-pub struct QuitCommand {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_daemon() {
-        fn check(args: &[&str]) {
-            assert_eq!(DaemonCommand::from_args(&["daemon"], args), Ok(DaemonCommand {}))
-        }
-
-        check(&[]);
-    }
 
     #[test]
     fn test_list() {
