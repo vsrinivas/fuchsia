@@ -21,6 +21,7 @@ use {
     setui_client_lib::night_mode,
     setui_client_lib::privacy,
     setui_client_lib::setup,
+    setui_client_lib::system,
     setui_client_lib::{AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions},
     std::sync::Arc,
 };
@@ -37,6 +38,7 @@ enum Services {
     NightMode(NightModeRequestStream),
     Privacy(PrivacyRequestStream),
     Setup(SetupRequestStream),
+    System(SystemRequestStream),
 }
 
 struct ExpectedStreamSettingsStruct {
@@ -216,6 +218,10 @@ async fn main() -> Result<(), Error> {
     validate_privacy_watch_output(Some(true)).await?;
     validate_privacy_watch_output(Some(false)).await?;
 
+    println!("system service tests");
+    println!("  client calls set login mode");
+    validate_system_override().await?;
+
     println!("setup service tests");
     println!(" client calls set config interfaces");
     validate_setup().await?;
@@ -262,6 +268,25 @@ macro_rules! create_service  {
         }));
         env
     }};
+}
+
+async fn validate_system_override() -> Result<(), Error> {
+    let env = create_service!(Services::System,
+        SystemRequest::Set { settings, responder } => {
+            if let Some(login_override) = settings.mode {
+                assert_eq!(login_override, LoginOverride::AuthProvider);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Wrong call to set");
+            }
+    });
+
+    let system_service =
+        env.connect_to_service::<SystemMarker>().context("Failed to connect to intl service")?;
+
+    system::command(system_service, Some("auth".to_string())).await?;
+
+    Ok(())
 }
 
 async fn validate_intl_set() -> Result<(), Error> {
