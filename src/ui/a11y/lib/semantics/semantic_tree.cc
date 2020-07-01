@@ -187,16 +187,20 @@ const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
 
     auto current_node = GetNode(current_node_id);
 
-    if (current_node->has_child_ids()) {
-      for (const auto child_id : current_node->child_ids()) {
-        nodes_to_visit.push(child_id);
-      }
-    } else if (found_node) {
+    if (found_node && NodeIsDescribable(current_node)) {
       return current_node;
     }
 
     if (current_node_id == node_id) {
       found_node = true;
+    }
+
+    if (!current_node->has_child_ids()) {
+      continue;
+    }
+
+    for (const auto child_id : current_node->child_ids()) {
+      nodes_to_visit.push(child_id);
     }
   }
 
@@ -213,14 +217,14 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
   // Start traversal from the root node.
   nodes_to_visit.push(kRootNodeId);
 
-  const Node* previous_leaf_node = nullptr;
+  const Node* previous_describable_node = nullptr;
 
   while (!nodes_to_visit.empty()) {
     auto current_node_id = nodes_to_visit.front();
     nodes_to_visit.pop();
 
     if (current_node_id == node_id) {
-      return previous_leaf_node;
+      return previous_describable_node;
     }
 
     FX_DCHECK(nodes_.find(current_node_id) != nodes_.end())
@@ -228,10 +232,11 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
 
     auto current_node = GetNode(current_node_id);
 
-    // Since we only want to return leaf nodes, only update previous_leaf_node if current_node does
-    // not have any children.
+    if (NodeIsDescribable(current_node)) {
+      previous_describable_node = current_node;
+    }
+
     if (!current_node->has_child_ids()) {
-      previous_leaf_node = current_node;
       continue;
     }
 
@@ -409,6 +414,14 @@ std::string SemanticTree::ToString() const {
   printNode(root, kRootNodeId, &tree_string);
 
   return tree_string;
+}
+
+// TODO(fxb/55220): Refine definition of describability.
+bool SemanticTree::NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) const {
+  return node &&
+         ((node->has_attributes() && node->attributes().has_label() &&
+           !node->attributes().label().empty()) ||
+          (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON));
 }
 
 }  // namespace a11y

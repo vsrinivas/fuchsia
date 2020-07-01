@@ -149,6 +149,10 @@ class SemanticTree {
   // gets deleted, as it is not reachable anymore.
   void ApplyNodeUpdates(const std::unordered_set<uint32_t>& visited_nodes);
 
+  // Returns true if a node has a label OR represents a button.
+  // Returns false otherwise.
+  bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) const;
+
   // Keeps all node updates to this tree which were not applied yet. Nodes are
   // just copied to their final location in the tree once a validation confirms
   // a well-formed tree. This also serves as an optimization to reset a tree

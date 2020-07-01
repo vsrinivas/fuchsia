@@ -336,9 +336,30 @@ TEST_F(SemanticTreeTest, NextNodeExists) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
-  auto next_node = tree_.GetNextNode(1u);
+  auto next_node = tree_.GetNextNode(3u);
   EXPECT_NE(next_node, nullptr);
-  EXPECT_EQ(next_node->node_id(), 3u);
+  EXPECT_EQ(next_node->node_id(), 4u);
+}
+
+TEST_F(SemanticTreeTest, GetNextNodeSkipUndescribableNodes) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  updates.clear();
+  fuchsia::accessibility::semantics::Node undescribable_node;
+  undescribable_node.set_node_id(4u);
+  undescribable_node.set_child_ids({});
+  undescribable_node.set_attributes(fuchsia::accessibility::semantics::Attributes());
+  updates.emplace_back(std::move(undescribable_node));  // Removed label.
+  fuchsia::accessibility::semantics::Node describable_node;
+  describable_node.set_node_id(5u);
+  describable_node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
+  describable_node.set_child_ids({});
+  updates.emplace_back(std::move(describable_node));
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+  auto next_node = tree_.GetNextNode(3u);
+  EXPECT_NE(next_node, nullptr);
+  EXPECT_EQ(next_node->node_id(), 5u);
 }
 
 TEST_F(SemanticTreeTest, NoNextNode) {
@@ -366,19 +387,44 @@ TEST_F(SemanticTreeTest, PreviousNodeExists) {
   EXPECT_EQ(next_node->node_id(), 5u);
 }
 
+TEST_F(SemanticTreeTest, GetPreviousNodeSkipUndescribableNodes) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  updates.clear();
+
+  // Create node with no label.
+  fuchsia::accessibility::semantics::Node node_no_label;
+  node_no_label.set_node_id(4u);
+  node_no_label.set_child_ids({});
+  node_no_label.set_attributes(fuchsia::accessibility::semantics::Attributes());
+  updates.emplace_back(std::move(node_no_label));
+
+  // Create node with empty label.
+  fuchsia::accessibility::semantics::Node node_empty_label;
+  node_empty_label.set_node_id(5u);
+  node_empty_label.set_child_ids({});
+  fuchsia::accessibility::semantics::Attributes attributes_empty_label;
+  attributes_empty_label.set_label("");
+  node_empty_label.set_attributes(std::move(attributes_empty_label));
+  updates.emplace_back(std::move(node_empty_label));
+
+  fuchsia::accessibility::semantics::Node describable_node;
+  describable_node.set_node_id(6u);
+  describable_node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
+  describable_node.set_child_ids({});
+  updates.emplace_back(std::move(describable_node));
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+  auto previous_node = tree_.GetPreviousNode(6u);
+  EXPECT_NE(previous_node, nullptr);
+  EXPECT_EQ(previous_node->node_id(), 3u);
+}
+
 TEST_F(SemanticTreeTest, NoPreviousNode) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
   auto next_node = tree_.GetPreviousNode(0u);
-  EXPECT_EQ(next_node, nullptr);
-}
-
-TEST_F(SemanticTreeTest, NoPreviousLeafNode) {
-  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
-  EXPECT_TRUE(tree_.Update(std::move(updates)));
-
-  auto next_node = tree_.GetPreviousNode(3u);
   EXPECT_EQ(next_node, nullptr);
 }
 
