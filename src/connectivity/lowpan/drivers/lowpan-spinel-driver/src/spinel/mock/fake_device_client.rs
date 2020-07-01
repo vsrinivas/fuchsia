@@ -132,8 +132,26 @@ pub fn new_fake_spinel_pair() -> (
 
         match frame.cmd {
             Cmd::PropValueGet => {
-                let prop = Prop::try_unpack_from_slice(frame.payload).ok()?;
-                handle_get_prop(frame, prop)
+                let mut payload = frame.payload.iter();
+                let prop = Prop::try_unpack(&mut payload);
+                if payload.count() == 0 {
+                    handle_get_prop(frame, prop.ok()?)
+                } else {
+                    // There was data after the property value,
+                    // which isn't allowed on a get, so we
+                    // return an error.
+                    let mut response: Vec<u8> = vec![];
+                    spinel_write!(
+                        &mut response,
+                        "Ciii",
+                        frame.header,
+                        Cmd::PropValueIs,
+                        Prop::LastStatus,
+                        Status::ParseError,
+                    )
+                    .unwrap();
+                    Some(response)
+                }
             }
             _ => {
                 let mut response: Vec<u8> = vec![];

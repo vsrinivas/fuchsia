@@ -145,7 +145,7 @@ impl<V: TryPack + Debug + Send> RequestDesc for CmdPropValueSet<V> {
     type Result = ();
 
     fn write_request(&self, buffer: &mut dyn io::Write) -> io::Result<()> {
-        Cmd::PropValueGet.try_pack(buffer)?;
+        Cmd::PropValueSet.try_pack(buffer)?;
         self.0.try_pack(buffer)?;
         self.1.try_pack(buffer)?;
         Ok(())
