@@ -1,0 +1,64 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.factory.lowpan;
+
+using fuchsia.lowpan.device;
+using InterfaceName = fuchsia.lowpan.device.InterfaceName;
+using ServiceError = fuchsia.lowpan.device.ServiceError;
+
+/// Protocol for sending factory commands to a LoWPAN device.
+///
+/// Not to be confused with `FactoryDriver`.
+///
+/// This protocol is implemented by LoWPAN drivers and used by client tools that need to issue
+/// factory commands. It is obtained from calling `FactoryLookup.Lookup()`.
+protocol FactoryDevice {
+    /// Send a proprietary manufacturing command to the device and return the response.
+    ///
+    /// This method is intended to be used to facilitate device testing on the assembly line and is
+    /// typically only used during device manufacturing.
+    ///
+    /// Commands are given as strings (command + arguments) and the response is also a string. The
+    /// usage and format of the commands is dependent on the firmware on the LoWPAN device.
+    ///
+    /// When finished sending manufacturing commands, call `fuchsia.lowpan.test.DeviceTest.reset()`
+    /// to return the device to normal behavior.
+    SendMfgCommand(string:2000 command) -> (string:2000 response);
+};
+
+/// Protocol for looking up the LoWPAN factory protocol for a LoWPAN interface.
+///
+/// This protocol is implemented by the LoWPAN service and used by client tools that need to issue
+/// factory commands.
+protocol FactoryLookup {
+    /// Connects the the associated `FactoryDevice` API for the given LoWPAN interface name.
+    Lookup(InterfaceName name, request<FactoryDevice> device_factory) -> () error ServiceError;
+};
+
+/// Protocol representing a LoWPAN driver instance that can serve `FactoryDevice` instances.
+///
+/// Not to be confused with `FactoryDevice`.
+///
+/// This protocol is implemented by LoWPAN drivers and used by the LoWPAN service when
+/// handling calls to `FactoryLookup.Lookup()`. It is registered with the service via
+/// a call to `FactoryRegister.Register()`.
+[Discoverable]
+protocol FactoryDriver {
+    /// Used to obtain a `FactoryDevice` protocol instance.
+    GetFactoryDevice(request<FactoryDevice> device_factory);
+};
+
+/// Protocol for registering the factory instance of a LoWPAN driver with the LoWPAN service.
+///
+/// This protocol is implemented by the LoWPAN service and used by LoWPAN drivers.
+[Discoverable]
+protocol FactoryRegister {
+    /// Registers the given LoWPAN device factory API with the LoWPAN Service
+    /// using the given interface name.
+    ///
+    /// The provided `FactoryDriver` will be used to connect requests made via
+    /// `FactoryLookup.Lookup()` for `FactoryDevice`.
+    Register(InterfaceName name, FactoryDriver driver) -> () error ServiceError;
+};
