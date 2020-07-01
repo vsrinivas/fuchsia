@@ -20,7 +20,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.device.manager.Administrator",
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",

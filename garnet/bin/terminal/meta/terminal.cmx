@@ -14,7 +14,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.device.manager.Administrator",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
