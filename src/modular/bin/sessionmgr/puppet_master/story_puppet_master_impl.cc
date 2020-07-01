@@ -123,6 +123,38 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
   std::vector<fuchsia::modular::Annotation> annotations_;
 };
 
+// Responds to a |WatchAnnotations| request with the current annotations, if any.
+class GetAnnotationsOperation
+    : public Operation<fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result> {
+ public:
+  GetAnnotationsOperation(SessionStorage* const session_storage, std::string story_name,
+                          ResultCall done)
+      : Operation("StoryPuppetMasterImpl.GetAnnotationsOperation", std::move(done)),
+        session_storage_(session_storage),
+        story_name_(std::move(story_name)) {}
+
+ private:
+  void Run() override {
+    fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result{};
+
+    auto data = session_storage_->GetStoryData(story_name_);
+    if (data) {
+      fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Response response{};
+      response.annotations = std::move(*data->mutable_story_info()->mutable_annotations());
+      result.set_response(std::move(response));
+    } else {
+      result.set_err(fuchsia::modular::AnnotationError::NOT_FOUND);
+    }
+
+    Done(std::move(result));
+  }
+
+  // Not owned.
+  SessionStorage* const session_storage_;
+
+  std::string story_name_;
+};
+
 }  // namespace
 
 StoryPuppetMasterImpl::StoryPuppetMasterImpl(std::string story_name,
@@ -163,6 +195,26 @@ void StoryPuppetMasterImpl::Annotate(std::vector<fuchsia::modular::Annotation> a
                                      AnnotateCallback callback) {
   operations_->Add(std::make_unique<AnnotateOperation>(
       session_storage_, story_name_, std::move(annotations), std::move(callback)));
+}
+
+void StoryPuppetMasterImpl::WatchAnnotations(WatchAnnotationsCallback callback) {
+  if (!watch_annotations_called_) {
+    watch_annotations_called_ = true;
+    operations_->Add(std::make_unique<GetAnnotationsOperation>(session_storage_, story_name_,
+                                                               std::move(callback)));
+    return;
+  }
+
+  session_storage_->add_on_annotations_updated_once(
+      story_name_,
+      [callback = std::move(callback)](std::string story_id,
+                                       std::vector<fuchsia::modular::Annotation> annotations) {
+        fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Response response{};
+        response.annotations = std::move(annotations);
+        fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result{};
+        result.set_response(std::move(response));
+        callback(std::move(result));
+      });
 }
 
 }  // namespace modular

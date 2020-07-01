@@ -65,7 +65,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   EXPECT_TRUE(fidl::Equals(*cached_data, all_data.at(0)));
 }
 
-TEST_F(SessionStorageTest, Create_VerifyData_NoAnntations) {
+TEST_F(SessionStorageTest, Create_VerifyData_NoAnnotations) {
   // Create a single story with no annotations, and verify that the data we have stored about it is
   // correct.
   auto storage = CreateStorage();
@@ -230,6 +230,246 @@ TEST_F(SessionStorageTest, GetStoryStorageNoStory) {
   auto storage = CreateStorage();
   storage->CreateStory("story", {});
   EXPECT_EQ(nullptr, storage->GetStoryStorage("fake"));
+}
+
+// Verifies that an on_annotations_updated callback is invoked when annotations are added/merged,
+// with the correct story_name and updated annotations.
+TEST_F(SessionStorageTest, OnAnnotationsUpdatedCallback) {
+  static constexpr auto story_name = "story";
+
+  auto storage = CreateStorage();
+
+  // Create a story with no annotations.
+  storage->CreateStory(story_name, /*annotations=*/{});
+
+  bool updated{};
+  std::string updated_story_id;
+  std::vector<fuchsia::modular::Annotation> updated_annotations;
+  storage->add_on_annotations_updated_once(
+      story_name, [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+        updated_story_id = story_id;
+        updated_annotations = std::move(annotations);
+        updated = true;
+      });
+
+  // Annotate the story.
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text("test_annotation_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  storage->MergeStoryAnnotations(story_name, std::move(annotations));
+
+  EXPECT_TRUE(updated);
+  EXPECT_EQ(story_name, updated_story_id);
+  ASSERT_EQ(1u, updated_annotations.size());
+  EXPECT_THAT(updated_annotations.at(0), annotations::AnnotationEq(ByRef(annotation)));
+}
+
+// Verifies that multiple on_annotations_updated for a single story callbacks are called
+// when annotations are added/merged.
+TEST_F(SessionStorageTest, OnAnnotationsUpdatedMultipleCallbacks) {
+  static constexpr auto story_name = "story";
+  static constexpr auto num_callbacks = 5;
+
+  auto storage = CreateStorage();
+
+  // Create a story with no annotations.
+  storage->CreateStory(story_name, /*annotations=*/{});
+
+  auto updated_count = 0;
+  auto callback = [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+    updated_count++;
+  };
+
+  for (int i = 0; i < num_callbacks; i++) {
+    storage->add_on_annotations_updated_once(story_name, callback);
+  }
+
+  // Annotate the story.
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text("test_annotation_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  storage->MergeStoryAnnotations(story_name, std::move(annotations));
+
+  EXPECT_EQ(num_callbacks, updated_count);
+}
+
+// Verifies that an on_annotations_updated callback registered with a particular story_id
+// is invoked when only that story's annotations are updated.
+TEST_F(SessionStorageTest, OnAnnotationsUpdatedMultipleStories) {
+  static constexpr auto story_name = "story-updated";
+  static constexpr auto story_name_no_update = "story-not-updated";
+
+  auto storage = CreateStorage();
+
+  // Create a story with no annotations.
+  storage->CreateStory(story_name, /*annotations=*/{});
+
+  storage->add_on_annotations_updated_once(
+      story_name_no_update,
+      [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+        FX_NOTREACHED() << "Callback called for story " << story_id << " but was registered for "
+                        << story_name_no_update;
+      });
+
+  bool updated{};
+  storage->add_on_annotations_updated_once(
+      story_name, [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+        updated = true;
+      });
+
+  // Annotate the story.
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text("test_annotation_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  storage->MergeStoryAnnotations(story_name, std::move(annotations));
+
+  // Only the callback for |story_name| should have been called.
+  EXPECT_TRUE(updated);
+}
+
+// Verifies that an on_annotations_updated callback is removed when the story is deleted.
+TEST_F(SessionStorageTest, OnAnnotationsUpdatedCallbackRemoveOnDelete) {
+  static constexpr auto story_name = "story";
+
+  auto storage = CreateStorage();
+
+  // Create a story with no annotations.
+  storage->CreateStory(story_name, /*annotations=*/{});
+
+  storage->add_on_annotations_updated_once(
+      story_name, [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+        FX_NOTREACHED() << "Callback should have been removed on story delete";
+      });
+
+  // Delete the story and create one with the same name.
+  // The new story should not have any previous callbacks.
+  storage->DeleteStory(story_name);
+  storage->CreateStory(story_name, /*annotations=*/{});
+
+  // Add a different callback.
+  bool updated{};
+  storage->add_on_annotations_updated_once(
+      story_name, [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+        updated = true;
+      });
+
+  // Annotate the story.
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text("test_annotation_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  storage->MergeStoryAnnotations(story_name, std::move(annotations));
+
+  // The second callback should have been called.
+  EXPECT_TRUE(updated);
+}
+
+// Verifies that an on_annotations_updated callback is called only once when annotations are
+// updated multiple times.
+TEST_F(SessionStorageTest, OnAnnotationsUpdatedCallbackCalledOnce) {
+  static constexpr auto story_name = "story";
+
+  auto storage = CreateStorage();
+
+  // Create a story with no annotations.
+  storage->CreateStory(story_name, /*annotations=*/{});
+
+  // Add a callback.
+  int updated_count = 0;
+  storage->add_on_annotations_updated_once(
+      story_name, [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+        updated_count++;
+      });
+
+  // Annotate the story.
+  std::vector<fuchsia::modular::Annotation> first_annotations{};
+  fuchsia::modular::AnnotationValue first_annotation_value;
+  first_annotation_value.set_text("first_test_annotation_value");
+  auto first_annotation =
+      fuchsia::modular::Annotation{.key = "first_test_annotation_key",
+                                   .value = fidl::MakeOptional(std::move(first_annotation_value))};
+  first_annotations.push_back(fidl::Clone(first_annotation));
+
+  storage->MergeStoryAnnotations(story_name, std::move(first_annotations));
+
+  // The callback should have been called.
+  EXPECT_EQ(1, updated_count);
+
+  // Annotate the story again.
+  std::vector<fuchsia::modular::Annotation> second_annotations{};
+  fuchsia::modular::AnnotationValue second_annotation_value;
+  second_annotation_value.set_text("second_test_annotation_value");
+  auto second_annotation =
+      fuchsia::modular::Annotation{.key = "second_test_annotation_key",
+                                   .value = fidl::MakeOptional(std::move(second_annotation_value))};
+  second_annotations.push_back(fidl::Clone(second_annotation));
+
+  storage->MergeStoryAnnotations(story_name, std::move(second_annotations));
+
+  // The callback should not have been called again.
+  EXPECT_EQ(1, updated_count);
+}
+
+// Verifies that an on_annotations_updated callback for a story that does not yet exist is
+// only called when the annotations are updated.
+TEST_F(SessionStorageTest, OnAnnotationsUpdatedCallbackBeforeCreate) {
+  static constexpr auto story_name = "story";
+
+  auto storage = CreateStorage();
+
+  // Add a callback.
+  bool updated{};
+  int annotations_count = 0;
+  storage->add_on_annotations_updated_once(
+      story_name, [&](std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
+        updated = true;
+        annotations_count = annotations.size();
+      });
+
+  // Create a story with some annotations.
+  std::vector<fuchsia::modular::Annotation> first_annotations{};
+  fuchsia::modular::AnnotationValue first_annotation_value;
+  first_annotation_value.set_text("first_test_annotation_value");
+  auto first_annotation =
+      fuchsia::modular::Annotation{.key = "first_test_annotation_key",
+                                   .value = fidl::MakeOptional(std::move(first_annotation_value))};
+  first_annotations.push_back(fidl::Clone(first_annotation));
+
+  storage->CreateStory(story_name, std::move(first_annotations));
+
+  // The callback should not have been invoked.
+  EXPECT_FALSE(updated);
+  EXPECT_EQ(0, annotations_count);
+
+  // Annotate the story.
+  std::vector<fuchsia::modular::Annotation> second_annotations{};
+  fuchsia::modular::AnnotationValue second_annotation_value;
+  second_annotation_value.set_text("second_test_annotation_value");
+  auto second_annotation =
+      fuchsia::modular::Annotation{.key = "second_test_annotation_key",
+                                   .value = fidl::MakeOptional(std::move(second_annotation_value))};
+  second_annotations.push_back(fidl::Clone(second_annotation));
+
+  storage->MergeStoryAnnotations(story_name, std::move(second_annotations));
+
+  // The callback should have been invoked.
+  EXPECT_TRUE(updated);
+  EXPECT_EQ(2, annotations_count);
 }
 
 }  // namespace

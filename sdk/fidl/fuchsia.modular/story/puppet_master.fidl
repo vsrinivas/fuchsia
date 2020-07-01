@@ -105,4 +105,13 @@ protocol StoryPuppetMaster {
     /// deleted if new value is null.
     Annotate(vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE annotations)
         -> () error AnnotationError;
+
+    /// Returns the annotations attached to this story.
+    ///
+    /// This is a "hanging get" that returns the current annotations on
+    /// first call, and on subsequent calls returns the full set of
+    /// annotations once they are updated.
+    ///
+    /// Returns AnnotationError.NOT_FOUND if the story does not exist.
+    WatchAnnotations() -> (vector<Annotation>:MAX_ANNOTATIONS_PER_STORY annotations) error AnnotationError;
 };

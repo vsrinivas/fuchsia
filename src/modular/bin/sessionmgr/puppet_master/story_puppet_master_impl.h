@@ -44,6 +44,9 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   void Annotate(std::vector<fuchsia::modular::Annotation> annotations,
                 AnnotateCallback callback) override;
 
+  // |StoryPuppetMaster|
+  void WatchAnnotations(WatchAnnotationsCallback callback) override;
+
   const std::string story_name_;
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
@@ -53,6 +56,11 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   OperationContainer* const operations_;  // Not owned.
 
   fxl::WeakPtrFactory<StoryPuppetMasterImpl> weak_ptr_factory_;
+
+  // When false, |WatchAnnotations| returns immediately with the current annotations.
+  // Set to true after the initial call to |WatchAnnotations|, indicating that subsequent
+  // calls will return only when the annotations are updated.
+  bool watch_annotations_called_{false};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryPuppetMasterImpl);
 };

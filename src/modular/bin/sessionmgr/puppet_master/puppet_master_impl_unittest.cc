@@ -23,6 +23,7 @@ namespace modular {
 namespace {
 
 using ::testing::ByRef;
+using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
 
 fuchsia::modular::Intent CreateEmptyIntent(const std::string& action,
@@ -63,17 +64,17 @@ class PuppetMasterTest : public modular_testing::TestWithSessionStorage {
     impl_->Connect(ptr_.NewRequest());
   }
 
-  fuchsia::modular::StoryPuppetMasterPtr ControlStory(fidl::StringPtr story_name) {
-    story_name_ = std::move(story_name);
+  fuchsia::modular::StoryPuppetMasterPtr ControlStory(std::string story_name) {
+    story_name_ = story_name;
     fuchsia::modular::StoryPuppetMasterPtr ptr;
-    ptr_->ControlStory(story_name_.value_or(""), ptr.NewRequest());
+    ptr_->ControlStory(story_name, ptr.NewRequest());
     return ptr;
   }
 
   void EnqueueAddModCommand(const fuchsia::modular::StoryPuppetMasterPtr& story,
                             const std::string& module_name) {
-    auto story_name = story_name_.value_or("");
-    FX_CHECK(story_name.size() > 0);
+    FX_CHECK(story_name_.has_value());
+
     // Add the module.
     std::vector<fuchsia::modular::StoryCommand> commands;
     commands.push_back(MakeAddModCommand(module_name));
@@ -82,11 +83,11 @@ class PuppetMasterTest : public modular_testing::TestWithSessionStorage {
     // Instruct our test executor to return an OK status, and since we're going to
     // AddMod, give the executor a StoryStorage.
     executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, std::nullopt);
-    executor_.SetStoryStorage(GetStoryStorage(session_storage_.get(), story_name));
+    executor_.SetStoryStorage(GetStoryStorage(session_storage_.get(), story_name_.value()));
   }
 
  protected:
-  fidl::StringPtr story_name_;
+  std::optional<std::string> story_name_;
   modular_testing::TestStoryCommandExecutor executor_;
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<PuppetMasterImpl> impl_;
@@ -405,8 +406,8 @@ TEST_F(PuppetMasterTest, GetStories) {
   RunLoopUntil([&] { return done; });
 
   // Create a story.
-
   session_storage_->CreateStory("foo", /*annotations=*/{});
+
   // "foo" should be listed.
   done = false;
   ptr_->GetStories([&](std::vector<std::string> story_names) {
@@ -672,6 +673,166 @@ TEST_F(PuppetMasterTest, AnnotateTooMany) {
         done = true;
       });
   RunLoopUntil([&] { return done; });
+}
+
+// Verifies that WatchAnnotations returns a NOT_FOUND error if the story does not exist.
+TEST_F(PuppetMasterTest, WatchAnnotationsNotFound) {
+  constexpr auto story_name = "story_watch_annotations_not_found";
+
+  auto story = ControlStory(story_name);
+
+  bool done{false};
+  story->WatchAnnotations([&](fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result) {
+    EXPECT_TRUE(result.is_err());
+    EXPECT_EQ(fuchsia::modular::AnnotationError::NOT_FOUND, result.err());
+    done = true;
+  });
+
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that WatchAnnotations returns existing annotations on first call.
+TEST_F(PuppetMasterTest, WatchAnnotationsExisting) {
+  constexpr auto story_name = "story_watch_annotations_existing";
+
+  auto story = ControlStory(story_name);
+
+  // Create a story with some annotations.
+  auto annotation_value = fuchsia::modular::AnnotationValue{};
+  annotation_value.set_text("test_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(std::move(annotation));
+
+  session_storage_->CreateStory(story_name, std::move(annotations));
+
+  // Get the annotations.
+  bool done{false};
+  int annotations_count = 0;
+  story->WatchAnnotations([&](fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result) {
+    ASSERT_TRUE(result.is_response());
+    annotations_count = result.response().annotations.size();
+    done = true;
+  });
+
+  RunLoopUntil([&] { return done; });
+  EXPECT_EQ(1, annotations_count);
+}
+
+// Verifies that WatchAnnotations on two different StoryPuppetMasters both return existing
+// annotations on first call.
+TEST_F(PuppetMasterTest, WatchAnnotationsExistingMultipleClients) {
+  constexpr auto story_name = "story_watch_annotations_existing_multiple_clients";
+
+  auto story = ControlStory(story_name);
+
+  // Create a story with some annotations.
+  auto annotation_value = fuchsia::modular::AnnotationValue{};
+  annotation_value.set_text("test_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(std::move(annotation));
+
+  session_storage_->CreateStory(story_name, std::move(annotations));
+
+  // Get the annotations.
+  bool done{false};
+  int annotations_count = 0;
+  story->WatchAnnotations([&](fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result) {
+    ASSERT_TRUE(result.is_response());
+    annotations_count = result.response().annotations.size();
+    done = true;
+  });
+
+  RunLoopUntil([&] { return done; });
+  EXPECT_EQ(1, annotations_count);
+
+  // Get a new StoryPuppetMaster for the same story.
+  auto story_2 = ControlStory(story_name);
+
+  // Get the annotations from the second StoryPuppetMaster.
+  done = false;
+  annotations_count = 0;
+  story_2->WatchAnnotations(
+      [&](fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result) {
+        ASSERT_TRUE(result.is_response());
+        annotations_count = result.response().annotations.size();
+        done = true;
+      });
+
+  // This should also return the current set of annotations, and not hang for updates.
+  RunLoopUntil([&] { return done; });
+  EXPECT_EQ(1, annotations_count);
+}
+
+// Verifies that WatchAnnotations returns updated annotations on subsequent calls.
+TEST_F(PuppetMasterTest, WatchAnnotationsUpdates) {
+  constexpr auto story_name = "story_watch_annotations_updates";
+
+  auto story = ControlStory(story_name);
+
+  // Create a story with one annotation.
+  auto first_annotation_value = fuchsia::modular::AnnotationValue{};
+  first_annotation_value.set_text("first_test_value");
+  auto first_annotation = fuchsia::modular::Annotation{
+      .key = "first_test_key", .value = fidl::MakeOptional(std::move(first_annotation_value))};
+  std::vector<fuchsia::modular::Annotation> first_annotations;
+  first_annotations.push_back(fidl::Clone(first_annotation));
+
+  session_storage_->CreateStory(story_name, std::move(first_annotations));
+
+  // Get the annotations.
+  bool first_watch_called{false};
+  std::vector<fuchsia::modular::Annotation> first_watch_annotations;
+  story->WatchAnnotations([&](fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result) {
+    // Ensure this callback is only called once.
+    ASSERT_FALSE(first_watch_called);
+    first_watch_called = true;
+
+    ASSERT_TRUE(result.is_response());
+    first_watch_annotations = std::move(result.response().annotations);
+  });
+
+  RunLoopUntil([&] { return first_watch_called; });
+  EXPECT_THAT(first_watch_annotations,
+              ElementsAre(annotations::AnnotationEq(ByRef(first_annotation))));
+
+  // Start watching for annotations.
+  bool second_watch_called{false};
+  std::vector<fuchsia::modular::Annotation> second_watch_annotations;
+  story->WatchAnnotations([&](fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result) {
+    // Ensure this callback is only called once.
+    ASSERT_FALSE(second_watch_called);
+    second_watch_called = true;
+
+    ASSERT_TRUE(result.is_response());
+    second_watch_annotations = std::move(result.response().annotations);
+  });
+
+  // Add another annotation.
+  auto second_annotation_value = fuchsia::modular::AnnotationValue{};
+  second_annotation_value.set_text("second_test_value");
+  auto second_annotation = fuchsia::modular::Annotation{
+      .key = "second_test_key", .value = fidl::MakeOptional(std::move(second_annotation_value))};
+  std::vector<fuchsia::modular::Annotation> second_annotations;
+  second_annotations.push_back(fidl::Clone(second_annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story->Annotate(std::move(second_annotations),
+                  [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                    EXPECT_FALSE(result.is_err());
+                    done = true;
+                  });
+  RunLoopUntil([&] { return done; });
+
+  // WatchAnnotations should have received the fnew annotations.
+  RunLoopUntil([&] { return second_watch_called; });
+  EXPECT_THAT(second_watch_annotations,
+              UnorderedElementsAre(annotations::AnnotationEq(ByRef(first_annotation)),
+                                   annotations::AnnotationEq(ByRef(second_annotation))));
 }
 
 }  // namespace

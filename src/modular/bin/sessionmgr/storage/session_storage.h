@@ -14,6 +14,12 @@
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/lib/async/cpp/future.h"
 
+using OnStoryDeletedCallback = fit::function<void(std::string story_id)>;
+using OnStoryUpdatedCallback =
+    fit::function<void(std::string story_id, fuchsia::modular::internal::StoryData story_data)>;
+using OnAnnotationsUpdatedCallback = fit::function<void(
+    std::string story_id, std::vector<fuchsia::modular::Annotation> annotations)>;
+
 namespace modular {
 
 // This class has the following responsibilities:
@@ -29,7 +35,7 @@ class SessionStorage {
   //
   // a) The story being deleted on another device.
   // b) The story having been deleted locally with DeleteStory().
-  void set_on_story_deleted(fit::function<void(std::string story_id)> callback) {
+  void set_on_story_deleted(OnStoryDeletedCallback callback) {
     on_story_deleted_ = std::move(callback);
   }
 
@@ -39,10 +45,20 @@ class SessionStorage {
   //
   // The update could be the result of a local modification (ie, through
   // Update*()) or a modification on another device.
-  void set_on_story_updated(
-      fit::function<void(std::string story_id, fuchsia::modular::internal::StoryData story_data)>
-          callback) {
+  void set_on_story_updated(OnStoryUpdatedCallback callback) {
     on_story_updated_ = std::move(callback);
+  }
+
+  // |callback| is notified once |story_id|'s annotations are updated, then the callback is removed.
+  // If the story does not exist, the callback will be invoked after the story is created and its
+  // annotations are updated, but not for the initial set of annotations.
+  //
+  // The callback will also be removed when the story is deleted.
+  void add_on_annotations_updated_once(std::string story_id,
+                                       OnAnnotationsUpdatedCallback callback) {
+    auto [it, inserted] = on_annotations_updated_callbacks_.try_emplace(
+        story_id, std::vector<OnAnnotationsUpdatedCallback>{});
+    it->second.push_back(std::move(callback));
   }
 
   // Creates a new story with the given name and returns |story_name|.
@@ -82,9 +98,20 @@ class SessionStorage {
   std::shared_ptr<StoryStorage> GetStoryStorage(std::string story_id);
 
  private:
-  fit::function<void(std::string story_id)> on_story_deleted_;
-  fit::function<void(std::string story_id, fuchsia::modular::internal::StoryData story_data)>
-      on_story_updated_;
+  // Invokes callbacks in |on_annotations_updated_callbacks_| for |story_id| to notify
+  // listeners that annotations for the story have the new value |annotations|,
+  // then removes all callbacks for the story.
+  //
+  // Does nothing if there are no callbacks registered for |story_id|.
+  void NotifyAndRemoveOnAnnotationsUpdated(
+      std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations);
+
+  OnStoryDeletedCallback on_story_deleted_;
+  OnStoryUpdatedCallback on_story_updated_;
+
+  // Map of story_id to a callback invoked when that story's annotations are updated.
+  std::map<std::string, std::vector<OnAnnotationsUpdatedCallback>>
+      on_annotations_updated_callbacks_;
 
   // In-memory map from story_id to the corresponding StoryData.  This was
   // previously stored in the ledger.

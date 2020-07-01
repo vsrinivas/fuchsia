@@ -49,6 +49,8 @@ void SessionStorage::DeleteStory(std::string story_name) {
 
   story_data_backing_store_.erase(it);
   story_storage_backing_store_.erase(story_name);
+  on_annotations_updated_callbacks_.erase(story_name);
+
   if (on_story_deleted_) {
     on_story_deleted_(story_name);
   }
@@ -121,6 +123,8 @@ std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnot
     return fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS;
   }
 
+  NotifyAndRemoveOnAnnotationsUpdated(story_name, new_annotations);
+
   // Mutate story in-place.
   // No need to write story data back to map because we modify it in place.
   story_data.mutable_story_info()->set_annotations(std::move(new_annotations));
@@ -148,6 +152,20 @@ std::shared_ptr<StoryStorage> SessionStorage::GetStoryStorage(std::string story_
     value = story_storage_backing_store_[story_name];
   }
   return value;
+}
+
+void SessionStorage::NotifyAndRemoveOnAnnotationsUpdated(
+    std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations) {
+  auto it = on_annotations_updated_callbacks_.find(story_id);
+  if (it == on_annotations_updated_callbacks_.end()) {
+    return;
+  }
+
+  for (const auto& callback : it->second) {
+    callback(story_id, fidl::Clone(annotations));
+  }
+
+  on_annotations_updated_callbacks_.erase(it);
 }
 
 }  // namespace modular
