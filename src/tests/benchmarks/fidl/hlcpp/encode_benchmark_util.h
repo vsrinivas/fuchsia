@@ -17,18 +17,17 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   state->DeclareStep("Encode/WallTime");
   state->DeclareStep("Teardown/WallTime");
 
-  constexpr uint32_t ordinal = 0xfefefefe;
   while (state->KeepRunning()) {
     FidlType obj = builder();
 
     state->NextStep();  // End: Setup. Begin: Encode.
 
     {
-      fidl::Encoder enc(ordinal);
+      fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
       auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::Encoder>(&enc));
       obj.Encode(&enc, offset);
       fidl::Message msg = enc.GetMessage();
-      ZX_ASSERT(ZX_OK == msg.Validate(&FidlTypeWithHeader<FidlType>, nullptr));
+      ZX_ASSERT(ZX_OK == msg.Validate(FidlType::FidlType, nullptr));
     }
 
     state->NextStep();  // End: Encode. Begin: Teardown.

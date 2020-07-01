@@ -14,12 +14,10 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   using FidlType = std::invoke_result_t<BuilderFunc>;
   FidlType obj = builder();
 
-  constexpr uint32_t ordinal = 0xfefefefe;
-  fidl::Encoder enc(ordinal);
+  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
   auto offset = enc.Alloc(EncodedSize<FidlType>);
   obj.Encode(&enc, offset);
   fidl::Message encode_msg = enc.GetMessage();
-  ZX_ASSERT(ZX_OK == encode_msg.Validate(&FidlTypeWithHeader<FidlType>, nullptr));
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
@@ -34,13 +32,13 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     {
       fidl::Message decode_msg(fidl::BytePart(buffer.data(), buffer.size(), buffer.size()),
                                fidl::HandlePart());
-      ZX_ASSERT(ZX_OK == decode_msg.Decode(&FidlTypeWithHeader<FidlType>, nullptr));
+      ZX_ASSERT(ZX_OK == decode_msg.Decode(FidlType::FidlType, nullptr));
       fidl::Decoder decoder(std::move(decode_msg));
       FidlType output;
-      FidlType::Decode(&decoder, &output, sizeof(fidl_message_header_t));
+      FidlType::Decode(&decoder, &output, 0);
     }
 
-    state->NextStep(); // End: Decode. Begin: Teardown.
+    state->NextStep();  // End: Decode. Begin: Teardown.
   }
 
   return true;
