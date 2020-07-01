@@ -83,30 +83,36 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   bool got_output_data = false;
   // default 2
   const uint64_t keep_stream_modulo = test_params->keep_stream_modulo;
-  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, &got_output_data,
-                          keep_stream_modulo](uint64_t stream_lifetime_ordinal, uint8_t* i420_data,
-                                              uint32_t width, uint32_t height, uint32_t stride,
-                                              bool has_timestamp_ish, uint64_t timestamp_ish) {
-    VLOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
-          " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
-          stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
-    ZX_DEBUG_ASSERT(stream_lifetime_ordinal % 2 == 1);
-    ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
-    ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
-    auto increment_frame_index = fit::defer([&frame_index] { frame_index++; });
-    // For streams where this isn't true, we don't flush the input EOS, so there's no guarantee
-    // how many output frames we'll get.
-    if (stream_lifetime_ordinal % keep_stream_modulo != 1) {
-      // ~increment_frame_index
-      return;
-    }
-    timestamps.push_back({has_timestamp_ish, timestamp_ish});
-    if (i420_data) {
-      got_output_data = true;
-      SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
-    }
-    // ~increment_frame_index
-  };
+  EmitFrame emit_frame =
+      [&sha256_ctx, &timestamps, &frame_index, &got_output_data, keep_stream_modulo, test_params](
+          uint64_t stream_lifetime_ordinal, uint8_t* i420_data, uint32_t width, uint32_t height,
+          uint32_t stride, bool has_timestamp_ish, uint64_t timestamp_ish) {
+        VLOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
+              " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
+              stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
+        // For debugging a flake:
+        if (test_params->loop_stream_count > 1) {
+          LOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
+               " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
+               stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
+        }
+        ZX_DEBUG_ASSERT(stream_lifetime_ordinal % 2 == 1);
+        ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
+        ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
+        auto increment_frame_index = fit::defer([&frame_index] { frame_index++; });
+        // For streams where this isn't true, we don't flush the input EOS, so there's no guarantee
+        // how many output frames we'll get.
+        if (stream_lifetime_ordinal % keep_stream_modulo != 1) {
+          // ~increment_frame_index
+          return;
+        }
+        timestamps.push_back({has_timestamp_ish, timestamp_ish});
+        if (i420_data) {
+          got_output_data = true;
+          SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
+        }
+        // ~increment_frame_index
+      };
 
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
                                 in_stream_peeker.get(), use_video_decoder, 0,

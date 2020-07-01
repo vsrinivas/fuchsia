@@ -721,12 +721,11 @@ void Vp9Decoder::HandleInterrupt() {
 
   HevcAssistMbox0ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
 
-  if (state_ == DecoderState::kFailed) {
-    // An interrupt can (finally) arrive (after all) immediately after watchdog triggers.
-    LOG(WARNING, "state_ == DecoderState::kFailed - ignoring interrupt");
+  if (state_ != DecoderState::kRunning) {
+    LOG(WARNING, "spurious interrupt??? - dec_status: %x adapt_prob_status: %x state_: %u",
+        dec_status, adapt_prob_status, state_);
     return;
   }
-  ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
 
   owner_->watchdog()->Cancel();
 

@@ -406,9 +406,9 @@ uint64_t QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
       Exit("Frame header truncated.");
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == sizeof(frame_header));
-    LOGF("input stream_frame_ordinal: %" PRId64 " input_pts_counter: %" PRIu64
+    LOGF("input stream: %" PRIu64 " stream_frame_ordinal: %" PRId64 " input_pts_counter: %" PRIu64
          " frame_header.size_bytes: %u",
-         stream_frame_ordinal, input_pts_counter, frame_header.size_bytes);
+         stream_lifetime_ordinal, stream_frame_ordinal, input_pts_counter, frame_header.size_bytes);
     if (!queue_access_unit(frame_header.size_bytes)) {
       // can be fine in case of vp9 input fuzzing test
       break;
@@ -529,13 +529,25 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
           }
 
           // Send through QueueInputEndOfStream().
-          VLOGF("QueueInputEndOfStream()");
+          VLOGF("QueueInputEndOfStream() - stream_lifetime_ordinal: %" PRIu64,
+                stream_lifetime_ordinal);
+          // For debugging a flake:
+          if (test_params->loop_stream_count > 1) {
+            LOGF("QueueInputEndOfStream() - stream_lifetime_ordinal: %" PRIu64,
+                 stream_lifetime_ordinal);
+          }
           codec_client.QueueInputEndOfStream(stream_lifetime_ordinal);
 
           if (stream_lifetime_ordinal % keep_stream_modulo == 1) {
             // We flush and close to run the handling code server-side.  However, we don't
             // yet verify that this successfully achieves what it says.
-            VLOGF("FlushEndOfStreamAndCloseStream()");
+            VLOGF("FlushEndOfStreamAndCloseStream() - stream_lifetime_ordinal: %" PRIu64,
+                  stream_lifetime_ordinal);
+            // For debugging a flake:
+            if (test_params->loop_stream_count > 1) {
+              LOGF("FlushEndOfStreamAndCloseStream() - stream_lifetime_ordinal: %" PRIu64,
+                   stream_lifetime_ordinal);
+            }
             codec_client.FlushEndOfStreamAndCloseStream(stream_lifetime_ordinal);
 
             // Stitch together the PTS values of the streams which we're keeping.
@@ -580,14 +592,26 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
             "on any input");
       }
       if (output->end_of_stream()) {
-        VLOGF("output end_of_stream()");
+        VLOGF("output end_of_stream() - stream_lifetime_ordinal: %" PRIu64,
+              output->stream_lifetime_ordinal());
+        // For debugging a flake:
+        if (params.test_params->loop_stream_count > 1) {
+          LOGF("output end_of_stream() - stream_lifetime_ordinal: %" PRIu64,
+               output->stream_lifetime_ordinal());
+        }
         // default 1
         const int64_t loop_stream_count = params.test_params->loop_stream_count;
         const uint64_t max_stream_lifetime_ordinal = (loop_stream_count - 1) * 2 + 1;
         if (output->stream_lifetime_ordinal() != max_stream_lifetime_ordinal) {
           continue;
         }
-        VLOGF("done with output");
+        VLOGF("done with output - stream_lifetime_ordinal: %" PRIu64,
+              output->stream_lifetime_ordinal());
+        // For debugging a flake:
+        if (params.test_params->loop_stream_count > 1) {
+          LOGF("done with output - stream_lifetime_ordinal: %" PRIu64,
+               output->stream_lifetime_ordinal());
+        }
         // Just "break;" would be more fragile under code modification.
         goto end_of_output;
       }
