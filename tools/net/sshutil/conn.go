@@ -258,9 +258,11 @@ func (c *Conn) RegisterDisconnectListener(ch chan struct{}) {
 // closed and/or refreshed.
 func (c *Conn) NewSFTPClient() (*sftp.Client, error) {
 	c.mu.Lock()
-	client := c.Client
-	c.mu.Unlock()
-	return sftp.NewClient(client)
+	defer c.mu.Unlock()
+	if c.Client == nil {
+		return nil, errors.New("ssh connection is closed, cannot create new SFTP client")
+	}
+	return sftp.NewClient(c.Client)
 }
 
 // disconnect from ssh, and notify anyone waiting for disconnection.
