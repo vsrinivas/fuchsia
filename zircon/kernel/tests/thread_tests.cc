@@ -442,35 +442,31 @@ static int join_tester_server(void* arg) {
   t = Thread::Create("join tester", &join_tester, (void*)1, DEFAULT_PRIORITY);
   t->Resume();
   ret = 99;
-  printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic_, (unsigned)THREAD_MAGIC);
+  t->canary().Assert();
   err = t->Join(&ret, ZX_TIME_INFINITE);
   printf("\tthread_join returns err %d, retval %d\n", err, ret);
-  printf("\tthread magic is 0x%x (should be 0)\n", (unsigned)t->magic_);
 
   printf("\tcreating and waiting on thread to exit with thread_join, after thread has exited\n");
   t = Thread::Create("join tester", &join_tester, (void*)2, DEFAULT_PRIORITY);
   t->Resume();
   Thread::Current::SleepRelative(ZX_SEC(1));  // wait until thread is already dead
   ret = 99;
-  printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic_, (unsigned)THREAD_MAGIC);
+  t->canary().Assert();
   err = t->Join(&ret, ZX_TIME_INFINITE);
   printf("\tthread_join returns err %d, retval %d\n", err, ret);
-  printf("\tthread magic is 0x%x (should be 0)\n", (unsigned)t->magic_);
 
   printf("\tcreating a thread, detaching it, let it exit on its own\n");
   t = Thread::Create("join tester", &join_tester, (void*)3, DEFAULT_PRIORITY);
   t->Detach();
   t->Resume();
   Thread::Current::SleepRelative(ZX_SEC(1));  // wait until the thread should be dead
-  printf("\tthread magic is 0x%x (should be 0)\n", (unsigned)t->magic_);
 
   printf("\tcreating a thread, detaching it after it should be dead\n");
   t = Thread::Create("join tester", &join_tester, (void*)4, DEFAULT_PRIORITY);
   t->Resume();
   Thread::Current::SleepRelative(ZX_SEC(1));  // wait until thread is already dead
-  printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic_, (unsigned)THREAD_MAGIC);
+  t->canary().Assert();
   t->Detach();
-  printf("\tthread magic is 0x%x\n", (unsigned)t->magic_);
 
   printf("\texiting join tester server\n");
 

@@ -72,7 +72,7 @@
 void WaitQueue::TimeoutHandler(Timer* timer, zx_time_t now, void* arg) {
   Thread* thread = (Thread*)arg;
 
-  DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
+  thread->canary().Assert();
 
   // spin trylocking on the thread lock since the routine that set up the callback,
   // wait_queue_block, may be trying to simultaneously cancel this timer while holding the
@@ -186,7 +186,7 @@ void WaitQueueCollection::Validate() const {
   // Validate that the queue is sorted properly
   const Thread* last_head = nullptr;
   for (const Thread& head : heads_) {
-    DEBUG_ASSERT(head.magic_ == THREAD_MAGIC);
+    head.canary().Assert();
 
     // Validate that the queue heads are sorted high to low priority.
     if (last_head) {
@@ -198,7 +198,7 @@ void WaitQueueCollection::Validate() const {
 
     // Walk any threads linked to this head, validating that they're the same priority.
     for (const Thread& thread : head.wait_queue_state().sublist_) {
-      DEBUG_ASSERT(thread.magic_ == THREAD_MAGIC);
+      thread.canary().Assert();
       DEBUG_ASSERT_MSG(head.scheduler_state().effective_priority() ==
                            thread.scheduler_state().effective_priority(),
                        "%p:%d  %p:%d", &head, head.scheduler_state().effective_priority(), &thread,
@@ -482,7 +482,7 @@ WaitQueue::~WaitQueue() {
  * @return ZX_ERR_BAD_STATE if thread was not in any wait queue.
  */
 zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
-  DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
+  t->canary().Assert();
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
 
@@ -511,7 +511,7 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
 }
 
 bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) {
-  DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
+  t->canary().Assert();
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);

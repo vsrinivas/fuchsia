@@ -22,6 +22,7 @@
 #include <arch/exception.h>
 #include <arch/ops.h>
 #include <arch/thread.h>
+#include <fbl/canary.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
@@ -36,6 +37,7 @@
 #include <lockdep/thread_lock_state.h>
 #include <vm/kstack.h>
 
+class Dpc;
 struct Thread;
 class OwnedWaitQueue;
 class ThreadDispatcher;
@@ -361,8 +363,6 @@ typedef void (*thread_trampoline_routine)() __NO_RETURN;
 #define THREAD_SIGNAL_SUSPEND                (1 << 1)
 #define THREAD_SIGNAL_POLICY_EXCEPTION       (1 << 2)
 // clang-format on
-
-#define THREAD_MAGIC (0x74687264)  // 'thrd'
 
 // thread priority
 #define NUM_PRIORITIES (32)
@@ -855,6 +855,9 @@ struct Thread {
 
   Linebuffer& linebuffer() { return linebuffer_; }
 
+  using Canary = fbl::Canary<fbl::magic("thrd")>;
+  const Canary& canary() const { return canary_; }
+
  private:
   // The architecture-specific methods for getting and setting the
   // current thread may need to see Thread's arch_ member via offsetof.
@@ -875,6 +878,9 @@ struct Thread {
   // replaced by the |alt_trampoline| parameter to CreateEtc().
   static void Trampoline() TA_REQ(thread_lock) __NO_RETURN;
 
+  // Dpc callback used for cleaning up a detached Thread's resources.
+  static void FreeDpc(Dpc* dpc);
+
   // Save the arch-specific user state.
   //
   // Returns true when the user state will later need to be restored.
@@ -885,13 +891,14 @@ struct Thread {
 
   __NO_RETURN void ExitLocked(int retcode) TA_REQ(thread_lock);
 
+ private:
+  Canary canary_;
+
   // TODO(54383) This should all be private. Until migrated away from
   // list_node, we need Thread to be standard layout. For now,
   // OwnedWaitQueue needs to be able to manipulate list_nodes in
   // Thread.
  public:
-  int magic_;
-
   struct ThreadListTrait {
     static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
       return thread.thread_list_node_;

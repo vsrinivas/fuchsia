@@ -182,7 +182,6 @@ void init_thread_struct(Thread* t, const char* name) {
   // all of this instead of using init_thread_struct and free_thread_resources
   new (t) Thread();
 
-  t->magic_ = THREAD_MAGIC;
   t->set_name(name);
   init_thread_lock_state(t);
 }
@@ -297,7 +296,6 @@ static void free_thread_resources(Thread* t) {
   // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
   // get triggered.
   bool thread_needs_free = (t->flags_ & THREAD_FLAG_FREE_STRUCT) != 0;
-  t->magic_ = 0;
   t->~Thread();
   if (thread_needs_free) {
     free(t);
@@ -312,7 +310,7 @@ static void free_thread_resources(Thread* t) {
  * thread_suspend(). It can not fail.
  */
 void Thread::Resume() {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
 
   bool ints_disabled = arch_ints_disabled();
   bool resched = false;
@@ -359,7 +357,7 @@ zx_status_t Thread::DetachAndResume() {
  * @return ZX_OK on success, ZX_ERR_BAD_STATE if the thread is dead
  */
 zx_status_t Thread::Suspend() {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   DEBUG_ASSERT(!IsIdle());
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
@@ -440,7 +438,7 @@ void Thread::EraseFromListsLocked() {
 }
 
 zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
 
   {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
@@ -458,7 +456,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
       }
     }
 
-    DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+    canary_.Assert();
     DEBUG_ASSERT(state_ == THREAD_DEATH);
     wait_queue_state_.AssertNotBlocked();
 
@@ -470,8 +468,8 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
     // remove it from global lists
     EraseFromListsLocked();
 
-    // clear the structure's magic
-    magic_ = 0;
+    // Our canary_ will be cleared out in free_thread_resources, which
+    // explicitly invokes ~Thread.
   }
 
   free_thread_resources(this);
@@ -482,7 +480,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
 }
 
 zx_status_t Thread::Detach() {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
@@ -503,10 +501,10 @@ zx_status_t Thread::Detach() {
 
 // called back in the DPC worker thread to free the stack and/or the thread structure
 // itself for a thread that is exiting on its own.
-static void thread_free_dpc(Dpc* dpc) {
+void Thread::FreeDpc(Dpc* dpc) {
   Thread* t = dpc->arg<Thread>();
 
-  DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
+  t->canary_.Assert();
   DEBUG_ASSERT(t->state_ == THREAD_DEATH);
 
   // grab and release the thread lock, which effectively serializes us with
@@ -553,7 +551,7 @@ __NO_RETURN void Thread::Current::ExitLocked(int retcode) TA_REQ(thread_lock) {
 
     // queue a dpc to free the stack and, optionally, the thread structure
     if (current_thread->stack_.base() || (current_thread->flags_ & THREAD_FLAG_FREE_STRUCT)) {
-      free_dpc = Dpc(&thread_free_dpc, current_thread);
+      free_dpc = Dpc(&Thread::FreeDpc, current_thread);
       zx_status_t status = free_dpc.QueueThreadLocked();
       DEBUG_ASSERT(status == ZX_OK);
     }
@@ -602,7 +600,7 @@ void Thread::Forget() {
 void Thread::Current::Exit(int retcode) {
   Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  current_thread->canary_.Assert();
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!current_thread->IsIdle());
 
@@ -617,7 +615,7 @@ void Thread::Current::Exit(int retcode) {
 
 // kill a thread
 void Thread::Kill() {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
@@ -680,13 +678,13 @@ void Thread::Kill() {
 }
 
 cpu_mask_t Thread::GetCpuAffinity() const {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   return scheduler_state_.hard_affinity();
 }
 
 void Thread::SetCpuAffinity(cpu_mask_t affinity) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   DEBUG_ASSERT_MSG(
       (affinity & mp_get_active_mask()) != 0,
       "Attempted to set affinity mask to %#x, which has no overlap of active CPUs %#x.", affinity,
@@ -702,7 +700,7 @@ void Thread::SetCpuAffinity(cpu_mask_t affinity) {
 }
 
 void Thread::SetSoftCpuAffinity(cpu_mask_t affinity) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
   // set the affinity mask
@@ -713,7 +711,7 @@ void Thread::SetSoftCpuAffinity(cpu_mask_t affinity) {
 }
 
 cpu_mask_t Thread::GetSoftCpuAffinity() const {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   return scheduler_state_.soft_affinity_;
 }
@@ -723,13 +721,13 @@ void Thread::Current::MigrateToCpu(const cpu_num_t target_cpu) {
 }
 
 void Thread::SetMigrateFn(MigrateFn migrate_fn) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   SetMigrateFnLocked(ktl::move(migrate_fn));
 }
 
 void Thread::SetMigrateFnLocked(MigrateFn migrate_fn) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   // If |migrate_fn_| was previously set, remove |this| from |migrate_list_|.
   if (migrate_fn_) {
     migrate_list_.erase(*this);
@@ -940,7 +938,7 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
 void Thread::Current::Yield() {
   __UNUSED Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  current_thread->canary_.Assert();
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
@@ -959,7 +957,7 @@ void Thread::Current::Yield() {
 void Thread::Current::Preempt() {
   Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  current_thread->canary_.Assert();
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
@@ -983,7 +981,7 @@ void Thread::Current::Preempt() {
 void Thread::Current::Reschedule() {
   Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  current_thread->canary_.Assert();
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
@@ -1011,7 +1009,7 @@ void PreemptionState::CheckPreemptPending() const {
 // timer callback to wake up a sleeping thread
 void Thread::SleepHandler(Timer* timer, zx_time_t now, void* arg) {
   Thread* t = static_cast<Thread*>(arg);
-  DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
+  t->canary_.Assert();
   t->HandleSleep(timer, now);
 }
 
@@ -1067,7 +1065,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
                                       zx_time_t now) {
   Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  current_thread->canary_.Assert();
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!current_thread->IsIdle());
   DEBUG_ASSERT(!arch_blocking_disallowed());
@@ -1223,7 +1221,7 @@ void Thread::Current::SetName(const char* name) {
  * See Thread::Create() for a discussion of priority values.
  */
 void Thread::SetPriority(int priority) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   ASSERT(priority >= LOWEST_PRIORITY && priority <= HIGHEST_PRIORITY);
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
@@ -1240,7 +1238,7 @@ void Thread::SetPriority(int priority) {
  * @param params The deadline parameters to apply to the thread.
  */
 void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   ASSERT(params.capacity > 0 && params.capacity <= params.relative_deadline &&
          params.relative_deadline <= params.period);
 
@@ -1254,7 +1252,7 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
  * ThreadDispatcher::Suspending() / Resuming()
  */
 void Thread::SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread) {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  canary_.Assert();
   DEBUG_ASSERT(state_ == THREAD_INITIAL);
   DEBUG_ASSERT(!user_thread_);
 
@@ -1350,15 +1348,6 @@ void thread_secondary_cpu_entry() {
 Thread* Thread::CreateIdleThread(cpu_num_t cpu_num) {
   DEBUG_ASSERT(cpu_num != 0 && cpu_num < SMP_MAX_CPUS);
 
-  // Shouldn't be initialized yet
-  // ZX-3672: if the idle thread appears initialized, dump some data
-  // around it
-  if (unlikely(percpu::Get(cpu_num).idle_thread.magic_ != 0)) {
-    platform_panic_start();
-    hexdump(&percpu::Get(cpu_num).idle_thread, 256);
-    panic("ZX-3672: detected non zeroed idle thread for core %u\n", cpu_num);
-  }
-
   char name[16];
   snprintf(name, sizeof(name), "idle %u", cpu_num);
 
@@ -1415,7 +1404,7 @@ static const char* thread_state_to_str(enum thread_state state) {
  * @brief  Dump debugging info about the specified thread.
  */
 void dump_thread_locked(Thread* t, bool full_dump) {
-  if (t->magic_ != THREAD_MAGIC) {
+  if (!t->canary().Valid()) {
     dprintf(INFO, "dump_thread WARNING: thread at %p has bad magic\n", t);
   }
 
@@ -1474,7 +1463,7 @@ void dump_thread(Thread* t, bool full) {
  */
 void dump_all_threads_locked(bool full) {
   for (Thread& t : thread_list.Get()) {
-    if (t.magic_ != THREAD_MAGIC) {
+    if (!t.canary().Valid()) {
       dprintf(INFO, "bad magic on thread struct %p, aborting.\n", &t);
       hexdump(&t, sizeof(Thread));
       break;
@@ -1499,7 +1488,7 @@ void dump_thread_user_tid_locked(uint64_t tid, bool full) {
       continue;
     }
 
-    if (t.magic_ != THREAD_MAGIC) {
+    if (!t.canary().Valid()) {
       dprintf(INFO, "bad magic on thread struct %p, aborting.\n", &t);
       hexdump(&t, sizeof(Thread));
       break;
@@ -1526,7 +1515,7 @@ Thread* thread_id_to_thread_slow(uint64_t tid) {
 void ktrace_report_live_threads() {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   for (Thread& t : thread_list.Get()) {
-    DEBUG_ASSERT(t.magic_ == THREAD_MAGIC);
+    t.canary().Assert();
     if (t.user_tid_) {
       ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.user_tid_),
                   static_cast<uint32_t>(t.user_pid_), t.name());

@@ -1172,7 +1172,7 @@ void Scheduler::Block() {
 
   Thread* const current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  current_thread->canary().Assert();
   DEBUG_ASSERT(current_thread->state_ != THREAD_RUNNING);
 
   const SchedTime now = CurrentTime();
@@ -1184,7 +1184,7 @@ void Scheduler::Block() {
 bool Scheduler::Unblock(Thread* thread) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock"_stringref};
 
-  DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
+  thread->canary().Assert();
   DEBUG_ASSERT(thread_lock.IsHeld());
 
   const SchedTime now = CurrentTime();
@@ -1214,7 +1214,7 @@ bool Scheduler::Unblock(WaitQueueSublist list) {
   cpu_mask_t cpus_to_reschedule_mask = 0;
   Thread* thread;
   while ((thread = list.pop_back()) != nullptr) {
-    DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
+    thread->canary().Assert();
     DEBUG_ASSERT(!thread->IsIdle());
 
     SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name(), now.raw_value());
