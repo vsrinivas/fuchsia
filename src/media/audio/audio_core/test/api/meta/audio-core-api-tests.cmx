@@ -10,7 +10,7 @@
         }
     },
     "program": {
-        "binary": "test/audio_fidl_tests"
+        "binary": "test/audio-core-api-tests"
     },
     "sandbox": {
         "features": [

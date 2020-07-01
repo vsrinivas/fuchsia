@@ -5,9 +5,9 @@
 group("test") {
   testonly = true
   deps = [
+    "api:audio-core-api-tests",
     "audio_admin:audio_admin_tests",
     "device:audio_device_tests",
-    "fidl:audio_fidl_tests",
     "hardware:audio_core_hardware_tests",
     "pipeline:audio-core-for-pipeline-tests",
     "pipeline:audio_pipeline_tests",
