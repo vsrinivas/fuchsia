@@ -7,6 +7,7 @@ package avb
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -20,23 +21,9 @@ func createScript(fileName string) (script string, err error) {
 	}
 	defer file.Close()
 
-	// Script outputs its name and all its arguments on the first line. Then it
-	// writes all the property files to stdout too.
+	// Script outputs its name and all its arguments.
 	contents := `#!/bin/bash
 echo "$0 $@"
-while (($#)); do
-	case "$1" in
-		--prop_from_file)
-			shift
-			property_file=$(cut -d':' -f2 <<< "$1")
-			printf "$property_file "
-			cat "$property_file"
-			echo
-			shift
-			;;
-		*) shift ;;
-	esac
-done
 `
 
 	if _, err := file.Write([]byte(contents)); err != nil {
@@ -56,6 +43,15 @@ func checkEq(t *testing.T, name string, actual string, expected string) {
 	if actual != expected {
 		t.Fatalf("%s check failed. Actual: \"%s\". Expected: \"%s\".", name, actual, expected)
 	}
+}
+
+func checkContains(t *testing.T, name string, needle string, haystack []string) {
+	for _, s := range haystack {
+		if s == needle {
+			return
+		}
+	}
+	t.Fatalf("%s check failed. List did not contain \"%s\".", name, needle)
 }
 
 func TestNoProperties(t *testing.T) {
@@ -155,46 +151,72 @@ func TestProperties(t *testing.T) {
 		t.Fatalf("Failed to create AVBTool: %s", err)
 	}
 
+	propFile1, err := ioutil.TempFile("", "")
+	defer os.Remove(propFile1.Name())
+	propFile2, err := ioutil.TempFile("", "")
+	defer os.Remove(propFile2.Name())
+	propFile3, err := ioutil.TempFile("", "")
+	defer os.Remove(propFile3.Name())
+
 	err = avbTool.MakeVBMetaImage(context.Background(), "destination/path", "source/path", map[string]string{
-		"key1": "value1",
-		"key2": "value2",
-		"key3": "value3",
+		"key1": propFile1.Name(),
+		"key2": propFile2.Name(),
+		"key3": propFile3.Name(),
 	})
 	if err != nil {
 		t.Fatalf("Failed to add properties: %s", err)
 	}
 
-	outputs := strings.Split(output.String(), "\n")
-	args := strings.Split(outputs[0], " ")
+	args := strings.Split(strings.TrimSpace(output.String()), " ")
+	if len(args) < 2 {
+		t.Fatal("Too few arguments.")
+	}
+	checkEq(t, "command", args[1], "make_vbmeta_image")
 
-	// Collect all of the prop_from_file arguments and record the filename that
-	// the value was written to.
-	keyToFile := make(map[string]string)
+	var destPath string
+	var srcPath string
+	var keyPath string
+	var keyMetadataPath string
+	var algorithm string
+	var prop_from_files []string
 	for i, arg := range args {
-		if arg == "--prop_from_file" {
+		if arg == "--output" {
 			if i+1 < len(args) {
-				propArg := strings.Split(args[i+1], ":")
-				if len(propArg) != 2 {
-					t.Fatalf("Badly formatted prop_from_file argument: %s", args[i+1])
-				}
-				keyToFile[propArg[0]] = propArg[1]
+				destPath = args[i+1]
+			}
+		} else if arg == "--key" {
+			if i+1 < len(args) {
+				keyPath = args[i+1]
+			}
+		} else if arg == "--algorithm" {
+			if i+1 < len(args) {
+				algorithm = args[i+1]
+			}
+		} else if arg == "--public_key_metadata" {
+			if i+1 < len(args) {
+				keyMetadataPath = args[i+1]
+			}
+		} else if arg == "--include_descriptors_from_image" {
+			if i+1 < len(args) {
+				srcPath = args[i+1]
+			}
+		} else if arg == "--prop_from_file" {
+			if i+1 < len(args) {
+				prop_from_files = append(prop_from_files, args[i+1])
 			}
 		}
 	}
 
-	// The bash script we passed in will write each file in prop_from_file to a
-	// line containing its filename and contents.
-	fileToValue := make(map[string]string)
-	for _, out := range outputs {
-		fileOutput := strings.Split(out, " ")
-		if len(fileOutput) != 2 {
-			continue
-		}
-		fileToValue[fileOutput[0]] = fileOutput[1]
-	}
+	checkEq(t, "source path", srcPath, "source/path")
+	checkEq(t, "destination path", destPath, "destination/path")
+	checkEq(t, "key path", keyPath, avbKey.Name())
+	checkEq(t, "key metadata path", keyMetadataPath, avbMetadata.Name())
+	checkEq(t, "algorithm", algorithm, "SHA512_RSA4096")
 
-	// Finally, check that each property has the correct value.
-	checkEq(t, "first property", fileToValue[keyToFile["key1"]], "value1")
-	checkEq(t, "second property", fileToValue[keyToFile["key2"]], "value2")
-	checkEq(t, "third property", fileToValue[keyToFile["key3"]], "value3")
+	if len(prop_from_files) != 3 {
+		t.Fatal("Incorrect number of prop_from_file arguments")
+	}
+	checkContains(t, "first property", fmt.Sprintf("key1:%s", propFile1.Name()), prop_from_files)
+	checkContains(t, "second property", fmt.Sprintf("key2:%s", propFile2.Name()), prop_from_files)
+	checkContains(t, "third property", fmt.Sprintf("key3:%s", propFile3.Name()), prop_from_files)
 }
