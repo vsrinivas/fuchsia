@@ -56,16 +56,17 @@ where
         }
     }
 
-    pub async fn advance_update_state(&mut self, next_update_state: Option<State>) {
-        *self.update_state.get_mut() = next_update_state;
-        if *self.update_state == None {
-            *self.version_available.get_mut() = None;
+    pub async fn advance_update_state(&mut self, next_update_state: State) {
+        *self.update_state.get_mut() = Some(next_update_state.clone());
+        if let Err(e) = self.temporary_queue.queue_event(next_update_state).await {
+            fx_log_warn!("error sending state to temporary queue: {:#}", anyhow!(e))
         }
-        self.send_on_state().await;
-        if *self.update_state == None {
-            if let Err(e) = self.temporary_queue.clear().await {
-                fx_log_warn!("error clearing clients of temporary queue: {:#}", anyhow!(e))
-            }
+    }
+
+    pub async fn clear(&mut self) {
+        *self.version_available.get_mut() = None;
+        if let Err(e) = self.temporary_queue.clear().await {
+            fx_log_warn!("error clearing clients of temporary queue: {:#}", anyhow!(e))
         }
     }
 
@@ -77,28 +78,13 @@ where
     pub fn get_version_available(&self) -> Option<String> {
         self.version_available.clone()
     }
-
-    pub fn update_state(&self) -> Option<State> {
-        self.update_state.clone()
-    }
-
-    pub async fn send_on_state(&mut self) {
-        if let Some(state) = self.update_state() {
-            if let Err(e) = self.temporary_queue.queue_event(state).await {
-                fx_log_warn!("error sending state to temporary queue: {:#}", anyhow!(e))
-            }
-        }
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use event_queue::{ClosedClient, Notify};
-    use fidl_fuchsia_update_ext::{
-        random_installation_deferred_data, random_installation_error_data, random_installing_data,
-        random_version_available,
-    };
+    use fidl_fuchsia_update_ext::random_version_available;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::future::BoxFuture;
@@ -124,29 +110,6 @@ mod test {
         }
     }
 
-    prop_compose! {
-        fn random_update_state()
-        (
-            installation_deferred_data in random_installation_deferred_data(),
-            installing_data in random_installing_data(),
-            installation_error_data in random_installation_error_data()
-        )
-        (
-            state in prop_oneof![
-                Just(Some(State::CheckingForUpdates)),
-                Just(Some(State::ErrorCheckingForUpdate)),
-                Just(Some(State::NoUpdateAvailable)),
-                Just(Some(State::InstallationDeferredByPolicy(installation_deferred_data))),
-                Just(Some(State::InstallingUpdate(installing_data.clone()))),
-                Just(Some(State::WaitingForReboot(installing_data))),
-                Just(Some(State::InstallationError(installation_error_data))),
-                Just(None),
-            ]) -> Option<State>
-        {
-            state
-        }
-    }
-
     async fn random_update_monitor(
         update_state: Option<State>,
         version_available: Option<String>,
@@ -154,7 +117,9 @@ mod test {
         let (fut, mut mms) = UpdateMonitor::<FakeStateNotifier>::new();
         fasync::spawn(fut);
         version_available.map(|s| mms.set_version_available(s));
-        mms.advance_update_state(update_state).await;
+        if let Some(update_state) = update_state {
+            mms.advance_update_state(update_state).await;
+        }
         mms
     }
 
@@ -167,7 +132,7 @@ mod test {
     proptest! {
         #[test]
         fn test_adding_callback_sends_current_state(
-                update_state in random_update_state(),
+                update_state: Option<State>,
                 version_available in random_version_available(),
         ) {
             fasync::Executor::new().unwrap().run_singlethreaded(async {
@@ -188,18 +153,20 @@ mod test {
 
         #[test]
         fn test_advance_update_state_calls_callbacks(
-                initial_state in random_update_state(),
+                initial_state: Option<State>,
                 version_available in random_version_available(),
-                next_state in random_update_state(),
+                next_states in prop::collection::vec(any::<State>(), 0..4),
         ) {
             fasync::Executor::new().unwrap().run_singlethreaded(async {
                 let mut update_monitor = random_update_monitor(initial_state.clone(), version_available).await;
                 let temporary_callback = FakeStateNotifier::new();
-                let expected_states: Vec<_> = vec![initial_state, next_state.clone()].into_iter().filter_map(|o|o).collect();
+                let expected_states: Vec<_> = initial_state.clone().into_iter().chain(next_states.clone().into_iter()).collect();
 
                 update_monitor.add_temporary_callback(temporary_callback.clone()).await;
 
-                update_monitor.advance_update_state(next_state).await;
+                for state in next_states {
+                    update_monitor.advance_update_state(state).await;
+                }
 
                 wait_for_states(&temporary_callback, expected_states.len()).await;
                 prop_assert_eq!(
@@ -211,15 +178,15 @@ mod test {
         }
 
         #[test]
-        fn test_advance_updater_state_to_none_clears_version_available(
-            update_state in random_update_state(),
+        fn test_clear_clears_version_available(
+            update_state: Option<State>,
             version_available in random_version_available(),
         ) {
             fasync::Executor::new().unwrap().run_singlethreaded(async {
                 let mut update_monitor = random_update_monitor(update_state, version_available).await;
                 update_monitor.set_version_available(VERSION_AVAILABLE.to_string());
 
-                update_monitor.advance_update_state(None).await;
+                update_monitor.clear().await;
 
                 prop_assert_eq!(
                     update_monitor.get_version_available(),
@@ -230,8 +197,8 @@ mod test {
         }
 
         #[test]
-        fn test_advance_update_state_to_idle_clears_temporary_callbacks(
-            update_state in random_update_state(),
+        fn test_clear_clears_temporary_callbacks(
+            update_state: Option<State>,
             version_available in random_version_available(),
         ) {
             fasync::Executor::new().unwrap().run_singlethreaded(async {
@@ -239,9 +206,9 @@ mod test {
                 let temporary_callback = FakeStateNotifier::new();
 
                 update_monitor.add_temporary_callback(temporary_callback.clone()).await;
-                update_monitor.advance_update_state(None).await;
+                update_monitor.clear().await;
                 temporary_callback.states.lock().clear();
-                update_monitor.advance_update_state(Some(State::CheckingForUpdates)).await;
+                update_monitor.advance_update_state(State::CheckingForUpdates).await;
 
                 prop_assert_eq!(temporary_callback.states.lock().clone(), vec![]);
                 Ok(())
@@ -292,7 +259,7 @@ mod test_inspect {
         );
         fasync::spawn(fut);
 
-        update_monitor.advance_update_state(Some(State::CheckingForUpdates)).await;
+        update_monitor.advance_update_state(State::CheckingForUpdates).await;
 
         assert_inspect_tree!(
             inspector,

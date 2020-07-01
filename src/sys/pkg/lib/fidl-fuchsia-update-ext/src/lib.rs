@@ -7,11 +7,7 @@
 
 mod types;
 pub use crate::types::{
-    proptest_util::{
-        random_installation_deferred_data, random_installation_error_data,
-        random_installation_progress, random_installing_data, random_update_info,
-        random_version_available,
-    },
-    CheckOptionsBuilder, InstallationDeferredData, InstallationErrorData, InstallationProgress,
-    InstallingData, State, UpdateInfo,
+    proptest_util::random_version_available, CheckOptions, CheckOptionsBuilder,
+    CheckOptionsDecodeError, Initiator, InstallationDeferredData, InstallationErrorData,
+    InstallationProgress, InstallingData, State, UpdateInfo,
 };

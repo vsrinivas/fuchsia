@@ -18,15 +18,15 @@ mod update_service;
 
 use {
     crate::{
-        apply::Initiator,
         channel_handler::ChannelHandler,
         config::Config,
         poller::run_periodic_update_check,
-        update_service::{RealUpdateManager, RealUpdateService},
+        update_service::{RealUpdateManager, UpdateService},
     },
     anyhow::{anyhow, Context as _, Error},
     fidl_fuchsia_update_channel::ProviderRequestStream,
     fidl_fuchsia_update_channelcontrol::ChannelControlRequestStream,
+    fidl_fuchsia_update_ext::{CheckOptions, Initiator},
     forced_fdr::perform_fdr_if_necessary,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -66,16 +66,17 @@ async fn main() -> Result<(), Error> {
     futures.push(current_channel_notifier.run().boxed());
     let current_channel_manager = Arc::new(current_channel_manager);
 
-    let update_manager = RealUpdateManager::new(
+    let (mut update_manager, update_manager_fut) = RealUpdateManager::new(
         Arc::clone(&target_channel_manager),
         Arc::clone(&current_channel_manager),
         inspector.root().create_child("update-manager"),
     )
-    .await;
-    let update_manager = Arc::new(update_manager);
+    .await
+    .start();
+    futures.push(update_manager_fut.boxed());
 
     let mut fs = ServiceFs::new();
-    let update_manager_clone = Arc::clone(&update_manager);
+    let update_manager_clone = update_manager.clone();
     let channel_handler =
         Arc::new(ChannelHandler::new(current_channel_manager, target_channel_manager));
     let channel_handler_clone = Arc::clone(&channel_handler);
@@ -83,10 +84,7 @@ async fn main() -> Result<(), Error> {
 
     fs.dir("svc")
         .add_fidl_service(move |stream| {
-            IncomingServices::Manager(
-                stream,
-                RealUpdateService::new(Arc::clone(&update_manager_clone)),
-            )
+            IncomingServices::Manager(stream, UpdateService::new(update_manager_clone.clone()))
         })
         .add_fidl_service(move |stream| {
             IncomingServices::Provider(stream, Arc::clone(&channel_handler_provider_clone))
@@ -113,9 +111,8 @@ async fn main() -> Result<(), Error> {
         async move {
             if config.poll_frequency().is_some() {
                 fasync::Timer::new(fasync::Time::after(Duration::from_secs(60).into())).await;
-                if let Err(e) =
-                    update_manager.try_start_update(Initiator::Automatic, None, None).await
-                {
+                let options = CheckOptions::builder().initiator(Initiator::Service).build();
+                if let Err(e) = update_manager.try_start_update(options, None).await {
                     fx_log_warn!("Update check failed with error: {:?}", e);
                 }
             }
@@ -133,14 +130,14 @@ async fn main() -> Result<(), Error> {
 }
 
 enum IncomingServices {
-    Manager(fidl_fuchsia_update::ManagerRequestStream, RealUpdateService),
+    Manager(fidl_fuchsia_update::ManagerRequestStream, UpdateService),
     Provider(ProviderRequestStream, Arc<ChannelHandler>),
     ChannelControl(ChannelControlRequestStream, Arc<ChannelHandler>),
 }
 
 async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(), Error> {
     match incoming_service {
-        IncomingServices::Manager(request_stream, update_service) => {
+        IncomingServices::Manager(request_stream, mut update_service) => {
             update_service.handle_request_stream(request_stream).await
         }
         IncomingServices::Provider(request_stream, handler) => {

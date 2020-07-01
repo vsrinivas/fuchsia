@@ -5,31 +5,20 @@
 use crate::errors::Error;
 use anyhow::Context as _;
 use fidl_fuchsia_sys::{LauncherMarker, LauncherProxy};
+use fidl_fuchsia_update_ext::Initiator;
 use fuchsia_async::futures::{future::BoxFuture, FutureExt};
 use fuchsia_component::client::{connect_to_service, launch};
 use fuchsia_merkle::Hash;
 use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 
-#[cfg(test)]
-use proptest_derive::Arbitrary;
-
 const SYSTEM_UPDATER_RESOURCE_URL: &str =
     "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx";
 
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(test, derive(Arbitrary))]
-pub enum Initiator {
-    Manual,
-    Automatic,
-}
-
-impl std::fmt::Display for Initiator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Initiator::Manual => write!(f, "manual"),
-            Initiator::Automatic => write!(f, "automatic"),
-        }
+fn initiator_cli_arg(initiator: Initiator) -> &'static str {
+    match initiator {
+        Initiator::User => "manual",
+        Initiator::Service => "automatic",
     }
 }
 
@@ -180,7 +169,7 @@ async fn apply_system_update_impl<'a>(
         Some(
             vec![
                 "--initiator",
-                &format!("{}", initiator),
+                initiator_cli_arg(initiator),
                 "--start",
                 &format!("{}", time_source.get_nanos()),
                 "--source",
@@ -275,7 +264,7 @@ mod test_apply_system_update_impl {
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
-            Initiator::Manual,
+            Initiator::User,
             &time_source,
             &filesystem,
         )
@@ -297,7 +286,7 @@ mod test_apply_system_update_impl {
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
-            Initiator::Manual,
+            Initiator::User,
             &time_source,
             &filesystem,
         )
@@ -320,7 +309,7 @@ mod test_apply_system_update_impl {
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
-            Initiator::Manual,
+            Initiator::User,
             &time_source,
             &filesystem,
         )
@@ -362,7 +351,7 @@ mod test_apply_system_update_impl {
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
-            Initiator::Manual,
+            Initiator::User,
             &time_source,
             &filesystem,
         )
@@ -384,13 +373,13 @@ mod test_apply_system_update_impl {
                 arguments: Some(
                     vec![
                         "--initiator",
-                        &format!("{}", Initiator::Manual),
+                        "manual",
                         "--start",
-                        &format!("{}", 0),
+                        "0",
                         "--source",
-                        &format!("{}", std::iter::repeat('0').take(64).collect::<String>()),
+                        "0000000000000000000000000000000000000000000000000000000000000000",
                         "--target",
-                        &format!("{}", std::iter::repeat("01").take(32).collect::<String>()),
+                        "0101010101010101010101010101010101010101010101010101010101010101",
                     ]
                     .iter()
                     .map(|s| s.to_string())
@@ -433,7 +422,7 @@ mod test_apply_system_update_impl {
                     url: SYSTEM_UPDATER_RESOURCE_URL.to_string(),
                     arguments: Some(vec![
                         "--initiator",
-                        &format!("{}",initiator),
+                        initiator_cli_arg(initiator),
                         "--start",
                         &format!("{}",start_time),
                         "--source",

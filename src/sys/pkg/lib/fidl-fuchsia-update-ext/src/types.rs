@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {event_queue::Event, fidl_fuchsia_update as fidl};
+use {
+    event_queue::Event, fidl_fuchsia_update as fidl, proptest::prelude::*,
+    proptest_derive::Arbitrary, std::convert::TryFrom, thiserror::Error,
+};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
 pub enum State {
     CheckingForUpdates,
     ErrorCheckingForUpdate,
@@ -82,7 +85,7 @@ impl From<fidl::State> for State {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
 pub struct InstallationErrorData {
     pub update: Option<UpdateInfo>,
     pub installation_progress: Option<InstallationProgress>,
@@ -104,8 +107,9 @@ impl From<fidl::InstallationErrorData> for InstallationErrorData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
 pub struct InstallationProgress {
+    #[proptest(strategy = "prop::option::of(prop::num::f32::NORMAL)")]
     pub fraction_completed: Option<f32>,
 }
 impl Into<fidl::InstallationProgress> for InstallationProgress {
@@ -119,7 +123,7 @@ impl From<fidl::InstallationProgress> for InstallationProgress {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
 pub struct InstallingData {
     pub update: Option<UpdateInfo>,
     pub installation_progress: Option<InstallationProgress>,
@@ -141,7 +145,7 @@ impl From<fidl::InstallingData> for InstallingData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
 pub struct InstallationDeferredData {
     pub update: Option<UpdateInfo>,
 }
@@ -156,8 +160,9 @@ impl From<fidl::InstallationDeferredData> for InstallationDeferredData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
 pub struct UpdateInfo {
+    #[proptest(strategy = "proptest_util::random_version_available()")]
     pub version_available: Option<String>,
     pub download_size: Option<u64>,
 }
@@ -175,25 +180,102 @@ impl From<fidl::UpdateInfo> for UpdateInfo {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct CheckOptionsBuilder {
-    initiator: Option<fidl::Initiator>,
-    allow_attaching_to_existing_update_check: Option<bool>,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Arbitrary)]
+pub enum Initiator {
+    User,
+    Service,
 }
+
+impl From<fidl::Initiator> for Initiator {
+    fn from(initiator: fidl::Initiator) -> Self {
+        match initiator {
+            fidl::Initiator::User => Initiator::User,
+            fidl::Initiator::Service => Initiator::Service,
+        }
+    }
+}
+
+impl From<Initiator> for fidl::Initiator {
+    fn from(initiator: Initiator) -> Self {
+        match initiator {
+            Initiator::User => fidl::Initiator::User,
+            Initiator::Service => fidl::Initiator::Service,
+        }
+    }
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum CheckOptionsDecodeError {
+    #[error("missing field 'initiator'")]
+    MissingInitiator,
+}
+
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
+pub struct CheckOptions {
+    pub initiator: Initiator,
+    pub allow_attaching_to_existing_update_check: bool,
+}
+
+impl CheckOptions {
+    pub fn builder() -> CheckOptionsBuilder {
+        CheckOptionsBuilder
+    }
+}
+
+impl TryFrom<fidl::CheckOptions> for CheckOptions {
+    type Error = CheckOptionsDecodeError;
+
+    fn try_from(o: fidl::CheckOptions) -> Result<Self, Self::Error> {
+        Ok(Self {
+            initiator: o.initiator.ok_or(CheckOptionsDecodeError::MissingInitiator)?.into(),
+            allow_attaching_to_existing_update_check: o
+                .allow_attaching_to_existing_update_check
+                .unwrap_or(false),
+        })
+    }
+}
+
+impl From<CheckOptions> for fidl::CheckOptions {
+    fn from(o: CheckOptions) -> Self {
+        Self {
+            initiator: Some(o.initiator.into()),
+            allow_attaching_to_existing_update_check: Some(
+                o.allow_attaching_to_existing_update_check,
+            ),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CheckOptionsBuilder;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CheckOptionsBuilderWithInitiator {
+    initiator: Initiator,
+    allow_attaching_to_existing_update_check: bool,
+}
+
 impl CheckOptionsBuilder {
     pub fn new() -> Self {
-        CheckOptionsBuilder { initiator: None, allow_attaching_to_existing_update_check: None }
+        Self
     }
-    pub fn initiator(mut self, initiator: fidl::Initiator) -> Self {
-        self.initiator = Some(initiator);
-        self
+
+    pub fn initiator(self, initiator: Initiator) -> CheckOptionsBuilderWithInitiator {
+        CheckOptionsBuilderWithInitiator {
+            initiator,
+            allow_attaching_to_existing_update_check: false,
+        }
     }
+}
+
+impl CheckOptionsBuilderWithInitiator {
     pub fn allow_attaching_to_existing_update_check(mut self, allow: bool) -> Self {
-        self.allow_attaching_to_existing_update_check = Some(allow);
+        self.allow_attaching_to_existing_update_check = allow;
         self
     }
-    pub fn build(self) -> fidl::CheckOptions {
-        fidl::CheckOptions {
+
+    pub fn build(self) -> CheckOptions {
+        CheckOptions {
             initiator: self.initiator,
             allow_attaching_to_existing_update_check: self.allow_attaching_to_existing_update_check,
         }
@@ -201,62 +283,11 @@ impl CheckOptionsBuilder {
 }
 
 pub mod proptest_util {
-    use super::*;
     use proptest::prelude::*;
 
     prop_compose! {
-        pub fn random_installation_error_data()(
-            update in random_update_info(),
-            installation_progress in random_installation_progress()
-        ) -> InstallationErrorData {
-                InstallationErrorData {
-                    update,
-                    installation_progress
-                }
-        }
-    }
-
-    prop_compose! {
-        pub fn random_installing_data() (
-            update in random_update_info(),
-            installation_progress in random_installation_progress()
-        )-> InstallingData {
-            InstallingData { update, installation_progress  }
-        }
-    }
-
-    prop_compose! {
-        pub fn random_installation_deferred_data() (
-            update in random_update_info()
-        )-> InstallationDeferredData {
-            InstallationDeferredData { update }
-        }
-    }
-
-    prop_compose! {
-        pub fn random_installation_progress() (
-            fraction_completed in proptest::option::of(prop::num::f32::NORMAL),
-        )(
-            progress in proptest::option::of(Just(InstallationProgress { fraction_completed })),
-        ) -> Option<InstallationProgress> {
-            progress
-        }
-    }
-
-    prop_compose! {
-        pub fn random_update_info() (
-            version_available in random_version_available(),
-            download_size in proptest::option::of(prop::num::u64::ANY)
-        )(
-            update_info in proptest::option::of(Just(UpdateInfo { version_available, download_size }))
-        ) -> Option<UpdateInfo> {
-            update_info
-        }
-    }
-
-    prop_compose! {
         pub fn random_version_available()(
-            version_available in proptest::option::of(Just("[0-9A-Z]{10,20}".to_string()))
+            version_available in proptest::option::of("[0-9A-Z]{10,20}")
         ) -> Option<String> {
             version_available
         }
@@ -266,37 +297,14 @@ pub mod proptest_util {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proptest::prelude::*;
-    use proptest_util::*;
-
-    prop_compose! {
-        fn random_update_state()(
-            installation_deferred_data in proptest_util::random_installation_deferred_data(),
-            installing_data in proptest_util::random_installing_data(),
-            installation_error_data in proptest_util::random_installation_error_data()
-        )
-        (
-            state in prop_oneof![
-                Just(State::CheckingForUpdates),
-                Just(State::ErrorCheckingForUpdate),
-                Just(State::NoUpdateAvailable),
-                Just(State::InstallationDeferredByPolicy(installation_deferred_data)),
-                Just(State::InstallingUpdate(installing_data.clone())),
-                Just(State::WaitingForReboot(installing_data)),
-                Just(State::InstallationError(installation_error_data)),
-            ]) -> State
-        {
-            state
-        }
-    }
 
     proptest! {
         // states with the same update info but different progress should merge
         #[test]
         fn test_can_merge(
-            update_info in random_update_info(),
-            progress0 in random_installation_progress(),
-            progress1 in random_installation_progress(),
+            update_info: Option<UpdateInfo>,
+            progress0: Option<InstallationProgress>,
+            progress1: Option<InstallationProgress>,
         ) {
             let event0 = State::InstallingUpdate(
                 InstallingData {
@@ -314,11 +322,52 @@ mod tests {
         }
 
         #[test]
-        fn test_state_roundtrips(state in random_update_state()) {
+        fn test_state_roundtrips(state: State) {
             let state0: State = state.clone();
             let fidl_intermediate: fidl::State = state.into();
             let state1: State = fidl_intermediate.into();
             prop_assert_eq!(state0, state1);
         }
+
+        #[test]
+        fn test_initiator_roundtrips(initiator: Initiator) {
+            prop_assert_eq!(
+                Initiator::from(fidl::Initiator::from(initiator.clone())),
+                initiator
+            );
+        }
+
+        #[test]
+        fn test_check_options_roundtrips(check_options: CheckOptions) {
+            prop_assert_eq!(
+                CheckOptions::try_from(fidl::CheckOptions::from(check_options.clone())),
+                Ok(check_options)
+            );
+        }
+
+        #[test]
+        fn test_check_options_initiator_required(allow_attaching_to_existing_update_check: bool) {
+            prop_assert_eq!(
+                CheckOptions::try_from(fidl::CheckOptions {
+                    initiator: None,
+                    allow_attaching_to_existing_update_check: Some(allow_attaching_to_existing_update_check),
+                }),
+                Err(CheckOptionsDecodeError::MissingInitiator)
+            );
+        }
+    }
+
+    #[test]
+    fn check_options_builder() {
+        assert_eq!(
+            CheckOptions::builder()
+                .initiator(Initiator::User)
+                .allow_attaching_to_existing_update_check(true)
+                .build(),
+            CheckOptions {
+                initiator: Initiator::User,
+                allow_attaching_to_existing_update_check: true,
+            }
+        );
     }
 }
