@@ -90,6 +90,7 @@ ssh_base_args=(
 
 ssh_exit() {
   ssh ${ssh_base_args[@]}  -O exit > /dev/null 2>&1
+  wait # for ssh to exit
 }
 
 # If there is already control master then exit it. We can't be sure its to the right host and it
@@ -122,10 +123,24 @@ ssh_tunnel_args=(
 # to allow the script to be consistent on how it is exited for both serve and non-serve cases. It
 # also allows script to explicitly close the control session (to better avoid stale sshd sessions).
 
-# Use `&` in addition to `-f` so so ssh doesn't receive script's SIGINT. And then `wait` to ensure
-# tunnels are established before continuing.
-ssh ${ssh_base_args[@]} ${ssh_tunnel_args[@]} -nNTf &
-wait $!
+# XXX: had to stop using -Nf because of b/160269794.
+ssh ${ssh_base_args[@]} ${ssh_tunnel_args[@]} -nT sleep infinity &
+# Attempt to assert that the backgrounded ssh is alive and kicking, emulating -f as best we can.
+ssh_pid=$!
+# If there's a 2fa prompt, we may need a "human time" number of tries, which is why this is high.
+tries=30
+until ssh -q -O check ${ssh_base_args[@]}; do
+  if ! kill -0 ${ssh_pid}; then
+    fx-error "SSH tunnel terminated prematurely"
+    exit 1
+  fi
+  if ! ((tries--)); then
+    fx-error "SSH tunnel appears not to have succeeded"
+    kill -TERM $ssh_pid
+    exit 1
+  fi
+  sleep 1
+done
 
 # If the user requested serving, then we'll check to see if there's a
 # remote server already running and kill it, this prevents most cases where
