@@ -130,16 +130,21 @@ class FidlEncoder final
     }
 
     if (mode == Mode::LinearizeAndEncode) {
+      // Zero the last 8 bytes so that padding is zero after the memcpy.
+      if (likely(inline_size != 0)) {
+        *reinterpret_cast<uint64_t*>(
+            __builtin_assume_aligned(&bytes_[new_offset - FIDL_ALIGNMENT], FIDL_ALIGNMENT)) = 0;
+      }
       // Copy the pointee to the desired location in secondary storage
       memcpy(&bytes_[next_out_of_line_], object_ptr, inline_size);
     } else if (unlikely(object_ptr != &bytes_[next_out_of_line_])) {
       SetError("noncontiguous out of line storage during encode");
       return Status::kMemoryError;
+    } else {
+      // Zero padding between out of line storage.
+      memset(&bytes_[next_out_of_line_] + inline_size, 0,
+             (new_offset - next_out_of_line_) - inline_size);
     }
-
-    // Zero padding between out of line storage.
-    memset(&bytes_[next_out_of_line_] + inline_size, 0,
-           (new_offset - next_out_of_line_) - inline_size);
 
     // Validate that we have a UTF8 string.
     // TODO(fxb/52215): For strings, it would most likely be more efficient
@@ -333,11 +338,12 @@ zx_status_t fidl_linearize_and_encode_impl(const fidl_type_t* type, void* value,
     return status;
   }
 
+  // Zero the last 8 bytes so padding will be zero after memcpy.
+  *reinterpret_cast<uint64_t*>(
+      __builtin_assume_aligned(&out_bytes[next_out_of_line - FIDL_ALIGNMENT], FIDL_ALIGNMENT)) = 0;
+
   // Copy the primary object
   memcpy(out_bytes, value, primary_size);
-
-  // Zero the padding gaps
-  memset(out_bytes + primary_size, 0, next_out_of_line - primary_size);
 
   FidlEncoder<Mode::LinearizeAndEncode> encoder(out_bytes, num_bytes, out_handles, num_handles,
                                                 next_out_of_line, out_error_msg);
