@@ -20,6 +20,7 @@ fidl("fuchsia.settings") {
     "privacy.fidl",
     "settings.fidl",
     "setup.fidl",
+    "system.fidl",
   ]
 
   public_deps = [
