@@ -3,17 +3,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <cstddef>
-#include <cstring>
+// ** WARNING ** WARNING ** WARNING ** WARNING ** WARNING **
+//
+// The following functions are called with only a basic environment set up.
+// In particular, most of Fuchsia (such as the C libraries) are compiled
+// using split stacks, but these threads run in a context without support for this.
+// Calling a function that uses the split stack will result in a crash (possibly
+// only on one architecture, on one compiler, at one optimization level).
+// As a result, we can only use very basic functions here, and can't call into
+// the C library.
+//
+// Avoid adding any #include's here, especially those from the C or C++ standard
+// libraries.
+#include "thread-functions.h"
 
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
+// ** WARNING ** WARNING ** WARNING ** WARNING ** WARNING **
 
-#include <runtime/thread.h>
+namespace {
 
-#include "thread-functions.h"
+// Determine if the two given buffers are equal.
+//
+// This is equivalent to "memcmp(a, b, size) == 0", but we can't call the standard library from
+// these functions.
+bool buffers_equal(const uint8_t* a, const uint8_t* b, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+}  // namespace
 
 void threads_test_sleep_fn(void* arg) {
   // Note: You shouldn't use C standard library functions from this thread.
@@ -92,8 +115,9 @@ void threads_test_channel_call_fn(void* arg_) {
                                      &actual_handles);
   if (arg->call_status == ZX_OK) {
     if (actual_bytes != sizeof(recv_buf) ||
-        memcmp(recv_buf + sizeof(zx_txid_t), &"abcdefghj"[sizeof(zx_txid_t)],
-               sizeof(recv_buf) - sizeof(zx_txid_t))) {
+        !buffers_equal(recv_buf + sizeof(zx_txid_t),
+                       reinterpret_cast<const uint8_t*>(&"abcdefghj"[sizeof(zx_txid_t)]),
+                       sizeof(recv_buf) - sizeof(zx_txid_t))) {
       arg->call_status = ZX_ERR_BAD_STATE;
     }
   }
@@ -101,10 +125,16 @@ void threads_test_channel_call_fn(void* arg_) {
   zx_handle_close(arg->channel);
 }
 
+void atomic_store(volatile int* addr, int value) {
+  __atomic_store_n(addr, value, __ATOMIC_SEQ_CST);
+}
+
+int atomic_load(volatile int* addr) { return __atomic_load_n(addr, __ATOMIC_SEQ_CST); }
+
 void threads_test_atomic_store(void* arg) {
-  auto* p = static_cast<std::atomic<int>*>(arg);
+  auto* p = static_cast<volatile int*>(arg);
   while (true) {
-    *p = 1;
+    atomic_store(p, 1);
   }
   __builtin_trap();
 }

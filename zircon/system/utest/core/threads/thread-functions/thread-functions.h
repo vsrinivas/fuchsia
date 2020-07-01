@@ -43,5 +43,12 @@ struct channel_call_suspend_test_arg {
   zx_status_t call_status;
 };
 
-// The arg is std::atomic<int>*.  The function loops storing 1 there.
+// Implementation of atomic store and atomic load.
+//
+// Used by |threads_test_atomic_store|, because functions in
+// |thread-functions.cc| can't use standard library functions.
+void atomic_store(volatile int* addr, int value);
+int atomic_load(volatile int* addr);
+
+// The arg is a |volatile int*|. The function loops storing 1 there.
 void threads_test_atomic_store(void* arg);

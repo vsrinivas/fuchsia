@@ -692,23 +692,24 @@ TEST(Threads, SuspendPortCall) {
 TEST(Threads, SuspendStopsThread) {
   zxr_thread_t thread;
 
-  std::atomic<int> value = 0;
+  volatile int value = 0;
   zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(&threads_test_atomic_store, &value, &thread, &thread_h));
+  ASSERT_TRUE(
+      start_thread(threads_test_atomic_store, const_cast<int*>(&value), &thread, &thread_h));
 
-  while (value != 1) {
+  while (atomic_load(&value) != 1) {
     zx_nanosleep(0);
   }
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK);
-  while (value != 2) {
-    value = 2;
+  while (atomic_load(&value) != 2) {
+    atomic_store(&value, 2);
     // Give the thread a chance to clobber the value
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
   }
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
-  while (value != 1) {
+  while (atomic_load(&value) != 1) {
     zx_nanosleep(0);
   }
 
