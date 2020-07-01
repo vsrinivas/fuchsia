@@ -63,7 +63,7 @@ int main(int argc, const char** argv) {
 
   // Ask the presenter to display it.
   auto presenter = component_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
-  presenter->PresentView(std::move(view_holder_token), nullptr);
+  presenter->PresentOrReplaceView(std::move(view_holder_token), nullptr);
 
   loop.Run();
   return 0;
