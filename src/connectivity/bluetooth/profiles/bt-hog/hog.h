@@ -5,16 +5,15 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_HOG_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_HOG_H_
 
+#include <lib/device-protocol/bt-gatt-svc.h>
 #include <stdbool.h>
+#include <threads.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
-#include <lib/device-protocol/bt-gatt-svc.h>
-
-#include <threads.h>
 
 // org.bluetooth.characteristic.protocol_mode
 #define BT_HOG_PROTOCOL_MODE 0x2A4E
@@ -42,6 +41,12 @@ typedef enum {
   HOGD_DEVICE_REPORT,
 } hogd_device_type_t;
 
+typedef enum {
+  HOGD_STATE_UNINITIALIZED = 0,
+  HOGD_STATE_INITIALIZED,
+  HOGD_STATE_TERMINATED,
+} hogd_state_t;
+
 typedef struct hogd_t hogd_t;
 typedef struct hogd_device_t hogd_device_t;
 struct hogd_device_t {
@@ -52,7 +57,7 @@ struct hogd_device_t {
   bt_gatt_id_t output_report_id;
   bool has_output_report_id;
 
-  bool is_initialized;
+  hogd_state_t state;
   zx_device_t* dev;
   mtx_t lock;
   hidbus_ifc_protocol_t ifc;
