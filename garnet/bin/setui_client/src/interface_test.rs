@@ -153,9 +153,10 @@ async fn main() -> Result<(), Error> {
     println!("light tests");
     println!(" client calls light set");
     validate_light_set().await?;
-
-    println!(" client calls light watch");
+    println!(" client calls watch light groups");
     validate_light_watch().await?;
+    println!(" client calls watch individual light group");
+    validate_light_watch_individual().await?;
 
     println!("  client calls watch light sensor");
     validate_light_sensor().await?;
@@ -760,6 +761,60 @@ async fn validate_light_watch() -> Result<(), Error> {
                     LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
                 ])
             }]
+        )
+    );
+
+    Ok(())
+}
+
+async fn validate_light_watch_individual() -> Result<(), Error> {
+    const TEST_NAME: &str = "test_name";
+    const ENABLED: bool = false;
+    const LIGHT_TYPE: LightType = LightType::Simple;
+    const LIGHT_VAL_1: u8 = 20;
+    const LIGHT_VAL_2: u8 = 42;
+
+    let env = create_service!(Services::Light,
+        LightRequest::WatchLightGroup { name, responder } => {
+            responder.send(LightGroup {
+                    name: Some(name),
+                    enabled: Some(ENABLED),
+                    type_: Some(LIGHT_TYPE),
+                    lights: Some(vec![
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
+                    ])
+                })?;
+        }
+    );
+
+    let light_service =
+        env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
+
+    let output = light::command(
+        light_service,
+        setui_client_lib::LightGroup {
+            name: Some(TEST_NAME.to_string()),
+            simple: vec![],
+            brightness: vec![],
+            rgb: vec![],
+        },
+    )
+    .await?;
+
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            LightGroup {
+                name: Some(TEST_NAME.to_string()),
+                enabled: Some(ENABLED),
+                type_: Some(LIGHT_TYPE),
+                lights: Some(vec![
+                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
+                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
+                ])
+            }
         )
     );
 
