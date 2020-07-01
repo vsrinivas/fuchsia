@@ -111,6 +111,11 @@ test_package("web_runner_tests") {
   deps = [
     ":web_runner_integration_tests",
     ":web_runner_pixel_tests",
+
+    # Provides a fake implementation for `fuchsia.intl.ProfileProvider`.  This
+    # just declares that the binary needs to be compiled, but doesn't actually
+    # add the package.  That happens below in the "tests" group.
+    "//garnet/examples/intl/manager:intl_property_manager",
   ]
 
   tests = [
@@ -157,5 +162,8 @@ group("tests") {
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/scenic",
+
+    # This dependency is used to provide a fake `fuchsia.intl.PropertyProvider`.
+    "//garnet/examples/intl/manager:intl_property_manager",
   ]
 }
