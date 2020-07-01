@@ -98,10 +98,8 @@ TEST_F(ProtoEventTest, InvokedAndOutputEvent) {
   int64_t timestamp_output = time(nullptr);
   auto output_event = std::make_shared<OutputEvent>(
       timestamp_output, dispatcher()->SearchThread(kTid), syscall, ZX_OK, invoked_event);
-  zx_handle_info handle_0 = {
-      .handle = kHandle0, .type = ZX_OBJ_TYPE_CHANNEL, .rights = 0};
-  zx_handle_info handle_1 = {
-      .handle = kHandle1, .type = ZX_OBJ_TYPE_CHANNEL, .rights = 0};
+  zx_handle_info handle_0 = {.handle = kHandle0, .type = ZX_OBJ_TYPE_CHANNEL, .rights = 0};
+  zx_handle_info handle_1 = {.handle = kHandle1, .type = ZX_OBJ_TYPE_CHANNEL, .rights = 0};
   output_event->AddInlineField(syscall->SearchInlineMember("out0", /*invoked=*/false),
                                std::make_unique<fidl_codec::HandleValue>(handle_0));
   output_event->AddInlineField(syscall->SearchInlineMember("out1", /*invoked=*/false),
@@ -120,8 +118,8 @@ TEST_F(ProtoEventTest, InvokedAndOutputEvent) {
   std::string result = GetResult();
   ASSERT_EQ(result,
             "\n"
-            "my_process.cmx 1234:5678 zx_channel_create(options:uint32: 0)\n"
-            "  -> ZX_OK (out0:handle: Channel:0000abcd, out1:handle: Channel:0000beef)\n");
+            "my_process.cmx 1234:5678 zx_channel_create(options: uint32 = 0)\n"
+            "  -> ZX_OK (out0: handle = Channel:0000abcd, out1: handle = Channel:0000beef)\n");
 }
 
 TEST_F(ProtoEventTest, Exception) {

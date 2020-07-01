@@ -36,9 +36,9 @@ JOB_CREATE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_job_create("
-    "parent_job:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "parent_job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_job_set_policy tests.
 
@@ -76,17 +76,17 @@ JOB_SET_POLICY_BASIC_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_job_set_policy("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-    "topic:\x1B[32mzx_policy_topic_t\x1B[0m: \x1B[34mZX_JOB_POL_BASIC\x1B[0m)\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
+    "topic: \x1B[32mzx_policy_topic_t\x1B[0m = \x1B[34mZX_JOB_POL_BASIC\x1B[0m)\n"
     "    policy:\x1B[32mzx_policy_basic_t\x1B[0m[]:  {\n"
     "      {\n"
-    "        condition:\x1B[32mzx_policy_condition_t\x1B[0m: \x1B[34mZX_POL_VMAR_WX\x1B[0m\n"
-    "        policy:\x1B[32mzx_policy_action_t\x1B[0m: \x1B[34mZX_POL_ACTION_ALLOW\x1B[0m\n"
+    "        condition: \x1B[32mzx_policy_condition_t\x1B[0m = \x1B[34mZX_POL_VMAR_WX\x1B[0m\n"
+    "        policy: \x1B[32mzx_policy_action_t\x1B[0m = \x1B[34mZX_POL_ACTION_ALLOW\x1B[0m\n"
     "      },\n"
     "      {\n"
-    "        condition:\x1B[32mzx_policy_condition_t\x1B[0m: \x1B[34mZX_POL_NEW_VMO\x1B[0m\n"
-    "        policy:\x1B[32mzx_policy_action_t\x1B[0m: \x1B[34mZX_POL_ACTION_DENY\x1B[0m\n"
+    "        condition: \x1B[32mzx_policy_condition_t\x1B[0m = \x1B[34mZX_POL_NEW_VMO\x1B[0m\n"
+    "        policy: \x1B[32mzx_policy_action_t\x1B[0m = \x1B[34mZX_POL_ACTION_DENY\x1B[0m\n"
     "      }\n"
     "    }\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
@@ -110,12 +110,12 @@ JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_job_set_policy("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m,"
-    " options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-    "topic:\x1B[32mzx_policy_topic_t\x1B[0m: \x1B[34mZX_JOB_POL_TIMER_SLACK\x1B[0m)\n"
-    "    policy:\x1B[32mzx_policy_timer_slack_t\x1B[0m: {\n"
-    "      min_slack:\x1B[32mduration\x1B[0m: \x1B[34m100 nano seconds\x1B[0m\n"
-    "      default_mode:\x1B[32mzx_timer_option_t\x1B[0m: \x1B[34mZX_TIMER_SLACK_CENTER\x1B[0m\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m,"
+    " options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
+    "topic: \x1B[32mzx_policy_topic_t\x1B[0m = \x1B[34mZX_JOB_POL_TIMER_SLACK\x1B[0m)\n"
+    "    policy: \x1B[32mzx_policy_timer_slack_t\x1B[0m = {\n"
+    "      min_slack: \x1B[32mduration\x1B[0m = \x1B[34m100 nano seconds\x1B[0m\n"
+    "      default_mode: \x1B[32mzx_timer_option_t\x1B[0m = \x1B[34mZX_TIMER_SLACK_CENTER\x1B[0m\n"
     "    }\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 

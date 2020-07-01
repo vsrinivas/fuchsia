@@ -27,7 +27,7 @@ std::unique_ptr<SystemCallTest> ZxPmtUnpin(int64_t result, std::string_view resu
 PMT_UNPIN_DISPLAY_TEST(ZxPmtUnpin, ZX_OK,
                        "\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-                       "zx_pmt_unpin(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+                       "zx_pmt_unpin(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
                        "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

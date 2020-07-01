@@ -47,20 +47,20 @@ PROFILE_CREATE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_profile_create("
-    "root_job:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
-    "    info:\x1B[32mzx_profile_info_t\x1B[0m: {\n"
-    "      flags:\x1B[32mzx_profile_info_flags_t\x1B[0m: "
+    "root_job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "    info: \x1B[32mzx_profile_info_t\x1B[0m = {\n"
+    "      flags: \x1B[32mzx_profile_info_flags_t\x1B[0m = "
     "\x1B[34mZX_PROFILE_INFO_FLAG_PRIORITY | ZX_PROFILE_INFO_FLAG_CPU_MASK\x1B[0m\n"
-    "      priority:\x1B[32mint32\x1B[0m: \x1B[34m-1\x1B[0m\n"
-    "      cpu_affinity_mask:\x1B[32mzx_cpu_set_t\x1B[0m: {\n"
-    "        mask:\x1B[32muint64[]\x1B[0m: "
+    "      priority: \x1B[32mint32\x1B[0m = \x1B[34m-1\x1B[0m\n"
+    "      cpu_affinity_mask: \x1B[32mzx_cpu_set_t\x1B[0m = {\n"
+    "        mask: \x1B[32muint64[]\x1B[0m = "
     "\x1B[34m000000000000000e\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m, "
     "\x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m\n"
     "      }\n"
     "    }\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 }  // namespace fidlcat

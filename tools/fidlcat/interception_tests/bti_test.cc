@@ -35,10 +35,10 @@ BTI_CREATE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_bti_create("
-    "iommu:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-    "bti_id:\x1B[32muint64\x1B[0m: \x1B[34m10\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "iommu: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
+    "bti_id: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_bti_pin tests.
 
@@ -75,13 +75,13 @@ BTI_PIN_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_bti_pin("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32mzx.bti_perm\x1B[0m: \x1B[34mZX_BTI_PERM_READ | ZX_BTI_PERM_EXECUTE\x1B[0m, "
-    "vmo:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m, "
-    "offset:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m, "
-    "size:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (pmt:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n"
-    "    addrs:\x1B[32mvector<zx.paddr>\x1B[0m: [ "
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32mzx.bti_perm\x1B[0m = \x1B[34mZX_BTI_PERM_READ | ZX_BTI_PERM_EXECUTE\x1B[0m, "
+    "vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
+    "offset: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m, "
+    "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (pmt: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
+    "    addrs: \x1B[32mvector<zx.paddr>\x1B[0m = [ "
     "\x1B[34m0000000000001234\x1B[0m, \x1B[34m0000000000002345\x1B[0m, "
     "\x1B[34m0000000000003456\x1B[0m ]\n");
 
@@ -110,7 +110,7 @@ BTI_RELEASE_QUARANTINE_DISPLAY_TEST(
     ZxBtiReleaseQuarantine, ZX_OK,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_bti_release_quarantine(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+    "zx_bti_release_quarantine(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

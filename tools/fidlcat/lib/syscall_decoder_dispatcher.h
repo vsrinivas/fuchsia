@@ -2489,9 +2489,9 @@ void ClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Ar
 template <typename ClassType, typename Type>
 void ArrayField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch /*arch*/,
                                           fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name();
-  DisplayType(ClassFieldBase<ClassType>::syscall_type(), printer);
-  printer << "[]: {";
+  printer << ClassFieldBase<ClassType>::name() << ": " << fidl_codec::Green
+          << TypeName(ClassFieldBase<ClassType>::syscall_type()) << fidl_codec::ResetColor
+          << "[] = {";
   const char* separator = " ";
   std::pair<const Type*, int> array = get_(object);
   for (int i = 0; i < array.second; ++i) {
@@ -2505,8 +2505,8 @@ void ArrayField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Ar
 template <typename ClassType, typename Type>
 void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
                                                fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ':' << fidl_codec::Green << field_class_->name()
-          << fidl_codec::ResetColor << ": ";
+  printer << ClassFieldBase<ClassType>::name() << ": " << fidl_codec::Green << field_class_->name()
+          << fidl_codec::ResetColor << " = ";
   const Type* sub_object = get_(object);
   field_class_->DisplayObject(sub_object, arch, printer);
   printer << '\n';
@@ -2735,7 +2735,7 @@ const char* SyscallInputOutputString<FromType>::DisplayInline(
     SyscallDecoder* decoder, Stage stage, const char* separator,
     fidl_codec::PrettyPrinter& printer) const {
   printer << separator;
-  printer << name() << ':' << fidl_codec::Green << "string" << fidl_codec::ResetColor << ": ";
+  printer << name() << ": " << fidl_codec::Green << "string" << fidl_codec::ResetColor << " = ";
   const char* string = reinterpret_cast<const char*>(string_->Content(decoder, stage));
   size_t string_size = string_size_->Value(decoder, stage);
   printer.DisplayString(std::string_view(string, string_size));
@@ -2746,8 +2746,8 @@ template <typename ClassType, typename SizeType>
 void SyscallInputOutputObject<ClassType, SizeType>::DisplayOutline(
     SyscallDecoder* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
   fidl_codec::Indent indent(printer);
-  printer << name() << ":" << fidl_codec::Green << class_definition_->name()
-          << fidl_codec::ResetColor << ": ";
+  printer << name() << ": " << fidl_codec::Green << class_definition_->name()
+          << fidl_codec::ResetColor << " = ";
   auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
   if (object == nullptr) {
     printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;

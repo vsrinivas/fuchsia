@@ -865,7 +865,7 @@ std::string_view TypeName(SyscallType type) {
 }
 
 void DisplayType(SyscallType type, fidl_codec::PrettyPrinter& printer) {
-  printer << ":" << fidl_codec::Green << TypeName(type) << fidl_codec::ResetColor << ": ";
+  printer << ": " << fidl_codec::Green << TypeName(type) << fidl_codec::ResetColor << " = ";
 }
 
 }  // namespace fidlcat

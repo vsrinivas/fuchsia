@@ -50,18 +50,18 @@ void FidlcatPrinter::DisplayStatus(zx_status_t status) {
 void FidlcatPrinter::DisplayInline(
     const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,
     const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values) {
-  (*this) << '(';
+  *this << '(';
   const char* separator = "";
   for (const auto& member : members) {
     auto it = values.find(member.get());
     if (it == values.end())
       continue;
-    (*this) << separator << member->name() << ":" << fidl_codec::Green << member->type()->Name()
-            << fidl_codec::ResetColor << ": ";
+    *this << separator << member->name() << ": " << fidl_codec::Green << member->type()->Name()
+          << fidl_codec::ResetColor << " = ";
     it->second->PrettyPrint(member->type(), *this);
     separator = ", ";
   }
-  (*this) << ")";
+  *this << ")";
 }
 
 void FidlcatPrinter::DisplayOutline(
@@ -76,10 +76,10 @@ void FidlcatPrinter::DisplayOutline(
     if (fidl_message_value != nullptr) {
       it->second->PrettyPrint(member->type(), *this);
     } else {
-      (*this) << member->name() << ":" << fidl_codec::Green << member->type()->Name()
-              << fidl_codec::ResetColor << ": ";
+      *this << member->name() << ": " << fidl_codec::Green << member->type()->Name()
+            << fidl_codec::ResetColor << " = ";
       it->second->PrettyPrint(member->type(), *this);
-      (*this) << '\n';
+      *this << '\n';
     }
   }
 }

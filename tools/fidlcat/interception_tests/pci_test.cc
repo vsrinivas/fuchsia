@@ -52,20 +52,20 @@ PCI_GET_NTH_DEVICE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_nth_device("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "index:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m)\n"
-    "    out_info:\x1B[32mzx_pcie_device_info_t\x1B[0m: {\n"
-    "      vendor_id:\x1B[32muint16\x1B[0m: \x1B[34m1\x1B[0m\n"
-    "      device_id:\x1B[32muint16\x1B[0m: \x1B[34m2\x1B[0m\n"
-    "      base_class:\x1B[32muint8\x1B[0m: \x1B[34m3\x1B[0m\n"
-    "      sub_class:\x1B[32muint8\x1B[0m: \x1B[34m4\x1B[0m\n"
-    "      program_interface:\x1B[32muint8\x1B[0m: \x1B[34m5\x1B[0m\n"
-    "      revision_id:\x1B[32muint8\x1B[0m: \x1B[34m6\x1B[0m\n"
-    "      bus_id:\x1B[32muint8\x1B[0m: \x1B[34m7\x1B[0m\n"
-    "      dev_id:\x1B[32muint8\x1B[0m: \x1B[34m8\x1B[0m\n"
-    "      func_id:\x1B[32muint8\x1B[0m: \x1B[34m9\x1B[0m\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "index: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n"
+    "    out_info: \x1B[32mzx_pcie_device_info_t\x1B[0m = {\n"
+    "      vendor_id: \x1B[32muint16\x1B[0m = \x1B[34m1\x1B[0m\n"
+    "      device_id: \x1B[32muint16\x1B[0m = \x1B[34m2\x1B[0m\n"
+    "      base_class: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m\n"
+    "      sub_class: \x1B[32muint8\x1B[0m = \x1B[34m4\x1B[0m\n"
+    "      program_interface: \x1B[32muint8\x1B[0m = \x1B[34m5\x1B[0m\n"
+    "      revision_id: \x1B[32muint8\x1B[0m = \x1B[34m6\x1B[0m\n"
+    "      bus_id: \x1B[32muint8\x1B[0m = \x1B[34m7\x1B[0m\n"
+    "      dev_id: \x1B[32muint8\x1B[0m = \x1B[34m8\x1B[0m\n"
+    "      func_id: \x1B[32muint8\x1B[0m = \x1B[34m9\x1B[0m\n"
     "    }\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pci_enable_bus_master tests.
 
@@ -93,8 +93,8 @@ PCI_ENABLE_BUS_MASTER_DISPLAY_TEST(ZxPciEnableBusMaster, ZX_OK,
                                    "\n"
                                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                    "zx_pci_enable_bus_master("
-                                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                                   "enable:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m)\n"
+                                   "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                   "enable: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m)\n"
                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_reset_device tests.
@@ -122,7 +122,7 @@ PCI_RESET_DEVICE_DISPLAY_TEST(
     ZxPciResetDevice, ZX_OK,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_pci_reset_device(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+    "zx_pci_reset_device(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_config_read tests.
@@ -156,10 +156,10 @@ PCI_CONFIG_READ_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_config_read("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "offset:\x1B[32muint16\x1B[0m: \x1B[34m1000\x1B[0m, "
-    "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m)\n");
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "offset: \x1B[32muint16\x1B[0m = \x1B[34m1000\x1B[0m, "
+    "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out_val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n");
 
 // zx_pci_config_write tests.
 
@@ -190,10 +190,10 @@ PCI_CONFIG_WRITE_DISPLAY_TEST(ZxPciConfigWrite, ZX_OK,
                               "\n"
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_pci_config_write("
-                              "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                              "offset:\x1B[32muint16\x1B[0m: \x1B[34m1000\x1B[0m, "
-                              "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m, "
-                              "val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m)\n"
+                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                              "offset: \x1B[32muint16\x1B[0m = \x1B[34m1000\x1B[0m, "
+                              "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
+                              "val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n"
                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_cfg_pio_rw tests.
@@ -233,27 +233,27 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_cfg_pio_rw("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "bus:\x1B[32muint8\x1B[0m: \x1B[34m1\x1B[0m, "
-    "dev:\x1B[32muint8\x1B[0m: \x1B[34m2\x1B[0m, "
-    "func:\x1B[32muint8\x1B[0m: \x1B[34m3\x1B[0m, "
-    "offset:\x1B[32muint8\x1B[0m: \x1B[34m100\x1B[0m, "
-    "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m, "
-    "write:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m)\n");
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "bus: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m, "
+    "dev: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m, "
+    "func: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m, "
+    "offset: \x1B[32muint8\x1B[0m = \x1B[34m100\x1B[0m, "
+    "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
+    "write: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n");
 
 PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
                             "\n"
                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                             "zx_pci_cfg_pio_rw("
-                            "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                            "bus:\x1B[32muint8\x1B[0m: \x1B[34m1\x1B[0m, "
-                            "dev:\x1B[32muint8\x1B[0m: \x1B[34m2\x1B[0m, "
-                            "func:\x1B[32muint8\x1B[0m: \x1B[34m3\x1B[0m, "
-                            "offset:\x1B[32muint8\x1B[0m: \x1B[34m100\x1B[0m, "
-                            "width:\x1B[32msize\x1B[0m: \x1B[34m4\x1B[0m, "
-                            "val:\x1B[32muint32\x1B[0m: \x1B[34m1234\x1B[0m, "
-                            "write:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m)\n"
+                            "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                            "bus: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m, "
+                            "dev: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m, "
+                            "func: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m, "
+                            "offset: \x1B[32muint8\x1B[0m = \x1B[34m100\x1B[0m, "
+                            "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
+                            "val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m, "
+                            "write: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m)\n"
                             "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_get_bar tests.
@@ -288,12 +288,12 @@ PCI_GET_BAR_UNUSED_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_bar("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "bar_num:\x1B[32muint32\x1B[0m: \x1B[34m1\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n"
-    "    out_bar:\x1B[32mzx_pci_bar_t\x1B[0m: {\n"
-    "      id:\x1B[32muint32\x1B[0m: \x1B[34m1000\x1B[0m\n"
-    "      type:\x1B[32mzx_pci_bar_type_t\x1B[0m: \x1B[34mZX_PCI_BAR_TYPE_UNUSED\x1B[0m\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
+    "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = {\n"
+    "      id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m\n"
+    "      type: \x1B[32mzx_pci_bar_type_t\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_UNUSED\x1B[0m\n"
     "    }\n");
 
 #define PCI_GET_BAR_MMIO_DISPLAY_TEST_CONTENT(result, expected)                          \
@@ -315,13 +315,13 @@ PCI_GET_BAR_MMIO_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_bar("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "bar_num:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n"
-    "    out_bar:\x1B[32mzx_pci_bar_t\x1B[0m: {\n"
-    "      id:\x1B[32muint32\x1B[0m: \x1B[34m1000\x1B[0m\n"
-    "      type:\x1B[32mzx_pci_bar_type_t\x1B[0m: \x1B[34mZX_PCI_BAR_TYPE_MMIO\x1B[0m\n"
-    "      handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
+    "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = {\n"
+    "      id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m\n"
+    "      type: \x1B[32mzx_pci_bar_type_t\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_MMIO\x1B[0m\n"
+    "      handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m\n"
     "    }\n");
 
 #define PCI_GET_BAR_PIO_DISPLAY_TEST_CONTENT(result, expected)                                     \
@@ -343,14 +343,14 @@ PCI_GET_BAR_PIO_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_bar("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "bar_num:\x1B[32muint32\x1B[0m: \x1B[34m3\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n"
-    "    out_bar:\x1B[32mzx_pci_bar_t\x1B[0m: {\n"
-    "      id:\x1B[32muint32\x1B[0m: \x1B[34m1000\x1B[0m\n"
-    "      type:\x1B[32mzx_pci_bar_type_t\x1B[0m: \x1B[34mZX_PCI_BAR_TYPE_PIO\x1B[0m\n"
-    "      size:\x1B[32msize_t\x1B[0m: \x1B[34m1024\x1B[0m\n"
-    "      addr:\x1B[32muintptr_t\x1B[0m: \x1B[34m0000000000045678\x1B[0m\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
+    "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = {\n"
+    "      id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m\n"
+    "      type: \x1B[32mzx_pci_bar_type_t\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_PIO\x1B[0m\n"
+    "      size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m\n"
+    "      addr: \x1B[32muintptr_t\x1B[0m = \x1B[34m0000000000045678\x1B[0m\n"
     "    }\n");
 
 // zx_pci_map_interrupt tests.
@@ -383,9 +383,9 @@ PCI_MAP_INTERRUPT_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_map_interrupt("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "which_irq:\x1B[32mint32\x1B[0m: \x1B[34m5\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "which_irq: \x1B[32mint32\x1B[0m = \x1B[34m5\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pci_query_irq_mode tests.
 
@@ -417,9 +417,9 @@ PCI_QUERY_IRQ_MODE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_query_irq_mode("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "mode:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_max_irqs:\x1B[32muint32\x1B[0m: \x1B[34m12\x1B[0m)\n");
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "mode: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out_max_irqs: \x1B[32muint32\x1B[0m = \x1B[34m12\x1B[0m)\n");
 
 // zx_pci_set_irq_mode tests.
 
@@ -449,9 +449,9 @@ PCI_SET_IRQ_MODE_DISPLAY_TEST(ZxPciSetIrqMode, ZX_OK,
                               "\n"
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_pci_set_irq_mode("
-                              "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                              "mode:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-                              "requested_irq_count:\x1B[32muint32\x1B[0m: \x1B[34m5\x1B[0m)\n"
+                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                              "mode: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
+                              "requested_irq_count: \x1B[32muint32\x1B[0m = \x1B[34m5\x1B[0m)\n"
                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_init tests.
@@ -529,49 +529,49 @@ PCI_INIT_DISPLAY_TEST(
     ZxPciInit, ZX_OK,
     FillPins("\n"
              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_pci_init("
-             "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-             "len:\x1B[32muint32\x1B[0m: \x1B[34m5968\x1B[0m)\n"
-             "    init_buf:\x1B[32mzx_pci_init_arg_t\x1B[0m: {\n"
-             "      dev_pin_to_global_irq:\x1B[32muint32\x1B[0m: []: { ",
+             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+             "len: \x1B[32muint32\x1B[0m = \x1B[34m5968\x1B[0m)\n"
+             "    init_buf: \x1B[32mzx_pci_init_arg_t\x1B[0m = {\n"
+             "      dev_pin_to_global_irq: \x1B[32muint32\x1B[0m[] = { ",
              " }\n"
-             "      num_irqs:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m\n"
+             "      num_irqs: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m\n"
              "      irqs:\x1B[32mzx_pci_init_arg_irq_t\x1B[0m[]: {\n"
              "        {\n"
-             "          global_irq:\x1B[32muint32\x1B[0m: \x1B[34m10\x1B[0m\n"
-             "          level_triggered:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
-             "          active_high:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
+             "          global_irq: \x1B[32muint32\x1B[0m = \x1B[34m10\x1B[0m\n"
+             "          level_triggered: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
+             "          active_high: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
              "        }\n"
              "        {\n"
-             "          global_irq:\x1B[32muint32\x1B[0m: \x1B[34m20\x1B[0m\n"
-             "          level_triggered:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
-             "          active_high:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
+             "          global_irq: \x1B[32muint32\x1B[0m = \x1B[34m20\x1B[0m\n"
+             "          level_triggered: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
+             "          active_high: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
              "        }\n"
              "      }\n"
-             "      addr_window_count:\x1B[32muint32\x1B[0m: \x1B[34m3\x1B[0m\n"
+             "      addr_window_count: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m\n"
              "      addr_windows:\x1B[32mzx_pci_init_arg_addr_window_t\x1B[0m[]: {\n"
              "        {\n"
-             "          base:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m\n"
-             "          size:\x1B[32msize_t\x1B[0m: \x1B[34m1024\x1B[0m\n"
-             "          bus_start:\x1B[32muint8\x1B[0m: \x1B[34m1\x1B[0m\n"
-             "          bus_end:\x1B[32muint8\x1B[0m: \x1B[34m2\x1B[0m\n"
-             "          cfg_space_type:\x1B[32muint8\x1B[0m: \x1B[34m3\x1B[0m\n"
-             "          has_ecam:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
+             "          base: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m\n"
+             "          size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m\n"
+             "          bus_start: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
+             "          bus_end: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m\n"
+             "          cfg_space_type: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m\n"
+             "          has_ecam: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
              "        }\n"
              "        {\n"
-             "          base:\x1B[32muint64\x1B[0m: \x1B[34m2000\x1B[0m\n"
-             "          size:\x1B[32msize_t\x1B[0m: \x1B[34m2024\x1B[0m\n"
-             "          bus_start:\x1B[32muint8\x1B[0m: \x1B[34m21\x1B[0m\n"
-             "          bus_end:\x1B[32muint8\x1B[0m: \x1B[34m22\x1B[0m\n"
-             "          cfg_space_type:\x1B[32muint8\x1B[0m: \x1B[34m23\x1B[0m\n"
-             "          has_ecam:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
+             "          base: \x1B[32muint64\x1B[0m = \x1B[34m2000\x1B[0m\n"
+             "          size: \x1B[32msize_t\x1B[0m = \x1B[34m2024\x1B[0m\n"
+             "          bus_start: \x1B[32muint8\x1B[0m = \x1B[34m21\x1B[0m\n"
+             "          bus_end: \x1B[32muint8\x1B[0m = \x1B[34m22\x1B[0m\n"
+             "          cfg_space_type: \x1B[32muint8\x1B[0m = \x1B[34m23\x1B[0m\n"
+             "          has_ecam: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
              "        }\n"
              "        {\n"
-             "          base:\x1B[32muint64\x1B[0m: \x1B[34m3000\x1B[0m\n"
-             "          size:\x1B[32msize_t\x1B[0m: \x1B[34m3024\x1B[0m\n"
-             "          bus_start:\x1B[32muint8\x1B[0m: \x1B[34m31\x1B[0m\n"
-             "          bus_end:\x1B[32muint8\x1B[0m: \x1B[34m32\x1B[0m\n"
-             "          cfg_space_type:\x1B[32muint8\x1B[0m: \x1B[34m33\x1B[0m\n"
-             "          has_ecam:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
+             "          base: \x1B[32muint64\x1B[0m = \x1B[34m3000\x1B[0m\n"
+             "          size: \x1B[32msize_t\x1B[0m = \x1B[34m3024\x1B[0m\n"
+             "          bus_start: \x1B[32muint8\x1B[0m = \x1B[34m31\x1B[0m\n"
+             "          bus_end: \x1B[32muint8\x1B[0m = \x1B[34m32\x1B[0m\n"
+             "          cfg_space_type: \x1B[32muint8\x1B[0m = \x1B[34m33\x1B[0m\n"
+             "          has_ecam: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
              "        }\n"
              "      }\n"
              "    }\n"
@@ -611,11 +611,11 @@ PCI_ADD_SUBTRACT_IO_RANGE_DISPLAY_TEST(ZxPciAddSubtractIoRange, ZX_OK,
                                        "\n"
                                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                        "zx_pci_add_subtract_io_range("
-                                       "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                                       "mmio:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m, "
-                                       "base:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m, "
-                                       "len:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m, "
-                                       "add:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m)\n"
+                                       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                       "mmio: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m, "
+                                       "base: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m, "
+                                       "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
+                                       "add: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m)\n"
                                        "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

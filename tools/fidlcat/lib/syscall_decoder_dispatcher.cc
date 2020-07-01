@@ -86,7 +86,7 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(Syscall
 void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDecoder* decoder, Stage stage,
                                                     fidl_codec::PrettyPrinter& printer) const {
   printer << name();
-  printer << ':' << fidl_codec::Green << "string" << fidl_codec::ResetColor << ": ";
+  printer << ": " << fidl_codec::Green << "string" << fidl_codec::ResetColor << " = ";
   const char* const* buffer = buffer_->Content(decoder, stage);
   if (buffer == nullptr) {
     printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;
@@ -115,7 +115,7 @@ const char* SyscallInputOutputFixedSizeString::DisplayInline(
     SyscallDecoder* decoder, Stage stage, const char* separator,
     fidl_codec::PrettyPrinter& printer) const {
   printer << separator;
-  printer << name() << ':' << fidl_codec::Green << "string" << fidl_codec::ResetColor << ": ";
+  printer << name() << ": " << fidl_codec::Green << "string" << fidl_codec::ResetColor << " = ";
   const char* string = string_->Content(decoder, stage);
   size_t string_size = (string == nullptr) ? 0 : strnlen(string, string_size_);
   printer.DisplayString(std::string_view(string, string_size));

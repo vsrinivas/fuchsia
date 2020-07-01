@@ -32,8 +32,8 @@ PAGER_CREATE_DISPLAY_TEST(
     ZxPagerCreate, ZX_OK,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_pager_create(options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "zx_pager_create(options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pager_create_vmo tests.
 
@@ -70,12 +70,12 @@ PAGER_CREATE_VMO_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pager_create_vmo("
-    "pager:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-    "port:\x1B[32mhandle\x1B[0m: \x1B[31mdf0b2ec1\x1B[0m, "
-    "key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m, "
-    "size:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "pager: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
+    "port: \x1B[32mhandle\x1B[0m = \x1B[31mdf0b2ec1\x1B[0m, "
+    "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m, "
+    "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pager_detach_vmo tests.
 
@@ -103,8 +103,8 @@ PAGER_DETACH_VMO_DISPLAY_TEST(ZxPagerDetachVmo, ZX_OK,
                               "\n"
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_pager_detach_vmo("
-                              "pager:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                              "vmo:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m)\n"
+                              "pager: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                              "vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pager_supply_pages tests.
@@ -141,12 +141,12 @@ PAGER_SUPPLY_PAGES_DISPLAY_TEST(ZxPagerSupplyPages, ZX_OK,
                                 "\n"
                                 "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                 "zx_pager_supply_pages("
-                                "pager:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                                "pager_vmo:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m, "
-                                "offset:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m, "
-                                "length:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m, "
-                                "aux_vmo:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1333\x1B[0m, "
-                                "aux_offset:\x1B[32muint64\x1B[0m: \x1B[34m2000\x1B[0m)\n"
+                                "pager: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                "pager_vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
+                                "offset: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m, "
+                                "length: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
+                                "aux_vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1333\x1B[0m, "
+                                "aux_offset: \x1B[32muint64\x1B[0m = \x1B[34m2000\x1B[0m)\n"
                                 "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

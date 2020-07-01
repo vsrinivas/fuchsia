@@ -44,8 +44,8 @@ WRITE_DISPLAY_TEST(
     ZxChannelWriteDecoded, ZX_OK, false,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
@@ -54,8 +54,8 @@ WRITE_DISPLAY_TEST(
     ZxChannelWriteDecodedDumped, ZX_OK, true,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
     "  Message: num_bytes=48 num_handles=0 txid=1 "
@@ -91,8 +91,8 @@ WRITE_EVENT_TEST(
     EventWriteDecoded, ZX_OK, false,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent event\x1B[0m \x1B[32mfidl.examples.echo/Echo.OnPong\x1B[0m = {}\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 

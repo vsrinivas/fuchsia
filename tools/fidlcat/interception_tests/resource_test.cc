@@ -46,11 +46,11 @@ RESOURCE_CREATE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_resource_create("
-    "parent_rsrc:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32mzx_rsrc_kind_t\x1B[0m: \x1B[34mZX_RSRC_KIND_ROOT\x1B[0m, "
-    "base:\x1B[32muint64\x1B[0m: \x1B[34m1000\x1B[0m, "
-    "size:\x1B[32msize_t\x1B[0m: \x1B[34m1024\x1B[0m, "
-    "name:\x1B[32mstring\x1B[0m: \x1B[31m\"My resource\"\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (resource_out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "parent_rsrc: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32mzx_rsrc_kind_t\x1B[0m = \x1B[34mZX_RSRC_KIND_ROOT\x1B[0m, "
+    "base: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m, "
+    "size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m, "
+    "name: \x1B[32mstring\x1B[0m = \x1B[31m\"My resource\"\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (resource_out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 }  // namespace fidlcat

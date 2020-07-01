@@ -29,9 +29,9 @@ DISPLAY_STACK_TEST(
     DisplayNoStack, ZX_OK, kNoStack,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_create("
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
-    "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
+    "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n");
 
 DISPLAY_STACK_TEST(
     DisplayPartialStack, ZX_OK, kPartialStack,
@@ -41,9 +41,9 @@ DISPLAY_STACK_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
     "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m50:4\x1B[0m\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_create("
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
-    "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
+    "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n");
 
 #define BAD_STACK_TEST_CONTENT(errno, expected)                                                  \
   set_bad_stack();                                                                               \

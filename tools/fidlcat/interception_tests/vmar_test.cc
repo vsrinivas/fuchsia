@@ -43,13 +43,13 @@ VMAR_ALLOCATE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_allocate("
-    "parent_vmar:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32mzx_vm_option_t\x1B[0m: \x1B[31mZX_VM_COMPACT | ZX_VM_CAN_MAP_READ\x1B[0m, "
-    "offset:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m, "
-    "size:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m)\n"
+    "parent_vmar: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32mzx_vm_option_t\x1B[0m = \x1B[31mZX_VM_COMPACT | ZX_VM_CAN_MAP_READ\x1B[0m, "
+    "offset: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m, "
+    "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "child_vmar:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m, "
-    "child_addr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000012345\x1B[0m)\n");
+    "child_vmar: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
+    "child_addr: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n");
 
 // zx_vmar_destroy tests.
 
@@ -69,11 +69,12 @@ std::unique_ptr<SystemCallTest> ZxVmarDestroy(int64_t result, std::string_view r
   }                                                      \
   TEST_F(InterceptionWorkflowTestArm, name) { VMAR_DESTROY_DISPLAY_TEST_CONTENT(errno, expected); }
 
-VMAR_DESTROY_DISPLAY_TEST(ZxVmarDestroy, ZX_OK,
-                          "\n"
-                          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-                          "zx_vmar_destroy(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
-                          "  -> \x1B[32mZX_OK\x1B[0m\n");
+VMAR_DESTROY_DISPLAY_TEST(
+    ZxVmarDestroy, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_vmar_destroy(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmar_map tests.
 
@@ -109,14 +110,14 @@ VMAR_MAP_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_map("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32mzx_vm_option_t\x1B[0m: \x1B[31mZX_VM_PERM_READ | ZX_VM_SPECIFIC\x1B[0m, "
-    "vmar_offset:\x1B[32muint64\x1B[0m: \x1B[34m10\x1B[0m, "
-    "vmo:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m, "
-    "vmo_offset:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m, "
-    "len:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m)\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32mzx_vm_option_t\x1B[0m = \x1B[31mZX_VM_PERM_READ | ZX_VM_SPECIFIC\x1B[0m, "
+    "vmar_offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m, "
+    "vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
+    "vmo_offset: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m, "
+    "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "mapped_addr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000012345\x1B[0m)\n");
+    "mapped_addr: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n");
 
 // zx_vmar_unmap tests.
 
@@ -141,9 +142,9 @@ VMAR_UNMAP_DISPLAY_TEST(ZxVmarUnmap, ZX_OK,
                         "\n"
                         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                         "zx_vmar_unmap("
-                        "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                        "addr:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000012345\x1B[0m, "
-                        "len:\x1B[32muint64\x1B[0m: \x1B[34m1024\x1B[0m)\n"
+                        "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                        "addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m, "
+                        "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
                         "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmar_protect tests.
@@ -176,9 +177,10 @@ VMAR_PROTECT_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_protect("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32mzx_vm_option_t\x1B[0m: \x1B[31mZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE\x1B[0m, "
-    "addr:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000012345\x1B[0m, len:\x1B[32muint64\x1B[0m: "
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32mzx_vm_option_t\x1B[0m = \x1B[31mZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE\x1B[0m, "
+    "addr: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000012345\x1B[0m, len: \x1B[32muint64\x1B[0m "
+    "= "
     "\x1B[34m1024\x1B[0m)\n  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmar_unmap_handle_close_thread_exit tests.
@@ -216,10 +218,10 @@ VMAR_UNMAP_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_unmap_handle_close_thread_exit("
-    "vmar_handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "addr:\x1B[32mzx.vaddr\x1B[0m: \x1B[34m0000000000012345\x1B[0m, "
-    "size:\x1B[32msize\x1B[0m: \x1B[34m1024\x1B[0m, "
-    "close_handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m)\n"
+    "vmar_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m, "
+    "size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m, "
+    "close_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

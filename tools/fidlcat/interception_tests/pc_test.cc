@@ -38,9 +38,9 @@ PC_FIRMWARE_TABLES_DISPLAY_TEST(
     ZxPcFirmwareTables, ZX_OK,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_pc_firmware_tables(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+    "zx_pc_firmware_tables(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "acpi_rsdp:\x1B[32mzx.paddr\x1B[0m: \x1B[34m0000000012340000\x1B[0m, "
-    "smbios:\x1B[32mzx.paddr\x1B[0m: \x1B[34m0000000012350000\x1B[0m)\n");
+    "acpi_rsdp: \x1B[32mzx.paddr\x1B[0m = \x1B[34m0000000012340000\x1B[0m, "
+    "smbios: \x1B[32mzx.paddr\x1B[0m = \x1B[34m0000000012350000\x1B[0m)\n");
 
 }  // namespace fidlcat

@@ -42,11 +42,11 @@ INTERRUPT_CREATE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_interrupt_create("
-    "src_obj:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "src_num:\x1B[32muint32\x1B[0m: \x1B[34m1\x1B[0m, "
-    "options:\x1B[32mzx_interrupt_flags_t\x1B[0m: "
+    "src_obj: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "src_num: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m, "
+    "options: \x1B[32mzx_interrupt_flags_t\x1B[0m = "
     "\x1B[31mZX_INTERRUPT_MODE_EDGE_LOW | ZX_INTERRUPT_REMAP_IRQ\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_interrupt_bind tests.
 
@@ -77,10 +77,10 @@ INTERRUPT_BIND_DISPLAY_TEST(ZxInterruptBind, ZX_OK,
                             "\n"
                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                             "zx_interrupt_bind("
-                            "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                            "port_handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m, "
-                            "key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m, "
-                            "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+                            "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                            "port_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
+                            "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m, "
+                            "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
                             "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_interrupt_wait tests.
@@ -110,9 +110,9 @@ INTERRUPT_WAIT_DISPLAY_TEST(
     ZxInterruptWait, ZX_OK,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_interrupt_wait(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+    "zx_interrupt_wait(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "out_timestamp:\x1B[32mzx_time_t\x1B[0m: "
+    "out_timestamp: \x1B[32mzx_time_t\x1B[0m = "
     "\x1B[34m2 hours, 13 minutes, 20 seconds and 123000 nano seconds\x1B[0m)\n");
 
 // zx_interrupt_destroy tests.
@@ -140,7 +140,7 @@ INTERRUPT_DESTROY_DISPLAY_TEST(
     ZxInterruptDestroy, ZX_OK,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_interrupt_destroy(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+    "zx_interrupt_destroy(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_interrupt_ack tests.
@@ -165,7 +165,7 @@ INTERRUPT_ACK_DISPLAY_TEST(
     ZxInterruptAck, ZX_OK,
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_interrupt_ack(handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+    "zx_interrupt_ack(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_interrupt_trigger tests.
@@ -197,9 +197,9 @@ INTERRUPT_TRIGGER_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_interrupt_trigger("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
-    "timestamp:\x1B[32mzx_time_t\x1B[0m: \x1B[34m2 hours, 13 minutes, 20 seconds\x1B[0m)\n"
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
+    "timestamp: \x1B[32mzx_time_t\x1B[0m = \x1B[34m2 hours, 13 minutes, 20 seconds\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_interrupt_bind_vcpu tests.
@@ -230,9 +230,9 @@ INTERRUPT_BIND_VCPU_DISPLAY_TEST(ZxInterruptBindVcpu, ZX_OK,
                                  "\n"
                                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                  "zx_interrupt_bind_vcpu("
-                                 "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                                 "vcpu:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1222\x1B[0m, "
-                                 "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+                                 "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                 "vcpu: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
+                                 "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
                                  "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

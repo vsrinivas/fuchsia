@@ -30,7 +30,7 @@ HANDLE_CLOSE_DISPLAY_TEST(ZxHandleClose, ZX_OK,
                           "\n"
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_handle_close("
-                          "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m)\n"
+                          "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
                           "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_handle_close_many tests.
@@ -57,14 +57,14 @@ std::unique_ptr<SystemCallTest> ZxHandleCloseMany(int64_t result, std::string_vi
     HANDLE_CLOSE_MANY_DISPLAY_TEST_CONTENT(errno, expected);  \
   }
 
-HANDLE_CLOSE_MANY_DISPLAY_TEST(
-    ZxHandleCloseMany, ZX_OK,
-    "\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "zx_handle_close_many()\n"
-    "  handles:\x1B[32mvector<handle>\x1B[0m: [ \x1B[31mcefa1db0\x1B[0m, \x1B[31mcefa1222\x1B[0m, "
-    "\x1B[31mcefa1333\x1B[0m ]\n"
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+HANDLE_CLOSE_MANY_DISPLAY_TEST(ZxHandleCloseMany, ZX_OK,
+                               "\n"
+                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                               "zx_handle_close_many()\n"
+                               "  handles: \x1B[32mvector<handle>\x1B[0m = [ "
+                               "\x1B[31mcefa1db0\x1B[0m, \x1B[31mcefa1222\x1B[0m, "
+                               "\x1B[31mcefa1333\x1B[0m ]\n"
+                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_handle_duplicate tests.
 
@@ -97,9 +97,9 @@ HANDLE_DUPLICATE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_handle_duplicate("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "rights:\x1B[32mzx.rights\x1B[0m: \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "rights: \x1B[32mzx.rights\x1B[0m = \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_handle_replace tests.
 
@@ -132,8 +132,8 @@ HANDLE_REPLACE_DISPLAY_TEST(
     "\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_handle_replace("
-    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "rights:\x1B[32mzx.rights\x1B[0m: \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
-    "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "rights: \x1B[32mzx.rights\x1B[0m = \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 }  // namespace fidlcat
