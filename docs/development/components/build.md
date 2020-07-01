@@ -750,7 +750,6 @@ resource("testdata") {
 }
 
 fuchsia_unittest_package("timekeeper-unittests") {
-  executable_name = "timekeeper"
   manifest = "meta/unittests.cmx"
   deps = [
     ":bin_test",
@@ -781,6 +780,10 @@ fuchsia_unittest_package("timekeeper-unittests") {
     `data/` automatically prepended to it. In both cases, the data file can
     be read by the test at runtime from the paths `/pkg/data/y2k` and
     `/pkg/data/end-of-unix-time`.
+*   If you're required to specify a packaged path such as the path to an
+    executable in a manifest or a test definition, and you're not sure what the
+    path is, then try your best guess and expect a helpful error message if
+    your guess was not correct.
 
 ### Unsupported features
 
