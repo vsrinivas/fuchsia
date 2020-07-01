@@ -5,7 +5,7 @@
 ///! Implements a DHCPv6 client.
 use {
     anyhow::{Context as _, Result},
-    dhcpv6::{
+    dhcpv6_core::{
         client::{Action, Actions, Dhcpv6ClientStateMachine, Dhcpv6ClientTimerType},
         protocol::{Dhcpv6Message, Dhcpv6OptionCode, ProtocolError},
     },
@@ -471,7 +471,7 @@ pub(crate) async fn start_client(
 mod tests {
     use {
         super::*,
-        dhcpv6::protocol::{Dhcpv6MessageBuilder, Dhcpv6MessageType, Dhcpv6Option},
+        dhcpv6_core::protocol::{Dhcpv6MessageBuilder, Dhcpv6MessageType, Dhcpv6Option},
         fidl::endpoints::create_endpoints,
         fidl_fuchsia_net_dhcpv6::{ClientMarker, OperationalModels, DEFAULT_CLIENT_PORT},
         fuchsia_async as fasync,
