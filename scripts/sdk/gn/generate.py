@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
 import tarfile
 import xml.etree.ElementTree
@@ -156,6 +157,14 @@ class GNBuilder(Frontend):
                 each.src, each.base, each.dest, allow_overwrite=False)
 
         self.write_additional_files()
+        # Find CIPD prebuilt gn.
+        gn_path = os.path.join(
+            FUCHSIA_ROOT, 'prebuilt', 'third_party', 'gn', '*', 'gn')
+        gn = glob.glob(gn_path)[0]
+        # Format gn files.
+        for root, _, files in os.walk(self.output):
+            for f in (f for f in files if f.endswith(('.gn', '.gni'))):
+                subprocess.call([gn, 'format', os.path.join(root, f)])
 
     def write_additional_files(self):
         self.write_file(self.dest('.gitignore'), 'gitignore', self)

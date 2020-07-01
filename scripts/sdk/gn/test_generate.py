@@ -87,9 +87,7 @@ class GNGenerateTest(unittest.TestCase):
         golden_file = os.path.join(
             SCRIPT_DIR, 'golden', 'build', 'test_targets.gni')
         if not filecmp.cmp(generated_file, golden_file, False):
-            self.fail(
-                "Generated %s does not match : %s." %
-                (generated_file, golden_file))
+            self.fail(_gen_diff(generated_file, golden_file))
 
         # Special case: Check the prebuilts *.version files generated from the jiri manifest
         for prebuilt, version in EXPECTED_PREBUILTS.items():
@@ -120,14 +118,9 @@ class GNGenerateTest(unittest.TestCase):
             # Show a diff of the culprit files. Need to run diff for each pair.
             diff_result = ''
             for file in dcmp.diff_files:
-                cmd_args = [
-                    'diff',
+                diff_result += _gen_diff(
                     os.path.join(dcmp.left, file),
-                    os.path.join(dcmp.right, file)
-                ]
-                pipe = subprocess.Popen(cmd_args, stdout=subprocess.PIPE)
-                out, err = pipe.communicate()
-                diff_result += "diff of '{}':\n{}\n".format(file, out)
+                    os.path.join(dcmp.right, file))
             self.fail("Generated SDK does not match golden files. " \
                 "You can run ./update_golden.py to update them.\n" \
                 "Left : {}\n" \
@@ -202,6 +195,13 @@ class GNGenerateTest(unittest.TestCase):
                     files.update(arch_atom['link_libs'])
 
         return files
+
+
+def _gen_diff(a, b):
+    cmd_args = ['diff', '-U', '2', a, b]
+    pipe = subprocess.Popen(cmd_args, stdout=subprocess.PIPE)
+    out, err = pipe.communicate()
+    return "diff of '{}':\n{}\n".format(os.path.basename(a), out)
 
 
 def TestMain():
