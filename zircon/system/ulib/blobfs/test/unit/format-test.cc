@@ -24,6 +24,20 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   return Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs);
 }
 
+void CheckDefaultInodeCount(std::unique_ptr<BlockDevice> device) {
+  MountOptions options = {};
+  std::unique_ptr<Blobfs> blobfs;
+  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));
+  ASSERT_GE(blobfs->Info().inode_count, kBlobfsDefaultInodeCount);
+}
+
+void CheckDefaultJournalBlocks(std::unique_ptr<BlockDevice> device) {
+  MountOptions options = {};
+  std::unique_ptr<Blobfs> blobfs;
+  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));
+  ASSERT_GE(blobfs->Info().journal_block_count, kDefaultJournalBlocks);
+}
+
 // Formatting filesystems should fail on devices that cannot be written.
 TEST(FormatFilesystemTest, CannotFormatReadOnlyDevice) {
   auto device = std::make_unique<FakeBlockDevice>(1 << 20, 512);
@@ -312,6 +326,33 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithNonDivisibleSliceSize) {
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
   ASSERT_EQ(ZX_ERR_IO_INVALID, FormatFilesystem(device.get()));
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
+}
+
+TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultInodeCount) {
+  const uint64_t kBlockCount = MinimumFilesystemBlocks();
+  const uint32_t kBlockSize = kBlobfsBlockSize;
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  ASSERT_OK(FormatFilesystem(device.get()));
+  CheckDefaultInodeCount(std::move(device));
+}
+
+TEST(FormatFilesystemTest, FormatFvmDeviceDefaultJournalBlocks) {
+  const uint64_t kBlockCount = MinimumFilesystemBlocks();
+  const uint32_t kBlockSize = kBlobfsBlockSize;
+  const uint64_t kSliceSize = kBlobfsBlockSize;
+  const uint64_t kSliceCount = 1028;
+  auto device =
+      std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
+  ASSERT_OK(FormatFilesystem(device.get()));
+  CheckDefaultJournalBlocks(std::move(device));
+}
+
+TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultJournalBlocks) {
+  const uint64_t kBlockCount = MinimumFilesystemBlocks();
+  const uint32_t kBlockSize = kBlobfsBlockSize;
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  ASSERT_OK(FormatFilesystem(device.get()));
+  CheckDefaultJournalBlocks(std::move(device));
 }
 
 }  // namespace

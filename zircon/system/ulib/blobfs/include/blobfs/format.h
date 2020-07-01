@@ -59,12 +59,23 @@ constexpr size_t kFVMDataStart     = 0x40000;
 // TODO(ZX-3076): Calculate the actual upper bound here; this number is not
 // necessarily considering the worst cases of fragmentation.
 constexpr uint32_t kMaxEntryDataBlocks = 64;
+
 // Minimum possible size for the journal, allowing the maximum size for one entry.
 constexpr size_t kMinimumJournalBlocks =
     fs::kJournalMetadataBlocks + fs::kEntryMetadataBlocks + kMaxEntryDataBlocks;
-constexpr size_t kDefaultJournalBlocks = std::max(kMinimumJournalBlocks, static_cast<size_t>(256));
 
-constexpr uint64_t kBlobfsDefaultInodeCount = 32768;
+// This serves as both default journal size and as minimum journal size.
+// This value is somewhat arbitrarily chosen. It is large enough to allow
+// us to run transactions and still small so that resources spent on
+// journals are limited. Mkfs can override this value.
+constexpr size_t kDefaultJournalBlocks = std::max(kMinimumJournalBlocks, static_cast<size_t>(16));
+
+// This serves as both default inode count when mkfs arguments do not specify
+// inode count and as absolute minimum inodes allowed in the fs.
+// This value is somewhat arbitrarily chosen. It is large enough to allow us
+// to create a few blobs and still small so that resources spent on inodes
+// are limited. Mkfs can override this value.
+constexpr uint64_t kBlobfsDefaultInodeCount = 10240;
 
 constexpr size_t kMinimumDataBlocks = 2;
 
