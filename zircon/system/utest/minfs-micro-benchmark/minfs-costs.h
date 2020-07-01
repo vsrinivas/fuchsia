@@ -15,13 +15,11 @@ namespace minfs_micro_benchmanrk {
 class MinfsProperties {
  public:
   MinfsProperties(BlockDeviceSizes block_device_sizes, disk_format_t format,
-                  mkfs_options_t mkfs_options, minfs::Superblock superblock,
-                  mount_options_t mount_options, const char* mount_path)
+                  mkfs_options_t mkfs_options, minfs::Superblock superblock, const char* mount_path)
       : block_device_sizes_(block_device_sizes),
         format_(format),
         mkfs_options_(mkfs_options),
         superblock_(superblock),
-        mount_options_(mount_options),
         mount_path_(mount_path) {}
 
   // Adds to |out| the cost to mount a clean, freshly created, empty filesystem.
@@ -51,7 +49,6 @@ class MinfsProperties {
     memcpy(&superblock_, &src, sizeof(superblock_));
   }
 
-  const mount_options_t& MountOptions() const { return mount_options_; }
   const char* MountPath() const { return mount_path_; }
 
  private:
@@ -90,7 +87,6 @@ class MinfsProperties {
   disk_format_t format_;
   mkfs_options_t mkfs_options_;
   minfs::Superblock superblock_;
-  mount_options_t mount_options_;
   const char* mount_path_;
 };
 

@@ -31,6 +31,8 @@ shared_library("fs_test") {
     "misc.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -41,6 +43,10 @@ shared_library("fs_test") {
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/memfs",
   ]
+  if (false) {  # Enable for fatfs
+    deps += [ "//src/storage/fatfs/fatfs-fuchsia:fatfs" ]
+    defines = [ "TEST_FATFS" ]
+  }
   public_deps = [
     "//src/lib/isolated_devmgr/v2_component:client",
     "//third_party/googletest:gtest",

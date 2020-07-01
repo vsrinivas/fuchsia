@@ -32,10 +32,13 @@
 #include <fs/vfs.h>
 #include <pretty/hexdump.h>
 
-namespace {
+#include "admin.h"
 
 namespace fblock = ::llcpp::fuchsia::hardware::block;
 namespace fio = ::llcpp::fuchsia::io;
+
+namespace fs_management {
+namespace {
 
 void UnmountHandle(zx_handle_t root, bool wait_until_ready) {
   // We've entered a failure case where the filesystem process (which may or may not be alive)
@@ -87,7 +90,7 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
 
 zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
                             const mount_options_t* options, LaunchCallback cb,
-                            zx::channel* out_data_root) {
+                            OutgoingDirectory outgoing_directory, zx::channel* out_data_root) {
   // get the device handle from the device_fd
   zx_status_t status;
   zx::channel device;
@@ -113,21 +116,33 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
   };
 
   // launch the filesystem process
-  zx::channel export_root;
-  status = fs_init(device.release(), df, &init_options, export_root.reset_and_get_address());
+  zx::unowned_channel export_root(outgoing_directory.client);
+  status =
+      FsInit(std::move(device), df, init_options, std::move(outgoing_directory)).status_value();
   if (status != ZX_OK) {
     return status;
   }
 
   // register the export root with the fshost registry
-  if (options->register_fs && ((status = fs_register(export_root.get())) != ZX_OK)) {
+  if (options->register_fs && ((status = fs_register(export_root->get())) != ZX_OK)) {
     return status;
   }
 
-  // extract the handle to the root of the filesystem from the export root
-  return fs_root_handle(export_root.get(), out_data_root->reset_and_get_address());
+  // Extract the handle to the root of the filesystem from the export root. The POSIX flag will
+  // cause the writable and executable rights to be inherited (if present).
+  uint32_t flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+  if (options->admin)
+    flags |= fio::OPEN_RIGHT_ADMIN;
+  auto handle_or = GetFsRootHandle(zx::unowned_channel(export_root), flags);
+  if (handle_or.is_error()) {
+    return handle_or.status_value();
+  }
+  *out_data_root = std::move(handle_or).value();
+  return ZX_OK;
 }
+
 }  // namespace
+}  // namespace fs_management
 
 const mount_options_t default_mount_options = {
     .readonly = false,
@@ -140,6 +155,8 @@ const mount_options_t default_mount_options = {
     .write_compression_algorithm = nullptr,
     .register_fs = true,
     .fsck_after_every_transaction = false,
+    .admin = true,
+    .outgoing_directory = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID},
 };
 
 const mkfs_options_t default_mkfs_options = {
@@ -255,7 +272,19 @@ zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const mount_optio
   zx_status_t status;
   zx::channel data_root;
   fbl::unique_fd device_fd(dev_fd);
-  if ((status = StartFilesystem(std::move(device_fd), df, options, cb, &data_root)) != ZX_OK) {
+
+  fs_management::OutgoingDirectory handles{zx::unowned_channel(options->outgoing_directory.client),
+                                           zx::channel(options->outgoing_directory.server)};
+  zx::channel client;
+  if (!*handles.client) {
+    zx_status_t status = zx::channel::create(0, &client, &handles.server);
+    if (status != ZX_OK)
+      return status;
+    handles.client = zx::unowned_channel(client);
+  }
+
+  if ((status = fs_management::StartFilesystem(std::move(device_fd), df, options, cb,
+                                               std::move(handles), &data_root)) != ZX_OK) {
     return status;
   }
 
@@ -293,13 +322,25 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
   zx_status_t status;
   zx::channel data_root;
   fbl::unique_fd device_fd(dev_fd);
-  if ((status = StartFilesystem(std::move(device_fd), df, options, cb, &data_root)) != ZX_OK) {
+
+  fs_management::OutgoingDirectory handles{zx::unowned_channel(options->outgoing_directory.client),
+                                           zx::channel(options->outgoing_directory.server)};
+  zx::channel client;
+  if (!*handles.client) {
+    zx_status_t status = zx::channel::create(0, &client, &handles.server);
+    if (status != ZX_OK)
+      return status;
+    handles.client = zx::unowned_channel(client);
+  }
+
+  if ((status = fs_management::StartFilesystem(std::move(device_fd), df, options, cb,
+                                               std::move(handles), &data_root)) != ZX_OK) {
     return status;
   }
 
   // mount the channel in the requested location
   if (options->create_mountpoint) {
-    return MakeDirAndRemoteMount(mount_path, std::move(data_root));
+    return fs_management::MakeDirAndRemoteMount(mount_path, std::move(data_root));
   }
 
   return mount_root_handle(data_root.release(), mount_path);

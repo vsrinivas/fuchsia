@@ -23,6 +23,7 @@ struct TestFilesystemOptions {
   __EXPORT static TestFilesystemOptions DefaultMinfs();
   __EXPORT static TestFilesystemOptions MinfsWithoutFvm();
   __EXPORT static TestFilesystemOptions DefaultMemfs();
+  __EXPORT static TestFilesystemOptions DefaultFatfs();
 
   std::string description;
   bool use_fvm = false;
@@ -48,11 +49,6 @@ class FilesystemInstance {
   virtual zx::status<> Unmount(const std::string& mount_path) = 0;
   virtual zx::status<> Fsck() = 0;
   virtual isolated_devmgr::RamDisk* GetRamDisk() { return nullptr; }
-
- protected:
-  // A wrapper around fs-management that can be used by subclasses if they so wish.
-  static zx::status<> Mount(const std::string& device_path, const std::string& mount_path,
-                            disk_format_t format);
 };
 
 // Base class for all supported file systems. It is a factory class that generates
@@ -112,6 +108,21 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
         .supports_mmap = true,
+    };
+    return traits;
+  }
+};
+
+// Support for Fatfs.
+class FatFilesystem : public FilesystemImpl<FatFilesystem> {
+ public:
+  zx::status<std::unique_ptr<FilesystemInstance>> Make(
+      const TestFilesystemOptions& options) const override;
+  const Traits& GetTraits() const override {
+    static Traits traits{
+        .can_unmount = true,
+        .timestamp_granularity = zx::sec(1),
+        .supports_hard_links = false,
     };
     return traits;
   }

@@ -36,16 +36,14 @@
 
 namespace {
 
-const mount_options_t test_mount_options = {
-    .readonly = false,
-    .verbose_mount = false,
-    .collect_metrics = false,
-    .wait_until_ready = true,
-    .create_mountpoint = false,
-    .enable_journal = true,
-    .enable_pager = false,
-    .write_compression_algorithm = nullptr,
-};
+const mount_options_t& test_mount_options() {
+  static mount_options_t* options = []() {
+    mount_options_t* options = new mount_options_t(default_mount_options);
+    options->register_fs = false;
+    return options;
+  }();
+  return *options;
+}
 
 fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
   fs_test_utils::FixtureOptions options = fs_test_utils::FixtureOptions::Default(DISK_FORMAT_MINFS);
@@ -84,7 +82,7 @@ void MountUnmountShared(size_t block_size) {
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
   ASSERT_EQ(umount(mount_path), ZX_OK);
@@ -108,7 +106,7 @@ TEST(MountMkdirUnmountCase, MountMkdirUnmount) {
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  mount_options_t options = test_mount_options;
+  mount_options_t options = test_mount_options();
   options.create_mountpoint = true;
   ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options, launch_stdio_async), ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
@@ -132,7 +130,8 @@ TEST(FmountFunmountCase, FmountFunmount) {
 
   int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
   ASSERT_GT(mountfd, 0, "Couldn't open mount point");
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async), ZX_OK);
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
+            ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
   ASSERT_EQ(fumount(mountfd), ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
@@ -164,7 +163,7 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   // Everything *would* be perfect to call fmount, when suddenly...
   ASSERT_EQ(rmdir(mount_path), 0);
   // The directory was unlinked! We can't mount now!
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_ERR_NOT_DIR);
   usleep(10000);
   ASSERT_NE(fumount(mountfd), ZX_OK);
@@ -178,7 +177,7 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   mountfd = open(mount_path, O_CREAT | O_RDWR);
   ASSERT_GT(mountfd, 0);
   // Wait a sec, that was a file, not a directory! We can't mount that!
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_ERR_ACCESS_DENIED);
   usleep(10000);
   ASSERT_NE(fumount(mountfd), ZX_OK);
@@ -192,7 +191,7 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   // Try mounting without O_ADMIN (which is disallowed)
   mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
   ASSERT_GT(mountfd, 0, "Couldn't open mount point");
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_ERR_ACCESS_DENIED);
   usleep(10000);
   ASSERT_EQ(close(mountfd), 0, "Couldn't close the unpriviledged mount point");
@@ -202,11 +201,11 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   ASSERT_GT(fd, 0);
   mountfd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
   ASSERT_GT(mountfd, 0, "Couldn't open mount point");
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async), ZX_OK);
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async), ZX_OK);
   // Awesome, that worked. But we shouldn't be able to mount again!
   fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_ERR_BAD_STATE);
   usleep(10000);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
@@ -263,7 +262,7 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
@@ -309,7 +308,7 @@ TEST(DoubleMountRootCase, DoubleMountRoot) {
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GE(fd, 0);
-  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
@@ -326,7 +325,7 @@ TEST(DoubleMountRootCase, DoubleMountRoot) {
   ASSERT_GE(mount_fd, 0);
   fd = open(ramdisk_path2, O_RDWR);
   ASSERT_GE(fd, 0);
-  ASSERT_NE(fmount(fd, mount_fd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_NE(fmount(fd, mount_fd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
   ASSERT_EQ(close(mount_fd), 0);
 
@@ -336,7 +335,7 @@ TEST(DoubleMountRootCase, DoubleMountRoot) {
   ASSERT_GE(mount_fd, 0);
   fd = open(ramdisk_path2, O_RDWR);
   ASSERT_GE(fd, 0);
-  ASSERT_NE(fmount(fd, mount_fd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_NE(fmount(fd, mount_fd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
   ASSERT_EQ(close(mount_fd), 0);
 
@@ -360,7 +359,7 @@ TEST(MountRemountCase, MountRemount) {
   for (size_t i = 0; i < 10; i++) {
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GE(fd, 0);
-    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
               ZX_OK);
     ASSERT_EQ(umount(mount_path), ZX_OK);
   }
@@ -378,7 +377,7 @@ TEST(MountFsckCase, MountFsck) {
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GE(fd, 0, "Could not open ramdisk device");
-  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
   ASSERT_EQ(umount(mount_path), ZX_OK);
   // fsck shouldn't require any user input for a newly mkfs'd filesystem
@@ -411,7 +410,7 @@ TEST(MountGetDeviceCase, MountGetDevice) {
 
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
@@ -450,8 +449,7 @@ TEST(MountGetDeviceCase, MountGetDevice) {
 
 // Mounts a minfs formatted partition to the desired point.
 void MountMinfs(int block_fd, bool read_only, bool enable_journal, const char* mount_path) {
-  mount_options_t options;
-  memcpy(&options, &test_mount_options, sizeof(mount_options_t));
+  mount_options_t options = test_mount_options();
   options.readonly = read_only;
   options.enable_journal = enable_journal;
 
@@ -567,7 +565,7 @@ TEST(StatfsTestCase, StatfsTest) {
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
 
   struct statfs stats;
@@ -602,7 +600,7 @@ TEST(StatvfsTestCase, StatvfsTest) {
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
+  ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
             ZX_OK);
 
   struct statvfs stats;

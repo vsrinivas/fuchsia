@@ -4,8 +4,11 @@
 
 #include "src/storage/fs_test/fs_test.h"
 
+#include <fuchsia/fs/cpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <lib/memfs/memfs.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
@@ -20,6 +23,8 @@
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
 
 namespace fs_test {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 // Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
 static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
@@ -47,6 +52,45 @@ static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDis
   return zx::ok(std::make_pair(std::move(ram_disk_or).value(), device_path));
 }
 
+// A wrapper around fs-management that can be used by filesytems if they so wish.
+static zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
+                            disk_format_t format, const mount_options_t& mount_options,
+                            zx::channel* outgoing_directory = nullptr) {
+  auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
+  if (!fd) {
+    FX_LOGS(ERROR) << "Could not open device: " << device_path << ": errno=" << errno;
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  mount_options_t options = mount_options;
+  options.register_fs = false;
+  if (outgoing_directory) {
+    zx::channel server;
+    auto status = zx::make_status(zx::channel::create(0, outgoing_directory, &server));
+    if (status.is_error()) {
+      FX_LOGS(ERROR) << "Unable to create channel for outgoing directory: "
+                     << status.status_string();
+      return status;
+    }
+    options.outgoing_directory.client = outgoing_directory->get();
+    options.outgoing_directory.server = server.release();
+  }
+
+  // Uncomment the following line to force an fsck at the end of every transaction (where
+  // supported).
+  // options.fsck_after_every_transaction = true;
+
+  // |fd| is consumed by mount.
+  auto status = zx::make_status(
+      mount(fd.release(), mount_path.c_str(), format, &options, launch_stdio_async));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Could not mount " << disk_format_string(format)
+                   << " file system: " << status.status_string();
+    return status;
+  }
+  return zx::ok();
+}
+
 TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
   return TestFilesystemOptions{.description = "MinfsWithFvm",
                                .use_fvm = true,
@@ -68,6 +112,15 @@ TestFilesystemOptions TestFilesystemOptions::DefaultMemfs() {
                                .filesystem = &MemfsFilesystem::SharedInstance()};
 }
 
+TestFilesystemOptions TestFilesystemOptions::DefaultFatfs() {
+  return TestFilesystemOptions{.description = "Fatfs",
+                               .use_fvm = false,
+                               .device_block_size = 512,
+                               .device_block_count = 131'072,
+                               .fvm_slice_size = 1'048'576,
+                               .filesystem = &FatFilesystem::SharedInstance()};
+}
+
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options) {
   return out << options.description;
 }
@@ -75,31 +128,11 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
   return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
                                             TestFilesystemOptions::MinfsWithoutFvm(),
-                                            TestFilesystemOptions::DefaultMemfs()};
-}
-
-zx::status<> FilesystemInstance::Mount(const std::string& device_path,
-                                       const std::string& mount_path, disk_format_t format) {
-  auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
-  if (!fd) {
-    FX_LOGS(ERROR) << "Could not open device: " << device_path << ": errno=" << errno;
-    return zx::error(ZX_ERR_BAD_STATE);
-  }
-
-  // fd consumed by mount. By default, mount waits until the filesystem is ready to accept commands.
-  mount_options_t options = default_mount_options;
-  options.register_fs = false;
-  // Uncomment the following line to force an fsck at the end of every transaction (where
-  // supported).
-  // options.fsck_after_every_transaction = true;
-  auto status = zx::make_status(
-      mount(fd.release(), mount_path.c_str(), format, &options, launch_stdio_async));
-  if (status.is_error()) {
-    FX_LOGS(ERROR) << "Could not mount " << disk_format_string(format)
-                   << " file system: " << status.status_string();
-    return status;
-  }
-  return zx::ok();
+                                            TestFilesystemOptions::DefaultMemfs(),
+#ifdef TEST_FATFS
+                                            TestFilesystemOptions::DefaultFatfs()
+#endif
+  };
 }
 
 zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t format) {
@@ -113,13 +146,15 @@ zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t fo
   return zx::ok();
 }
 
+// -- Minfs --
+
 class MinfsInstance : public FilesystemInstance {
  public:
   MinfsInstance(isolated_devmgr::RamDisk ram_disk, const std::string& device_path)
       : ram_disk_(std::move(ram_disk)), device_path_(device_path) {}
 
   zx::status<> Mount(const std::string& mount_path) override {
-    return FilesystemInstance::Mount(device_path_, mount_path, DISK_FORMAT_MINFS);
+    return FsMount(device_path_, mount_path, DISK_FORMAT_MINFS, default_mount_options);
   }
 
   zx::status<> Unmount(const std::string& mount_path) override {
@@ -158,6 +193,8 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Make(
   }
   return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_disk), device_path));
 }
+
+// -- Memfs --
 
 class MemfsInstance : public FilesystemInstance {
  public:
@@ -212,6 +249,100 @@ zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
   }
   return zx::ok(std::move(instance));
 }
+
+// -- Fatfs --
+
+class FatfsInstance : public FilesystemInstance {
+ public:
+  FatfsInstance(isolated_devmgr::RamDisk ram_disk, const std::string& device_path)
+      : ram_disk_(std::move(ram_disk)), device_path_(device_path) {}
+
+  zx::status<> Mount(const std::string& mount_path) override {
+    mount_options_t options = default_mount_options;
+    // Fatfs doesn't support DirectoryAdmin.
+    options.admin = false;
+    return FsMount(device_path_, mount_path, DISK_FORMAT_FAT, options, &outgoing_directory_);
+  }
+
+  zx::status<> Unmount(const std::string& mount_path) override {
+    // O_ADMIN & O_NO_REMOTE are not part of the SDK and O_ADMIN, at least, is deprecated, so for
+    // now, we hard code their values until we get around to fixing fs-management. fatfs doesn't
+    // support O_ADMIN.
+
+    // First detach the node.
+    constexpr int kAdmin = 0x0000'0004;
+    constexpr int kNoRemote = 0x0020'0000;
+    auto fd = fbl::unique_fd(open(mount_path.c_str(), O_DIRECTORY | kNoRemote | kAdmin));
+    if (!fd) {
+      FX_LOGS(ERROR) << "Unable to open mount point for unmount: " << strerror(errno);
+      return zx::error(ZX_ERR_IO);
+    }
+    fdio_cpp::FdioCaller caller(std::move(fd));
+    auto response = fio::DirectoryAdmin::Call::UnmountNode(caller.channel());
+    caller.release().release();
+    if (!response.ok()) {
+      auto status = zx::make_status(response.status());
+      FX_LOGS(ERROR) << "UnmountNode failed with fidl error: " << status.status_string();
+      return status;
+    }
+    if (response.value().s != ZX_OK) {
+      auto status = zx::make_status(response.value().s);
+      FX_LOGS(ERROR) << "UnmountNode failed: " << status.status_string();
+      return status;
+    }
+
+    // Now shut down the filesystem.
+    fidl::SynchronousInterfacePtr<fuchsia::fs::Admin> admin;
+    std::string service_name = std::string("svc/") + fuchsia::fs::Admin::Name_;
+    auto status = zx::make_status(fdio_service_connect_at(
+        outgoing_directory_.get(), service_name.c_str(), admin.NewRequest().TakeChannel().get()));
+    if (status.is_error()) {
+      FX_LOGS(ERROR) << "Unable to connect to admin service: " << status.status_string();
+      return status;
+    }
+    status = zx::make_status(admin->Shutdown());
+    if (status.is_error()) {
+      FX_LOGS(ERROR) << "Shut down failed: " << status.status_string();
+      return status;
+    }
+    outgoing_directory_.reset();
+
+    return zx::ok();
+  }
+
+  zx::status<> Fsck() override {
+    fsck_options_t options{
+        .verbose = false,
+        .never_modify = true,
+        .always_modify = false,
+        .force = true,
+        .apply_journal = false,
+    };
+    return zx::make_status(
+        fsck(device_path_.c_str(), DISK_FORMAT_FAT, &options, launch_stdio_sync));
+  }
+
+ private:
+  isolated_devmgr::RamDisk ram_disk_;
+  std::string device_path_;
+  zx::channel outgoing_directory_;
+};
+
+zx::status<std::unique_ptr<FilesystemInstance>> FatFilesystem::Make(
+    const TestFilesystemOptions& options) const {
+  auto ram_disk_or = CreateRamDisk(options);
+  if (ram_disk_or.is_error()) {
+    return ram_disk_or.take_error();
+  }
+  auto [ram_disk, device_path] = std::move(ram_disk_or).value();
+  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_FAT);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::make_unique<FatfsInstance>(std::move(ram_disk), device_path));
+}
+
+// --
 
 zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& options) {
   // Make a file system.

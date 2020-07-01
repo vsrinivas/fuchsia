@@ -49,6 +49,7 @@ if (is_fuchsia) {
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/pretty",
       "//zircon/public/lib/zx",
+      "//zircon/public/lib/zxc",
       "//zircon/system/ulib/digest",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fs",

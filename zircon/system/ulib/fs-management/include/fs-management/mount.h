@@ -19,9 +19,9 @@ typedef struct mount_options {
   // Create the mountpoint directory if it doesn't already exist.
   // Must be false if passed to "fmount".
   bool create_mountpoint;
-  // Enable journaling on the file system (if supported).
+  // Enable journaling on the filesystem (if supported).
   bool enable_journal;
-  // Enable paging on the file system (if supported).
+  // Enable paging on the filesystem (if supported).
   bool enable_pager;
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
@@ -30,6 +30,15 @@ typedef struct mount_options {
   bool register_fs;
   // If set, run fsck after every transaction.
   bool fsck_after_every_transaction;
+  // If set, attach the filesystem with O_ADMIN, which will allow the use of the DirectoryAdmin
+  // protocol.
+  bool admin;
+  // If set, provides the handle pair for the filesystem processes's outgoing directory. If
+  // unspecified, it is assumed the caller doesn't need it. The server handle is *always* consumed,
+  // even on error; the client handle is unowned.
+  struct {
+    zx_handle_t client, server;
+  } outgoing_directory;
 } mount_options_t;
 
 __EXPORT
@@ -56,7 +65,7 @@ zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
 zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
                    LaunchCallback cb);
 
-// Mounts the file system being served via root_handle (which is consumed) at mount_path.
+// Mounts the filesystem being served via root_handle (which is consumed) at mount_path.
 zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path);
 
 // Umount the filesystem process.

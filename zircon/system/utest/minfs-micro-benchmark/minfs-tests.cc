@@ -180,6 +180,12 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
   void TearDown() override { UnmountAndCompareBlockMetrics(); }
 
  private:
+  mount_options_t GetMountOptions() {
+    mount_options_t options = default_mount_options;
+    options.register_fs = false;
+    return options;
+  }
+
   // Creates a filesystem and mounts it. Clears block metrics after creating the
   // filesystem but before mounting it.
   void SetUpFs() {
@@ -217,8 +223,9 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
     EXPECT_EQ(metrics.flush.success.bytes_transferred, 0);
     EXPECT_EQ(metrics.flush.failure.bytes_transferred, 0);
 
-    EXPECT_EQ(mount(device_fd_.get(), properties_.MountPath(), properties_.DiskFormat(),
-                    &properties_.MountOptions(), launch_stdio_async),
+    const mount_options_t options = GetMountOptions();
+    EXPECT_EQ(mount(device_fd_.get(), properties_.MountPath(), properties_.DiskFormat(), &options,
+                    launch_stdio_async),
               0);
 
     root_fd_.reset(open(properties_.MountPath(), O_RDONLY));
@@ -247,16 +254,6 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
 };
 
 constexpr BlockDeviceSizes kDefaultBlockDeviceSizes = {8192, 1 << 13};
-constexpr mount_options_t kDefaultMinfsMountOptions = {
-    .readonly = false,
-    .verbose_mount = false,
-    .collect_metrics = false,
-    .wait_until_ready = true,
-    .create_mountpoint = false,
-    .enable_journal = true,
-    .enable_pager = false,
-    .write_compression_algorithm = nullptr,
-};
 
 constexpr const char kDefaultMinfsMountPath[] = "/tmp/minfs_micro_benchmark_test";
 constexpr const minfs::Superblock kMinfsZeroedSuperblock = {};
@@ -267,7 +264,7 @@ constexpr const mkfs_options_t kMinfsDefaultMkfsOptions = {
 
 const MinfsProperties kDefaultMinfsProperties(kDefaultBlockDeviceSizes, DISK_FORMAT_MINFS,
                                               kMinfsDefaultMkfsOptions, kMinfsZeroedSuperblock,
-                                              kDefaultMinfsMountOptions, kDefaultMinfsMountPath);
+                                              kDefaultMinfsMountPath);
 
 using MinfsMicroBenchmark = MinfsMicroBenchmarkFixture<MinfsProperties, &kDefaultMinfsProperties>;
 
