@@ -60,5 +60,6 @@ group("test") {
     ":examples-integration-test",
     "//examples/fidl/hlcpp:all",
     "//examples/fidl/llcpp:all",
+    "//examples/fidl/rust:all",
   ]
 }

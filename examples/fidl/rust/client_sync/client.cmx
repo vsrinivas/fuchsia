@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/fidl_echo_rust_client_sync"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.examples.Echo"
+        ]
+    }
+}

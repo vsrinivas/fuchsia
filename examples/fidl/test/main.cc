@@ -56,6 +56,10 @@ TEST(IntegrationTest, LlcppService) {
   TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-llcpp-service-client#meta/echo-client.cmx");
 }
 
+TEST(IntegrationTest, RustService) {
+  TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-rust-service-client#meta/echo-client.cmx");
+}
+
 TEST(IntegrationTest, HlcppMultipleClients) {
   ASSERT_EQ(
       LaunchComponents("fuchsia-pkg://fuchsia.com/echo-hlcpp-multi-client#meta/echo-client.cmx",
@@ -68,6 +72,28 @@ TEST(IntegrationTest, HlcppPipelining) {
   ASSERT_EQ(
       LaunchComponents("fuchsia-pkg://fuchsia.com/echo-launcher-hlcpp-client#meta/echo-client.cmx",
                        "fuchsia-pkg://fuchsia.com/echo-launcher-hlcpp-server#meta/echo-server.cmx",
+                       {"fuchsia.examples.EchoLauncher"}),
+      0);
+}
+
+TEST(IntegrationTest, RustSync) {
+  ASSERT_EQ(LaunchComponents("fuchsia-pkg://fuchsia.com/echo-rust-client-sync#meta/echo-client.cmx",
+                             "fuchsia-pkg://fuchsia.com/echo-rust-server#meta/echo-server.cmx",
+                             {"fuchsia.examples.Echo"}),
+            0);
+}
+
+TEST(IntegrationTest, RustAsync) {
+  ASSERT_EQ(LaunchComponents("fuchsia-pkg://fuchsia.com/echo-rust-client#meta/echo-client.cmx",
+                             "fuchsia-pkg://fuchsia.com/echo-rust-server#meta/echo-server.cmx",
+                             {"fuchsia.examples.Echo"}),
+            0);
+}
+
+TEST(IntegrationTest, RustPipelining) {
+  ASSERT_EQ(
+      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-launcher-rust-client#meta/echo-client.cmx",
+                       "fuchsia-pkg://fuchsia.com/echo-launcher-rust-server#meta/echo-server.cmx",
                        {"fuchsia.examples.EchoLauncher"}),
       0);
 }

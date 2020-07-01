@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/fidl_echo_rust_service_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

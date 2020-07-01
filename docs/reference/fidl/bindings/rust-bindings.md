@@ -427,10 +427,10 @@ stream type.
 `TicTacToe` protocol. It has the following variants:
 
 * `StartGame { start_first: bool, control_handle: TicTacToeControlHandle }`: A
-  fire and forget request, which contains the request parameters and a control
-  handle.
+  fire and forget request, which contains the request parameters and a [control handle](#protocol-control-handle).
 * `MakeMove { row: u8, col: u8, responder: TicTacToeMakeMoveResponder }`: A two
-  way method request, which contains the request parameters and a responder.
+  way method request, which contains the request parameters and a
+  [responder](#request-responder).
 
 One such enum is generated for each protocol.
 
