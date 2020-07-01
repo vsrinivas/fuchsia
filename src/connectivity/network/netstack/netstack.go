@@ -423,12 +423,14 @@ func (ns *Netstack) name(nicid tcpip.NICID) string {
 }
 
 func (ns *Netstack) onInterfacesChanged() {
+	// We must hold a lock through the entire process of preparing the event so
+	// we guarantee events cannot be reordered.
+	ns.netstackService.mu.Lock()
 	interfaces2 := ns.getNetInterfaces2()
 	connectivity.InferAndNotify(interfaces2)
 	// TODO(NET-2078): Switch to the new NetInterface struct once Chromium stops
 	// using netstack.fidl.
 	interfaces := interfaces2ListToInterfacesList(interfaces2)
-	ns.netstackService.mu.Lock()
 	for pxy := range ns.netstackService.mu.proxies {
 		if err := pxy.OnInterfacesChanged(interfaces); err != nil {
 			syslog.Warnf("OnInterfacesChanged failed: %s", err)

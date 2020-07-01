@@ -5,7 +5,7 @@
 use ::fidl;
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
-use futures::TryStreamExt as _;
+use futures::{FutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, std_ip};
 use netstack_testing_macros::variants_test;
 
@@ -620,6 +620,104 @@ async fn test_close_data_race<E: Endpoint>(name: &str) -> Result {
                     "netstack stream ended unexpectedly while waiting for interface to disappear"
                 )
             })?;
+    }
+    Ok(())
+}
+
+/// Tests that competing InterfacesChanged events will be reported in the
+/// correct order.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_interfaces_changed_race() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>("interfaces_changed_race")
+        .context("failed to create netstack environment")?;
+    // NB: This test takes more than 100 iterations to exercise the flake, but
+    // we limit the load in CQ.
+    for _ in 0..100 {
+        let netstack = env
+            .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+            .context("failed to connect to netstack")?;
+        let ep = sandbox
+            // We don't need to run variants for this test, all we care about is
+            // the Netstack race. Use NetworkDevice because it's lighter weight.
+            .create_endpoint::<NetworkDevice, _>("ep")
+            .await
+            .context("failed to create fixed ep")?
+            .into_interface_in_environment(&env)
+            .await
+            .context("failed to install in environment")?;
+
+        const ADDR: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+
+        // Bring the link up, enable the interface, and add an IP address
+        // "non-sequentially" (as much as possible) to cause races in Netstack
+        // when reporting events.
+        let ((), (), ()) = futures::future::try_join3(
+            ep.set_link_up(true).map(|r| r.context("failed to bring link up")),
+            ep.enable_interface().map(|r| r.context("failed to enable interface")),
+            ep.add_ip_addr(fidl_fuchsia_net::Subnet { addr: ADDR, prefix_len: 24 })
+                .map(|r| r.context("failed to add address")),
+        )
+        .await?;
+
+        let id = ep.id();
+
+        let () = futures::stream::try_unfold(
+            (netstack.take_event_stream(), false, false, false),
+            |(mut event_stream, present, up, has_addr)| async move {
+                let fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces } =
+                    event_stream
+                        .try_next()
+                        .await
+                        .context("failed to fetch next event")?
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("Netstack event stream ended unexpectedly")
+                        })?;
+                let (new_present, new_up, new_has_addr) =
+                    if let Some(iface) = interfaces.iter().find(|i| u64::from(i.id) == id) {
+                        (
+                            true,
+                            iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0,
+                            iface.addr == ADDR,
+                        )
+                    } else {
+                        (false, false, false)
+                    };
+                println!(
+                    "Observed interfaces, previous state = ({}, {}, {}), new state = ({}, {}, {})",
+                    present, up, has_addr, new_present, new_up, new_has_addr
+                );
+
+                // Verify that none of the observed states can be seen as
+                // "undone" by bad event ordering in Netstack. We don't care
+                // about the order in which we see the events since we're
+                // intentionally racing some things, only that nothing tracks
+                // back.
+
+                if present {
+                    // Device should not disappear.
+                    assert!(new_present, "out of order events, device disappeared");
+                }
+                if up {
+                    // Device should not go offline.
+                    assert!(new_up, "out of order events, device went offline");
+                }
+                if has_addr {
+                    // Address should not disappear.
+                    assert!(new_has_addr, "out of order events, address disappeared");
+                }
+                Result::Ok(if new_present && new_up && new_has_addr {
+                    // We got everything we wanted, end the stream.
+                    None
+                } else {
+                    // Continue folding with the new state.
+                    Some(((), (event_stream, new_present, new_up, new_has_addr)))
+                })
+            },
+        )
+        .try_collect()
+        .await?;
     }
     Ok(())
 }
