@@ -4,6 +4,7 @@
 
 #include "src/lib/fidl_codec/proto_value.h"
 
+#include "src/lib/fidl_codec/logger.h"
 #include "src/lib/fidl_codec/proto/value.pb.h"
 #include "src/lib/fidl_codec/visitor.h"
 #include "src/lib/fidl_codec/wire_object.h"
@@ -131,8 +132,8 @@ std::unique_ptr<StructValue> DecodeStruct(LibraryLoader* loader, const proto::St
   for (const auto& proto_field : proto_struct.fields()) {
     const fidl_codec::StructMember* member = struct_definition.SearchMember(proto_field.first);
     if (member == nullptr) {
-      FX_LOGS(ERROR) << "Member " << proto_field.first << " not found in "
-                     << struct_definition.name() << '.';
+      FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_field.first << " not found in "
+                                << struct_definition.name() << '.';
       ok = false;
     } else {
       std::unique_ptr<fidl_codec::Value> value =
@@ -179,14 +180,15 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
     case proto::Value::kUnionValue: {
       auto union_type = type->AsUnionType();
       if (union_type == nullptr) {
-        FX_LOGS(ERROR) << "Type of union value should be union.";
+        FX_LOGS_OR_CAPTURE(ERROR) << "Type of union value should be union.";
         return nullptr;
       }
       fidl_codec::UnionMember* member =
           union_type->union_definition().SearchMember(proto_value.union_value().member());
       if (member == nullptr) {
-        FX_LOGS(ERROR) << "Member " << proto_value.union_value().member() << " not found in union "
-                       << union_type->union_definition().name() << '.';
+        FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_value.union_value().member()
+                                  << " not found in union " << union_type->union_definition().name()
+                                  << '.';
         return nullptr;
       }
       std::unique_ptr<fidl_codec::Value> union_value =
@@ -199,7 +201,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
     case proto::Value::kStructValue: {
       auto struct_type = type->AsStructType();
       if (struct_type == nullptr) {
-        FX_LOGS(ERROR) << "Type of struct value should be struct.";
+        FX_LOGS_OR_CAPTURE(ERROR) << "Type of struct value should be struct.";
         return nullptr;
       }
       return DecodeStruct(loader, proto_value.struct_value(), struct_type->struct_definition());
@@ -207,7 +209,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
     case proto::Value::kVectorValue: {
       const fidl_codec::Type* component_type = type->GetComponentType();
       if (component_type == nullptr) {
-        FX_LOGS(ERROR) << "Type of vector should be array or vector.";
+        FX_LOGS_OR_CAPTURE(ERROR) << "Type of vector should be array or vector.";
         return nullptr;
       }
       bool ok = true;
@@ -230,7 +232,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
     case proto::Value::kTableValue: {
       auto table_type = type->AsTableType();
       if (table_type == nullptr) {
-        FX_LOGS(ERROR) << "Type of table value should be table.";
+        FX_LOGS_OR_CAPTURE(ERROR) << "Type of table value should be table.";
         return nullptr;
       }
       bool ok = true;
@@ -239,8 +241,8 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
         const fidl_codec::TableMember* member =
             table_type->table_definition().GetMember(proto_member.first);
         if (member == nullptr) {
-          FX_LOGS(ERROR) << "Member " << proto_member.first << " not found in "
-                         << table_type->table_definition().name() << '.';
+          FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_member.first << " not found in "
+                                    << table_type->table_definition().name() << '.';
           ok = false;
         } else {
           std::unique_ptr<fidl_codec::Value> value =
@@ -262,8 +264,8 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       const std::vector<const fidl_codec::InterfaceMethod*>* methods =
           loader->GetByOrdinal(proto_message.ordinal());
       if (methods == nullptr || methods->empty()) {
-        FX_LOGS(ERROR) << "Protocol method with ordinal 0x" << std::hex << proto_message.ordinal()
-                       << std::dec << " not found\n";
+        FX_LOGS_OR_CAPTURE(ERROR) << "Protocol method with ordinal 0x" << std::hex
+                                  << proto_message.ordinal() << std::dec << " not found\n";
         return nullptr;
       }
       const fidl_codec::InterfaceMethod* method = (*methods)[0];
@@ -285,7 +287,8 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       bool ok = true;
       if (proto_message.has_request()) {
         if (method->request() == nullptr) {
-          FX_LOGS(ERROR) << "Request without request defined in " << method->name() << '.';
+          FX_LOGS_OR_CAPTURE(ERROR)
+              << "Request without request defined in " << method->name() << '.';
           ok = false;
         } else {
           message->set_decoded_request(
@@ -294,7 +297,8 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       }
       if (proto_message.has_response()) {
         if (method->response() == nullptr) {
-          FX_LOGS(ERROR) << "Response without response defined in " << method->name() << '.';
+          FX_LOGS_OR_CAPTURE(ERROR)
+              << "Response without response defined in " << method->name() << '.';
           ok = false;
         } else {
           message->set_decoded_response(
@@ -307,7 +311,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       return message;
     }
     default:
-      FX_LOGS(ERROR) << "Unknown value.";
+      FX_LOGS_OR_CAPTURE(ERROR) << "Unknown value.";
       return nullptr;
   }
 }

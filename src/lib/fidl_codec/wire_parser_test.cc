@@ -24,6 +24,7 @@
 #include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/library_loader_test_data.h"
+#include "src/lib/fidl_codec/logger.h"
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "src/lib/fidl_codec/wire_object.h"
 
@@ -1489,6 +1490,8 @@ TEST_F(WireParserTest, ParseTraversalMain) {
 // Corrupt data tests
 
 TEST_F(WireParserTest, BadSchemaPrintHex) {
+  std::ostringstream log_msg;
+  fidl_codec::logger::LogCapturer capturer(&log_msg);
   // i32 in the schema is missing "subtype": "int32"
   std::string bad_schema = R"FIDL({
   "version": "0.0.1",
@@ -1617,6 +1620,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   ASSERT_STREQ(actual["i32"].GetString(), "(invalid)");
 
   delete[] handle_infos;
+  ASSERT_STREQ(log_msg.str().c_str(), "Invalid type");
 }
 
 // Checks that MessageDecoder::DecodeValue doesn't core dump with a null type.

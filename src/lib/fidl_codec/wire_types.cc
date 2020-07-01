@@ -4,12 +4,12 @@
 
 #include "src/lib/fidl_codec/wire_types.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/fidl.h>
 
 #include <rapidjson/error/en.h>
 
 #include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/logger.h"
 #include "src/lib/fidl_codec/type_visitor.h"
 #include "src/lib/fidl_codec/wire_object.h"
 
@@ -748,7 +748,7 @@ std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name) {
 
 std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type) {
   if (!type.HasMember("subtype")) {
-    FX_LOGS(ERROR) << "Invalid type";
+    FX_LOGS_OR_CAPTURE(ERROR) << "Invalid type";
     return std::make_unique<InvalidType>();
   }
 
@@ -759,7 +759,7 @@ std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type) {
 std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
                                                const rapidjson::Value& type) {
   if (!type.HasMember("identifier")) {
-    FX_LOGS(ERROR) << "Invalid type";
+    FX_LOGS_OR_CAPTURE(ERROR) << "Invalid type";
     return std::make_unique<InvalidType>();
   }
   std::string id = type["identifier"].GetString();
@@ -767,7 +767,7 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
   std::string library_name = id.substr(0, split_index);
   Library* library = loader->GetLibraryFromName(library_name);
   if (library == nullptr) {
-    FX_LOGS(ERROR) << "Unknown type for identifier: " << library_name;
+    FX_LOGS_OR_CAPTURE(ERROR) << "Unknown type for identifier: " << library_name;
     return std::make_unique<InvalidType>();
   }
 
@@ -780,7 +780,7 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
 
 std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Value& type) {
   if (!type.HasMember("kind")) {
-    FX_LOGS(ERROR) << "Invalid type";
+    FX_LOGS_OR_CAPTURE(ERROR) << "Invalid type";
     return std::make_unique<InvalidType>();
   }
   std::string kind = type["kind"].GetString();
@@ -808,7 +808,7 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   if (kind == "identifier") {
     return Type::TypeFromIdentifier(loader, type);
   }
-  FX_LOGS(ERROR) << "Invalid type " << kind;
+  FX_LOGS_OR_CAPTURE(ERROR) << "Invalid type " << kind;
   return std::make_unique<InvalidType>();
 }
 

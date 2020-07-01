@@ -4,13 +4,12 @@
 
 #include "src/lib/fidl_codec/library_loader.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <fstream>
 
 #include <rapidjson/error/en.h>
 
 #include "src/lib/fidl_codec/builtin_semantic.h"
+#include "src/lib/fidl_codec/logger.h"
 #include "src/lib/fidl_codec/semantic_parser.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_types.h"
@@ -533,8 +532,8 @@ uint64_t Library::ExtractFieldOffset(const rapidjson::Value* json_definition,
 void Library::FieldNotFound(std::string_view container_type, std::string_view container_name,
                             const char* field_name) {
   has_errors_ = true;
-  FX_LOGS(ERROR) << "File " << name() << " field '" << field_name << "' missing for "
-                 << container_type << ' ' << container_name;
+  FX_LOGS_OR_CAPTURE(ERROR) << "File " << name() << " field '" << field_name << "' missing for "
+                            << container_type << ' ' << container_name;
 }
 
 LibraryLoader::LibraryLoader(const std::vector<std::string>& library_paths, LibraryReadError* err) {
@@ -574,9 +573,9 @@ void LibraryLoader::AddPath(const std::string& path, LibraryReadError* err) {
   }
   AddContent(content, err);
   if (err->value != LibraryReadError::kOk) {
-    FX_LOGS(ERROR) << path << ": JSON parse error: "
-                   << rapidjson::GetParseError_En(err->parse_result.Code()) << " at offset "
-                   << err->parse_result.Offset();
+    FX_LOGS_OR_CAPTURE(ERROR) << path << ": JSON parse error: "
+                              << rapidjson::GetParseError_En(err->parse_result.Code())
+                              << " at offset " << err->parse_result.Offset();
     return;
   }
 }

@@ -5,10 +5,10 @@
 #include "src/lib/fidl_codec/encoder.h"
 
 #include <lib/fidl/txn_header.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 
+#include "src/lib/fidl_codec/logger.h"
 #include "src/lib/fidl_codec/type_visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
 
@@ -20,7 +20,7 @@ class NullVisitor : public TypeVisitor {
 
  private:
   void VisitType(const Type* type) override {
-    FX_LOGS(FATAL) << "Type " << type->Name() << " can't be null.";
+    FX_LOGS_OR_CAPTURE(FATAL) << "Type " << type->Name() << " can't be null.";
   }
 
   void VisitStringType(const StringType* type) override {
@@ -109,7 +109,7 @@ void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
 }
 
 void Encoder::VisitInvalidValue(const InvalidValue* node, const Type* for_type) {
-  FX_LOGS(FATAL) << "Can't encode invalid data.";
+  FX_LOGS_OR_CAPTURE(FATAL) << "Can't encode invalid data.";
 }
 
 void Encoder::VisitNullValue(const NullValue* node, const Type* for_type) {
