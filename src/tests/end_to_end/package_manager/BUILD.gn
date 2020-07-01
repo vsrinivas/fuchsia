@@ -15,6 +15,7 @@ dart_test("package_manager_test") {
   sources = [ "package_manager_test.dart" ]
 
   deps = [
+    "//cts/util/ports:ports",
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
