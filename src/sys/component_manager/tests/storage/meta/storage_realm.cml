@@ -19,7 +19,7 @@
         },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
             to: [
                 "#memfs",
                 "#storage_user",

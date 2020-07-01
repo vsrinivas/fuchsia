@@ -9,7 +9,7 @@
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",
             ],
-            from: "realm",
+            from: "parent",
         },
     ],
     expose: [

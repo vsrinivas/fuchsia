@@ -19,14 +19,14 @@
         // Some components run under test get fonts from /config/data.
         {
             directory: "/config/data",
-            from: "realm",
+            from: "parent",
             as: "/config/data",
             to: [ "#driver" ],
             subdir: "fonts",
         },
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
-            from: "realm",
+            from: "parent",
             to: [ "#driver" ],
         },
     ],

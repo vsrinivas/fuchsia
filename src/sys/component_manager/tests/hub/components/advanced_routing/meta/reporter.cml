@@ -10,7 +10,7 @@
         { runner: "elf" },
         {
             directory: "/hub",
-            from: "realm",
+            from: "parent",
             as: "/parent_hub",
             rights: [ "r*" ],
         },
@@ -22,7 +22,7 @@
         },
         {
             directory: "/sibling_hub",
-            from: "realm",
+            from: "parent",
             rights: [ "r*" ],
         },
         { protocol: "/svc/fidl.examples.routing.echo.Echo" },

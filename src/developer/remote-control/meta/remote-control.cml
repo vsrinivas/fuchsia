@@ -6,7 +6,7 @@
         { runner: "elf" },
         {
             directory: "/hub",
-            from: "realm",
+            from: "parent",
             as: "/discovery_root",
             rights: [ "r*" ],
         },

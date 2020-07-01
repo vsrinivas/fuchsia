@@ -12,12 +12,12 @@
         },
     ],
     offer: [
-        // Capabilities routed from "realm" at the root are either provided by
+        // Capabilities routed from "parent" at the root are either provided by
         // bootsvc through component_manager's namespace or by component_manager
         // itself as a builtin service
         {
             directory: "/boot",
-            from: "realm",
+            from: "parent",
             to: [
                 "#bootstrap",
                 "#core",
@@ -37,7 +37,7 @@
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.process.Launcher",
             ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#bootstrap",
                 "#core",
@@ -49,7 +49,7 @@
                 "/svc/fuchsia.sys2.EventSource",
                 "/svc/fuchsia.time.Maintenance",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#core" ],
         },
         {
@@ -57,7 +57,7 @@
                 "/svc/fuchsia.security.resource.Vmex",
                 "/svc/fuchsia.sys2.SystemController",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#bootstrap" ],
         },
 

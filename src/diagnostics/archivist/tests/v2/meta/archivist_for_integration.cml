@@ -25,11 +25,11 @@
                 "started",
                 "stopped",
             ],
-            from: "realm",
+            from: "parent",
         },
         {
             event: "capability_ready",
-            from: "realm",
+            from: "parent",
             as: "diagnostics_ready",
             filter: { path: "/diagnostics" },
         },

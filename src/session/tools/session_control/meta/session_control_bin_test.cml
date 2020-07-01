@@ -31,7 +31,7 @@
     offer: [
         {
             protocol: "/svc/fuchsia.session.Launcher",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
         },
     ],

@@ -27,7 +27,7 @@
         },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
         },
     ],
     offer: [
@@ -38,7 +38,7 @@
         },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
             to: [
                 "#coll",
                 "#memfs",

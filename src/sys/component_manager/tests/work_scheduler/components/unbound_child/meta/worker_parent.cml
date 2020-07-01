@@ -19,7 +19,7 @@
         },
         {
             protocol: "/svc/fuchsia.sys2.WorkSchedulerControl",
-            from: "realm",
+            from: "parent",
             to: [ "#worker_sibling" ],
         },
     ],

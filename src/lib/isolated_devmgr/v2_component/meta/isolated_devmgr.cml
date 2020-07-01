@@ -18,7 +18,7 @@
                 "/svc/fuchsia.process.Launcher",
                 "/svc/fuchsia.sys.Launcher",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#driver_manager_test" ],
         },
         {

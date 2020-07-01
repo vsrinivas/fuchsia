@@ -12,7 +12,7 @@
     offer: [
         {
             directory: "/tmp",
-            from: "realm",
+            from: "parent",
             to: [ "#test-driver" ],
             rights: [ "rw*" ],
         },

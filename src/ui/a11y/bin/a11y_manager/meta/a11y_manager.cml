@@ -11,7 +11,7 @@
                 "/svc/fuchsia.tracing.provider.Registry",
                 "/svc/fuchsia.ui.input.accessibility.PointerEventRegistry",
             ],
-            from: "realm",
+            from: "parent",
         },
     ],
     expose: [

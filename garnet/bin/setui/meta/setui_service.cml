@@ -24,25 +24,25 @@
                 "/svc/fuchsia.ui.brightness.Control",
                 "/svc/fuchsia.ui.policy.DeviceListenerRegistry",
             ],
-            from: "realm",
+            from: "parent",
         },
         {
             directory: "/dev/class/input",
-            from: "realm",
+            from: "parent",
             rights: [ "r*" ],
         },
 
         // features: build-info
         {
             directory: "/config/build-info",
-            from: "realm",
+            from: "parent",
             rights: [ "r*" ],
         },
 
         // features: config-data
         {
             directory: "/pkgfs/packages/config-data/0/data/setui_service",
-            from: "realm",
+            from: "parent",
             as: "/config/data",
             rights: [ "r*" ],
         },
@@ -50,7 +50,7 @@
         // features: isolated-persistent-storage
         {
             directory: "/data",
-            from: "realm",
+            from: "parent",
             rights: [ "rw*" ],
         },
     ],

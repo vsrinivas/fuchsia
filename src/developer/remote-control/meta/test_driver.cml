@@ -6,7 +6,7 @@
         { runner: "rust_test_runner" },
         {
             directory: "/tmp",
-            from: "realm",
+            from: "parent",
             rights: [ "rw*" ],
         },
         {
@@ -14,7 +14,7 @@
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.sys.Launcher",
             ],
-            from: "realm",
+            from: "parent",
         },
     ],
     expose: [

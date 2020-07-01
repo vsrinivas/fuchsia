@@ -22,11 +22,11 @@
                 "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.logger.LogSink",
             ],
-            from: "realm",
+            from: "parent",
         },
         {
             directory: "/config/data",
-            from: "realm",
+            from: "parent",
             rights: [ "r*" ],
         },
     ],
@@ -86,51 +86,51 @@
                 "/svc/fuchsia.update.channelcontrol.ChannelControl",
                 "/svc/fuchsia.wlan.service.Wlan",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
         },
         {
             // features: build-info
             directory: "/config/build-info",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
         {
             // features: root-ssl-certificates
             directory: "/config/ssl",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
         {
             // features: isolated-persistent-storage
             directory: "/data",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "rw*" ],
         },
         {
             directory: "/dev/class/input",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
         {
             directory: "/dev/class/input-report",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
         {
             directory: "/dev/null",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "rw*" ],
         },
         {
             directory: "/dev/zero",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "rw*" ],
         },
@@ -146,21 +146,21 @@
             //   as: "/pkgfs-config-data"
             // and then share "/pkgfs-config-data/cast_agent" with the
             // cast_agent component.
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
         {
             // features: config-data for setui_service (see above)
             directory: "/pkgfs/packages/config-data/0/data/setui_service",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
         {
             // features: isolated-temp
             directory: "/tmp",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "rw*" ],
         },

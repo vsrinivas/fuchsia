@@ -12,7 +12,7 @@
         { runner: "rust_test_runner" },
         {
             directory: "/dev/class/input-report",
-            from: "realm",
+            from: "parent",
             rights: [ "r*" ],
         },
         {
@@ -37,12 +37,12 @@
     offer: [
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
         },
         {
             directory: "/dev/class/input-report",
-            from: "realm",
+            from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },

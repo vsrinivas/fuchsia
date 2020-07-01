@@ -24,7 +24,7 @@
     offer: [
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#custom-timeout-child",
                 "#inherited-timeout-child",

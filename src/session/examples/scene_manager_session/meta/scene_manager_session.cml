@@ -6,7 +6,7 @@
         { runner: "elf" },
         {
             directory: "/dev/class/input-report",
-            from: "realm",
+            from: "parent",
             rights: [ "r*" ],
         },
         { protocol: "/svc/fuchsia.ui.scenic.Scenic" },

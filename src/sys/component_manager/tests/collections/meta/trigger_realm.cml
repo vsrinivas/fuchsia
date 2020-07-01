@@ -14,7 +14,7 @@
                 "/svc/fidl.examples.routing.echo.Echo",
                 "/svc/fuchsia.logger.LogSink",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#trigger" ],
         },
     ],

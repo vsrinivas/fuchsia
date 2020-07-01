@@ -22,7 +22,7 @@
         // Some components run under test get fonts from /config/data.
         {
             directory: "/config/data",
-            from: "realm",
+            from: "parent",
             to: [ "#coll" ],
         },
         {
@@ -30,7 +30,7 @@
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.pkg.FontResolver",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#coll" ],
         },
     ],

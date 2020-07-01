@@ -6,7 +6,7 @@
         { runner: "elf" },
         {
             protocol: "/svc/fuchsia.session.Launcher",
-            from: "realm",
+            from: "parent",
         },
     ],
 }

@@ -23,7 +23,7 @@
         },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
             to: [ "#echo_client" ],
         },
     ],

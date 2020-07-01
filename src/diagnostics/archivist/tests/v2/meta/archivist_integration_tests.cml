@@ -13,7 +13,7 @@
     offer: [
         {
             protocol: "/svc/fuchsia.boot.WriteOnlyLog",
-            from: "realm",
+            from: "parent",
             to: [ "#driver" ],
         },
         {
@@ -28,7 +28,7 @@
         },
         {
             protocol: "/svc/fuchsia.sys2.EventSource",
-            from: "realm",
+            from: "parent",
             to: [ "#archivist" ],
         },
         {
@@ -48,7 +48,7 @@
         },
         {
             directory: "/config/data",
-            from: "realm",
+            from: "parent",
             as: "/config/data",
             to: [ "#archivist" ],
             subdir: "archivist",

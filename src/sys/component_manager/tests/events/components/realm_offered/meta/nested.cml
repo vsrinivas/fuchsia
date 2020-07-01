@@ -37,7 +37,7 @@
     offer: [
         {
             protocol: "/svc/fuchsia.sys2.BlockingEventSource",
-            from: "realm",
+            from: "parent",
             to: [ "#reporter" ],
         },
         {

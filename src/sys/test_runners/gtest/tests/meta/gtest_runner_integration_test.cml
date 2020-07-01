@@ -21,12 +21,12 @@
     offer: [
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
             to: [ "#test_manager" ],
         },
         {
             protocol: "/svc/fuchsia.process.Launcher",
-            from: "realm",
+            from: "parent",
             to: [ "#test_manager" ],
         },
     ],

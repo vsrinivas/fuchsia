@@ -6,11 +6,11 @@
         { runner: "elf" },
         {
             protocol: "/svc/fuchsia.sys2.WorkScheduler",
-            from: "realm",
+            from: "parent",
         },
         {
             protocol: "/svc/fuchsia.sys2.WorkSchedulerControl",
-            from: "realm",
+            from: "parent",
         },
     ],
 }

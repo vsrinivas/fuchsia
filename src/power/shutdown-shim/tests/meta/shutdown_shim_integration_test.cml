@@ -48,12 +48,12 @@
         },
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
-            from: "realm",
+            from: "parent",
             to: [ "#test-driver" ],
         },
         {
             protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#shutdown-shim-statecontrol-missing",
                 "#shutdown-shim-statecontrol-not-present",

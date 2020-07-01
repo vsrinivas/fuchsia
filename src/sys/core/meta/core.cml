@@ -37,7 +37,7 @@
         },
         {
             protocol: [ "/svc/fuchsia.boot.RootResource" ],
-            from: "realm",
+            from: "parent",
             to: [ "#debug_serial" ],
         },
         {
@@ -83,12 +83,12 @@
                 "/svc/fuchsia.time.Maintenance",
                 "/svc/fuchsia.virtualconsole.SessionManager",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#appmgr",
                 "#test_manager",
@@ -105,7 +105,7 @@
                 "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.EventSource",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#test_manager" ],
         },
         {
@@ -126,18 +126,18 @@
                 "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.device.NameProvider",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#remote-control" ],
         },
         {
             directory: "/config/data",
-            from: "realm",
+            from: "parent",
             to: [ "#font_provider" ],
             subdir: "fonts",
         },
         {
             directory: "/config/data",
-            from: "realm",
+            from: "parent",
             to: [ "#test_manager" ],
         },
         {
@@ -152,54 +152,54 @@
         },
         {
             directory: "/boot",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/dev",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/minfs",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/pkgfs",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/system",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/blob",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/volume",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/install",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             directory: "/tmp",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             // Note: this is the v2 root hub. The hub in the `expose` section below
             // is the v1 root hub.
             directory: "/hub",
-            from: "realm",
+            from: "parent",
             to: [ "#remote-control" ],
         },
 
@@ -211,12 +211,12 @@
                 "started",
                 "stopped",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
         },
         {
             event: "capability_ready",
-            from: "realm",
+            from: "parent",
             to: [ "#appmgr" ],
             filter: { path: "/diagnostics" },
         },

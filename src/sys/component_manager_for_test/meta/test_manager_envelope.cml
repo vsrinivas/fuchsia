@@ -15,14 +15,14 @@
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#test_manager" ],
         },
 
         // Some components run under test need access to /config/data.
         {
             directory: "/pkgfs/packages/config-data/0/data",
-            from: "realm",
+            from: "parent",
             as: "/config/data",
             to: [ "#test_manager" ],
         },
@@ -30,7 +30,7 @@
         // Some tests access dev/class. We should provide those till we can mock it.
         {
             directory: "/dev/class/input-report",
-            from: "realm",
+            from: "parent",
             to: [ "#test_manager" ],
             rights: [ "r*" ],
         },
@@ -40,7 +40,7 @@
                 "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.EventSource",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#test_manager" ],
         },
     ],

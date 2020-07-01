@@ -9,7 +9,7 @@
                 "/svc/fuchsia.accessibility.tts.EngineEngineRegistry",
                 "/svc/fuchsia.logger.LogSink",
             ],
-            from: "realm",
+            from: "parent",
         },
     ],
 }

@@ -41,7 +41,7 @@
     offer: [
         {
             directory: "/boot",
-            from: "realm",
+            from: "parent",
             to: [
                 "#driver_manager",
                 "#fshost",
@@ -55,7 +55,7 @@
                 "/svc/fuchsia.boot.RootJob",
                 "/svc/fuchsia.boot.RootJobForInspect",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#driver_manager" ],
         },
         {
@@ -65,7 +65,7 @@
         },
         {
             protocol: [ "/svc/fuchsia.kernel.Stats" ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#driver_manager",
                 "#power_manager",
@@ -73,7 +73,7 @@
         },
         {
             protocol: "/svc/fuchsia.boot.RootResource",
-            from: "realm",
+            from: "parent",
             to: [
                 "#console",
                 "#driver_manager",
@@ -86,7 +86,7 @@
                 "/svc/fuchsia.boot.Items",
                 "/svc/fuchsia.process.Launcher",
             ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#driver_manager",
                 "#fshost",
@@ -94,7 +94,7 @@
         },
         {
             protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#console",
                 "#driver_manager",
@@ -111,7 +111,7 @@
                 "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.tracing.provider.Registry",
             ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#driver_manager",
                 "#fshost",
@@ -120,7 +120,7 @@
         },
         {
             protocol: [ "/svc/fuchsia.security.resource.Vmex" ],
-            from: "realm",
+            from: "parent",
             to: [ "#fshost" ],
         },
         {
@@ -221,7 +221,7 @@
         // driver_manager needs the v1 hub for the serial console
         {
             directory: "/hub",
-            from: "realm",
+            from: "parent",
             to: [ "#driver_manager" ],
         },
         {
@@ -234,7 +234,7 @@
         // Things shutdown_shim and power_manager need
         {
             protocol: [ "/svc/fuchsia.sys2.SystemController" ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#power_manager",
                 "#shutdown_shim",
@@ -258,7 +258,7 @@
         },
         {
             protocol: [ "/svc/fuchsia.feedback.CrashReporter" ],
-            from: "realm",
+            from: "parent",
             to: [ "#power_manager" ],
         },
 
@@ -280,14 +280,14 @@
                 "/svc/fuchsia.tracing.controller.Controller",
                 "/svc/fuchsia.wlan.service.Wlan",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#driver_manager" ],
         },
         {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
             ],
-            from: "realm",
+            from: "parent",
             to: [
                 "#driver_manager",
                 "#fshost",

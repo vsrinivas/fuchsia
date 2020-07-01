@@ -38,7 +38,7 @@
     offer: [
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
             to: [
                 "#gtest_runner",
                 "#runner_memfs",
@@ -53,12 +53,12 @@
                 "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.EventSource",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#tests" ],
         },
         {
             protocol: "/svc/fuchsia.process.Launcher",
-            from: "realm",
+            from: "parent",
             to: [
                 "#gtest_runner",
                 "#rust_test_runner",
@@ -77,7 +77,7 @@
         // Some components run under test need access to /config/data.
         {
             directory: "/config/data",
-            from: "realm",
+            from: "parent",
             to: [ "#tests" ],
         },
 
@@ -93,7 +93,7 @@
         // access to /dev/class/input-report.
         {
             directory: "/dev/class/input-report",
-            from: "realm",
+            from: "parent",
             to: [ "#tests" ],
             rights: [ "r*" ],
         },

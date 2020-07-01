@@ -37,7 +37,7 @@
                 "/svc/fuchsia.process.Launcher",
                 "/svc/fuchsia.sys.Launcher",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#isolated_devmgr" ],
         },
     ],

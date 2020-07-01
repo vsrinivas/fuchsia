@@ -17,7 +17,7 @@
         },
         {
             event: "started_nested",
-            from: "realm",
+            from: "parent",
         },
         {
             event: "resolved",

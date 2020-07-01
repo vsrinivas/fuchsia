@@ -6,12 +6,12 @@
         { runner: "elf" },
         {
             directory: "/dev/class/input-report",
-            from: "realm",
+            from: "parent",
             rights: [ "r*" ],
         },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
+            from: "parent",
         },
     ],
 }

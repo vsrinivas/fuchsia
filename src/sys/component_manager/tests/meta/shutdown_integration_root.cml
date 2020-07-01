@@ -17,7 +17,7 @@
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.sys2.SystemController",
             ],
-            from: "realm",
+            from: "parent",
             to: [ "#power_switch" ],
         },
     ],

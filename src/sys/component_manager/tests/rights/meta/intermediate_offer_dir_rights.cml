@@ -10,17 +10,17 @@
     offer: [
         {
             directory: "/read_only",
-            from: "realm",
+            from: "parent",
             to: [ "#use_dir_rights" ],
         },
         {
             directory: "/read_write",
-            from: "realm",
+            from: "parent",
             to: [ "#use_dir_rights" ],
         },
         {
             directory: "/read_write",
-            from: "realm",
+            from: "parent",
             as: "/read_write_dup",
             to: [ "#use_dir_rights" ],
         },
@@ -28,20 +28,20 @@
         // This just re-declares the rights which is optional but valid.
         {
             directory: "/read_exec",
-            from: "realm",
+            from: "parent",
             to: [ "#use_dir_rights" ],
             rights: [ "rx*" ],
         },
         {
             directory: "/read_admin",
-            from: "realm",
+            from: "parent",
             to: [ "#use_dir_rights" ],
         },
 
         // This permission is scoped from rw to r when offered to the child.
         {
             directory: "/read_only_after_scoped",
-            from: "realm",
+            from: "parent",
             to: [ "#use_dir_rights" ],
             rights: [ "r*" ],
         },
