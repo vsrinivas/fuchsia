@@ -359,27 +359,61 @@ generated.
 
 ### Client {#client}
 
-The LLCPP bindings provides three ways to interact with a FIDL protocol as a
+The LLCPP bindings provides multiple ways to interact with a FIDL protocol as a
 client:
 
-* `fidl::Client<Protocol>`: This class exposes thread-safe APIs for outgoing
+* `fidl::Client<TicTacToe>`: This class exposes thread-safe APIs for outgoing
   asynchronous and synchronous calls as well as asynchronous event handling. It
   owns the client end of the channel. An `async_dispatcher_t*` is required to
   support the asynchronous APIs as well as event and error handling. This is the
   recommended variant for most use-cases, except for those where an
   `async_dispatcher_t` cannot be used.
-* `Protocol::SyncClient`: This class exposes purely synchronous APIs for
+* `TicTacToe::SyncClient`: This class exposes purely synchronous APIs for
   outgoing calls as well as for event handling. It owns the client end of the
   channel.
-* `Protocol::Call`: This class is identical to `SyncClient` except that it does
+* `TicTacToe::Call`: This class is identical to `SyncClient` except that it does
   not have ownership of the client end of the channel. `Call` may be preferable
   to `SyncClient` when migrating code from the C bindings to the LLCPP bindings,
   or when implementing C APIs that take raw `zx_handle_t`s.
 
-#### Async-capable Client
+#### fidl::Client
 
-See
-[here](/docs/development/languages/fidl/tutorials/tutorial-llcpp.md#Async_capable-Client).
+Dereferencing a `fidl::Client` provides access to the following methods:
+
+* `fidl::StatusAndError StartGame(bool start_first)`: Managed variant of a fire
+  and forget method.
+* `fidl::StatusAndError StartGame(::fidl::BytePart _request_buffer, bool
+  start_first)`: Caller-allocated variant of a fire and forget method.
+* `fidl::StatusAndError MakeMove(uint8_t row, uint8_t col,
+  fit::callback<void(bool success, fidl::tracking_ptr<GameState> new_state)>
+  _cb)`: Managed variant of an asynchronous two way method. It takes a
+  callback to handle responses as the last argument.
+* `fidl::StatusAndError MakeMove(fidl::BytePart _request_buffer, uint8_t row,
+  uint8_t col, MakeMoveResponseContext* _context)`: Asynchronous,
+  caller-allocated variant of a two way method. The final argument is a response
+  context, which is explained below.
+* `ResultOf::MakeMove MakeMove_Sync(uint8_t row, uint8_t col)`: Synchronous,
+  managed variant of a two way method. The same method exists on `SyncClient`.
+* `UnownedResultOf::MakeMove_sync(fidl::BytePart _request_bufffer, uint8_t row,
+  uint8_t col, fidl::BytePart _response_buffer)`: Synchronous, caller-allocated
+  variant of a two way method. The same method exists on `SyncClient`.
+
+Each two way method has a response context that is used in the caller-allocated,
+asynchronous case. `TicTacToe` has only one response context,
+`TicTacToe::MakeMoveResponseContext`, which has pure virtual methods that
+should be overriden to handle responses:
+
+```c++
+virtual void OnReply(fidl::DecodedMessage<MakeMoveResponse> msg)
+virtual void OnError()
+```
+
+Only one of the two methods is called for a single response: `OnReply` is called
+with a successfully decoded response, whereas `OnError` is called on any error
+that would cause the response context to be discarded without `OnReply` being
+called. You are responsible for ensuring that the response context object
+outlives the duration of the entire async call, since the `fidl::Client` borrows
+the context object by address to avoid implicit allocation.
 
 #### SyncClient
 
@@ -435,11 +469,12 @@ the only difference being that they are all `static` and take an
 * `static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers
   handlers)`:
 
-#### ResultOf and UnownedResultOf
+#### StatusAndError, ResultOf and UnownedResultOf
 
 The managed variants of each method of `SyncClient` and `Call` all return a
 `ResultOf::` type, whereas the caller-allocating variants all return an
-`UnownedResultOf::`. Both types define the same set of methods:
+`UnownedResultOf::`. Fire and forget methods on `fidl::Client` return a
+`StatusAndError`. These types define the same set of methods:
 
 *   `zx_status status() const` returns the transport status. it returns the
     first error encountered during (if applicable) linearizing, encoding, making
@@ -447,11 +482,28 @@ The managed variants of each method of `SyncClient` and `Call` all return a
     `ZX_OK`, the call has succeeded, and vice versa.
 *   `const char* error() const` contains a brief error message when status is
     not `ZX_OK`. Otherwise, returns `nullptr`.
-*   **(only for two-way calls)** `T* Unwrap()` returns a pointer to the
-    [response struct](#request-response-structs). For `ResultOf::`, the pointer
-    points to memory owned by the result object. For `UnownedResultOf::`, the
-    pointer points to the caller-provided buffer. `Unwrap()` should only be
-    called when the status is `ZX_OK`.
+*   **(only for ResultOf and UnownedResultOf for two-way calls)** `T* Unwrap()`
+    returns a pointer to the [response struct](#request-response-structs). For
+    `ResultOf::`, the pointer points to memory owned by the result object. For
+    `UnownedResultOf::`, the pointer points to the caller-provided buffer.
+    `Unwrap()` should only be called when the status is `ZX_OK`.
+
+Additionally, `ResultOf` and `UnownedResultOf` for two-way calls will
+implement dereference operators that return the response struct itself.
+This allows code such as:
+
+```cpp
+auto result = client->MakeMove_Sync(0, 0);
+auto response = result->Unwrap();
+bool success = response.success;
+```
+
+To be simplified to:
+
+```cpp
+auto result = client->MakeMove_Sync(0, 0);
+bool success = result->success;
+```
 
 ### Server
 
@@ -513,31 +565,77 @@ following `Reply` methods:
 * `void Reply(fidl::BytePart _buffer, bool success,
   fidl::tracking_ptr<GameState> new_state)`
 
-Finally, sync completers for two way methods will provide a method for
-converting to an async completer. Async completers can out-live the scope of the
+Finally, sync completers for two way methods can be coverted to an async
+completer using the `ToAsync()` method. Async completers can out-live the scope of the
 handler by e.g. moving it into a lambda capture (see [LLCPP tutorial][llcpp-async-example]
 for example usage), allowing the server to
-respond to requests asynchronously. There is only one such method in the above
-example, on `MakeMoveCompleter::Sync`:
-
-```c++
-MakeMoveCompleter::Async ToAsync()
-```
+respond to requests asynchronously. The async completer has the same methods for
+responding to the client as the sync completer.
 
 ### Events {#events}
 
 #### Client
 
-Clients can handle events by calling `TicTacToe::HandleEvents` and passing it a
-`TicTacToe::EventHandlers`. This is a struct that contains handlers for each
-type of event. In this example, it consists of the following members:
+In LLCPP, events can be handled asynchronously or synchronously, depending
+on the type of [client](#client) being used.
+
+When using a `fidl::Client`, events can be handled asynchronously by passing the
+class a `TicTacToe::AsyncEventHandlers` object. This class has the following
+members:
+
+* `std::variant<fit::function<void(GameState new_state)>,
+  fit::function<void(fidl::DecodedMessage<OnOpponentMoveResponse> msg)>>
+  on_opponent_move`: Handler for an event. Each handler can be in the
+  managed variant or the caller-allocated variant.
+
+For `SyncClient` and `Call` clients, events are handled synchronously by calling
+a `HandleEvents` function and passing it a `TicTacToe::EventHandlers`.
+`EventHandlers` is a struct that contains handlers for each type of event. In
+this example, it consists of the following members:
 
 * `fit::callback<zx_status_t(GameState new_state)> on_opponent_move`:
 * `fit::callback<zx_status_t()> unknown`:
 
+There are two variants of the `HandleEvents` function available:
+
+* `TicTacToe::SyncClient::HandleEvents(EventHandlers handlers)`: A bound version
+  for sync clients.
+* `TicTacToe::Call::HandleEvents(zx::unowned_channel client_end, EventHandlers handlers)`:
+  An unbound version that also takes in an `unowned_channel`.
+
 #### Server
 
-The `TicTacToe` class provides static methods for sending events. Similarly to
+##### Sending events using a server binding object {#bound-event-sending}
+
+When binding a server implementation to a channel, calling `fidl::BindServer`
+will return a `fidl::ServerBindingRef<Protocol>` which is the means by which you
+may interact safely with a server binding. This class allows access to an event
+sender interface through the following operators:
+
+```c++
+typename Protocol::EventSender* get() const;
+typename Protocol::EventSender* operator->() const;
+typename Protocol::EventSender& operator*() const;
+```
+
+where `Protocol` is a template parameter.
+
+The `EventSender` class contains managed and caller-allocated methods for
+sending each event. As a concrete example, `TicTacToe::EventSender` provides the
+following methods:
+
+* `zx_status_t OnOpponentMove(GameState new_state)`: Managed flavor.
+* `zx_status_t OnOpponentMove(fidl::BytePart _buffer, GameState new_state)`:
+  Caller allocated flavor.
+
+##### Sending events with a bare-metal channel
+
+Note: [Sending events using a server binding object](#bound-event-sending)
+should be preferred whenever possible. Using the methods listed below may
+introduce a race condition between unbinding the server connection and sending
+some final events on the same channel.
+
+The `TicTacToe` class provides static methods for sending events on a channel. Like
 the client [Call](#client-call) APIs, these methods take an `unowned_channel` as
 the first argument, sending the event over this channel. Each event has managed
 and caller-allocating sender events, analogous to the [client API](#client) as
@@ -547,7 +645,7 @@ The event sender methods are:
 
 * `static zx_status_t SendOnOpponentMoveEvent(zx::unowned_channel _chan,
   GameState new_state)`
-* `static zx_status_t SendOnOpponentMoveEventzx::unowned_channel _chan,
+* `static zx_status_t SendOnOpponentMoveEvent(zx::unowned_channel _chan,
   fidl::BytePart _buffer, GameState new_state)`
 
 ### Results {#protocols-results}

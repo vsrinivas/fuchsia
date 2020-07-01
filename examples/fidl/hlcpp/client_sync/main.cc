@@ -15,9 +15,9 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
   context->svc()->Connect(echo_proxy.NewRequest());
 
-  assert(echo_proxy->SendString("hi") == ZX_OK);
+  ZX_ASSERT(echo_proxy->SendString("hi") == ZX_OK);
   std::string response;
-  assert(echo_proxy->EchoString("hello", &response) == ZX_OK);
+  ZX_ASSERT(echo_proxy->EchoString("hello", &response) == ZX_OK);
   printf("Got response: %s\n", response.c_str());
 
   // TODO(fcz): this currently does not pass on CQ

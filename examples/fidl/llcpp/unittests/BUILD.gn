@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "fidl_example_llcpp_test"
+  sources = [ "main.cc" ]
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("fidl-example-llcpp-test") {
+  executable_path = "bin/fidl_example_llcpp_test"
+  deps = [ ":bin" ]
+}
+
+group("unittests") {
+  testonly = true
+  deps = [ ":fidl-example-llcpp-test" ]
+}

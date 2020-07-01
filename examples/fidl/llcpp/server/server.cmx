@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/fidl_echo_llcpp_server"
+    }
+}

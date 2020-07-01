@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("bin") {
+  output_name = "fidl_echo_llcpp_client_sync"
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+fuchsia_component("echo-client") {
+  manifest = "client.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("client_sync") {
+  package_name = "echo-llcpp-client-sync"
+  deps = [ ":echo-client" ]
+}

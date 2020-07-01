@@ -7,6 +7,7 @@ group("tests") {
   deps = [
     "go:tests",
     "hlcpp:tests",
+    "llcpp:tests",
     "rust:tests",
     "test",
   ]
