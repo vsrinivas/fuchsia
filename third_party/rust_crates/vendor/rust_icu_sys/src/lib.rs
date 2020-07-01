@@ -20,18 +20,18 @@
     unused_imports
 )]
 
-#[cfg(features = "use-bindgen")]
+#[cfg(feature="use-bindgen")]
 include!(concat!(env!("OUT_DIR"), "/macros.rs"));
-#[cfg(all(features = "use-bindgen",features="icu_config",not(features="icu_version_in_env")))]
+#[cfg(all(feature="use-bindgen",feature="icu_config",not(feature="icu_version_in_env")))]
 include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 
-#[cfg(not(features = "use-bindgen"))]
+#[cfg(not(feature="use-bindgen"))]
 include!("../bindgen/macros.rs");
 
-#[cfg(all(not(features = "use-bindgen"),not(features="icu_version_in_env"),not(features="icu_config")))]
+#[cfg(all(not(feature="use-bindgen"),not(feature="icu_version_in_env"),not(feature="icu_config")))]
 include!("../bindgen/lib.rs");
 
-#[cfg(all(not(features="use-bindgen"),features="icu_version_in_env",not(features="icu_config")))]
+#[cfg(all(not(feature="use-bindgen"),feature="icu_version_in_env",not(feature="icu_config")))]
 include!(concat!("../bindgen/lib_", env!("RUST_ICU_MAJOR_VERSION_NUMBER"), ".rs"));
 
 // Add the ability to print the error code, so that it can be reported in

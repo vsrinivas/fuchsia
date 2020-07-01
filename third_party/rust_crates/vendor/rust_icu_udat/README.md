@@ -2,7 +2,7 @@
 
 | Item | Description |
 | ---- | ----------- |
-| ICU 64..67 | [![Build Status `master`](https://travis-ci.org/google/rust_icu.svg?branch=master)](https://travis-ci.org/google/rust_icu) |
+| ICU 64..67 | [![Test status](https://github.com/google/rust_icu/workflows/Test/badge.svg)](https://github.com/google/rust_icu/workflows/Test/badge.svg) |
 | Source | https://github.com/google/rust_icu |
 | README | https://github.com/google/rust_icu/blob/master/README.md |
 | Coverage | [View report](/coverage/report.md)
@@ -48,6 +48,7 @@ coverage in the headers.
 | [rust_icu](https://crates.io/crates/rust_icu)| Top-level crate.  Include this if you just want to have all the functionality available for use. |
 | [rust_icu_common](https://crates.io/crates/rust_icu_common)| Commonly used low-level wrappings of the bindings. |
 | [rust_icu_intl](https://crates.io/crates/rust_icu_intl)| Implements ECMA 402 recommendation APIs. |
+| [rust_icu_ulistformatter](https://crates.io/crates/rust_icu_ulistformatter)| Locale-sensitive list formatting support. Implements [`ulistformatter.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ulistformatter_8h.html) C API header from the ICU library. |
 | [rust_icu_sys](https://crates.io/crates/rust_icu_sys)| Low-level bindings code |
 | [rust_icu_ucal](https://crates.io/crates/rust_icu_ucal)| ICU Calendar. Implements [`ucal.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ucal_8h.html) C API header from the ICU library. |
 | [rust_icu_ucol](https://crates.io/crates/rust_icu_ucol)| Collation support. Implements [`ucol.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ucol_8h.html) C API header from the ICU library. |
@@ -483,7 +484,7 @@ environment variables.
 ```bash
 make DOCKER_TEST_ENV=rust_icu_testenv-67 \
   RUST_ICU_MAJOR_VERSION_NUMBER=67 \
-  DOCKER_TEST_CARGO_TEST_ARGS='--no-default-features --features icu_version_in_env renaming' \
+  DOCKER_TEST_CARGO_TEST_ARGS='--no-default-features --features icu_version_in_env,renaming' \
   docker-test
 ```
 

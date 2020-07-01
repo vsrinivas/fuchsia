@@ -659,7 +659,7 @@ mod tests {
     }
 
     // This tests verifies buggy behavior which is fixed since ICU version 67.1
-    #[cfg(not(features = "icu_version_67_plus"))]
+    #[cfg(not(feature="icu_version_67_plus"))]
     #[test]
     fn test_accept_language_exact_match() {
         let accept_list: Result<Vec<_>, _> = vec!["es_ES", "ar_EG", "fr_FR"]
@@ -685,7 +685,7 @@ mod tests {
         );
     }
 
-    #[cfg(features = "icu_version_67_plus")]
+    #[cfg(feature="icu_version_67_plus")]
     #[test]
     fn test_accept_language_exact_match() {
         let accept_list: Result<Vec<_>, _> = vec!["es_ES", "ar_EG", "fr_FR"]

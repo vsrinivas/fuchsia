@@ -982,55 +982,774 @@ extern "C" {
         status: *mut UErrorCode,
     ) -> i32;
 }
+extern "C" {
+    pub fn u_init_67(status: *mut UErrorCode);
+}
+extern "C" {
+    pub fn u_cleanup_67();
+}
+pub type UMemAllocFn = ::std::option::Option<
+    unsafe extern "C" fn(
+        context: *const ::std::os::raw::c_void,
+        size: size_t,
+    ) -> *mut ::std::os::raw::c_void,
+>;
+pub type UMemReallocFn = ::std::option::Option<
+    unsafe extern "C" fn(
+        context: *const ::std::os::raw::c_void,
+        mem: *mut ::std::os::raw::c_void,
+        size: size_t,
+    ) -> *mut ::std::os::raw::c_void,
+>;
+pub type UMemFreeFn = ::std::option::Option<
+    unsafe extern "C" fn(context: *const ::std::os::raw::c_void, mem: *mut ::std::os::raw::c_void),
+>;
+extern "C" {
+    pub fn u_setMemoryFunctions_67(
+        context: *const ::std::os::raw::c_void,
+        a: UMemAllocFn,
+        r: UMemReallocFn,
+        f: UMemFreeFn,
+        status: *mut UErrorCode,
+    );
+}
+pub type UMTX = *mut ::std::os::raw::c_void;
+pub type UMtxInitFn = ::std::option::Option<
+    unsafe extern "C" fn(
+        context: *const ::std::os::raw::c_void,
+        mutex: *mut UMTX,
+        status: *mut UErrorCode,
+    ),
+>;
+pub type UMtxFn = ::std::option::Option<
+    unsafe extern "C" fn(context: *const ::std::os::raw::c_void, mutex: *mut UMTX),
+>;
+extern "C" {
+    pub fn u_setMutexFunctions_67(
+        context: *const ::std::os::raw::c_void,
+        init: UMtxInitFn,
+        destroy: UMtxFn,
+        lock: UMtxFn,
+        unlock: UMtxFn,
+        status: *mut UErrorCode,
+    );
+}
+pub type UMtxAtomicFn = ::std::option::Option<
+    unsafe extern "C" fn(context: *const ::std::os::raw::c_void, p: *mut i32) -> i32,
+>;
+extern "C" {
+    pub fn u_setAtomicIncDecFunctions_67(
+        context: *const ::std::os::raw::c_void,
+        inc: UMtxAtomicFn,
+        dec: UMtxAtomicFn,
+        status: *mut UErrorCode,
+    );
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UCharIteratorOrigin {
+    UITER_START = 0,
+    UITER_CURRENT = 1,
+    UITER_LIMIT = 2,
+    UITER_ZERO = 3,
+    UITER_LENGTH = 4,
+}
+pub type UCharIteratorGetIndex = ::std::option::Option<
+    unsafe extern "C" fn(iter: *mut UCharIterator, origin: UCharIteratorOrigin) -> i32,
+>;
+pub type UCharIteratorMove = ::std::option::Option<
+    unsafe extern "C" fn(iter: *mut UCharIterator, delta: i32, origin: UCharIteratorOrigin) -> i32,
+>;
+pub type UCharIteratorHasNext =
+    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UBool>;
+pub type UCharIteratorHasPrevious =
+    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UBool>;
+pub type UCharIteratorCurrent =
+    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UChar32>;
+pub type UCharIteratorNext =
+    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UChar32>;
+pub type UCharIteratorPrevious =
+    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UChar32>;
+pub type UCharIteratorReserved =
+    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator, something: i32) -> i32>;
+pub type UCharIteratorGetState =
+    ::std::option::Option<unsafe extern "C" fn(iter: *const UCharIterator) -> u32>;
+pub type UCharIteratorSetState = ::std::option::Option<
+    unsafe extern "C" fn(iter: *mut UCharIterator, state: u32, pErrorCode: *mut UErrorCode),
+>;
 #[repr(C)]
-#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, PartialEq)]
-pub struct UFieldPosition {
-    pub field: i32,
-    pub beginIndex: i32,
-    pub endIndex: i32,
+#[derive(Debug, Copy, Clone, Hash, PartialOrd, PartialEq)]
+pub struct UCharIterator {
+    pub context: *const ::std::os::raw::c_void,
+    pub length: i32,
+    pub start: i32,
+    pub index: i32,
+    pub limit: i32,
+    pub reservedField: i32,
+    pub getIndex: UCharIteratorGetIndex,
+    pub move_: UCharIteratorMove,
+    pub hasNext: UCharIteratorHasNext,
+    pub hasPrevious: UCharIteratorHasPrevious,
+    pub current: UCharIteratorCurrent,
+    pub next: UCharIteratorNext,
+    pub previous: UCharIteratorPrevious,
+    pub reservedFn: UCharIteratorReserved,
+    pub getState: UCharIteratorGetState,
+    pub setState: UCharIteratorSetState,
 }
 #[test]
-fn bindgen_test_layout_UFieldPosition() {
+fn bindgen_test_layout_UCharIterator() {
     assert_eq!(
-        ::std::mem::size_of::<UFieldPosition>(),
-        12usize,
-        concat!("Size of: ", stringify!(UFieldPosition))
+        ::std::mem::size_of::<UCharIterator>(),
+        112usize,
+        concat!("Size of: ", stringify!(UCharIterator))
     );
     assert_eq!(
-        ::std::mem::align_of::<UFieldPosition>(),
-        4usize,
-        concat!("Alignment of ", stringify!(UFieldPosition))
+        ::std::mem::align_of::<UCharIterator>(),
+        8usize,
+        concat!("Alignment of ", stringify!(UCharIterator))
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UFieldPosition>())).field as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).context as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(UFieldPosition),
+            stringify!(UCharIterator),
             "::",
-            stringify!(field)
+            stringify!(context)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UFieldPosition>())).beginIndex as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UFieldPosition),
-            "::",
-            stringify!(beginIndex)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UFieldPosition>())).endIndex as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).length as *const _ as usize },
         8usize,
         concat!(
             "Offset of field: ",
-            stringify!(UFieldPosition),
+            stringify!(UCharIterator),
             "::",
-            stringify!(endIndex)
+            stringify!(length)
         )
     );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).start as *const _ as usize },
+        12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(start)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).index as *const _ as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(index)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).limit as *const _ as usize },
+        20usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(limit)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).reservedField as *const _ as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(reservedField)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).getIndex as *const _ as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(getIndex)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).move_ as *const _ as usize },
+        40usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(move_)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).hasNext as *const _ as usize },
+        48usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(hasNext)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).hasPrevious as *const _ as usize },
+        56usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(hasPrevious)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).current as *const _ as usize },
+        64usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(current)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).next as *const _ as usize },
+        72usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(next)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).previous as *const _ as usize },
+        80usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(previous)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).reservedFn as *const _ as usize },
+        88usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(reservedFn)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).getState as *const _ as usize },
+        96usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(getState)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UCharIterator>())).setState as *const _ as usize },
+        104usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UCharIterator),
+            "::",
+            stringify!(setState)
+        )
+    );
+}
+impl Default for UCharIterator {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct UCPMap {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct USet {
+    _unused: [u8; 0],
+}
+impl UProperty {
+    pub const UCHAR_BINARY_START: UProperty = UProperty::UCHAR_ALPHABETIC;
+}
+impl UProperty {
+    pub const UCHAR_INT_START: UProperty = UProperty::UCHAR_BIDI_CLASS;
+}
+impl UProperty {
+    pub const UCHAR_MASK_START: UProperty = UProperty::UCHAR_GENERAL_CATEGORY_MASK;
+}
+impl UProperty {
+    pub const UCHAR_DOUBLE_START: UProperty = UProperty::UCHAR_NUMERIC_VALUE;
+}
+impl UProperty {
+    pub const UCHAR_STRING_START: UProperty = UProperty::UCHAR_AGE;
+}
+impl UProperty {
+    pub const UCHAR_OTHER_PROPERTY_START: UProperty = UProperty::UCHAR_SCRIPT_EXTENSIONS;
+}
+#[repr(i32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UProperty {
+    UCHAR_ALPHABETIC = 0,
+    UCHAR_ASCII_HEX_DIGIT = 1,
+    UCHAR_BIDI_CONTROL = 2,
+    UCHAR_BIDI_MIRRORED = 3,
+    UCHAR_DASH = 4,
+    UCHAR_DEFAULT_IGNORABLE_CODE_POINT = 5,
+    UCHAR_DEPRECATED = 6,
+    UCHAR_DIACRITIC = 7,
+    UCHAR_EXTENDER = 8,
+    UCHAR_FULL_COMPOSITION_EXCLUSION = 9,
+    UCHAR_GRAPHEME_BASE = 10,
+    UCHAR_GRAPHEME_EXTEND = 11,
+    UCHAR_GRAPHEME_LINK = 12,
+    UCHAR_HEX_DIGIT = 13,
+    UCHAR_HYPHEN = 14,
+    UCHAR_ID_CONTINUE = 15,
+    UCHAR_ID_START = 16,
+    UCHAR_IDEOGRAPHIC = 17,
+    UCHAR_IDS_BINARY_OPERATOR = 18,
+    UCHAR_IDS_TRINARY_OPERATOR = 19,
+    UCHAR_JOIN_CONTROL = 20,
+    UCHAR_LOGICAL_ORDER_EXCEPTION = 21,
+    UCHAR_LOWERCASE = 22,
+    UCHAR_MATH = 23,
+    UCHAR_NONCHARACTER_CODE_POINT = 24,
+    UCHAR_QUOTATION_MARK = 25,
+    UCHAR_RADICAL = 26,
+    UCHAR_SOFT_DOTTED = 27,
+    UCHAR_TERMINAL_PUNCTUATION = 28,
+    UCHAR_UNIFIED_IDEOGRAPH = 29,
+    UCHAR_UPPERCASE = 30,
+    UCHAR_WHITE_SPACE = 31,
+    UCHAR_XID_CONTINUE = 32,
+    UCHAR_XID_START = 33,
+    UCHAR_CASE_SENSITIVE = 34,
+    UCHAR_S_TERM = 35,
+    UCHAR_VARIATION_SELECTOR = 36,
+    UCHAR_NFD_INERT = 37,
+    UCHAR_NFKD_INERT = 38,
+    UCHAR_NFC_INERT = 39,
+    UCHAR_NFKC_INERT = 40,
+    UCHAR_SEGMENT_STARTER = 41,
+    UCHAR_PATTERN_SYNTAX = 42,
+    UCHAR_PATTERN_WHITE_SPACE = 43,
+    UCHAR_POSIX_ALNUM = 44,
+    UCHAR_POSIX_BLANK = 45,
+    UCHAR_POSIX_GRAPH = 46,
+    UCHAR_POSIX_PRINT = 47,
+    UCHAR_POSIX_XDIGIT = 48,
+    UCHAR_CASED = 49,
+    UCHAR_CASE_IGNORABLE = 50,
+    UCHAR_CHANGES_WHEN_LOWERCASED = 51,
+    UCHAR_CHANGES_WHEN_UPPERCASED = 52,
+    UCHAR_CHANGES_WHEN_TITLECASED = 53,
+    UCHAR_CHANGES_WHEN_CASEFOLDED = 54,
+    UCHAR_CHANGES_WHEN_CASEMAPPED = 55,
+    UCHAR_CHANGES_WHEN_NFKC_CASEFOLDED = 56,
+    UCHAR_EMOJI = 57,
+    UCHAR_EMOJI_PRESENTATION = 58,
+    UCHAR_EMOJI_MODIFIER = 59,
+    UCHAR_EMOJI_MODIFIER_BASE = 60,
+    UCHAR_EMOJI_COMPONENT = 61,
+    UCHAR_REGIONAL_INDICATOR = 62,
+    UCHAR_PREPENDED_CONCATENATION_MARK = 63,
+    UCHAR_EXTENDED_PICTOGRAPHIC = 64,
+    UCHAR_BINARY_LIMIT = 65,
+    UCHAR_BIDI_CLASS = 4096,
+    UCHAR_BLOCK = 4097,
+    UCHAR_CANONICAL_COMBINING_CLASS = 4098,
+    UCHAR_DECOMPOSITION_TYPE = 4099,
+    UCHAR_EAST_ASIAN_WIDTH = 4100,
+    UCHAR_GENERAL_CATEGORY = 4101,
+    UCHAR_JOINING_GROUP = 4102,
+    UCHAR_JOINING_TYPE = 4103,
+    UCHAR_LINE_BREAK = 4104,
+    UCHAR_NUMERIC_TYPE = 4105,
+    UCHAR_SCRIPT = 4106,
+    UCHAR_HANGUL_SYLLABLE_TYPE = 4107,
+    UCHAR_NFD_QUICK_CHECK = 4108,
+    UCHAR_NFKD_QUICK_CHECK = 4109,
+    UCHAR_NFC_QUICK_CHECK = 4110,
+    UCHAR_NFKC_QUICK_CHECK = 4111,
+    UCHAR_LEAD_CANONICAL_COMBINING_CLASS = 4112,
+    UCHAR_TRAIL_CANONICAL_COMBINING_CLASS = 4113,
+    UCHAR_GRAPHEME_CLUSTER_BREAK = 4114,
+    UCHAR_SENTENCE_BREAK = 4115,
+    UCHAR_WORD_BREAK = 4116,
+    UCHAR_BIDI_PAIRED_BRACKET_TYPE = 4117,
+    UCHAR_INDIC_POSITIONAL_CATEGORY = 4118,
+    UCHAR_INDIC_SYLLABIC_CATEGORY = 4119,
+    UCHAR_VERTICAL_ORIENTATION = 4120,
+    UCHAR_INT_LIMIT = 4121,
+    UCHAR_GENERAL_CATEGORY_MASK = 8192,
+    UCHAR_MASK_LIMIT = 8193,
+    UCHAR_NUMERIC_VALUE = 12288,
+    UCHAR_DOUBLE_LIMIT = 12289,
+    UCHAR_AGE = 16384,
+    UCHAR_BIDI_MIRRORING_GLYPH = 16385,
+    UCHAR_CASE_FOLDING = 16386,
+    UCHAR_ISO_COMMENT = 16387,
+    UCHAR_LOWERCASE_MAPPING = 16388,
+    UCHAR_NAME = 16389,
+    UCHAR_SIMPLE_CASE_FOLDING = 16390,
+    UCHAR_SIMPLE_LOWERCASE_MAPPING = 16391,
+    UCHAR_SIMPLE_TITLECASE_MAPPING = 16392,
+    UCHAR_SIMPLE_UPPERCASE_MAPPING = 16393,
+    UCHAR_TITLECASE_MAPPING = 16394,
+    UCHAR_UNICODE_1_NAME = 16395,
+    UCHAR_UPPERCASE_MAPPING = 16396,
+    UCHAR_BIDI_PAIRED_BRACKET = 16397,
+    UCHAR_STRING_LIMIT = 16398,
+    UCHAR_SCRIPT_EXTENSIONS = 28672,
+    UCHAR_OTHER_PROPERTY_LIMIT = 28673,
+    UCHAR_INVALID_CODE = -1,
+}
+impl UCharCategory {
+    pub const U_GENERAL_OTHER_TYPES: UCharCategory = UCharCategory::U_UNASSIGNED;
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UCharCategory {
+    U_UNASSIGNED = 0,
+    U_UPPERCASE_LETTER = 1,
+    U_LOWERCASE_LETTER = 2,
+    U_TITLECASE_LETTER = 3,
+    U_MODIFIER_LETTER = 4,
+    U_OTHER_LETTER = 5,
+    U_NON_SPACING_MARK = 6,
+    U_ENCLOSING_MARK = 7,
+    U_COMBINING_SPACING_MARK = 8,
+    U_DECIMAL_DIGIT_NUMBER = 9,
+    U_LETTER_NUMBER = 10,
+    U_OTHER_NUMBER = 11,
+    U_SPACE_SEPARATOR = 12,
+    U_LINE_SEPARATOR = 13,
+    U_PARAGRAPH_SEPARATOR = 14,
+    U_CONTROL_CHAR = 15,
+    U_FORMAT_CHAR = 16,
+    U_PRIVATE_USE_CHAR = 17,
+    U_SURROGATE = 18,
+    U_DASH_PUNCTUATION = 19,
+    U_START_PUNCTUATION = 20,
+    U_END_PUNCTUATION = 21,
+    U_CONNECTOR_PUNCTUATION = 22,
+    U_OTHER_PUNCTUATION = 23,
+    U_MATH_SYMBOL = 24,
+    U_CURRENCY_SYMBOL = 25,
+    U_MODIFIER_SYMBOL = 26,
+    U_OTHER_SYMBOL = 27,
+    U_INITIAL_PUNCTUATION = 28,
+    U_FINAL_PUNCTUATION = 29,
+    U_CHAR_CATEGORY_COUNT = 30,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UCharDirection {
+    U_LEFT_TO_RIGHT = 0,
+    U_RIGHT_TO_LEFT = 1,
+    U_EUROPEAN_NUMBER = 2,
+    U_EUROPEAN_NUMBER_SEPARATOR = 3,
+    U_EUROPEAN_NUMBER_TERMINATOR = 4,
+    U_ARABIC_NUMBER = 5,
+    U_COMMON_NUMBER_SEPARATOR = 6,
+    U_BLOCK_SEPARATOR = 7,
+    U_SEGMENT_SEPARATOR = 8,
+    U_WHITE_SPACE_NEUTRAL = 9,
+    U_OTHER_NEUTRAL = 10,
+    U_LEFT_TO_RIGHT_EMBEDDING = 11,
+    U_LEFT_TO_RIGHT_OVERRIDE = 12,
+    U_RIGHT_TO_LEFT_ARABIC = 13,
+    U_RIGHT_TO_LEFT_EMBEDDING = 14,
+    U_RIGHT_TO_LEFT_OVERRIDE = 15,
+    U_POP_DIRECTIONAL_FORMAT = 16,
+    U_DIR_NON_SPACING_MARK = 17,
+    U_BOUNDARY_NEUTRAL = 18,
+    U_FIRST_STRONG_ISOLATE = 19,
+    U_LEFT_TO_RIGHT_ISOLATE = 20,
+    U_RIGHT_TO_LEFT_ISOLATE = 21,
+    U_POP_DIRECTIONAL_ISOLATE = 22,
+    U_CHAR_DIRECTION_COUNT = 23,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UCharNameChoice {
+    U_UNICODE_CHAR_NAME = 0,
+    U_UNICODE_10_CHAR_NAME = 1,
+    U_EXTENDED_CHAR_NAME = 2,
+    U_CHAR_NAME_ALIAS = 3,
+    U_CHAR_NAME_CHOICE_COUNT = 4,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UPropertyNameChoice {
+    U_SHORT_PROPERTY_NAME = 0,
+    U_LONG_PROPERTY_NAME = 1,
+    U_PROPERTY_NAME_CHOICE_COUNT = 2,
+}
+extern "C" {
+    pub fn u_hasBinaryProperty_67(c: UChar32, which: UProperty) -> UBool;
+}
+extern "C" {
+    pub fn u_getBinaryPropertySet_67(
+        property: UProperty,
+        pErrorCode: *mut UErrorCode,
+    ) -> *const USet;
+}
+extern "C" {
+    pub fn u_isUAlphabetic_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isULowercase_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isUUppercase_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isUWhiteSpace_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_getIntPropertyValue_67(c: UChar32, which: UProperty) -> i32;
+}
+extern "C" {
+    pub fn u_getIntPropertyMinValue_67(which: UProperty) -> i32;
+}
+extern "C" {
+    pub fn u_getIntPropertyMaxValue_67(which: UProperty) -> i32;
+}
+extern "C" {
+    pub fn u_getIntPropertyMap_67(
+        property: UProperty,
+        pErrorCode: *mut UErrorCode,
+    ) -> *const UCPMap;
+}
+extern "C" {
+    pub fn u_getNumericValue_67(c: UChar32) -> f64;
+}
+extern "C" {
+    pub fn u_islower_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isupper_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_istitle_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isdigit_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isalpha_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isalnum_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isxdigit_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_ispunct_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isgraph_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isblank_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isdefined_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isspace_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isJavaSpaceChar_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isWhitespace_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_iscntrl_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isISOControl_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isprint_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isbase_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_charDirection_67(c: UChar32) -> UCharDirection;
+}
+extern "C" {
+    pub fn u_isMirrored_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_charMirror_67(c: UChar32) -> UChar32;
+}
+extern "C" {
+    pub fn u_getBidiPairedBracket_67(c: UChar32) -> UChar32;
+}
+extern "C" {
+    pub fn u_charType_67(c: UChar32) -> i8;
+}
+pub type UCharEnumTypeRange = ::std::option::Option<
+    unsafe extern "C" fn(
+        context: *const ::std::os::raw::c_void,
+        start: UChar32,
+        limit: UChar32,
+        type_: UCharCategory,
+    ) -> UBool,
+>;
+extern "C" {
+    pub fn u_enumCharTypes_67(
+        enumRange: UCharEnumTypeRange,
+        context: *const ::std::os::raw::c_void,
+    );
+}
+extern "C" {
+    pub fn u_getCombiningClass_67(c: UChar32) -> u8;
+}
+extern "C" {
+    pub fn u_charDigitValue_67(c: UChar32) -> i32;
+}
+extern "C" {
+    pub fn u_charName_67(
+        code: UChar32,
+        nameChoice: UCharNameChoice,
+        buffer: *mut ::std::os::raw::c_char,
+        bufferLength: i32,
+        pErrorCode: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn u_getISOComment_67(
+        c: UChar32,
+        dest: *mut ::std::os::raw::c_char,
+        destCapacity: i32,
+        pErrorCode: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn u_charFromName_67(
+        nameChoice: UCharNameChoice,
+        name: *const ::std::os::raw::c_char,
+        pErrorCode: *mut UErrorCode,
+    ) -> UChar32;
+}
+pub type UEnumCharNamesFn = ::std::option::Option<
+    unsafe extern "C" fn(
+        context: *mut ::std::os::raw::c_void,
+        code: UChar32,
+        nameChoice: UCharNameChoice,
+        name: *const ::std::os::raw::c_char,
+        length: i32,
+    ) -> UBool,
+>;
+extern "C" {
+    pub fn u_enumCharNames_67(
+        start: UChar32,
+        limit: UChar32,
+        fn_: UEnumCharNamesFn,
+        context: *mut ::std::os::raw::c_void,
+        nameChoice: UCharNameChoice,
+        pErrorCode: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn u_getPropertyName_67(
+        property: UProperty,
+        nameChoice: UPropertyNameChoice,
+    ) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn u_getPropertyEnum_67(alias: *const ::std::os::raw::c_char) -> UProperty;
+}
+extern "C" {
+    pub fn u_getPropertyValueName_67(
+        property: UProperty,
+        value: i32,
+        nameChoice: UPropertyNameChoice,
+    ) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn u_getPropertyValueEnum_67(
+        property: UProperty,
+        alias: *const ::std::os::raw::c_char,
+    ) -> i32;
+}
+extern "C" {
+    pub fn u_isIDStart_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isIDPart_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isIDIgnorable_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isJavaIDStart_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_isJavaIDPart_67(c: UChar32) -> UBool;
+}
+extern "C" {
+    pub fn u_tolower_67(c: UChar32) -> UChar32;
+}
+extern "C" {
+    pub fn u_toupper_67(c: UChar32) -> UChar32;
+}
+extern "C" {
+    pub fn u_totitle_67(c: UChar32) -> UChar32;
+}
+extern "C" {
+    pub fn u_foldCase_67(c: UChar32, options: u32) -> UChar32;
+}
+extern "C" {
+    pub fn u_digit_67(ch: UChar32, radix: i8) -> i32;
+}
+extern "C" {
+    pub fn u_forDigit_67(digit: i32, radix: i8) -> UChar32;
+}
+extern "C" {
+    pub fn u_charAge_67(c: UChar32, versionArray: *mut u8);
+}
+extern "C" {
+    pub fn u_getUnicodeVersion_67(versionArray: *mut u8);
+}
+extern "C" {
+    pub fn u_getFC_NFKC_Closure_67(
+        c: UChar32,
+        dest: *mut UChar,
+        destCapacity: i32,
+        pErrorCode: *mut UErrorCode,
+    ) -> i32;
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum USetSpanCondition {
+    USET_SPAN_NOT_CONTAINED = 0,
+    USET_SPAN_CONTAINED = 1,
+    USET_SPAN_SIMPLE = 2,
+    USET_SPAN_CONDITION_COUNT = 3,
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, PartialEq)]
@@ -1090,6 +1809,485 @@ fn bindgen_test_layout_UParseError() {
             stringify!(UParseError),
             "::",
             stringify!(postContext)
+        )
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct UCollator {
+    _unused: [u8; 0],
+}
+#[repr(i32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UCollationResult {
+    UCOL_EQUAL = 0,
+    UCOL_GREATER = 1,
+    UCOL_LESS = -1,
+}
+impl UColAttributeValue {
+    pub const UCOL_DEFAULT_STRENGTH: UColAttributeValue = UColAttributeValue::UCOL_TERTIARY;
+}
+impl UColAttributeValue {
+    pub const UCOL_QUATERNARY: UColAttributeValue = UColAttributeValue::UCOL_CE_STRENGTH_LIMIT;
+}
+impl UColAttributeValue {
+    pub const UCOL_OFF: UColAttributeValue = UColAttributeValue::UCOL_STRENGTH_LIMIT;
+}
+#[repr(i32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UColAttributeValue {
+    UCOL_DEFAULT = -1,
+    UCOL_PRIMARY = 0,
+    UCOL_SECONDARY = 1,
+    UCOL_TERTIARY = 2,
+    UCOL_CE_STRENGTH_LIMIT = 3,
+    UCOL_IDENTICAL = 15,
+    UCOL_STRENGTH_LIMIT = 16,
+    UCOL_ON = 17,
+    UCOL_SHIFTED = 20,
+    UCOL_NON_IGNORABLE = 21,
+    UCOL_LOWER_FIRST = 24,
+    UCOL_UPPER_FIRST = 25,
+    UCOL_ATTRIBUTE_VALUE_COUNT = 26,
+}
+impl UColReorderCode {
+    pub const UCOL_REORDER_CODE_OTHERS: UColReorderCode = UColReorderCode::UCOL_REORDER_CODE_NONE;
+}
+impl UColReorderCode {
+    pub const UCOL_REORDER_CODE_FIRST: UColReorderCode = UColReorderCode::UCOL_REORDER_CODE_SPACE;
+}
+#[repr(i32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UColReorderCode {
+    UCOL_REORDER_CODE_DEFAULT = -1,
+    UCOL_REORDER_CODE_NONE = 103,
+    UCOL_REORDER_CODE_SPACE = 4096,
+    UCOL_REORDER_CODE_PUNCTUATION = 4097,
+    UCOL_REORDER_CODE_SYMBOL = 4098,
+    UCOL_REORDER_CODE_CURRENCY = 4099,
+    UCOL_REORDER_CODE_DIGIT = 4100,
+    UCOL_REORDER_CODE_LIMIT = 4101,
+}
+pub use self::UColAttributeValue as UCollationStrength;
+impl UColAttribute {
+    pub const UCOL_DECOMPOSITION_MODE: UColAttribute = UColAttribute::UCOL_NORMALIZATION_MODE;
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UColAttribute {
+    UCOL_FRENCH_COLLATION = 0,
+    UCOL_ALTERNATE_HANDLING = 1,
+    UCOL_CASE_FIRST = 2,
+    UCOL_CASE_LEVEL = 3,
+    UCOL_NORMALIZATION_MODE = 4,
+    UCOL_STRENGTH = 5,
+    UCOL_HIRAGANA_QUATERNARY_MODE = 6,
+    UCOL_NUMERIC_COLLATION = 7,
+    UCOL_ATTRIBUTE_COUNT = 8,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UColRuleOption {
+    UCOL_TAILORING_ONLY = 0,
+    UCOL_FULL_RULES = 1,
+}
+extern "C" {
+    pub fn ucol_open_67(
+        loc: *const ::std::os::raw::c_char,
+        status: *mut UErrorCode,
+    ) -> *mut UCollator;
+}
+extern "C" {
+    pub fn ucol_openRules_67(
+        rules: *const UChar,
+        rulesLength: i32,
+        normalizationMode: UColAttributeValue,
+        strength: UCollationStrength,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+    ) -> *mut UCollator;
+}
+extern "C" {
+    pub fn ucol_openFromShortString_67(
+        definition: *const ::std::os::raw::c_char,
+        forceDefaults: UBool,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+    ) -> *mut UCollator;
+}
+extern "C" {
+    pub fn ucol_getContractions_67(
+        coll: *const UCollator,
+        conts: *mut USet,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_getContractionsAndExpansions_67(
+        coll: *const UCollator,
+        contractions: *mut USet,
+        expansions: *mut USet,
+        addPrefixes: UBool,
+        status: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn ucol_close_67(coll: *mut UCollator);
+}
+extern "C" {
+    pub fn ucol_strcoll_67(
+        coll: *const UCollator,
+        source: *const UChar,
+        sourceLength: i32,
+        target: *const UChar,
+        targetLength: i32,
+    ) -> UCollationResult;
+}
+extern "C" {
+    pub fn ucol_strcollUTF8_67(
+        coll: *const UCollator,
+        source: *const ::std::os::raw::c_char,
+        sourceLength: i32,
+        target: *const ::std::os::raw::c_char,
+        targetLength: i32,
+        status: *mut UErrorCode,
+    ) -> UCollationResult;
+}
+extern "C" {
+    pub fn ucol_greater_67(
+        coll: *const UCollator,
+        source: *const UChar,
+        sourceLength: i32,
+        target: *const UChar,
+        targetLength: i32,
+    ) -> UBool;
+}
+extern "C" {
+    pub fn ucol_greaterOrEqual_67(
+        coll: *const UCollator,
+        source: *const UChar,
+        sourceLength: i32,
+        target: *const UChar,
+        targetLength: i32,
+    ) -> UBool;
+}
+extern "C" {
+    pub fn ucol_equal_67(
+        coll: *const UCollator,
+        source: *const UChar,
+        sourceLength: i32,
+        target: *const UChar,
+        targetLength: i32,
+    ) -> UBool;
+}
+extern "C" {
+    pub fn ucol_strcollIter_67(
+        coll: *const UCollator,
+        sIter: *mut UCharIterator,
+        tIter: *mut UCharIterator,
+        status: *mut UErrorCode,
+    ) -> UCollationResult;
+}
+extern "C" {
+    pub fn ucol_getStrength_67(coll: *const UCollator) -> UCollationStrength;
+}
+extern "C" {
+    pub fn ucol_setStrength_67(coll: *mut UCollator, strength: UCollationStrength);
+}
+extern "C" {
+    pub fn ucol_getReorderCodes_67(
+        coll: *const UCollator,
+        dest: *mut i32,
+        destCapacity: i32,
+        pErrorCode: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_setReorderCodes_67(
+        coll: *mut UCollator,
+        reorderCodes: *const i32,
+        reorderCodesLength: i32,
+        pErrorCode: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn ucol_getEquivalentReorderCodes_67(
+        reorderCode: i32,
+        dest: *mut i32,
+        destCapacity: i32,
+        pErrorCode: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_getDisplayName_67(
+        objLoc: *const ::std::os::raw::c_char,
+        dispLoc: *const ::std::os::raw::c_char,
+        result: *mut UChar,
+        resultLength: i32,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_getAvailable_67(localeIndex: i32) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn ucol_countAvailable_67() -> i32;
+}
+extern "C" {
+    pub fn ucol_openAvailableLocales_67(status: *mut UErrorCode) -> *mut UEnumeration;
+}
+extern "C" {
+    pub fn ucol_getKeywords_67(status: *mut UErrorCode) -> *mut UEnumeration;
+}
+extern "C" {
+    pub fn ucol_getKeywordValues_67(
+        keyword: *const ::std::os::raw::c_char,
+        status: *mut UErrorCode,
+    ) -> *mut UEnumeration;
+}
+extern "C" {
+    pub fn ucol_getKeywordValuesForLocale_67(
+        key: *const ::std::os::raw::c_char,
+        locale: *const ::std::os::raw::c_char,
+        commonlyUsed: UBool,
+        status: *mut UErrorCode,
+    ) -> *mut UEnumeration;
+}
+extern "C" {
+    pub fn ucol_getFunctionalEquivalent_67(
+        result: *mut ::std::os::raw::c_char,
+        resultCapacity: i32,
+        keyword: *const ::std::os::raw::c_char,
+        locale: *const ::std::os::raw::c_char,
+        isAvailable: *mut UBool,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_getRules_67(coll: *const UCollator, length: *mut i32) -> *const UChar;
+}
+extern "C" {
+    pub fn ucol_getShortDefinitionString_67(
+        coll: *const UCollator,
+        locale: *const ::std::os::raw::c_char,
+        buffer: *mut ::std::os::raw::c_char,
+        capacity: i32,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_normalizeShortDefinitionString_67(
+        source: *const ::std::os::raw::c_char,
+        destination: *mut ::std::os::raw::c_char,
+        capacity: i32,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_getSortKey_67(
+        coll: *const UCollator,
+        source: *const UChar,
+        sourceLength: i32,
+        result: *mut u8,
+        resultLength: i32,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_nextSortKeyPart_67(
+        coll: *const UCollator,
+        iter: *mut UCharIterator,
+        state: *mut u32,
+        dest: *mut u8,
+        count: i32,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UColBoundMode {
+    UCOL_BOUND_LOWER = 0,
+    UCOL_BOUND_UPPER = 1,
+    UCOL_BOUND_UPPER_LONG = 2,
+    UCOL_BOUND_VALUE_COUNT = 3,
+}
+extern "C" {
+    pub fn ucol_getBound_67(
+        source: *const u8,
+        sourceLength: i32,
+        boundType: UColBoundMode,
+        noOfLevels: u32,
+        result: *mut u8,
+        resultLength: i32,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_getVersion_67(coll: *const UCollator, info: *mut u8);
+}
+extern "C" {
+    pub fn ucol_getUCAVersion_67(coll: *const UCollator, info: *mut u8);
+}
+extern "C" {
+    pub fn ucol_mergeSortkeys_67(
+        src1: *const u8,
+        src1Length: i32,
+        src2: *const u8,
+        src2Length: i32,
+        dest: *mut u8,
+        destCapacity: i32,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_setAttribute_67(
+        coll: *mut UCollator,
+        attr: UColAttribute,
+        value: UColAttributeValue,
+        status: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn ucol_getAttribute_67(
+        coll: *const UCollator,
+        attr: UColAttribute,
+        status: *mut UErrorCode,
+    ) -> UColAttributeValue;
+}
+extern "C" {
+    pub fn ucol_setMaxVariable_67(
+        coll: *mut UCollator,
+        group: UColReorderCode,
+        pErrorCode: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn ucol_getMaxVariable_67(coll: *const UCollator) -> UColReorderCode;
+}
+extern "C" {
+    pub fn ucol_setVariableTop_67(
+        coll: *mut UCollator,
+        varTop: *const UChar,
+        len: i32,
+        status: *mut UErrorCode,
+    ) -> u32;
+}
+extern "C" {
+    pub fn ucol_getVariableTop_67(coll: *const UCollator, status: *mut UErrorCode) -> u32;
+}
+extern "C" {
+    pub fn ucol_restoreVariableTop_67(coll: *mut UCollator, varTop: u32, status: *mut UErrorCode);
+}
+extern "C" {
+    pub fn ucol_safeClone_67(
+        coll: *const UCollator,
+        stackBuffer: *mut ::std::os::raw::c_void,
+        pBufferSize: *mut i32,
+        status: *mut UErrorCode,
+    ) -> *mut UCollator;
+}
+extern "C" {
+    pub fn ucol_getRulesEx_67(
+        coll: *const UCollator,
+        delta: UColRuleOption,
+        buffer: *mut UChar,
+        bufferLen: i32,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_getLocale_67(
+        coll: *const UCollator,
+        type_: ULocDataLocaleType,
+        status: *mut UErrorCode,
+    ) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn ucol_getLocaleByType_67(
+        coll: *const UCollator,
+        type_: ULocDataLocaleType,
+        status: *mut UErrorCode,
+    ) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn ucol_getTailoredSet_67(coll: *const UCollator, status: *mut UErrorCode) -> *mut USet;
+}
+extern "C" {
+    pub fn ucol_getUnsafeSet_67(
+        coll: *const UCollator,
+        unsafe_: *mut USet,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_prepareShortStringOpen_67(
+        definition: *const ::std::os::raw::c_char,
+        forceDefaults: UBool,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn ucol_cloneBinary_67(
+        coll: *const UCollator,
+        buffer: *mut u8,
+        capacity: i32,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ucol_openBinary_67(
+        bin: *const u8,
+        length: i32,
+        base: *const UCollator,
+        status: *mut UErrorCode,
+    ) -> *mut UCollator;
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, PartialEq)]
+pub struct UFieldPosition {
+    pub field: i32,
+    pub beginIndex: i32,
+    pub endIndex: i32,
+}
+#[test]
+fn bindgen_test_layout_UFieldPosition() {
+    assert_eq!(
+        ::std::mem::size_of::<UFieldPosition>(),
+        12usize,
+        concat!("Size of: ", stringify!(UFieldPosition))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<UFieldPosition>(),
+        4usize,
+        concat!("Alignment of ", stringify!(UFieldPosition))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UFieldPosition>())).field as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UFieldPosition),
+            "::",
+            stringify!(field)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UFieldPosition>())).beginIndex as *const _ as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UFieldPosition),
+            "::",
+            stringify!(beginIndex)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UFieldPosition>())).endIndex as *const _ as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(UFieldPosition),
+            "::",
+            stringify!(endIndex)
         )
     );
 }
@@ -1677,6 +2875,270 @@ pub enum UDataFileAccess {
 extern "C" {
     pub fn udata_setFileAccess_67(access: UDataFileAccess, status: *mut UErrorCode);
 }
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct UFormattedValue {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct UListFormatter {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct UFormattedList {
+    _unused: [u8; 0],
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UListFormatterField {
+    ULISTFMT_LITERAL_FIELD = 0,
+    ULISTFMT_ELEMENT_FIELD = 1,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UListFormatterType {
+    ULISTFMT_TYPE_AND = 0,
+    ULISTFMT_TYPE_OR = 1,
+    ULISTFMT_TYPE_UNITS = 2,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UListFormatterWidth {
+    ULISTFMT_WIDTH_WIDE = 0,
+    ULISTFMT_WIDTH_SHORT = 1,
+    ULISTFMT_WIDTH_NARROW = 2,
+}
+extern "C" {
+    pub fn ulistfmt_open_67(
+        locale: *const ::std::os::raw::c_char,
+        status: *mut UErrorCode,
+    ) -> *mut UListFormatter;
+}
+extern "C" {
+    pub fn ulistfmt_openForType_67(
+        locale: *const ::std::os::raw::c_char,
+        type_: UListFormatterType,
+        width: UListFormatterWidth,
+        status: *mut UErrorCode,
+    ) -> *mut UListFormatter;
+}
+extern "C" {
+    pub fn ulistfmt_close_67(listfmt: *mut UListFormatter);
+}
+extern "C" {
+    pub fn ulistfmt_openResult_67(ec: *mut UErrorCode) -> *mut UFormattedList;
+}
+extern "C" {
+    pub fn ulistfmt_resultAsValue_67(
+        uresult: *const UFormattedList,
+        ec: *mut UErrorCode,
+    ) -> *const UFormattedValue;
+}
+extern "C" {
+    pub fn ulistfmt_closeResult_67(uresult: *mut UFormattedList);
+}
+extern "C" {
+    pub fn ulistfmt_format_67(
+        listfmt: *const UListFormatter,
+        strings: *const *const UChar,
+        stringLengths: *const i32,
+        stringCount: i32,
+        result: *mut UChar,
+        resultCapacity: i32,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn ulistfmt_formatStringsToResult_67(
+        listfmt: *const UListFormatter,
+        strings: *const *const UChar,
+        stringLengths: *const i32,
+        stringCount: i32,
+        uresult: *mut UFormattedList,
+        status: *mut UErrorCode,
+    );
+}
+pub type va_list = __builtin_va_list;
+extern "C" {
+    pub fn u_formatMessage_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        result: *mut UChar,
+        resultLength: i32,
+        status: *mut UErrorCode,
+        ...
+    ) -> i32;
+}
+extern "C" {
+    pub fn u_vformatMessage_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        result: *mut UChar,
+        resultLength: i32,
+        ap: *mut __va_list_tag,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn u_parseMessage_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        source: *const UChar,
+        sourceLength: i32,
+        status: *mut UErrorCode,
+        ...
+    );
+}
+extern "C" {
+    pub fn u_vparseMessage_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        source: *const UChar,
+        sourceLength: i32,
+        ap: *mut __va_list_tag,
+        status: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn u_formatMessageWithError_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        result: *mut UChar,
+        resultLength: i32,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+        ...
+    ) -> i32;
+}
+extern "C" {
+    pub fn u_vformatMessageWithError_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        result: *mut UChar,
+        resultLength: i32,
+        parseError: *mut UParseError,
+        ap: *mut __va_list_tag,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn u_parseMessageWithError_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        source: *const UChar,
+        sourceLength: i32,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+        ...
+    );
+}
+extern "C" {
+    pub fn u_vparseMessageWithError_67(
+        locale: *const ::std::os::raw::c_char,
+        pattern: *const UChar,
+        patternLength: i32,
+        source: *const UChar,
+        sourceLength: i32,
+        ap: *mut __va_list_tag,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+    );
+}
+pub type UMessageFormat = *mut ::std::os::raw::c_void;
+extern "C" {
+    pub fn umsg_open_67(
+        pattern: *const UChar,
+        patternLength: i32,
+        locale: *const ::std::os::raw::c_char,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+    ) -> *mut UMessageFormat;
+}
+extern "C" {
+    pub fn umsg_close_67(format: *mut UMessageFormat);
+}
+extern "C" {
+    pub fn umsg_clone_67(fmt: *const UMessageFormat, status: *mut UErrorCode) -> UMessageFormat;
+}
+extern "C" {
+    pub fn umsg_setLocale_67(fmt: *mut UMessageFormat, locale: *const ::std::os::raw::c_char);
+}
+extern "C" {
+    pub fn umsg_getLocale_67(fmt: *const UMessageFormat) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn umsg_applyPattern_67(
+        fmt: *mut UMessageFormat,
+        pattern: *const UChar,
+        patternLength: i32,
+        parseError: *mut UParseError,
+        status: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn umsg_toPattern_67(
+        fmt: *const UMessageFormat,
+        result: *mut UChar,
+        resultLength: i32,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn umsg_format_67(
+        fmt: *const UMessageFormat,
+        result: *mut UChar,
+        resultLength: i32,
+        status: *mut UErrorCode,
+        ...
+    ) -> i32;
+}
+extern "C" {
+    pub fn umsg_vformat_67(
+        fmt: *const UMessageFormat,
+        result: *mut UChar,
+        resultLength: i32,
+        ap: *mut __va_list_tag,
+        status: *mut UErrorCode,
+    ) -> i32;
+}
+extern "C" {
+    pub fn umsg_parse_67(
+        fmt: *const UMessageFormat,
+        source: *const UChar,
+        sourceLength: i32,
+        count: *mut i32,
+        status: *mut UErrorCode,
+        ...
+    );
+}
+extern "C" {
+    pub fn umsg_vparse_67(
+        fmt: *const UMessageFormat,
+        source: *const UChar,
+        sourceLength: i32,
+        count: *mut i32,
+        ap: *mut __va_list_tag,
+        status: *mut UErrorCode,
+    );
+}
+extern "C" {
+    pub fn umsg_autoQuoteApostrophe_67(
+        pattern: *const UChar,
+        patternLength: i32,
+        dest: *mut UChar,
+        destCapacity: i32,
+        ec: *mut UErrorCode,
+    ) -> i32;
+}
 extern "C" {
     pub fn u_getDataDirectory_67() -> *const ::std::os::raw::c_char;
 }
@@ -1698,236 +3160,6 @@ extern "C" {
 }
 extern "C" {
     pub fn u_UCharsToChars_67(us: *const UChar, cs: *mut ::std::os::raw::c_char, length: i32);
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UCharIteratorOrigin {
-    UITER_START = 0,
-    UITER_CURRENT = 1,
-    UITER_LIMIT = 2,
-    UITER_ZERO = 3,
-    UITER_LENGTH = 4,
-}
-pub type UCharIteratorGetIndex = ::std::option::Option<
-    unsafe extern "C" fn(iter: *mut UCharIterator, origin: UCharIteratorOrigin) -> i32,
->;
-pub type UCharIteratorMove = ::std::option::Option<
-    unsafe extern "C" fn(iter: *mut UCharIterator, delta: i32, origin: UCharIteratorOrigin) -> i32,
->;
-pub type UCharIteratorHasNext =
-    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UBool>;
-pub type UCharIteratorHasPrevious =
-    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UBool>;
-pub type UCharIteratorCurrent =
-    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UChar32>;
-pub type UCharIteratorNext =
-    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UChar32>;
-pub type UCharIteratorPrevious =
-    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator) -> UChar32>;
-pub type UCharIteratorReserved =
-    ::std::option::Option<unsafe extern "C" fn(iter: *mut UCharIterator, something: i32) -> i32>;
-pub type UCharIteratorGetState =
-    ::std::option::Option<unsafe extern "C" fn(iter: *const UCharIterator) -> u32>;
-pub type UCharIteratorSetState = ::std::option::Option<
-    unsafe extern "C" fn(iter: *mut UCharIterator, state: u32, pErrorCode: *mut UErrorCode),
->;
-#[repr(C)]
-#[derive(Debug, Copy, Clone, Hash, PartialOrd, PartialEq)]
-pub struct UCharIterator {
-    pub context: *const ::std::os::raw::c_void,
-    pub length: i32,
-    pub start: i32,
-    pub index: i32,
-    pub limit: i32,
-    pub reservedField: i32,
-    pub getIndex: UCharIteratorGetIndex,
-    pub move_: UCharIteratorMove,
-    pub hasNext: UCharIteratorHasNext,
-    pub hasPrevious: UCharIteratorHasPrevious,
-    pub current: UCharIteratorCurrent,
-    pub next: UCharIteratorNext,
-    pub previous: UCharIteratorPrevious,
-    pub reservedFn: UCharIteratorReserved,
-    pub getState: UCharIteratorGetState,
-    pub setState: UCharIteratorSetState,
-}
-#[test]
-fn bindgen_test_layout_UCharIterator() {
-    assert_eq!(
-        ::std::mem::size_of::<UCharIterator>(),
-        112usize,
-        concat!("Size of: ", stringify!(UCharIterator))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<UCharIterator>(),
-        8usize,
-        concat!("Alignment of ", stringify!(UCharIterator))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).context as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(context)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).length as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).start as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(start)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).index as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(index)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).limit as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(limit)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).reservedField as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(reservedField)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).getIndex as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(getIndex)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).move_ as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(move_)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).hasNext as *const _ as usize },
-        48usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(hasNext)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).hasPrevious as *const _ as usize },
-        56usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(hasPrevious)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).current as *const _ as usize },
-        64usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(current)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).next as *const _ as usize },
-        72usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(next)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).previous as *const _ as usize },
-        80usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(previous)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).reservedFn as *const _ as usize },
-        88usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(reservedFn)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).getState as *const _ as usize },
-        96usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(getState)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<UCharIterator>())).setState as *const _ as usize },
-        104usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UCharIterator),
-            "::",
-            stringify!(setState)
-        )
-    );
-}
-impl Default for UCharIterator {
-    fn default() -> Self {
-        unsafe { ::std::mem::zeroed() }
-    }
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -2300,474 +3532,6 @@ extern "C" {
         pNumSubstitutions: *mut i32,
         pErrorCode: *mut UErrorCode,
     ) -> *mut UChar;
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct UCPMap {
-    _unused: [u8; 0],
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct USet {
-    _unused: [u8; 0],
-}
-impl UProperty {
-    pub const UCHAR_BINARY_START: UProperty = UProperty::UCHAR_ALPHABETIC;
-}
-impl UProperty {
-    pub const UCHAR_INT_START: UProperty = UProperty::UCHAR_BIDI_CLASS;
-}
-impl UProperty {
-    pub const UCHAR_MASK_START: UProperty = UProperty::UCHAR_GENERAL_CATEGORY_MASK;
-}
-impl UProperty {
-    pub const UCHAR_DOUBLE_START: UProperty = UProperty::UCHAR_NUMERIC_VALUE;
-}
-impl UProperty {
-    pub const UCHAR_STRING_START: UProperty = UProperty::UCHAR_AGE;
-}
-impl UProperty {
-    pub const UCHAR_OTHER_PROPERTY_START: UProperty = UProperty::UCHAR_SCRIPT_EXTENSIONS;
-}
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UProperty {
-    UCHAR_ALPHABETIC = 0,
-    UCHAR_ASCII_HEX_DIGIT = 1,
-    UCHAR_BIDI_CONTROL = 2,
-    UCHAR_BIDI_MIRRORED = 3,
-    UCHAR_DASH = 4,
-    UCHAR_DEFAULT_IGNORABLE_CODE_POINT = 5,
-    UCHAR_DEPRECATED = 6,
-    UCHAR_DIACRITIC = 7,
-    UCHAR_EXTENDER = 8,
-    UCHAR_FULL_COMPOSITION_EXCLUSION = 9,
-    UCHAR_GRAPHEME_BASE = 10,
-    UCHAR_GRAPHEME_EXTEND = 11,
-    UCHAR_GRAPHEME_LINK = 12,
-    UCHAR_HEX_DIGIT = 13,
-    UCHAR_HYPHEN = 14,
-    UCHAR_ID_CONTINUE = 15,
-    UCHAR_ID_START = 16,
-    UCHAR_IDEOGRAPHIC = 17,
-    UCHAR_IDS_BINARY_OPERATOR = 18,
-    UCHAR_IDS_TRINARY_OPERATOR = 19,
-    UCHAR_JOIN_CONTROL = 20,
-    UCHAR_LOGICAL_ORDER_EXCEPTION = 21,
-    UCHAR_LOWERCASE = 22,
-    UCHAR_MATH = 23,
-    UCHAR_NONCHARACTER_CODE_POINT = 24,
-    UCHAR_QUOTATION_MARK = 25,
-    UCHAR_RADICAL = 26,
-    UCHAR_SOFT_DOTTED = 27,
-    UCHAR_TERMINAL_PUNCTUATION = 28,
-    UCHAR_UNIFIED_IDEOGRAPH = 29,
-    UCHAR_UPPERCASE = 30,
-    UCHAR_WHITE_SPACE = 31,
-    UCHAR_XID_CONTINUE = 32,
-    UCHAR_XID_START = 33,
-    UCHAR_CASE_SENSITIVE = 34,
-    UCHAR_S_TERM = 35,
-    UCHAR_VARIATION_SELECTOR = 36,
-    UCHAR_NFD_INERT = 37,
-    UCHAR_NFKD_INERT = 38,
-    UCHAR_NFC_INERT = 39,
-    UCHAR_NFKC_INERT = 40,
-    UCHAR_SEGMENT_STARTER = 41,
-    UCHAR_PATTERN_SYNTAX = 42,
-    UCHAR_PATTERN_WHITE_SPACE = 43,
-    UCHAR_POSIX_ALNUM = 44,
-    UCHAR_POSIX_BLANK = 45,
-    UCHAR_POSIX_GRAPH = 46,
-    UCHAR_POSIX_PRINT = 47,
-    UCHAR_POSIX_XDIGIT = 48,
-    UCHAR_CASED = 49,
-    UCHAR_CASE_IGNORABLE = 50,
-    UCHAR_CHANGES_WHEN_LOWERCASED = 51,
-    UCHAR_CHANGES_WHEN_UPPERCASED = 52,
-    UCHAR_CHANGES_WHEN_TITLECASED = 53,
-    UCHAR_CHANGES_WHEN_CASEFOLDED = 54,
-    UCHAR_CHANGES_WHEN_CASEMAPPED = 55,
-    UCHAR_CHANGES_WHEN_NFKC_CASEFOLDED = 56,
-    UCHAR_EMOJI = 57,
-    UCHAR_EMOJI_PRESENTATION = 58,
-    UCHAR_EMOJI_MODIFIER = 59,
-    UCHAR_EMOJI_MODIFIER_BASE = 60,
-    UCHAR_EMOJI_COMPONENT = 61,
-    UCHAR_REGIONAL_INDICATOR = 62,
-    UCHAR_PREPENDED_CONCATENATION_MARK = 63,
-    UCHAR_EXTENDED_PICTOGRAPHIC = 64,
-    UCHAR_BINARY_LIMIT = 65,
-    UCHAR_BIDI_CLASS = 4096,
-    UCHAR_BLOCK = 4097,
-    UCHAR_CANONICAL_COMBINING_CLASS = 4098,
-    UCHAR_DECOMPOSITION_TYPE = 4099,
-    UCHAR_EAST_ASIAN_WIDTH = 4100,
-    UCHAR_GENERAL_CATEGORY = 4101,
-    UCHAR_JOINING_GROUP = 4102,
-    UCHAR_JOINING_TYPE = 4103,
-    UCHAR_LINE_BREAK = 4104,
-    UCHAR_NUMERIC_TYPE = 4105,
-    UCHAR_SCRIPT = 4106,
-    UCHAR_HANGUL_SYLLABLE_TYPE = 4107,
-    UCHAR_NFD_QUICK_CHECK = 4108,
-    UCHAR_NFKD_QUICK_CHECK = 4109,
-    UCHAR_NFC_QUICK_CHECK = 4110,
-    UCHAR_NFKC_QUICK_CHECK = 4111,
-    UCHAR_LEAD_CANONICAL_COMBINING_CLASS = 4112,
-    UCHAR_TRAIL_CANONICAL_COMBINING_CLASS = 4113,
-    UCHAR_GRAPHEME_CLUSTER_BREAK = 4114,
-    UCHAR_SENTENCE_BREAK = 4115,
-    UCHAR_WORD_BREAK = 4116,
-    UCHAR_BIDI_PAIRED_BRACKET_TYPE = 4117,
-    UCHAR_INDIC_POSITIONAL_CATEGORY = 4118,
-    UCHAR_INDIC_SYLLABIC_CATEGORY = 4119,
-    UCHAR_VERTICAL_ORIENTATION = 4120,
-    UCHAR_INT_LIMIT = 4121,
-    UCHAR_GENERAL_CATEGORY_MASK = 8192,
-    UCHAR_MASK_LIMIT = 8193,
-    UCHAR_NUMERIC_VALUE = 12288,
-    UCHAR_DOUBLE_LIMIT = 12289,
-    UCHAR_AGE = 16384,
-    UCHAR_BIDI_MIRRORING_GLYPH = 16385,
-    UCHAR_CASE_FOLDING = 16386,
-    UCHAR_ISO_COMMENT = 16387,
-    UCHAR_LOWERCASE_MAPPING = 16388,
-    UCHAR_NAME = 16389,
-    UCHAR_SIMPLE_CASE_FOLDING = 16390,
-    UCHAR_SIMPLE_LOWERCASE_MAPPING = 16391,
-    UCHAR_SIMPLE_TITLECASE_MAPPING = 16392,
-    UCHAR_SIMPLE_UPPERCASE_MAPPING = 16393,
-    UCHAR_TITLECASE_MAPPING = 16394,
-    UCHAR_UNICODE_1_NAME = 16395,
-    UCHAR_UPPERCASE_MAPPING = 16396,
-    UCHAR_BIDI_PAIRED_BRACKET = 16397,
-    UCHAR_STRING_LIMIT = 16398,
-    UCHAR_SCRIPT_EXTENSIONS = 28672,
-    UCHAR_OTHER_PROPERTY_LIMIT = 28673,
-    UCHAR_INVALID_CODE = -1,
-}
-impl UCharCategory {
-    pub const U_GENERAL_OTHER_TYPES: UCharCategory = UCharCategory::U_UNASSIGNED;
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UCharCategory {
-    U_UNASSIGNED = 0,
-    U_UPPERCASE_LETTER = 1,
-    U_LOWERCASE_LETTER = 2,
-    U_TITLECASE_LETTER = 3,
-    U_MODIFIER_LETTER = 4,
-    U_OTHER_LETTER = 5,
-    U_NON_SPACING_MARK = 6,
-    U_ENCLOSING_MARK = 7,
-    U_COMBINING_SPACING_MARK = 8,
-    U_DECIMAL_DIGIT_NUMBER = 9,
-    U_LETTER_NUMBER = 10,
-    U_OTHER_NUMBER = 11,
-    U_SPACE_SEPARATOR = 12,
-    U_LINE_SEPARATOR = 13,
-    U_PARAGRAPH_SEPARATOR = 14,
-    U_CONTROL_CHAR = 15,
-    U_FORMAT_CHAR = 16,
-    U_PRIVATE_USE_CHAR = 17,
-    U_SURROGATE = 18,
-    U_DASH_PUNCTUATION = 19,
-    U_START_PUNCTUATION = 20,
-    U_END_PUNCTUATION = 21,
-    U_CONNECTOR_PUNCTUATION = 22,
-    U_OTHER_PUNCTUATION = 23,
-    U_MATH_SYMBOL = 24,
-    U_CURRENCY_SYMBOL = 25,
-    U_MODIFIER_SYMBOL = 26,
-    U_OTHER_SYMBOL = 27,
-    U_INITIAL_PUNCTUATION = 28,
-    U_FINAL_PUNCTUATION = 29,
-    U_CHAR_CATEGORY_COUNT = 30,
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UCharDirection {
-    U_LEFT_TO_RIGHT = 0,
-    U_RIGHT_TO_LEFT = 1,
-    U_EUROPEAN_NUMBER = 2,
-    U_EUROPEAN_NUMBER_SEPARATOR = 3,
-    U_EUROPEAN_NUMBER_TERMINATOR = 4,
-    U_ARABIC_NUMBER = 5,
-    U_COMMON_NUMBER_SEPARATOR = 6,
-    U_BLOCK_SEPARATOR = 7,
-    U_SEGMENT_SEPARATOR = 8,
-    U_WHITE_SPACE_NEUTRAL = 9,
-    U_OTHER_NEUTRAL = 10,
-    U_LEFT_TO_RIGHT_EMBEDDING = 11,
-    U_LEFT_TO_RIGHT_OVERRIDE = 12,
-    U_RIGHT_TO_LEFT_ARABIC = 13,
-    U_RIGHT_TO_LEFT_EMBEDDING = 14,
-    U_RIGHT_TO_LEFT_OVERRIDE = 15,
-    U_POP_DIRECTIONAL_FORMAT = 16,
-    U_DIR_NON_SPACING_MARK = 17,
-    U_BOUNDARY_NEUTRAL = 18,
-    U_FIRST_STRONG_ISOLATE = 19,
-    U_LEFT_TO_RIGHT_ISOLATE = 20,
-    U_RIGHT_TO_LEFT_ISOLATE = 21,
-    U_POP_DIRECTIONAL_ISOLATE = 22,
-    U_CHAR_DIRECTION_COUNT = 23,
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UCharNameChoice {
-    U_UNICODE_CHAR_NAME = 0,
-    U_UNICODE_10_CHAR_NAME = 1,
-    U_EXTENDED_CHAR_NAME = 2,
-    U_CHAR_NAME_ALIAS = 3,
-    U_CHAR_NAME_CHOICE_COUNT = 4,
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UPropertyNameChoice {
-    U_SHORT_PROPERTY_NAME = 0,
-    U_LONG_PROPERTY_NAME = 1,
-    U_PROPERTY_NAME_CHOICE_COUNT = 2,
-}
-extern "C" {
-    pub fn u_hasBinaryProperty_67(c: UChar32, which: UProperty) -> UBool;
-}
-extern "C" {
-    pub fn u_getBinaryPropertySet_67(
-        property: UProperty,
-        pErrorCode: *mut UErrorCode,
-    ) -> *const USet;
-}
-extern "C" {
-    pub fn u_isUAlphabetic_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isULowercase_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isUUppercase_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isUWhiteSpace_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_getIntPropertyValue_67(c: UChar32, which: UProperty) -> i32;
-}
-extern "C" {
-    pub fn u_getIntPropertyMinValue_67(which: UProperty) -> i32;
-}
-extern "C" {
-    pub fn u_getIntPropertyMaxValue_67(which: UProperty) -> i32;
-}
-extern "C" {
-    pub fn u_getIntPropertyMap_67(
-        property: UProperty,
-        pErrorCode: *mut UErrorCode,
-    ) -> *const UCPMap;
-}
-extern "C" {
-    pub fn u_getNumericValue_67(c: UChar32) -> f64;
-}
-extern "C" {
-    pub fn u_islower_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isupper_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_istitle_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isdigit_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isalpha_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isalnum_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isxdigit_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_ispunct_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isgraph_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isblank_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isdefined_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isspace_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isJavaSpaceChar_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isWhitespace_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_iscntrl_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isISOControl_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isprint_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isbase_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_charDirection_67(c: UChar32) -> UCharDirection;
-}
-extern "C" {
-    pub fn u_isMirrored_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_charMirror_67(c: UChar32) -> UChar32;
-}
-extern "C" {
-    pub fn u_getBidiPairedBracket_67(c: UChar32) -> UChar32;
-}
-extern "C" {
-    pub fn u_charType_67(c: UChar32) -> i8;
-}
-pub type UCharEnumTypeRange = ::std::option::Option<
-    unsafe extern "C" fn(
-        context: *const ::std::os::raw::c_void,
-        start: UChar32,
-        limit: UChar32,
-        type_: UCharCategory,
-    ) -> UBool,
->;
-extern "C" {
-    pub fn u_enumCharTypes_67(
-        enumRange: UCharEnumTypeRange,
-        context: *const ::std::os::raw::c_void,
-    );
-}
-extern "C" {
-    pub fn u_getCombiningClass_67(c: UChar32) -> u8;
-}
-extern "C" {
-    pub fn u_charDigitValue_67(c: UChar32) -> i32;
-}
-extern "C" {
-    pub fn u_charName_67(
-        code: UChar32,
-        nameChoice: UCharNameChoice,
-        buffer: *mut ::std::os::raw::c_char,
-        bufferLength: i32,
-        pErrorCode: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn u_getISOComment_67(
-        c: UChar32,
-        dest: *mut ::std::os::raw::c_char,
-        destCapacity: i32,
-        pErrorCode: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn u_charFromName_67(
-        nameChoice: UCharNameChoice,
-        name: *const ::std::os::raw::c_char,
-        pErrorCode: *mut UErrorCode,
-    ) -> UChar32;
-}
-pub type UEnumCharNamesFn = ::std::option::Option<
-    unsafe extern "C" fn(
-        context: *mut ::std::os::raw::c_void,
-        code: UChar32,
-        nameChoice: UCharNameChoice,
-        name: *const ::std::os::raw::c_char,
-        length: i32,
-    ) -> UBool,
->;
-extern "C" {
-    pub fn u_enumCharNames_67(
-        start: UChar32,
-        limit: UChar32,
-        fn_: UEnumCharNamesFn,
-        context: *mut ::std::os::raw::c_void,
-        nameChoice: UCharNameChoice,
-        pErrorCode: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn u_getPropertyName_67(
-        property: UProperty,
-        nameChoice: UPropertyNameChoice,
-    ) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn u_getPropertyEnum_67(alias: *const ::std::os::raw::c_char) -> UProperty;
-}
-extern "C" {
-    pub fn u_getPropertyValueName_67(
-        property: UProperty,
-        value: i32,
-        nameChoice: UPropertyNameChoice,
-    ) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn u_getPropertyValueEnum_67(
-        property: UProperty,
-        alias: *const ::std::os::raw::c_char,
-    ) -> i32;
-}
-extern "C" {
-    pub fn u_isIDStart_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isIDPart_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isIDIgnorable_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isJavaIDStart_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_isJavaIDPart_67(c: UChar32) -> UBool;
-}
-extern "C" {
-    pub fn u_tolower_67(c: UChar32) -> UChar32;
-}
-extern "C" {
-    pub fn u_toupper_67(c: UChar32) -> UChar32;
-}
-extern "C" {
-    pub fn u_totitle_67(c: UChar32) -> UChar32;
-}
-extern "C" {
-    pub fn u_foldCase_67(c: UChar32, options: u32) -> UChar32;
-}
-extern "C" {
-    pub fn u_digit_67(ch: UChar32, radix: i8) -> i32;
-}
-extern "C" {
-    pub fn u_forDigit_67(digit: i32, radix: i8) -> UChar32;
-}
-extern "C" {
-    pub fn u_charAge_67(c: UChar32, versionArray: *mut u8);
-}
-extern "C" {
-    pub fn u_getUnicodeVersion_67(versionArray: *mut u8);
-}
-extern "C" {
-    pub fn u_getFC_NFKC_Closure_67(
-        c: UChar32,
-        dest: *mut UChar,
-        destCapacity: i32,
-        pErrorCode: *mut UErrorCode,
-    ) -> i32;
 }
 extern "C" {
     pub fn utext_close_67(ut: *mut UText) -> *mut UText;
@@ -3375,685 +4139,6 @@ impl Default for UText {
 }
 extern "C" {
     pub fn utext_setup_67(ut: *mut UText, extraSpace: i32, status: *mut UErrorCode) -> *mut UText;
-}
-extern "C" {
-    pub fn u_init_67(status: *mut UErrorCode);
-}
-extern "C" {
-    pub fn u_cleanup_67();
-}
-pub type UMemAllocFn = ::std::option::Option<
-    unsafe extern "C" fn(
-        context: *const ::std::os::raw::c_void,
-        size: size_t,
-    ) -> *mut ::std::os::raw::c_void,
->;
-pub type UMemReallocFn = ::std::option::Option<
-    unsafe extern "C" fn(
-        context: *const ::std::os::raw::c_void,
-        mem: *mut ::std::os::raw::c_void,
-        size: size_t,
-    ) -> *mut ::std::os::raw::c_void,
->;
-pub type UMemFreeFn = ::std::option::Option<
-    unsafe extern "C" fn(context: *const ::std::os::raw::c_void, mem: *mut ::std::os::raw::c_void),
->;
-extern "C" {
-    pub fn u_setMemoryFunctions_67(
-        context: *const ::std::os::raw::c_void,
-        a: UMemAllocFn,
-        r: UMemReallocFn,
-        f: UMemFreeFn,
-        status: *mut UErrorCode,
-    );
-}
-pub type UMTX = *mut ::std::os::raw::c_void;
-pub type UMtxInitFn = ::std::option::Option<
-    unsafe extern "C" fn(
-        context: *const ::std::os::raw::c_void,
-        mutex: *mut UMTX,
-        status: *mut UErrorCode,
-    ),
->;
-pub type UMtxFn = ::std::option::Option<
-    unsafe extern "C" fn(context: *const ::std::os::raw::c_void, mutex: *mut UMTX),
->;
-extern "C" {
-    pub fn u_setMutexFunctions_67(
-        context: *const ::std::os::raw::c_void,
-        init: UMtxInitFn,
-        destroy: UMtxFn,
-        lock: UMtxFn,
-        unlock: UMtxFn,
-        status: *mut UErrorCode,
-    );
-}
-pub type UMtxAtomicFn = ::std::option::Option<
-    unsafe extern "C" fn(context: *const ::std::os::raw::c_void, p: *mut i32) -> i32,
->;
-extern "C" {
-    pub fn u_setAtomicIncDecFunctions_67(
-        context: *const ::std::os::raw::c_void,
-        inc: UMtxAtomicFn,
-        dec: UMtxAtomicFn,
-        status: *mut UErrorCode,
-    );
-}
-pub type va_list = __builtin_va_list;
-extern "C" {
-    pub fn u_formatMessage_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        result: *mut UChar,
-        resultLength: i32,
-        status: *mut UErrorCode,
-        ...
-    ) -> i32;
-}
-extern "C" {
-    pub fn u_vformatMessage_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        result: *mut UChar,
-        resultLength: i32,
-        ap: *mut __va_list_tag,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn u_parseMessage_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        source: *const UChar,
-        sourceLength: i32,
-        status: *mut UErrorCode,
-        ...
-    );
-}
-extern "C" {
-    pub fn u_vparseMessage_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        source: *const UChar,
-        sourceLength: i32,
-        ap: *mut __va_list_tag,
-        status: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn u_formatMessageWithError_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        result: *mut UChar,
-        resultLength: i32,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-        ...
-    ) -> i32;
-}
-extern "C" {
-    pub fn u_vformatMessageWithError_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        result: *mut UChar,
-        resultLength: i32,
-        parseError: *mut UParseError,
-        ap: *mut __va_list_tag,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn u_parseMessageWithError_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        source: *const UChar,
-        sourceLength: i32,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-        ...
-    );
-}
-extern "C" {
-    pub fn u_vparseMessageWithError_67(
-        locale: *const ::std::os::raw::c_char,
-        pattern: *const UChar,
-        patternLength: i32,
-        source: *const UChar,
-        sourceLength: i32,
-        ap: *mut __va_list_tag,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-    );
-}
-pub type UMessageFormat = *mut ::std::os::raw::c_void;
-extern "C" {
-    pub fn umsg_open_67(
-        pattern: *const UChar,
-        patternLength: i32,
-        locale: *const ::std::os::raw::c_char,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-    ) -> *mut UMessageFormat;
-}
-extern "C" {
-    pub fn umsg_close_67(format: *mut UMessageFormat);
-}
-extern "C" {
-    pub fn umsg_clone_67(fmt: *const UMessageFormat, status: *mut UErrorCode) -> UMessageFormat;
-}
-extern "C" {
-    pub fn umsg_setLocale_67(fmt: *mut UMessageFormat, locale: *const ::std::os::raw::c_char);
-}
-extern "C" {
-    pub fn umsg_getLocale_67(fmt: *const UMessageFormat) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn umsg_applyPattern_67(
-        fmt: *mut UMessageFormat,
-        pattern: *const UChar,
-        patternLength: i32,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn umsg_toPattern_67(
-        fmt: *const UMessageFormat,
-        result: *mut UChar,
-        resultLength: i32,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn umsg_format_67(
-        fmt: *const UMessageFormat,
-        result: *mut UChar,
-        resultLength: i32,
-        status: *mut UErrorCode,
-        ...
-    ) -> i32;
-}
-extern "C" {
-    pub fn umsg_vformat_67(
-        fmt: *const UMessageFormat,
-        result: *mut UChar,
-        resultLength: i32,
-        ap: *mut __va_list_tag,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn umsg_parse_67(
-        fmt: *const UMessageFormat,
-        source: *const UChar,
-        sourceLength: i32,
-        count: *mut i32,
-        status: *mut UErrorCode,
-        ...
-    );
-}
-extern "C" {
-    pub fn umsg_vparse_67(
-        fmt: *const UMessageFormat,
-        source: *const UChar,
-        sourceLength: i32,
-        count: *mut i32,
-        ap: *mut __va_list_tag,
-        status: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn umsg_autoQuoteApostrophe_67(
-        pattern: *const UChar,
-        patternLength: i32,
-        dest: *mut UChar,
-        destCapacity: i32,
-        ec: *mut UErrorCode,
-    ) -> i32;
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum USetSpanCondition {
-    USET_SPAN_NOT_CONTAINED = 0,
-    USET_SPAN_CONTAINED = 1,
-    USET_SPAN_SIMPLE = 2,
-    USET_SPAN_CONDITION_COUNT = 3,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct UCollator {
-    _unused: [u8; 0],
-}
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UCollationResult {
-    UCOL_EQUAL = 0,
-    UCOL_GREATER = 1,
-    UCOL_LESS = -1,
-}
-impl UColAttributeValue {
-    pub const UCOL_DEFAULT_STRENGTH: UColAttributeValue = UColAttributeValue::UCOL_TERTIARY;
-}
-impl UColAttributeValue {
-    pub const UCOL_QUATERNARY: UColAttributeValue = UColAttributeValue::UCOL_CE_STRENGTH_LIMIT;
-}
-impl UColAttributeValue {
-    pub const UCOL_OFF: UColAttributeValue = UColAttributeValue::UCOL_STRENGTH_LIMIT;
-}
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UColAttributeValue {
-    UCOL_DEFAULT = -1,
-    UCOL_PRIMARY = 0,
-    UCOL_SECONDARY = 1,
-    UCOL_TERTIARY = 2,
-    UCOL_CE_STRENGTH_LIMIT = 3,
-    UCOL_IDENTICAL = 15,
-    UCOL_STRENGTH_LIMIT = 16,
-    UCOL_ON = 17,
-    UCOL_SHIFTED = 20,
-    UCOL_NON_IGNORABLE = 21,
-    UCOL_LOWER_FIRST = 24,
-    UCOL_UPPER_FIRST = 25,
-    UCOL_ATTRIBUTE_VALUE_COUNT = 26,
-}
-impl UColReorderCode {
-    pub const UCOL_REORDER_CODE_OTHERS: UColReorderCode = UColReorderCode::UCOL_REORDER_CODE_NONE;
-}
-impl UColReorderCode {
-    pub const UCOL_REORDER_CODE_FIRST: UColReorderCode = UColReorderCode::UCOL_REORDER_CODE_SPACE;
-}
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UColReorderCode {
-    UCOL_REORDER_CODE_DEFAULT = -1,
-    UCOL_REORDER_CODE_NONE = 103,
-    UCOL_REORDER_CODE_SPACE = 4096,
-    UCOL_REORDER_CODE_PUNCTUATION = 4097,
-    UCOL_REORDER_CODE_SYMBOL = 4098,
-    UCOL_REORDER_CODE_CURRENCY = 4099,
-    UCOL_REORDER_CODE_DIGIT = 4100,
-    UCOL_REORDER_CODE_LIMIT = 4101,
-}
-pub use self::UColAttributeValue as UCollationStrength;
-impl UColAttribute {
-    pub const UCOL_DECOMPOSITION_MODE: UColAttribute = UColAttribute::UCOL_NORMALIZATION_MODE;
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UColAttribute {
-    UCOL_FRENCH_COLLATION = 0,
-    UCOL_ALTERNATE_HANDLING = 1,
-    UCOL_CASE_FIRST = 2,
-    UCOL_CASE_LEVEL = 3,
-    UCOL_NORMALIZATION_MODE = 4,
-    UCOL_STRENGTH = 5,
-    UCOL_HIRAGANA_QUATERNARY_MODE = 6,
-    UCOL_NUMERIC_COLLATION = 7,
-    UCOL_ATTRIBUTE_COUNT = 8,
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UColRuleOption {
-    UCOL_TAILORING_ONLY = 0,
-    UCOL_FULL_RULES = 1,
-}
-extern "C" {
-    pub fn ucol_open_67(
-        loc: *const ::std::os::raw::c_char,
-        status: *mut UErrorCode,
-    ) -> *mut UCollator;
-}
-extern "C" {
-    pub fn ucol_openRules_67(
-        rules: *const UChar,
-        rulesLength: i32,
-        normalizationMode: UColAttributeValue,
-        strength: UCollationStrength,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-    ) -> *mut UCollator;
-}
-extern "C" {
-    pub fn ucol_openFromShortString_67(
-        definition: *const ::std::os::raw::c_char,
-        forceDefaults: UBool,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-    ) -> *mut UCollator;
-}
-extern "C" {
-    pub fn ucol_getContractions_67(
-        coll: *const UCollator,
-        conts: *mut USet,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_getContractionsAndExpansions_67(
-        coll: *const UCollator,
-        contractions: *mut USet,
-        expansions: *mut USet,
-        addPrefixes: UBool,
-        status: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn ucol_close_67(coll: *mut UCollator);
-}
-extern "C" {
-    pub fn ucol_strcoll_67(
-        coll: *const UCollator,
-        source: *const UChar,
-        sourceLength: i32,
-        target: *const UChar,
-        targetLength: i32,
-    ) -> UCollationResult;
-}
-extern "C" {
-    pub fn ucol_strcollUTF8_67(
-        coll: *const UCollator,
-        source: *const ::std::os::raw::c_char,
-        sourceLength: i32,
-        target: *const ::std::os::raw::c_char,
-        targetLength: i32,
-        status: *mut UErrorCode,
-    ) -> UCollationResult;
-}
-extern "C" {
-    pub fn ucol_greater_67(
-        coll: *const UCollator,
-        source: *const UChar,
-        sourceLength: i32,
-        target: *const UChar,
-        targetLength: i32,
-    ) -> UBool;
-}
-extern "C" {
-    pub fn ucol_greaterOrEqual_67(
-        coll: *const UCollator,
-        source: *const UChar,
-        sourceLength: i32,
-        target: *const UChar,
-        targetLength: i32,
-    ) -> UBool;
-}
-extern "C" {
-    pub fn ucol_equal_67(
-        coll: *const UCollator,
-        source: *const UChar,
-        sourceLength: i32,
-        target: *const UChar,
-        targetLength: i32,
-    ) -> UBool;
-}
-extern "C" {
-    pub fn ucol_strcollIter_67(
-        coll: *const UCollator,
-        sIter: *mut UCharIterator,
-        tIter: *mut UCharIterator,
-        status: *mut UErrorCode,
-    ) -> UCollationResult;
-}
-extern "C" {
-    pub fn ucol_getStrength_67(coll: *const UCollator) -> UCollationStrength;
-}
-extern "C" {
-    pub fn ucol_setStrength_67(coll: *mut UCollator, strength: UCollationStrength);
-}
-extern "C" {
-    pub fn ucol_getReorderCodes_67(
-        coll: *const UCollator,
-        dest: *mut i32,
-        destCapacity: i32,
-        pErrorCode: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_setReorderCodes_67(
-        coll: *mut UCollator,
-        reorderCodes: *const i32,
-        reorderCodesLength: i32,
-        pErrorCode: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn ucol_getEquivalentReorderCodes_67(
-        reorderCode: i32,
-        dest: *mut i32,
-        destCapacity: i32,
-        pErrorCode: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_getDisplayName_67(
-        objLoc: *const ::std::os::raw::c_char,
-        dispLoc: *const ::std::os::raw::c_char,
-        result: *mut UChar,
-        resultLength: i32,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_getAvailable_67(localeIndex: i32) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn ucol_countAvailable_67() -> i32;
-}
-extern "C" {
-    pub fn ucol_openAvailableLocales_67(status: *mut UErrorCode) -> *mut UEnumeration;
-}
-extern "C" {
-    pub fn ucol_getKeywords_67(status: *mut UErrorCode) -> *mut UEnumeration;
-}
-extern "C" {
-    pub fn ucol_getKeywordValues_67(
-        keyword: *const ::std::os::raw::c_char,
-        status: *mut UErrorCode,
-    ) -> *mut UEnumeration;
-}
-extern "C" {
-    pub fn ucol_getKeywordValuesForLocale_67(
-        key: *const ::std::os::raw::c_char,
-        locale: *const ::std::os::raw::c_char,
-        commonlyUsed: UBool,
-        status: *mut UErrorCode,
-    ) -> *mut UEnumeration;
-}
-extern "C" {
-    pub fn ucol_getFunctionalEquivalent_67(
-        result: *mut ::std::os::raw::c_char,
-        resultCapacity: i32,
-        keyword: *const ::std::os::raw::c_char,
-        locale: *const ::std::os::raw::c_char,
-        isAvailable: *mut UBool,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_getRules_67(coll: *const UCollator, length: *mut i32) -> *const UChar;
-}
-extern "C" {
-    pub fn ucol_getShortDefinitionString_67(
-        coll: *const UCollator,
-        locale: *const ::std::os::raw::c_char,
-        buffer: *mut ::std::os::raw::c_char,
-        capacity: i32,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_normalizeShortDefinitionString_67(
-        source: *const ::std::os::raw::c_char,
-        destination: *mut ::std::os::raw::c_char,
-        capacity: i32,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_getSortKey_67(
-        coll: *const UCollator,
-        source: *const UChar,
-        sourceLength: i32,
-        result: *mut u8,
-        resultLength: i32,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_nextSortKeyPart_67(
-        coll: *const UCollator,
-        iter: *mut UCharIterator,
-        state: *mut u32,
-        dest: *mut u8,
-        count: i32,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
-pub enum UColBoundMode {
-    UCOL_BOUND_LOWER = 0,
-    UCOL_BOUND_UPPER = 1,
-    UCOL_BOUND_UPPER_LONG = 2,
-    UCOL_BOUND_VALUE_COUNT = 3,
-}
-extern "C" {
-    pub fn ucol_getBound_67(
-        source: *const u8,
-        sourceLength: i32,
-        boundType: UColBoundMode,
-        noOfLevels: u32,
-        result: *mut u8,
-        resultLength: i32,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_getVersion_67(coll: *const UCollator, info: *mut u8);
-}
-extern "C" {
-    pub fn ucol_getUCAVersion_67(coll: *const UCollator, info: *mut u8);
-}
-extern "C" {
-    pub fn ucol_mergeSortkeys_67(
-        src1: *const u8,
-        src1Length: i32,
-        src2: *const u8,
-        src2Length: i32,
-        dest: *mut u8,
-        destCapacity: i32,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_setAttribute_67(
-        coll: *mut UCollator,
-        attr: UColAttribute,
-        value: UColAttributeValue,
-        status: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn ucol_getAttribute_67(
-        coll: *const UCollator,
-        attr: UColAttribute,
-        status: *mut UErrorCode,
-    ) -> UColAttributeValue;
-}
-extern "C" {
-    pub fn ucol_setMaxVariable_67(
-        coll: *mut UCollator,
-        group: UColReorderCode,
-        pErrorCode: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn ucol_getMaxVariable_67(coll: *const UCollator) -> UColReorderCode;
-}
-extern "C" {
-    pub fn ucol_setVariableTop_67(
-        coll: *mut UCollator,
-        varTop: *const UChar,
-        len: i32,
-        status: *mut UErrorCode,
-    ) -> u32;
-}
-extern "C" {
-    pub fn ucol_getVariableTop_67(coll: *const UCollator, status: *mut UErrorCode) -> u32;
-}
-extern "C" {
-    pub fn ucol_restoreVariableTop_67(coll: *mut UCollator, varTop: u32, status: *mut UErrorCode);
-}
-extern "C" {
-    pub fn ucol_safeClone_67(
-        coll: *const UCollator,
-        stackBuffer: *mut ::std::os::raw::c_void,
-        pBufferSize: *mut i32,
-        status: *mut UErrorCode,
-    ) -> *mut UCollator;
-}
-extern "C" {
-    pub fn ucol_getRulesEx_67(
-        coll: *const UCollator,
-        delta: UColRuleOption,
-        buffer: *mut UChar,
-        bufferLen: i32,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_getLocale_67(
-        coll: *const UCollator,
-        type_: ULocDataLocaleType,
-        status: *mut UErrorCode,
-    ) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn ucol_getLocaleByType_67(
-        coll: *const UCollator,
-        type_: ULocDataLocaleType,
-        status: *mut UErrorCode,
-    ) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn ucol_getTailoredSet_67(coll: *const UCollator, status: *mut UErrorCode) -> *mut USet;
-}
-extern "C" {
-    pub fn ucol_getUnsafeSet_67(
-        coll: *const UCollator,
-        unsafe_: *mut USet,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_prepareShortStringOpen_67(
-        definition: *const ::std::os::raw::c_char,
-        forceDefaults: UBool,
-        parseError: *mut UParseError,
-        status: *mut UErrorCode,
-    );
-}
-extern "C" {
-    pub fn ucol_cloneBinary_67(
-        coll: *const UCollator,
-        buffer: *mut u8,
-        capacity: i32,
-        status: *mut UErrorCode,
-    ) -> i32;
-}
-extern "C" {
-    pub fn ucol_openBinary_67(
-        bin: *const u8,
-        length: i32,
-        base: *const UCollator,
-        status: *mut UErrorCode,
-    ) -> *mut UCollator;
 }
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]

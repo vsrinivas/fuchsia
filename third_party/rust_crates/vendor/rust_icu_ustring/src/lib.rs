@@ -155,6 +155,13 @@ impl TryFrom<&UChar> for String {
     }
 }
 
+impl From<Vec<sys::UChar>> for crate::UChar {
+    /// Adopts a vector of [sys::UChar] into a string.
+    fn from(rep: Vec<sys::UChar>) -> crate::UChar {
+        crate::UChar { rep }
+    }
+}
+
 impl crate::UChar {
     /// Allocates a new UChar with given capacity.
     ///
@@ -162,7 +169,7 @@ impl crate::UChar {
     /// low-level code.
     pub fn new_with_capacity(capacity: usize) -> crate::UChar {
         let rep: Vec<sys::UChar> = vec![0; capacity];
-        crate::UChar { rep: rep }
+        crate::UChar::from(rep)
     }
 
     /// Converts into a zeroed-out string.

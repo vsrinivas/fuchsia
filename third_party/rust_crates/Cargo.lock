@@ -764,15 +764,15 @@ dependencies = [
  "ring 0.16.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rouille 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust-crypto 0.2.36",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_ucal 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_udat 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_udata 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_uenum 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_uloc 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_ustring 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_utext 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_ucal 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_udat 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_udata 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_uenum 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_uloc 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_ustring 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_utext 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-demangle 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hash 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustls 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2177,17 +2177,17 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_common"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "anyhow 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "rust_icu_sys"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "anyhow 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2198,86 +2198,86 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_ucal"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_uenum 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_ustring 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_uenum 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_ustring 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "rust_icu_udat"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_ucal 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_uenum 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_uloc 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_ustring 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_ucal 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_uenum 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_uloc 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_ustring 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "rust_icu_udata"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "rust_icu_uenum"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "rust_icu_uloc"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "anyhow 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_uenum 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_ustring 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_uenum 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_ustring 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "rust_icu_ustring"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "rust_icu_utext"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3515,15 +3515,15 @@ version = "0.3.99"
 "checksum rental-impl 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "82260d54cf2cbe9608df161f7e7c98e81fae702aa13af9e4d5d39dc2ffb25ab6"
 "checksum ring 0.16.12 (registry+https://github.com/rust-lang/crates.io-index)" = "1ba5a8ec64ee89a76c98c549af81ff14813df09c3e6dc4766c3856da48597a0c"
 "checksum rouille 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "112568052ec17fa26c6c11c40acbb30d3ad244bf3d6da0be181f5e7e42e5004f"
-"checksum rust_icu_common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ced14a80a7de18dfd55b4f13811346c5956bc7466dbf1780ed51f1f07148a6b7"
-"checksum rust_icu_sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "cc3c19cd8c8f19bdced25cc0f60d03be7ccdccc70b36c9c12c241f3d1f38c689"
-"checksum rust_icu_ucal 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "6da2b660b2020deeccea44ffe652c9a06c7935ef91f8f1de381bec639f94d2ae"
-"checksum rust_icu_udat 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "f670035b192b9b9021ab9d1981aeec864fc780be10f6d978bed17702918b7fee"
-"checksum rust_icu_udata 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c340e5bee6190e5d319690eb4b76a2e9d54093272c679a7eaa3217791862e3e4"
-"checksum rust_icu_uenum 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "5fa4279c0d4d4d39f4bc6ca99e6ccbdd7d2575af308f982595fdf4ac7f75b7db"
-"checksum rust_icu_uloc 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "0dc211b4ee069c20ab7a1d196150724bd4b5552e5c2a24b6e3b13ebf68280516"
-"checksum rust_icu_ustring 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "f4761555d84869b46ca9f077b9d2f4163e66acda9e76710b979ad82551366bcf"
-"checksum rust_icu_utext 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "763646cd88cf12f67cb5da48cc7d2303a96f6e3d43dad0bc4bbb0e264a9c9a31"
+"checksum rust_icu_common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5285b5af301740ddaa66a877286e8c868d6df0767014c1f8e904309fe23513fb"
+"checksum rust_icu_sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e997b3ce3eaf33f769fca376c4b68314f423ac2713f0f83f9635517e7952c8f7"
+"checksum rust_icu_ucal 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b08aa2b13aea37b6789778036a0d902a895a09af7a3dbdc75dbedbc88ca5bef0"
+"checksum rust_icu_udat 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1c599d4e94fd23cc335f3f33f409169c0f0c0d70270cfe1a10a7ae9f267356be"
+"checksum rust_icu_udata 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "217d234ae355df9ae12662dc0e8e361523141f3932a63ae15e848bd622fe9c18"
+"checksum rust_icu_uenum 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "259d5700118d94d8df82e10dcb4a36d0cec62022ee1f3fd9cff2c0062e32f0de"
+"checksum rust_icu_uloc 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2bafb7cb26d3a60d1583ad74eeeb5f89749f44f1e30c2b95f0272f17d2158762"
+"checksum rust_icu_ustring 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a6b873907e9f122161d1e1a341f8553998ab4cf28b78afa3ffabfa6bdcbdfd3b"
+"checksum rust_icu_utext 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "74f251edc80b46a031a48156afee138fe8031d6f127b7569c2c2851d2cb0d290"
 "checksum rustc-demangle 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"
 "checksum rustc-hash 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7540fc8b0c49f096ee9c961cda096467dce8084bec6bdca2fc83895fd9b28cb8"
 "checksum rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)" = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"

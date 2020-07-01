@@ -34,15 +34,16 @@ OUTPUT_DIR=${OUTPUT_DIR:-.}
 # build.rs file.
 readonly BINDGEN_SOURCE_MODULES=(
         "ucal"
+        "uclean"
+        "ucol"
         "udat"
         "udata"
         "uenum"
+        "ulistformatter"
+        "umsg"
+        "uset"
         "ustring"
         "utext"
-        "uclean"
-        "umsg"
-        "ucol"
-        "uset"
 )
 
 # Types for which to generate the bindings.  Expand this list if you need more.
@@ -53,18 +54,20 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
         "UBool"
         "UCalendar.*"
         "UChar.*"
+        "UCol.*"
+        "UCollation.*"
+        "UCollator"
         "UData.*"
         "UDate.*"
         "UDateFormat.*"
         "UEnumeration.*"
         "UErrorCode"
+        "UFormattedList.*"
+        "UListFormatter.*"
         "UMessageFormat"
         "UParseError"
-        "UText"
-        "UCollator"
-        "UCollation.*"
         "USet"
-        "UCol.*"
+        "UText"
 )
 
 # Functions for which to generate the bindings.  Expand this list if you need
@@ -73,13 +76,14 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
 readonly BINDGEN_ALLOWLIST_FUNCTIONS=(
         "u_.*"
         "ucal_.*"
-        "udata_.*"
-        "udat_.*"
-        "uenum_.*"
-        "uloc_.*"
-        "utext_.*"
-        "umsg_.*"
         "ucol_.*"
+        "udat_.*"
+        "udata_.*"
+        "uenum_.*"
+        "ulistfmt_.*"
+        "uloc_.*"
+        "umsg_.*"
+        "utext_.*"
 )
 
 function check_requirements() {
