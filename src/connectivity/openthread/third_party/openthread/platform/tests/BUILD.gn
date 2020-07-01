@@ -28,6 +28,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "entropy_test.cc",
     "fuchsia_platform_alarm_tests.cc",
     "settings_test.cc",
   ]

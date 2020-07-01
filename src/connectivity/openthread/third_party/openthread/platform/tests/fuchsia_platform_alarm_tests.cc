@@ -123,28 +123,41 @@ TEST(Alarm, MicroSecAlarm) {
   EXPECT_EQ(alarm.MicroSecAlarmFired(), true);
 }
 
-// Setup both alarms at once, one after 50 msec
-// another after 150 sec. Check at 100 msec and 200 msec
+// Setup both alarms at once, one after 500 msec
+// another after 1000 sec. Check at 750 msec and 1200 msec
 // to ensure correct alarms are fired
 TEST(Alarm, BothAlarms) {
   FuchsiaPlatformAlarm alarm;
   alarm.SetSpeedUpFactor(1);
 
+  uint64_t start_time_us = GetCurTimeMicroSec();
+
   uint32_t now_us = alarm.GetNowMicroSec();
-  constexpr uint32_t kUsAlarmDelay = 50000;
+  constexpr uint32_t kUsAlarmDelay = 500000;
   alarm.SetMicroSecAlarm(now_us + kUsAlarmDelay);
   uint32_t now_ms = alarm.GetNowMilliSec();
-  constexpr uint32_t kMsAlarmDelay = 150;
-  constexpr uint32_t kMsSleepDelay = 100;
+  constexpr uint32_t kMsAlarmDelay = 1000;
   alarm.SetMilliSecAlarm(now_ms + kMsAlarmDelay);
   EXPECT_EQ(alarm.MicroSecAlarmFired(), false);
 
+  constexpr uint32_t kMsSleepDelay1 = 750;
+  constexpr uint32_t kMsSleepDelay2 = 450;
   // Sleep for some time to wake up after first alarms expected
   // time to fire and before second alarm's expected time to fire
-  zx::nanosleep(zx::deadline_after(zx::msec(kMsSleepDelay)));
+  zx::nanosleep(zx::deadline_after(zx::msec(kMsSleepDelay1)));
   EXPECT_EQ(alarm.MicroSecAlarmFired(), true);
+
+  // In some cases, the actual sleep time may be much longer than
+  // requested. Check Ms delay has already passed
+  uint64_t end_time_us = GetCurTimeMicroSec();
+  if (end_time_us - start_time_us >
+        alarm.MilliToMicroSec( kMsAlarmDelay)) {
+    EXPECT_EQ(alarm.MilliSecAlarmFired(), true);
+    return;
+  }
+
   EXPECT_EQ(alarm.MilliSecAlarmFired(), false);
-  zx::nanosleep(zx::deadline_after(zx::msec(kMsSleepDelay)));
+  zx::nanosleep(zx::deadline_after(zx::msec(kMsSleepDelay2)));
   EXPECT_EQ(alarm.MilliSecAlarmFired(), true);
 }
 

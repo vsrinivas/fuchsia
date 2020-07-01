@@ -28,16 +28,23 @@
 
 /**
  * @file
- *   This file implements an entropy source based on /dev/urandom or pseudo-random generator.
- *
+ *   This file implements an entropy source based on a cryptographically-secure
+ *   pseudo random number generator supplied by kernel
  */
 
 #include <stdint.h>
+#include <zircon/syscalls.h>
 
 #include <openthread/error.h>
+#include <openthread/platform/entropy.h>
 
 void platformRandomInit(void) {}
 
 extern "C" otError otPlatEntropyGet(uint8_t *a_output, uint16_t a_output_length) {
+  if (!a_output || !a_output_length) {
+    return OT_ERROR_INVALID_ARGS;
+  }
+
+  zx_cprng_draw(a_output, a_output_length);
   return OT_ERROR_NONE;
 }
