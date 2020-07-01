@@ -63,7 +63,6 @@ zx_library("pc") {
       "$zx/system/ulib/affine",
     ]
   }
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 source_set("tests") {

@@ -195,7 +195,6 @@ zx_library("x86") {
     # <arch/x86.h> has #include <lib/arch/intrin.h>.
     "$zx/kernel/lib/arch:headers",
   ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 source_set("syscall") {

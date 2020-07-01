@@ -22,7 +22,7 @@ const uint VMM_PF_FLAG_SW_FAULT = (1u << 6);  // software fault
 const uint VMM_PF_FLAG_FAULT_MASK = (VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_SW_FAULT);
 
 // convenience routine for converting page fault flags to a string
-static const char* vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
+static inline const char* vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
   str[0] = (pf_flags & VMM_PF_FLAG_WRITE) ? 'w' : 'r';
   str[1] = (pf_flags & VMM_PF_FLAG_USER) ? 'u' : ((pf_flags & VMM_PF_FLAG_GUEST) ? 'g' : 's');
   str[2] = (pf_flags & VMM_PF_FLAG_INSTRUCTION) ? 'i' : 'd';
