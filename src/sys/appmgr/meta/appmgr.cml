@@ -236,6 +236,7 @@
                 "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.exception.Handler",
+                "/svc/fuchsia.feedback.CrashReporter",
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.net.NameLookup",
