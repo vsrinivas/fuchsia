@@ -13,6 +13,7 @@ test("display-core-unittests") {
     "fence-test.cc",
     "image-test.cc",
     "integration-test.cc",
+    "layer-test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [
