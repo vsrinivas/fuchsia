@@ -594,9 +594,6 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
                     if self.variants.contains("Parent") {
                         tokens.append_all(quote! {
                             "parent" => Ok(Self::Parent),
-                            // TODO: For compatibility. Remove once all clients are migrated to
-                            // use "parent".
-                            "realm" => Ok(Self::Parent),
                         });
                     }
                     if self.variants.contains("Framework") {

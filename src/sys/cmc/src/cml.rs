@@ -973,7 +973,6 @@ mod tests {
 
     #[test]
     fn test_parse_reference_test() {
-        assert_matches!("realm".parse::<OfferFromRef>(), Ok(OfferFromRef::Parent));
         assert_matches!("parent".parse::<OfferFromRef>(), Ok(OfferFromRef::Parent));
         assert_matches!("framework".parse::<OfferFromRef>(), Ok(OfferFromRef::Framework));
         assert_matches!("self".parse::<OfferFromRef>(), Ok(OfferFromRef::Self_));
@@ -991,7 +990,6 @@ mod tests {
     #[test]
     fn test_deserialize_ref() -> Result<(), Error> {
         assert_matches!(parse_as_ref("\"self\""), Ok(OfferFromRef::Self_));
-        assert_matches!(parse_as_ref("\"realm\""), Ok(OfferFromRef::Parent));
         assert_matches!(parse_as_ref("\"parent\""), Ok(OfferFromRef::Parent));
         assert_matches!(parse_as_ref("\"#child\""), Ok(OfferFromRef::Named(name)) if name == "child");
 

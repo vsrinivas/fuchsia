@@ -1066,12 +1066,6 @@ mod tests {
                         "from": "self",
                         "to": "parent"
                     },
-                    // Test compatibility for "realm"
-                    {
-                        "protocol": [ "/C" ],
-                        "from": "self",
-                        "to": "realm"
-                    },
                     {
                         "directory": "/volumes/blobfs/blob",
                         "from": "self",
@@ -1155,16 +1149,6 @@ mod tests {
                 },
                 "source_path": "/B",
                 "target_path": "/B",
-                "target": "parent"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "/C",
-                "target_path": "/C",
                 "target": "parent"
             }
         },
