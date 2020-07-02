@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # If true, replaces netstack with netstack3.
+  #
+  # When set as a GN argument, requires that sysmgr_config_warn_override be set
+  # to true to avoid build failures. See that flag's documentation for details.
   use_netstack3 = false
 
   # Transitional flag to enable dns-resolver as the provider for
