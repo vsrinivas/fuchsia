@@ -75,8 +75,21 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 		return nil, fmt.Errorf("dnsServerWatcher: not allowed to watch twice")
 	}
 
-	servers := w.dnsClient.GetServersCache()
-	for !w.mu.isDead && serverListEquals(servers, w.mu.lastObserved) {
+	for {
+		if w.mu.isDead {
+			return nil, fmt.Errorf("dnsServerWatcher: watcher killed")
+		}
+
+		if servers := w.dnsClient.GetServersCache(); !serverListEquals(servers, w.mu.lastObserved) {
+			dnsServer := make([]name.DnsServer, 0, len(servers))
+			for _, v := range servers {
+				dnsServer = append(dnsServer, dnsServerToFidl(v))
+			}
+			// Store the last observed servers to compare in subsequent calls.
+			w.mu.lastObserved = servers
+			return dnsServer, nil
+		}
+
 		w.mu.isHanging = true
 
 		w.mu.Unlock()
@@ -95,21 +108,7 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 			w.mu.isDead = true
 			return nil, err
 		}
-
-		servers = w.dnsClient.GetServersCache()
 	}
-
-	if w.mu.isDead {
-		return nil, fmt.Errorf("dnsServerWatcher: watcher killed")
-	}
-
-	dnsServer := make([]name.DnsServer, 0, len(servers))
-	for _, v := range servers {
-		dnsServer = append(dnsServer, dnsServerToFidl(v))
-	}
-	// Store the last observed servers to compare in subsequent calls.
-	w.mu.lastObserved = servers
-	return dnsServer, nil
 }
 
 type dnsServerWatcherCollection struct {
