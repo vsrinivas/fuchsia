@@ -6,6 +6,7 @@
 #include <zircon/status.h>
 
 #include "src/developer/debug/debug_agent/object_provider.h"
+#include "src/developer/debug/debug_agent/zircon_thread_exception.h"
 
 using namespace fuchsia::exception;
 
@@ -145,23 +146,26 @@ void LimboProvider::WatchLimbo() {
       });
 }
 
-zx_status_t LimboProvider::RetrieveException(zx_koid_t process_koid,
-                                             fuchsia::exception::ProcessException* out) {
+fitx::result<zx_status_t, LimboProvider::RetrievedException> LimboProvider::RetrieveException(
+    zx_koid_t process_koid) {
   ProcessLimboSyncPtr process_limbo;
   if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
-    return status;
+    return fitx::error(status);
 
   ProcessLimbo_RetrieveException_Result result = {};
   if (zx_status_t status = process_limbo->RetrieveException(process_koid, &result);
       status != ZX_OK) {
-    return status;
+    return fitx::error(status);
   }
 
   if (result.is_err())
-    return result.err();
+    return fitx::error(result.err());
 
-  *out = result.response().ResultValue_();
-  return ZX_OK;
+  fuchsia::exception::ProcessException process_exception = result.response().ResultValue_();
+  return fitx::ok(RetrievedException{
+      std::make_unique<ZirconThreadException>(std::move(*process_exception.mutable_exception())),
+      std::move(*process_exception.mutable_process()),
+  });
 }
 
 zx_status_t LimboProvider::ReleaseProcess(zx_koid_t process_koid) {

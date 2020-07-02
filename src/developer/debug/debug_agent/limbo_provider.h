@@ -6,12 +6,14 @@
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/fitx/result.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <map>
 #include <optional>
 #include <vector>
 
+#include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_agent {
@@ -25,6 +27,11 @@ class LimboProvider {
  public:
   using OnEnterLimboCallback =
       fit::function<void(std::vector<fuchsia::exception::ProcessExceptionMetadata>)>;
+
+  struct RetrievedException {
+    std::unique_ptr<ThreadException> exception;
+    zx::process process;
+  };
 
   explicit LimboProvider(std::shared_ptr<sys::ServiceDirectory> services);
   virtual ~LimboProvider();
@@ -51,8 +58,7 @@ class LimboProvider {
 
   virtual const std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata>& Limbo() const;
 
-  virtual zx_status_t RetrieveException(zx_koid_t process_koid,
-                                        fuchsia::exception::ProcessException* out);
+  virtual fitx::result<zx_status_t, RetrievedException> RetrieveException(zx_koid_t process_koid);
 
   virtual zx_status_t ReleaseProcess(zx_koid_t process_koid);
 

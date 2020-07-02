@@ -24,6 +24,7 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/system_info.h"
+#include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -702,46 +703,52 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
   if (!process_metadata)
     return ZX_ERR_NOT_FOUND;
 
-  // Obtain the process from limbo.
-  fuchsia::exception::ProcessException exception;
-  zx_status_t status = limbo_provider_->RetrieveException(process_koid, &exception);
-  if (status != ZX_OK) {
+  // Obtain the process and exception from limbo.
+
+  auto retrieved = limbo_provider_->RetrieveException(process_koid);
+  if (retrieved.is_error()) {
+    zx_status_t status = retrieved.error_value();
     DEBUG_LOG(Agent) << "Could not retrieve exception from limbo: " << zx_status_get_string(status);
     return status;
   }
 
-  // We attach to the process.
-  DebuggedProcessCreateInfo create_info = {};
+  auto [exception, process] = std::move(retrieved.value());
+
+  DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
-  create_info.name = object_provider_->NameForObject(exception.process());
-  create_info.handle = std::move(*exception.mutable_process());
   create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
   create_info.from_limbo = true;
+  create_info.name = object_provider_->NameForObject(process.get());
+  create_info.handle = std::move(process);
 
-  DebuggedProcess* process = nullptr;
-  status = AddDebuggedProcess(std::move(create_info), &process);
+  DebuggedProcess* debugged_process = nullptr;
+  zx_status_t status = AddDebuggedProcess(std::move(create_info), &debugged_process);
   if (status != ZX_OK)
     return status;
 
   // Send the response, then the notifications about the process and threads.
-  SendAttachReply(this, transaction_id, ZX_OK, process_koid, process->name());
+  SendAttachReply(this, transaction_id, ZX_OK, process_koid, debugged_process->name());
 
-  process->PopulateCurrentThreads();
-  process->SuspendAndSendModulesIfKnown();
+  debugged_process->PopulateCurrentThreads();
+  debugged_process->SuspendAndSendModulesIfKnown();
 
   // Pass in the exception handle to the corresponding thread.
   DebuggedThread* exception_thread = nullptr;
-  for (DebuggedThread* thread : process->GetThreads()) {
-    if (thread->koid() == exception.info().thread_koid) {
+  for (DebuggedThread* thread : debugged_process->GetThreads()) {
+    auto koid = exception->GetThreadKoid();
+    if (koid.is_error()) {
+      DEBUG_LOG(Agent) << "failed to get koid of exception's thread";
+      return koid.error_value();
+    }
+    if (thread->koid() == koid.value()) {
       exception_thread = thread;
       break;
     }
   }
 
   FX_DCHECK(exception_thread);
-  exception_thread->set_exception_handle(
-      std::make_unique<zx::exception>(std::move(*exception.mutable_exception())));
+  exception_thread->set_exception_handle(std::move(exception));
 
   return ZX_OK;
 }

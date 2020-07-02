@@ -11,6 +11,7 @@
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_breakpoint.h"
+#include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
@@ -253,7 +254,7 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_FATAL_PAGE_FAULT;
-  thread.OnException(std::make_unique<zx::exception>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -298,7 +299,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_SW_BREAKPOINT;
-  thread.OnException(std::unique_ptr<zx::exception>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -331,7 +332,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   context.arch_provider->AppendBreakpoint(kAddress);
 
   // Throw the same breakpoint exception.
-  thread.OnException(std::make_unique<zx::exception>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
 
   // We should've received an exception notification with hit breakpoints.
   ASSERT_EQ(context.backend->exceptions().size(), 2u);
@@ -393,7 +394,7 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_HW_BREAKPOINT;
-  thread.OnException(std::make_unique<zx::exception>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -459,7 +460,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_HW_BREAKPOINT;
-  thread.OnException(std::make_unique<zx::exception>(), exception_info);
+  thread.OnException(std::make_unique<MockThreadException>(), exception_info);
 
   // We should've received an exception notification.
   {

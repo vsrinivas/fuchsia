@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
+#include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 using namespace ::fuchsia::exception;
@@ -236,16 +237,17 @@ TEST(LimboProvider, RetriveException) {
   LimboProvider limbo_provider(services.service_directory());
 
   // Some random koid should fail.
-  fuchsia::exception::ProcessException exception;
-  ASSERT_ZX_EQ(limbo_provider.RetrieveException(-1, &exception), ZX_ERR_NOT_FOUND);
+  {
+    auto result = limbo_provider.RetrieveException(-1);
+    ASSERT_TRUE(result.is_error());
+    ASSERT_ZX_EQ(result.error_value(), ZX_ERR_NOT_FOUND);
+  }
 
   // Getting a valid one should work.
-  ASSERT_ZX_EQ(limbo_provider.RetrieveException(process1->koid, &exception), ZX_OK);
-
-  // We can only check the info in this test.
-  EXPECT_EQ(exception.info().process_koid, process1->koid);
-  EXPECT_EQ(exception.info().thread_koid, thread1->koid);
-  EXPECT_EQ(exception.info().type, exception1);
+  {
+    auto result = limbo_provider.RetrieveException(process1->koid);
+    ASSERT_TRUE(result.is_ok());
+  }
 }
 
 TEST(LimboProvider, ReleaseProcess) {

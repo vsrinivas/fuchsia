@@ -11,6 +11,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
+#include "src/developer/debug/debug_agent/thread_exception.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -69,7 +70,7 @@ class DebuggedThread {
     zx::thread handle;
     ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
 
-    std::unique_ptr<zx::exception> exception;  // Optional.
+    std::unique_ptr<ThreadException> exception;  // Optional.
 
     std::shared_ptr<arch::ArchProvider> arch_provider;
     std::shared_ptr<ObjectProvider> object_provider;
@@ -84,15 +85,15 @@ class DebuggedThread {
   zx::thread& handle() { return handle_; }
   const zx::thread& handle() const { return handle_; }
 
-  zx::exception* exception_handle() { return exception_handle_.get(); }
-  const zx::exception* exception_handle() const { return exception_handle_.get(); }
-  void set_exception_handle(std::unique_ptr<zx::exception> exception) {
+  ThreadException* exception_handle() { return exception_handle_.get(); }
+  const ThreadException* exception_handle() const { return exception_handle_.get(); }
+  void set_exception_handle(std::unique_ptr<ThreadException> exception) {
     exception_handle_ = std::move(exception);
   }
 
   fxl::WeakPtr<DebuggedThread> GetWeakPtr();
 
-  void OnException(std::unique_ptr<zx::exception> exception_handle,
+  void OnException(std::unique_ptr<ThreadException> exception_handle,
                    zx_exception_info_t exception_info);
 
   // Resumes execution of the thread. The thread should currently be in a
@@ -170,9 +171,7 @@ class DebuggedThread {
   bool running() const { return !IsSuspended() && !IsInException(); }
 
   virtual bool IsSuspended() const { return ref_counted_suspend_token_.is_valid(); }
-  virtual bool IsInException() const {
-    return !!exception_handle_ && exception_handle_->is_valid();
-  }
+  virtual bool IsInException() const { return !!exception_handle_; }
 
   int ref_counted_suspend_count() const { return suspend_count_; }
 
@@ -245,7 +244,7 @@ class DebuggedThread {
   zx::suspend_token ref_counted_suspend_token_;
 
   // Active if the thread is currently on an exception.
-  std::unique_ptr<zx::exception> exception_handle_;
+  std::unique_ptr<ThreadException> exception_handle_;
 
   // Whether this thread is currently stepping over.
   bool stepping_over_breakpoint_ = false;

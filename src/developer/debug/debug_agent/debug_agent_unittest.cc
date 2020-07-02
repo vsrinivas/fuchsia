@@ -12,6 +12,7 @@
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
+#include "src/developer/debug/debug_agent/mock_thread_exception.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
@@ -109,16 +110,18 @@ class MockLimboProvider : public LimboProvider {
 
   bool Valid() const override { return true; }
 
-  zx_status_t RetrieveException(zx_koid_t process_koid,
-                                fuchsia::exception::ProcessException* out) override {
+  fitx::result<zx_status_t, RetrievedException> RetrieveException(zx_koid_t process_koid) override {
     auto it = limbo_.find(process_koid);
     if (it == limbo_.end())
-      return ZX_ERR_NOT_FOUND;
+      return fitx::error(ZX_ERR_NOT_FOUND);
 
-    *out = ToProcessException(it->second);
-
+    zx_koid_t thread_koid = it->second.info().thread_koid;
+    // zx_koid_t process_koid = it->second.info().process_koid;
     limbo_.erase(it);
-    return ZX_OK;
+    return fitx::ok(RetrievedException{
+        std::make_unique<MockThreadException>(thread_koid),
+        zx::process(process_koid),
+    });
   }
 
   void AppendException(const MockProcessObject* process, const MockThreadObject* thread,
@@ -164,17 +167,6 @@ class MockLimboProvider : public LimboProvider {
     ProcessExceptionMetadata exception = {};
 
     exception.set_info(metadata.info());
-    exception.set_process(zx::process(metadata.info().process_koid));
-    exception.set_thread(zx::thread(metadata.info().thread_koid));
-
-    return exception;
-  }
-
-  ProcessException ToProcessException(const ProcessExceptionMetadata& metadata) {
-    ProcessException exception = {};
-
-    exception.set_info(metadata.info());
-    exception.set_exception(zx::exception(metadata.info().thread_koid));
     exception.set_process(zx::process(metadata.info().process_koid));
     exception.set_thread(zx::thread(metadata.info().thread_koid));
 
@@ -555,7 +547,10 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
 
     ASSERT_TRUE(exception_thread);
     ASSERT_TRUE(exception_thread->IsInException());
-    EXPECT_EQ(exception_thread->exception_handle()->get(), thread_object->koid);
+    auto koid = exception_thread->exception_handle()->GetThreadKoid();
+    ASSERT_TRUE(koid.is_ok()) << "failed to get exception's thread koid: "
+                              << zx_status_get_string(koid.error_value());
+    EXPECT_EQ(koid.value(), thread_object->koid);
   }
 }
 
