@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 26;
+constexpr uint32_t kProtocolVersion = 27;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -440,6 +440,12 @@ struct NotifyException {
   // Be sure to check should_delete on each of these and update local state as
   // necessary.
   std::vector<BreakpointStats> hit_breakpoints;
+
+  // Lists all other threads affected by this exception. Breakpoints can indicate that other threads
+  // in the same process or all attached processes should be stopped when the breakpoint is hit.
+  // This vector will not contain the thread that was stopped (the "thread" member above), and it
+  // will not contain threads that were already stopped at the time of the exception.
+  std::vector<ThreadRecord> other_affected_threads;
 };
 
 // Indicates the loaded modules may have changed. The entire list of current

@@ -911,6 +911,10 @@ TEST(Protocol, NotifyException) {
   initial.hit_breakpoints[1].hit_count = 16;
   initial.hit_breakpoints[1].should_delete = false;
 
+  initial.other_affected_threads.emplace_back();
+  initial.other_affected_threads[0].process_koid = 667788;
+  initial.other_affected_threads[0].thread_koid = 990011;
+
   NotifyException second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyException,
                                                &ReadNotifyException));
@@ -936,6 +940,12 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.hit_breakpoints[1].id, second.hit_breakpoints[1].id);
   EXPECT_EQ(initial.hit_breakpoints[1].hit_count, second.hit_breakpoints[1].hit_count);
   EXPECT_EQ(initial.hit_breakpoints[1].should_delete, second.hit_breakpoints[1].should_delete);
+
+  ASSERT_EQ(initial.other_affected_threads.size(), second.other_affected_threads.size());
+  EXPECT_EQ(initial.other_affected_threads[0].process_koid,
+            second.other_affected_threads[0].process_koid);
+  EXPECT_EQ(initial.other_affected_threads[0].thread_koid,
+            second.other_affected_threads[0].thread_koid);
 }
 
 TEST(Protocol, NotifyModules) {

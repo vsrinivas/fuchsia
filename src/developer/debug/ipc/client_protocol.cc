@@ -667,7 +667,9 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
   if (!reader->ReadBytes(sizeof(notify->exception), &notify->exception))
     return false;
 
-  return Deserialize(reader, &notify->hit_breakpoints);
+  if (!Deserialize(reader, &notify->hit_breakpoints))
+    return false;
+  return Deserialize(reader, &notify->other_affected_threads);
 }
 
 bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {

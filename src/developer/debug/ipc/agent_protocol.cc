@@ -591,6 +591,7 @@ void WriteNotifyException(const NotifyException& notify, MessageWriter* writer) 
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
   writer->WriteBytes(&notify.exception, sizeof(notify.exception));
   Serialize(notify.hit_breakpoints, writer);
+  Serialize(notify.other_affected_threads, writer);
 }
 
 void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
