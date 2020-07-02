@@ -21,6 +21,7 @@ group("ulib") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/counters",
     "$zx/third_party/ulib",
+    "abr",
     "affine",
     "async",
     "async:async-cpp",
