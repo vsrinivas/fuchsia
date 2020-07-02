@@ -18,7 +18,9 @@ zx_library("cksum") {
 
   cflags = [ "-Wno-strict-prototypes" ]
 
-  if (is_kernel) {
+  if (is_kernel && !is_efi) {
+    # TODO(55514): Excluding kernel libc for efi bootloader until standard library dependency
+    # of bootloader is sorted out.
     deps = [ "$zx/kernel/lib/libc" ]
   }
 }

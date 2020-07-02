@@ -17,6 +17,7 @@ if (current_toolchain == default_toolchain) {
       os = "win"  # TODO(49546)
       globals = {
         is_kernel = true
+        is_efi = true
       }
       configs += standard_fuchsia_configs + [ ":efi_config" ]
 

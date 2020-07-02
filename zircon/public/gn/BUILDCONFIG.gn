@@ -73,6 +73,11 @@ if (!defined(is_kernel)) {
   is_kernel = false
 }
 
+if (!defined(is_efi)) {
+  # True iff $current_toolchain builds efi bootloader code.
+  is_efi = false
+}
+
 ###
 ### "Non-terminal" (library) target types.
 ### These are compiling targets that never do variant selection.
