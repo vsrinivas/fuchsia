@@ -116,8 +116,8 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
       safemath::checked_cast<uint32_t>((integrity_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
   fvm_info_.dat_slices =
       safemath::checked_cast<uint32_t>((dat_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
-  fvm_info_.vslice_count = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices + fvm_info_.ino_slices +
-                           fvm_info_.integrity_slices + fvm_info_.dat_slices;
+
+  fvm_info_.vslice_count = CalculateVsliceCount(fvm_info_);
 
   xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
           kBlocksPerSlice);

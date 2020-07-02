@@ -86,6 +86,8 @@ struct MountOptions {
   uint32_t fvm_data_slices = 1;
 };
 
+uint32_t CalculateVsliceCount(const Superblock& info);
+
 // Format the partition backed by |bc| as MinFS.
 zx_status_t Mkfs(const MountOptions& options, Bcache* bc);
 
@@ -107,9 +109,8 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
 zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<minfs::Bcache> bcache,
-                          zx::channel mount_channel, fbl::Closure on_unmount,
-                          ServeLayout serve_layout);
+                          std::unique_ptr<minfs::Bcache> bcache, zx::channel mount_channel,
+                          fbl::Closure on_unmount, ServeLayout serve_layout);
 #endif
 
 }  // namespace minfs

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/fsck.h>
-
 #include <block-client/cpp/fake-device.h>
 #include <minfs/format.h>
+#include <minfs/fsck.h>
 #include <zxtest/zxtest.h>
 
 #include "minfs_private.h"
@@ -14,6 +13,7 @@ namespace minfs {
 namespace {
 
 using block_client::FakeBlockDevice;
+using block_client::FakeFVMBlockDevice;
 
 constexpr uint64_t kBlockCount = 1 << 15;
 constexpr uint32_t kBlockSize = 512;
@@ -59,6 +59,28 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
   for (size_t i = fs::kJournalMetadataBlocks; i < JournalBlocks(superblock); i++) {
     EXPECT_BYTES_EQ(buffer.Data(i), expected_buffer.get(), kMinfsBlockSize);
   }
+}
+
+const uint64_t kSliceSize = kMinfsBlockSize * 8;
+const uint64_t kSliceCount = 1028;
+
+TEST(FormatFVMFilesystemTest, FVMIncorrectVsliceCount) {
+  auto device =
+      std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
+  std::unique_ptr<Bcache> bcache;
+
+  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
+  ASSERT_OK(Mkfs(bcache.get()));
+
+  Superblock sb;
+  EXPECT_OK(bcache->Readblk(0, &sb));
+
+  // Expect FVM flag to be set correctly.
+  EXPECT_EQ(sb.flags & kMinfsFlagFVM, kMinfsFlagFVM);
+
+  // Expect vslice_count to be aggregate of the slice counts + superblock slice.
+  uint32_t expected_vslice_count = CalculateVsliceCount(sb);
+  EXPECT_EQ(expected_vslice_count, sb.vslice_count);
 }
 
 }  // namespace

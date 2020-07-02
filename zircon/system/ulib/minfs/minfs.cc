@@ -230,6 +230,10 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
     return status;
   }
   info->dat_slices = options.fvm_data_slices;
+
+  // update vslice_count after allocating all the slices, accounting for an additional
+  // slice needed for superblock.
+  info->vslice_count = CalculateVsliceCount(*info);
   return ZX_OK;
 }
 #endif
@@ -383,6 +387,12 @@ void UpdateChecksum(Superblock* info) {
   info->generation_count += 1;
   info->checksum = 0;
   info->checksum = crc32(0, reinterpret_cast<uint8_t*>(info), sizeof(*info));
+}
+
+uint32_t CalculateVsliceCount(const Superblock& info) {
+  // Account for an additional slice for the superblock itself.
+  return (1 + info.ibm_slices + info.abm_slices + info.ino_slices + info.integrity_slices +
+          info.dat_slices);
 }
 
 #ifdef __Fuchsia__
