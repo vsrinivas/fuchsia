@@ -5,6 +5,13 @@
 import("//build/package.gni")
 import("//build/testing/golden_file.gni")
 
+declare_args() {
+  # Used by config_package().
+  # If true, then overrides the value of the sysmgr_golden_warn template
+  # parameter to true regardless of whether it is specified on a target.
+  sysmgr_golden_warn_override = false
+}
+
 # Define configuration data that can be aggregated into other packages. This is
 # primarily used to aggregate configuration files into the config-data package
 # that supplies the /config/data namespace.
@@ -75,6 +82,11 @@ template("config_data") {
 #   sysmgr_golden_warn (default: false)
 #     [boolean] If true, mismatches in the sysmgr golden config are treated as warnings
 #     rather than errors.
+#     If the `sysmgr_golden_warn_override` GN arg is true then mismatches
+#     against the sysmgr golden config are treated as warnings regardless of the
+#     parameter value specified.
+#     To apply this override:
+#     fx set ... --args=sysmgr_golden_warn_override=true
 #
 #   deps (required)
 #   public_deps (optional)
@@ -146,7 +158,8 @@ template("config_package") {
       golden = invoker.sysmgr_golden
       current = merged_sysmgr_config
       warn_on_changes =
-          defined(invoker.sysmgr_golden_warn) && invoker.sysmgr_golden_warn
+          (defined(invoker.sysmgr_golden_warn) && invoker.sysmgr_golden_warn) ||
+          sysmgr_golden_warn_override
 
       deps += [ ":$validate_sysmgr_config_target_name" ]
     }
