@@ -614,11 +614,6 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
   return r;
 }
 
-// 'name' must be a user-provided buffer, at least NAME_MAX + 1 bytes long.
-static zx_status_t __fdio_opendir_containing(fdio_t** io, const char* path, char* name) {
-  return __fdio_opendir_containing_at(io, AT_FDCWD, path, name);
-}
-
 // hook into libc process startup
 // this is called prior to main to set up the fdio world
 // and thus does not use the fdio_lock

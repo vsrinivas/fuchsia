@@ -106,11 +106,6 @@ zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
   return zxio_release(z, out_handle);
 }
 
-static zx_status_t fdio_zxio_sync(fdio_t* io) {
-  zxio_t* z = fdio_get_zxio(io);
-  return zxio_sync(z);
-}
-
 static zx_status_t fdio_zxio_get_attr(fdio_t* io, zxio_node_attributes_t* out) {
   zxio_t* z = fdio_get_zxio(io);
   return zxio_attr_get(z, out);
@@ -449,10 +444,6 @@ fdio_t* fdio_vmo_create(zx::vmo vmo, zx_off_t seek) {
 }
 
 // Vmofile ---------------------------------------------------------------------
-
-static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {
-  return (zxio_vmofile_t*)fdio_get_zxio(io);
-}
 
 static constexpr fdio_ops_t fdio_zxio_vmofile_ops = {
     .close = fdio_zxio_close,
