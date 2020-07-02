@@ -7,11 +7,11 @@ use {
     files_async::readdir,
     fuchsia_async, fuchsia_zircon as zx,
     futures::{poll, StreamExt},
+    isolated_devmgr::IsolatedDeviceEnv,
     std::path::Path,
     wlan_common::{
         appendable::Appendable, big_endian::BigEndianU16, buffer_reader::BufferReader, mac,
     },
-    wlan_dev::IsolatedDeviceEnv,
 };
 
 const ETH_BUF_FRAME_COUNT: u64 = 256;

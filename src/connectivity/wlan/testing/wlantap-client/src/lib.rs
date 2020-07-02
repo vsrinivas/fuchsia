@@ -24,7 +24,7 @@ impl Wlantap {
 
     pub fn open_from_isolated_devmgr() -> Result<Self, Error> {
         const PATH_STR: &str = "test/wlantapctl";
-        Ok(Self { file: wlan_dev::IsolatedDeviceEnv::open_file(PATH_STR)? })
+        Ok(Self { file: isolated_devmgr::IsolatedDeviceEnv::open_file(PATH_STR)? })
     }
 
     pub fn create_phy(

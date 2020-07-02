@@ -9,6 +9,7 @@ use futures::prelude::*;
 use std::convert::Into;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
+use wlan_dev::DeviceEnv;
 
 use fidl_fuchsia_device_test::CONTROL_DEVICE;
 
@@ -35,7 +36,7 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
 fn get_proxy() -> Result<(fasync::Executor, wlan::PhyProxy), Error> {
     let executor = fasync::Executor::new().context("error creating event loop")?;
 
-    let phy = wlan_dev::Device::new(&dev_wlanphy())?;
+    let phy = wlan_dev::RealDeviceEnv::device_from_path(&dev_wlanphy())?;
     let proxy = wlan_dev::connect_wlan_phy(&phy)?;
     Ok((executor, proxy))
 }

@@ -470,6 +470,7 @@ mod tests {
         channel::{Cbw, Phy},
         RadioConfig,
     };
+    use wlan_dev::DeviceEnv;
 
     use crate::{
         mlme_query_proxy::MlmeQueryProxy,
@@ -1297,8 +1298,8 @@ mod tests {
     fn fake_phy(path: &str) -> (PhyDevice, PhyRequestStream) {
         let (proxy, server) =
             create_proxy::<fidl_wlan_dev::PhyMarker>().expect("fake_phy: create_proxy() failed");
-        let device =
-            wlan_dev::Device::new(path).expect(&format!("fake_phy: failed to open {}", path));
+        let device = wlan_dev::RealDeviceEnv::device_from_path(path)
+            .expect(&format!("fake_phy: failed to open {}", path));
         let stream = server.into_stream().expect("fake_phy: failed to create stream");
         (PhyDevice { proxy, device }, stream)
     }

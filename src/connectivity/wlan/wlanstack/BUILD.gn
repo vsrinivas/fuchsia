@@ -42,9 +42,9 @@ rustc_binary("bin") {
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
     "//src/connectivity/wlan/lib/eapol",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
+    "//src/connectivity/wlan/lib/isolated-devmgr",
     "//src/connectivity/wlan/lib/sme:wlan-sme",
     "//src/connectivity/wlan/lib/wlan_dev",
-    "//src/connectivity/wlan/testing/wlantap-client",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -66,6 +66,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
   ]
+
+  test_deps = [ "//src/connectivity/wlan/testing/wlantap-client" ]
 }
 
 package("wlanstack") {

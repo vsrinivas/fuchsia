@@ -27,7 +27,7 @@ use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
-use futures::future::{try_join, try_join4};
+use futures::future::try_join5;
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
@@ -83,8 +83,15 @@ async fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let ifaces = Arc::new(ifaces);
 
-    let phy_server = device::serve_phys(phys.clone(), cfg.isolated_devmgr, inspect_tree.clone())
-        .map_ok(|x| match x {});
+    // TODO(45790): this should not depend on isolated_devmgr; the two functionalities should
+    // live in separate binaries to avoid leaking test dependencies into production builds.
+    let phy_server = if cfg.isolated_devmgr {
+        device::serve_phys::<isolated_devmgr::IsolatedDeviceEnv>(phys.clone(), inspect_tree.clone())
+            .left_future()
+    } else {
+        device::serve_phys::<wlan_dev::RealDeviceEnv>(phys.clone(), inspect_tree.clone())
+            .right_future()
+    };
     let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
         .serve(ConnectionType::project_id(wlan_metrics_registry::PROJECT_ID));
     let telemetry_server =
@@ -93,10 +100,15 @@ async fn main() -> Result<(), Error> {
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
     let serve_fidl_fut =
         serve_fidl(cfg, fs, phys, ifaces, watcher_service, inspect_tree, cobalt_sender);
-    let services_server = try_join(serve_fidl_fut, watcher_fut);
 
-    try_join4(services_server, phy_server, cobalt_reporter.map(Ok), telemetry_server.map(Ok))
-        .await?;
+    let ((), (), (), (), ()) = try_join5(
+        serve_fidl_fut,
+        watcher_fut.map_ok(|_: void::Void| ()),
+        phy_server.map_ok(|_: void::Void| ()),
+        cobalt_reporter.map(Ok),
+        telemetry_server.map(Ok),
+    )
+    .await?;
     Ok(())
 }
 

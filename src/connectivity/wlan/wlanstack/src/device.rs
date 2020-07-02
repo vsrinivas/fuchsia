@@ -77,16 +77,11 @@ pub struct IfaceDevice {
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
 pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
-pub async fn serve_phys(
+pub async fn serve_phys<Env: wlan_dev::DeviceEnv>(
     phys: Arc<PhyMap>,
-    isolated_devmgr: bool,
     inspect_tree: Arc<inspect::WlanstackTree>,
 ) -> Result<Void, Error> {
-    let new_phys = if isolated_devmgr {
-        device_watch::watch_phy_devices::<wlan_dev::IsolatedDeviceEnv>()?.left_stream()
-    } else {
-        device_watch::watch_phy_devices::<wlan_dev::RealDeviceEnv>()?.right_stream()
-    };
+    let new_phys = device_watch::watch_phy_devices::<Env>()?;
     pin_mut!(new_phys);
     let mut active_phys = FuturesUnordered::new();
     loop {

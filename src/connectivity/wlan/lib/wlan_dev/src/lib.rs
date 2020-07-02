@@ -15,9 +15,6 @@ use {
     },
 };
 
-pub use isolated_devmgr::IsolatedDeviceEnv;
-
-mod isolated_devmgr;
 mod sys;
 
 /// Represents a device node.
@@ -27,10 +24,9 @@ pub struct Device {
 }
 
 impl Device {
-    /// Opens the given path and creates a `Device` for that device node.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, zx::Status> {
-        let dev = OpenOptions::new().read(true).write(true).open(&path)?;
-        Ok(Self { path: PathBuf::from(fdio::device_get_topo_path(&dev)?), node: dev })
+    /// Creates a `Device` from the provided filesystem node.
+    pub fn new(node: File) -> Result<Self, zx::Status> {
+        Ok(Self { path: PathBuf::from(fdio::device_get_topo_path(&node)?), node })
     }
 
     /// Returns a reference to the topological path of the device.
@@ -58,21 +54,27 @@ impl fmt::Debug for Device {
 /// Encapsulate phy and iface devices as well as the environment where they exist
 pub trait DeviceEnv {
     /// Path to the directory where new phy deivces will be spawned
-    const PHY_PATH: &'static str = "/dev/class/wlanphy";
-    /// (soon to be depreacated) Path to the directory where new iface devies will be spawned
-    const IFACE_PATH: &'static str = "/dev/class/wlanif";
+    const PHY_PATH: &'static str;
 
     /// Opens a directory for device watcher to detect new devices
-    fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-        File::open(path).map_err(|e| e.into())
-    }
+    fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status>;
 
     /// Creates a Device (defined above) from a file at the given path
-    fn device_from_path(path: &PathBuf) -> Result<Device, zx::Status> {
-        Device::new(path)
-    }
+    fn device_from_path<P: AsRef<Path>>(path: P) -> Result<Device, zx::Status>;
 }
 
 /// The real environment is the global Fuchsia environment
 pub struct RealDeviceEnv;
-impl DeviceEnv for RealDeviceEnv {}
+
+impl DeviceEnv for RealDeviceEnv {
+    const PHY_PATH: &'static str = "/dev/class/wlanphy";
+
+    fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
+        File::open(path).map_err(|e| e.into())
+    }
+
+    fn device_from_path<P: AsRef<Path>>(path: P) -> Result<Device, zx::Status> {
+        let dev = OpenOptions::new().read(true).write(true).open(path)?;
+        Device::new(dev)
+    }
+}

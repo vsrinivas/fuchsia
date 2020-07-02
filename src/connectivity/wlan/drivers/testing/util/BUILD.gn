@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("util") {
   name = "wlan_test_util"
   edition = "2018"
+  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",

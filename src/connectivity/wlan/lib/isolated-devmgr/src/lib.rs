@@ -6,37 +6,25 @@
 //! created for unittests and integration tests.
 
 use {
-    crate::{Device, DeviceEnv},
     fidl_fuchsia_wlan_devmgr::IsolatedDevmgrMarker,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
-    std::{
-        fs::File,
-        path::{Path, PathBuf},
-    },
+    std::{fs::File, path::Path},
+    wlan_dev::{Device, DeviceEnv},
 };
-
-impl Device {
-    /// For testing purpose only.
-    /// Open the given path from an isolated device manager that is exposed in the environment.
-    fn new_from_isolated_devmgr<P: AsRef<Path>>(path: P) -> Result<Self, zx::Status> {
-        let dev = IsolatedDeviceEnv::open_file(path.as_ref().to_str().unwrap())?;
-        Ok(Self { path: PathBuf::from(fdio::device_get_topo_path(&dev)?), node: dev })
-    }
-}
 
 /// An environment (usually in a test) where a isolated device manager is exposed.
 pub struct IsolatedDeviceEnv;
 impl DeviceEnv for IsolatedDeviceEnv {
     const PHY_PATH: &'static str = "class/wlanphy";
-    const IFACE_PATH: &'static str = "class/wlanif";
 
     fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
         IsolatedDeviceEnv::open_dir(path)
     }
 
-    fn device_from_path(path: &PathBuf) -> Result<Device, zx::Status> {
-        Device::new_from_isolated_devmgr(path)
+    fn device_from_path<P: AsRef<Path>>(path: P) -> Result<Device, zx::Status> {
+        let dev = IsolatedDeviceEnv::open_file(path)?;
+        Device::new(dev)
     }
 }
 

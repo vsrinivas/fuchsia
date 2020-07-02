@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 
 group("testing") {
+  testonly = true
   public_deps = [
     ":wlanphy-testdev",
     "//src/connectivity/wlan/drivers/testing/util",
