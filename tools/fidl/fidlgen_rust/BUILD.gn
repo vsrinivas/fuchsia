@@ -36,7 +36,7 @@ if (is_host) {
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",
     ]
-    non_go_deps = [ ":test_data"]
+    non_go_deps = [ ":test_data" ]
   }
 
   host_test_data("test_data") {

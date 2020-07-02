@@ -73,9 +73,7 @@ template("custom_signed_zbi") {
     script = custom_signing_script
 
     inputs = zbi
-    outputs = [
-      output_file,
-    ]
+    outputs = [ output_file ]
     args = [
       "-z",
       rebase_path(inputs[0], root_build_dir),

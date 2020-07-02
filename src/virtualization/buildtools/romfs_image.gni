@@ -13,9 +13,7 @@ template("romfs_image") {
     assert(defined(invoker.inputs), "inputs must be defined for $target_name")
     forward_variables_from(invoker, "*")
     tool = "//src/virtualization/buildtools:mkromfs"
-    outputs = [
-      output,
-    ]
+    outputs = [ output ]
     args = [ rebase_path(output, root_out_dir) ]
     foreach(input, inputs) {
       args += [ rebase_path(input, root_out_dir) ]
@@ -23,16 +21,10 @@ template("romfs_image") {
   }
   action(check_target) {
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":${image_target}",
-    ]
+    deps = [ ":${image_target}" ]
     script = "//src/virtualization/buildtools/romfsck.py"
-    inputs = [
-      invoker.output,
-    ]
-    outputs = [
-      "${invoker.output}.verify",
-    ]
+    inputs = [ invoker.output ]
+    outputs = [ "${invoker.output}.verify" ]
     args = [
       rebase_path(invoker.output, root_out_dir),
       rebase_path("${invoker.output}.verify", root_out_dir),
@@ -40,11 +32,7 @@ template("romfs_image") {
   }
   group("${target_name}") {
     forward_variables_from(invoker, [ "testonly" ])
-    public_deps = [
-      ":${image_target}",
-    ]
-    deps = [
-      ":${check_target}",
-    ]
+    public_deps = [ ":${image_target}" ]
+    deps = [ ":${check_target}" ]
   }
 }

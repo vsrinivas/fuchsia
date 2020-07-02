@@ -40,9 +40,7 @@ template("zircon_extras_manifest") {
 
   manifest_deps = [ "//build/unification/images:migrated-${invoker.manifest}" ]
   if (invoker.manifest == "tests") {
-    manifest_deps += [
-      "//build/unification/images:legacy-${invoker.manifest}",
-    ]
+    manifest_deps += [ "//build/unification/images:legacy-${invoker.manifest}" ]
   }
   manifest_sources = []
   foreach(dep, manifest_deps) {
@@ -59,9 +57,7 @@ template("zircon_extras_manifest") {
                            ])
     sources = manifest_sources
     deps = manifest_deps
-    outputs = [
-      "$target_gen_dir/$target_name.manifest",
-    ]
+    outputs = [ "$target_gen_dir/$target_name.manifest" ]
     script = "//build/images/manifest.py"
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
     foreach(pattern, invoker.patterns) {

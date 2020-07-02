@@ -9,12 +9,8 @@ template("zircon_host_tool") {
   tool_name = target_name
 
   copy(tool_name) {
-    sources = [
-      "$zircon_root_build_dir/${invoker.path}",
-    ]
-    outputs = [
-      "$root_out_dir/$tool_name",
-    ]
+    sources = [ "$zircon_root_build_dir/${invoker.path}" ]
+    outputs = [ "$root_out_dir/$tool_name" ]
   }
 
   file_base = "tools/$tool_name"

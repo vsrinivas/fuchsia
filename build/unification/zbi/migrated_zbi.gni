@@ -49,7 +49,11 @@ template("migrated_zbi") {
   rsp_file = "$target_gen_dir/$target_name.zbi.rsp"
 
   zbi_input(input_target) {
-    forward_variables_from(invoker, [ "deps", "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
   }
 
   generated_file(rsp_target) {
@@ -81,7 +85,14 @@ template("migrated_zbi") {
   zbi_tool = "$zircon_tools_dir/zbi"
 
   action(main_target) {
-    forward_variables_from(invoker, [ "assert_no_deps", "compress", "data_deps", "testonly", "visibility" ])
+    forward_variables_from(invoker,
+                           [
+                             "assert_no_deps",
+                             "compress",
+                             "data_deps",
+                             "testonly",
+                             "visibility",
+                           ])
 
     script = "//build/unification/zbi/run_zbi.py"
 

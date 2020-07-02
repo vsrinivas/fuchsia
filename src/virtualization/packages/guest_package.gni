@@ -30,9 +30,7 @@ template("guest_package") {
     testonly = defined(invoker.testonly) && invoker.testonly
 
     script = "//src/virtualization/packages/generate_guest_config.py"
-    outputs = [
-      guest_config_file,
-    ]
+    outputs = [ guest_config_file ]
 
     args = []
     if (defined(invoker.zircon)) {
@@ -91,9 +89,7 @@ template("guest_package") {
   package(target_name) {
     testonly = defined(invoker.testonly) && invoker.testonly
 
-    deps = [
-      ":${guest_config_target_name}",
-    ]
+    deps = [ ":${guest_config_target_name}" ]
     inputs = []
     resources = []
 
@@ -206,8 +202,6 @@ template("guest_prebuilt") {
       rebase_path(depfile, root_build_dir),
     ]
 
-    outputs = [
-      invoker.output,
-    ]
+    outputs = [ invoker.output ]
   }
 }

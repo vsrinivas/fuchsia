@@ -36,9 +36,7 @@ template("firmware") {
         outputs += [ "lib/firmware/$path" ]
       }
     } else {
-      outputs = [
-        "lib/firmware/{{source_file_part}}",
-      ]
+      outputs = [ "lib/firmware/{{source_file_part}}" ]
     }
 
     if (!have_firmware) {

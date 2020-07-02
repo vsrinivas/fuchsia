@@ -40,20 +40,14 @@ template("banjo_rust") {
 
     tool = "//src/devices/tools/banjo:banjo_bin"
 
-    inputs = [
-      "//src/devices/tools/banjo/zx.banjo",
-    ]
+    inputs = [ "//src/devices/tools/banjo/zx.banjo" ]
     inputs += invoker.sources
 
-    outputs = [
-      "$file_stem",
-    ]
+    outputs = [ "$file_stem" ]
 
     args = [ "@" + rebase_path(file_args, root_build_dir) ]
 
-    deps = [
-      ":$main_target_name($banjo_toolchain)",
-    ]
+    deps = [ ":$main_target_name($banjo_toolchain)" ]
   }
 
   group(main_target_name) {
@@ -64,9 +58,7 @@ template("banjo_rust") {
                              "visibility",
                            ])
 
-    deps = [
-      ":$generation_target_name",
-    ]
+    deps = [ ":$generation_target_name" ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps

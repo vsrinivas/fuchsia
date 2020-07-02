@@ -45,9 +45,7 @@ template("json_merge") {
     tool = "//build/tools/json_merge"
 
     merged_output = "$target_out_dir/$target_name"
-    outputs = [
-      merged_output,
-    ]
+    outputs = [ merged_output ]
 
     args = []
     foreach(source, sources) {

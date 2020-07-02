@@ -47,9 +47,7 @@ template("merged_sdk") {
             latest_archive,
           ]
 
-          outputs = [
-            merged_archive,
-          ]
+          outputs = [ merged_archive ]
 
           args = [
             "--base-archive",
@@ -63,9 +61,7 @@ template("merged_sdk") {
           if (index == 1) {
             public_deps = invoker.deps
           } else {
-            public_deps = [
-              ":$latest_step",
-            ]
+            public_deps = [ ":$latest_step" ]
           }
         }
 
@@ -79,17 +75,11 @@ template("merged_sdk") {
     copy(target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      sources = [
-        latest_archive,
-      ]
+      sources = [ latest_archive ]
 
-      outputs = [
-        "$target_gen_dir/$target_name.tar.gz",
-      ]
+      outputs = [ "$target_gen_dir/$target_name.tar.gz" ]
 
-      public_deps = [
-        ":$latest_step",
-      ]
+      public_deps = [ ":$latest_step" ]
     }
   }
 }

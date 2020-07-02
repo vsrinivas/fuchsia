@@ -25,12 +25,8 @@ template("tablegen") {
   compiled_action("${target_name}_action") {
     tool = "//third_party/llvm/utils/TableGen:tablegen"
 
-    inputs = [
-      invoker.source,
-    ]
-    outputs = [
-      invoker.output,
-    ]
+    inputs = [ invoker.source ]
+    outputs = [ invoker.output ]
     args = invoker.args + [
              "-I=" + rebase_path("//third_party/llvm/include", root_build_dir),
              rebase_path(invoker.source, root_build_dir),
@@ -40,9 +36,7 @@ template("tablegen") {
   }
 
   source_set(target_name) {
-    deps = [
-      ":${target_name}_action",
-    ]
+    deps = [ ":${target_name}_action" ]
     #public_configs = [ ":target_gen_dir_include" ]
   }
 }

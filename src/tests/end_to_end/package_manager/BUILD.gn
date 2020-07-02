@@ -41,7 +41,7 @@ if (is_host) {
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
     deps = [
       "//garnet/examples/components:component_hello_world($default_toolchain)",
-      "//garnet/packages/tools:sl4f", # Required to run tests locally.
+      "//garnet/packages/tools:sl4f",  # Required to run tests locally.
       "//src/sys/pkg/bin/pm:host($host_toolchain)",
     ]
   }

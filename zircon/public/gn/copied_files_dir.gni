@@ -41,9 +41,7 @@ template("copied_files_dir") {
   generated_file(rspfile_target) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":$main_target" ]
-    outputs = [
-      rspfile,
-    ]
+    outputs = [ rspfile ]
     output_conversion = "list lines"
     forward_variables_from(invoker,
                            [
@@ -61,17 +59,11 @@ template("copied_files_dir") {
                              "testonly",
                              "visibility",
                            ])
-    deps = [
-      ":$rspfile_target",
-    ]
+    deps = [ ":$rspfile_target" ]
     script = "$zx/public/gn/copied_files_dir.sh"
     depfile = "$target_out_dir/$target_name.d"
-    outputs = [
-      depfile,
-    ]
-    sources = [
-      rspfile,
-    ]
+    outputs = [ depfile ]
+    sources = [ rspfile ]
     if (!defined(output_dir)) {
       output_dir = "$root_out_dir/$target_name"
     }

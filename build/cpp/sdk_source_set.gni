@@ -167,9 +167,7 @@ template("sdk_source_set") {
 
     inputs = sdk_metas
 
-    outputs = [
-      metadata_file,
-    ]
+    outputs = [ metadata_file ]
 
     args = [
       "--out",

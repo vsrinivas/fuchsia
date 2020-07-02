@@ -25,13 +25,9 @@ template("build_id_entry") {
                              "data_deps",
                            ])
     assert(defined(invoker.debug), "Must define debug")
-    sources = [
-      invoker.debug,
-    ]
+    sources = [ invoker.debug ]
     stamp = "${invoker.debug}.build-id.stamp"
-    outputs = [
-      stamp,
-    ]
+    outputs = [ stamp ]
 
     script = "//prebuilt/tools/buildidtool/${host_platform}/buildidtool"
     args = [

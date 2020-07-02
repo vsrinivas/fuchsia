@@ -12,9 +12,7 @@ library("arch") {
   host = true
 
   sdk = "source"
-  sdk_headers = [
-    "lib/arch/asm.h",
-  ]
+  sdk_headers = [ "lib/arch/asm.h" ]
 
   sources = []
 

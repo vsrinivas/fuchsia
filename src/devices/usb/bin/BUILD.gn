@@ -4,6 +4,6 @@
 
 group("tests") {
   testonly = true
- # TODO(fxb/52730): re-enable once issue is root caused
- # deps = [ "lsusb:tests" ]
+  # TODO(fxb/52730): re-enable once issue is root caused
+  # deps = [ "lsusb:tests" ]
 }

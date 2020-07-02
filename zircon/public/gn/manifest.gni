@@ -126,9 +126,7 @@ template("manifest_file") {
     visibility = [ ":$manifest_target" ]
     forward_variables_from(invoker, [ "testonly" ])
     deps = manifest_deps
-    outputs = [
-      manifest_file,
-    ]
+    outputs = [ manifest_file ]
     output_conversion = "list lines"
     data_keys = [ "manifest_lines" ]
     walk_keys = [ "manifest_barrier" ]
@@ -149,9 +147,7 @@ template("manifest_file") {
                              "testonly",
                              "visibility",
                            ])
-    deps = [
-      ":$file_target",
-    ]
+    deps = [ ":$file_target" ]
     metadata = {
       images = []
 

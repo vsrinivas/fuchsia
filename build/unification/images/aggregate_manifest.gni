@@ -31,9 +31,7 @@ template("aggregate_manifest") {
 
     inputs = []
 
-    outputs = [
-      final_manifest,
-    ]
+    outputs = [ final_manifest ]
 
     response_file_contents = [
       "--output",
@@ -83,13 +81,9 @@ template("aggregate_manifest") {
     action(normalize_target_name) {
       script = "//build/images/manifest.py"
 
-      inputs = [
-        reference_manifest,
-      ]
+      inputs = [ reference_manifest ]
 
-      outputs = [
-        normalized_manifest,
-      ]
+      outputs = [ normalized_manifest ]
 
       args = [
         "--output",
@@ -111,9 +105,7 @@ template("aggregate_manifest") {
         normalized_manifest,
       ]
 
-      outputs = [
-        "$target_out_dir/$target_name.success.stamp",
-      ]
+      outputs = [ "$target_out_dir/$target_name.success.stamp" ]
 
       args = [
         "--generated",

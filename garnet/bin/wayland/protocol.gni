@@ -37,12 +37,8 @@ template("wayland_protocol") {
   # Generate the rust sources using the scanner.
   compiled_action("gen_${target_name}_source") {
     tool = "//garnet/bin/wayland/scanner"
-    sources = [
-      invoker.protocol,
-    ]
-    outputs = [
-      target_crate_root,
-    ]
+    sources = [ invoker.protocol ]
+    outputs = [ target_crate_root ]
     args = [
       "-i",
       rebase_path(invoker.protocol),

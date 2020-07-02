@@ -199,9 +199,7 @@ template("sdk_static_library") {
 
     inputs = sdk_metas
 
-    outputs = [
-      metadata_file,
-    ]
+    outputs = [ metadata_file ]
 
     args = [
              "--out",
@@ -283,9 +281,7 @@ template("sdk_static_library") {
 
     stamp_file = "$target_gen_dir/$target_name.stamp"
 
-    outputs = [
-      stamp_file,
-    ]
+    outputs = [ stamp_file ]
 
     args = [
       "--stamp",

@@ -30,11 +30,7 @@ template("ota_config") {
 
   config_data(target_name) {
     for_pkg = "system-update-checker"
-    outputs = [
-      "ota_config.json",
-    ]
-    sources = [
-      config_path,
-    ]
+    outputs = [ "ota_config.json" ]
+    sources = [ config_path ]
   }
 }

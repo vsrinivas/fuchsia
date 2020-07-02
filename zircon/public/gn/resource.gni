@@ -136,8 +136,6 @@ template("generated_resource") {
 
     # That static file is the actual output of this target.
     outputs = []
-    outputs = [
-      file,
-    ]
+    outputs = [ file ]
   }
 }

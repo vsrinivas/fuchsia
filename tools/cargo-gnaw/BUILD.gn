@@ -47,7 +47,10 @@ install_host_tools("cargo-gnaw") {
 #
 # They are still available for local testing
 group("tests") {
-  visibility = [":*", "//:additional_universe_packages"]
+  visibility = [
+    ":*",
+    "//:additional_universe_packages",
+  ]
   testonly = true
   deps = [ ":cargo-gnaw-tests($host_toolchain)" ]
 }

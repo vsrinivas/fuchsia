@@ -40,13 +40,9 @@ template("icu_tzdata_config_data") {
     assert(data_version == "44" && format == "le",
            "Unsupported data version or format")
 
-    deps = [
-      "//src/lib/icu/tzdata:revision",
-    ]
+    deps = [ "//src/lib/icu/tzdata:revision" ]
 
-    outputs = [
-      "tzdata/icu/${data_version}/${format}/{{source_file_part}}",
-    ]
+    outputs = [ "tzdata/icu/${data_version}/${format}/{{source_file_part}}" ]
 
     sources = [
       "//third_party/icu/tzres/metaZones.res",
@@ -65,13 +61,9 @@ template("icu_tzdata_config_data") {
                              "for_pkg",
                              "testonly",
                            ])
-    deps = [
-      "//src/lib/icu/tzdata:revision",
-    ]
+    deps = [ "//src/lib/icu/tzdata:revision" ]
 
-    outputs = [
-      "tzdata/{{source_file_part}}",
-    ]
+    outputs = [ "tzdata/{{source_file_part}}" ]
 
     # get_target_outputs("//src/lib/icu/tzdata:revision") can only be used in
     # //src/lib/icu/tzdata/BUILD.gn, so we have to hard-code the file path.
@@ -91,9 +83,7 @@ template("icu_tzdata_config_data") {
                                "for_pkg",
                                "testonly",
                              ])
-      sources = [
-        "//src/lib/icu/tzdata/testing/FUCHSIA_IN_TREE_TEST",
-      ]
+      sources = [ "//src/lib/icu/tzdata/testing/FUCHSIA_IN_TREE_TEST" ]
     }
   }
 

@@ -4,7 +4,5 @@
 
 group("ui") {
   testonly = true
-  deps = [
-    "benchmarks",
-  ]
+  deps = [ "benchmarks" ]
 }

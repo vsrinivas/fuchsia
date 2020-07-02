@@ -64,7 +64,7 @@ template("zx_manifest") {
           path = rebase_path(manifest_file, root_build_dir)
           cpu = current_cpu
           os = current_os
-        }
+        },
       ]
     }
   }

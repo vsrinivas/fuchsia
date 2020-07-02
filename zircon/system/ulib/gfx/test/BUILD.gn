@@ -12,7 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-
 import("//build/fuzzing/fuzzer.gni")
 
 fuzzer("gfx-fuzzer") {

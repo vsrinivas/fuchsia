@@ -13,4 +13,3 @@ config_data("system_config") {
   for_pkg = "sysmgr"
   sources = [ "config/present_view_dachsiaboard.config" ]
 }
-

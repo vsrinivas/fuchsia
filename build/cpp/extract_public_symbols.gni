@@ -30,9 +30,7 @@ template("extract_public_symbols") {
       rebase_path("$clang_prefix/llvm-nm", ".", root_build_dir),
     ]
 
-    outputs = [
-      invoker.symbols,
-    ]
+    outputs = [ invoker.symbols ]
 
     args = [
       "$clang_prefix/llvm-nm",

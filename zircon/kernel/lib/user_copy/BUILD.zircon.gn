@@ -6,9 +6,7 @@
 
 zx_library("user_copy") {
   kernel = true
-  sources = [
-    "internal.cc",
-  ]
+  sources = [ "internal.cc" ]
   deps = [ ":tests" ]
   public_deps = [
     # <lib/user_copy/user_ptr.h> has #include <ktl/type_traits.h>.

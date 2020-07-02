@@ -44,16 +44,12 @@ template("vulkan_test_app") {
       script =
           "${graphics_compute_dir}/scripts/convert_spirv_files_to_c_arrays.py"
       sources = get_target_outputs(":${_shaders_target}")
-      outputs = [
-        _shaders_c_source,
-      ]
+      outputs = [ _shaders_c_source ]
       args = [
                "--output",
                rebase_path(outputs[0], root_build_dir),
              ] + rebase_path(sources, root_build_dir)
-      deps = [
-        ":${_shaders_target}",
-      ]
+      deps = [ ":${_shaders_target}" ]
     }
   }
 

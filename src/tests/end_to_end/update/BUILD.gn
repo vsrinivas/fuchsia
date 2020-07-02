@@ -6,9 +6,7 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
 dart_test("update_test") {
-  sources = [
-    "update_test.dart",
-  ]
+  sources = [ "update_test.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -21,7 +19,5 @@ dart_test("update_test") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":update_test($host_toolchain)",
-  ]
+  deps = [ ":update_test($host_toolchain)" ]
 }

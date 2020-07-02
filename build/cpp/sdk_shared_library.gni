@@ -274,9 +274,7 @@ template("sdk_shared_library") {
   generated_symbols_file = "$target_gen_dir/${output_name}.symbols.api"
   extract_public_symbols(extract_public_symbols_target_name) {
     library = "$shared_out_dir/$lib_name"
-    deps = [
-      ":$main_target_name",
-    ]
+    deps = [ ":$main_target_name" ]
     symbols = generated_symbols_file
   }
 
@@ -284,9 +282,7 @@ template("sdk_shared_library") {
     current = generated_symbols_file
     reference = reference_symbols_file
     library_name = main_target_dir
-    deps = [
-      ":$extract_public_symbols_target_name",
-    ]
+    deps = [ ":$extract_public_symbols_target_name" ]
   }
 
   sdk_atom(manifest_target_name) {
@@ -347,9 +343,7 @@ template("sdk_shared_library") {
 
     stamp_file = "$target_gen_dir/$target_name.stamp"
 
-    outputs = [
-      stamp_file,
-    ]
+    outputs = [ stamp_file ]
 
     args = [
       "--stamp",

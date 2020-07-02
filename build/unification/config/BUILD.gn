@@ -15,9 +15,7 @@ declare_args() {
 # It should not be used on any target native to the GN build.
 
 config("zircon-migrated") {
-  compiler_flags = [
-    "-O2",
-  ]
+  compiler_flags = [ "-O2" ]
 
   cflags = compiler_flags + [
              "-fno-omit-frame-pointer",
@@ -63,9 +61,7 @@ config("zircon-library") {
   compiler_flags = []
 
   if (!debug_zircon_libraries_more) {
-    compiler_flags += [
-      "-O2",
-    ]
+    compiler_flags += [ "-O2" ]
   }
 
   cflags = compiler_flags

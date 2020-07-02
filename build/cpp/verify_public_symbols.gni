@@ -38,9 +38,7 @@ template("verify_public_symbols") {
       rebase_path("$clang_prefix/llvm-cxxfilt", ".", root_build_dir),
     ]
 
-    outputs = [
-      stamp_file,
-    ]
+    outputs = [ stamp_file ]
 
     args = [
       "$clang_prefix/llvm-cxxfilt",

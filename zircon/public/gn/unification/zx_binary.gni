@@ -149,22 +149,16 @@ template("zx_binary") {
     group(main_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      public_deps = [
-        ":$binary_target_name",
-      ]
+      public_deps = [ ":$binary_target_name" ]
 
-      deps = [
-        ":$manifest_target_name",
-      ]
+      deps = [ ":$manifest_target_name" ]
     }
   } else {
     # In other toolchains, simply redirect to the builder toolchain.
     group(main_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      public_deps = [
-        ":$main_target_name($_builder_toolchain)",
-      ]
+      public_deps = [ ":$main_target_name($_builder_toolchain)" ]
     }
   }
 
@@ -174,9 +168,7 @@ template("zx_binary") {
     group(variant_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      public_deps = [
-        ":$variant_target_name(${variant.label})",
-      ]
+      public_deps = [ ":$variant_target_name(${variant.label})" ]
     }
   }
 
@@ -187,12 +179,8 @@ template("zx_binary") {
   group("$main_target_name${toolchain.variant_suffix}") {
     forward_variables_from(invoker, [ "testonly" ])
 
-    data_deps = [
-      ":$binary_target_name${toolchain.variant_suffix}",
-    ]
+    data_deps = [ ":$binary_target_name${toolchain.variant_suffix}" ]
 
-    deps = [
-      ":$manifest_target_name${toolchain.variant_suffix}",
-    ]
+    deps = [ ":$manifest_target_name${toolchain.variant_suffix}" ]
   }
 }

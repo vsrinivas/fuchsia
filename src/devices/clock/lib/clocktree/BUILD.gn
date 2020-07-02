@@ -12,9 +12,7 @@ source_set("clocktree") {
     "//zircon/public/lib/zx",
   ]
 
-  include_dirs = [
-    "include"
-  ]
+  include_dirs = [ "include" ]
 
   public_deps = [ "//zircon/public/lib/zircon-internal" ]
 }

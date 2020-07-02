@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
-
 zx_library("utf_conversion") {
   sdk = "static"
   sdk_headers = [ "utf_conversion/utf_conversion.h" ]

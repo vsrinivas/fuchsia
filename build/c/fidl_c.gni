@@ -21,16 +21,10 @@ template("fidl_tables") {
                              "visibility",
                            ])
 
-    sources = [
-      coding_tables,
-    ]
+    sources = [ coding_tables ]
 
-    deps = [
-      ":${main_target_name}_compile($fidl_toolchain)",
-    ]
-    public_deps = [
-      "//zircon/public/lib/fidl_base",
-    ]
+    deps = [ ":${main_target_name}_compile($fidl_toolchain)" ]
+    public_deps = [ "//zircon/public/lib/fidl_base" ]
   }
 }
 
@@ -69,12 +63,8 @@ template("fidl_c_target") {
                              "visibility",
                            ])
 
-    sources = [
-      c_file,
-    ]
-    public = [
-      c_header,
-    ]
+    sources = [ c_file ]
+    public = [ c_header ]
 
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ ":$config_target_name" ]
@@ -83,9 +73,7 @@ template("fidl_c_target") {
       ":${main_target_name}_compile($fidl_toolchain)",
       ":${main_target_name}_tables",
     ]
-    public_deps = [
-      "//zircon/public/lib/fidl",
-    ]
+    public_deps = [ "//zircon/public/lib/fidl" ]
 
     fidl_deps = []
     if (defined(invoker.deps)) {

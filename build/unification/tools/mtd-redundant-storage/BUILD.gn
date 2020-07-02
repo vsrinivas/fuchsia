@@ -4,5 +4,6 @@
 
 # This alias is used to soft-transition references to the tool.
 group("linux-arm64") {
-  public_deps = [ "//zircon/tools/mtd-redundant-storage($linux_arm64_toolchain)" ]
+  public_deps =
+      [ "//zircon/tools/mtd-redundant-storage($linux_arm64_toolchain)" ]
 }

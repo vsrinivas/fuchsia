@@ -37,9 +37,7 @@ template("executable_package") {
     if (defined(deps)) {
       deps += [ ":${binary_rule}" ]
     } else {
-      deps = [
-        ":${binary_rule}",
-      ]
+      deps = [ ":${binary_rule}" ]
     }
 
     binaries = [

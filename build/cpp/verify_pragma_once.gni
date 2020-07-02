@@ -19,9 +19,7 @@ template("verify_pragma_once") {
 
     inputs = invoker.headers
 
-    outputs = [
-      stamp_file,
-    ]
+    outputs = [ stamp_file ]
 
     args = [
              "--stamp",

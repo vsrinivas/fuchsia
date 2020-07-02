@@ -15,8 +15,8 @@ group("tools") {
     "//zircon/tools/fvm($host_toolchain)",
     "//zircon/tools/kazoo($host_toolchain)",
     "//zircon/tools/ktrace-dump($host_toolchain)",
-    "//zircon/tools/minfs($host_toolchain)",
     "//zircon/tools/merkleroot($host_toolchain)",
+    "//zircon/tools/minfs($host_toolchain)",
     "//zircon/tools/xdc-server($host_toolchain)",
   ]
   if (host_os == "linux") {

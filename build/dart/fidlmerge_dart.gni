@@ -75,9 +75,7 @@ template("fidlmerge_dart") {
       template_path,
     ]
 
-    outputs = [
-      "$file_stem.dart",
-    ]
+    outputs = [ "$file_stem.dart" ]
 
     args = [
       "--template",
@@ -102,9 +100,7 @@ template("fidlmerge_dart") {
       ]
     }
 
-    deps = [
-      "$fidl_target($fidl_toolchain)",
-    ]
+    deps = [ "$fidl_target($fidl_toolchain)" ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
@@ -119,36 +115,22 @@ template("fidlmerge_dart") {
   root_dir = "$target_gen_dir/${library_name}_package"
 
   copy(copy_pubspec_target_name) {
-    sources = [
-      "//build/dart/empty_pubspec.yaml",
-    ]
+    sources = [ "//build/dart/empty_pubspec.yaml" ]
 
-    outputs = [
-      "$root_dir/pubspec.yaml",
-    ]
+    outputs = [ "$root_dir/pubspec.yaml" ]
   }
 
   copy(copy_options_target_name) {
-    sources = [
-      "//topaz/tools/analysis_options.yaml",
-    ]
+    sources = [ "//topaz/tools/analysis_options.yaml" ]
 
-    outputs = [
-      "$root_dir/analysis_options.yaml",
-    ]
+    outputs = [ "$root_dir/analysis_options.yaml" ]
   }
 
   copy(copy_source_target_name) {
-    sources = [
-      "$file_stem.dart",
-    ]
-    outputs = [
-      "$root_dir/lib/$source_base.dart",
-    ]
+    sources = [ "$file_stem.dart" ]
+    outputs = [ "$root_dir/lib/$source_base.dart" ]
 
-    deps = [
-      ":$generation_target_name",
-    ]
+    deps = [ ":$generation_target_name" ]
   }
 
   dart_library(library_name) {
@@ -162,9 +144,7 @@ template("fidlmerge_dart") {
 
     package_name = "fidl_" + string_replace(library_name, ".", "_")
 
-    sources = [
-      "$source_base.dart",
-    ]
+    sources = [ "$source_base.dart" ]
 
     deps = []
 

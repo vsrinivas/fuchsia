@@ -5,12 +5,12 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("flagmisc"){
-    name = "go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
+go_library("flagmisc") {
+  name = "go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 }
 
 go_test("tests") {
-    output_name = "flagmisc_tests"
-    gopackages=["go.fuchsia.dev/fuchsia/tools/lib/flagmisc"]
-    deps = [":flagmisc"]
+  output_name = "flagmisc_tests"
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/flagmisc" ]
+  deps = [ ":flagmisc" ]
 }

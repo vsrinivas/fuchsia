@@ -117,9 +117,7 @@ template("fidlmerge_cpp") {
       ]
     }
 
-    deps = [
-      "$fidl_target($fidl_toolchain)",
-    ]
+    deps = [ "$fidl_target($fidl_toolchain)" ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
@@ -139,9 +137,7 @@ template("fidlmerge_cpp") {
       sources += [ "$file_stem$ext" ]
     }
 
-    public_deps = [
-      ":$generation_target_name",
-    ]
+    public_deps = [ ":$generation_target_name" ]
     if (defined(invoker.public_deps)) {
       public_deps += invoker.public_deps
     }

@@ -34,7 +34,7 @@ group("syscalls-headers") {
         public_deps = []
         install = []
         debug = []
-      }
+      },
     ]
   }
 }

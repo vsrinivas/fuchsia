@@ -57,16 +57,10 @@ template("hwinfo_config") {
 
   config_data(target_name) {
     for_pkg = "hwinfo"
-    sources = [
-      rebase_path(invoker.config),
-    ]
+    sources = [ rebase_path(invoker.config) ]
 
-    outputs = [
-      "${invoker.type}_config.json",
-    ]
+    outputs = [ "${invoker.type}_config.json" ]
 
-    deps = [
-      ":${validate_target}",
-    ]
+    deps = [ ":${validate_target}" ]
   }
 }

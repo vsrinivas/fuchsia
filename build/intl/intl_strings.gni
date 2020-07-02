@@ -216,9 +216,7 @@ template("intl_strings") {
   # This group target has the same name as the template invoker, and contains
   # all generated targets as its deps, so that all the deps are executed when
   # the template is expanded.
-  group_deps += [
-    ":${strings_to_fidl_name}($fidl_toolchain)",
-  ]
+  group_deps += [ ":${strings_to_fidl_name}($fidl_toolchain)" ]
   group(target_name) {
     public_deps = group_deps
   }

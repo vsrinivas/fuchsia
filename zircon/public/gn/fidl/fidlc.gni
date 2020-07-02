@@ -58,12 +58,8 @@ template("fidlc") {
     action("_fidlc.rsp.$target_name") {
       forward_variables_from(invoker, [ "testonly" ])
       visibility = [ ":$fidlc_target" ]
-      deps = [
-        files_rspfile_target,
-      ]
-      sources = [
-        files_rspfile,
-      ]
+      deps = [ files_rspfile_target ]
+      sources = [ files_rspfile ]
       outputs = [
         fidlc_rspfile,
         fidlc_depfile,
@@ -89,12 +85,8 @@ template("fidlc") {
         tool = "$zx/tools/fidl:fidlc"
       }
       outputs = fidlc_outputs
-      deps = [
-        ":_fidlc.rsp.$target_name",
-      ]
-      sources = [
-        fidlc_rspfile,
-      ]
+      deps = [ ":_fidlc.rsp.$target_name" ]
+      sources = [ fidlc_rspfile ]
       depfile = fidlc_depfile
       args = [ "@" + rebase_path(fidlc_rspfile, root_build_dir) ]
 
@@ -109,9 +101,7 @@ template("fidlc") {
                                "visibility",
                                "testonly",
                              ])
-      public_deps = [
-        ":$target_name($default_toolchain)",
-      ]
+      public_deps = [ ":$target_name($default_toolchain)" ]
       not_needed(invoker, "*")
     }
   }

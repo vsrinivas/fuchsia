@@ -36,17 +36,11 @@ template("sdk_alias") {
     copy(copy_meta_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      sources = [
-        "$sdk_target_gen_dir/$sdk_target_name.meta.json",
-      ]
+      sources = [ "$sdk_target_gen_dir/$sdk_target_name.meta.json" ]
 
-      outputs = [
-        "$target_gen_dir/$target_name.meta.json",
-      ]
+      outputs = [ "$target_gen_dir/$target_name.meta.json" ]
 
-      deps = [
-        invoker.target,
-      ]
+      deps = [ invoker.target ]
     }
   }
 
@@ -55,17 +49,11 @@ template("sdk_alias") {
   copy(copy_manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    sources = [
-      "$sdk_target_gen_dir/$sdk_target_name.sdk",
-    ]
+    sources = [ "$sdk_target_gen_dir/$sdk_target_name.sdk" ]
 
-    outputs = [
-      "$target_gen_dir/$target_name.sdk",
-    ]
+    outputs = [ "$target_gen_dir/$target_name.sdk" ]
 
-    deps = [
-      invoker.target,
-    ]
+    deps = [ invoker.target ]
   }
 
   group(target_name) {

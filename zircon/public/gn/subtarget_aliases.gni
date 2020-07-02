@@ -26,9 +26,7 @@ template("subtarget_aliases") {
                                  "testonly",
                                  "visibility",
                                ])
-        public_deps = [
-          ":$invoker_name.$subtarget",
-        ]
+        public_deps = [ ":$invoker_name.$subtarget" ]
       }
     }
   } else {
