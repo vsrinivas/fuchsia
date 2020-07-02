@@ -13,5 +13,8 @@ fidl("fuchsia.weave") {
     "weavestack.fidl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.net" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.net",
+  ]
 }

@@ -4,6 +4,8 @@
 
 library fuchsia.weave;
 
+using fuchsia.mem;
+
 /// This protocol is used for signing operations with the factory-provisioned
 /// Weave key.
 [Discoverable]
@@ -27,4 +29,15 @@ protocol Signer {
 protocol FactoryDataManager {
     /// Return the device |pairing_code| on success.
     GetPairingCode() -> (bytes:16 pairing_code) error ErrorCode;
+};
+
+/// This protocol is used to retrieve factory data that may be encrypted at
+/// rest. Transitional protocol to avoid breaking SDK users.
+[Discoverable]
+protocol FactoryDataManagerV2 {
+    /// Return the device |pairing_code| on success.
+    GetPairingCode() -> (bytes:16 pairing_code) error ErrorCode;
+
+    /// Returns the factory provisioned Weave certificate in PEM format.
+    GetWeaveCertificate() -> (fuchsia.mem.Buffer certificate) error ErrorCode;
 };
