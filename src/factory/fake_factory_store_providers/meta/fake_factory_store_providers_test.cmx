@@ -2,6 +2,10 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.factory.AlphaFactoryStoreProvider": [
+                    "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/alpha.cmx",
+                    "--config=/config/data/test_alpha.config"
+                ],
                 "fuchsia.factory.CastCredentialsFactoryStoreProvider": [
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/cast.cmx",
                     "--config=/config/data/test_cast.config"
@@ -30,6 +34,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.factory.AlphaFactoryStoreProvider",
             "fuchsia.factory.CastCredentialsFactoryStoreProvider",
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.factory.PlayReadyFactoryStoreProvider",

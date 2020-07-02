@@ -36,6 +36,7 @@ pub struct ReadFileRequest {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum FactoryStoreProvider {
+    Alpha,
     Cast,
     Misc,
     Playready,

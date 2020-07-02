@@ -45,6 +45,10 @@ package("fake_factory_store_providers") {
 
   meta = [
     {
+      path = rebase_path("meta/alpha.cmx")
+      dest = "alpha.cmx"
+    },
+    {
       path = rebase_path("meta/cast.cmx")
       dest = "cast.cmx"
     },
@@ -98,6 +102,7 @@ config_data("test_fake_factory_store_providers_config") {
   for_pkg = "fake_factory_store_providers"
 
   sources = [
+    "testdata/test_alpha.config",
     "testdata/test_cast.config",
     "testdata/test_misc.config",
     "testdata/test_playready.config",

@@ -24,6 +24,12 @@ void main(List<String> args) {
 
   group(FactoryStore, () {
     test('listFiles makes request and receives file list', () async {
+      const expectedAlphaFiles = [
+        'alpha_file1',
+        'some/dir/alpha_file2',
+        'alpha_file3',
+        'another/dir/alpha_file4'
+      ];
       const expectedCastFiles = ['cast_file1', 'some/dir/cast_file2'];
       const expectedMiscFiles = ['misc_file1', 'some/dir/misc_file2'];
       const expectedPlayreadyFiles = [
@@ -42,6 +48,7 @@ void main(List<String> args) {
       ];
 
       final returnedFiles = {
+        'alpha': expectedAlphaFiles,
         'cast': expectedCastFiles,
         'misc': expectedMiscFiles,
         'playready': expectedPlayreadyFiles,
@@ -62,6 +69,8 @@ void main(List<String> args) {
       fakeServer.listen(handler);
 
       final sl4fFactory = FactoryStore(sl4f);
+      final List<String> alphaFiles =
+          await sl4fFactory.listFiles(FactoryStoreProvider.alpha);
       final List<String> castFiles =
           await sl4fFactory.listFiles(FactoryStoreProvider.cast);
       final List<String> miscFiles =
@@ -73,6 +82,7 @@ void main(List<String> args) {
       final List<String> widevineFiles =
           await sl4fFactory.listFiles(FactoryStoreProvider.widevine);
 
+      expect(alphaFiles, containsAllInOrder(expectedAlphaFiles));
       expect(castFiles, containsAllInOrder(expectedCastFiles));
       expect(miscFiles, containsAllInOrder(expectedMiscFiles));
       expect(playreadyFiles, containsAllInOrder(expectedPlayreadyFiles));
@@ -81,6 +91,9 @@ void main(List<String> args) {
     });
 
     test('readFile makes request and receives file contents', () async {
+      const alphaFilename = 'alpha_file1';
+      final expectedAlphaFileContents =
+          base64Encode(utf8.encode('alpha_file1'));
       const castFilename = 'cast_file1';
       final expectedCastFileContents = base64Encode(utf8.encode('cast_file1'));
       const miscFilename = 'misc_file1';
@@ -96,6 +109,7 @@ void main(List<String> args) {
           base64Encode(utf8.encode('widevine_file1'));
 
       final returnedFileContents = {
+        'alpha': {alphaFilename: expectedAlphaFileContents},
         'cast': {castFilename: expectedCastFileContents},
         'misc': {miscFilename: expectedMiscFileContents},
         'playready': {playreadyFilename: expectedPlayreadyFileContents},
@@ -120,6 +134,8 @@ void main(List<String> args) {
       fakeServer.listen(handler);
 
       final sl4fFactory = FactoryStore(sl4f);
+      final Uint8List alphaFiles =
+          await sl4fFactory.readFile(FactoryStoreProvider.alpha, alphaFilename);
       final Uint8List castFiles =
           await sl4fFactory.readFile(FactoryStoreProvider.cast, castFilename);
       final Uint8List miscFiles =
@@ -131,6 +147,7 @@ void main(List<String> args) {
       final Uint8List widevineFiles = await sl4fFactory.readFile(
           FactoryStoreProvider.widevine, widevineFilename);
 
+      expect(alphaFiles, base64Decode(expectedAlphaFileContents));
       expect(castFiles, base64Decode(expectedCastFileContents));
       expect(miscFiles, base64Decode(expectedMiscFileContents));
       expect(playreadyFiles, base64Decode(expectedPlayreadyFileContents));

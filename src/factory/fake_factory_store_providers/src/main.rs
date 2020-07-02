@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_factory::{
+        AlphaFactoryStoreProviderRequest, AlphaFactoryStoreProviderRequestStream,
         CastCredentialsFactoryStoreProviderRequest,
         CastCredentialsFactoryStoreProviderRequestStream, MiscFactoryStoreProviderRequest,
         MiscFactoryStoreProviderRequestStream, PlayReadyFactoryStoreProviderRequest,
@@ -28,6 +29,7 @@ use {
 type LockedDirectoryProxy = Arc<Mutex<DirectoryProxy>>;
 
 enum IncomingServices {
+    AlphaFactoryStoreProvider(AlphaFactoryStoreProviderRequestStream),
     CastCredentialsFactoryStoreProvider(CastCredentialsFactoryStoreProviderRequestStream),
     MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
     PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
@@ -75,6 +77,13 @@ fn start_test_dir(config_path: &str) -> Result<DirectoryProxy, Error> {
 
 async fn run_server(req: IncomingServices, dir_mtx: LockedDirectoryProxy) -> Result<(), Error> {
     match req {
+        IncomingServices::AlphaFactoryStoreProvider(mut stream) => {
+            while let Some(request) = stream.try_next().await? {
+                let AlphaFactoryStoreProviderRequest::GetFactoryStore { dir, control_handle: _ } =
+                    request;
+                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+            }
+        }
         IncomingServices::CastCredentialsFactoryStoreProvider(mut stream) => {
             while let Some(request) = stream.try_next().await? {
                 let CastCredentialsFactoryStoreProviderRequest::GetFactoryStore {
@@ -120,6 +129,7 @@ async fn run_server(req: IncomingServices, dir_mtx: LockedDirectoryProxy) -> Res
 
 #[derive(Debug, StructOpt)]
 enum Provider {
+    Alpha,
     Cast,
     Misc,
     Playready,
@@ -132,6 +142,7 @@ impl FromStr for Provider {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let formatted_str = s.trim().to_lowercase();
         match formatted_str.as_ref() {
+            "alpha" => Ok(Provider::Alpha),
             "cast" => Ok(Provider::Cast),
             "misc" => Ok(Provider::Misc),
             "playready" => Ok(Provider::Playready),
@@ -163,6 +174,7 @@ async fn main() -> Result<(), Error> {
     let mut fs_dir = fs.dir("svc");
 
     match flags.provider {
+        Provider::Alpha => fs_dir.add_fidl_service(IncomingServices::AlphaFactoryStoreProvider),
         Provider::Cast => {
             fs_dir.add_fidl_service(IncomingServices::CastCredentialsFactoryStoreProvider)
         }

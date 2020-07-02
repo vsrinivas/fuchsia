@@ -9,9 +9,9 @@ use crate::factory_store::types::{FactoryStoreProvider, ListFilesRequest, ReadFi
 use base64;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_factory::{
-    CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
-    PlayReadyFactoryStoreProviderMarker, WeaveFactoryStoreProviderMarker,
-    WidevineFactoryStoreProviderMarker,
+    AlphaFactoryStoreProviderMarker, CastCredentialsFactoryStoreProviderMarker,
+    MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
+    WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
 };
 use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE};
 use files_async::{readdir_recursive, DirentKind};
@@ -91,6 +91,10 @@ impl FactoryStoreFacade {
         let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
 
         match provider {
+            FactoryStoreProvider::Alpha => {
+                let alpha_svc = connect_to_service::<AlphaFactoryStoreProviderMarker>()?;
+                alpha_svc.get_factory_store(dir_server_end)?;
+            }
             FactoryStoreProvider::Cast => {
                 let cast_svc = connect_to_service::<CastCredentialsFactoryStoreProviderMarker>()?;
                 cast_svc.get_factory_store(dir_server_end)?;
@@ -128,6 +132,10 @@ mod tests {
 
     lazy_static! {
         static ref GOLDEN_FILE_DATA: HashMap<&'static str, HashMap<&'static str, &'static str>> = hashmap! {
+            "alpha" => hashmap! {
+                "alpha.file" => "alpha info",
+                "alpha/data" => "alpha data"
+            },
             "cast" => hashmap! {
                 "txt/info.txt" => "cast info.txt",
                 "more.extra" => "extra cast stuff",

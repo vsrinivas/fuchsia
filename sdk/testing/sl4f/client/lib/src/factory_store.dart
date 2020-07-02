@@ -9,6 +9,7 @@ import 'sl4f_client.dart';
 
 /// Provider for a factory store that exposes a set of files.
 enum FactoryStoreProvider {
+  alpha,
   cast,
   misc,
   playready,
@@ -17,6 +18,7 @@ enum FactoryStoreProvider {
 }
 
 final _providerToJson = {
+  FactoryStoreProvider.alpha: 'alpha',
   FactoryStoreProvider.cast: 'cast',
   FactoryStoreProvider.misc: 'misc',
   FactoryStoreProvider.playready: 'playready',

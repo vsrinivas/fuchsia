@@ -34,6 +34,7 @@ template("factory_store_provider_config_validate") {
 #   provider (required)
 #     The factory store provider protocol that the given config maps to.
 #     Must be one of the following:
+#       fuchsia.factory.AlphaFactoryStoreProvider
 #       fuchsia.factory.CastCredentialsFactoryStoreProvider
 #       fuchsia.factory.MiscFactoryStoreProvider
 #       fuchsia.factory.PlayReadyFactoryStoreProvider

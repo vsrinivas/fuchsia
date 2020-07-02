@@ -173,6 +173,10 @@ test_package("sl4f-service-tests") {
 
   resources = [
     {
+      path = rebase_path("testdata/alpha_factory_store.config")
+      dest = "alpha_factory_store.config"
+    },
+    {
       path = rebase_path("testdata/cast_factory_store.config")
       dest = "cast_factory_store.config"
     },
@@ -205,6 +209,7 @@ test_package("sl4f-service-tests") {
 config_data("fake-factory-store-providers-config") {
   for_pkg = "fake_factory_store_providers"
   sources = [
+    "testdata/alpha_factory_store.config",
     "testdata/cast_factory_store.config",
     "testdata/misc_factory_store.config",
     "testdata/playready_factory_store.config",
