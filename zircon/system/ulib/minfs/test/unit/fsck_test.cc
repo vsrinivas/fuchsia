@@ -10,6 +10,7 @@
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
 #include <fs-management/mount.h>
+#include <fs/journal/format.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <safemath/checked_math.h>
@@ -332,6 +333,46 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
 TEST_F(ConsistencyCheckerFixtureVerbose, UnlinkedDirectoryHasBadEntryCount) {
   std::unique_ptr<Bcache> bcache;
   ASSERT_NO_FATAL_FAILURES(CreateUnlinkedDirectoryWithEntry(TakeFs(), &bcache));
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
+}
+
+TEST_F(ConsistencyCheckerFixtureVerbose, CorruptSuperblock) {
+  std::unique_ptr<Bcache> bcache;
+  destroy_fs(&bcache);
+
+  Superblock sb;
+  EXPECT_OK(bcache->Readblk(0, &sb));
+
+  // Check if superblock magic is valid
+  EXPECT_EQ(sb.magic0, kMinfsMagic0);
+  EXPECT_EQ(sb.magic1, kMinfsMagic1);
+
+  // Corrupt the superblock
+  sb.checksum = 0;
+  EXPECT_OK(bcache->Writeblk(0, &sb));
+
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
+}
+
+TEST_F(ConsistencyCheckerFixtureVerbose, CorruptJournalInfo) {
+  std::unique_ptr<Bcache> bcache;
+  destroy_fs(&bcache);
+
+  Superblock sb;
+  EXPECT_OK(bcache->Readblk(0, &sb));
+  char data[kMinfsBlockSize];
+
+  blk_t journal_block = static_cast<blk_t>(JournalStartBlock(sb));
+  EXPECT_OK(bcache->Readblk(journal_block, data));
+
+  // Check that the journal superblock is valid.
+  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(data);
+  EXPECT_EQ(journal_info->magic, fs::kJournalMagic);
+
+  // Corrupt the journalInfo checksum
+  journal_info->checksum = 0;
+  EXPECT_OK(bcache->Writeblk(journal_block, data));
+
   ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
 }
 
