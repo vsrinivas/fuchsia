@@ -153,7 +153,7 @@ namespace fit {
 // complicated continuation types that are hard to describe, often consisting of
 // nested templates and lambdas.  These are referred to as "unboxed"
 // promises.  In contrast, "boxed" promises are parameterized by a
-// a |fit::function| that hides (or "erases") the type of the continuation
+// |fit::function| that hides (or "erases") the type of the continuation
 // thereby yielding type that is easier to describe.
 //
 // You can recognize boxed and unboxed promises by their types.

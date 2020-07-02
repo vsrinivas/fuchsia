@@ -518,7 +518,7 @@ struct hash<fit::basic_string_view<CharT, std::char_traits<CharT>>> {
   }
 };
 
-// Ouput stream specialization for fit::string_view.
+// Output stream specialization for fit::string_view.
 //
 // https://en.cppreference.com/w/cpp/string/basic_string_view/operator_ltlt
 template <class CharT, class Traits>
