@@ -25,7 +25,6 @@
 #
 if (is_host) {
   template("host_test_data") {
-    testonly = true
     assert(defined(invoker.sources), "sources are required")
 
     main_target_name = target_name
@@ -38,6 +37,7 @@ if (is_host) {
       # The copy rule is the main target so that clients can still
       # call `get_target_outputs` on it.
       copy(main_target_name) {
+        testonly = true
         forward_variables_from(invoker, "*")
         if (!defined(deps)) {
           deps = []
@@ -63,7 +63,12 @@ if (is_host) {
     # This group exists only to carry the `test_runtime_deps` metadata, which
     # is aggregated by test_spec().
     group(metadata_target_name) {
-      forward_variables_from(invoker, [ "deps" ])
+      testonly = true
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "visibility",
+                             ])
       metadata = {
         test_runtime_deps = test_data
       }
