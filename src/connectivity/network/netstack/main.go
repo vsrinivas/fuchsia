@@ -270,11 +270,15 @@ func Main() {
 		},
 		TempIIDSeed: tempIIDSeed,
 	})
-	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
-		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
-	}
-	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.DelayEnabled(true)); err != nil {
-		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.DelayEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
+
+	for _, opt := range []interface{}{
+		tcp.DelayEnabled(true),
+		tcp.SACKEnabled(true),
+		tcpip.ModerateReceiveBufferOption(true),
+	} {
+		if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, opt); err != nil {
+			syslog.Fatalf("SetTransportProtocolOption(%d, %#v) failed: %s", tcp.ProtocolNumber, opt, err)
+		}
 	}
 
 	req, np, err := device.NewNameProviderWithCtxInterfaceRequest()
