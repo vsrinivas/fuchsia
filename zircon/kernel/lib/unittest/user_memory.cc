@@ -20,7 +20,7 @@ UserMemory::~UserMemory() {
 ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
   size_t size = vmo->size();
 
-  fbl::RefPtr<VmAspace> aspace(Thread::Current::Get()->aspace_);
+  fbl::RefPtr<VmAspace> aspace(Thread::Current::Get()->aspace());
 
   DEBUG_ASSERT(aspace);
   DEBUG_ASSERT(aspace->is_user());

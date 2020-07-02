@@ -85,7 +85,7 @@ static int wait_sema_thread(void* arg) {
 
 static bool thread_is_blocked(const Thread* t) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-  return (t->state_ == THREAD_BLOCKED);
+  return (t->state() == THREAD_BLOCKED);
 }
 
 enum class Signal { kPost, kKill, kSuspend };

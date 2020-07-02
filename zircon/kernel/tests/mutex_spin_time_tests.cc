@@ -115,7 +115,7 @@ bool mutex_spin_time_test(void) {
       while (true) {
         {
           Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
-          s = test_thread->state_;
+          s = test_thread->state();
         }
 
         if (s == THREAD_BLOCKED) {

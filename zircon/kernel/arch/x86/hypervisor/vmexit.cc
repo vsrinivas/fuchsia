@@ -173,7 +173,7 @@ static zx_status_t handle_external_interrupt(AutoVmcs* vmcs) {
 
   // If we are receiving an external interrupt because the thread is being
   // killed, we should exit with an error.
-  return Thread::Current::Get()->signals_ & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
+  return Thread::Current::Get()->signals() & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
 }
 
 static zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local_apic_state) {

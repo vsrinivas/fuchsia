@@ -103,7 +103,7 @@ __NO_SAFESTACK static void arm64_context_switch_spec_mitigations(Thread* oldthre
   // 2b)    the old address space is not nullptr (not a kernel thread).
   //        If the old thread is a kernel thread, it can be trusted not to attack userspace
   if (__arm64_percpu->should_invalidate_bp_on_context_switch &&
-      ((oldthread->aspace_ != newthread->aspace_) && oldthread->aspace_)) {
+      ((oldthread->aspace() != newthread->aspace()) && oldthread->aspace())) {
     arm64_uarch_do_spectre_v2_mitigation();
   }
 }
@@ -162,7 +162,7 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
 }
 
 void arch_dump_thread(Thread* t) {
-  if (t->state_ != THREAD_RUNNING) {
+  if (t->state() != THREAD_RUNNING) {
     dprintf(INFO, "\tarch: ");
     dprintf(INFO, "sp 0x%lx\n", t->arch().sp);
   }

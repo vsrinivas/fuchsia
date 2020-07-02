@@ -52,20 +52,20 @@ ResourceOwnership BrwLock<PI>::Wake() {
 
       if (context->ownership == ResourceOwnership::Normal) {
         // Check if target is blocked for writing and not reading
-        if (woken->state_ == THREAD_BLOCKED) {
+        if (woken->state() == THREAD_BLOCKED) {
           context->state.writer_.store(woken, ktl::memory_order_relaxed);
           context->state.state_.fetch_add(-kBrwLockWaiter + kBrwLockWriter,
                                           ktl::memory_order_acq_rel);
           return Action::SelectAndAssignOwner;
         }
         // If not writing then we must be blocked for reading
-        DEBUG_ASSERT(woken->state_ == THREAD_BLOCKED_READ_LOCK);
+        DEBUG_ASSERT(woken->state() == THREAD_BLOCKED_READ_LOCK);
         context->ownership = ResourceOwnership::Reader;
       }
       // Our current ownership is ResourceOwnership::Reader otherwise we would
       // have returned early
       DEBUG_ASSERT(context->ownership == ResourceOwnership::Reader);
-      if (woken->state_ == THREAD_BLOCKED_READ_LOCK) {
+      if (woken->state() == THREAD_BLOCKED_READ_LOCK) {
         // We are waking readers and we found a reader, so we can wake them up and
         // search for me.
         context->state.state_.fetch_add(-kBrwLockWaiter + kBrwLockReader,
@@ -86,10 +86,10 @@ ResourceOwnership BrwLock<PI>::Wake() {
   } else {
     Thread* next = wait_.Peek();
     DEBUG_ASSERT(next != NULL);
-    if (next->state_ == THREAD_BLOCKED_READ_LOCK) {
+    if (next->state() == THREAD_BLOCKED_READ_LOCK) {
       while (!wait_.IsEmpty()) {
         Thread* next = wait_.Peek();
-        if (next->state_ != THREAD_BLOCKED_READ_LOCK) {
+        if (next->state() != THREAD_BLOCKED_READ_LOCK) {
           break;
         }
         state_.state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acq_rel);

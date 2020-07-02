@@ -61,7 +61,7 @@ class KTrace<true> : public KTraceBase {
 
   void FutexWait(uintptr_t futex_id, Thread* new_owner) {
     ktrace(TAG_FUTEX_WAIT, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
-           static_cast<uint32_t>(new_owner ? new_owner->user_tid_ : 0),
+           static_cast<uint32_t>(new_owner ? new_owner->user_tid() : 0),
            static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF), ts_);
   }
 
@@ -82,7 +82,7 @@ class KTrace<true> : public KTraceBase {
                      ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
 
     ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
-           static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid_ : 0), flags, ts_);
+           static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid() : 0), flags, ts_);
   }
 
   void FutexRequeue(uintptr_t futex_id, FutexActive active, uint32_t count,
@@ -97,7 +97,7 @@ class KTrace<true> : public KTraceBase {
                      ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
 
     ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
-           static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid_ : 0), flags, ts_);
+           static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid() : 0), flags, ts_);
   }
 
  private:
@@ -197,11 +197,11 @@ OwnedWaitQueue::Hook::Action FutexContext::ResetBlockingFutexId(Thread* thrd, vo
   // Any thread involved in one of these operations is
   // currently blocked on a futex's wait queue, and therefor
   // *must* be a user mode thread.
-  DEBUG_ASSERT((thrd != nullptr) && (thrd->user_thread_ != nullptr));
+  DEBUG_ASSERT((thrd != nullptr) && (thrd->user_thread() != nullptr));
   DEBUG_ASSERT(ctx != nullptr);
   auto state = reinterpret_cast<ResetBlockingFutexIdState*>(ctx);
 
-  thrd->user_thread_->blocking_futex_id_ = 0;
+  thrd->user_thread()->blocking_futex_id_ = 0;
   ++state->count;
 
   return action;
@@ -212,11 +212,11 @@ OwnedWaitQueue::Hook::Action FutexContext::SetBlockingFutexId(Thread* thrd, void
   // Any thread involved in one of these operations is
   // currently blocked on a futex's wait queue, and therefor
   // *must* be a user mode thread.
-  DEBUG_ASSERT((thrd != nullptr) && (thrd->user_thread_ != nullptr));
+  DEBUG_ASSERT((thrd != nullptr) && (thrd->user_thread() != nullptr));
   DEBUG_ASSERT(ctx != nullptr);
   auto state = reinterpret_cast<SetBlockingFutexIdState*>(ctx);
 
-  thrd->user_thread_->blocking_futex_id_ = state->id;
+  thrd->user_thread()->blocking_futex_id_ = state->id;
   ++state->count;
 
   return action;
@@ -305,7 +305,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
   zx_status_t result;
 
   Thread* current_core_thread = Thread::Current::Get();
-  ThreadDispatcher* current_thread = current_core_thread->user_thread_.get();
+  ThreadDispatcher* current_thread = current_core_thread->user_thread();
   uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
   {
     // Obtain the FutexState for the ID we are interested in, activating a free
@@ -751,8 +751,8 @@ zx_status_t FutexContext::FutexGetOwner(user_in_ptr<const zx_futex_t> value_ptr,
       if (const Thread* owner = futex_ref->waiters_.owner(); owner != nullptr) {
         // Any thread which owns a FutexState's wait queue *must* be a
         // user mode thread.
-        DEBUG_ASSERT(owner->user_thread_ != nullptr);
-        koid = owner->user_thread_->get_koid();
+        DEBUG_ASSERT(owner->user_thread() != nullptr);
+        koid = owner->user_thread()->get_koid();
       }
     }
   }

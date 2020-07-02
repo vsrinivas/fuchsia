@@ -544,10 +544,10 @@ void VmAspace::AttachToThread(Thread* t) {
   Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // not prepared to handle setting a new address space or one on a running thread
-  DEBUG_ASSERT(!t->aspace_);
-  DEBUG_ASSERT(t->state_ != THREAD_RUNNING);
+  DEBUG_ASSERT(!t->aspace());
+  DEBUG_ASSERT(t->state() != THREAD_RUNNING);
 
-  t->aspace_ = this;
+  t->switch_aspace(this);
 }
 
 zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
@@ -634,7 +634,7 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
   if (is_kernel_address(address)) {
     return kernel_aspace();
   } else if (is_user_address(address)) {
-    return Thread::Current::Get()->aspace_;
+    return Thread::Current::Get()->aspace();
   } else {
     return nullptr;
   }

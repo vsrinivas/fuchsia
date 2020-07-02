@@ -91,8 +91,8 @@ class KTracer<Level, ktl::enable_if_t<(Level == KernelMutexTracingLevel::Contest
     uint32_t flags =
         static_cast<uint32_t>(arch_curr_cpu_num() & KTRACE_FLAGS_KERNEL_MUTEX_CPUID_MASK);
 
-    if ((t != nullptr) && (t->user_thread_ != nullptr)) {
-      tid = static_cast<uint32_t>(t->user_tid_);
+    if ((t != nullptr) && (t->user_thread() != nullptr)) {
+      tid = static_cast<uint32_t>(t->user_tid());
       flags |= KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID;
     }
 

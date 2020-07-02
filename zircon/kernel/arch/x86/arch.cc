@@ -152,7 +152,7 @@ void arch_resume(void) {
   thread->SecondaryCpuInitEarly();
   // The thread stacks and struct are from a single allocation, free it
   // when we exit into the scheduler.
-  thread->flags_ |= THREAD_FLAG_FREE_STRUCT;
+  thread->set_free_struct(true);
 
   lk_secondary_cpu_entry();
 

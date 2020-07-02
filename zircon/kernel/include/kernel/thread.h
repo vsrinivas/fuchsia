@@ -731,6 +731,9 @@ struct Thread {
     // Interruptible version of Sleep.
     static zx_status_t SleepInterruptible(zx_time_t deadline);
 
+    // Transition the current thread to the THREAD_SUSPENDED state.
+    static void DoSuspend();
+
     static void SignalPolicyException();
 
     // Process pending signals, may never return because of kill signal.
@@ -769,6 +772,14 @@ struct Thread {
       dump_thread_user_tid_during_panic(tid, full);
     }
   };
+
+  // Trait for the global Thread list.
+  struct ThreadListTrait {
+    static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
+      return thread.thread_list_node_;
+    }
+  };
+  using List = fbl::DoublyLinkedListCustomTraits<Thread*, ThreadListTrait>;
 
   // Stats for a thread's runtime.
   struct RuntimeStats {
@@ -824,6 +835,55 @@ struct Thread {
   // Accessors into Thread state. When the conversion to all-private
   // members is complete (bug 54383), we can revisit the overall
   // Thread API.
+
+  thread_state state() const { return state_; }
+
+  // The scheduler can set threads to be running, or to be ready to run.
+  void set_running() { state_ = THREAD_RUNNING; }
+  void set_ready() { state_ = THREAD_READY; }
+  // While wait queues can set threads to be blocked.
+  void set_blocked() { state_ = THREAD_BLOCKED; }
+  void set_blocked_read_lock() { state_ = THREAD_BLOCKED_READ_LOCK; }
+
+  // Accessors for specific flags_ bits.
+  bool detatched() const { return (flags_ & THREAD_FLAG_DETACHED) != 0; }
+  void set_detached(bool value) {
+    if (value) {
+      flags_ |= THREAD_FLAG_DETACHED;
+    } else {
+      flags_ &= ~THREAD_FLAG_DETACHED;
+    }
+  }
+  bool free_struct() const { return (flags_ & THREAD_FLAG_FREE_STRUCT) != 0; }
+  void set_free_struct(bool value) {
+    if (value) {
+      flags_ |= THREAD_FLAG_FREE_STRUCT;
+    } else {
+      flags_ &= ~THREAD_FLAG_FREE_STRUCT;
+    }
+  }
+  bool idle() const { return (flags_ & THREAD_FLAG_IDLE) != 0; }
+  void set_idle(bool value) {
+    if (value) {
+      flags_ |= THREAD_FLAG_IDLE;
+    } else {
+      flags_ &= ~THREAD_FLAG_IDLE;
+    }
+  }
+  bool vcpu() const { return (flags_ & THREAD_FLAG_VCPU) != 0; }
+  void set_vcpu(bool value) {
+    if (value) {
+      flags_ |= THREAD_FLAG_VCPU;
+    } else {
+      flags_ &= ~THREAD_FLAG_VCPU;
+    }
+  }
+
+  // Access to the entire flags_ value, for diagnostics.
+  unsigned int flags() const { return flags_; }
+
+  unsigned int signals() const { return signals_; }
+
   bool has_migrate_fn() const { return migrate_fn_ != nullptr; }
 
   TaskState& task_state() { return task_state_; }
@@ -843,10 +903,25 @@ struct Thread {
   const lockdep::ThreadLockState& lock_state() const { return lock_state_; }
 #endif
 
+  ThreadDispatcher* user_thread() { return user_thread_.get(); }
+  const ThreadDispatcher* user_thread() const { return user_thread_.get(); }
+  zx_koid_t user_pid() const { return user_pid_; }
+  zx_koid_t user_tid() const { return user_tid_; }
+  void set_user_pid(zx_koid_t pid) { user_pid_ = pid; }
+  void set_user_tid(zx_koid_t tid) { user_tid_ = tid; }
+
   arch_thread& arch() { return arch_; }
 
   KernelStack& stack() { return stack_; }
   const KernelStack& stack() const { return stack_; }
+
+  VmAspace* aspace() { return aspace_; }
+  const VmAspace* aspace() const { return aspace_; }
+  VmAspace* switch_aspace(VmAspace* aspace) {
+    VmAspace* old_aspace = aspace_;
+    aspace_ = aspace;
+    return old_aspace;
+  }
 
   const char* name() const { return name_; }
   // This may truncate |name|, so that it (including a trailing NUL
@@ -889,30 +964,26 @@ struct Thread {
   // Restore the arch-specific user state.
   void RestoreUserStateLocked() TA_REQ(thread_lock);
 
+  // Returns true if it decides to kill the thread, which must be the
+  // current thread. The thread_lock must be held when calling this
+  // function.
+  //
+  // TODO: move this to CurrentThread, once that becomes a subclass of
+  // Thread.
+  bool CheckKillSignal() TA_REQ(thread_lock);
+
   __NO_RETURN void ExitLocked(int retcode) TA_REQ(thread_lock);
 
  private:
   Canary canary_;
 
-  // TODO(54383) This should all be private. Until migrated away from
-  // list_node, we need Thread to be standard layout. For now,
-  // OwnedWaitQueue needs to be able to manipulate list_nodes in
-  // Thread.
- public:
-  struct ThreadListTrait {
-    static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
-      return thread.thread_list_node_;
-    }
-  };
   fbl::DoublyLinkedListNodeState<Thread*> thread_list_node_ TA_GUARDED(thread_lock);
-  using List = fbl::DoublyLinkedListCustomTraits<Thread*, ThreadListTrait>;
 
   // active bits
   enum thread_state state_;
   unsigned int flags_;
   unsigned int signals_;
 
- private:
   SchedulerState scheduler_state_;
 
   WaitQueueState wait_queue_state_;
@@ -922,7 +993,6 @@ struct Thread {
   lockdep::ThreadLockState lock_state_;
 #endif
 
- public:
   // pointer to the kernel address space this thread is associated with
   VmAspace* aspace_;
 
@@ -930,11 +1000,14 @@ struct Thread {
   // In the common case freeing Thread will also free ThreadDispatcher when this
   // reference is dropped.
   fbl::RefPtr<ThreadDispatcher> user_thread_;
-  uint64_t user_tid_;
-  uint64_t user_pid_;
 
-  // TODO(54383) More of Thread should be private than this.
- private:
+  // When user_thread_ is set, these are the koids of the
+  // ThreadDispatcher and its parent ProcessDispatcher. We cache them
+  // here since their values may be used even after those Dispatchers
+  // are torn down.
+  zx_koid_t user_tid_;
+  zx_koid_t user_pid_;
+
   // Architecture-specific stuff.
   struct arch_thread arch_;
 

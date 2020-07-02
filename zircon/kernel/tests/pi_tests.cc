@@ -507,7 +507,7 @@ bool TestThread::WaitFor() {
       thread_state cur_state;
       {
         Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-        cur_state = thread_->state_;
+        cur_state = thread_->state();
       }
 
       if (cur_state == THREAD_BLOCKED) {

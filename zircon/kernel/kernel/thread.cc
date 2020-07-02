@@ -83,9 +83,6 @@ Thread::MigrateList Thread::migrate_list_;
 // master thread spinlock
 SpinLock thread_lock __CPU_ALIGN_EXCLUSIVE;
 
-// local routines
-static void thread_do_suspend();
-
 const char* ToString(enum thread_state state) {
   switch (state) {
     case THREAD_INITIAL:
@@ -255,7 +252,6 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   t->task_state_.Init(entry, arg);
 
   t->state_ = THREAD_INITIAL;
-  t->signals_ = 0;
 
   Scheduler::InitializeThread(t, priority);
 
@@ -295,7 +291,7 @@ static void free_thread_resources(Thread* t) {
   // free the thread structure itself.  Manually trigger the struct's
   // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
   // get triggered.
-  bool thread_needs_free = (t->flags_ & THREAD_FLAG_FREE_STRUCT) != 0;
+  bool thread_needs_free = t->free_struct();
   t->~Thread();
   if (thread_needs_free) {
     free(t);
@@ -749,15 +745,13 @@ void Thread::CallMigrateFnForCpuLocked(cpu_num_t cpu) {
   }
 }
 
-// Returns true if it decides to kill the thread. The thread_lock must be held
-// when calling this function.
-static bool check_kill_signal(Thread* current_thread) TA_REQ(thread_lock) {
+bool Thread::CheckKillSignal() {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
 
-  if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
+  if (signals_ & THREAD_SIGNAL_KILL) {
     // Ensure we don't recurse into thread_exit.
-    DEBUG_ASSERT(current_thread->state_ != THREAD_DEATH);
+    DEBUG_ASSERT(state_ != THREAD_DEATH);
     return true;
   } else {
     return false;
@@ -765,8 +759,9 @@ static bool check_kill_signal(Thread* current_thread) TA_REQ(thread_lock) {
 }
 
 // finish suspending the current thread
-static void thread_do_suspend() {
+void Thread::Current::DoSuspend() {
   Thread* current_thread = Thread::Current::Get();
+
   // Note: After calling this callback, we must not return without
   // calling the callback with THREAD_USER_STATE_RESUME.  That is
   // because those callbacks act as barriers which control when it is
@@ -781,7 +776,7 @@ static void thread_do_suspend() {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
     // make sure we haven't been killed while the lock was dropped for the user callback
-    if (check_kill_signal(current_thread)) {
+    if (current_thread->CheckKillSignal()) {
       guard.Release();
       Thread::Current::Exit(0);
     }
@@ -799,7 +794,7 @@ static void thread_do_suspend() {
       // shouldn't call user_callback() with THREAD_USER_STATE_RESUME in
       // this case, because there might not have been any request to
       // resume the thread.
-      if (check_kill_signal(current_thread)) {
+      if (current_thread->CheckKillSignal()) {
         guard.Release();
         Thread::Current::Exit(0);
       }
@@ -884,7 +879,7 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
     }
   });
 
-  if (check_kill_signal(current_thread)) {
+  if (current_thread->CheckKillSignal()) {
     guard.Release();
     cleanup_suspended_general_regs.cancel();
     Thread::Current::Exit(0);
@@ -914,14 +909,14 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
       // (returns false), then we likely have a mismatched save/restore pair, which is a bug.
       const bool saved = current_thread->SaveUserStateLocked();
       DEBUG_ASSERT(saved);
-      guard.CallUnlocked([]() { thread_do_suspend(); });
+      guard.CallUnlocked([]() { Thread::Current::DoSuspend(); });
       if (saved) {
         current_thread->RestoreUserStateLocked();
       }
     } else {
       // No user mode component so nothing to save.
       guard.Release();
-      thread_do_suspend();
+      Thread::Current::DoSuspend();
     }
   }
 }
@@ -1166,9 +1161,8 @@ void thread_construct_first(Thread* t, const char* name) {
   cpu_num_t cpu = arch_curr_cpu_num();
 
   init_thread_struct(t, name);
-  t->state_ = THREAD_RUNNING;
-  t->flags_ = THREAD_FLAG_DETACHED;
-  t->signals_ = 0;
+  t->set_running();
+  t->set_detached(true);
 
   // Setup the scheduler state before directly manipulating its members.
   Scheduler::InitializeThread(t, HIGHEST_PRIORITY);
@@ -1484,7 +1478,7 @@ void dump_thread_user_tid(uint64_t tid, bool full) {
 
 void dump_thread_user_tid_locked(uint64_t tid, bool full) {
   for (Thread& t : thread_list.Get()) {
-    if (t.user_tid_ != tid) {
+    if (t.user_tid() != tid) {
       continue;
     }
 
@@ -1500,7 +1494,7 @@ void dump_thread_user_tid_locked(uint64_t tid, bool full) {
 Thread* thread_id_to_thread_slow(uint64_t tid) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   for (Thread& t : thread_list.Get()) {
-    if (t.user_tid_ == tid) {
+    if (t.user_tid() == tid) {
       return &t;
     }
   }
@@ -1516,9 +1510,9 @@ void ktrace_report_live_threads() {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   for (Thread& t : thread_list.Get()) {
     t.canary().Assert();
-    if (t.user_tid_) {
-      ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.user_tid_),
-                  static_cast<uint32_t>(t.user_pid_), t.name());
+    if (t.user_tid()) {
+      ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.user_tid()),
+                  static_cast<uint32_t>(t.user_pid()), t.name());
     } else {
       ktrace_name(TAG_KTHREAD_NAME, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(&t)), 0,
                   t.name());

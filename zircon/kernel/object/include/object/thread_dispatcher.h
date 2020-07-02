@@ -76,7 +76,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
                             zx_rights_t* out_rights);
   ~ThreadDispatcher();
 
-  static ThreadDispatcher* GetCurrent() { return Thread::Current::Get()->user_thread_.get(); }
+  static ThreadDispatcher* GetCurrent() { return Thread::Current::Get()->user_thread(); }
   static void ExitCurrent() __NO_RETURN { Thread::Current::Exit(0); }
 
   // Dispatcher implementation.

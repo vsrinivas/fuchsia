@@ -408,7 +408,7 @@ bool set_migrate_ready_threads_test() {
       cpu_num_t curr_cpu;
       {
         Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-        state = worker->state_;
+        state = worker->state();
         curr_cpu = worker->scheduler_state().curr_cpu();
       }
       ASSERT_EQ(state, THREAD_READY, "The worker was in the wrong state.");

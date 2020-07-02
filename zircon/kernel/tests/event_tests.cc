@@ -61,7 +61,7 @@ static bool event_signal_result_after_wait_test() {
       // Check if the waiter thread is in the blocked state, indicating that the event
       // has latched.
       Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-      if (waiter->state_ == THREAD_BLOCKED) {
+      if (waiter->state() == THREAD_BLOCKED) {
         break;
       }
     }

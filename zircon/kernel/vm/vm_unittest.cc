@@ -910,7 +910,7 @@ static bool multiple_regions_test() {
   fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
   ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
 
-  VmAspace* old_aspace = Thread::Current::Get()->aspace_;
+  VmAspace* old_aspace = Thread::Current::Get()->aspace();
   vmm_set_active_aspace(aspace.get());
 
   // allocate region 0
@@ -1115,8 +1115,7 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   mem->vmo()->HarvestAccessedBits();
 
   // Read from the VMO into the mapping that has been harvested.
-  status = vmo->ReadUser(Thread::Current::Get()->aspace_, mem->user_out<char>(),
-                         0, sizeof(char));
+  status = vmo->ReadUser(Thread::Current::Get()->aspace(), mem->user_out<char>(), 0, sizeof(char));
   ASSERT_EQ(status, ZX_OK);
 
   END_TEST;

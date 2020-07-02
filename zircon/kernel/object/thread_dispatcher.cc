@@ -168,8 +168,8 @@ zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspend
     suspend_count_++;
 
   // Update the core_thread_ information.
-  core_thread_->user_tid_ = get_koid();
-  core_thread_->user_pid_ = process_->get_koid();
+  core_thread_->set_user_tid(get_koid());
+  core_thread_->set_user_pid(process_->get_koid());
 
   // Attach the ThreadDispatcher to the core thread. This takes out an additional
   // reference on the ThreadDispatcher.

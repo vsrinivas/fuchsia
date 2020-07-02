@@ -7,7 +7,6 @@
 #include <debug.h>
 #include <err.h>
 #include <lib/cmdline.h>
-#include <ktl/atomic.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
@@ -19,6 +18,7 @@
 #include <arch/user_copy.h>
 #include <fbl/alloc_checker.h>
 #include <hypervisor/ktrace.h>
+#include <ktl/atomic.h>
 #include <ktl/iterator.h>
 #include <lk/init.h>
 #include <object/thread_dispatcher.h>
@@ -308,7 +308,7 @@ void* ktrace_open(uint32_t tag, uint64_t ts) {
   hdr->tag = tag;
   hdr->tid = KTRACE_FLAGS(tag) & KTRACE_FLAGS_CPU
                  ? arch_curr_cpu_num()
-                 : static_cast<uint32_t>(Thread::Current::Get()->user_tid_);
+                 : static_cast<uint32_t>(Thread::Current::Get()->user_tid());
   return hdr + 1;
 }
 

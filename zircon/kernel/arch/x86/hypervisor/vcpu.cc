@@ -682,7 +682,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
   Thread* thread = Thread::Current::Get();
-  if ((thread->flags_ & THREAD_FLAG_VCPU) != 0) {
+  if (thread->vcpu()) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -749,7 +749,7 @@ Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
       thread_(thread),
       last_cpu_(thread->LastCpu()),
       vmx_state_(/* zero-init */) {
-  thread->flags_ |= THREAD_FLAG_VCPU;
+  thread->set_vcpu(true);
   // We have to disable thread safety analysis because it's not smart enough to
   // realize that SetMigrateFn will always be called with the ThreadLock.
   thread->SetMigrateFn([this](Thread* thread, auto stage)
@@ -765,7 +765,7 @@ Vcpu::~Vcpu() {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     Thread* thread = thread_.load();
     if (thread != nullptr) {
-      thread->flags_ &= ~THREAD_FLAG_VCPU;
+      thread->set_vcpu(false);
       // Clear the migration function, so that |thread_| does not reference
       // |this| after destruction of the VCPU.
       thread->SetMigrateFnLocked(nullptr);

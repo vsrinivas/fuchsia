@@ -181,7 +181,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
   Thread* thread = Thread::Current::Get();
-  if ((thread->flags_ & THREAD_FLAG_VCPU) != 0) {
+  if (thread->vcpu()) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -220,7 +220,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
 Vcpu::Vcpu(Guest* guest, uint8_t vpid, Thread* thread)
     : guest_(guest), vpid_(vpid), thread_(thread), last_cpu_(thread->LastCpu()) {
-  thread->flags_ |= THREAD_FLAG_VCPU;
+  thread->set_vcpu(true);
   // We have to disable thread safety analysis because it's not smart enough to
   // realize that SetMigrateFn will always be called with the ThreadLock.
   thread->SetMigrateFn([this](Thread* thread, auto stage)
@@ -234,7 +234,7 @@ Vcpu::~Vcpu() {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     Thread* thread = thread_.load();
     if (thread != nullptr) {
-      thread->flags_ &= ~THREAD_FLAG_VCPU;
+      thread->set_vcpu(false);
       // Clear the migration function, so that |thread_| does not reference
       // |this| after destruction of the VCPU.
       thread->SetMigrateFnLocked(nullptr);
@@ -293,7 +293,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       // to the guest.
       ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(ich_state->misr),
                        guest_state->system_state.elr_el2);
-      status = current_thread->signals_ & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
+      status = current_thread->signals() & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
       GUEST_STATS_INC(interrupts);
     } else if (status == ZX_OK) {
       status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),

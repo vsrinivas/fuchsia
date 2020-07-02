@@ -103,7 +103,7 @@ bool WaitQueue::UpdatePriority(int old_prio) TA_REQ(thread_lock) {
 void WaitQueue::Dequeue(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
   DEBUG_ASSERT(t != nullptr);
   DEBUG_ASSERT(t->wait_queue_state().InWaitQueue());
-  DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
+  DEBUG_ASSERT(t->state() == THREAD_BLOCKED || t->state() == THREAD_BLOCKED_READ_LOCK);
   DEBUG_ASSERT(t->wait_queue_state().blocking_wait_queue_ == this);
 
   collection_.Remove(t);
@@ -266,7 +266,7 @@ zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
   Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT_MAGIC_CHECK(this);
-  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
   DEBUG_ASSERT(arch_ints_disabled());
 
   // Any time a thread blocks, it should be holding exactly one spinlock, and it
@@ -376,7 +376,7 @@ void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
 
   DEBUG_ASSERT(t != nullptr);
   DEBUG_ASSERT(t->wait_queue_state().InWaitQueue());
-  DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
+  DEBUG_ASSERT(t->state() == THREAD_BLOCKED || t->state() == THREAD_BLOCKED_READ_LOCK);
   DEBUG_ASSERT(t->wait_queue_state().blocking_wait_queue_ == source);
   DEBUG_ASSERT(source->collection_.Count() > 0);
 
@@ -486,7 +486,7 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
 
-  if (t->state_ != THREAD_BLOCKED && t->state_ != THREAD_BLOCKED_READ_LOCK) {
+  if (t->state() != THREAD_BLOCKED && t->state() != THREAD_BLOCKED_READ_LOCK) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -514,7 +514,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   t->canary().Assert();
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
-  DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
+  DEBUG_ASSERT(t->state() == THREAD_BLOCKED || t->state() == THREAD_BLOCKED_READ_LOCK);
 
   DEBUG_ASSERT(t->wait_queue_state().blocking_wait_queue_ == this);
   DEBUG_ASSERT_MAGIC_CHECK(this);

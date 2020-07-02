@@ -55,10 +55,10 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
     return ZX_ERR_TIMED_OUT;
   }
 
-  if (interruptible == Interruptible::Yes && (unlikely(current_thread->signals_ & ~signal_mask))) {
-    if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
+  if (interruptible == Interruptible::Yes && (unlikely(current_thread->signals() & ~signal_mask))) {
+    if (current_thread->signals() & THREAD_SIGNAL_KILL) {
       return ZX_ERR_INTERNAL_INTR_KILLED;
-    } else if (current_thread->signals_ & THREAD_SIGNAL_SUSPEND) {
+    } else if (current_thread->signals() & THREAD_SIGNAL_SUSPEND) {
       return ZX_ERR_INTERNAL_INTR_RETRY;
     }
   }
@@ -68,8 +68,11 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
   state.interruptible_ = interruptible;
 
   collection_.Insert(current_thread);
-  current_thread->state_ =
-      (reason == ResourceOwnership::Normal) ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
+  if (reason == ResourceOwnership::Normal) {
+    current_thread->set_blocked();
+  } else {
+    current_thread->set_blocked_read_lock();
+  }
   state.blocking_wait_queue_ = this;
   state.blocked_status_ = ZX_OK;
 
