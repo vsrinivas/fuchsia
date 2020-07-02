@@ -3,10 +3,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from __future__ import print_function
+
 import argparse
 import os
 import sys
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -16,7 +17,7 @@ def main():
 
     # Print out one line for each file in the directory
     for f in os.listdir(args.dir):
-        print os.path.abspath(os.path.join(args.dir, f))
+        print(os.path.abspath(os.path.join(args.dir, f)))
 
 
 if __name__ == '__main__':
