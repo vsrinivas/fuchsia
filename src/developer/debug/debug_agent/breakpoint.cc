@@ -93,8 +93,8 @@ void LogSetSettings(debug_ipc::FileLineFunction location, const Breakpoint* bp) 
       ss << ", T: " << location.thread_koid;
 
     // Print the actual location.
-    ss << ", 0x" << std::hex << location.address << "] ";
-    ss << ", range: " << location.address_range.ToString();
+    ss << "], addr: 0x" << std::hex << location.address << ", range: "
+       << location.address_range.ToString();
   }
 
   DEBUG_LOG_WITH_LOCATION(Breakpoint, location) << Preamble(bp) << ss.str();
