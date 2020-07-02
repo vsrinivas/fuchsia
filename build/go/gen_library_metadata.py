@@ -33,14 +33,14 @@ def get_sources(dep_files, extra_sources=None):
         sources.update(extra_sources)
     for dep in dep_files:
         with open(dep, 'r') as dep_file:
-            for name, path in json.load(dep_file).iteritems():
+            for name, path in json.load(dep_file).items():
                 sources.add(Source(name, path, dep))
 
     # Verify duplicates.
     sources_by_name = {}
     for src in sources:
         sources_by_name.setdefault(src.name, []).append(src)
-    for name, srcs in sources_by_name.iteritems():
+    for name, srcs in sources_by_name.items():
         if len(srcs) <= 1:
             continue
         print('Error: source "%s" has multiple paths.' % name)

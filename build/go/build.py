@@ -132,7 +132,7 @@ def main():
 
     if args.go_dep_files:
         # Create a gopath for the packages dependency tree
-        for dst, src in get_sources(args.go_dep_files).items():
+        for dst, src in list(get_sources(args.go_dep_files).items()):
             dstdir = os.path.join(project_path, 'src', os.path.dirname(dst))
             try:
                 os.makedirs(dstdir)
