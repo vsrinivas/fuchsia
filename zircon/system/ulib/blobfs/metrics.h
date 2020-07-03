@@ -94,8 +94,12 @@ class BlobfsMetrics {
   // Flushes the metrics to the cobalt client and schedules itself to flush again.
   void ScheduleMetricFlush();
 
-  // ALLOCATION STATS
+  // Inspect instrumentation data, with an initial size of the current histogram size.
+  inspect::Inspector inspector_ = inspect::Inspector(
+      inspect::InspectSettings{.maximum_size = 2 * fs_metrics::Histograms::Size()});
+  inspect::Node& root_ = inspector_.GetRoot();
 
+  // ALLOCATION STATS
   // Created with external-facing "Create".
   uint64_t blobs_created_ = 0;
   // Measured by space allocated with "Truncate".
@@ -103,7 +107,6 @@ class BlobfsMetrics {
   zx::ticks total_allocation_time_ticks_ = {};
 
   // WRITEBACK STATS
-
   // Measurements, from the client's perspective, of writing and enqueing
   // data that will later be written to disk.
   uint64_t data_bytes_written_ = 0;
@@ -112,10 +115,38 @@ class BlobfsMetrics {
   zx::ticks total_merkle_generation_time_ticks_ = {};
 
   // LOOKUP STATS
-
   // Opened via "LookupBlob".
   uint64_t blobs_opened_ = 0;
   uint64_t blobs_opened_total_size_ = 0;
+
+  // INSPECT NODES AND PROPERTIES
+  inspect::Node allocation_stats_ = root_.CreateChild("allocation_stats");
+  inspect::Node writeback_stats_ = root_.CreateChild("writeback_stats");
+  inspect::Node lookup_stats_ = root_.CreateChild("lookup_stats");
+
+  // Allocation properties
+  inspect::UintProperty blobs_created_property_ =
+      allocation_stats_.CreateUint("blobs_created", blobs_created_);
+  inspect::UintProperty blobs_created_total_size_property_ =
+      allocation_stats_.CreateUint("blobs_created_total_size", blobs_created_total_size_);
+  inspect::IntProperty total_allocation_time_ticks_property_ = allocation_stats_.CreateInt(
+      "total_allocation_time_ticks", total_allocation_time_ticks_.get());
+
+  // Writeback properties
+  inspect::UintProperty data_bytes_written_property_ =
+      writeback_stats_.CreateUint("data_bytes_written", data_bytes_written_);
+  inspect::UintProperty merkle_bytes_written_property_ =
+      writeback_stats_.CreateUint("merkle_bytes_written", merkle_bytes_written_);
+  inspect::IntProperty total_write_enqueue_time_ticks_property_ = writeback_stats_.CreateInt(
+      "total_write_enqueue_time_ticks", total_write_enqueue_time_ticks_.get());
+  inspect::IntProperty total_merkle_generation_time_ticks_property_ = writeback_stats_.CreateInt(
+      "total_merkle_generation_time_ticks", total_merkle_generation_time_ticks_.get());
+
+  // Lookup properties
+  inspect::UintProperty blobs_opened_property_ =
+      lookup_stats_.CreateUint("blobs_opened", blobs_opened_);
+  inspect::UintProperty blobs_opened_total_size_property_ =
+      lookup_stats_.CreateUint("blobs_opened_total_size", blobs_opened_total_size_);
 
   // READ STATS
   ReadMetrics paged_read_metrics_, unpaged_read_metrics_;
@@ -128,10 +159,6 @@ class BlobfsMetrics {
   // FVM STATS
   // TODO(smklein)
 
-  // Inspect instrumentation data, with an initial size of the current histogram size.
-  inspect::Inspector inspector_ = inspect::Inspector(
-      inspect::InspectSettings{.maximum_size = 2 * fs_metrics::Histograms::Size()});
-  inspect::Node& root_ = inspector_.GetRoot();
   fs_metrics::Histograms histograms_ = fs_metrics::Histograms(&root_);
 
   // local_storage project ID as defined in cobalt-analytics projects.yaml.

@@ -133,11 +133,16 @@ void BlobfsMetrics::UpdateAllocation(uint64_t size_data, const fs::Duration& dur
   blobs_created_++;
   blobs_created_total_size_ += size_data;
   total_allocation_time_ticks_ += duration;
+  blobs_created_property_.Add(1);
+  blobs_created_total_size_property_.Add(size_data);
+  total_allocation_time_ticks_property_.Add(duration.get());
 }
 
 void BlobfsMetrics::UpdateLookup(uint64_t size) {
   blobs_opened_++;
   blobs_opened_total_size_ += size;
+  blobs_opened_property_.Add(1);
+  blobs_opened_total_size_property_.Add(size);
 }
 
 void BlobfsMetrics::UpdateClientWrite(uint64_t data_size, uint64_t merkle_size,
@@ -147,6 +152,10 @@ void BlobfsMetrics::UpdateClientWrite(uint64_t data_size, uint64_t merkle_size,
   merkle_bytes_written_ += merkle_size;
   total_write_enqueue_time_ticks_ += enqueue_duration;
   total_merkle_generation_time_ticks_ += generate_duration;
+  data_bytes_written_property_.Add(data_size);
+  merkle_bytes_written_property_.Add(merkle_size);
+  total_write_enqueue_time_ticks_property_.Add(enqueue_duration.get());
+  total_merkle_generation_time_ticks_property_.Add(generate_duration.get());
 }
 
 void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode& inode) {

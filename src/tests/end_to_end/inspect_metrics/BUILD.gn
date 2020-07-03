@@ -5,6 +5,25 @@
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
+dart_test("blobfs_metrics_test") {
+  sources = [ "blobfs_metrics_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    nuc_env,
+    emu_env,
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+    },
+  ]
+}
+
 dart_test("inspect_metrics_test") {
   sources = [ "inspect_metrics_test.dart" ]
 
@@ -67,6 +86,7 @@ group("test") {
 
   deps = [
     ":archivist_reader_test($host_toolchain)",
+    ":blobfs_metrics_test($host_toolchain)",
     ":inspect_metrics_emulator_test($host_toolchain)",
     ":inspect_metrics_test($host_toolchain)",
   ]

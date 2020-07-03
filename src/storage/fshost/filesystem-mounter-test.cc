@@ -7,9 +7,9 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+#include <blobfs/mount.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <zxtest/zxtest.h>
-#include <blobfs/mount.h>
 
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
