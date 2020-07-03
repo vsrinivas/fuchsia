@@ -211,7 +211,7 @@ zx_status_t Watchpoint::Install(DebuggedThread* thread) {
   auto suspend_token = thread->RefCountedSuspend(true);
 
   // Do the actual installation.
-  auto result = arch_provider_->InstallWatchpoint(type_, thread->handle(), range_);
+  auto result = thread->thread_handle().InstallWatchpoint(type_, range_);
   if (result.status != ZX_OK) {
     Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), result.status);
     return result.status;
@@ -257,8 +257,7 @@ zx_status_t Watchpoint::Uninstall(DebuggedThread* thread) {
 
   auto suspend_token = thread->RefCountedSuspend(true);
 
-  zx_status_t status = arch_provider_->UninstallWatchpoint(thread->handle(), range_);
-  if (status != ZX_OK) {
+  if (zx_status_t status = thread->thread_handle().UninstallWatchpoint(range_); status != ZX_OK) {
     Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), status);
     return status;
   }

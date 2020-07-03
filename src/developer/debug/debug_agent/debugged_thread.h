@@ -12,6 +12,7 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/thread_exception.h"
+#include "src/developer/debug/debug_agent/thread_handle.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -67,7 +68,7 @@ class DebuggedThread {
   struct CreateInfo {
     DebuggedProcess* process = nullptr;
     zx_koid_t koid = 0;
-    zx::thread handle;
+    std::unique_ptr<ThreadHandle> handle;
     ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
 
     std::unique_ptr<ThreadException> exception;  // Optional.
@@ -82,8 +83,12 @@ class DebuggedThread {
 
   zx_koid_t koid() const { return koid_; }
 
-  zx::thread& handle() { return handle_; }
-  const zx::thread& handle() const { return handle_; }
+  const ThreadHandle& thread_handle() const { return *thread_handle_; }
+  ThreadHandle& thread_handle() { return *thread_handle_; }
+
+  // TODO(brettw) remove this and have all callers use thread_handle().
+  zx::thread& handle() { return thread_handle_->GetNativeHandle(); }
+  const zx::thread& handle() const { return thread_handle_->GetNativeHandle(); }
 
   ThreadException* exception_handle() { return exception_handle_.get(); }
   const ThreadException* exception_handle() const { return exception_handle_.get(); }
@@ -151,13 +156,11 @@ class DebuggedThread {
                                 const zx_thread_state_general_regs* optional_regs,
                                 debug_ipc::ThreadRecord* record) const;
 
-  // Register reading and writing. The "write" command also has an output parameter which includes a
-  // validated version of all registers re-read (and possibly others if they're known) from the
-  // kernel after the write.
-  void ReadRegisters(const std::vector<debug_ipc::RegisterCategory>& cats_to_get,
-                     std::vector<debug_ipc::Register>* out) const;
-  zx_status_t WriteRegisters(const std::vector<debug_ipc::Register>& regs,
-                             std::vector<debug_ipc::Register>* written);
+  // Register reading and writing. The "write" command also returns the contents of the register
+  // categories written do.
+  std::vector<debug_ipc::Register> ReadRegisters(
+      const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const;
+  std::vector<debug_ipc::Register> WriteRegisters(const std::vector<debug_ipc::Register>& regs);
 
   // Sends a notification to the client about the state of this thread.
   void SendThreadNotification() const;
@@ -183,7 +186,7 @@ class DebuggedThread {
   virtual void DecreaseSuspend();
 
   zx_koid_t koid_;
-  zx::thread handle_;
+  std::unique_ptr<ThreadHandle> thread_handle_;
 
  private:
   enum class OnStop {

@@ -14,26 +14,6 @@
 namespace debug_agent {
 namespace {
 
-class MockBreakpointArchProvider : public MockArchProvider {
- public:
-  zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
-    installs_.push_back({thread.get(), address});
-    return ZX_OK;
-  }
-
-  zx_status_t UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
-    uninstalls_.push_back({thread.get(), address});
-    return ZX_OK;
-  }
-
-  const std::vector<std::pair<zx_koid_t, uint64_t>>& installs() const { return installs_; }
-  const std::vector<std::pair<zx_koid_t, uint64_t>>& uninstalls() const { return uninstalls_; }
-
- private:
-  std::vector<std::pair<zx_koid_t, uint64_t>> installs_;
-  std::vector<std::pair<zx_koid_t, uint64_t>> uninstalls_;
-};
-
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
   zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
@@ -77,7 +57,7 @@ constexpr uint64_t kAddress = 0x1234;
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
-  auto arch_provider = std::make_shared<MockBreakpointArchProvider>();
+  auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -100,10 +80,8 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_ZX_EQ(hw_breakpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  EXPECT_EQ(arch_provider->installs()[0].first, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[0].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 0u);
+  EXPECT_EQ(thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(thread1->mock_thread_handle().TotalBreakpointUninstallCalls(), 0u);
 
   // Binding again to the same breakpoint should fail.
 
@@ -117,10 +95,9 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 0u);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 1u);
-  EXPECT_EQ(arch_provider->uninstalls()[0].first, thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[0].second, kAddress);
+  // Same number of installs, now have uninstall for the address.
+  ASSERT_EQ(thread1->mock_thread_handle().TotalBreakpointInstallCalls(), 1u);
+  EXPECT_EQ(thread1->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
 
   // Registering again should add the breakpoint
 
@@ -128,10 +105,8 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 1u);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 2u);
-  EXPECT_EQ(arch_provider->installs()[1].first, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[1].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 1u);
+  EXPECT_EQ(thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 2u);
+  EXPECT_EQ(thread1->mock_thread_handle().TotalBreakpointUninstallCalls(), 1u);
 
   // Create two other threads
 
@@ -152,10 +127,8 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 2u);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid(), thread2->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 3u);
-  EXPECT_EQ(arch_provider->installs()[2].first, thread2->koid());
-  EXPECT_EQ(arch_provider->installs()[2].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 1u);
+  EXPECT_EQ(thread2->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(thread2->mock_thread_handle().TotalBreakpointUninstallCalls(), 0u);
 
   // Removing the first breakpoint should remove the first install.
   // Returning true means that there are more breakpoints registered.
@@ -164,10 +137,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 1u);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread2->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 3u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
-  EXPECT_EQ(arch_provider->uninstalls()[1].first, thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[1].second, kAddress);
+  EXPECT_EQ(thread1->mock_thread_handle().BreakpointUninstallCount(kAddress), 2u);
 
   // Add a location for another address to the already bound breakpoint.
   // Add a location to the already bound breakpoint.
@@ -181,10 +151,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_ZX_EQ(hw_breakpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread2->koid(), thread3->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 4u);
-  EXPECT_EQ(arch_provider->installs()[3].first, thread3->koid());
-  EXPECT_EQ(arch_provider->installs()[3].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
+  EXPECT_EQ(thread3->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
 
   // Create moar threads.
 
@@ -209,16 +176,10 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid(), thread2->koid(), thread3->koid(),
                                             thread4->koid(), thread5->koid(), thread6->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 8u);
-  EXPECT_EQ(arch_provider->installs()[4].first, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[4].second, kAddress);
-  EXPECT_EQ(arch_provider->installs()[5].first, thread4->koid());
-  EXPECT_EQ(arch_provider->installs()[5].second, kAddress);
-  EXPECT_EQ(arch_provider->installs()[6].first, thread5->koid());
-  EXPECT_EQ(arch_provider->installs()[6].second, kAddress);
-  EXPECT_EQ(arch_provider->installs()[7].first, thread6->koid());
-  EXPECT_EQ(arch_provider->installs()[7].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
+  EXPECT_EQ(thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 3u);
+  EXPECT_EQ(thread4->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(thread5->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(thread6->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
 
   // Removing the other breakpoint should not remove installs.
 
@@ -228,9 +189,6 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid(), thread2->koid(), thread3->koid(),
                                             thread4->koid(), thread5->koid(), thread6->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 8u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
-
   // Removing the last breakpoint should remove all the installations.
   // Returns false because there are no more registered breakpoints.
 
@@ -239,24 +197,16 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 8u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 8u);
-  EXPECT_EQ(arch_provider->uninstalls()[2].first, thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[2].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls()[3].first, thread2->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[3].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls()[4].first, thread3->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[4].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls()[5].first, thread4->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[5].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls()[6].first, thread5->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[6].second, kAddress);
-  EXPECT_EQ(arch_provider->uninstalls()[7].first, thread6->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[7].second, kAddress);
+  EXPECT_EQ(thread1->mock_thread_handle().BreakpointUninstallCount(kAddress), 3u);
+  EXPECT_EQ(thread2->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
+  EXPECT_EQ(thread3->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
+  EXPECT_EQ(thread4->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
+  EXPECT_EQ(thread5->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
+  EXPECT_EQ(thread6->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
 }
 
 TEST(HardwareBreakpoint, StepSimple) {
-  auto arch_provider = std::make_shared<MockBreakpointArchProvider>();
+  auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t process_koid = 0x1234;
@@ -284,10 +234,8 @@ TEST(HardwareBreakpoint, StepSimple) {
   ASSERT_ZX_EQ(bp.Init(), ZX_OK);
 
   // Should've installed the breakpoint.
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  EXPECT_EQ(arch_provider->installs()[0].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[0].second, kAddress);
-  ASSERT_EQ(arch_provider->uninstalls().size(), 0u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().TotalBreakpointUninstallCalls(), 0u);
 
   // Hit the breakpoint ----------------------------------------------------------------------------
 
@@ -303,11 +251,8 @@ TEST(HardwareBreakpoint, StepSimple) {
   ASSERT_TRUE(mock_thread1->stepping_over_breakpoint());
 
   // Breakpoint should've been uninstalled for this thread.
-
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  ASSERT_EQ(arch_provider->uninstalls().size(), 1u);
-  EXPECT_EQ(arch_provider->uninstalls()[0].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[0].second, kAddress);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().TotalBreakpointInstallCalls(), 1u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
 
   // End the step over -----------------------------------------------------------------------------
 
@@ -320,14 +265,12 @@ TEST(HardwareBreakpoint, StepSimple) {
   ASSERT_FALSE(mock_thread1->stepping_over_breakpoint());
 
   // It should've reinstalled the breakpoint for this thread.
-  ASSERT_EQ(arch_provider->installs().size(), 2u);
-  EXPECT_EQ(arch_provider->installs()[1].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[1].second, kAddress);
-  ASSERT_EQ(arch_provider->uninstalls().size(), 1u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 2u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
 }
 
 TEST(HardwareBreakpoint, MultipleSteps) {
-  auto arch_provider = std::make_shared<MockBreakpointArchProvider>();
+  auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t process_koid = 0x1234;
@@ -359,14 +302,12 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   ASSERT_ZX_EQ(bp.Init(), ZX_OK);
 
   // Should've installed the breakpoint.
-  ASSERT_EQ(arch_provider->installs().size(), 3u);
-  EXPECT_EQ(arch_provider->installs()[0].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[0].second, kAddress);
-  EXPECT_EQ(arch_provider->installs()[1].first, mock_thread2->koid());
-  EXPECT_EQ(arch_provider->installs()[1].second, kAddress);
-  EXPECT_EQ(arch_provider->installs()[2].first, mock_thread3->koid());
-  EXPECT_EQ(arch_provider->installs()[2].second, kAddress);
-  ASSERT_EQ(arch_provider->uninstalls().size(), 0u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(mock_thread2->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(mock_thread3->mock_thread_handle().BreakpointInstallCount(kAddress), 1u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().TotalBreakpointUninstallCalls(), 0u);
+  EXPECT_EQ(mock_thread2->mock_thread_handle().TotalBreakpointUninstallCalls(), 0u);
+  EXPECT_EQ(mock_thread3->mock_thread_handle().TotalBreakpointUninstallCalls(), 0u);
 
   // Hit the breakpoint ----------------------------------------------------------------------------
 
@@ -383,11 +324,8 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
 
   // Breakpoint should've been uninstalled for this thread.
-
-  ASSERT_EQ(arch_provider->installs().size(), 3u);
-  ASSERT_EQ(arch_provider->uninstalls().size(), 1u);
-  EXPECT_EQ(arch_provider->uninstalls()[0].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[0].second, kAddress);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().TotalBreakpointInstallCalls(), 1u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
 
   // Hit the breakpoint two more times -------------------------------------------------------------
 
@@ -415,14 +353,10 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
 
   // It should've reinstalled the breakpoint for this thread.
-  ASSERT_EQ(arch_provider->installs().size(), 4u);
-  EXPECT_EQ(arch_provider->installs()[3].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[3].second, kAddress);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 2u);
 
   // It should've uninstalled for the second.
-  ASSERT_EQ(arch_provider->uninstalls().size(), 2u);
-  EXPECT_EQ(arch_provider->uninstalls()[1].first, mock_thread2->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[1].second, kAddress);
+  EXPECT_EQ(mock_thread2->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
 
   // First thread hits again! ----------------------------------------------------------------------
 
@@ -445,14 +379,10 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   ASSERT_TRUE(mock_thread3->stepping_over_breakpoint());
 
   // It should've reinstalled the breakpoint for this thread.
-  ASSERT_EQ(arch_provider->installs().size(), 5u);
-  EXPECT_EQ(arch_provider->installs()[4].first, mock_thread2->koid());
-  EXPECT_EQ(arch_provider->installs()[4].second, kAddress);
+  EXPECT_EQ(mock_thread2->mock_thread_handle().BreakpointInstallCount(kAddress), 2u);
 
   // It should've uninstalled for the second.
-  ASSERT_EQ(arch_provider->uninstalls().size(), 3u);
-  EXPECT_EQ(arch_provider->uninstalls()[2].first, mock_thread3->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[2].second, kAddress);
+  EXPECT_EQ(mock_thread3->mock_thread_handle().BreakpointUninstallCount(kAddress), 1u);
 
   // Third thread ends -----------------------------------------------------------------------------
 
@@ -468,14 +398,10 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
 
   // It should've reinstalled the breakpoint for this thread.
-  ASSERT_EQ(arch_provider->installs().size(), 6u);
-  EXPECT_EQ(arch_provider->installs()[5].first, mock_thread3->koid());
-  EXPECT_EQ(arch_provider->installs()[5].second, kAddress);
+  EXPECT_EQ(mock_thread2->mock_thread_handle().BreakpointInstallCount(kAddress), 2u);
 
   // It should've uninstalled for the second.
-  ASSERT_EQ(arch_provider->uninstalls().size(), 4u);
-  EXPECT_EQ(arch_provider->uninstalls()[3].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[3].second, kAddress);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointUninstallCount(kAddress), 2u);
 
   // First thread ends again -----------------------------------------------------------------------
 
@@ -489,11 +415,7 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
 
   // It should've reinstalled the breakpoint for this thread.
-  ASSERT_EQ(arch_provider->installs().size(), 7u);
-  EXPECT_EQ(arch_provider->installs()[6].first, mock_thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[6].second, kAddress);
-
-  ASSERT_EQ(arch_provider->uninstalls().size(), 4u);
+  EXPECT_EQ(mock_thread1->mock_thread_handle().BreakpointInstallCount(kAddress), 3u);
 }
 
 }  // namespace

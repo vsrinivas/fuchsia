@@ -36,12 +36,6 @@ namespace debug_agent {
 
 namespace {
 
-bool IsBlockedOnException(const zx::thread& thread) {
-  zx_info_thread info;
-  return thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) == ZX_OK &&
-         info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION;
-}
-
 // Used to have better context upon reading the debug logs.
 std::string ThreadPreamble(const DebuggedThread* thread) {
   return fxl::StringPrintf("[Pr: %lu (%s), T: %lu] ", thread->process()->koid(),
@@ -125,7 +119,7 @@ DebuggedThread::SuspendToken::~SuspendToken() {
 
 DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info)
     : koid_(create_info.koid),
-      handle_(std::move(create_info.handle)),
+      thread_handle_(std::move(create_info.handle)),
       debug_agent_(debug_agent),
       process_(create_info.process),
       exception_handle_(std::move(create_info.exception)),
@@ -157,10 +151,10 @@ void DebuggedThread::OnException(std::unique_ptr<ThreadException> exception_hand
 
   debug_ipc::NotifyException exception;
   exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
-  arch_provider_->FillExceptionRecord(handle_, &exception.exception);
+  arch_provider_->FillExceptionRecord(thread_handle_->GetNativeHandle(), &exception.exception);
 
   zx_thread_state_general_regs regs;
-  zx_status_t status = arch_provider_->ReadGeneralState(handle_, &regs);
+  zx_status_t status = arch_provider_->ReadGeneralState(thread_handle_->GetNativeHandle(), &regs);
   if (status != ZX_OK) {
     // This can happen, for example, if the thread was killed during the time the exception message
     // was waiting to be delivered to us.
@@ -408,10 +402,7 @@ zx::time DebuggedThread::DefaultSuspendDeadline() {
 
 bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   // The thread could already be suspended. This bypasses a wait cycle in that case.
-  zx_info_thread info;
-  if (arch_provider_->GetInfo(handle_, ZX_INFO_THREAD, &info, sizeof(info)) != ZX_OK)
-    return false;  // Error getting thread info, probably thread is dead.
-  if (info.state == ZX_THREAD_STATE_SUSPENDED)
+  if (thread_handle_->GetState() == ZX_THREAD_STATE_SUSPENDED)
     return true;  // Already suspended, success.
 
   // This function is complex because a thread in an exception state can't be suspended (ZX-3772).
@@ -433,11 +424,12 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   zx_status_t status = ZX_OK;
   do {
     // Before waiting, check the thread state from the kernel because of queue described above.
-    if (IsBlockedOnException(handle_))
+    if (thread_handle_->GetState() == ZX_THREAD_STATE_BLOCKED_EXCEPTION)
       return true;
 
     zx_signals_t observed;
-    status = handle_.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(poll_time), &observed);
+    status = thread_handle_->GetNativeHandle().wait_one(ZX_THREAD_SUSPENDED,
+                                                        zx::deadline_after(poll_time), &observed);
     if (status == ZX_OK && (observed & ZX_THREAD_SUSPENDED))
       return true;
 
@@ -450,22 +442,13 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
 void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
                                       const zx_thread_state_general_regs* optional_regs,
                                       debug_ipc::ThreadRecord* record) const {
-  record->process_koid = process_->koid();
-  record->thread_koid = koid();
-  record->name = object_provider_->NameForObject(handle_);
+  *record = thread_handle_->GetThreadRecord();
 
-  // State (running, blocked, etc.).
-  zx_info_thread info;
-  if (arch_provider_->GetInfo(handle_, ZX_INFO_THREAD, &info, sizeof(info)) == ZX_OK) {
-    record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
-  } else {
-    FX_NOTREACHED();
-    record->state = debug_ipc::ThreadRecord::State::kDead;
-  }
-
-  // The registers are available when suspended or blocked in an exception.
-  if ((info.state == ZX_THREAD_STATE_SUSPENDED ||
-       info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION) &&
+  // Unwind the stack if requested. This requires the registers which are available when suspended
+  // or blocked in an exception.
+  if ((record->state == debug_ipc::ThreadRecord::State::kSuspended ||
+       (record->state == debug_ipc::ThreadRecord::State::kBlocked &&
+        record->blocked_reason == debug_ipc::ThreadRecord::BlockedReason::kException)) &&
       stack_amount != debug_ipc::ThreadRecord::StackAmount::kNone) {
     // Only record this when we actually attempt to query the stack.
     record->stack_amount = stack_amount;
@@ -474,7 +457,8 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
     zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
     zx_thread_state_general_regs* regs = nullptr;
     if (!optional_regs) {
-      if (arch_provider_->ReadGeneralState(handle_, &queried_regs) == ZX_OK)
+      if (arch_provider_->ReadGeneralState(thread_handle_->GetNativeHandle(), &queried_regs) ==
+          ZX_OK)
         regs = &queried_regs;
     } else {
       // We don't change the values here but *InRegs below returns mutable
@@ -488,78 +472,43 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(arch_provider_.get(), process_->handle(), process_->dl_debug_addr(), handle_,
-                  *regs, max_stack_depth, &record->frames);
+      UnwindStack(arch_provider_.get(), process_->handle(), process_->dl_debug_addr(),
+                  thread_handle_->GetNativeHandle(), *regs, max_stack_depth, &record->frames);
     }
   } else {
     // Didn't bother querying the stack.
     record->stack_amount = debug_ipc::ThreadRecord::StackAmount::kNone;
-    record->frames.clear();
   }
 }
 
-void DebuggedThread::ReadRegisters(const std::vector<debug_ipc::RegisterCategory>& cats_to_get,
-                                   std::vector<debug_ipc::Register>* out) const {
-  out->clear();
-  for (const auto& cat_type : cats_to_get) {
-    zx_status_t status = arch_provider_->ReadRegisters(cat_type, handle_, out);
-    if (status != ZX_OK) {
-      DEBUG_LOG(Thread) << "Could not get register state for category: "
-                        << debug_ipc::RegisterCategoryToString(cat_type);
-    }
-  }
+std::vector<debug_ipc::Register> DebuggedThread::ReadRegisters(
+    const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
+  return thread_handle_->ReadRegisters(cats_to_get);
 }
 
-zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register>& regs,
-                                           std::vector<debug_ipc::Register>* written) {
-  bool rip_change = false;
-  debug_ipc::RegisterID rip_id =
-      GetSpecialRegisterID(arch_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP);
+std::vector<debug_ipc::Register> DebuggedThread::WriteRegisters(
+    const std::vector<debug_ipc::Register>& regs) {
+  std::vector<debug_ipc::Register> written = thread_handle_->WriteRegisters(regs);
 
-  // Figure out which registers will change.
-  std::map<debug_ipc::RegisterCategory, std::vector<debug_ipc::Register>> categories;
-  for (const debug_ipc::Register& reg : regs) {
-    auto cat_type = debug_ipc::RegisterIDToCategory(reg.id);
-    if (cat_type == debug_ipc::RegisterCategory::kNone) {
-      FX_LOGS(WARNING) << "Attempting to change register without category: "
-                       << RegisterIDToString(reg.id);
-      continue;
-    }
-
-    // We are changing the RIP, meaning that we're not going to jump over a breakpoint.
-    if (reg.id == rip_id)
-      rip_change = true;
-
-    categories[cat_type].push_back(reg);
-  }
-
-  for (const auto& [cat_type, cat_regs] : categories) {
-    FX_DCHECK(cat_type != debug_ipc::RegisterCategory::kNone);
-    zx_status_t res = arch_provider_->WriteRegisters(cat_type, cat_regs, &handle_);
-    if (res != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not write category "
-                       << debug_ipc::RegisterCategoryToString(cat_type) << ": "
-                       << debug_ipc::ZxStatusToString(res);
-    }
-
-    res = arch_provider_->ReadRegisters(cat_type, handle_, written);
-    if (res != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not read category "
-                       << debug_ipc::RegisterCategoryToString(cat_type) << ": "
-                       << debug_ipc::ZxStatusToString(res);
-    }
-  }
-
-  // If the debug agent wrote to the thread IP directly, then current state is no longer valid.
+  // If we're updating the instruction pointer directly, current state is no longer valid.
   // Specifically, if we're currently on a breakpoint, we have to now know the fact that we're no
   // longer in a breakpoint.
   //
   // This is necessary to avoid the single-stepping logic that the thread does when resuming from a
   // breakpoint.
+  bool rip_change = false;
+  debug_ipc::RegisterID rip_id =
+      GetSpecialRegisterID(arch_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP);
+  for (const debug_ipc::Register& reg : regs) {
+    if (reg.id == rip_id) {
+      rip_change = true;
+      break;
+    }
+  }
   if (rip_change)
     current_breakpoint_ = nullptr;
 
-  return ZX_OK;
+  return written;
 }
 
 void DebuggedThread::SendThreadNotification() const {
@@ -614,7 +563,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       // the breakpoint instruction will never go away.
       *arch::IPInRegs(regs) =
           arch_provider_->NextInstructionForSoftwareExceptionAddress(*arch::IPInRegs(regs));
-      zx_status_t status = arch_provider_->WriteGeneralState(handle_, *regs);
+      zx_status_t status =
+          arch_provider_->WriteGeneralState(thread_handle_->GetNativeHandle(), *regs);
       if (status != ZX_OK) {
         fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
                 static_cast<int>(status));
@@ -657,7 +607,7 @@ void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_bre
   // from (after putting back the original instruction), and will be what the client wants to
   // display to the user.
   *arch::IPInRegs(regs) = process_breakpoint->address();
-  zx_status_t status = arch_provider_->WriteGeneralState(handle_, *regs);
+  zx_status_t status = arch_provider_->WriteGeneralState(thread_handle_->GetNativeHandle(), *regs);
   if (status != ZX_OK) {
     fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
             static_cast<int>(status));
@@ -709,7 +659,7 @@ void DebuggedThread::ResumeForRunMode() {
 }
 
 void DebuggedThread::SetSingleStep(bool single_step) {
-  arch_provider_->WriteSingleStep(handle_, single_step);
+  arch_provider_->WriteSingleStep(thread_handle_->GetNativeHandle(), single_step);
 }
 
 const char* DebuggedThread::ClientStateToString(ClientState client_state) {
@@ -731,7 +681,7 @@ void DebuggedThread::IncreaseSuspend() {
   if (ref_counted_suspend_token_.is_valid())
     return;
 
-  zx_status_t status = handle_.suspend(&ref_counted_suspend_token_);
+  zx_status_t status = thread_handle_->GetNativeHandle().suspend(&ref_counted_suspend_token_);
   if (status != ZX_OK) {
     DEBUG_LOG(Thread) << ThreadPreamble(this)
                       << "Could not suspend: " << zx_status_get_string(status);

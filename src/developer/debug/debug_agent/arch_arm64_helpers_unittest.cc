@@ -880,6 +880,91 @@ TEST(ArmHelpers_SettingWatchpoints, DifferentTypes) {
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, kWrite, kReadWrite}));
 }
 
+TEST(ArmHelpers, SetupRemoveWatchpoint) {
+  constexpr uint32_t kWatchpointCount = 4;
+  zx_thread_state_debug_regs_t regs = {};
+
+  const debug_ipc::AddressRange kRange1 = {0x100, 0x101};
+  const debug_ipc::AddressRange kRange2 = {0x100, 0x102};
+  const debug_ipc::AddressRange kRange3 = {0x100, 0x104};
+  const debug_ipc::AddressRange kRange4 = {0x100, 0x108};
+  const debug_ipc::AddressRange kRange5 = {0x100, 0x105};
+  const debug_ipc::AddressRange kRange6 = {0x200, 0x201};
+
+  auto install =
+      SetupWatchpoint(&regs, debug_ipc::BreakpointType::kWrite, kRange1, kWatchpointCount);
+  ASSERT_ZX_EQ(install.status, ZX_OK);
+  EXPECT_EQ(install.installed_range, kRange1);
+  EXPECT_EQ(install.slot, 0);
+
+  install = SetupWatchpoint(&regs, debug_ipc::BreakpointType::kWrite, kRange2, kWatchpointCount);
+  ASSERT_ZX_EQ(install.status, ZX_OK);
+  EXPECT_EQ(install.installed_range, kRange2);
+  EXPECT_EQ(install.slot, 1);
+  ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0, 0}));
+  ASSERT_TRUE(CheckEnabled(regs, {1, 1, 0, 0}));
+  ASSERT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
+  ASSERT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
+
+  install = SetupWatchpoint(&regs, debug_ipc::BreakpointType::kWrite, kRange2, kWatchpointCount);
+  ASSERT_ZX_EQ(install.status, ZX_ERR_ALREADY_BOUND);
+
+  install = SetupWatchpoint(&regs, debug_ipc::BreakpointType::kWrite, kRange5, kWatchpointCount);
+  ASSERT_ZX_EQ(install.status, ZX_ERR_OUT_OF_RANGE);
+
+  install = SetupWatchpoint(&regs, debug_ipc::BreakpointType::kWrite, kRange3, kWatchpointCount);
+  ASSERT_ZX_EQ(install.status, ZX_OK);
+  EXPECT_EQ(install.installed_range, kRange3);
+  EXPECT_EQ(install.slot, 2);
+  ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0x100, 0}));
+  ASSERT_TRUE(CheckEnabled(regs, {1, 1, 1, 0}));
+  ASSERT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
+  ASSERT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
+
+  install = SetupWatchpoint(&regs, debug_ipc::BreakpointType::kWrite, kRange4, kWatchpointCount);
+  ASSERT_ZX_EQ(install.status, ZX_OK);
+  EXPECT_EQ(install.installed_range, kRange4);
+  EXPECT_EQ(install.slot, 3);
+  ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0x100, 0x100}));
+  ASSERT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
+  ASSERT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  ASSERT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
+
+  install = SetupWatchpoint(&regs, debug_ipc::BreakpointType::kWrite, kRange6, kWatchpointCount);
+  ASSERT_ZX_EQ(install.status, ZX_ERR_NO_RESOURCES);
+
+  // Removing.
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kRange1, kWatchpointCount), ZX_OK);
+  ASSERT_TRUE(CheckAddresses(regs, {0, 0x100, 0x100, 0x100}));
+  ASSERT_TRUE(CheckEnabled(regs, {0, 1, 1, 1}));
+  ASSERT_TRUE(CheckLengths(regs, {0, 2, 4, 8}));
+  ASSERT_TRUE(CheckTypes(regs, {0, kWrite, kWrite, kWrite}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kRange1, kWatchpointCount), ZX_ERR_NOT_FOUND);
+  ASSERT_TRUE(CheckAddresses(regs, {0, 0x100, 0x100, 0x100}));
+  ASSERT_TRUE(CheckEnabled(regs, {0, 1, 1, 1}));
+  ASSERT_TRUE(CheckLengths(regs, {0, 2, 4, 8}));
+  ASSERT_TRUE(CheckTypes(regs, {0, kWrite, kWrite, kWrite}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kRange4, kWatchpointCount), ZX_OK);
+  ASSERT_TRUE(CheckAddresses(regs, {0, 0x100, 0x100, 0}));
+  ASSERT_TRUE(CheckEnabled(regs, {0, 1, 1, 0}));
+  ASSERT_TRUE(CheckLengths(regs, {0, 2, 4, 0}));
+  ASSERT_TRUE(CheckTypes(regs, {0, kWrite, kWrite, 0}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kRange3, kWatchpointCount), ZX_OK);
+  ASSERT_TRUE(CheckAddresses(regs, {0, 0x100, 0, 0}));
+  ASSERT_TRUE(CheckEnabled(regs, {0, 1, 0, 0}));
+  ASSERT_TRUE(CheckLengths(regs, {0, 2, 0, 0}));
+  ASSERT_TRUE(CheckTypes(regs, {0, kWrite, 0, 0}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kRange2, kWatchpointCount), ZX_OK);
+  ASSERT_TRUE(CheckAddresses(regs, {0, 0, 0, 0}));
+  ASSERT_TRUE(CheckEnabled(regs, {0, 0, 0, 0}));
+  ASSERT_TRUE(CheckLengths(regs, {0, 0, 0, 0}));
+  ASSERT_TRUE(CheckTypes(regs, {0, 0, 0, 0}));
+}
+
 }  // namespace
 }  // namespace arch
 }  // namespace debug_agent

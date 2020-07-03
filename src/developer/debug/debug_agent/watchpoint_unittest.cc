@@ -26,41 +26,6 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
   void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {}
 };
 
-class MockWatchpointArchProvider : public MockArchProvider {
- public:
-  struct Installation {
-    zx_koid_t thread_koid;
-    AddressRange address_range;
-    debug_ipc::BreakpointType type;
-  };
-
-  arch::WatchpointInstallationResult InstallWatchpoint(debug_ipc::BreakpointType type,
-                                                       const zx::thread& thread,
-                                                       const AddressRange& range) override {
-    installs_.push_back({thread.get(), range, type});
-    return arch::WatchpointInstallationResult(ZX_OK, range_to_return_, slot_to_return_);
-  }
-
-  zx_status_t UninstallWatchpoint(const zx::thread& thread, const AddressRange& range) override {
-    // Uninstalls don't need type.
-    uninstalls_.push_back({thread.get(), range, debug_ipc::BreakpointType::kLast});
-    return ZX_OK;
-  }
-
-  const std::vector<Installation>& installs() const { return installs_; }
-  const std::vector<Installation>& uninstalls() const { return uninstalls_; }
-
-  void set_range_to_return(debug_ipc::AddressRange r) { range_to_return_ = r; }
-  void set_slot_to_return(int slot) { slot_to_return_ = slot; }
-
- private:
-  std::vector<Installation> installs_;
-  std::vector<Installation> uninstalls_;
-
-  debug_ipc::AddressRange range_to_return_;
-  int slot_to_return_ = 0;
-};
-
 // If |thread| is null, it means a process-wide breakpoint.
 debug_ipc::ProcessBreakpointSettings CreateLocation(const MockProcess& process,
                                                     const MockThread* thread,
@@ -97,7 +62,7 @@ bool ContainsKoids(const Watchpoint& watchpoint, const std::vector<zx_koid_t>& k
 const AddressRange kAddressRange = {0x1000, 0x2000};
 
 TEST(Watchpoint, SimpleInstallAndRemove) {
-  auto arch_provider = std::make_shared<MockWatchpointArchProvider>();
+  auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -120,11 +85,8 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(watchpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  EXPECT_EQ(arch_provider->installs()[0].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[0].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[0].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 0u);
+  EXPECT_EQ(thread1->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
+  EXPECT_EQ(thread1->mock_thread_handle().TotalWatchpointUninstallCalls(), 0u);
 
   // Binding again to the same breakpoint should fail.
 
@@ -138,10 +100,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(watchpoint.breakpoints().size(), 0u);
   ASSERT_TRUE(ContainsKoids(watchpoint, {}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 1u);
-  EXPECT_EQ(arch_provider->uninstalls()[0].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[0].address_range, kAddressRange);
+  EXPECT_EQ(thread1->mock_thread_handle().WatchpointUninstallCount(kAddressRange), 1u);
 
   // Registering again should add the breakpoint again.
 
@@ -149,11 +108,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 2u);
-  EXPECT_EQ(arch_provider->installs()[1].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[1].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[1].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 1u);
+  EXPECT_EQ(thread1->mock_thread_handle().WatchpointInstallCount(kAddressRange), 2u);
 
   // Create two other threads.
 
@@ -175,12 +130,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(watchpoint.RegisterBreakpoint(&breakpoint2), ZX_OK);
   ASSERT_EQ(watchpoint.breakpoints().size(), 2u);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid(), thread2->koid()}));
-
-  ASSERT_EQ(arch_provider->installs().size(), 3u);
-  EXPECT_EQ(arch_provider->installs()[2].thread_koid, thread2->koid());
-  EXPECT_EQ(arch_provider->installs()[2].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[2].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 1u);
+  EXPECT_EQ(thread2->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
 
   // Removing the first breakpoint should remove the first install.
   // Returning true means that there are more breakpoints registered.
@@ -188,11 +138,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_TRUE(watchpoint.UnregisterBreakpoint(&breakpoint1));
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread2->koid()}));
-
-  ASSERT_EQ(arch_provider->installs().size(), 3u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
-  EXPECT_EQ(arch_provider->uninstalls()[1].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[1].address_range, kAddressRange);
+  EXPECT_EQ(thread1->mock_thread_handle().WatchpointUninstallCount(kAddressRange), 2u);
 
   // Add a location for another address to the already bound breakpoint.
   // Add a location to the already bound breakpoint.
@@ -204,12 +150,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 
   ASSERT_EQ(watchpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread2->koid(), thread3->koid()}));
-
-  ASSERT_EQ(arch_provider->installs().size(), 4u);
-  EXPECT_EQ(arch_provider->installs()[3].thread_koid, thread3->koid());
-  EXPECT_EQ(arch_provider->installs()[3].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[3].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
+  EXPECT_EQ(thread3->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
 
   // Create moar threads.
 
@@ -234,20 +175,9 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid(), thread2->koid(), thread3->koid(),
                                          thread4->koid(), thread5->koid(), thread6->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 8u);
-  EXPECT_EQ(arch_provider->installs()[4].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[4].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[4].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->installs()[5].thread_koid, thread4->koid());
-  EXPECT_EQ(arch_provider->installs()[5].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[5].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->installs()[6].thread_koid, thread5->koid());
-  EXPECT_EQ(arch_provider->installs()[6].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[6].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->installs()[7].thread_koid, thread6->koid());
-  EXPECT_EQ(arch_provider->installs()[7].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[7].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
+  EXPECT_EQ(thread4->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
+  EXPECT_EQ(thread5->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
+  EXPECT_EQ(thread6->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
 
   // Removing the other breakpoint should not remove installs.
 
@@ -257,8 +187,11 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid(), thread2->koid(), thread3->koid(),
                                          thread4->koid(), thread5->koid(), thread6->koid()}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 8u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 2u);
+  EXPECT_EQ(thread1->mock_thread_handle().TotalWatchpointUninstallCalls(), 2u);
+  EXPECT_EQ(thread3->mock_thread_handle().TotalWatchpointUninstallCalls(), 0u);
+  EXPECT_EQ(thread4->mock_thread_handle().TotalWatchpointUninstallCalls(), 0u);
+  EXPECT_EQ(thread5->mock_thread_handle().TotalWatchpointUninstallCalls(), 0u);
+  EXPECT_EQ(thread6->mock_thread_handle().TotalWatchpointUninstallCalls(), 0u);
 
   // Removing the last breakpoint should remove all the installations.
   // Returns false because there are no more registered breakpoints.
@@ -268,24 +201,16 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 
   ASSERT_TRUE(ContainsKoids(watchpoint, {}));
 
-  ASSERT_EQ(arch_provider->installs().size(), 8u);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 8u);
-  EXPECT_EQ(arch_provider->uninstalls()[2].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[2].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->uninstalls()[3].thread_koid, thread2->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[3].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->uninstalls()[4].thread_koid, thread3->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[4].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->uninstalls()[5].thread_koid, thread4->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[5].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->uninstalls()[6].thread_koid, thread5->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[6].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->uninstalls()[7].thread_koid, thread6->koid());
-  EXPECT_EQ(arch_provider->uninstalls()[7].address_range, kAddressRange);
+  EXPECT_EQ(thread1->mock_thread_handle().TotalWatchpointUninstallCalls(), 3u);
+  EXPECT_EQ(thread2->mock_thread_handle().TotalWatchpointUninstallCalls(), 1u);
+  EXPECT_EQ(thread3->mock_thread_handle().TotalWatchpointUninstallCalls(), 1u);
+  EXPECT_EQ(thread4->mock_thread_handle().TotalWatchpointUninstallCalls(), 1u);
+  EXPECT_EQ(thread5->mock_thread_handle().TotalWatchpointUninstallCalls(), 1u);
+  EXPECT_EQ(thread6->mock_thread_handle().TotalWatchpointUninstallCalls(), 1u);
 }
 
 TEST(Watchpoint, InstalledRanges) {
-  auto arch_provider = std::make_shared<MockWatchpointArchProvider>();
+  auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -306,19 +231,19 @@ TEST(Watchpoint, InstalledRanges) {
 
   const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
   constexpr int kSlot = 1;
-  arch_provider->set_range_to_return(kSubRange);
-  arch_provider->set_slot_to_return(kSlot);
+  thread1->mock_thread_handle().set_watchpoint_range_to_return(kSubRange);
+  thread1->mock_thread_handle().set_watchpoint_slot_to_return(kSlot);
 
   // Update should install one thread
   ASSERT_EQ(watchpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
   // There should be an install with a different sub range.
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  EXPECT_EQ(arch_provider->installs()[0].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[0].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->installs()[0].type, debug_ipc::BreakpointType::kWrite);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 0u);
+  auto installs = thread1->mock_thread_handle().watchpoint_installs();
+  ASSERT_EQ(installs.size(), 1u);
+  EXPECT_EQ(installs[0].address_range, kAddressRange);
+  EXPECT_EQ(installs[0].type, debug_ipc::BreakpointType::kWrite);
+  EXPECT_EQ(thread1->mock_thread_handle().TotalWatchpointUninstallCalls(), 0u);
 
   // The installed and actual range should be differnt.
   {
@@ -335,7 +260,7 @@ TEST(Watchpoint, InstalledRanges) {
 }
 
 TEST(Watchpoint, MatchesException) {
-  auto arch_provider = std::make_shared<MockWatchpointArchProvider>();
+  auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -357,18 +282,18 @@ TEST(Watchpoint, MatchesException) {
 
   const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
   constexpr int kSlot = 1;
-  arch_provider->set_range_to_return(kSubRange);
-  arch_provider->set_slot_to_return(kSlot);
+  thread1->mock_thread_handle().set_watchpoint_range_to_return(kSubRange);
+  thread1->mock_thread_handle().set_watchpoint_slot_to_return(kSlot);
 
   // Update should install one thread
   ASSERT_EQ(watchpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
   // There should be an install with a different sub range.
-  ASSERT_EQ(arch_provider->installs().size(), 1u);
-  EXPECT_EQ(arch_provider->installs()[0].thread_koid, thread1->koid());
-  EXPECT_EQ(arch_provider->installs()[0].address_range, kAddressRange);
-  EXPECT_EQ(arch_provider->uninstalls().size(), 0u);
+  auto installs = thread1->mock_thread_handle().watchpoint_installs();
+  ASSERT_EQ(installs.size(), 1u);
+  EXPECT_EQ(installs[0].address_range, kAddressRange);
+  EXPECT_EQ(thread1->mock_thread_handle().TotalWatchpointUninstallCalls(), 0u);
 
   // The installed and actual range should be differnt.
   {
@@ -398,7 +323,7 @@ TEST(Watchpoint, MatchesException) {
 }
 
 TEST(Watchpoint, DifferentTypes) {
-  auto arch_provider = std::make_shared<MockWatchpointArchProvider>();
+  auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
@@ -422,10 +347,10 @@ TEST(Watchpoint, DifferentTypes) {
     ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
     // There should be an install with a different sub range.
-    ASSERT_EQ(arch_provider->installs().size(), 1u);
-    EXPECT_EQ(arch_provider->installs()[0].thread_koid, thread1->koid());
-    EXPECT_EQ(arch_provider->installs()[0].address_range, kAddressRange);
-    EXPECT_EQ(arch_provider->installs()[0].type, debug_ipc::BreakpointType::kWrite);
+    auto installs = thread1->mock_thread_handle().watchpoint_installs();
+    ASSERT_EQ(installs.size(), 1u);
+    EXPECT_EQ(installs[0].address_range, kAddressRange);
+    EXPECT_EQ(installs[0].type, debug_ipc::BreakpointType::kWrite);
   }
 
   {
@@ -441,10 +366,10 @@ TEST(Watchpoint, DifferentTypes) {
     ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
     // There should be an install with a different sub range.
-    ASSERT_EQ(arch_provider->installs().size(), 2u);
-    EXPECT_EQ(arch_provider->installs()[1].thread_koid, thread1->koid());
-    EXPECT_EQ(arch_provider->installs()[1].address_range, kAddressRange);
-    EXPECT_EQ(arch_provider->installs()[1].type, debug_ipc::BreakpointType::kReadWrite);
+    auto installs = thread1->mock_thread_handle().watchpoint_installs();
+    ASSERT_EQ(installs.size(), 2u);
+    EXPECT_EQ(installs[1].address_range, kAddressRange);
+    EXPECT_EQ(installs[1].type, debug_ipc::BreakpointType::kReadWrite);
   }
 }
 

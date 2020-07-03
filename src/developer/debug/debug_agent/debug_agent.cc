@@ -358,7 +358,7 @@ void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
                                  debug_ipc::ReadRegistersReply* reply) {
   DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    thread->ReadRegisters(request.categories, &reply->registers);
+    reply->registers = thread->ReadRegisters(request.categories);
   } else {
     FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
   }
@@ -368,7 +368,8 @@ void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& reques
                                   debug_ipc::WriteRegistersReply* reply) {
   DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    reply->status = thread->WriteRegisters(request.registers, &reply->registers);
+    reply->status = ZX_OK;
+    reply->registers = thread->WriteRegisters(request.registers);
   } else {
     reply->status = ZX_ERR_NOT_FOUND;
     FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.thread_koid;

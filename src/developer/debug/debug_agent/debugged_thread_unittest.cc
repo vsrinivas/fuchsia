@@ -13,7 +13,9 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
+#include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
+#include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
 namespace debug_agent {
 
@@ -59,6 +61,23 @@ void SetRegister(const Register& reg, std::vector<Register>* regs) {
     }
   }
   regs->push_back(reg);
+}
+
+// Creates a thread with no process backed by a MockThreadHandle and returns the thread and the
+// handle.
+std::pair<std::unique_ptr<DebuggedThread>, MockThreadHandle*> CreateThread(zx_koid_t process_koid,
+                                                                           zx_koid_t thread_koid) {
+  auto owning_handle = std::make_unique<MockThreadHandle>(process_koid, thread_koid);
+  MockThreadHandle* handle = owning_handle.get();
+
+  DebuggedThread::CreateInfo create_info = {};
+  create_info.process = nullptr;
+  create_info.koid = thread_koid;
+  create_info.handle = std::move(owning_handle);
+  create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
+  create_info.arch_provider = std::make_shared<MockArchProvider>();
+  create_info.object_provider = std::make_unique<ObjectProvider>();
+  return {std::make_unique<DebuggedThread>(nullptr, std::move(create_info)), handle};
 }
 
 class FakeArchProvider : public MockArchProvider {
@@ -115,7 +134,9 @@ class FakeProcess : public DebuggedProcess {
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
       DebuggedThread::CreateInfo create_info = {};
+      create_info.process = this;
       create_info.koid = tid;
+      create_info.handle = std::make_unique<MockThreadHandle>(koid(), tid);
       create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
       create_info.arch_provider = arch_provider_;
       create_info.object_provider = std::make_unique<ObjectProvider>();
@@ -127,148 +148,6 @@ class FakeProcess : public DebuggedProcess {
  private:
   std::unique_ptr<DebuggedThread> thread_;
 };
-
-TEST(DebuggedThread, ReadRegisters) {
-  auto arch_provider = std::make_shared<FakeArchProvider>();
-
-  constexpr size_t kGeneralCount = 12u;
-  arch_provider->AddCategory(RegisterCategory::kGeneral, kGeneralCount);
-
-  FakeProcess fake_process(1u, arch_provider);
-  DebuggedThread* thread = fake_process.CreateThread(1u);
-
-  std::vector<RegisterCategory> cats_to_get = {RegisterCategory::kGeneral};
-
-  std::vector<Register> registers;
-  thread->ReadRegisters(cats_to_get, &registers);
-  EXPECT_EQ(registers.size(), kGeneralCount);
-}
-
-TEST(DebuggedThread, ReadRegistersGettingErrorShouldStillReturnTheRest) {
-  auto arch_provider = std::make_shared<FakeArchProvider>();
-
-  FakeProcess fake_process(1u, arch_provider);
-  DebuggedThread* thread = fake_process.CreateThread(1u);
-
-  constexpr size_t kGeneralCount = 12u;
-  constexpr size_t kDebugCount = 33u;
-  arch_provider->AddCategory(RegisterCategory::kGeneral, kGeneralCount);
-  arch_provider->AddCategory(RegisterCategory::kDebug, kDebugCount);
-
-  std::vector<RegisterCategory> cats_to_get = {RegisterCategory::kGeneral,
-                                               RegisterCategory::kVector, RegisterCategory::kDebug};
-
-  std::vector<Register> registers;
-  thread->ReadRegisters(cats_to_get, &registers);
-  EXPECT_EQ(registers.size(), kGeneralCount + kDebugCount);
-}
-
-TEST(DebuggedThread, WriteRegisters) {
-  auto arch_provider = std::make_shared<FakeArchProvider>();
-
-  FakeProcess fake_process(1u, arch_provider);
-  DebuggedThread* thread = fake_process.CreateThread(1u);
-
-  std::vector<Register> regs_to_write;
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_rax, 16));
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_rip, 16));
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_rsp, 16));
-
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_fcw, 16));
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_st0, 16));
-
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_mxcsr, 16));
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_ymm1, 16));
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_ymm2, 16));
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_ymm3, 16));
-
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_dr1, 16));
-  regs_to_write.push_back(CreateRegister(RegisterID::kX64_dr7, 16));
-
-  // The registers retrieved from the "system" after writing.
-  std::vector<debug_ipc::Register> reported_written;
-
-  thread->WriteRegisters(regs_to_write, &reported_written);
-
-  // The registers the mock told us it wrote.
-  const auto& regs_written = arch_provider->regs_written();
-  ASSERT_EQ(regs_written.size(), 4u);
-  EXPECT_EQ(regs_written.count(RegisterCategory::kNone), 0u);
-
-  // Make sure the API echoed back the registers we asked it to write.
-  EXPECT_TRUE(FindRegister(reported_written, RegisterID::kX64_rax));
-  EXPECT_TRUE(FindRegister(reported_written, RegisterID::kX64_rip));
-  EXPECT_TRUE(FindRegister(reported_written, RegisterID::kX64_rsp));
-
-  auto it = regs_written.find(RegisterCategory::kGeneral);
-  ASSERT_NE(it, regs_written.end());
-  ASSERT_EQ(it->second.size(), 3u);
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_rax));
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_rip));
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_rsp));
-
-  it = regs_written.find(RegisterCategory::kFloatingPoint);
-  ASSERT_NE(it, regs_written.end());
-  ASSERT_EQ(it->second.size(), 2u);
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_fcw));
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_st0));
-
-  it = regs_written.find(RegisterCategory::kVector);
-  ASSERT_NE(it, regs_written.end());
-  ASSERT_EQ(it->second.size(), 4u);
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_mxcsr));
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_ymm1));
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_ymm2));
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_ymm3));
-
-  it = regs_written.find(RegisterCategory::kDebug);
-  ASSERT_NE(it, regs_written.end());
-  ASSERT_EQ(it->second.size(), 2u);
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_dr1));
-  EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_dr7));
-}
-
-TEST(DebuggedThread, FillThreadRecord) {
-  auto arch_provider = std::make_shared<FakeArchProvider>();
-  auto object_provider = std::make_shared<ObjectProvider>();
-
-  constexpr zx_koid_t kProcessKoid = 0x8723456;
-  FakeProcess fake_process(kProcessKoid, arch_provider);
-
-  zx::thread current_thread;
-  zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
-
-  zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
-
-  // Set the name of the current thread so we can find it.
-  const std::string thread_name("ProcessInfo test thread name");
-  std::string old_name = object_provider->NameForObject(current_thread);
-  current_thread.set_property(ZX_PROP_NAME, thread_name.c_str(), thread_name.size());
-  EXPECT_EQ(thread_name, object_provider->NameForObject(current_thread));
-
-  DebuggedThread::CreateInfo create_info = {};
-  create_info.process = &fake_process;
-  create_info.koid = current_thread_koid;
-  create_info.handle = std::move(current_thread);
-  create_info.arch_provider = arch_provider;
-  create_info.object_provider = object_provider;
-  auto thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
-
-  // Request no stack since this thread should be running.
-  debug_ipc::ThreadRecord record;
-  thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone, nullptr, &record);
-
-  // Put back the old thread name for hygiene.
-  zx::thread::self()->set_property(ZX_PROP_NAME, old_name.c_str(), old_name.size());
-
-  // Validate the results.
-  EXPECT_EQ(kProcessKoid, record.process_koid);
-  EXPECT_EQ(current_thread_koid, record.thread_koid);
-  EXPECT_EQ(thread_name, record.name);
-  EXPECT_EQ(debug_ipc::ThreadRecord::State::kRunning, record.state);
-  EXPECT_EQ(debug_ipc::ThreadRecord::StackAmount::kNone, record.stack_amount);
-  EXPECT_TRUE(record.frames.empty());
-}
 
 // Ref-counted Suspension --------------------------------------------------------------------------
 
@@ -294,7 +173,10 @@ TEST(DebuggedThread, NormalSuspension) {
     DebuggedThread::CreateInfo create_info = {};
     create_info.process = &fake_process;
     create_info.koid = current_thread_koid;
-    create_info.handle = std::move(current_thread);
+    // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
+    // with that in a way that will make the DebuggedThread happy.
+    create_info.handle = std::make_unique<ZirconThreadHandle>(
+        arch_provider, kProcessKoid, current_thread_koid, std::move(current_thread));
     create_info.arch_provider = arch_provider;
     create_info.object_provider = object_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
@@ -362,7 +244,10 @@ TEST(DebuggedThread, RefCountedSuspension) {
     DebuggedThread::CreateInfo create_info = {};
     create_info.process = &fake_process;
     create_info.koid = current_thread_koid;
-    create_info.handle = std::move(current_thread);
+    // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
+    // with that in a way that will make the DebuggedThread happy.
+    create_info.handle = std::make_unique<ZirconThreadHandle>(
+        arch_provider, kProcessKoid, current_thread_koid, std::move(current_thread));
     create_info.arch_provider = arch_provider;
     create_info.object_provider = object_provider;
     debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));

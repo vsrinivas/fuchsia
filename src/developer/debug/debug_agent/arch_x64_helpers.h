@@ -66,12 +66,14 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // Returns ZX_ERR_ALREADY_BOUND if the |address|/|size| pair is already set.
 // Returns ZX_ERR_NO_RESOURCES if there are no registers left.
 WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t*,
+                                             debug_ipc::BreakpointType type,
                                              const debug_ipc::AddressRange& range,
-                                             debug_ipc::BreakpointType type);
+                                             uint32_t watchpoint_count);
 
 // Removes an installed execution watchpoint for |address|. If the address is not installed, no
 // functional change will happen and ZX_ERR_NOT_FOUND will be returned.
-zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t*, const debug_ipc::AddressRange& range);
+zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t*, const debug_ipc::AddressRange& range,
+                             uint32_t watchpoint_count);
 
 // Aligns the given address according to the watchpoint size.
 uint64_t WatchpointAddressAlign(const debug_ipc::AddressRange&);

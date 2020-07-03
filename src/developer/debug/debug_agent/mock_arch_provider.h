@@ -28,32 +28,6 @@ class MockArchProvider : public arch::ArchProvider {
   zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
                       size_t buffer_size, size_t* actual, size_t* avail) const override;
   void FillExceptionRecord(const zx::thread&, debug_ipc::ExceptionRecord* out) const override;
-
-  zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override;
-
-  zx_status_t UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) override;
-
-  arch::WatchpointInstallationResult InstallWatchpoint(debug_ipc::BreakpointType, const zx::thread&,
-                                                       const debug_ipc::AddressRange&) override;
-
-  zx_status_t UninstallWatchpoint(const zx::thread&, const debug_ipc::AddressRange&) override;
-
-  size_t BreakpointInstallCount(uint64_t address) const;
-  size_t TotalBreakpointInstallCalls() const;
-  size_t BreakpointUninstallCount(uint64_t address) const;
-  size_t TotalBreakpointUninstallCalls() const;
-
-  size_t WatchpointInstallCount(const debug_ipc::AddressRange&) const;
-  size_t TotalWatchpointInstallCalls() const;
-  size_t WatchpointUninstallCount(const debug_ipc::AddressRange&) const;
-  size_t TotalWatchpointUninstallCalls() const;
-
- private:
-  std::map<uint64_t, size_t> bp_installs_;
-  std::map<uint64_t, size_t> bp_uninstalls_;
-
-  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeBeginCmp> wp_installs_;
-  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeBeginCmp> wp_uninstalls_;
 };
 
 }  // namespace debug_agent

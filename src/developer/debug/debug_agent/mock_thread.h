@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_THREAD_H_
 
 #include "src/developer/debug/debug_agent/debugged_thread.h"
+#include "src/developer/debug/debug_agent/mock_thread_handle.h"
 
 namespace debug_agent {
 
@@ -15,6 +16,11 @@ class MockThread : public DebuggedThread {
              std::shared_ptr<arch::ArchProvider> arch_provider,
              std::shared_ptr<ObjectProvider> object_provider);
   ~MockThread();
+
+  MockThreadHandle& mock_thread_handle() {
+    // We create the thread handle in our constructor so we can assume its underlying type here.
+    return static_cast<MockThreadHandle&>(thread_handle());
+  }
 
   void ResumeException() override;
   void ResumeSuspension() override;

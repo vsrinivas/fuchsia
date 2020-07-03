@@ -377,9 +377,11 @@ uint64_t WatchpointAddressAlign(const debug_ipc::AddressRange& range) {
 }
 // clang-format on
 
+// On x64, watchpoint_count is unnecessary for this computation.
 WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
+                                             debug_ipc::BreakpointType type,
                                              const debug_ipc::AddressRange& range,
-                                             debug_ipc::BreakpointType type) {
+                                             uint32_t watchpoint_count) {
   if (!debug_ipc::IsWatchpointType(type))
     return CreateResult(ZX_ERR_INVALID_ARGS);
 
@@ -416,8 +418,9 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug
   return CreateResult(ZX_OK, aligned_range.value(), slot);
 }
 
+// On x64, watchpoint_count is unnecessary for this computation.
 zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
-                             const debug_ipc::AddressRange& range) {
+                             const debug_ipc::AddressRange& range, uint32_t watchpoint_count) {
   uint64_t aligned_address = WatchpointAddressAlign(range);
   if (!aligned_address)
     return ZX_ERR_INVALID_ARGS;

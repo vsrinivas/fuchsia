@@ -196,7 +196,7 @@ zx_status_t HardwareBreakpoint::Install(DebuggedThread* thread) {
   auto suspend_token = thread->RefCountedSuspend(true);
 
   // Do the actual installation.
-  zx_status_t status = arch_provider_->InstallHWBreakpoint(thread->handle(), address());
+  zx_status_t status = thread->thread_handle().InstallHWBreakpoint(address());
   if (status != ZX_OK) {
     Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), status);
     return status;
@@ -231,7 +231,7 @@ zx_status_t HardwareBreakpoint::Uninstall(DebuggedThread* thread) {
                         << std::hex << address();
 
   auto suspend_token = thread->RefCountedSuspend(true);
-  zx_status_t status = arch_provider_->UninstallHWBreakpoint(thread->handle(), address());
+  zx_status_t status = thread->thread_handle().UninstallHWBreakpoint(address());
   if (status != ZX_OK) {
     Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), status);
     return status;

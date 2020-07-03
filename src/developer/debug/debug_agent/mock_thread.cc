@@ -14,16 +14,13 @@ MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
                        std::shared_ptr<arch::ArchProvider> arch_provider,
                        std::shared_ptr<ObjectProvider> object_provider)
     : DebuggedThread(nullptr, DebuggedThread::CreateInfo{
-                                  process, thread_koid, zx::thread(thread_koid),
+                                  process, thread_koid,
+                                  std::make_unique<MockThreadHandle>(process->koid(), thread_koid),
                                   ThreadCreationOption::kRunningKeepRunning,
                                   std::make_unique<MockThreadException>(), std::move(arch_provider),
                                   std::move(object_provider)}) {}
 
-MockThread::~MockThread() {
-  // We clear the handle that is fake.
-  zx_handle_t handle = handle_.release();
-  (void)handle;  // Avoid un-used warning.
-}
+MockThread::~MockThread() {}
 
 void MockThread::ResumeException() {
   DEBUG_LOG(Test) << "Thread " << koid() << ": Resuming exception.";

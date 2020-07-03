@@ -55,12 +55,15 @@ static_library("lib") {
     "system_info.cc",
     "system_info.h",
     "thread_exception.h",
+    "thread_handle.h",
     "unwind.cc",
     "unwind.h",
     "watchpoint.cc",
     "watchpoint.h",
     "zircon_thread_exception.cc",
     "zircon_thread_exception.h",
+    "zircon_thread_handle.cc",
+    "zircon_thread_handle.h",
   ]
 
   if (current_cpu == "x64") {
@@ -159,6 +162,8 @@ source_set("test_lib") {
     "mock_thread.cc",
     "mock_thread.h",
     "mock_thread_exception.h",
+    "mock_thread_handle.cc",
+    "mock_thread_handle.h",
   ]
 
   public_deps = [ ":lib" ]

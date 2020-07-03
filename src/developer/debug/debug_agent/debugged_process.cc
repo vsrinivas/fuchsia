@@ -21,6 +21,7 @@
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/debug_agent/zircon_thread_exception.h"
+#include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -310,23 +311,26 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 }
 
 void DebuggedProcess::PopulateCurrentThreads() {
-  for (zx_koid_t koid : object_provider_->GetChildKoids(handle_.get(), ZX_INFO_PROCESS_THREADS)) {
+  for (zx_koid_t thread_koid :
+       object_provider_->GetChildKoids(handle_.get(), ZX_INFO_PROCESS_THREADS)) {
     // We should never populate the same thread twice.
-    if (threads_.find(koid) != threads_.end())
+    if (threads_.find(thread_koid) != threads_.end())
       continue;
 
     zx_handle_t handle;
-    if (object_provider_->GetChild(handle_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
+    if (object_provider_->GetChild(handle_.get(), thread_koid, ZX_RIGHT_SAME_RIGHTS, &handle) ==
+        ZX_OK) {
       DebuggedThread::CreateInfo create_info = {};
       create_info.process = this;
-      create_info.koid = koid;
-      create_info.handle = zx::thread(handle);
+      create_info.koid = thread_koid;
+      create_info.handle = std::make_unique<ZirconThreadHandle>(arch_provider_, koid_, thread_koid,
+                                                                zx::thread(handle));
       create_info.creation_option = ThreadCreationOption::kRunningKeepRunning;
       create_info.arch_provider = arch_provider_;
       create_info.object_provider = object_provider_;
 
       auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, std::move(create_info));
-      threads_.emplace(koid, std::move(new_thread));
+      threads_.emplace(thread_koid, std::move(new_thread));
     }
   }
 }
@@ -599,12 +603,12 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   FX_DCHECK(exception_info.pid == koid());
   FX_DCHECK(threads_.find(exception_info.tid) == threads_.end());
 
-  zx::thread handle = object_provider_->GetThreadFromException(exception.get());
-
   DebuggedThread::CreateInfo create_info = {};
   create_info.process = this;
   create_info.koid = exception_info.tid;
-  create_info.handle = std::move(handle);
+  create_info.handle = std::make_unique<ZirconThreadHandle>(
+      arch_provider_, koid_, exception_info.tid,
+      object_provider_->GetThreadFromException(exception.get()));
   create_info.exception = std::make_unique<ZirconThreadException>(std::move(exception));
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
   create_info.arch_provider = arch_provider_;

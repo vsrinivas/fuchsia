@@ -13,53 +13,6 @@
 namespace debug_agent {
 namespace {
 
-class MockProcessArchProvider : public MockArchProvider {
- public:
-  struct Installation {
-    zx_koid_t thread_koid;
-    debug_ipc::AddressRange address_range;
-    debug_ipc::BreakpointType type;
-  };
-
-  zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
-    installs_.push_back({thread.get(), address});
-    return ZX_OK;
-  }
-
-  zx_status_t UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
-    uninstalls_.push_back({thread.get(), address});
-    return ZX_OK;
-  }
-
-  arch::WatchpointInstallationResult InstallWatchpoint(
-      debug_ipc::BreakpointType type, const zx::thread& thread,
-      const debug_ipc::AddressRange& range) override {
-    wp_installs_.push_back({thread.get(), range, type});
-    return arch::WatchpointInstallationResult(ZX_OK, range, 0);
-  }
-
-  zx_status_t UninstallWatchpoint(const zx::thread& thread,
-                                  const debug_ipc::AddressRange& range) override {
-    wp_uninstalls_.push_back({thread.get(), range});
-    return ZX_OK;
-  }
-
-  const std::vector<std::pair<zx_koid_t, uint64_t>>& installs() const { return installs_; }
-  const std::vector<std::pair<zx_koid_t, uint64_t>>& uninstalls() const { return uninstalls_; }
-
-  const std::vector<Installation>& wp_installs() const { return wp_installs_; }
-  const std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>>& wp_uninstalls() const {
-    return wp_uninstalls_;
-  }
-
- private:
-  std::vector<std::pair<zx_koid_t, uint64_t>> installs_;
-  std::vector<std::pair<zx_koid_t, uint64_t>> uninstalls_;
-
-  std::vector<Installation> wp_installs_;
-  std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>> wp_uninstalls_;
-};
-
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
   zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override { return ZX_OK; }
@@ -72,10 +25,14 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 };
 
 class MockProcessMemoryAccessor : public ProcessMemoryAccessor {
+ public:
+  // This mock is designed to report that a breakpoint was written to the given memory.
   zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
                                 size_t* actual) override {
-    // In this test the logic expects to have written a breakpoint.
-    uint8_t* ptr = static_cast<uint8_t*>(buffer);
+    if (len != sizeof(arch::BreakInstructionType))
+      return ZX_ERR_INVALID_ARGS;  // Unexpected size to read.
+
+    auto* ptr = static_cast<arch::BreakInstructionType*>(buffer);
     *ptr = arch::kBreakInstruction;
     *actual = len;
     return ZX_OK;
@@ -91,7 +48,7 @@ DebuggedProcess CreateProcess(zx_koid_t koid, std::string name) {
   DebuggedProcessCreateInfo create_info = {};
   create_info.koid = koid;
   create_info.name = std::move(name);
-  create_info.arch_provider = std::make_unique<MockProcessArchProvider>();
+  create_info.arch_provider = std::make_unique<MockArchProvider>();
   create_info.object_provider = CreateDefaultMockObjectProvider();
   create_info.memory_accessor = std::make_unique<MockProcessMemoryAccessor>();
 

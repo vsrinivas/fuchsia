@@ -12,6 +12,7 @@
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_thread_exception.h"
+#include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
@@ -235,17 +236,22 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
+  auto owning_thread_handle =
+      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
+
   // Create the thread that will be on an exception.
   DebuggedThread::CreateInfo create_info = {};
   create_info.process = &process;
   create_info.koid = thread_object->koid;
-  create_info.handle = thread_object->GetHandle();
+  create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
   create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
+  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kPageFault);
 
@@ -280,17 +286,22 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
+  auto owning_thread_handle =
+      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
+
   // Create the thread that will be on an exception.
   DebuggedThread::CreateInfo create_info = {};
   create_info.process = &process;
   create_info.koid = thread_object->koid;
-  create_info.handle = thread_object->GetHandle();
+  create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
   create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
+  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kSoftware);
 
@@ -363,17 +374,22 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
+  auto owning_thread_handle =
+      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
+
   // Create the thread that will be on an exception.
   DebuggedThread::CreateInfo create_info = {};
   create_info.process = &process;
   create_info.koid = thread_object->koid;
-  create_info.handle = thread_object->GetHandle();
+  create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
   create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
+  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kHardware);
 
@@ -425,11 +441,15 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
                       context.arch_provider, context.object_provider);
 
+  auto owning_thread_handle =
+      std::make_unique<MockThreadHandle>(process.koid(), thread_object->koid);
+  MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
+
   // Create the thread that will be on an exception.
   DebuggedThread::CreateInfo create_info = {};
   create_info.process = &process;
   create_info.koid = thread_object->koid;
-  create_info.handle = thread_object->GetHandle();
+  create_info.handle = std::move(owning_thread_handle);
   create_info.arch_provider = context.arch_provider;
   create_info.object_provider = context.object_provider;
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
@@ -451,6 +471,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   // Set the exception information the arch provider is going to return.
   const uint64_t kAddress = kRange.begin();
   constexpr uint64_t kSlot = 0;
+  mock_thread_handle->set_state(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kWatchpoint);
   context.arch_provider->set_exception_addr(kAddress);
   context.arch_provider->set_slot(kSlot);
