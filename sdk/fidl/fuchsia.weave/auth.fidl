@@ -29,6 +29,9 @@ protocol Signer {
 protocol FactoryDataManager {
     /// Return the device |pairing_code| on success.
     GetPairingCode() -> (bytes:16 pairing_code) error ErrorCode;
+
+    /// Returns the factory provisioned Weave certificate in PEM format.
+    GetWeaveCertificate() -> (fuchsia.mem.Buffer certificate) error ErrorCode;
 };
 
 /// This protocol is used to retrieve factory data that may be encrypted at
