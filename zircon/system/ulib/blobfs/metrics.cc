@@ -49,6 +49,28 @@ fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
 
 BlobfsMetrics::~BlobfsMetrics() { Dump(); }
 
+void PrintReadMetrics(ReadMetrics& metrics) {
+  constexpr uint64_t mb = 1 << 20;
+  auto snapshot = metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
+  FS_TRACE_INFO("    Uncompressed: Read %zu MB (spent %zu ms)\n", snapshot.read_bytes / mb,
+                TicksToMs(zx::ticks(snapshot.read_ticks)));
+
+  snapshot = metrics.GetSnapshot(CompressionAlgorithm::LZ4);
+  FS_TRACE_INFO("    LZ4: Read %zu MB (spent %zu ms) | Decompressed %zu MB (spent %zu ms)\n",
+                snapshot.read_bytes / mb, TicksToMs(zx::ticks(snapshot.read_ticks)),
+                snapshot.decompress_bytes / mb, TicksToMs(zx::ticks(snapshot.decompress_ticks)));
+
+  snapshot = metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
+  FS_TRACE_INFO("    Chunked: Read %zu MB (spent %zu ms) | Decompressed %zu MB (spent %zu ms)\n",
+                snapshot.read_bytes / mb, TicksToMs(zx::ticks(snapshot.read_ticks)),
+                snapshot.decompress_bytes / mb, TicksToMs(zx::ticks(snapshot.decompress_ticks)));
+
+  snapshot = metrics.GetSnapshot(CompressionAlgorithm::ZSTD);
+  FS_TRACE_INFO("    ZSTD: Read %zu MB (spent %zu ms) | Decompressed %zu MB (spent %zu ms)\n",
+                snapshot.read_bytes / mb, TicksToMs(zx::ticks(snapshot.read_ticks)),
+                snapshot.decompress_bytes / mb, TicksToMs(zx::ticks(snapshot.decompress_ticks)));
+}
+
 void BlobfsMetrics::Dump() {
   constexpr uint64_t mb = 1 << 20;
 
@@ -69,17 +91,22 @@ void BlobfsMetrics::Dump() {
   }
 
   FS_TRACE_INFO("Read Info:\n");
+  FS_TRACE_INFO("  Paged:\n");
+  PrintReadMetrics(paged_read_metrics_);
+  FS_TRACE_INFO("  Unpaged:\n");
+  PrintReadMetrics(unpaged_read_metrics_);
+
+  FS_TRACE_INFO("  Merkle data read: %zu MB (spent %zu ms)\n", bytes_merkle_read_from_disk_ / mb,
+                TicksToMs(zx::ticks(total_read_merkle_time_ticks_)));
+
   FS_TRACE_INFO("  Opened %zu blobs (%zu MB)\n", blobs_opened_, blobs_opened_total_size_ / mb);
 
   auto verify_snapshot = verification_metrics_.Get();
-  auto read_snapshot = read_metrics_.GetDiskRead();
   FS_TRACE_INFO("  Verified %zu blobs (%zu MB data, %zu MB merkle)\n",
                 verify_snapshot.blobs_verified, verify_snapshot.data_size / mb,
                 verify_snapshot.merkle_size / mb);
-  FS_TRACE_INFO("  Read %zu MB from disk\n", read_snapshot.read_size / mb);
   if (Collecting()) {
-    FS_TRACE_INFO("  Spent %zu ms reading, %zu ms verifying\n",
-                  TicksToMs(zx::ticks(read_snapshot.read_time)),
+    FS_TRACE_INFO("  Spent %zu ms verifying\n",
                   TicksToMs(zx::ticks(verify_snapshot.verification_time)));
   }
 }
@@ -128,6 +155,11 @@ void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode& inode) {
   }
   fs_metrics::CompressionFormat format = FormatForInode(inode);
   cobalt_metrics_.mutable_compression_format_metrics()->IncrementCounter(format, inode.blob_size);
+}
+
+void BlobfsMetrics::IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration) {
+  total_read_merkle_time_ticks_ += read_duration;
+  bytes_merkle_read_from_disk_ += read_size;
 }
 
 }  // namespace blobfs

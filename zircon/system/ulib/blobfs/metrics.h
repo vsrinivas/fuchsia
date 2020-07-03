@@ -69,10 +69,19 @@ class BlobfsMetrics {
   // the |inode| header, and increments the counter for that format with the inode's |blob_size|.
   void IncrementCompressionFormatMetric(const Inode& inode);
 
-  // Accessors for read and verification metrics. The metrics objects returned are thread-safe.
+  // Increments a read of Merkle Tree data from disk.
+  // This method must only be called from the blobfs main thread.
+  void IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration);
+
+  // Accessors for ReadMetrics. The metrics objects returned are NOT thread-safe.
+  // The metrics objects are to be used by exactly one thread (main or pager).
   // Used to increment relevant metrics from the blobfs main thread and the user pager thread.
-  // The |BlobfsMetrics| class is not thread-safe except for these accessors.
-  ReadMetrics& read_metrics() { return read_metrics_; }
+  ReadMetrics& paged_read_metrics() { return paged_read_metrics_; }
+  ReadMetrics& unpaged_read_metrics() { return unpaged_read_metrics_; }
+
+  // Accessor for VerificationMetrics. This metrics object is thread-safe.
+  // Used to increment relevant metrics from the blobfs main thread and the user pager thread.
+  // The |BlobfsMetrics| class is not thread-safe except for this accessor.
   VerificationMetrics& verification_metrics() { return verification_metrics_; }
 
   // Accessor for BlobFS Inspector. This Inspector serves the BlobFS inspect tree.
@@ -109,7 +118,9 @@ class BlobfsMetrics {
   uint64_t blobs_opened_total_size_ = 0;
 
   // READ STATS
-  ReadMetrics read_metrics_;
+  ReadMetrics paged_read_metrics_, unpaged_read_metrics_;
+  zx::ticks total_read_merkle_time_ticks_ = {};
+  uint64_t bytes_merkle_read_from_disk_ = 0;
 
   // VERIFICATION STATS
   VerificationMetrics verification_metrics_;

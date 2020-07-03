@@ -19,6 +19,7 @@
 #include "../blob-verifier.h"
 #include "../compression/seekable-decompressor.h"
 #include "../compression/zstd-seekable-blob-collection.h"
+#include "../metrics.h"
 
 namespace blobfs {
 
@@ -113,7 +114,8 @@ constexpr PagerErrorStatus ToPagerErrorStatus(zx_status_t status) {
 // blocks read from storage.
 class UserPager {
  public:
-  UserPager() = default;
+  explicit UserPager(BlobfsMetrics* metrics);
+  UserPager() = delete;
   virtual ~UserPager() = default;
 
   // Returns the pager handle.
@@ -212,6 +214,9 @@ class UserPager {
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  // Records all metrics for this instance of blofs.
+  BlobfsMetrics* metrics_ = nullptr;
 };
 
 }  // namespace blobfs
