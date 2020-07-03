@@ -296,6 +296,24 @@ fuchsia_component("persist-tests") {
   ]
 }
 
+test("random_op_tests") {
+  sources = [ "random_op.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("random-op-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/random-op-tests.cml"
+  deps = [
+    ":manifests",
+    ":random_op_tests",
+  ]
+}
+
 test("read_write_tests") {
   sources = [ "read_write.cc" ]
   deps = [
@@ -329,6 +347,7 @@ fuchsia_test_package("fs-tests") {
     ":mmap-tests",
     ":overflow-tests",
     ":persist-tests",
+    ":random-op-tests",
     ":read-write-tests",
   ]
 }
@@ -374,6 +393,7 @@ action("manifests") {
     "$target_gen_dir/mmap-tests.cml",
     "$target_gen_dir/overflow-tests.cml",
     "$target_gen_dir/persist-tests.cml",
+    "$target_gen_dir/random-op-tests.cml",
     "$target_gen_dir/read-write-tests.cml",
   ]
   args = rebase_path(sources, root_build_dir) +
