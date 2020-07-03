@@ -12,6 +12,7 @@ source_set("testing") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//src/media/audio/lib/clock:clone_mono",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/zx",
   ]

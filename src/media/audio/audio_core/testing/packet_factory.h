@@ -26,6 +26,7 @@ class PacketFactory {
                                    fit::closure callback = nullptr);
 
   const Format& format() const { return format_; }
+  void SeekToFrame(int64_t frame_num) { next_pts_ = FractionalFrames<int64_t>(frame_num); }
 
  private:
   Packet::Allocator allocator_{1, true};

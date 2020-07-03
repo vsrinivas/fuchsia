@@ -135,8 +135,11 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(ref_time.get());
   int64_t output_frames_transmitted = output_frames_consumed - fifo_frames;
 
+  auto mono_time =
+      clock::MonotonicTimeFromReferenceTime(reference_clock().get(), ref_time).take_value();
+
   if (output_frames_consumed >= frames_sent_) {
-    if (!underflow_start_time_.get()) {
+    if (!underflow_start_time_mono_.get()) {
       // If this was the first time we missed our limit, log a message, mark the start time of the
       // underflow event, and fill our entire ring buffer with silence.
       int64_t output_underflow_frames = output_frames_consumed - frames_sent_;
@@ -144,7 +147,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
 
       zx::duration output_underflow_duration =
           zx::nsec(output_frames_per_reference_tick.Inverse().Scale(output_underflow_frames));
-      FX_CHECK(output_underflow_duration.get() >= 0);
+      FX_DCHECK(output_underflow_duration.get() >= 0);
 
       zx::duration output_variance_from_expected_wakeup =
           zx::nsec(output_frames_per_reference_tick.Inverse().Scale(low_water_frames_underflow));
@@ -157,9 +160,9 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
                      << " milliseconds.";
 
       // Use our Reporter to log this to Cobalt and Inspect, if enabled.
-      REPORT(OutputUnderflow(*this, output_underflow_duration, ref_time));
+      REPORT(OutputUnderflow(*this, output_underflow_duration, mono_time));
 
-      underflow_start_time_ = ref_time;
+      underflow_start_time_mono_ = mono_time;
       output_producer_->FillWithSilence(rb.virt(), rb.frames());
       zx_cache_flush(rb.virt(), rb.size(), ZX_CACHE_FLUSH_DATA);
 
@@ -169,7 +172,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
     // Regardless of whether this was the first or a subsequent underflow,
     // update the cooldown deadline (the time at which we will start producing
     // frames again, provided we don't underflow again)
-    underflow_cooldown_deadline_ = zx::deadline_after(kUnderflowCooldown);
+    underflow_cooldown_deadline_mono_ = zx::deadline_after(kUnderflowCooldown);
   }
 
   // We want to fill up to be HighWaterNsec ahead of the current safe write
@@ -178,8 +181,8 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   int64_t fill_target = ref_clock_to_safe_wr_frame.Apply((ref_time + kDefaultHighWaterNsec).get());
 
   // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
-  if (underflow_start_time_.get()) {
-    if (ref_time < underflow_cooldown_deadline_) {
+  if (underflow_start_time_mono_.get()) {
+    if (mono_time < underflow_cooldown_deadline_mono_) {
       // Looks like we have not recovered yet.  Pretend to have produced the
       // frames we were going to produce and schedule the next wakeup time.
       frames_sent_ = fill_target;
@@ -188,9 +191,9 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
     } else {
       // Looks like we recovered.  Log and go back to mixing.
       FX_LOGS(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
-                       << (ref_time - underflow_start_time_).to_msecs() << " ms.";
-      underflow_start_time_ = zx::time(0);
-      underflow_cooldown_deadline_ = zx::time(0);
+                       << (mono_time - underflow_start_time_mono_).to_msecs() << " ms.";
+      underflow_start_time_mono_ = zx::time(0);
+      underflow_cooldown_deadline_mono_ = zx::time(0);
     }
   }
 
@@ -318,9 +321,11 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   // pointer's reference clock <-> frame number function will tell us when it
   // will be time to wake up.
   int64_t low_water_frame_number = frames_sent_ - low_water_frames_;
-  int64_t low_water_time =
+  int64_t low_water_ref_time =
       driver_safe_read_or_write_ref_clock_to_frames().ApplyInverse(low_water_frame_number);
-  SetNextSchedTime(zx::time(low_water_time));
+  auto low_water_mono_time =
+      clock::MonotonicTimeFromReferenceTime(reference_clock().get(), zx::time(low_water_ref_time));
+  SetNextSchedTimeMono(low_water_mono_time.take_value());
 }
 
 void DriverOutput::OnDriverInfoFetched() {
@@ -447,7 +452,7 @@ void DriverOutput::OnDriverConfigComplete() {
                  kDefaultHighWaterNsec);
 
   // Fill our brand new ring buffer with silence
-  FX_CHECK(driver_writable_ring_buffer() != nullptr);
+  FX_DCHECK(driver_writable_ring_buffer() != nullptr);
   const auto& rb = *driver_writable_ring_buffer();
   FX_DCHECK(output_producer_ != nullptr);
   FX_DCHECK(rb.virt() != nullptr);
@@ -487,7 +492,7 @@ void DriverOutput::OnDriverStartComplete() {
   // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
   // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
   auto format = driver()->GetFormat();
-  FX_CHECK(format);
+  FX_DCHECK(format);
   FX_DCHECK(pipeline_config_);
   SetupMixTask(*pipeline_config_, volume_curve_, driver_writable_ring_buffer()->frames(),
                driver_ptscts_ref_clock_to_fractional_frames());

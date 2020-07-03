@@ -67,7 +67,7 @@ class TestAudioOutput : public AudioOutput {
       : AudioOutput(threading_model, registry, link_matrix) {}
 
   using AudioOutput::FrameSpan;
-  using AudioOutput::SetNextSchedTime;
+  using AudioOutput::SetNextSchedTimeMono;
   void SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
                     uint32_t max_frames, TimelineFunction clock_mono_to_output_frame) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -151,7 +151,7 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
 
   // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.
   audio_output_->set_start_mix_delegate([this, audio_output = audio_output_.get()](zx::time) {
-    audio_output->SetNextSchedTime(Now() + zx::msec(1));
+    audio_output->SetNextSchedTimeMono(Now() + zx::msec(1));
     return std::nullopt;
   });
 

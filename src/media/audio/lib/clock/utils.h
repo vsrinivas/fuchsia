@@ -14,7 +14,7 @@ namespace media::audio::clock {
 
 constexpr uint32_t kInvalidClockGeneration = 0xFFFFFFFF;
 struct ClockSnapshot {
-  TimelineFunction timeline_transform;
+  TimelineFunction reference_to_monotonic;
   uint32_t generation = kInvalidClockGeneration;
 };
 

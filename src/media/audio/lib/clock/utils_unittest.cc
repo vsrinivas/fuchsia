@@ -150,14 +150,11 @@ TEST(ClockUtilsTest, SnapshotClock) {
 
   auto snapshot = snapshot_result.take_value();
   EXPECT_EQ(clock_details.generation_counter, snapshot.generation);
-  EXPECT_EQ(clock_details.mono_to_synthetic.synthetic_offset,
-            snapshot.timeline_transform.subject_time());
-  EXPECT_EQ(clock_details.mono_to_synthetic.reference_offset,
-            snapshot.timeline_transform.reference_time());
-  EXPECT_EQ(clock_details.mono_to_synthetic.rate.synthetic_ticks,
-            snapshot.timeline_transform.subject_delta());
-  EXPECT_EQ(clock_details.mono_to_synthetic.rate.reference_ticks,
-            snapshot.timeline_transform.reference_delta());
+  auto mono_to_ref = snapshot.reference_to_monotonic.Inverse();
+  EXPECT_EQ(clock_details.mono_to_synthetic.synthetic_offset, mono_to_ref.subject_time());
+  EXPECT_EQ(clock_details.mono_to_synthetic.reference_offset, mono_to_ref.reference_time());
+  EXPECT_EQ(clock_details.mono_to_synthetic.rate.synthetic_ticks, mono_to_ref.subject_delta());
+  EXPECT_EQ(clock_details.mono_to_synthetic.rate.reference_ticks, mono_to_ref.reference_delta());
 }
 
 // Bracket a call to reference_clock.read, with two get_monotonic calls.

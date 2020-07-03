@@ -466,9 +466,12 @@ void BaseRenderer::DiscardAllPacketsNoReply() {
 
 void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::Play");
-  AUDIO_LOG_OBJ(DEBUG, this)
-      << " (ref: " << (_reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : _reference_time)
-      << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
+  AUDIO_LOG_OBJ(DEBUG, this) << "Request (ref: "
+                             << (_reference_time == fuchsia::media::NO_TIMESTAMP ? -1
+                                                                                 : _reference_time)
+                             << ", media: "
+                             << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time)
+                             << ")";
   zx::time reference_time(_reference_time);
 
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
@@ -537,10 +540,8 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
   reference_clock_to_fractional_frames_->Update(TimelineFunction(
       frac_frame_media_time.raw_value(), reference_time.get(), frac_frames_per_ref_tick_));
 
-  AUDIO_LOG_OBJ(DEBUG, this)
-      << " Actual (ref: "
-      << (reference_time.get() == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time.get())
-      << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
+  AUDIO_LOG(DEBUG) << "Actual: (ref: " << reference_time.get() << ", media: " << media_time << ")";
+  AUDIO_LOG(DEBUG) << "frac_frame_media_time:" << std::hex << frac_frame_media_time.raw_value();
 
   // If the user requested a callback, invoke it now.
   if (callback != nullptr) {

@@ -10,10 +10,12 @@
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
+// #include "src/media/audio/audio_core/testing/custom_clock_ref.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/lib/clock/testing/clock_test.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -29,6 +31,8 @@ const Format kDefaultFormat =
                    })
         .take_value();
 
+enum ClockMode { SAME, WITH_OFFSET, DIFFERENT_RATE };
+
 class MixStageTest : public testing::ThreadingModelFixture {
  protected:
   void SetUp() {
@@ -43,11 +47,6 @@ class MixStageTest : public testing::ThreadingModelFixture {
           TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
                        zx::sec(1).to_nsecs())));
 
-  zx::clock clock_mono_ = clock::CloneOfMonotonic();
-  ClockReference ref_clock_;
-
-  std::shared_ptr<MixStage> mix_stage_;
-
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
   //
@@ -57,17 +56,46 @@ class MixStageTest : public testing::ThreadingModelFixture {
   std::array<T, N>& as_array(void* ptr, size_t offset = 0) {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
+
+  void TestMixStageTrim(ClockMode clock_mode);
+  void TestMixStageUniformFormats(ClockMode clock_mode);
+  void TestMixStageSingleInput(ClockMode clock_mode);
+
+  std::shared_ptr<MixStage> mix_stage_;
+
+  zx::clock clock_mono_ = clock::CloneOfMonotonic();
+  ClockReference ref_clock_;
 };
 
 // TODO(50004): Add tests to verify we can read from other mix stages with unaligned frames.
 
-TEST_F(MixStageTest, Trim) {
+void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
+
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+  std::shared_ptr<PacketQueue> packet_queue;
+  zx::clock custom_clock;
+
+  if (clock_mode == ClockMode::SAME) {
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+  } else if (clock_mode == ClockMode::WITH_OFFSET) {
+    constexpr int kNumSecondsOffset = 2;
+    packet_factory.SeekToFrame(kDefaultFormat.frames_per_second() * kNumSecondsOffset);
+
+    auto custom_clock_result =
+        clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
+    ASSERT_TRUE(custom_clock_result.is_ok());
+    custom_clock = custom_clock_result.take_value();
+    auto clock_ref = ClockReference::MakeAdjustable(custom_clock);
+
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, clock_ref);
+  } else {
+    ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
+  }
+
   mix_stage_->AddInput(packet_queue);
 
   bool packet1_released = false;
@@ -80,39 +108,62 @@ TEST_F(MixStageTest, Trim) {
   // After 4ms we should still be retaining packet1.
   mix_stage_->Trim(time_until(zx::msec(4)));
   RunLoopUntilIdle();
-  ASSERT_FALSE(packet1_released);
+  EXPECT_FALSE(packet1_released);
 
   // 5ms; all the audio from packet1 is consumed and it should be released. We should still have
   // packet2, however.
   mix_stage_->Trim(time_until(zx::msec(5)));
   RunLoopUntilIdle();
-  ASSERT_TRUE(packet1_released && !packet2_released);
+  EXPECT_TRUE(packet1_released && !packet2_released);
 
   // After 9ms we should still be retaining packet2.
   mix_stage_->Trim(time_until(zx::msec(9)));
   RunLoopUntilIdle();
-  ASSERT_FALSE(packet2_released);
+  EXPECT_FALSE(packet2_released);
 
   // Finally after 10ms we will have released packet2.
   mix_stage_->Trim(time_until(zx::msec(10)));
   RunLoopUntilIdle();
-  ASSERT_TRUE(packet2_released);
+  EXPECT_TRUE(packet2_released);
+
+  // Clear out any lingering allocated packets, so the slab_allocator doesn't assert on exit
+  mix_stage_->Trim(zx::time::infinite());
 }
 
-TEST_F(MixStageTest, MixUniformFormats) {
+TEST_F(MixStageTest, Trim) { TestMixStageTrim(ClockMode::SAME); }
+TEST_F(MixStageTest, Trim_ClockOffset) { TestMixStageTrim(ClockMode::WITH_OFFSET); }
+
+void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
+  constexpr int kNumSecondsOffset = 10;
+  std::shared_ptr<PacketQueue> packet_queue1;
+  zx::clock custom_clock;
+
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
-  // Create 2 packet queues that we will mix together.
-  auto packet_queue1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+  if (clock_mode == ClockMode::SAME) {
+    packet_queue1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+  } else if (clock_mode == ClockMode::WITH_OFFSET) {
+    auto custom_clock_result =
+        clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
+    ASSERT_TRUE(custom_clock_result.is_ok());
+    custom_clock = custom_clock_result.take_value();
+    auto clock_ref = ClockReference::MakeAdjustable(custom_clock);
+
+    packet_queue1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, clock_ref);
+  } else {
+    ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
+  }
+  // Create 2 packet queues that we will mix together. One has a clock with an offset.
   auto packet_queue2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+
   mix_stage_->AddInput(packet_queue1);
   mix_stage_->AddInput(packet_queue2);
 
   // Mix 2 packet queues with the following samples and expected outputs. We'll feed this data
-  // though the mix stage in 3 passes of 2ms windows:
+  // through the mix stage in 3 passes of 2ms windows:
   //
   //       -----------------------------------
   // q1   | 0.1 | 0.2 | 0.2 | 0.3 | 0.3 | 0.3 |
@@ -125,6 +176,9 @@ TEST_F(MixStageTest, MixUniformFormats) {
   //       -----------------------------------
   testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
+    if (clock_mode == ClockMode::WITH_OFFSET) {
+      packet_factory1.SeekToFrame(kDefaultFormat.frames_per_second() * kNumSecondsOffset);
+    }
     packet_queue1->PushPacket(packet_factory1.CreatePacket(0.1, zx::msec(1)));
     packet_queue1->PushPacket(packet_factory1.CreatePacket(0.2, zx::msec(2)));
     packet_queue1->PushPacket(packet_factory1.CreatePacket(0.3, zx::msec(3)));
@@ -138,8 +192,7 @@ TEST_F(MixStageTest, MixUniformFormats) {
 
   int64_t output_frame_start = 0;
   uint32_t output_frame_count = 96;
-  {  // Mix frames 0-2ms. Expect the first 1ms to be 0.8 samples and the second ms to be 0.9
-     // samples.
+  {  // Mix frames 0-2ms. Expect 1 ms of 0.8 values, then 1 ms of 0.9 values.
     auto buf =
         mix_stage_->ReadLock(time_until(zx::msec(2)), output_frame_start, output_frame_count);
     // 1ms @ 48000hz == 48 frames. 2ms == 96 (frames).
@@ -153,8 +206,7 @@ TEST_F(MixStageTest, MixUniformFormats) {
   }
 
   output_frame_start += output_frame_count;
-  {  // Mix frames 2-4ms. Expect the first 1ms to be 0.9 samples and the second ms to be 0.8
-     // samples.
+  {  // Mix frames 2-4ms. Expect 1 ms of 0.9 samples, then 1 ms of 0.8 values.
     auto buf =
         mix_stage_->ReadLock(time_until(zx::msec(4)), output_frame_start, output_frame_count);
     ASSERT_TRUE(buf);
@@ -167,8 +219,7 @@ TEST_F(MixStageTest, MixUniformFormats) {
   }
 
   output_frame_start += output_frame_count;
-  {  // Mix frames 4-6ms. Expect the first 1ms to be 0.8 samples and the second ms to be 0.6
-     // samples.
+  {  // Mix frames 4-6ms. Expect 1 ms of 0.8 values, then 1 ms of 0.6 values.
     auto buf =
         mix_stage_->ReadLock(time_until(zx::msec(6)), output_frame_start, output_frame_count);
     ASSERT_TRUE(buf);
@@ -181,6 +232,11 @@ TEST_F(MixStageTest, MixUniformFormats) {
   }
 }
 
+TEST_F(MixStageTest, MixUniformFormats) { TestMixStageUniformFormats(ClockMode::SAME); }
+TEST_F(MixStageTest, MixUniformFormats_ClockOffset) {
+  TestMixStageUniformFormats(ClockMode::WITH_OFFSET);
+}
+
 TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // Create a new RingBuffer and add it to our mix stage.
   constexpr uint32_t kRingSizeFrames = 72;
@@ -188,10 +244,10 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // We explictly request a SincSampler here to get a non-trivial filter width.
   auto ring_buffer_endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
       kDefaultFormat, timeline_function_, ref_clock_, kRingSizeFrames);
+
   mix_stage_->AddInput(ring_buffer_endpoints.reader, Mixer::Resampler::WindowedSinc);
 
-  // Fill up the ring buffer with some non-empty samples so that we can observe these values in
-  // the mix output.
+  // Fill up the ring buffer with non-empty samples so we can observe them in the mix output.
   constexpr float kRingBufferSampleValue1 = 0.5;
   constexpr float kRingBufferSampleValue2 = 0.7;
   float* ring_buffer_samples = reinterpret_cast<float*>(ring_buffer_endpoints.writer->virt());
@@ -239,7 +295,8 @@ TEST_F(MixStageTest, MixNoInputs) {
   EXPECT_FLOAT_EQ(buf->gain_db(), fuchsia::media::audio::MUTED_GAIN_DB);
 }
 
-TEST_F(MixStageTest, MixSingleInput) {
+static constexpr auto kInputStreamUsage = StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION);
+void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
@@ -247,8 +304,26 @@ TEST_F(MixStageTest, MixSingleInput) {
 
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
-  static constexpr auto kInputStreamUsage = StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION);
-  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+  std::shared_ptr<PacketQueue> packet_queue;
+  zx::clock custom_clock;
+
+  if (clock_mode == ClockMode::SAME) {
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, ref_clock_);
+  } else if (clock_mode == ClockMode::WITH_OFFSET) {
+    constexpr int kNumSecondsOffset = 5;
+    packet_factory.SeekToFrame(kDefaultFormat.frames_per_second() * kNumSecondsOffset);
+
+    auto custom_clock_result =
+        clock::testing::CreateCustomClock({.mono_offset = zx::sec(kNumSecondsOffset)});
+    ASSERT_TRUE(custom_clock_result.is_ok());
+    custom_clock = custom_clock_result.take_value();
+    auto clock_ref = ClockReference::MakeAdjustable(custom_clock);
+
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, clock_ref);
+  } else {
+    ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
+  }
+
   packet_queue->set_usage(kInputStreamUsage);
   mix_stage_->AddInput(packet_queue);
 
@@ -261,6 +336,11 @@ TEST_F(MixStageTest, MixSingleInput) {
   EXPECT_FLOAT_EQ(buf->gain_db(), Gain::kUnityGainDb);
 
   mix_stage_->RemoveInput(*packet_queue);
+}
+
+TEST_F(MixStageTest, MixSingleInput) { TestMixStageSingleInput(ClockMode::SAME); }
+TEST_F(MixStageTest, MixSingleInput_ClockOffset) {
+  TestMixStageSingleInput(ClockMode::WITH_OFFSET);
 }
 
 TEST_F(MixStageTest, MixMultipleInputs) {

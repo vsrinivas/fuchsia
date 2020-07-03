@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
+#include "src/media/audio/lib/clock/utils.h"
+
 namespace media::audio {
 
 // In addition to being copyable, ClockReference abstracts clock rate-adjustment. An _adjustable_
@@ -23,6 +25,7 @@ class ClockReference {
 
   zx::time Read() const {
     FX_DCHECK(clock_) << "Null clock ref cannot be read";
+    FX_DCHECK(clock_->is_valid()) << "Invalid clock ref cannot be read";
     zx::time now;
     auto status = clock_->read(now.get_address());
     FX_DCHECK(status == ZX_OK) << "Error while reading clock: " << status;
@@ -38,12 +41,32 @@ class ClockReference {
   explicit operator bool() const { return is_valid(); }
   bool adjustable() const { return adjustable_; }
 
+  const TimelineFunction& ref_clock_to_clock_mono() {
+    FX_DCHECK(clock_) << "this (" << std::hex << static_cast<void*>(this)
+                      << "), ref_clock_to_clock_mono called before clock_ was established";
+    FX_DCHECK(clock_->is_valid()) << "this (" << std::hex << static_cast<void*>(this)
+                                  << "), ref_clock_to_clock_mono called before clock_ was valid";
+
+    auto result = audio::clock::SnapshotClock(*clock_);
+    FX_DCHECK(result.is_ok()) << "SnapshotClock failed";
+    ref_clock_to_clock_mono_ = result.take_value().reference_to_monotonic;
+
+    return ref_clock_to_clock_mono_;
+  }
+  const TimelineFunction& quick_ref_clock_to_clock_mono() { return ref_clock_to_clock_mono_; }
+
  private:
-  ClockReference(const zx::clock* clock, bool adjustable)
-      : clock_(clock), adjustable_(adjustable) {}
+  ClockReference(const zx::clock* clock, bool adjustable) : clock_(clock), adjustable_(adjustable) {
+    if (clock_ && clock_->is_valid()) {
+      auto result = audio::clock::SnapshotClock(*clock_);
+      FX_DCHECK(result.is_ok()) << "SnapshotClock failed";
+      ref_clock_to_clock_mono_ = result.take_value().reference_to_monotonic;
+    }
+  }
 
   const zx::clock* clock_;
   bool adjustable_;
+  TimelineFunction ref_clock_to_clock_mono_;
 };
 
 }  // namespace media::audio

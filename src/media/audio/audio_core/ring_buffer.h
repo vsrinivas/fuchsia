@@ -32,9 +32,8 @@ class BaseRingBuffer {
   // ahead of |reference_clock_to_fractional_frames(now)|, with the expectation there is a hardware
   // device consuming frames at the trailing edge.
   //
-  // |offset_frames| determines how logical frame numbers are mapped to physical frame locations in
-  // the ring buffer. Ex: if |offset_frames| is 5, then frame 0 will be located at frame 5 in the
-  // ring buffer.
+  // |offset_frames| determines the mapping of logical frame numbers to physical locations in the
+  // ring buffer. Ex: if |offset_frames| is 5, then frame 0 is located at ring buffer frame 5.
   static std::shared_ptr<ReadableRingBuffer> CreateReadableHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,

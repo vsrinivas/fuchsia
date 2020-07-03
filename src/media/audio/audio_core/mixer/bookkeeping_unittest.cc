@@ -27,27 +27,15 @@ TEST(BookkeepingTest, Defaults) {
   EXPECT_EQ(info.denominator, 0u);
   EXPECT_EQ(info.src_pos_modulo, 0u);
 
-  EXPECT_EQ(info.SnapshotDenominatorFromDestTrans(), 1u);
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_time(), 0);
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_time(), 0);
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_delta(), 0u);
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_delta(), 1u);
-  EXPECT_EQ(info.dest_trans_gen_id, kInvalidGenerationId);
 
   EXPECT_EQ(info.clock_mono_to_frac_source_frames.subject_time(), 0);
   EXPECT_EQ(info.clock_mono_to_frac_source_frames.reference_time(), 0);
   EXPECT_EQ(info.clock_mono_to_frac_source_frames.subject_delta(), 0u);
   EXPECT_EQ(info.clock_mono_to_frac_source_frames.reference_delta(), 1u);
-  EXPECT_EQ(info.source_trans_gen_id, kInvalidGenerationId);
-}
-
-TEST(BookkeepingTest, SnapshotDenominator) {
-  StubMixer mixer;
-  auto& info = mixer.bookkeeping();
-
-  // This common  timeline function reduces to 147/160.
-  info.dest_frames_to_frac_source_frames = TimelineFunction(0, 1, 44100u, 48000u);
-  EXPECT_EQ(info.SnapshotDenominatorFromDestTrans(), 160u);
 }
 
 // Upon Reset, Bookkeeping should clear position modulo and gain ramp, and reset its mixer.

@@ -147,17 +147,18 @@ void PacketQueue::ReadUnlock(bool fully_consumed) {
   }
 }
 
-void PacketQueue::Trim(zx::time dest_ref_time) {
+void PacketQueue::Trim(zx::time ref_time) {
   TRACE_DURATION("audio", "PacketQueue::Trim");
-  int64_t local_now_ticks = (dest_ref_time - zx::time(0)).to_nsecs();
-  auto trim_threshold =
-      FractionalFrames<int64_t>::FromRaw(timeline_function_->get().first(local_now_ticks));
+  int64_t ref_now_ticks = (ref_time - zx::time(0)).to_nsecs();
+
+  auto frac_frame_to_trim =
+      FractionalFrames<int64_t>::FromRaw(timeline_function_->get().first(ref_now_ticks));
 
   std::lock_guard<std::mutex> locker(pending_mutex_);
   while (!pending_packet_queue_.empty()) {
     auto packet = pending_packet_queue_.front();
 
-    if (packet->end() > trim_threshold) {
+    if (packet->end() > frac_frame_to_trim) {
       return;
     }
     pending_packet_queue_.pop_front();
@@ -172,6 +173,7 @@ BaseStream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFractionalFram
     };
   }
   auto [timeline_function, generation] = timeline_function_->get();
+
   return {
       .timeline_function = timeline_function,
       .generation = generation,

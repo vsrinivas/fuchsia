@@ -56,7 +56,11 @@ MixStage::MixStage(std::shared_ptr<WritableStream> output_stream)
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream,
                                           Mixer::Resampler resampler_hint) {
   TRACE_DURATION("audio", "MixStage::AddInput");
-  FX_CHECK(stream);
+  if (!stream) {
+    FX_LOGS(ERROR) << "Null stream, cannot add";
+    return nullptr;
+  }
+
   auto mixer = std::shared_ptr<Mixer>(
       Mixer::Select(stream->format().stream_type(), format().stream_type(), resampler_hint)
           .release());
@@ -78,7 +82,11 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   auto it = std::find_if(streams_.begin(), streams_.end(), [stream = &stream](const auto& holder) {
     return holder.stream.get() == stream;
   });
-  FX_CHECK(it != streams_.end());
+
+  if (it == streams_.end()) {
+    FX_LOGS(ERROR) << "Input not found, cannot remove";
+    return;
+  }
   streams_.erase(it);
 }
 
@@ -98,8 +106,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time,
   cur_mix_job_.buf = static_cast<float*>(output_buffer->payload());
   cur_mix_job_.buf_frames = output_buffer->length().Floor();
   cur_mix_job_.start_pts_of = frame;
-  cur_mix_job_.reference_clock_to_fractional_destination_frame = snapshot.timeline_function;
-  cur_mix_job_.reference_clock_to_fractional_destination_frame_gen = snapshot.generation;
+  cur_mix_job_.dest_ref_clock_to_frac_dest_frame = snapshot.timeline_function;
   cur_mix_job_.applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
 
   // Fill the output buffer with silence.
@@ -125,7 +132,7 @@ void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
   TRACE_DURATION("audio", "MixStage::SetMinLeadTime");
   ReadableStream::SetMinLeadTime(min_lead_time);
 
-  // Propagate our lead time to our inputs.
+  // Propagate our lead time to our sources.
   std::lock_guard<std::mutex> lock(stream_lock_);
   for (const auto& holder : streams_) {
     FX_DCHECK(holder.stream);
@@ -148,25 +155,29 @@ void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {
-      FX_CHECK(holder.stream);
-      FX_CHECK(holder.mixer);
-      streams.emplace_back(std::make_pair(holder.stream, holder.mixer));
+      if (holder.stream && holder.mixer) {
+        streams.emplace_back(std::make_pair(holder.stream, holder.mixer));
+      }
     }
   }
 
   for (const auto& [stream, mixer] : streams) {
-    FX_CHECK(stream);
     if (task_type == TaskType::Mix) {
       MixStream(stream.get(), mixer.get(), dest_ref_time);
     } else {
-      stream->Trim(dest_ref_time);
+      // To pass a Trim upstream to a source, we must translate dest_ref_time to their ref clock.
+      auto source_ref_time =
+          audio::clock::ReferenceTimeFromReferenceTime(reference_clock().get(), dest_ref_time,
+                                                       stream->reference_clock().get())
+              .take_value();
+      stream->Trim(source_ref_time);
     }
   }
 }
 
 void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref_time) {
   TRACE_DURATION("audio", "MixStage::MixStream");
-  // Ensure the mapping from source-frame to local-time is up-to-date.
+  // Ensure the mappings from source-frame to source-ref-time and monotonic-time are up-to-date.
   UpdateSourceTrans(*stream, &mixer->bookkeeping());
   SetupMix(mixer);
 
@@ -175,6 +186,11 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref
   if (!mixer->bookkeeping().dest_frames_to_frac_source_frames.subject_delta()) {
     return;
   }
+
+  auto source_ref_time =
+      audio::clock::ReferenceTimeFromReferenceTime(reference_clock().get(), dest_ref_time,
+                                                   stream->reference_clock().get())
+          .take_value();
 
   // Calculate the first sampling point for the initial job, in source sub-frames. Use timestamps
   // for the first and last dest frames we need, translated into the source (frac_frame) timeline.
@@ -197,9 +213,9 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref
             info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left)) +
         mixer->pos_filter_width();
 
-    // Try to grab the packet queue's front.
+    // Try to grab the front of the packet queue (or ring buffer, if capturing).
     auto stream_buffer = stream->ReadLock(
-        dest_ref_time, frac_source_for_first_mix_job_frame.Floor(), source_frames.Ceiling());
+        source_ref_time, frac_source_for_first_mix_job_frame.Floor(), source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
     if (!stream_buffer) {
@@ -226,7 +242,8 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time dest_ref
     if (!fully_consumed) {
       break;
     }
-
+    // FX_LOGS(WARNING) << "src_ff_for_first_mix_job_frame:" << std::hex
+    //                  << frac_source_for_first_mix_job_frame.raw_value();
     frac_source_for_first_mix_job_frame = stream_buffer->end();
   }
 
@@ -289,6 +306,8 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
       FractionalFrames<int64_t>::FromRaw(
           info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left - 1));
 
+  // The above two calculated values characterize our demand. Now reason about our supply.
+  //
   // If packet has no frames, there's no need to mix it; it may be skipped.
   if (source_buffer.end() == source_buffer.start()) {
     AUDIO_LOG(DEBUG) << " skipping an empty packet!";
@@ -297,8 +316,7 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
 
   FX_DCHECK(source_buffer.end() >= source_buffer.start() + 1);
 
-  // The above two calculated values characterize our demand. Now reason about our supply. Calculate
-  // the actual first and final frame times in the source packet.
+  // Calculate the actual first and final frame times in the source packet.
   FractionalFrames<int64_t> frac_source_for_first_packet_frame = source_buffer.start();
   FractionalFrames<int64_t> frac_source_for_final_packet_frame = source_buffer.end() - 1;
 
@@ -393,9 +411,8 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
     // to be below audible thresholds. Until the effects are measurable and attributable to this
     // jitter, we will defer this work.
     auto prev_dest_offset = dest_offset;
-    auto prev_frac_source_offset = frac_source_offset;
-    auto reference_clock_to_integral_frame = ReferenceClockToIntegralFrames(
-        cur_mix_job_.reference_clock_to_fractional_destination_frame);
+    auto dest_ref_clock_to_integral_dest_frame =
+        ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame);
 
     // Check whether we are still ramping
     bool ramping = info.gain.IsRamping();
@@ -403,7 +420,7 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
       info.gain.GetScaleArray(
           info.scale_arr.get(),
           std::min(dest_frames_left - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
-          reference_clock_to_integral_frame.rate());
+          dest_ref_clock_to_integral_dest_frame.rate());
     }
 
     {
@@ -415,19 +432,16 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
       cur_mix_job_.usages_mixed.insert_all(source_buffer.usage_mask());
       // The gain for the stream will be any previously applied gain combined with any additional
       // gain that will be applied at this stage. In terms of the applied gain of the mixed stream,
-      // we consider that to be the max gain of any single input stream.
+      // we consider that to be the max gain of any single source stream.
       float stream_gain_db = Gain::CombineGains(source_buffer.gain_db(), info.gain.GetGainDb());
       cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, stream_gain_db);
     }
     FX_DCHECK(dest_offset <= dest_frames_left);
-    AUDIO_LOG_OBJ(TRACE, this) << " consumed from " << std::hex << std::setw(8)
-                               << prev_frac_source_offset.raw_value() << " to " << std::setw(8)
-                               << frac_source_offset.raw_value() << ", of " << std::setw(8)
-                               << source_buffer.length().raw_value();
 
     // If src is ramping, advance by delta of dest_offset
     if (ramping) {
-      info.gain.Advance(dest_offset - prev_dest_offset, reference_clock_to_integral_frame.rate());
+      info.gain.Advance(dest_offset - prev_dest_offset,
+                        dest_ref_clock_to_integral_dest_frame.rate());
     }
   } else {
     // This packet was initially within our mix window. After realigning our sampling point to the
@@ -451,60 +465,88 @@ void MixStage::UpdateSourceTrans(const ReadableStream& stream, Mixer::Bookkeepin
   TRACE_DURATION("audio", "MixStage::UpdateSourceTrans");
 
   auto snapshot = stream.ReferenceClockToFractionalFrames();
-  bk->clock_mono_to_frac_source_frames = snapshot.timeline_function;
+  bk->source_ref_clock_to_frac_source_frames = snapshot.timeline_function;
 
-  // If local->media transformation hasn't changed since last time, we're done.
-  if (bk->source_trans_gen_id == snapshot.generation) {
+  if (bk->source_ref_clock_to_frac_source_frames.subject_delta() == 0) {
+    bk->clock_mono_to_frac_source_frames = TimelineFunction();
     return;
   }
 
-  // Transformation has changed. Update gen; invalidate dest-to-src generation.
-  bk->source_trans_gen_id = snapshot.generation;
-  bk->dest_trans_gen_id = kInvalidGenerationId;
+  auto source_ref_clock_to_clock_mono = stream.reference_clock().ref_clock_to_clock_mono();
+  auto frac_source_frame_to_clock_mono =
+      source_ref_clock_to_clock_mono * bk->source_ref_clock_to_frac_source_frames.Inverse();
+  bk->clock_mono_to_frac_source_frames = frac_source_frame_to_clock_mono.Inverse();
 }
+
+// For now, we do not compose the effects of clock reconciliation into the SRC step size (we do not
+// apply 'micro-SRC' based on clock-rate synchronization).  When enabled, we will only apply
+// micro-SRC to streams that use neither the 'optimal' clock, nor the clock we designate as
+// driving our hardware-rate-adjustments. Eventually, we will apply micro-SRC to those streams via
+// an intermediate "slew away the error" rate-correction factor driven by a PID control.
+// Why use a PID? Sources do not simply chase the dest clock's rate -- they chases its position.
+// Note that even if we don't adjust our rate, we still want a composed transformation for offsets.
+//
+// This will be a flag added to ClockReference, rather than a const.
+constexpr bool kAssumeOptimalClock = true;
 
 void MixStage::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "MixStage::UpdateDestTrans");
-  // We should only be here if we have a valid mix job. This means a job which supplies a valid
-  // transformation from local time to output frames.
-  FX_DCHECK(job.reference_clock_to_fractional_destination_frame_gen != kInvalidGenerationId);
 
-  // If generations match, don't re-compute -- just use what we have already.
-  if (bk->dest_trans_gen_id == job.reference_clock_to_fractional_destination_frame_gen) {
+  // We should only be here if we have a valid mix job. This means a job which supplies a valid
+  // transformation from reference time to destination frames (based on dest frame rate).
+  FX_DCHECK(job.dest_ref_clock_to_frac_dest_frame.rate().reference_delta());
+  FX_DCHECK(job.dest_ref_clock_to_frac_dest_frame.rate().subject_delta());
+
+  // Assert we can map from local monotonic-time to fractional source frames.
+  FX_DCHECK(bk->clock_mono_to_frac_source_frames.rate().reference_delta());
+
+  // Don't bother with these calculations, if source-rate numerator is zero (we are stopped).
+  if (bk->clock_mono_to_frac_source_frames.subject_delta() == 0) {
+    bk->dest_frames_to_frac_source_frames = TimelineFunction();
+    bk->step_size = 0;
+    bk->denominator = 0;  // we need not also clear rate_mod and pos_mod
     return;
   }
 
-  // Assert we can map from local time to fractional renderer frames.
-  FX_DCHECK(bk->source_trans_gen_id != kInvalidGenerationId);
+  auto dest_frame_to_dest_ref_clock =
+      ReferenceClockToIntegralFrames(job.dest_ref_clock_to_frac_dest_frame).Inverse();
 
-  // Combine the job-supplied local-to-output transformation, with the renderer-supplied mapping of
-  // local-to-input-subframe, to produce a transformation which maps from output frames to
-  // fractional input frames.
-  TimelineFunction reference_clock_to_integral_frame =
-      ReferenceClockToIntegralFrames(job.reference_clock_to_fractional_destination_frame);
-  TimelineFunction& dest = bk->dest_frames_to_frac_source_frames;
-  dest = bk->clock_mono_to_frac_source_frames * reference_clock_to_integral_frame.Inverse();
+  // Compose our transformation from local monotonic-time to dest frames.
+  FX_DCHECK(reference_clock().is_valid());
+  auto dest_frames_to_clock_mono =
+      reference_clock().ref_clock_to_clock_mono() * dest_frame_to_dest_ref_clock;
 
-  // Finally, compute the step size in subframes. IOW, every time we move forward one output frame,
-  // how many input subframes should we consume. Don't bother doing the multiplications if already
-  // we know the numerator is zero.
-  FX_DCHECK(dest.rate().reference_delta());
-  if (!dest.rate().subject_delta()) {
-    bk->step_size = 0;
-    bk->denominator = 0;  // shouldn't also need to clear rate_mod and pos_mod
+  // Combine the job-supplied dest transformation, with the renderer-supplied mapping of
+  // monotonic-to-source-subframe, to produce a transformation which maps from dest frames to
+  // fractional source frames.
+  bk->dest_frames_to_frac_source_frames =
+      bk->clock_mono_to_frac_source_frames * dest_frames_to_clock_mono;
+
+  // Finally, compute the step size in subframes. IOW, every time we move forward one dest
+  // frame, how many source subframes should we consume.
+  TimelineRate frac_src_frames_per_dest_frame;
+
+  if constexpr (kAssumeOptimalClock) {
+    // If micro-SRC is disabled, ignore the clock factors (treat src & dest clocks as identical).
+    auto dest_frames_to_dest_ref_clock =
+        ReferenceClockToIntegralFrames(job.dest_ref_clock_to_frac_dest_frame).Inverse();
+    frac_src_frames_per_dest_frame =
+        dest_frames_to_dest_ref_clock.rate() * bk->source_ref_clock_to_frac_source_frames.rate();
   } else {
-    int64_t tmp_step_size = dest.rate().Scale(1);
-
-    FX_DCHECK(tmp_step_size >= 0);
-    FX_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
-
-    bk->step_size = static_cast<uint32_t>(tmp_step_size);
-    bk->denominator = bk->SnapshotDenominatorFromDestTrans();
-    bk->rate_modulo = dest.rate().subject_delta() - (bk->denominator * bk->step_size);
+    frac_src_frames_per_dest_frame = bk->dest_frames_to_frac_source_frames.rate();
   }
 
-  // Done, update our dest_trans generation.
-  bk->dest_trans_gen_id = job.reference_clock_to_fractional_destination_frame_gen;
+  FX_DCHECK(frac_src_frames_per_dest_frame.reference_delta());
+
+  int64_t tmp_step_size = frac_src_frames_per_dest_frame.Scale(1);
+
+  FX_DCHECK(tmp_step_size >= 0);
+  FX_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
+
+  bk->step_size = static_cast<uint32_t>(tmp_step_size);
+  bk->denominator = frac_src_frames_per_dest_frame.reference_delta();
+  bk->rate_modulo =
+      frac_src_frames_per_dest_frame.subject_delta() - (bk->denominator * bk->step_size);
 }
 
 }  // namespace media::audio

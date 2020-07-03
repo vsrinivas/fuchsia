@@ -13,6 +13,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/lib/clock/utils.h"
 
 namespace media::audio {
 
@@ -51,19 +52,22 @@ class ThrottleOutput : public AudioOutput {
   // AudioOutput Implementation
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {
     if (uninitialized_) {
-      last_sched_time_ = async::Now(mix_domain().dispatcher());
+      last_sched_time_mono_ = async::Now(mix_domain().dispatcher());
+
       UpdatePlugState(true, zx::time(0));
       Process();
       uninitialized_ = false;
     }
   }
 
-  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start) override {
+  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time) override {
     // Compute the next callback time; check whether trimming is falling behind.
-    last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
-    if (process_start > last_sched_time_) {
+    last_sched_time_mono_ = last_sched_time_mono_ + TRIM_PERIOD;
+    auto mono_time =
+        clock::MonotonicTimeFromReferenceTime(reference_clock().get(), ref_time).take_value();
+    if (mono_time > last_sched_time_mono_) {
       // TODO(mpuryear): Trimming is falling behind. We should tell someone.
-      last_sched_time_ = process_start + TRIM_PERIOD;
+      last_sched_time_mono_ = mono_time + TRIM_PERIOD;
     }
 
     // TODO(mpuryear): Optimize the trim operation by scheduling callbacks for
@@ -73,7 +77,7 @@ class ThrottleOutput : public AudioOutput {
     //
     // To do this, we would need wake and recompute, whenever an AudioRenderer
     // client changes its rate transformation. For now, just polling is simpler.
-    SetNextSchedTime(last_sched_time_);
+    SetNextSchedTimeMono(last_sched_time_mono_);
 
     // Throttle outputs don't actually mix; they provide backpressure to the
     // pipeline by holding AudioPacket references until they are presented. We
@@ -93,9 +97,11 @@ class ThrottleOutput : public AudioOutput {
                        fuchsia::media::AudioGainValidFlags set_flags) override {
     FX_DCHECK(false);
   }
+  virtual zx::time last_sched_time_mono() { return last_sched_time_mono_; }
 
  private:
-  zx::time last_sched_time_;
+  zx::time last_sched_time_mono_;
+
   bool uninitialized_ = true;
 };
 

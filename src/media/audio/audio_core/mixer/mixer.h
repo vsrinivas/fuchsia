@@ -68,33 +68,23 @@ class Mixer {
     // for each dest frame.
     uint32_t denominator = 0;
 
-    // This function returns a snapshot of the denominator as determined by the
-    // 'dest_frames_to_frac_source_frames' timeline transform.
-    uint32_t SnapshotDenominatorFromDestTrans() const {
-      return dest_frames_to_frac_source_frames.rate().reference_delta();
-    }
-
     // If src_offset cannot perfectly express the source's position, this parameter (along with
     // denominator) expresses any leftover precision. When present, src_pos_modulo and denominator
     // express a fractional value of src_offset unit that should be used when advancing src
     // position.
     uint32_t src_pos_modulo = 0;
 
-    // This translates a destination frame value into a source subframe value. The output values of
-    // this function are in 19.13 source subframes.
-    TimelineFunction dest_frames_to_frac_source_frames;
+    // This translates a source reference_clock value into a source subframe value.
+    // The output values of this function are in 19.13 source subframes.
+    TimelineFunction source_ref_clock_to_frac_source_frames;
 
-    // dest_frames_to_frac_source_frames may change over time; this value represents the current
-    // generation (which version), so any change can be detected.
-    uint32_t dest_trans_gen_id = kInvalidGenerationId;
-
-    // This translates a CLOCK_MONOTONIC value into a source subframe value. The output values of
-    // this function are in 19.13 source subframes.
+    // This translates a CLOCK_MONOTONIC time to a source subframe, accounting for the source
+    // reference clock. The output values of this function are in 19.13 source subframes.
     TimelineFunction clock_mono_to_frac_source_frames;
 
-    // clock_mono_to_frac_source_frames may change over time; this value represents the current
-    // generation (which version), so any change can be detected.
-    uint32_t source_trans_gen_id = kInvalidGenerationId;
+    // This translates a destination frame to a source subframe, accounting for both the source and
+    // dest reference clocks. The output values of this function are in 19.13 source subframes.
+    TimelineFunction dest_frames_to_frac_source_frames;
 
     void Reset() {
       src_pos_modulo = 0;
@@ -113,7 +103,7 @@ class Mixer {
   // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select
   // optionally use this enum to specify a resampler type. Default allows an
   // algorithm to select a resampler based on the ratio of incoming and outgoing
-  // rates, using WindowedSinc for all except "Integer-to-One" resampling ratios.
+  // rates (currently we use WindowedSinc for all resampling ratios except 1:1).
   enum class Resampler {
     Default = 0,
     SampleAndHold,

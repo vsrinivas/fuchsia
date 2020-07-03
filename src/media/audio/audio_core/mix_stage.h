@@ -48,8 +48,7 @@ class MixStage : public ReadableStream {
     float* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
-    uint32_t reference_clock_to_fractional_destination_frame_gen;
-    TimelineFunction reference_clock_to_fractional_destination_frame;
+    TimelineFunction dest_ref_clock_to_frac_dest_frame;
     bool accumulate;
     StreamUsageMask usages_mixed;
     float applied_gain_db;

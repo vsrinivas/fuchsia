@@ -17,6 +17,7 @@
 
 namespace media::audio {
 
+// This MONOTONIC-based duration is the maximum interval between trim operations.
 static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 
 // TODO(49345): We should not need driver to be set for all Audio Devices.
@@ -24,42 +25,43 @@ AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* regist
                          LinkMatrix* link_matrix)
     : AudioDevice(Type::Output, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV1>(this)) {
-  next_sched_time_mono_ = async::Now(mix_domain().dispatcher());
-  next_sched_time_known_ = true;
+  SetNextSchedTimeMono(async::Now(mix_domain().dispatcher()));
 }
 
 AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                          LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver)
     : AudioDevice(Type::Output, threading_model, registry, link_matrix, std::move(driver)) {
-  next_sched_time_mono_ = async::Now(mix_domain().dispatcher());
-  next_sched_time_known_ = true;
+  SetNextSchedTimeMono(async::Now(mix_domain().dispatcher()));
 }
 
 void AudioOutput::Process() {
-  FX_CHECK(pipeline_);
   auto mono_now = async::Now(mix_domain().dispatcher());
-
-  int64_t trace_wake_delta = next_sched_time_known_ ? (mono_now - next_sched_time_mono_).get() : 0;
+  int64_t trace_wake_delta =
+      next_sched_time_mono_.has_value() ? (mono_now - next_sched_time_mono_.value()).get() : 0;
   TRACE_DURATION("audio", "AudioOutput::Process", "wake delta", TA_INT64(trace_wake_delta));
+
+  FX_DCHECK(pipeline_);
 
   // At this point, we should always know when our implementation would like to be called to do some
   // mixing work next. If we do not know, then we should have already shut down.
   //
   // If the next sched time has not arrived yet, don't attempt to mix anything. Just trim the queues
   // and move on.
-  FX_DCHECK(next_sched_time_known_);
-  if (mono_now >= next_sched_time_mono_) {
+  FX_DCHECK(next_sched_time_mono_);
+  if (mono_now >= next_sched_time_mono_.value()) {
     // Clear the flag. If the implementation does not set it during the cycle by calling
-    // SetNextSchedTime, we consider it an error and shut down.
-    next_sched_time_known_ = false;
+    // SetNextSchedTimeMono, we consider it an error and shut down.
+    ClearNextSchedTime();
+    auto ref_now =
+        clock::ReferenceTimeFromMonotonicTime(reference_clock().get(), mono_now).take_value();
 
     uint32_t frames_remaining;
     do {
       float* payload = nullptr;
-      auto mix_frames = StartMixJob(mono_now);
+      auto mix_frames = StartMixJob(ref_now);
+      // If we have frames to mix that are non-silent, we should do the mix now.
       if (mix_frames && !mix_frames->is_mute) {
-        // If we have frames to mix that are non-silent, we should do the mix now.
-        auto buf = pipeline_->ReadLock(mono_now, mix_frames->start, mix_frames->length);
+        auto buf = pipeline_->ReadLock(ref_now, mix_frames->start, mix_frames->length);
         if (buf) {
           // We have a buffer so call FinishMixJob on this region and perform another MixJob if
           // we did not mix enough data. This can happen if our pipeline is unable to produce the
@@ -84,7 +86,7 @@ void AudioOutput::Process() {
       } else {
         // If we did not |ReadLock| on this region of the pipeline, we should instead trim now to
         // ensure any client packets that otherwise would have been mixed are still released.
-        pipeline_->Trim(mono_now);
+        pipeline_->Trim(ref_now);
         frames_remaining = 0;
       }
 
@@ -95,7 +97,7 @@ void AudioOutput::Process() {
     } while (frames_remaining > 0);
   }
 
-  if (!next_sched_time_known_) {
+  if (!next_sched_time_mono_) {
     FX_LOGS(ERROR) << "Output failed to schedule next service time. Shutting down!";
     ShutdownSelf();
     return;
@@ -103,11 +105,12 @@ void AudioOutput::Process() {
 
   // Figure out when we should wake up to do more work again. No matter how long our implementation
   // wants to wait, we need to make sure to wake up and periodically trim our input queues.
-  auto max_sched_time = mono_now + kMaxTrimPeriod;
-  if (next_sched_time_mono_ > max_sched_time) {
-    next_sched_time_mono_ = max_sched_time;
+  auto max_sched_time_mono = mono_now + kMaxTrimPeriod;
+  if (next_sched_time_mono_.value() > max_sched_time_mono) {
+    SetNextSchedTimeMono(max_sched_time_mono);
   }
-  zx_status_t status = mix_timer_.PostForTime(mix_domain().dispatcher(), next_sched_time_mono_);
+  zx_status_t status =
+      mix_timer_.PostForTime(mix_domain().dispatcher(), next_sched_time_mono_.value());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to schedule mix";
     ShutdownSelf();

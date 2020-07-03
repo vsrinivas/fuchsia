@@ -131,10 +131,13 @@ void VirtualDevice<Iface>::WatchEvents() {
 
 template <class Iface>
 int64_t VirtualDevice<Iface>::NextSynchronizedTimestamp(TestFixture* fixture) const {
-  // Allow an entire ring buffer to go by.
-  fixture->RunLoopUntil([this]() { return running_ring_pos_ >= rb_.SizeBytes(); });
+  // Wait for a ring buffer rollover, to give the client enough time before the next one.
+  auto min_num_rings_for_measurement = (running_ring_pos_ + rb_.SizeBytes()) / rb_.SizeBytes();
+  auto pos_for_measurement = min_num_rings_for_measurement * rb_.SizeBytes();
+  fixture->RunLoopUntil(
+      [this, pos_for_measurement]() { return running_ring_pos_ >= pos_for_measurement; });
 
-  // Calculate the reference time at the start of the next ring buffer.
+  // Calculate the reference time for the start of the next ring buffer.
   auto ns_per_byte =
       TimelineRate(zx::sec(1).get(), format_.frames_per_second() * format_.bytes_per_frame());
   int64_t running_pos_for_play = ((running_ring_pos_ / rb_.SizeBytes()) + 1) * rb_.SizeBytes();

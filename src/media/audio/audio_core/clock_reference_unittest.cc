@@ -61,5 +61,29 @@ TEST(ClockReferenceTest, ClockCanSubsequentlyBeSet) {
   EXPECT_LT(time1, time2);
 }
 
+TEST(ClockReferenceTest, ClockMonoToRefClock) {
+  auto clock = clock::AdjustableCloneOfMonotonic();
+  auto clock_ref = ClockReference::MakeAdjustable(clock);
+
+  auto tl_func = clock_ref.ref_clock_to_clock_mono();
+  EXPECT_EQ(tl_func.reference_delta(), tl_func.subject_delta()) << "rate should be 1:1";
+
+  zx::clock::update_args args;
+  args.reset().set_rate_adjust(-1000);
+  EXPECT_EQ(clock.update(args), ZX_OK) << "clock.update with rate_adjust failed";
+
+  auto quick_tl_func = clock_ref.quick_ref_clock_to_clock_mono();
+  EXPECT_EQ(quick_tl_func.reference_delta(), quick_tl_func.subject_delta())
+      << "rate should still be 1:1";
+
+  auto post_update_tl_func = clock_ref.ref_clock_to_clock_mono();
+  EXPECT_LT(post_update_tl_func.reference_delta(), post_update_tl_func.subject_delta())
+      << "rate should be less than 1:1";
+
+  auto post_update_quick_tl_func = clock_ref.ref_clock_to_clock_mono();
+  EXPECT_LT(post_update_quick_tl_func.reference_delta(), post_update_quick_tl_func.subject_delta())
+      << "rate should be less than 1:1";
+}
+
 }  // namespace
 }  // namespace media::audio

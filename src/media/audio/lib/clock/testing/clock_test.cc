@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/lib/clock/clone_mono.h"
+
 namespace media::audio::clock::testing {
 
 // Ensure this reference clock's handle has expected rights: DUPLICATE, TRANSFER, READ, not WRITE.
@@ -129,6 +131,55 @@ void VerifyIsNotSystemMonotonic(const zx::clock& clock) {
                    clock_details.mono_to_synthetic.synthetic_offset &&
                clock_details.mono_to_synthetic.rate.reference_ticks ==
                    clock_details.mono_to_synthetic.rate.synthetic_ticks);
+}
+
+fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props) {
+  constexpr zx::duration kOffsetPad = zx::usec(10);
+
+  zx::clock clock;
+  zx_status_t status;
+
+  if (props.start_val.has_value() || props.mono_offset.has_value()) {
+    status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &clock);
+    if (status != ZX_OK) {
+      return fit::error(status);
+    }
+
+    zx::clock::update_args args;
+    if (props.start_val.has_value()) {
+      args.reset().set_value(props.start_val.value());
+    } else {
+      auto offset = props.mono_offset.value() + kOffsetPad;
+      args.reset().set_value(zx::clock::get_monotonic() + offset);
+    }
+
+    status = clock.update(args);
+    if (status != ZX_OK) {
+      return fit::error(status);
+    }
+  } else {
+    clock = props.rate_adjust_ppm.has_value() ? clock::AdjustableCloneOfMonotonic()
+                                              : clock::CloneOfMonotonic();
+  }
+
+  if (props.rate_adjust_ppm.has_value()) {
+    zx::clock::update_args args;
+    args.reset().set_rate_adjust(props.rate_adjust_ppm.value());
+
+    status = clock.update(args);
+    if (status != ZX_OK) {
+      return fit::error(status);
+    }
+
+    return fit::ok(std::move(clock));
+  }
+
+  status = clock.replace(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ, &clock);
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+
+  return fit::ok(std::move(clock));
 }
 
 }  // namespace media::audio::clock::testing

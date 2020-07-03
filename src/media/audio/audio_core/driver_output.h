@@ -88,8 +88,8 @@ class DriverOutput : public AudioOutput {
 
   int64_t frames_sent_ = 0;
   int64_t low_water_frames_ = 0;
-  zx::time underflow_start_time_;
-  zx::time underflow_cooldown_deadline_;
+  zx::time underflow_start_time_mono_;
+  zx::time underflow_cooldown_deadline_mono_;
 
   // Details about the final output format
   std::unique_ptr<OutputProducer> output_producer_;

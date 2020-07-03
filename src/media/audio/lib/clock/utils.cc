@@ -68,11 +68,12 @@ fit::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock
     return fit::error(status);
   }
 
-  snapshot.timeline_transform =
-      TimelineFunction(clock_details.mono_to_synthetic.synthetic_offset,
-                       clock_details.mono_to_synthetic.reference_offset,
-                       clock_details.mono_to_synthetic.rate.synthetic_ticks,
-                       clock_details.mono_to_synthetic.rate.reference_ticks);
+  // The inverse of the clock_details.mono_to_synthetic affine transform.
+  snapshot.reference_to_monotonic =
+      TimelineFunction(clock_details.mono_to_synthetic.reference_offset,
+                       clock_details.mono_to_synthetic.synthetic_offset,
+                       clock_details.mono_to_synthetic.rate.reference_ticks,
+                       clock_details.mono_to_synthetic.rate.synthetic_ticks);
   snapshot.generation = clock_details.generation_counter;
 
   return fit::ok(snapshot);

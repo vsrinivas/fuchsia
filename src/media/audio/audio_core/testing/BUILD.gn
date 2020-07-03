@@ -6,6 +6,7 @@ source_set("testing") {
   testonly = true
 
   sources = [
+    "custom_clock_ref.h",
     "fake_audio_device.h",
     "fake_audio_driver.h",
     "fake_audio_driver_v1.cc",
@@ -33,6 +34,7 @@ source_set("testing") {
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:message_transceiver",
+    "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/audio-proto-utils",
   ]

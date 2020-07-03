@@ -5,7 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_CLOCK_TEST_H_
 #define SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_CLOCK_TEST_H_
 
+#include <lib/fit/result.h>
 #include <lib/zx/clock.h>
+
+#include <optional>
 
 namespace media::audio::clock::testing {
 
@@ -27,6 +30,14 @@ void VerifyNotSame(const zx::clock& clock1, const zx::clock& clock2);
 
 void VerifyIsSystemMonotonic(const zx::clock& clock);
 void VerifyIsNotSystemMonotonic(const zx::clock& clock);
+
+struct ClockProperties {
+  std::optional<zx::time> start_val = std::nullopt;
+  std::optional<zx::duration> mono_offset = std::nullopt;
+  std::optional<int32_t> rate_adjust_ppm = std::nullopt;
+};
+
+fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props);
 
 }  // namespace media::audio::clock::testing
 

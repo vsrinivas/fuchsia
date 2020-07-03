@@ -10,6 +10,8 @@
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/time.h>
 
+#include <optional>
+
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
@@ -35,8 +37,6 @@ class AudioOutput : public AudioDevice {
   OutputPipeline* output_pipeline() const { return pipeline_.get(); }
 
  protected:
-  friend class AudioOutputTest;
-
   AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix);
   AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
               std::unique_ptr<AudioDriver>);
@@ -56,10 +56,11 @@ class AudioOutput : public AudioDevice {
 
   // Mark this output as needing to be mixed at the specified future time.
   // async PostForTime requires a time in the CLOCK_MONOTONIC timebase, so we use that here.
-  void SetNextSchedTime(zx::time next_sched_time_mono) {
+  void SetNextSchedTimeMono(zx::time next_sched_time_mono) {
     next_sched_time_mono_ = next_sched_time_mono;
-    next_sched_time_known_ = true;
   }
+
+  inline void ClearNextSchedTime() { next_sched_time_mono_ = std::nullopt; }
 
   void SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
                     size_t max_block_size_frames,
@@ -124,8 +125,7 @@ class AudioOutput : public AudioDevice {
       FXL_GUARDED_BY(mix_domain().token()){this};
 
   zx::duration min_lead_time_;
-  zx::time next_sched_time_mono_;
-  bool next_sched_time_known_;
+  std::optional<zx::time> next_sched_time_mono_;
   size_t max_block_size_frames_;
 
   std::unique_ptr<OutputPipeline> pipeline_;
