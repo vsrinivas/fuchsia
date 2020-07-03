@@ -53,8 +53,8 @@ component.
 ## Using a runner
 
 A component can specify that it should be launched with a particular runner by
-[using][use] a runner from its [environment][environments]. For example, a
-component can use the `web` runner by including the following stanza in its
+[using][use] a runner from its [environment][environments-runners]. For example,
+a component can use the `web` runner by including the following stanza in its
 `cml` file:
 
 ```json5
@@ -68,9 +68,9 @@ request to the provider of the `web` runner to start it.
 
 ## Making a runner available {#available}
 
-Runners are made available to components through [environments][environments]. A
-runner must be registered in a component's environment for the component to
-`use` it.
+Runners are made available to components through
+[environments][environments-runners]. A runner must be registered in a
+component's environment for the component to `use` it.
 
 Runners are a type of [capability][glossary-capability], which can be
 [routed][routing]. Note that unlike other capabilities like protocols, runners
