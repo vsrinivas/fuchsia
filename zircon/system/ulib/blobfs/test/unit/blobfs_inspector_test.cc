@@ -19,7 +19,7 @@
 namespace blobfs {
 namespace {
 
-constexpr uint64_t kBlockCount = 1 << 15;
+constexpr uint64_t kBlockCount = 1 << 10;
 
 class FakeTransactionHandler : public fs::LegacyTransactionHandler {
  public:
