@@ -37,6 +37,11 @@ struct ConsoleStarterArgs {
   llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
 };
 
+struct ServiceStarterArgs {
+  SystemInstance* instance;
+  Coordinator* coordinator;
+};
+
 struct ServiceStarterParams {
   std::string netsvc_interface;
   std::string zircon_nodename;
@@ -503,13 +508,13 @@ void SystemInstance::devmgr_vfs_init() {
                 zx_status_get_string(r));
 }
 
-// Thread trampoline for start_console_shell/ConsoleStarter
-int console_starter(void* arg) {
+// Thread trampoline for start_console/ConsoleStarter
+static int console_starter(void* arg) {
   auto args = std::unique_ptr<ConsoleStarterArgs>(static_cast<ConsoleStarterArgs*>(arg));
   return args->instance->ConsoleStarter(args->boot_args);
 }
 
-void SystemInstance::start_console_shell(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args) {
+void SystemInstance::start_console(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args) {
   // If the shell job wasn't created, console.shell is disabled so we have nothing to launch.
   if (!shell_job_.is_valid()) {
     return;
@@ -642,15 +647,26 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
 }
 
 // Thread trampoline for ServiceStarter
-int SystemInstance::service_starter(void* arg) {
+int service_starter(void* arg) {
   auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
   return args->instance->ServiceStarter(args->coordinator);
 }
 
+void SystemInstance::start_services(Coordinator& coordinator) {
+  thrd_t t;
+  auto service_starter_args = std::make_unique<ServiceStarterArgs>();
+  service_starter_args->instance = this;
+  service_starter_args->coordinator = &coordinator;
+  int ret =
+      thrd_create_with_name(&t, service_starter, service_starter_args.release(), "service-starter");
+  if (ret == thrd_success) {
+    thrd_detach(t);
+  }
+}
+
 // Thread trampoline for WaitForSystemAvailable, which ServiceStarter spawns
 int wait_for_system_available(void* arg) {
-  auto args = std::unique_ptr<SystemInstance::ServiceStarterArgs>(
-      static_cast<SystemInstance::ServiceStarterArgs*>(arg));
+  auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
   return args->instance->WaitForSystemAvailable(args->coordinator);
 }
 

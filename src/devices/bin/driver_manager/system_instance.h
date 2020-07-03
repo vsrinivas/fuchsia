@@ -20,11 +20,6 @@ zx_status_t wait_for_file(const char* path, zx::time deadline);
 
 class SystemInstance : public FsProvider {
  public:
-  struct ServiceStarterArgs {
-    SystemInstance* instance;
-    Coordinator* coordinator;
-  };
-
   SystemInstance();
 
   // Implementation required to implement FsProvider
@@ -44,11 +39,10 @@ class SystemInstance : public FsProvider {
 
   void devmgr_vfs_init();
 
-  void start_console_shell(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
+  void start_console(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
   int ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args);
 
-  // Thread entry point
-  static int service_starter(void* arg);
+  void start_services(Coordinator& coordinator);
   int ServiceStarter(Coordinator* coordinator);
   int WaitForSystemAvailable(Coordinator* coordinator);
 
