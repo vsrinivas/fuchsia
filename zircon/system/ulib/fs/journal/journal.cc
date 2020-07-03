@@ -73,6 +73,10 @@ Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> op
 
   // Ensure there is enough space in the writeback buffer.
   uint64_t block_count = BlockCount(operations);
+  if (block_count == 0) {
+    return fit::make_result_promise<void, zx_status_t>(fit::ok());
+  }
+
   storage::BlockingRingBufferReservation reservation;
   status = writeback_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {

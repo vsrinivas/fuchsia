@@ -16,7 +16,9 @@
 namespace storage {
 
 zx_status_t internal::RingBufferState::Reserve(uint64_t blocks, RingBufferReservation* out) {
-  ZX_DEBUG_ASSERT(blocks > 0);
+  if (blocks == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   size_t destination_offset = 0;
   {
     fbl::AutoLock lock(&lock_);

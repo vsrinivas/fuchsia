@@ -4,6 +4,7 @@
 
 #include <lib/cksum.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
 #include <algorithm>
@@ -605,7 +606,7 @@ TEST_F(JournalTest, NoWorkSyncCompletesBeforeJournalDestruction) {
 
   ASSERT_FALSE(sync_completed);
   journal.schedule_task(std::move(promise));
-  ASSERT_OK(sync_completion_wait(&sync_completion, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&sync_completion, zx::duration::infinite().get()));
   ASSERT_TRUE(sync_completed);
 }
 
@@ -659,6 +660,19 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
     });
     journal.schedule_task(std::move(promise));
   }
+}
+
+TEST_F(JournalTest, WriteNoDataSucceeds) {
+  MockTransactionHandler handler(registry(), {}, 0);
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                  Journal::Options());
+  sync_completion_t sync_completion;
+  auto promise = journal.WriteData({}).inspect([&] (const fit::result<void, zx_status_t>& result) {
+    EXPECT_TRUE(result.is_ok());
+    sync_completion_signal(&sync_completion);
+  });
+  journal.schedule_task(std::move(promise));
+  EXPECT_OK(sync_completion_wait(&sync_completion, zx::duration::infinite().get()));
 }
 
 // Tests that writing metadata to the journal is observable from the "block device".

@@ -706,5 +706,14 @@ TEST(RingBufferTest, ReleaseReservationDecommitsMemory) {
   ASSERT_EQ(0, info.committed_bytes);
 }
 
+TEST(RingBufferTest, ReserveZeroBlocksReturnsError) {
+  MockVmoidRegistry vmoid_registry;
+  std::unique_ptr<RingBuffer> buffer;
+  const size_t kBlocks = 5;
+  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, kBlockSize, "test-buffer", &buffer));
+  RingBufferReservation reservation;
+  EXPECT_STATUS(buffer->Reserve(0, &reservation), ZX_ERR_INVALID_ARGS);
+}
+
 }  // namespace
 }  // namespace storage
