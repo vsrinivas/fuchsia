@@ -15,17 +15,25 @@ Manager::Manager() = default;
 Manager::~Manager() { CloseFifoServer(); }
 
 bool Manager::IsFifoServerRunning() {
-  switch (GetState()) {
-    case ThreadState::Running:
-      return true;
-    case ThreadState::Joinable:
-      // Joining the thread here is somewhat arbitrary -- as opposed to joining in
-      // |StartServer()| -- but it lets us avoid a second atomic load.
-      JoinServer();
-      break;
-    case ThreadState::None:
-      break;
+  {
+    std::scoped_lock lock(mutex_);
+    switch (state_) {
+      case ThreadState::Running:
+        // See if the server is about to terminate.
+        if (!server_->WillTerminate())
+          return true;
+        // It is, so wait.
+        while (state_ != ThreadState::Joinable)
+          condition_.wait(mutex_);
+        break;
+      case ThreadState::Joinable:
+        break;
+      case ThreadState::None:
+        return false;
+    }
   }
+  // Joining the thread here is somewhat arbitrary -- as opposed to joining in |StartServer()|.
+  JoinServer();
   return false;
 }
 

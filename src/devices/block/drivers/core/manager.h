@@ -10,7 +10,8 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 #include <ddktl/protocol/block.h>
 
@@ -68,12 +69,21 @@ class Manager {
   // closes their end of the Fifo.
   static int RunServer(void* arg);
 
-  ThreadState GetState() const { return state_.load(); }
+  ThreadState GetState() const {
+    std::scoped_lock lock(mutex_);
+    return state_;
+  }
 
-  void SetState(ThreadState state) { state_.store(state); }
+  void SetState(ThreadState state) {
+    std::scoped_lock lock(mutex_);
+    state_ = state;
+    condition_.notify_all();
+  }
 
   thrd_t thread_;
-  std::atomic<ThreadState> state_ = ThreadState::None;
+  mutable std::mutex mutex_;
+  std::condition_variable_any condition_;
+  ThreadState state_ TA_GUARDED(mutex_) = ThreadState::None;
 
   std::unique_ptr<Server> server_;
 };

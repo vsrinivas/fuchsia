@@ -515,3 +515,8 @@ void Server::Shutdown() {
   zx_signals_t seen;
   fifo_.wait_one(signals, zx::time::infinite(), &seen);
 }
+
+bool Server::WillTerminate() const {
+  zx_signals_t signals;
+  return fifo_.wait_one(ZX_FIFO_PEER_CLOSED, zx::time::infinite_past(), &signals) == ZX_OK;
+}

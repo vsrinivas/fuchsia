@@ -37,6 +37,8 @@ class Server {
                             fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
                             std::unique_ptr<Server>* out);
 
+  ~Server();
+
   // Starts the Server using the current thread
   zx_status_t Serve() TA_EXCL(server_lock_);
   zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out) TA_EXCL(server_lock_);
@@ -56,7 +58,9 @@ class Server {
   void TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group);
 
   void Shutdown();
-  ~Server();
+
+  // Returns true if the server is about to terminate.
+  bool WillTerminate() const;
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Server);
