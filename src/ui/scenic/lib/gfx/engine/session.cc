@@ -79,12 +79,16 @@ void Session::DispatchCommand(fuchsia::ui::scenic::Command command,
 
 EventReporter* Session::event_reporter() const { return event_reporter_.get(); }
 
+void Session::UpdateAndStageViewTreeUpdates(SceneGraph* scene_graph) {
+  view_tree_updater_.UpdateViewHolderConnections();
+  view_tree_updater_.StageViewTreeUpdates(scene_graph);
+}
+
 bool Session::ApplyScheduledUpdates(CommandContext* command_context,
                                     scheduling::PresentId present_id) {
   // RAII object to ensure UpdateViewHolderConnections and StageViewTreeUpdates, on all exit paths.
   fbl::AutoCall cleanup([this, command_context] {
-    view_tree_updater_.UpdateViewHolderConnections();
-    view_tree_updater_.StageViewTreeUpdates(command_context->scene_graph.get());
+    UpdateAndStageViewTreeUpdates(command_context->scene_graph.get());
   });
 
   // Batch all updates up to |present_id|.

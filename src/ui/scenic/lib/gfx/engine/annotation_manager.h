@@ -63,6 +63,10 @@ class AnnotationManager {
 
   void FulfillCreateRequests();
 
+  // Annotation manager session doesn't participate in |ApplySessionUpdates()|,
+  // so its ViewTree updates need to be staged manually using this method.
+  void StageViewTreeUpdates();
+
  private:
   // Create annotation ViewHolder immediately.
   ViewHolderPtr NewAnnotationViewHolder(fuchsia::ui::views::ViewHolderToken view_holder_token);

@@ -87,6 +87,9 @@ class Session : public CommandDispatcher {
   ResourceMap* resources() { return &resources_; }
   const ResourceMap* resources() const { return &resources_; }
 
+  // Stage the latest ViewTree updates to a given SceneGraph.
+  void UpdateAndStageViewTreeUpdates(SceneGraph* scene_graph);
+
   // Applies all updates with a PresentId up to and including |present_id| to the scene graph.
   // This function should be called with monotonically increasing PresentIds.
   // Returns true if the update succeeds, false otherwise.

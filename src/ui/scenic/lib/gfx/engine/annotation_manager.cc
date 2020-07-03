@@ -124,5 +124,9 @@ void AnnotationManager::FulfillCreateRequests() {
   CleanupFulfilledRequests();
 }
 
+void AnnotationManager::StageViewTreeUpdates() {
+  session_->UpdateAndStageViewTreeUpdates(scene_graph_.get());
+}
+
 }  // namespace gfx
 }  // namespace scenic_impl

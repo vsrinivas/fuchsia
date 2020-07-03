@@ -244,6 +244,11 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   // fulfilling them by adding the annotation ViewHolders to the SceneGraph.
   engine_->annotation_manager()->FulfillCreateRequests();
 
+  // Session owned by AnnotationManager can also have ViewTree updates when
+  // AnnotaionViewHolders are created or deleted. We should stage these updates
+  // into SceneGraph manually.
+  engine_->annotation_manager()->StageViewTreeUpdates();
+
   // Run through compositors, find the active Scene, stage it as the view tree root.
   {
     std::set<Scene*> scenes;
