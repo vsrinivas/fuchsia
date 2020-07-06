@@ -5,6 +5,10 @@
 #define SRC_MEDIA_AUDIO_TOOLS_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
@@ -60,8 +64,11 @@ class MediaApp {
   void set_duration(double duration_secs) { duration_secs_ = duration_secs; }
   double get_duration() { return duration_secs_; }
 
-  void set_frames_per_payload(uint32_t frames_per_payload) {
-    frames_per_payload_ = frames_per_payload;
+  void set_frames_per_packet(uint32_t set_frames_per_packet) {
+    frames_per_packet_ = set_frames_per_packet;
+  }
+  void set_frames_per_payload_buffer(uint32_t frames_per_payload_buffer) {
+    frames_per_payload_buffer_ = frames_per_payload_buffer;
   }
   void set_num_payload_buffers(uint32_t num_payload_buffers) {
     num_payload_buffers_ = num_payload_buffers;
@@ -70,12 +77,13 @@ class MediaApp {
   void set_clock_type(ClockType type) { clock_type_ = type; }
   void adjust_clock_rate(int32_t rate_adjustment) { clock_rate_adjustment_ = rate_adjustment; }
 
-  void set_use_pts(bool use_pts) { use_pts_ = use_pts; }
+  void set_ref_start_time(bool set_ref_time) { set_ref_start_time_ = set_ref_time; }
+  void set_media_start_pts(int64_t media_start_pts) { media_start_pts_ = media_start_pts; }
+  void use_pkt_pts(bool use_pts) { timestamp_packets_ = use_pts; }
   void set_pts_continuity_threshold(float pts_continuity_threshold) {
     pts_continuity_threshold_secs_ = pts_continuity_threshold;
   }
 
-  void set_save_to_file(bool save_to_file) { save_to_file_ = save_to_file; }
   void set_save_file_name(std::string file_name) { file_name_ = file_name; }
 
   void set_stream_gain(float gain_db) { stream_gain_db_ = gain_db; }
@@ -87,8 +95,9 @@ class MediaApp {
   void set_usage_gain(float gain_db) { usage_gain_db_ = gain_db; }
   void set_usage_volume(float volume) { usage_volume_ = volume; }
 
-  void set_verbose(bool verbose) { verbose_ = verbose; }
   void set_ultrasound(bool ultrasound) { ultrasound_ = ultrasound; }
+  void set_online(bool online) { online_ = online; }
+  void set_verbose(bool verbose) { verbose_ = verbose; }
 
   void Run(sys::ComponentContext* app_context);
 
@@ -109,6 +118,9 @@ class MediaApp {
   void Play();
 
   void SendPacket();
+  bool CheckPayloadSpace();
+  void OnSendPacketTimer();
+  void ScheduleNextSendPacket();
   void OnSendPacketComplete(uint64_t frames_completed);
 
   struct AudioPacket {
@@ -131,7 +143,6 @@ class MediaApp {
 
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
-  bool received_min_lead_time_ = false;
   zx::duration min_lead_time_;
 
   std::vector<fzl::VmoMapper> payload_buffers_;
@@ -153,33 +164,44 @@ class MediaApp {
   double amplitude_;         // Amplitude between 0.0 and 1.0 (full-scale).
   double amplitude_scalar_;  // Amp translated to container-specific magn.
 
-  double duration_secs_;
-  uint32_t frames_per_payload_;
+  uint32_t bytes_per_packet_;
+  uint32_t frames_per_packet_;
+
+  uint32_t frames_per_payload_buffer_;
+  uint32_t packets_per_payload_buffer_;
+
   uint32_t num_payload_buffers_;
+
+  uint32_t total_mappable_packets_;
+  uint32_t target_num_packets_outstanding_;
+
+  double duration_secs_;
+  uint64_t total_frames_to_send_;
+  uint64_t num_packets_to_send_;
+  uint64_t num_packets_sent_ = 0u;
+  uint64_t num_packets_completed_ = 0u;
+  uint64_t num_frames_completed_ = 0u;
 
   zx::clock reference_clock_;
   ClockType clock_type_ = ClockType::Default;
   std::optional<int32_t> clock_rate_adjustment_ = std::nullopt;
 
+  async::TaskClosureMethod<MediaApp, &MediaApp::OnSendPacketTimer> online_send_packet_timer_{this};
+
+  zx::time target_online_send_packet_ref_time_;
+  zx::duration online_send_packet_ref_period_;
+
+  bool set_ref_start_time_ = false;
   zx::time reference_start_time_;
-  zx::time media_start_time_;
-  bool use_pts_ = false;
+
+  std::optional<int64_t> media_start_pts_ = std::nullopt;
+
+  bool timestamp_packets_ = false;
   std::optional<float> pts_continuity_threshold_secs_ = std::nullopt;
 
-  uint32_t payload_mapping_size_;
-  uint32_t payload_size_;
-  uint32_t payloads_per_mapping_;
-  uint32_t total_num_mapped_payloads_;
+  bool online_;
 
-  uint64_t total_frames_to_send_;
-  uint64_t num_packets_to_send_;
-  uint64_t num_packets_sent_ = 0u;
-  uint64_t num_packets_completed_ = 0u;
-  uint64_t num_frames_sent_ = 0u;
-  uint64_t num_frames_completed_ = 0u;
-
-  bool save_to_file_ = false;
-  std::string file_name_;
+  std::optional<std::string> file_name_ = std::nullopt;
   media::audio::WavWriter<> wav_writer_;
   bool wav_writer_initialized_ = false;
 
@@ -191,8 +213,6 @@ class MediaApp {
 
   std::optional<float> usage_gain_db_ = std::nullopt;
   std::optional<float> usage_volume_ = std::nullopt;
-
-  bool verbose_ = false;
 
   // To produce pink noise, we first generate white noise then run it through a "pinking" filter to
   // progressively attenuate high frequencies.
@@ -209,6 +229,7 @@ class MediaApp {
   static constexpr double kPinkNoiseSignalBoostFactor = 4.0;
 
   bool ultrasound_ = false;
+  bool verbose_;
 };
 
 }  // namespace media::tools

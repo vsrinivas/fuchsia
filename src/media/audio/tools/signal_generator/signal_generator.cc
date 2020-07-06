@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
 
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
@@ -19,7 +20,6 @@
 
 namespace media::tools {
 
-constexpr auto kNoTimeStamp = zx::time(fuchsia::media::NO_TIMESTAMP);
 constexpr auto kPlayStartupDelay = zx::msec(0);
 
 const char* SampleFormatToString(const fuchsia::media::AudioSampleFormat& format) {
@@ -35,30 +35,25 @@ const char* SampleFormatToString(const fuchsia::media::AudioSampleFormat& format
   }
 }
 
-std::string RefTimeStrFromZxTime(zx::time zx_time) {
-  char time_chars[20];
+fbl::String RefTimeStrFromZxTime(zx::time zx_time) {
   auto time = zx_time.get();
 
   if (time == fuchsia::media::NO_TIMESTAMP) {
-    snprintf(time_chars, 20, "  [NO_TIMESTAMP]   ");
-  } else {
-    snprintf(time_chars, 20, "%07lu'%03lu'%03lu'%03lu", time / ZX_SEC(1),
-             (time % ZX_SEC(1)) / ZX_MSEC(1), (time % ZX_MSEC(1)) / ZX_USEC(1), time % ZX_USEC(1));
+    return fbl::String("  [NO_TIMESTAMP]   ");
   }
-  return std::string(time_chars);
+  return fbl::StringPrintf("%07lu'%03lu'%03lu'%03lu", time / ZX_SEC(1),
+                           (time % ZX_SEC(1)) / ZX_MSEC(1), (time % ZX_MSEC(1)) / ZX_USEC(1),
+                           time % ZX_USEC(1));
 }
 
-std::string RefTimeMsStrFromZxTime(zx::time zx_time) {
-  char time_chars[18];
+fbl::String RefTimeMsStrFromZxTime(zx::time zx_time) {
   auto time = zx_time.get();
 
   if (time == fuchsia::media::NO_TIMESTAMP) {
-    snprintf(time_chars, 18, "[NO_TIMESTAMP]   ");
-  } else {
-    snprintf(time_chars, 18, "%07lu'%03lu.%02lu ms", time / ZX_SEC(1),
-             (time % ZX_SEC(1)) / ZX_MSEC(1), (time % ZX_MSEC(1)) / ZX_USEC(10));
+    return fbl::String("[NO_TIMESTAMP]   ");
   }
-  return std::string(time_chars);
+  return fbl::StringPrintf("%07lu'%03lu.%02lu ms", time / ZX_SEC(1),
+                           (time % ZX_SEC(1)) / ZX_MSEC(1), (time % ZX_MSEC(1)) / ZX_USEC(10));
 }
 
 MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
@@ -133,12 +128,13 @@ void MediaApp::ParameterRangeChecks() {
     success = false;
   }
 
-  if (frames_per_payload_ > frame_rate_ / 2) {
-    std::cerr << "Payload size must be 500 milliseconds or less" << std::endl;
+  if (frames_per_packet_ > (num_payload_buffers_ * frames_per_payload_buffer_ / 2) &&
+      frames_per_packet_ < num_payload_buffers_ * frames_per_payload_buffer_) {
+    std::cerr << "Packet size cannot be larger than half the total payload space" << std::endl;
     success = false;
   }
-  if (frames_per_payload_ < frame_rate_ / 1000) {
-    std::cerr << "Payload size must be 1 millisecond or more" << std::endl;
+  if (frames_per_packet_ < frame_rate_ / 1000) {
+    std::cerr << "Packet size must be 1 millisecond or more" << std::endl;
     success = false;
   }
 
@@ -187,8 +183,8 @@ void MediaApp::ParameterRangeChecks() {
 // TODO(mpuryear): handle end-of-buffer wraparound; make it a true ring buffer.
 void MediaApp::SetupPayloadCoefficients() {
   total_frames_to_send_ = duration_secs_ * frame_rate_;
-  num_packets_to_send_ = total_frames_to_send_ / frames_per_payload_;
-  if (num_packets_to_send_ * frames_per_payload_ < total_frames_to_send_) {
+  num_packets_to_send_ = total_frames_to_send_ / frames_per_packet_;
+  if (num_packets_to_send_ * frames_per_packet_ < total_frames_to_send_) {
     ++num_packets_to_send_;
   }
 
@@ -209,23 +205,24 @@ void MediaApp::SetupPayloadCoefficients() {
       sample_size_ = sizeof(float);
       break;
     default:
-      CLI_CHECK(false, "Unknown AudioSampleFormat");
+      printf("Unknown AudioSampleFormat: %u\n", sample_format_);
+      Shutdown();
+      return;
   }
 
   // As mentioned above, for 24-bit audio we use 32-bit samples (low byte 0).
   frame_size_ = num_channels_ * sample_size_;
 
-  payload_size_ = frames_per_payload_ * frame_size_;
+  bytes_per_packet_ = frames_per_packet_ * frame_size_;
 
-  // First, assume one second of audio, determine how many payloads will fit, then trim the mapping
-  // to the amount that will be used. This mapping size will be split across |num_payload_buffers_|
-  // buffers. For example, with 2 buffers each will be large enough hold 500ms of data.
-  auto total_mapping_size = frame_rate_ * frame_size_;
-  total_num_mapped_payloads_ = total_mapping_size / payload_size_;
+  // From the specified size|number of payload buffers, determine how many packets fit, then trim
+  // the mapping to what will be used. This size will be split across |num_payload_buffers_|
+  // buffers, e.g. 2 buffers of 48000 frames each will be large enough hold 200 480-frame packets.
+  auto total_payload_buffer_space = num_payload_buffers_ * frames_per_payload_buffer_ * frame_size_;
+  total_mappable_packets_ = total_payload_buffer_space / bytes_per_packet_;
 
   // Shard out the payloads across multiple buffers, ensuring we can hold at least 1 buffer.
-  payloads_per_mapping_ = std::max(1u, total_num_mapped_payloads_ / num_payload_buffers_);
-  payload_mapping_size_ = payloads_per_mapping_ * payload_size_;
+  packets_per_payload_buffer_ = std::max(1u, total_mappable_packets_ / num_payload_buffers_);
 }
 
 void MediaApp::DisplayConfigurationSettings() {
@@ -282,8 +279,8 @@ void MediaApp::DisplayConfigurationSettings() {
 
   printf(".\nThe generated signal will play for %.3f seconds", duration_secs_);
 
-  if (save_to_file_) {
-    printf(" and will be saved to '%s'", file_name_.c_str());
+  if (file_name_) {
+    printf(" and will be saved to '%s'", file_name_.value().c_str());
   }
 
   printf(".\nThe stream's reference clock will be ");
@@ -308,12 +305,18 @@ void MediaApp::DisplayConfigurationSettings() {
       break;
   }
 
-  printf(".\nThe renderer will transport data using %u %stimestamped buffers of %u frames",
-         total_num_mapped_payloads_, (!use_pts_ ? "non-" : ""), frames_per_payload_);
+  printf(".\nThe renderer will transport data using %u %stimestamped buffer sections of %u frames",
+         total_mappable_packets_, (timestamp_packets_ ? "" : "non-"), frames_per_packet_);
 
   if (pts_continuity_threshold_secs_) {
     printf(",\nhaving set the PTS continuity threshold to %f seconds",
            pts_continuity_threshold_secs_.value());
+  }
+
+  if (online_) {
+    printf(",\nusing strict timing for flow control (online mode)");
+  } else {
+    printf(",\nusing previous packet completions for flow control (contiguous mode)");
   }
 
   printf(".\n\n");
@@ -384,12 +387,16 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
     // GainControl throughout playback, in case we someday want to change gain during playback.
   }
 
+  if (online_) {
+    online_send_packet_ref_period_ = (zx::sec(1) * frames_per_packet_) / frame_rate_;
+  }
+
   SetAudioRendererEvents();
   ConfigureAudioRendererPts();
 }
 
 void MediaApp::ConfigureAudioRendererPts() {
-  if (use_pts_) {
+  if (timestamp_packets_) {
     audio_renderer_->SetPtsUnits(frame_rate_, 1);
   }
   if (pts_continuity_threshold_secs_) {
@@ -477,10 +484,10 @@ void MediaApp::InitializeAudibleRenderer() {
 }
 
 void MediaApp::InitializeWavWriter() {
-  // 24-bit buffers use 32-bit samples (lowest byte zero), and when this particular utility
-  // saves to .wav file, we save the entire 32 bits.
-  if (save_to_file_) {
-    wav_writer_initialized_ = wav_writer_.Initialize(file_name_.c_str(), sample_format_,
+  // 24-bit buffers use 32-bit samples (lowest byte zero), and when this particular utility saves to
+  // .wav file, we save the entire 32 bits.
+  if (file_name_) {
+    wav_writer_initialized_ = wav_writer_.Initialize(file_name_.value().c_str(), sample_format_,
                                                      num_channels_, frame_rate_, sample_size_ * 8);
     CLI_CHECK(wav_writer_initialized_, "WavWriter::Initialize() failed");
   }
@@ -493,8 +500,8 @@ void MediaApp::CreateMemoryMapping() {
     auto& payload_buffer = payload_buffers_.emplace_back();
     zx::vmo payload_vmo;
     zx_status_t status = payload_buffer.CreateAndMap(
-        payload_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &payload_vmo,
-        ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+        bytes_per_packet_ * packets_per_payload_buffer_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+        nullptr, &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
     CLI_CHECK(status == ZX_OK || Shutdown(), "VmoMapper:::CreateAndMap failed: " << status);
 
@@ -526,6 +533,7 @@ void MediaApp::Play() {
   if (num_packets_to_send_ == 0) {
     // No packets to send, so we're done! Shutdown will unwind everything and exit our loop.
     Shutdown();
+    return;
   }
 
   zx::time ref_now;
@@ -539,25 +547,46 @@ void MediaApp::Play() {
     PrimePinkNoiseFilter();
   }
 
-  // We can only send down as many packets as will concurrently fit into our payload buffer.
-  // The rest will be sent, one at a time, from a previous packet's completion callback.
-  uint32_t num_packets_to_prime =
-      std::min<uint64_t>(total_num_mapped_payloads_, num_packets_to_send_);
-  for (uint32_t packet_num = 0; packet_num < num_packets_to_prime; ++packet_num) {
+  target_num_packets_outstanding_ =
+      online_ ? (total_mappable_packets_ / 2) : total_mappable_packets_;
+  target_num_packets_outstanding_ =
+      std::min<uint64_t>(target_num_packets_outstanding_, num_packets_to_send_);
+
+  auto target_duration_outstanding =
+      (zx::sec(1) * target_num_packets_outstanding_ * frames_per_packet_) / frame_rate_;
+  if (target_duration_outstanding < min_lead_time_ &&
+      target_duration_outstanding < zx::nsec(ZX_SEC(1) * duration_secs_)) {
+    printf("\nPayload buffer space is too small for the minimum lead time and signal duration.\n");
+    Shutdown();
+    return;
+  }
+
+  // We "prime" the audio renderer by submitting an initial set of packets before starting playback.
+  // We will subsequently send the rest one at a time -- either from a timer (if 'online'), or from
+  // the completion of a previous packet (if not 'online').
+  // When priming, we send down only as many packets as concurrently fit into our payload buffer.
+  // And if online, we send half that much, to provide leeway for the renderer to temporarily
+  // complete packets too fast OR too slow, because of slight differences in clock rate.
+  for (uint32_t packet_num = 0; packet_num < target_num_packets_outstanding_; ++packet_num) {
     SendPacket();
   }
 
   status = reference_clock_.read(ref_now.get_address());
   CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during Play(): " << status);
 
-  reference_start_time_ = use_pts_ ? ref_now + kPlayStartupDelay + min_lead_time_ : kNoTimeStamp;
-  media_start_time_ = use_pts_ ? zx::time(0) : kNoTimeStamp;
+  reference_start_time_ = set_ref_start_time_ ? ref_now + kPlayStartupDelay + min_lead_time_
+                                              : zx::time(fuchsia::media::NO_TIMESTAMP);
+  auto media_start_pts = media_start_pts_.value_or(fuchsia::media::NO_TIMESTAMP);
 
   if (verbose_) {
+    auto mono_time_result = audio::clock::MonotonicTimeFromReferenceTime(reference_clock_, ref_now);
+    CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
+    auto mono_now = mono_time_result.take_value();
+
     auto requested_ref_str = RefTimeStrFromZxTime(reference_start_time_);
-    auto requested_media_str = RefTimeStrFromZxTime(media_start_time_);
-    auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
-    auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
+    auto requested_media_str = RefTimeStrFromZxTime(zx::time{media_start_pts});
+    auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
+    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
 
     printf("\nCalling Play (ref %s, media %s) at ref_now %s : mono_now %s\n",
            requested_ref_str.c_str(), requested_media_str.c_str(), ref_now_str.c_str(),
@@ -571,10 +600,15 @@ void MediaApp::Play() {
       CLI_CHECK(status == ZX_OK || Shutdown(),
                 "zx::clock::read failed during Play callback: " << status);
 
+      auto mono_time_result =
+          audio::clock::MonotonicTimeFromReferenceTime(reference_clock_, ref_now);
+      CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
+      auto mono_now = mono_time_result.take_value();
+
       auto actual_ref_str = RefTimeStrFromZxTime(zx::time{actual_ref_start});
       auto actual_media_str = RefTimeStrFromZxTime(zx::time{actual_media_start});
       auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
-      auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
+      auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
 
       printf("Play callback(ref %s, media %s) at ref_now %s : mono_now %s\n\n",
              actual_ref_str.c_str(), actual_media_str.c_str(), ref_now_str.c_str(),
@@ -582,7 +616,11 @@ void MediaApp::Play() {
     }
   };
 
-  audio_renderer_->Play(reference_start_time_.get(), media_start_time_.get(), play_completion_func);
+  audio_renderer_->Play(reference_start_time_.get(), media_start_pts, play_completion_func);
+  if (online_) {
+    target_online_send_packet_ref_time_ = ref_now;
+    ScheduleNextSendPacket();
+  }
 }
 
 // We have a set of buffers each backed by its own VMO, with each buffer sub-divided into
@@ -608,17 +646,21 @@ MediaApp::AudioPacket MediaApp::CreateAudioPacket(uint64_t packet_num) {
   packet.payload_buffer_id = packet_num % num_payload_buffers_;
 
   auto buffer_payload_index = packet_num / num_payload_buffers_;
-  packet.payload_offset = (buffer_payload_index % payloads_per_mapping_) * payload_size_;
+  packet.payload_offset = (buffer_payload_index % packets_per_payload_buffer_) * bytes_per_packet_;
 
   // If last payload, send exactly what remains (otherwise send a full payload).
   packet.payload_size =
       (packet_num + 1 == num_packets_to_send_)
-          ? (total_frames_to_send_ - (packet_num * frames_per_payload_)) * frame_size_
-          : payload_size_;
+          ? (total_frames_to_send_ - (packet_num * frames_per_packet_)) * frame_size_
+          : bytes_per_packet_;
 
   // packet.pts (media time) is NO_TIMESTAMP by default unless we override it.
-  if (use_pts_) {
-    packet.pts = packet_num * frames_per_payload_;
+  if (timestamp_packets_) {
+    packet.pts = packet_num * frames_per_packet_;  // assumes PTS units of "frames"
+
+    if (media_start_pts_) {
+      packet.pts += media_start_pts_.value();
+    }
   }
 
   return {
@@ -640,15 +682,15 @@ void MediaApp::GenerateAudioForPacket(const AudioPacket& audio_packet, uint64_t 
   switch (sample_format_) {
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
       WriteAudioIntoBuffer<int32_t>(reinterpret_cast<int32_t*>(audio_buff), payload_frames,
-                                    frames_per_payload_ * packet_num);
+                                    frames_per_packet_ * packet_num);
       break;
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
       WriteAudioIntoBuffer<int16_t>(reinterpret_cast<int16_t*>(audio_buff), payload_frames,
-                                    frames_per_payload_ * packet_num);
+                                    frames_per_packet_ * packet_num);
       break;
     case fuchsia::media::AudioSampleFormat::FLOAT:
       WriteAudioIntoBuffer<float>(reinterpret_cast<float*>(audio_buff), payload_frames,
-                                  frames_per_payload_ * packet_num);
+                                  frames_per_packet_ * packet_num);
       break;
     default:
       CLI_CHECK(false, "Unknown AudioSampleFormat");
@@ -752,15 +794,118 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
   }
 }
 
+constexpr zx::duration kPktCompleteToleranceDuration = zx::msec(50);
+constexpr uint64_t kPktCompleteTolerance = 5;
+
+bool MediaApp::CheckPayloadSpace() {
+  if (num_packets_completed_ > 0 && num_packets_sent_ <= num_packets_completed_) {
+    printf("! Sending: packet %4lu; packet %4lu has already completed - did we underrun?\n",
+           num_packets_sent_, num_packets_completed_);
+    return false;
+  }
+
+  if (num_packets_sent_ >= num_packets_completed_ + total_mappable_packets_) {
+    printf("! Sending: packet %4lu; only %4lu have completed - did we overrun?\n",
+           num_packets_sent_, num_packets_completed_);
+    return false;
+  }
+
+  target_num_packets_outstanding_ = std::min<uint64_t>(
+      num_packets_to_send_ - num_packets_completed_, target_num_packets_outstanding_);
+  auto actual_packets_outstanding = num_packets_sent_ - num_packets_completed_;
+
+  auto target_duration_outstanding =
+      (zx::sec(1) * target_num_packets_outstanding_ * frames_per_packet_) / frame_rate_;
+  auto actual_duration_outstanding =
+      (zx::sec(1) * actual_packets_outstanding * frames_per_packet_) / frame_rate_;
+
+  auto elapsed_time_sec = static_cast<float>(num_frames_completed_) / frame_rate_;
+  // Check whether payload buffer is staying at approx the same fullness.
+  if (num_packets_completed_ > 0 &&
+      actual_packets_outstanding + kPktCompleteTolerance <= target_num_packets_outstanding_ &&
+      actual_duration_outstanding + kPktCompleteToleranceDuration <= target_duration_outstanding) {
+    printf(
+        "\n? %4lu packets outstanding (%ld msec); expected %4u (%ld msec); total elapsed %f sec: "
+        "are we completing faster than sending?\n\n",
+        actual_packets_outstanding, (actual_duration_outstanding / ZX_MSEC(1)).get(),
+        target_num_packets_outstanding_, (target_duration_outstanding / ZX_MSEC(1)).get(),
+        elapsed_time_sec);
+    return false;
+  }
+  if (num_packets_completed_ > 0 &&
+      target_num_packets_outstanding_ + kPktCompleteTolerance <= actual_packets_outstanding &&
+      target_duration_outstanding + kPktCompleteToleranceDuration <= actual_duration_outstanding) {
+    printf(
+        "\n? %4lu packets outstanding (%ld msec); expected %4u (%ld msec); total elapsed %f sec: "
+        "are we sending faster than completing?\n\n",
+        actual_packets_outstanding, (actual_duration_outstanding / ZX_MSEC(1)).get(),
+        target_num_packets_outstanding_, (target_duration_outstanding / ZX_MSEC(1)).get(),
+        elapsed_time_sec);
+    return false;
+  }
+
+  return true;
+}
+
+// Calculate the next SendPacket ref_time and mono_time, and Post to our async::TaskClosureMethod
+void MediaApp::ScheduleNextSendPacket() {
+  CLI_CHECK(online_, "Should only call NextSendPacket in online mode");
+  CLI_CHECK(online_send_packet_ref_period_ > zx::duration(0), "SendPacket period is not set");
+
+  if (num_packets_sent_ >= num_packets_to_send_) {
+    return;
+  }
+
+  target_online_send_packet_ref_time_ += online_send_packet_ref_period_;
+  auto mono_time_result = audio::clock::MonotonicTimeFromReferenceTime(
+      reference_clock_, target_online_send_packet_ref_time_);
+  CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
+  auto target_mono_time = mono_time_result.take_value();
+
+  if (verbose_) {
+    zx::time ref_now;
+    auto status = reference_clock_.read(ref_now.get_address());
+    if (status != ZX_OK) {
+      Shutdown();
+      CLI_CHECK_OK(status, "zx::clock::read failed during Play callback");
+    }
+
+    auto mono_time_result = audio::clock::MonotonicTimeFromReferenceTime(reference_clock_, ref_now);
+    CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
+    auto mono_now = mono_time_result.take_value();
+
+    auto target_ref_str = RefTimeStrFromZxTime(target_online_send_packet_ref_time_);
+    auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
+    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
+
+    printf("Scheduling packet %4lu (reference %s) :  ref_now %s :  mono_now %s\n",
+           num_packets_sent_, target_ref_str.c_str(), ref_now_str.c_str(), mono_now_str.c_str());
+  }
+
+  zx_status_t status =
+      online_send_packet_timer_.PostForTime(audio_renderer_.dispatcher(), target_mono_time);
+  if (status != ZX_OK) {
+    Shutdown();
+    CLI_CHECK_OK(status, "Failed to schedule SendPacket");
+  }
+}
+
+void MediaApp::OnSendPacketTimer() {
+  SendPacket();
+  ScheduleNextSendPacket();
+}
+
 // Submit a packet, incrementing our count of packets sent. When it returns:
 // a. if there are more packets to send, create and send the next packet;
 // b. if all expected packets have completed, begin closing down the system.
 void MediaApp::SendPacket() {
+  CLI_CHECK(CheckPayloadSpace(), "Insufficient payload buffer space -- synchronization issue?");
+
   auto packet = CreateAudioPacket(num_packets_sent_);
 
   GenerateAudioForPacket(packet, num_packets_sent_);
 
-  if (save_to_file_) {
+  if (file_name_) {
     CLI_CHECK(wav_writer_.Write(reinterpret_cast<char*>(packet.vmo->start()) +
                                     packet.stream_packet.payload_offset,
                                 packet.stream_packet.payload_size) ||
@@ -774,16 +919,19 @@ void MediaApp::SendPacket() {
     CLI_CHECK((status == ZX_OK) || Shutdown(),
               "zx::clock::read failed during SendPacket(): " << status);
 
+    auto mono_time_result = audio::clock::MonotonicTimeFromReferenceTime(reference_clock_, ref_now);
+    CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
+    auto mono_now = mono_time_result.take_value();
+
     auto pts_str = RefTimeStrFromZxTime(zx::time{packet.stream_packet.pts});
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
-    auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
+    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
 
     printf("  Sending: packet %4lu (media pts %s) :  ref_now %s :  mono_now %s\n",
            num_packets_sent_, pts_str.c_str(), ref_now_str.c_str(), mono_now_str.c_str());
   }
 
   ++num_packets_sent_;
-  num_frames_sent_ += packet.stream_packet.payload_size / frame_size_;
   uint64_t frames_completed = packet.stream_packet.payload_size / frame_size_;
   audio_renderer_->SendPacket(
       packet.stream_packet, [this, frames_completed]() { OnSendPacketComplete(frames_completed); });
@@ -798,8 +946,12 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
     CLI_CHECK(status == ZX_OK || Shutdown(),
               "zx::clock::read failed during OnSendPacketComplete(): " << status);
 
+    auto mono_time_result = audio::clock::MonotonicTimeFromReferenceTime(reference_clock_, ref_now);
+    CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
+    auto mono_now = mono_time_result.take_value();
+
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
-    auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
+    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
 
     printf("Completed: packet %4lu (%5lu frames, up to %8lu ) :  ref_now %s :  mono_now %s\n",
            num_packets_completed_, frames_completed, num_frames_completed_, ref_now_str.c_str(),
@@ -810,10 +962,10 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
   CLI_CHECK(num_packets_completed_ <= num_packets_to_send_,
             "packets_completed cannot exceed packets_to_send");
 
-  if (num_packets_sent_ < num_packets_to_send_) {
-    SendPacket();
-  } else if (num_packets_completed_ >= num_packets_to_send_) {
+  if (num_packets_completed_ >= num_packets_to_send_) {
     Shutdown();
+  } else if (!online_ && num_packets_sent_ < num_packets_to_send_) {
+    SendPacket();
   }
 }
 
@@ -824,7 +976,6 @@ void MediaApp::SetAudioRendererEvents() {
   });
 
   audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
-    received_min_lead_time_ = true;
     min_lead_time_ = zx::duration(min_lead_time_nsec);
 
     if (verbose_) {
@@ -844,6 +995,8 @@ void MediaApp::SetAudioRendererEvents() {
 
 // Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp).
 bool MediaApp::Shutdown() {
+  online_send_packet_timer_.Cancel();
+
   gain_control_.Unbind();
   usage_volume_control_.Unbind();
   audio_renderer_.Unbind();

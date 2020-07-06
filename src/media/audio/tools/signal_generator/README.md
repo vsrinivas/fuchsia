@@ -11,21 +11,26 @@ AudioCore, AudioRenderer, VolumeControl and GainControl FIDL protocols.
       [--rate=<FRAME_RATE>]
       [--sine[=<FREQ>] | --square[=<FREQ>] | --saw[=<FREQ>] | --tri[=<FREQ>] | --noise | --pink]
       [--dur=<DURATION_SEC>]
-      [--amp=<AMPL>]
+      [--amp[=<AMPL>]]
       [--wav[=<FILEPATH>]]
       [--usage=<RENDER_USAGE>]
       [--usage-vol[=<USAGE_VOLUME>]]
       [--usage-gain[=<USAGE_GAIN_DB>]]
       [--optimal-clock | --monotonic-clock | --custom-clock | --rate-adjust[=<PPM>]]
+      [--ref]
+      [--media[=<PTS>]]
       [--pts]
       [--threshold=<SECS>]
       [--frames=<FRAMES>]
       [--num-bufs=<BUFFERS>]
+      [--buffer=<FRAMES>]
+      [--online]
       [--gain[=<STREAM_GAIN_DB>]]
       [--mute[=<0|1>]]
       [--ramp]
       [--end-gain=<RAMP_END_DB>]
       [--ramp-dur=<RAMP_DURATION_MSEC>]
+      [--ultrasound]
       [--v]
       [--help | --?]
 
@@ -47,7 +52,7 @@ These optional parameters are interpreted as follows:
 
       By default, play signal for 2.0 seconds, at amplitude 0.25
     --dur=<DURATION_SECS>    Set playback length, in seconds
-    --amp=<AMPL>             Set amplitude (silence=0.0, full-scale=1.0)
+    --amp[=<AMPL>]           Set amplitude (silence=0.0, full-scale=1.0, 1.0 if no value provided)
 
     --wav[=<FILEPATH>]       Save to .wav file (default '/tmp/signal_generator.wav')
 
@@ -67,11 +72,21 @@ These optional parameters are interpreted as follows:
     --rate-adjust[=<PPM>]    Run faster/slower than local system clock, in parts-per-million
                              (-1000 min, +1000 max, use -75 if unspecified). Implies '--custom-clock'
 
-      By default, submit data in non-timestamped buffers of 480 frames and 1 VMOs.
+      By default, submit data in non-timestamped buffers of 480 frames and 1 VMO,
+      without specifying a precise reference time or PTS for the start of playback
+    --ref                    Specify a reference time in the Play() method
+    --media[=<PTS>]          Use a specifie PTS value for playback start  
     --pts                    Apply presentation timestamps (units: frames)
-    --threshold[=<SECS>]     Set PTS discontinuity threshold, in seconds (default 0.0)
+    --threshold[=<SECS>]     Set PTS discontinuity threshold, in seconds (default 0.000125)
     --frames=<FRAMES>        Set packet size, in frames
-    --num-bufs=<BUFFERS>     Set the number of payload buffers to use
+    --num-bufs=<BUFFERS>     Set the number of payload buffers
+    --buffer=<FRAMES>        Set size of each payload buffer, in frames
+                             Payload buffer space must exceed renderer MinLeadTime or signal duration
+
+      By default, submit packets upon previous packet completions
+    --online                Emit packets at precisely calculated times, ignoring previous completions.
+                            This simulates playback from an external source, such as a network.
+                            (This doubles the payload buffer space requirement mentioned above.)
 
       By default, do not set AudioRenderer gain/mute (unity 0.0 dB, unmuted, no ramping)
     --gain[=<GAIN_DB>]       Set stream gain, in dB (min -160.0, max 24.0, default 0.0)

@@ -28,7 +28,8 @@ constexpr char kPinkNoiseSwitch[] = "pink";
 constexpr char kDurationSwitch[] = "dur";
 constexpr char kDurationDefaultSecs[] = "2.0";
 constexpr char kAmplitudeSwitch[] = "amp";
-constexpr char kAmplitudeDefaultScale[] = "0.25";
+constexpr char kAmplitudeNoValueScale[] = "1.0";
+constexpr char kAmplitudeNotSpecifiedScale[] = "0.25";
 
 constexpr char kSaveToFileSwitch[] = "wav";
 constexpr char kSaveToFileDefaultName[] = "/tmp/signal_generator.wav";
@@ -39,15 +40,22 @@ constexpr char kCustomClockSwitch[] = "custom-clock";
 constexpr char kClockRateSwitch[] = "rate-adjust";
 constexpr char kClockRateDefault[] = "-75";
 
-constexpr char kFramesPerPayloadSwitch[] = "frames";
-constexpr char kFramesPerPayloadDefault[] = "480";
+constexpr char kFramesPerPacketSwitch[] = "frames";
+constexpr char kFramesPerPacketDefault[] = "480";
+
+constexpr char kFramesPerPayloadBufferSwitch[] = "buffer";
+constexpr char kFramesPerPayloadBufferDefault[] = "48000";
 
 constexpr char kNumPayloadBuffersSwitch[] = "num-bufs";
 constexpr char kNumPayloadBuffersDefault[] = "1";
 
-constexpr char kUsePtsSwitch[] = "pts";
+constexpr char kRefStartTimeSwitch[] = "ref";
+constexpr char kMediaStartPtsSwitch[] = "media";
+constexpr char kMediaStartPtsDefault[] = "123456789";
+
+constexpr char kPacketPtsSwitch[] = "pts";
 constexpr char kPtsContinuityThresholdSwitch[] = "threshold";
-constexpr char kPtsContinuityThresholdDefaultSecs[] = "0.0";
+constexpr char kPtsContinuityThresholdDefaultSecs[] = "0.000125";
 
 constexpr char kStreamGainSwitch[] = "gain";
 constexpr char kStreamGainDefaultDb[] = "0.0";
@@ -66,6 +74,8 @@ constexpr char kRenderUsageGainSwitch[] = "usage-gain";
 constexpr char kRenderUsageGainDefaultDb[] = "0.0";
 constexpr char kRenderUsageVolumeSwitch[] = "usage-vol";
 constexpr char kRenderUsageVolumeDefault[] = "1.0";
+
+constexpr char kOnlineSwitch[] = "online";
 
 constexpr char kUltrasoundSwitch[] = "ultrasound";
 
@@ -111,9 +121,10 @@ void usage(const char* prog_name) {
   printf("  --%s  \t\t Play pseudo-random 'pink' (1/f) noise\n", kPinkNoiseSwitch);
 
   printf("\n    By default, play signal for %s seconds, at amplitude %s\n", kDurationDefaultSecs,
-         kAmplitudeDefaultScale);
+         kAmplitudeNotSpecifiedScale);
   printf("  --%s=<DURATION_SECS>\t Set playback length, in seconds\n", kDurationSwitch);
-  printf("  --%s=<AMPL>\t\t Set amplitude (silence=0.0, full-scale=1.0)\n", kAmplitudeSwitch);
+  printf("  --%s[=<AMPL>]\t Set amplitude (0.0=silence, 1.0=full-scale, %s if only '--%s')\n",
+         kAmplitudeSwitch, kAmplitudeNoValueScale, kAmplitudeSwitch);
 
   printf("\n  --%s[=<FILEPATH>]\t Save to .wav file (default '%s')\n", kSaveToFileSwitch,
          kSaveToFileDefaultName);
@@ -154,14 +165,25 @@ void usage(const char* prog_name) {
          ZX_CLOCK_UPDATE_MIN_RATE_ADJUST, ZX_CLOCK_UPDATE_MAX_RATE_ADJUST, kClockRateDefault,
          kCustomClockSwitch);
 
-  printf("\n    By default, submit data in non-timestamped buffers of %s frames and %s VMOs\n",
-         kFramesPerPayloadDefault, kNumPayloadBuffersDefault);
-  printf("  --%s\t\t\t Apply presentation timestamps (units: frames)\n", kUsePtsSwitch);
+  printf("\n    By default, submit data in non-timestamped buffers of %s frames and %s VMO,\n",
+         kFramesPerPacketDefault, kNumPayloadBuffersDefault);
+  printf("    without specifying a precise reference time or PTS for the start of playback\n");
+  printf("  --%s\t\t\t Specify a reference time in the Play() method\n", kRefStartTimeSwitch);
+  printf("  --%s[=<PTS>]\t Use a specific PTS value for playback start\n", kMediaStartPtsSwitch);
+  printf("  --%s\t\t\t Apply timestamps to every packet (units: frames)\n", kPacketPtsSwitch);
   printf("  --%s[=<SECS>]\t Set PTS discontinuity threshold, in seconds (default %s)\n",
          kPtsContinuityThresholdSwitch, kPtsContinuityThresholdDefaultSecs);
-  printf("  --%s=<FRAMES>\t Set packet size, in frames \n", kFramesPerPayloadSwitch);
-  printf("  --%s=<BUFFERS>\t Set the number of payload buffers to use \n",
-         kNumPayloadBuffersSwitch);
+  printf("  --%s=<FRAMES>\t Set packet size, in frames \n", kFramesPerPacketSwitch);
+  printf("  --%s=<BUFFERS>\t Set the number of payload buffers \n", kNumPayloadBuffersSwitch);
+  printf("  --%s=<FRAMES>\t Set size of each payload buffer, in frames \n",
+         kFramesPerPayloadBufferSwitch);
+  printf("\t\t\t Payload buffer space must exceed renderer MinLeadTime or signal duration\n");
+
+  printf("\n    By default, submit packets upon previous packet completions\n");
+  printf("  --%s\t\t Emit packets at precisely calculated times, ignoring previous completions.\n",
+         kOnlineSwitch);
+  printf("\t\t\t This simulates playback from an external source, such as a network.\n");
+  printf("\t\t\t (This doubles the payload buffer space requirement mentioned above.)\n");
 
   printf(
       "\n    By default, do not set AudioRenderer gain/mute (unity %.1f dB, unmuted, no ramping)\n",
@@ -201,10 +223,6 @@ int main(int argc, const char** argv) {
   media::tools::MediaApp media_app(
       [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
 
-  if (command_line.HasOption(kVerboseSwitch)) {
-    media_app.set_verbose(true);
-  }
-
   if (command_line.HasOption(kUltrasoundSwitch)) {
     media_app.set_ultrasound(true);
 
@@ -216,6 +234,9 @@ int main(int argc, const char** argv) {
       }
     }
   }
+
+  media_app.set_online(command_line.HasOption(kOnlineSwitch));
+  media_app.set_verbose(command_line.HasOption(kVerboseSwitch));
 
   // Handle channels and frame-rate
   std::string num_channels_str =
@@ -283,12 +304,16 @@ int main(int argc, const char** argv) {
 
   media_app.set_frequency(std::stod(frequency_str));
 
-  // Handle duration and amplitude of generated signal
-  std::string amplitude_str =
-      command_line.GetOptionValueWithDefault(kAmplitudeSwitch, kAmplitudeDefaultScale);
-  if (amplitude_str != "") {
-    media_app.set_amplitude(std::stof(amplitude_str));
+  // Handle amplitude and duration of generated signal
+  std::string amplitude_str;
+  if (command_line.GetOptionValue(kAmplitudeSwitch, &amplitude_str)) {
+    if (amplitude_str == "") {
+      amplitude_str = kAmplitudeNoValueScale;
+    }
+  } else {
+    amplitude_str = kAmplitudeNotSpecifiedScale;
   }
+  media_app.set_amplitude(std::stof(amplitude_str));
 
   std::string duration_str =
       command_line.GetOptionValueWithDefault(kDurationSwitch, kDurationDefaultSecs);
@@ -296,10 +321,15 @@ int main(int argc, const char** argv) {
     media_app.set_duration(std::stod(duration_str));
   }
 
+  // Handle packet size
+  std::string frames_per_packet_str =
+      command_line.GetOptionValueWithDefault(kFramesPerPacketSwitch, kFramesPerPacketDefault);
+  media_app.set_frames_per_packet(fxl::StringToNumber<uint32_t>(frames_per_packet_str));
+
   // Handle payload buffer size
-  std::string frames_per_payload_str =
-      command_line.GetOptionValueWithDefault(kFramesPerPayloadSwitch, kFramesPerPayloadDefault);
-  media_app.set_frames_per_payload(fxl::StringToNumber<uint32_t>(frames_per_payload_str));
+  std::string frames_per_payload_str = command_line.GetOptionValueWithDefault(
+      kFramesPerPayloadBufferSwitch, kFramesPerPayloadBufferDefault);
+  media_app.set_frames_per_payload_buffer(fxl::StringToNumber<uint32_t>(frames_per_payload_str));
 
   // Set the number of buffers to use.
   std::string num_payload_buffers_str =
@@ -328,10 +358,19 @@ int main(int argc, const char** argv) {
   }
 
   // Handle timestamp usage
-  media_app.set_use_pts(command_line.HasOption(kUsePtsSwitch));
-  if (command_line.HasOption(kPtsContinuityThresholdSwitch)) {
-    std::string pts_continuity_threshold_str;
-    command_line.GetOptionValue(kPtsContinuityThresholdSwitch, &pts_continuity_threshold_str);
+  media_app.set_ref_start_time(command_line.HasOption(kRefStartTimeSwitch));
+
+  std::string pts_start_str;
+  if (command_line.GetOptionValue(kMediaStartPtsSwitch, &pts_start_str)) {
+    if (pts_start_str == "") {
+      pts_start_str = kMediaStartPtsDefault;
+    }
+    media_app.set_media_start_pts(std::stoi(pts_start_str));
+  }
+
+  media_app.use_pkt_pts(command_line.HasOption(kPacketPtsSwitch));
+  std::string pts_continuity_threshold_str;
+  if (command_line.GetOptionValue(kPtsContinuityThresholdSwitch, &pts_continuity_threshold_str)) {
     if (pts_continuity_threshold_str == "") {
       pts_continuity_threshold_str = kPtsContinuityThresholdDefaultSecs;
     }
@@ -405,16 +444,13 @@ int main(int argc, const char** argv) {
   }
 
   // Handle "generate to file"
-  if (command_line.HasOption(kSaveToFileSwitch)) {
-    std::string save_file_str;
-    command_line.GetOptionValue(kSaveToFileSwitch, &save_file_str);
-
+  std::string save_file_str;
+  if (command_line.GetOptionValue(kSaveToFileSwitch, &save_file_str)) {
     // If just '--wav' is specified, use the default file name.
     if (save_file_str == "") {
       save_file_str = kSaveToFileDefaultName;
     }
 
-    media_app.set_save_to_file(true);
     media_app.set_save_file_name(save_file_str);
   }
 
