@@ -139,10 +139,10 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::UnbindableNew>,
   zx_status_t GetMAC(zx_device_t* dev);
 
   // Number each of tx/rx transaction descriptors
-  //  1024 buffers = ~12ms of packets
-  static constexpr uint32_t kNumDesc = 1024;
+  //  4096 buffers = ~48ms of packets
+  static constexpr uint32_t kNumDesc = 4096;
   // Size of each transaction buffer
-  static constexpr uint32_t kTxnBufSize = 2048;
+  static constexpr uint32_t kTxnBufSize = 4096;
 
   dw_dmadescr_t* tx_descriptors_ = nullptr;
   dw_dmadescr_t* rx_descriptors_ = nullptr;
