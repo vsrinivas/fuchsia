@@ -47,14 +47,17 @@ function fx-gn {
 }
 
 function fx-gen {
-    (
-      cd "${FUCHSIA_DIR}"
-      fx-gn gen --check --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
-      # symlink rust-project.json to root of project
-      if [[ -f "${FUCHSIA_BUILD_DIR}/rust-project.json" ]]; then
-        ln -f -s "${FUCHSIA_BUILD_DIR}/rust-project.json" rust-project.json
-      fi
-    ) || return 1
+  # If a user executes gen from a symlinked directory that is not a
+  # subdirectory $FUCHSIA_DIR then dotgn search may fail, so execute
+  # the gen from the $FUCHSIA_DIR.
+  (
+    cd "${FUCHSIA_DIR}" && \
+    fx-gn gen --check --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
+  ) || return $?
+  # symlink rust-project.json to root of project
+  if [[ -f "${FUCHSIA_BUILD_DIR}/rust-project.json" ]]; then
+    ln -f -s "${FUCHSIA_BUILD_DIR}/rust-project.json" "${FUCHSIA_DIR}/rust-project.json"
+  fi
 }
 
 function fx-build-config-load {
