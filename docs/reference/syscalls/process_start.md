@@ -82,6 +82,9 @@ does not belong to *process*, or the handle *process* lacks **ZX_RIGHT_WRITE** o
 
 **ZX_ERR_BAD_STATE**  *process* is already running or has exited.
 
+**ZX_ERR_INVALID_ARGS** *entry* is not a userspace address, is not a
+[canonical address], or is not `0`.
+
 ## SEE ALSO
 
  - [`zx_handle_close()`]
@@ -107,3 +110,4 @@ does not belong to *process*, or the handle *process* lacks **ZX_RIGHT_WRITE** o
 [`zx_thread_exit()`]: thread_exit.md
 [`zx_thread_start()`]: thread_start.md
 [`zx_vmo_create()`]: vmo_create.md
+[canonical address]: ../../concepts/kernel/sysret_problem.md

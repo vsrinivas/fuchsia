@@ -19,6 +19,7 @@
 
 #include <arch/debugger.h>
 #include <arch/exception.h>
+#include <arch/vm.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -155,6 +156,9 @@ zx_status_t ThreadDispatcher::Start(const EntryState& entry, bool initial_thread
 }
 
 zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspended) {
+  if (!arch_is_valid_user_pc(entry.pc)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   Guard<Mutex> guard{get_lock()};
 
   if (state_.lifecycle() != ThreadState::Lifecycle::INITIALIZED)

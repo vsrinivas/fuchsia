@@ -30,8 +30,16 @@ To avoid this problem:
 * We disallow setting the `RIP` register to a non-canonical address using
   [`zx_thread_write_state()`].
 
-For more background, see "A Stitch In Time Saves Nine: A Case Of Multiple
-OS Vulnerability", Rafal Wojtczuk
-(https://media.blackhat.com/bh-us-12/Briefings/Wojtczuk/BH_US_12_Wojtczuk_A_Stitch_In_Time_WP.pdf).
+* We disallow setting the thread entry point to a non-canonical address in
+  `ThreadDispatcher::MakeRunnable()`.
+
+* We disallow setting non-userspace addresses in [`zx_thread_start()`] and
+  [`zx_process_start()`].
+
+For more background, see ["A Stitch In Time Saves Nine: A Case Of Multiple
+OS Vulnerability", Rafal Wojtczuk][a-stich-in-time-saves-nine]
 
 [`zx_thread_write_state()`]: /docs/reference/syscalls/thread_write_state.md
+[`zx_thread_start()`]: /docs/reference/syscalls/thread_start.md
+[`zx_process_start()`]: /docs/reference/syscalls/process_start.md
+[a-stich-in-time-saves-nine]: https://media.blackhat.com/bh-us-12/Briefings/Wojtczuk/BH_US_12_Wojtczuk_A_Stitch_In_Time_WP.pdf

@@ -24,6 +24,7 @@
 #include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
+#include <arch/vm.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
@@ -93,6 +94,9 @@ void arch_enter_uspace(iframe_t* iframe) {
   LTRACEF("kernel stack %#" PRIxPTR "\n", x86_get_percpu()->default_tss.rsp0);
 
   arch_disable_ints();
+
+  /* check that we are accessing userspace code */
+  ASSERT(arch_is_valid_user_pc(iframe->ip));
 
   /* check that we're still pointed at the kernel gs */
   DEBUG_ASSERT(is_kernel_address(read_msr(X86_MSR_IA32_GS_BASE)));

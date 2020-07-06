@@ -284,15 +284,14 @@ TEST(Threads, ThreadStartOnInitialThread) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t thread;
-  ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
-                              &vmar),
-            ZX_OK);
-  ASSERT_EQ(zx_thread_create(process, kThreadName, sizeof(kThreadName) - 1, 0, &thread), ZX_OK);
-  ASSERT_EQ(zx_thread_start(thread, 1, 1, 1, 1), ZX_ERR_BAD_STATE);
+  ASSERT_OK(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
+                              &vmar));
+  ASSERT_OK(zx_thread_create(process, kThreadName, sizeof(kThreadName) - 1, 0, &thread));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, zx_thread_start(thread, 0, 1, 1, 1));
 
-  ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-  ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
-  ASSERT_EQ(zx_handle_close(process), ZX_OK);
+  ASSERT_OK(zx_handle_close(thread));
+  ASSERT_OK(zx_handle_close(vmar));
+  ASSERT_OK(zx_handle_close(process));
 }
 
 // Test that we don't get an assertion failure (and kernel panic) if we
@@ -1392,6 +1391,31 @@ static uint32_t x86_linear_address_width() {
 }
 
 #endif
+
+TEST(Threads, ThreadStartInvalidEntry) {
+  auto test_thread_start = [&](uintptr_t pc, zx_status_t expected) {
+    zx_handle_t process = zx_process_self();
+    zx_handle_t thread = ZX_HANDLE_INVALID;
+    ASSERT_OK(
+        zx_thread_create(process, kThreadName, sizeof(kThreadName) - 1, 0 /* options */, &thread));
+    char stack[1024] __ALIGNED(16);  // a small stack for the thread.
+    uintptr_t thread_stack = reinterpret_cast<uintptr_t>(&stack[1024]);
+
+    EXPECT_EQ(expected, zx_thread_start(thread, pc, thread_stack, 0 /* arg0 */, 0 /* arg1 */));
+    zx_handle_close(thread);
+  };
+
+  uintptr_t non_user_pc = 0x1UL;
+  uintptr_t kernel_pc = 0xffffff8000000000UL;
+
+  test_thread_start(non_user_pc, ZX_ERR_INVALID_ARGS);
+  test_thread_start(kernel_pc, ZX_ERR_INVALID_ARGS);
+
+#if defined(__x86_64__)
+  uintptr_t non_canonical_pc = ((uintptr_t)1) << (x86_linear_address_width() - 1);
+  test_thread_start(non_canonical_pc, ZX_ERR_INVALID_ARGS);
+#endif  // defined(__x86_64__)
+}
 
 // Test that zx_thread_write_state() does not allow setting RIP to a
 // non-canonical address for a thread that was suspended inside a syscall,

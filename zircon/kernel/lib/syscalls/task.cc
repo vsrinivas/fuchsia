@@ -123,7 +123,6 @@ zx_status_t sys_thread_start(zx_handle_t handle, zx_vaddr_t thread_entry, zx_vad
   LTRACEF("handle %x, entry %#" PRIxPTR ", sp %#" PRIxPTR ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR
           "\n",
           handle, thread_entry, stack, arg1, arg2);
-
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<ThreadDispatcher> thread;
@@ -281,7 +280,6 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
   LTRACEF("phandle %x, thandle %x, pc %#" PRIxPTR ", sp %#" PRIxPTR
           ", arg_handle %x, arg2 %#" PRIxPTR "\n",
           process_handle, thread_handle, pc, sp, arg_handle_value, arg2);
-
   auto up = ProcessDispatcher::GetCurrent();
 
   // get process dispatcher

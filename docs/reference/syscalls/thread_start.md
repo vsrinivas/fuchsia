@@ -72,6 +72,9 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_BAD_STATE**  *thread* is not ready to run or the process *thread*
 is part of is no longer alive.
 
+**ZX_ERR_INVALID_ARGS** *thread_entry* is not a userspace address, is not a
+[canonical address], or is not `0`.
+
 ## SEE ALSO
 
  - [`zx_futex_wake_handle_close_thread_exit()`]
@@ -95,3 +98,4 @@ is part of is no longer alive.
 [`zx_thread_create()`]: thread_create.md
 [`zx_thread_exit()`]: thread_exit.md
 [`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md
+[canonical address]: ../../concepts/kernel/sysret_problem.md

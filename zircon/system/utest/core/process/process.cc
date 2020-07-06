@@ -141,6 +141,53 @@ TEST(ProcessTest, ProcessStartNoHandle) {
   zx_handle_close(proc);
 }
 
+#if defined(__x86_64__)
+
+#include <cpuid.h>
+
+// This is based on code from kernel/ which isn't usable by code in system/.
+enum { X86_CPUID_ADDR_WIDTH = 0x80000008 };
+
+static uint32_t x86_linear_address_width() {
+  uint32_t eax, ebx, ecx, edx;
+  __cpuid(X86_CPUID_ADDR_WIDTH, eax, ebx, ecx, edx);
+  return (eax >> 8) & 0xff;
+}
+
+#endif
+
+TEST(ProcessTest, ProcessStartNonUserspaceEntry) {
+  auto test_process_start = [&](uintptr_t entry, zx_status_t expected) {
+    zx_handle_t proc;
+    zx_handle_t thread;
+    zx_handle_t vmar;
+
+    constexpr const char kTestName[] = "test-noncanonical-entry";
+    ASSERT_OK(
+        zx_process_create(zx_job_default(), kTestName, sizeof(kTestName) - 1, 0, &proc, &vmar));
+    zx_handle_close(vmar);
+    ASSERT_OK(zx_thread_create(proc, kTestName, sizeof(kTestName) - 1, 0u, &thread));
+
+    char stack[1024] __ALIGNED(16);  // a small stack for the process.
+    uintptr_t sp = reinterpret_cast<uintptr_t>(&stack[1024]);
+
+    EXPECT_EQ(expected, zx_process_start(proc, thread, entry, sp, ZX_HANDLE_INVALID, 0));
+    zx_handle_close(thread);
+    zx_handle_close(proc);
+  };
+
+  uintptr_t non_user_pc = 0x1UL;
+  uintptr_t kernel_pc = 0xffffff8000000000UL;
+
+  test_process_start(non_user_pc, ZX_ERR_INVALID_ARGS);
+  test_process_start(kernel_pc, ZX_ERR_INVALID_ARGS);
+
+#if defined(__x86_64__)
+  uintptr_t non_canonical_pc = ((uintptr_t)1) << (x86_linear_address_width() - 1);
+  test_process_start(non_canonical_pc, ZX_ERR_INVALID_ARGS);
+#endif  // defined(__x86_64__)
+}
+
 TEST(ProcessTest, ProcessStartFail) {
   zx_handle_t event1, event2;
   zx_handle_t process;

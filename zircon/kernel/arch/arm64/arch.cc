@@ -24,6 +24,7 @@
 #include <arch/arm64/uarch.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
+#include <arch/vm.h>
 #include <kernel/thread.h>
 #include <ktl/atomic.h>
 #include <lk/init.h>
@@ -278,6 +279,8 @@ void arch_enter_uspace(iframe_t* iframe) {
           iframe->r[0], iframe->r[1], iframe->spsr, ct->stack().top(), iframe->usp, iframe->elr);
 
   arch_disable_ints();
+
+  ASSERT(arch_is_valid_user_pc(iframe->elr));
 
   arm64_uspace_entry(iframe, ct->stack().top());
   __UNREACHABLE;
