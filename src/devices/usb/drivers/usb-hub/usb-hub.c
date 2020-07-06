@@ -282,7 +282,9 @@ static void usb_hub_unbind(void* ctx) {
 
   atomic_store(&hub->thread_done, true);
   sync_completion_signal(&hub->completion);
-  thrd_join(hub->thread, NULL);
+  if (hub->thread) {
+    thrd_join(hub->thread, NULL);
+  }
 
   device_unbind_reply(hub->zxdev);
 }
@@ -299,12 +301,6 @@ static void usb_hub_release(void* ctx) {
   usb_hub_free(hub);
 }
 
-static zx_protocol_device_t usb_hub_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = usb_hub_unbind,
-    .release = usb_hub_release,
-};
-
 static int usb_hub_thread(void* arg) {
   usb_hub_t* hub = (usb_hub_t*)arg;
   usb_request_t* req = hub->status_request;
@@ -317,17 +313,19 @@ static int usb_hub_thread(void* arg) {
                          sizeof(hub_desc), ZX_TIME_INFINITE, &out_length);
   if (result < 0) {
     zxlogf(ERROR, "get hub descriptor failed: %d", result);
-    goto fail;
+    device_init_reply(hub->zxdev, result, NULL);
+    return result;
   }
   // The length of the descriptor varies depending on whether it is USB 2.0 or 3.0,
   // and how many ports it has.
   size_t min_length = 7;
   size_t max_length = sizeof(hub_desc);
   if (out_length < min_length || out_length > max_length) {
-    zxlogf(ERROR, "get hub descriptor got length %lu, want length between %lu and %lu",
-           out_length, min_length, max_length);
+    zxlogf(ERROR, "get hub descriptor got length %lu, want length between %lu and %lu", out_length,
+           min_length, max_length);
     result = ZX_ERR_BAD_STATE;
-    goto fail;
+    device_init_reply(hub->zxdev, result, NULL);
+    return result;
   }
 
   // Determine whether the hub supports a single or multiple transaction-translators.  For
@@ -341,12 +339,14 @@ static int usb_hub_thread(void* arg) {
                                 &qual_desc, sizeof(qual_desc), ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
       zxlogf(ERROR, "get device_qualifier descriptor failed: %d", result);
-      goto fail;
+      device_init_reply(hub->zxdev, result, NULL);
+      return result;
     } else if (out_length != sizeof(qual_desc)) {
       zxlogf(ERROR, "get device_qualifier descriptor returned %ld bytes, want %ld", out_length,
              sizeof(qual_desc));
       result = ZX_ERR_BAD_STATE;
-      goto fail;
+      device_init_reply(hub->zxdev, result, NULL);
+      return result;
     }
     multi_tt = qual_desc.bDeviceProtocol == 2;
   } else if (hub->hub_speed == USB_SPEED_HIGH) {
@@ -355,12 +355,14 @@ static int usb_hub_thread(void* arg) {
                                 sizeof(dev_desc), ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
       zxlogf(ERROR, "get device descriptor failed: %d", result);
-      goto fail;
+      device_init_reply(hub->zxdev, result, NULL);
+      return result;
     } else if (out_length != sizeof(dev_desc)) {
       zxlogf(ERROR, "get device descriptor returned %ld bytes, want %ld", out_length,
              sizeof(dev_desc));
       result = ZX_ERR_BAD_STATE;
-      goto fail;
+      device_init_reply(hub->zxdev, result, NULL);
+      return result;
     }
     multi_tt = dev_desc.bDeviceProtocol == 2;
   } else {  // super-speed
@@ -371,7 +373,8 @@ static int usb_hub_thread(void* arg) {
   result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &hub_desc, multi_tt);
   if (result < 0) {
     zxlogf(ERROR, "configure_hub failed: %d", result);
-    goto fail;
+    device_init_reply(hub->zxdev, result, NULL);
+    return result;
   }
 
   int num_ports = hub_desc.bNbrPorts;
@@ -379,7 +382,8 @@ static int usb_hub_thread(void* arg) {
   hub->port_status = calloc(num_ports + 1, sizeof(port_status_t));
   if (!hub->port_status) {
     result = ZX_ERR_NO_MEMORY;
-    goto fail;
+    device_init_reply(hub->zxdev, result, NULL);
+    return result;
   }
 
   // power on delay in microseconds
@@ -393,7 +397,7 @@ static int usb_hub_thread(void* arg) {
     usb_hub_power_on_port(hub, i);
   }
 
-  device_make_visible(hub->zxdev, NULL);
+  device_init_reply(hub->zxdev, ZX_OK, NULL);
 
   // bit field for port status bits
   uint8_t status_buf[128 / 8];
@@ -410,7 +414,8 @@ static int usb_hub_thread(void* arg) {
     usb_request_queue(&hub->usb, req, &complete);
     sync_completion_wait(&hub->completion, ZX_TIME_INFINITE);
     if (req->response.status != ZX_OK || atomic_load(&hub->thread_done)) {
-      break;
+      device_remove_deprecated(hub->zxdev);
+      return ZX_ERR_IO_INVALID;
     }
 
     usb_request_copy_from(req, status_buf, req->response.actual, 0);
@@ -442,11 +447,24 @@ static int usb_hub_thread(void* arg) {
   }
 
   return ZX_OK;
-
-fail:
-  device_remove_deprecated(hub->zxdev);
-  return result;
 }
+
+static void usb_hub_init(void* ctx) {
+  usb_hub_t* hub = ctx;
+  usb_bus_set_hub_interface(&hub->bus, hub->usb_device, hub, &_hub_interface);
+
+  int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
+  if (ret != thrd_success) {
+    device_init_reply(hub->zxdev, ZX_ERR_NO_MEMORY, NULL);
+  }
+}
+
+static zx_protocol_device_t usb_hub_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .init = usb_hub_init,
+    .unbind = usb_hub_unbind,
+    .release = usb_hub_release,
+};
 
 static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
   usb_protocol_t usb;
@@ -529,21 +547,13 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
       .name = "usb-hub",
       .ctx = hub,
       .ops = &usb_hub_device_proto,
-      .flags = DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INVISIBLE,
+      .flags = DEVICE_ADD_NON_BINDABLE,
   };
 
   status = device_add(hub->usb_device, &args, &hub->zxdev);
   if (status != ZX_OK) {
     usb_hub_free(hub);
     return status;
-  }
-
-  usb_bus_set_hub_interface(&bus, hub->usb_device, hub, &_hub_interface);
-
-  int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
-  if (ret != thrd_success) {
-    device_remove_deprecated(hub->zxdev);
-    return ZX_ERR_NO_MEMORY;
   }
 
   return ZX_OK;
