@@ -41,6 +41,9 @@ use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
+// BootArguments-related includes
+use crate::boot_arguments::facade::BootArgumentsFacade;
+
 // Camera-related includes
 use crate::camera::facade::CameraFacade;
 
@@ -177,6 +180,7 @@ impl Sl4f {
                 "battery_simulator" => BatterySimulatorFacade::new(),
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),
+                "boot_arguments_facade" => BootArgumentsFacade::new(),
                 "bt_control_facade" => BluetoothControlFacade::new(),
                 "camera_facade" => CameraFacade::new(),
                 "component_facade" => ComponentFacade::new(),

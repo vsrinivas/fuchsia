@@ -25,6 +25,7 @@
             "fuchsia.bluetooth.gatt.Server",
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.boot.Arguments",
             "fuchsia.camera2.hal.Controller",
             "fuchsia.developer.tiles.Controller",
             "fuchsia.device.NameProvider",

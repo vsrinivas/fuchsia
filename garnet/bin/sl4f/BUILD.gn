@@ -31,6 +31,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2-rustc",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal-rustc",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles-rustc",
