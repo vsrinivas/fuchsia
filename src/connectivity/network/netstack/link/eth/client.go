@@ -34,7 +34,7 @@ const tag = "eth"
 
 const bufferSize = 2048
 
-// A Buffer is a segment of memory backed by a mapped VMO.
+// Buffer is a segment of memory backed by a mapped VMO.
 //
 // A Buffer must not outlive its VMO's mapping.
 // A Buffer's head must not change (by slicing or appending).
@@ -67,7 +67,8 @@ var _ link.Controller = (*Client)(nil)
 var _ stack.LinkEndpoint = (*Client)(nil)
 var _ stack.GSOEndpoint = (*Client)(nil)
 
-// A Client is an ethernet client.
+// Client is an ethernet client.
+//
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
 // The protocol is described in system/fidl/fuchsia-hardware-ethernet/ethernet.fidl.
 type Client struct {
@@ -421,8 +422,7 @@ func (c *Client) ListenTX() error {
 	return nil
 }
 
-// updateStatusLocked fetches the current device status and notifies endpoint
-// status changes.
+// getState fetches the current device state.
 func (c *Client) getState(debugSource string) (link.State, error) {
 	status, err := c.device.GetStatus(context.Background())
 	if err != nil {
