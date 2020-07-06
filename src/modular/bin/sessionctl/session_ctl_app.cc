@@ -14,9 +14,11 @@ namespace modular {
 
 SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug,
                              fuchsia::modular::PuppetMasterPtr puppet_master,
-                             const modular::Logger& logger, async_dispatcher_t* const dispatcher)
+                             fuchsia::sys::LoaderPtr sys_loader, const modular::Logger& logger,
+                             async_dispatcher_t* const dispatcher)
     : basemgr_debug_(std::move(basemgr_debug)),
       puppet_master_(std::move(puppet_master)),
+      sys_loader_(std::move(sys_loader)),
       logger_(logger),
       dispatcher_(dispatcher) {}
 
@@ -80,6 +82,26 @@ void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
 
   // Get the mod url and default the mod name and story name to the mod url
   std::string mod_url = command_line.positional_args().at(1);
+
+  if (mod_url.find("fuchsia-pkg://") != 0) {
+    // |mod_url| is not a fuchsia-pkg URL. Continue without validating it.
+    ExecuteAddModCommandInternal(mod_url, command_line, std::move(done));
+    return;
+  }
+
+  ModPackageExists(
+      mod_url, [this, mod_url, command_line, done = std::move(done)](bool exists) mutable {
+        if (!exists) {
+          done(fit::error(std::string("No package with URL " + mod_url + " was found")));
+          return;
+        }
+        ExecuteAddModCommandInternal(mod_url, command_line, std::move(done));
+      });
+}
+
+void SessionCtlApp::ExecuteAddModCommandInternal(std::string mod_url,
+                                                 const fxl::CommandLine& command_line,
+                                                 CommandDoneCallback done) {
   // If there's not a colon, resolve to the fuchsia package path
   if (mod_url.find(":") == std::string::npos) {
     mod_url = fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
@@ -289,6 +311,11 @@ modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
   });
 
   return fut;
+}
+
+void SessionCtlApp::ModPackageExists(std::string url, fit::function<void(bool)> done) {
+  sys_loader_->LoadUrl(
+      url, [done = std::move(done)](fuchsia::sys::PackagePtr package) { done(!!package); });
 }
 
 }  // namespace modular

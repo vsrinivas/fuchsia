@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <glob.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -281,7 +282,8 @@ int main(int argc, const char** argv) {
   }
 
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
-  modular::SessionCtlApp app(std::move(basemgr), std::move(puppet_master), logger,
+  modular::SessionCtlApp app(std::move(basemgr), std::move(puppet_master),
+                             context->svc()->Connect<fuchsia::sys::Loader>(), logger,
                              loop.dispatcher());
   app.ExecuteCommand(cmd, command_line,
                      [cmd, logger, &loop](modular::SessionCtlApp::CommandResult result) {

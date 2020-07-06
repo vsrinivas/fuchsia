@@ -16,6 +16,30 @@
 namespace modular {
 namespace {
 
+class FakeLoader : public fuchsia::sys::Loader {
+ public:
+  void LoadUrl(std::string url, LoadUrlCallback done) {
+    if (urls_.count(url) == 0) {
+      done(nullptr);
+      return;
+    }
+    auto package = fuchsia::sys::Package::New();
+    done(std::move(package));
+  }
+
+  void AddUrl(std::string url) { urls_.insert(url); }
+
+  fuchsia::sys::LoaderPtr Connect() {
+    fuchsia::sys::LoaderPtr loader;
+    bindings_.AddBinding(this, loader.NewRequest());
+    return loader;
+  }
+
+ private:
+  std::set<std::string> urls_;
+  fidl::BindingSet<fuchsia::sys::Loader> bindings_;
+};
+
 class SessionCtlAppTest : public modular_testing::TestWithSessionStorage {
  public:
   SessionCtlAppTest() {
@@ -27,6 +51,7 @@ class SessionCtlAppTest : public modular_testing::TestWithSessionStorage {
  protected:
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
+  FakeLoader fake_loader_;
   fuchsia::modular::internal::BasemgrDebugPtr basemgr_;
   std::unique_ptr<Logger> logger_;
   modular_testing::TestStoryCommandExecutor test_executor_;
@@ -36,7 +61,8 @@ class SessionCtlAppTest : public modular_testing::TestWithSessionStorage {
     fuchsia::modular::PuppetMasterPtr puppet_master;
     puppet_master_impl_->Connect(puppet_master.NewRequest());
     return std::make_unique<SessionCtlApp>(/*basemgr_debug=*/nullptr, std::move(puppet_master),
-                                           *(logger_.get()), async_get_default_dispatcher());
+                                           fake_loader_.Connect(), *(logger_.get()),
+                                           async_get_default_dispatcher());
   }
 
   SessionCtlApp::CommandResult RunSessionCtlCommand(SessionCtlApp* app,
@@ -68,24 +94,50 @@ TEST_F(SessionCtlAppTest, GetUsage) {
   });
 }
 
-TEST_F(SessionCtlAppTest, AddMod) {
-  // Add a mod
+TEST_F(SessionCtlAppTest, AddMod_ExistingFuchsiaPkg) {
+  // Add a mod URL starting with fuchsia-pkg:// that exists.
+  constexpr char kModUrl[] = "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx";
+  fake_loader_.AddUrl(kModUrl);
+
   auto sessionctl = CreateSessionCtl();
-  EXPECT_TRUE(RunSessionCtlCommand(
-                  sessionctl.get(),
-                  {kAddModCommandString, "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx"})
-                  .is_ok());
-  std::string default_name_hash = std::to_string(
-      std::hash<std::string>{}("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx"));
+  EXPECT_TRUE(RunSessionCtlCommand(sessionctl.get(), {kAddModCommandString, kModUrl}).is_ok());
+  std::string default_name_hash = std::to_string(std::hash<std::string>{}(kModUrl));
 
   // Assert the story and the mod were added with default story and mod names
   auto story_data = session_storage_->GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(default_name_hash, story_data->story_name());
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
-            test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
-            test_executor_.last_commands().at(0).add_mod().intent.handler);
+  EXPECT_EQ(kModUrl, test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
+  EXPECT_EQ(kModUrl, test_executor_.last_commands().at(0).add_mod().intent.handler);
+  EXPECT_EQ(1, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, AddMod_NonExistingFuchsiaPkg) {
+  // Add a mod URL starting with fuchsia-pkg:// that does not exist.
+  constexpr char kModUrl[] = "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx";
+
+  auto sessionctl = CreateSessionCtl();
+  auto result = RunSessionCtlCommand(sessionctl.get(), {kAddModCommandString, kModUrl});
+  EXPECT_TRUE(result.is_error());
+  EXPECT_EQ(std::string("No package with URL ") + kModUrl + " was found", result.error());
+  EXPECT_EQ(0, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, AddMod_NonFuchsiaPkg) {
+  // Add a mod URL starting with something other than fuchsia-pkg:// -- sessionctl
+  // has no way of knowing if the mod exists, so it will allow it.
+  constexpr char kModUrl[] = "foo://bar";
+
+  auto sessionctl = CreateSessionCtl();
+  EXPECT_TRUE(RunSessionCtlCommand(sessionctl.get(), {kAddModCommandString, kModUrl}).is_ok());
+  std::string default_name_hash = std::to_string(std::hash<std::string>{}(kModUrl));
+
+  // Assert the story and the mod were added with default story and mod names
+  auto story_data = session_storage_->GetStoryData(default_name_hash);
+  ASSERT_TRUE(story_data);
+  EXPECT_EQ(default_name_hash, story_data->story_name());
+  EXPECT_EQ(kModUrl, test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
+  EXPECT_EQ(kModUrl, test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 
