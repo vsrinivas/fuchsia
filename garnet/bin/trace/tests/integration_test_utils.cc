@@ -23,7 +23,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <trace-reader/file_reader.h>
 
-#include "garnet/bin/trace/spec.h"
+#include "garnet/bin/trace/options.h"
 
 namespace tracing {
 namespace test {

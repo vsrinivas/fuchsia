@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/trace/spec.h"
+#include "garnet/bin/trace/options.h"
 #include "garnet/bin/trace/tests/component_context.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "src/developer/tracing/lib/test_utils/run_program.h"
@@ -39,21 +39,6 @@ namespace test {
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program as a shell command.
 const char kTraceProgramPath[] = "/bin/trace";
-
-// TODO(52043): Remove tspec functionality once all tests are converted
-static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
-  std::string tspec_contents;
-  if (!files::ReadFileToString(tspec_path, &tspec_contents)) {
-    FX_LOGS(ERROR) << "Can't read test spec: " << tspec_path;
-    return false;
-  }
-
-  if (!tracing::DecodeSpec(tspec_contents, spec)) {
-    FX_LOGS(ERROR) << "Error decoding test spec: " << tspec_path;
-    return false;
-  }
-  return true;
-}
 
 static bool BuildTraceProgramArgs(const std::string& app_path, const std::string& test_name,
                                   const std::string& categories, size_t buffer_size_in_mb,
@@ -83,36 +68,6 @@ static bool BuildTraceProgramArgs(const std::string& app_path, const std::string
   return true;
 }
 
-static bool BuildTraceProgramArgsWithTspec(const std::string& relative_tspec_path,
-                                           const std::string& relative_output_file_path,
-                                           std::vector<std::string>* args,
-                                           const syslog::LogSettings& log_settings) {
-  tracing::Spec spec;
-  if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
-    return false;
-  }
-
-  AppendLoggingArgs(args, "", log_settings);
-  args->push_back("record");
-  args->push_back(fxl::StringPrintf(
-      "--spec-file=%s",
-      (std::string(kSpawnedTestPackagePath) + "/" + relative_tspec_path).c_str()));
-  args->push_back(fxl::StringPrintf(
-      "--output-file=%s",
-      (std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path).c_str()));
-
-  AppendLoggingArgs(args, "--append-args=", log_settings);
-
-  // Note that |relative_tspec_path| cannot have a comma.
-  args->push_back(
-      fxl::StringPrintf("--append-args=run_tspec,%s",
-                        (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) +
-                         "/" + relative_tspec_path)
-                            .c_str()));
-
-  return true;
-}
-
 static bool BuildVerificationProgramArgs(const std::string& test_name, size_t buffer_size_in_mb,
                                          const std::string& buffering_mode,
                                          const std::string& output_file_path,
@@ -125,17 +80,6 @@ static bool BuildVerificationProgramArgs(const std::string& test_name, size_t bu
   args->push_back(buffering_mode);
   args->push_back(output_file_path);
   return true;
-}
-
-static void BuildVerificationProgramArgsWithTspec(const std::string& tspec_path,
-                                                  const std::string& output_file_path,
-                                                  std::vector<std::string>* args,
-                                                  const syslog::LogSettings& log_settings) {
-  AppendLoggingArgs(args, "", log_settings);
-
-  args->push_back("verify_tspec");
-  args->push_back(tspec_path);
-  args->push_back(output_file_path);
 }
 
 static zx_status_t AddAuxDirToSpawnAction(const char* local_path, const char* remote_path,
@@ -258,20 +202,6 @@ bool RunIntegrationTest(const std::string& app_path, const std::string& test_nam
   return RunTraceComponentAndWait(kTraceProgramUrl, args);
 }
 
-bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
-              const syslog::LogSettings& log_settings) {
-  std::vector<std::string> args;
-  if (!BuildTraceProgramArgsWithTspec(relative_tspec_path, relative_output_file_path, &args,
-                                      log_settings)) {
-    return false;
-  }
-
-  FX_LOGS(INFO) << "Running tspec " << relative_tspec_path << ", output file "
-                << relative_output_file_path;
-
-  return RunTraceComponentAndWait(kTraceProgramUrl, args);
-}
-
 bool VerifyIntegrationTest(const std::string& app_path, const std::string& test_name,
                            size_t buffer_size_in_mb, const std::string& buffering_mode,
                            const std::string& relative_output_file_path,
@@ -285,39 +215,6 @@ bool VerifyIntegrationTest(const std::string& app_path, const std::string& test_
                 << buffering_mode << " buffer, output file " << relative_output_file_path;
 
   return RunTraceComponentAndWait(app_path, args);
-}
-
-bool VerifyTspec(const std::string& relative_tspec_path,
-                 const std::string& relative_output_file_path,
-                 const syslog::LogSettings& log_settings) {
-  tracing::Spec spec;
-  if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
-    return false;
-  }
-
-  FX_DCHECK(spec.app);
-  const std::string& program_path = *spec.app;
-
-  std::vector<std::string> args;
-  BuildVerificationProgramArgsWithTspec(
-      (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" +
-       relative_tspec_path),
-      std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path, &args, log_settings);
-
-  FX_LOGS(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
-                << relative_output_file_path;
-
-  // For consistency we do the exact same thing that the trace program does.
-  if (spec.spawn) {
-    zx::job job{};  // -> default job
-    std::vector<std::string> argv{program_path};
-    for (const auto& arg : args) {
-      argv.push_back(arg);
-    }
-    return RunProgramAndWait(job, argv, 0, nullptr);
-  } else {
-    return RunTraceComponentAndWait(program_path, args);
-  }
 }
 
 }  // namespace test

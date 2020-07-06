@@ -14,26 +14,17 @@
 #include <string.h>
 #include <zircon/status.h>
 
-#include <fstream>
 #include <string>
-#include <string_view>
 #include <unordered_set>
 
-#include "garnet/bin/trace/results_export.h"
-#include "garnet/bin/trace/results_output.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
-#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/fxl/strings/trim.h"
 
 namespace tracing {
 
 namespace {
 
 // Command line options.
-const char kSpecFile[] = "spec-file";
 const char kCategories[] = "categories";
 const char kAppendArgs[] = "append-args";
 const char kOutputFile[] = "output-file";
@@ -48,8 +39,6 @@ const char kReturnChildResult[] = "return-child-result";
 const char kBufferSize[] = "buffer-size";
 const char kProviderBufferSize[] = "provider-buffer-size";
 const char kBufferingMode[] = "buffering-mode";
-const char kBenchmarkResultsFile[] = "benchmark-results-file";
-const char kTestSuite[] = "test-suite";
 const char kTrigger[] = "trigger";
 
 zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess) {
@@ -65,31 +54,14 @@ zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess)
                     subprocess->reset_and_get_address());
 }
 
-void CheckCommandLineOverride(const char* name, bool present_in_spec) {
-  if (present_in_spec) {
-    FX_LOGS(WARNING) << "The " << name << " passed on the command line"
-                     << "override value(s) from the tspec file.";
-  }
-}
-
-// Helper so call sites don't have to type !!object_as_unique_ptr.
-template <typename T>
-void CheckCommandLineOverride(const char* name, const T& object) {
-  CheckCommandLineOverride(name, !!object);
-}
-
 }  // namespace
 
 bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
-  const std::unordered_set<std::string> known_options = {kSpecFile,        kCategories,
-                                                         kAppendArgs,      kOutputFile,
-                                                         kBinary,          kCompress,
-                                                         kDuration,        kDetach,
-                                                         kDecouple,        kSpawn,
-                                                         kEnvironmentName, kReturnChildResult,
-                                                         kBufferSize,      kProviderBufferSize,
-                                                         kBufferingMode,   kBenchmarkResultsFile,
-                                                         kTestSuite,       kTrigger};
+  const std::unordered_set<std::string> known_options = {
+      kCategories,        kAppendArgs, kOutputFile,         kBinary,        kCompress,
+      kDuration,          kDetach,     kDecouple,           kSpawn,         kEnvironmentName,
+      kReturnChildResult, kBufferSize, kProviderBufferSize, kBufferingMode, kTrigger,
+  };
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -98,74 +70,17 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     }
   }
 
-  Spec spec{};
   size_t index = 0;
-  // Read the spec file first. Arguments passed on the command line override the
-  // spec.
-  // --spec-file=<file>
-  if (command_line.HasOption(kSpecFile, &index)) {
-    std::string spec_file_path = command_line.options()[index].value;
-    if (!files::IsFile(spec_file_path)) {
-      FX_LOGS(ERROR) << spec_file_path << " is not a file";
-      return false;
-    }
-
-    std::string content;
-    if (!files::ReadFileToString(spec_file_path, &content)) {
-      FX_LOGS(ERROR) << "Can't read " << spec_file_path;
-      return false;
-    }
-
-    if (!DecodeSpec(content, &spec)) {
-      FX_LOGS(ERROR) << "Can't decode " << spec_file_path;
-      return false;
-    }
-
-    if (spec.test_name)
-      test_name = *spec.test_name;
-    if (spec.app)
-      app = *spec.app;
-    if (spec.args)
-      args = *spec.args;
-    if (spec.spawn)
-      spawn = *spec.spawn;
-    if (spec.environment_name)
-      environment_name = *spec.environment_name;
-    if (spec.categories)
-      categories = *spec.categories;
-    if (spec.buffering_mode) {
-      const BufferingModeSpec* mode_spec = LookupBufferingMode(*spec.buffering_mode);
-      if (mode_spec == nullptr) {
-        FX_LOGS(ERROR) << "Unknown spec parameter buffering-mode: " << spec.buffering_mode;
-        return false;
-      }
-      buffering_mode = TranslateBufferingMode(mode_spec->mode);
-    }
-    if (spec.buffer_size_in_mb)
-      buffer_size_megabytes = *spec.buffer_size_in_mb;
-    if (spec.provider_specs)
-      provider_specs = *spec.provider_specs;
-    if (spec.duration)
-      duration = *spec.duration;
-    if (spec.measurements)
-      measurements = *spec.measurements;
-    if (spec.test_suite_name)
-      test_suite = *spec.test_suite_name;
-    if (spec.trigger_specs)
-      trigger_specs = std::move(*spec.trigger_specs);
-  }
 
   // --categories=<cat1>,<cat2>,...
   if (command_line.HasOption(kCategories, &index)) {
     categories = fxl::SplitStringCopy(command_line.options()[index].value, ",",
                                       fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-    CheckCommandLineOverride("categories", spec.categories);
   }
 
   // --append-args=<arg1>,<arg2>,...
   // This option may be repeated, all args are added in order.
-  // These arguments are added after either of spec.args or the command line
-  // positional args.
+  // These arguments are added after the command line positional args.
   std::vector<std::string> append_args;
   if (command_line.HasOption(kAppendArgs, nullptr)) {
     auto all_append_args = command_line.GetOptionValues(kAppendArgs);
@@ -205,7 +120,6 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
       return false;
     }
     duration = zx::sec(seconds);
-    CheckCommandLineOverride("duration", spec.duration);
   }
 
   // --detach
@@ -228,14 +142,12 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     bool have_spawn = spawn_status == OptionStatus::PRESENT;
     if (have_spawn) {
       spawn = spawn_value;
-      CheckCommandLineOverride("spawn", spec.spawn);
     }
   }
 
   // --environment-name
   if (command_line.HasOption(kEnvironmentName, &index)) {
     environment_name = command_line.options()[index].value;
-    CheckCommandLineOverride(kEnvironmentName, spec.environment_name);
   }
 
   // --return-child-result=<flag>
@@ -249,7 +161,6 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     if (!ParseBufferSize(command_line.options()[index].value, &buffer_size_megabytes)) {
       return false;
     }
-    CheckCommandLineOverride("buffer-size", spec.buffer_size_in_mb);
   }
 
   // --provider-buffer-size=<name:megabytes>
@@ -258,7 +169,6 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     if (!ParseProviderBufferSize(args, &provider_specs)) {
       return false;
     }
-    CheckCommandLineOverride("provider-specs", spec.provider_specs);
   }
 
   // --buffering-mode=oneshot|circular|streaming
@@ -268,18 +178,6 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
       return false;
     }
     buffering_mode = TranslateBufferingMode(mode);
-    CheckCommandLineOverride("buffering-mode", spec.buffering_mode);
-  }
-
-  // --benchmark-results-file=<file>
-  if (command_line.HasOption(kBenchmarkResultsFile, &index)) {
-    benchmark_results_file = command_line.options()[index].value;
-  }
-
-  // --test-suite=<test-suite-name>
-  if (command_line.HasOption(kTestSuite, &index)) {
-    test_suite = command_line.options()[index].value;
-    CheckCommandLineOverride("test-suite-name", spec.test_suite_name);
   }
 
   // --trigger=<alert>:<action>
@@ -288,7 +186,6 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     if (!ParseTriggers(args, &trigger_specs)) {
       return false;
     }
-    CheckCommandLineOverride("trigger", spec.trigger_specs);
   }
 
   // <command> <args...>
@@ -296,7 +193,6 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   if (!positional_args.empty()) {
     app = positional_args[0];
     args = std::vector<std::string>(positional_args.begin() + 1, positional_args.end());
-    CheckCommandLineOverride("app,args", spec.app || spec.args);
   }
 
   // Now that we've processed positional args we can append --append-args args.
@@ -310,8 +206,7 @@ Command::Info RecordCommand::Describe() {
       [](sys::ComponentContext* context) { return std::make_unique<RecordCommand>(context); },
       "record",
       "starts tracing and records data",
-      {{"spec-file=[none]", "Tracing specification file"},
-       {"output-file=[/tmp/trace.json]",
+      {{"output-file=[/tmp/trace.json]",
         "Trace data is stored in this file. "
         "If the output file is \"tcp:TCP-ADDRESS\" then the output is streamed "
         "to that address. TCP support is generally only used by traceutil."},
@@ -327,9 +222,8 @@ Command::Info RecordCommand::Describe() {
         "started. The provided value must be integral."},
        {"categories=[\"\"]", "Categories that should be enabled for tracing"},
        {"append-args=[\"\"]",
-        "Additional args for the app being traced, appended to those from the "
-        "spec file, if any. The value is a comma-separated list of arguments "
-        "to pass. This option may be repeated, arguments are added in order."},
+        "Additional args for the app being traced. The value is a comma-separated list of "
+        "arguments to pass. This option may be repeated, arguments are added in order."},
        {"detach=[false]", "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
        {"spawn=[false]", "Use fdio_spawn to run a legacy app."},
@@ -343,12 +237,6 @@ Command::Info RecordCommand::Describe() {
         "Specify the buffer size that \"provider-name\" will use. "
         "May be specified multiple times, once per provider."},
        {"buffering-mode=oneshot|circular|streaming", "The buffering mode to use"},
-       {"benchmark-results-file=[none]", "Destination for exported benchmark results"},
-       {"test-suite=[none]",
-        "Test suite name to put into the exported benchmark results file. "
-        "This is used by the Catapult dashboard. This argument is required if "
-        "the results are uploaded to the Catapult dashboard (using "
-        "bin/catapult_converter)"},
        {"trigger=<alert>:<action>",
         "Specifies an action to take when an alert with "
         "the specified name is received. Multiple alert/action rules may be "
@@ -398,32 +286,11 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
     exporter_.reset(new ChromiumExporter(std::move(out_stream)));
 
     bytes_consumer = [](const unsigned char* buffer, size_t n_bytes) {};
-    record_consumer = [this](trace::Record record) {
-      exporter_->ExportRecord(record);
-
-      if (aggregate_events_ && record.type() == trace::RecordType::kEvent) {
-        events_.push_back(std::move(record));
-      }
-    };
+    record_consumer = [this](trace::Record record) { exporter_->ExportRecord(record); };
     error_handler = [](fbl::String error) { FX_LOGS(ERROR) << error.c_str(); };
   }
 
   tracer_.reset(new Tracer(controller().get()));
-
-  if (!options_.measurements.duration.empty()) {
-    aggregate_events_ = true;
-    measure_duration_.reset(new measure::MeasureDuration(options_.measurements.duration));
-  }
-  if (!options_.measurements.time_between.empty()) {
-    aggregate_events_ = true;
-    measure_time_between_.reset(
-        new measure::MeasureTimeBetween(options_.measurements.time_between));
-  }
-  if (!options_.measurements.argument_value.empty()) {
-    aggregate_events_ = true;
-    measure_argument_value_.reset(
-        new measure::MeasureArgumentValue(options_.measurements.argument_value));
-  }
 
   tracing_ = true;
 
@@ -466,76 +333,6 @@ void RecordCommand::TerminateTrace(int32_t return_code) {
   }
 }
 
-void RecordCommand::ProcessMeasurements() {
-  FX_DCHECK(!tracing_);
-
-  if (!events_.empty()) {
-    std::sort(std::begin(events_), std::end(events_),
-              [](const trace::Record& e1, const trace::Record& e2) {
-                return e1.GetEvent().timestamp < e2.GetEvent().timestamp;
-              });
-  }
-
-  for (const auto& event : events_) {
-    if (measure_duration_) {
-      measure_duration_->Process(event.GetEvent());
-    }
-    if (measure_time_between_) {
-      measure_time_between_->Process(event.GetEvent());
-    }
-    if (measure_argument_value_) {
-      measure_argument_value_->Process(event.GetEvent());
-    }
-  }
-
-  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
-  if (measure_duration_) {
-    ticks.insert(measure_duration_->results().begin(), measure_duration_->results().end());
-  }
-  if (measure_time_between_) {
-    ticks.insert(measure_time_between_->results().begin(), measure_time_between_->results().end());
-  }
-  if (measure_argument_value_) {
-    ticks.insert(measure_argument_value_->results().begin(),
-                 measure_argument_value_->results().end());
-  }
-
-  uint64_t ticks_per_second = zx_ticks_per_second();
-  FX_DCHECK(ticks_per_second);
-  std::vector<measure::Result> results =
-      measure::ComputeResults(options_.measurements, ticks, ticks_per_second);
-
-  // Fail and quit if any of the measurements has empty results. This is so that
-  // we can notice when benchmarks break (e.g. in CQ or on perfbots).
-  bool errored = false;
-  for (auto& result : results) {
-    if (result.values.empty()) {
-      FX_LOGS(ERROR) << "No results for measurement \"" << result.label << "\".";
-      errored = true;
-    }
-  }
-  OutputResults(out(), results);
-  if (errored) {
-    FX_LOGS(ERROR) << "One or more measurements had empty results. Quitting.";
-    Done(EXIT_FAILURE);
-    return;
-  }
-
-  if (!options_.benchmark_results_file.empty()) {
-    for (auto& result : results) {
-      result.test_suite = options_.test_suite;
-    }
-    if (!ExportResults(options_.benchmark_results_file, results)) {
-      FX_LOGS(ERROR) << "Failed to write benchmark results to " << options_.benchmark_results_file;
-      Done(EXIT_FAILURE);
-      return;
-    }
-    out() << "Benchmark results written to " << options_.benchmark_results_file << std::endl;
-  }
-
-  Done(return_code_);
-}
-
 void RecordCommand::DoneTrace() {
   FX_DCHECK(!tracing_);
 
@@ -544,11 +341,7 @@ void RecordCommand::DoneTrace() {
 
   out() << "Trace file written to " << options_.output_file_name << std::endl;
 
-  if (measure_duration_ || measure_time_between_ || measure_argument_value_) {
-    ProcessMeasurements();
-  } else {
-    Done(return_code_);
-  }
+  Done(return_code_);
 }
 
 // Quote elements of |args| as necessary to ensure the result can be correctly

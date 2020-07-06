@@ -51,23 +51,12 @@ bool VerifySimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mod
   return true;
 }
 
-// TODO(52043): Remove tspec compatibility.
-bool RunSimpleTest(const tracing::Spec& spec) {
-  return RunSimpleTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
-}
-
-bool VerifySimpleTest(const tracing::Spec& spec, const std::string& test_output_file) {
-  return VerifySimpleTest(*spec.buffer_size_in_mb, *spec.buffering_mode, test_output_file);
-}
-
 }  // namespace
 
 const IntegrationTest kSimpleIntegrationTest = {
     kSimpleIntegrationTestProviderName,
     &RunSimpleTest,     // for run command
     &VerifySimpleTest,  // for verify command
-    &RunSimpleTest,     // for run_tspec command; to be removed
-    &VerifySimpleTest,  // for verify_tspec command; to be removed
 };
 
 }  // namespace tracing::test

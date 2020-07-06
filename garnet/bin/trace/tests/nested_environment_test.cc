@@ -116,22 +116,10 @@ bool VerifyNestedEnvironmentTest(size_t buffer_size_in_mb, const std::string& bu
   return true;
 }
 
-// TODO(52043): Remove tspec compatibility.
-bool RunNestedEnvironmentTest(const tracing::Spec& spec) {
-  return RunNestedEnvironmentTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
-}
-
-bool VerifyNestedEnvironmentTest(const tracing::Spec& spec, const std::string& test_output_file) {
-  return VerifyNestedEnvironmentTest(*spec.buffer_size_in_mb, *spec.buffering_mode,
-                                     test_output_file);
-}
-
 const IntegrationTest kNestedEnvironmentIntegrationTest = {
     kNestedEnvironmentTestProviderName,
     &RunNestedEnvironmentTest,     // for run command
     &VerifyNestedEnvironmentTest,  // for verify command
-    &RunNestedEnvironmentTest,     // for run_tspec command; to be removed
-    &VerifyNestedEnvironmentTest,  // for verify_tspec command; to be removed
 };
 
 }  // namespace

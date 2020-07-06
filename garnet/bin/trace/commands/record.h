@@ -11,18 +11,16 @@
 #include <lib/zx/time.h>
 
 #include <memory>
+#include <optional>
+#include <ostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "garnet/bin/trace/cmd_utils.h"
 #include "garnet/bin/trace/command.h"
-#include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
 #include "garnet/bin/trace/utils.h"
-#include "garnet/lib/measure/argument_value.h"
-#include "garnet/lib/measure/duration.h"
-#include "garnet/lib/measure/measurements.h"
-#include "garnet/lib/measure/time_between.h"
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -51,7 +49,6 @@ class RecordCommand : public CommandWithController {
     std::string output_file_name = kDefaultOutputFileName;
     std::string benchmark_results_file;
     std::string test_suite;
-    measure::Measurements measurements;
     std::unordered_map<std::string, Action> trigger_specs;
   };
 
@@ -64,7 +61,6 @@ class RecordCommand : public CommandWithController {
 
  private:
   void TerminateTrace(int32_t return_code);
-  void ProcessMeasurements();
   void DoneTrace();
   void LaunchComponentApp();
   void LaunchSpawnedApp();
@@ -85,17 +81,6 @@ class RecordCommand : public CommandWithController {
   std::unique_ptr<ChromiumExporter> exporter_;
 
   std::unique_ptr<Tracer> tracer_;
-
-  // Aggregate events if there are any measurements to be performed, so that we
-  // can sort them by timestamp and process in order.
-  bool aggregate_events_ = false;
-  // This is actually a vector of trace::Record::Event, but it isn't
-  // copyable so we record the entire Record here (which also isn't copyable
-  // but it is movable).
-  std::vector<trace::Record> events_;
-  std::unique_ptr<measure::MeasureDuration> measure_duration_;
-  std::unique_ptr<measure::MeasureTimeBetween> measure_time_between_;
-  std::unique_ptr<measure::MeasureArgumentValue> measure_argument_value_;
 
   bool tracing_ = false;
   int32_t return_code_ = 0;

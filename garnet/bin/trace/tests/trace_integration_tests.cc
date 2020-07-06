@@ -49,12 +49,6 @@ void RunAndVerify(const std::string& app_path, const std::string& test_name,
                                     kRelativeOutputFilePath, g_log_settings));
 }
 
-// |relative_tspec_path| is a relative path, from /pkg.
-static void RunAndVerifyTspec(const char* relative_tspec_path) {
-  ASSERT_TRUE(RunTspec(relative_tspec_path, kRelativeOutputFilePath, g_log_settings));
-  ASSERT_TRUE(VerifyTspec(relative_tspec_path, kRelativeOutputFilePath, g_log_settings));
-}
-
 TEST(Oneshot, FillBuffer) {
   RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer", "trace:test", 1, "oneshot");
 }
@@ -76,13 +70,6 @@ TEST(NestedTestEnvironment, Test) {
   RunAndVerify(kNestedEnvironmentTestUrl, "nested-environment-test", "trace:test", 1, "oneshot",
                {"--environment-name=environment_name"});
 }
-
-// TODO(51793): Remove tspec tests along with trace tool tspec functionality.
-// These are present for now to test tspec functionality in the trace tool, which is still used by
-// some benchmarks.
-TEST(Tspec, Oneshot) { RunAndVerifyTspec("data/oneshot.tspec"); }
-TEST(Tspec, CircularWithTrigger) { RunAndVerifyTspec("data/circular_trigger.tspec"); }
-TEST(Tspec, NestedTestEnvironment) { RunAndVerifyTspec("data/nested_environment_test.tspec"); }
 
 // A class for adding an extra provider to the test.
 

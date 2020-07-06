@@ -52,15 +52,3 @@ class PerfTestHelper {
         localResultsFile, Platform.environment);
   }
 }
-
-// TODO(53025): Stop using this and remove.
-void addTspecTest(String specFile) {
-  test(specFile, () async {
-    final helper = await PerfTestHelper.make();
-    const resultsFile = '/tmp/perf_results.json';
-    final result = await helper.sl4fDriver.ssh.run(
-        'trace record --spec-file=$specFile --benchmark-results-file=$resultsFile');
-    expect(result.exitCode, equals(0));
-    await helper.processResults(resultsFile);
-  }, timeout: Timeout.none);
-}

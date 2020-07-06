@@ -97,17 +97,6 @@ std::optional<BenchmarksRunner> BenchmarksRunner::Create(int argc, const char** 
   return benchmarks_runner;
 }
 
-void BenchmarksRunner::AddTspecBenchmark(const std::string& name, const std::string& tspec_file,
-                                         const std::string& test_suite) {
-  std::string out_file = MakePerfResultsOutputFilename(name);
-  std::vector<std::string> command = {"/bin/trace", "record", "--spec-file=" + tspec_file,
-                                      "--benchmark-results-file=" + out_file};
-  if (!test_suite.empty()) {
-    command.push_back("--test-suite=" + test_suite);
-  }
-  AddCustomBenchmark(name, command, out_file);
-}
-
 void BenchmarksRunner::AddLibPerfTestBenchmark(const std::string& name,
                                                const std::string& libperftest_binary,
                                                const std::vector<std::string>& extra_args) {

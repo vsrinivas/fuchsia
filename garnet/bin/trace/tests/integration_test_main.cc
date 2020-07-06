@@ -21,7 +21,7 @@
 
 #include <src/lib/files/file.h>
 
-#include "garnet/bin/trace/spec.h"
+#include "garnet/bin/trace/options.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -33,12 +33,6 @@ const char kUsageString[] = {
     "\n"
     "Test verifier usage:\n"
     "  $program [options] verify test-name buffer-size buffering-mode trace-output-file\n"
-    // TODO(52043): Remove tspec options once all tests are converted
-    "Tspec test runner usage:\n"
-    "  $program [options] run_tspec tspec-file\n"
-    "\n"
-    "Tspec test verifier usage:\n"
-    "  $program [options] verify_tspec tspec-file trace-output-file\n"
     "\n"
     "Options:\n"
     "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
@@ -70,30 +64,6 @@ static bool CopyArguments(const std::vector<std::string>& args,
   for (std::string* output : outputs) {
     *output = args[argument_index++];
   }
-  return true;
-}
-
-static bool ReadTspec(const std::string& spec_file_path, tracing::Spec* spec,
-                      const tracing::test::IntegrationTest** test) {
-  std::string spec_file_contents;
-  if (!files::ReadFileToString(spec_file_path, &spec_file_contents)) {
-    FX_LOGS(ERROR) << "Can't read test spec: " << spec_file_path;
-    return false;
-  }
-
-  if (!tracing::DecodeSpec(spec_file_contents, spec)) {
-    FX_LOGS(ERROR) << "Error decoding test spec: " << spec_file_path;
-    return false;
-  }
-
-  std::string test_name = *spec->test_name;
-
-  *test = tracing::test::LookupTest(test_name);
-  if (*test == nullptr) {
-    FX_LOGS(ERROR) << "Unknown test name: " << test_name;
-    return false;
-  }
-
   return true;
 }
 
@@ -151,39 +121,6 @@ int main(int argc, char* argv[]) {
     FX_LOGS(INFO) << "Verifying test " << test_name << ", output file " << trace_output_file;
     return test->verify(buffer_size, buffering_mode, trace_output_file) ? EXIT_SUCCESS
                                                                         : EXIT_FAILURE;
-  }
-
-  if (command == "run_tspec") {
-    std::string spec_file;
-    if (!CopyArguments(args, {&spec_file})) {
-      return EXIT_FAILURE;  // error already logged
-    }
-
-    tracing::Spec spec;
-    const tracing::test::IntegrationTest* test;
-    if (!ReadTspec(spec_file, &spec, &test)) {
-      return EXIT_FAILURE;  // error already logged
-    }
-
-    FX_LOGS(INFO) << "Running subprogram for test " << spec_file << ":\"" << test->name << "\"";
-    return test->run_tspec(spec) ? EXIT_SUCCESS : EXIT_FAILURE;
-  }
-
-  if (command == "verify_tspec") {
-    std::string spec_file, trace_output_file;
-    if (!CopyArguments(args, {&spec_file, &trace_output_file})) {
-      return EXIT_FAILURE;  // error already logged
-    }
-
-    tracing::Spec spec;
-    const tracing::test::IntegrationTest* test;
-    if (!ReadTspec(spec_file, &spec, &test)) {
-      return EXIT_FAILURE;  // error already logged
-    }
-
-    FX_LOGS(INFO) << "Verifying test " << spec_file << ":\"" << test->name << "\", output file "
-                  << trace_output_file;
-    return test->verify_tspec(spec, trace_output_file) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
   FX_LOGS(ERROR) << "Unknown command: " << command;

@@ -64,23 +64,10 @@ bool VerifyTwoProvidersTwoEnginesTest(size_t buffer_size_in_mb, const std::strin
   return true;
 }
 
-// TODO(52043): Remove tspec compatibility.
-bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
-  return RunTwoProvidersTwoEnginesTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
-}
-
-bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
-                                      const std::string& test_output_file) {
-  return VerifyTwoProvidersTwoEnginesTest(*spec.buffer_size_in_mb, *spec.buffering_mode,
-                                          test_output_file);
-}
-
 const IntegrationTest kTwoProvidersTwoEnginesIntegrationTest = {
     kTwoProvidersTwoEnginesProviderName,
     &RunTwoProvidersTwoEnginesTest,     // for run command
     &VerifyTwoProvidersTwoEnginesTest,  // for verify command
-    &RunTwoProvidersTwoEnginesTest,     // for run_tspec command; to be removed
-    &VerifyTwoProvidersTwoEnginesTest,  // for verify_tspec command; to be removed
 };
 }  // namespace
 

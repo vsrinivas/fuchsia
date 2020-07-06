@@ -82,24 +82,12 @@ bool VerifyFillBufferAndAlertTest(size_t buffer_size_in_mb, const std::string& b
   return VerifyFullBuffer(test_output_file, mode_spec->mode, buffer_size_in_mb);
 }
 
-// TODO(52043): Remove tspec compatibility.
-bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
-  return RunFillBufferAndAlertTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
-}
-
-bool VerifyFillBufferAndAlertTest(const tracing::Spec& spec, const std::string& test_output_file) {
-  return VerifyFillBufferAndAlertTest(*spec.buffer_size_in_mb, *spec.buffering_mode,
-                                      test_output_file);
-}
-
 }  // namespace
 
 const IntegrationTest kFillBufferAndAlertIntegrationTest = {
     kFillBufferAndAlertProviderName,
     &RunFillBufferAndAlertTest,     // for run command
     &VerifyFillBufferAndAlertTest,  // for verify command
-    &RunFillBufferAndAlertTest,     // for run_tspec command; to be removed
-    &VerifyFillBufferAndAlertTest,  // for verify_tspec command; to be removed
 };
 
 }  // namespace tracing::test

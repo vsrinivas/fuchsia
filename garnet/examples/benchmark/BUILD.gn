@@ -26,13 +26,6 @@ package("benchmark") {
     },
   ]
 
-  resources = [
-    {
-      path = rebase_path("benchmark_example.tspec")
-      dest = "benchmark_example.tspec"
-    },
-  ]
-
   meta = [
     {
       path = rebase_path("meta/benchmark.cmx")

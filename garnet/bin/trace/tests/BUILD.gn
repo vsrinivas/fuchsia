@@ -13,7 +13,6 @@ group("tests") {
     ":integration_test_utils",
     ":integration_test_utils_with_trace_with_static_engine",
     ":nested_environment_test",
-    ":run_integration_test",
     ":run_test",
     ":self_contained_provider",
     ":trace_integration_tests",
@@ -68,11 +67,7 @@ executable("trace_tests_bin") {
 
   output_name = "trace_tests"
 
-  deps = [
-    ":gtest_main",
-    "//garnet/bin/trace:unittests",
-    "//garnet/lib/measure:unittests",
-  ]
+  deps = [ ":gtest_main" ]
 
   # TODO(46850): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
@@ -94,7 +89,7 @@ source_set("run_test") {
   deps = [
     ":component_context",
     ":integration_test_utils",
-    "//garnet/bin/trace:spec",
+    "//garnet/bin/trace:options",
     "//sdk/lib/fdio",
     "//src/developer/tracing/lib/test_utils",
     "//src/lib/fxl",
@@ -112,10 +107,11 @@ source_set("integration_test_utils") {
   ]
 
   public_deps = [
-    "//garnet/bin/trace:spec",
+    "//garnet/bin/trace:options",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/trace-reader",
   ]
 
   deps = [
@@ -142,10 +138,11 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
   ]
 
   public_deps = [
-    "//garnet/bin/trace:spec",
+    "//garnet/bin/trace:options",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
+    "//zircon/system/ulib/trace-reader",
   ]
 
   deps = [
@@ -180,22 +177,6 @@ executable("trace_integration_tests") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-executable("run_integration_test") {
-  testonly = true
-  output_name = "run_integration_test"
-
-  sources = [ "run_integration_test.cc" ]
-
-  deps = [
-    ":component_context",
-    ":integration_test_utils",
-    ":run_test",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
 executable("basic_integration_test_app") {
   testonly = true
   output_name = "basic_integration_test_app"
@@ -211,7 +192,6 @@ executable("basic_integration_test_app") {
 
   deps = [
     ":integration_test_utils",
-    "//garnet/lib/measure",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -273,7 +253,7 @@ executable("two_providers_two_engines_test_app") {
   deps = [
     ":integration_test_utils",
     ":self_contained_provider",
-    "//garnet/bin/trace:spec",
+    "//garnet/bin/trace:options",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -439,7 +419,6 @@ test_package("trace_tests") {
     ":return_1234",
     ":return_child_result_tests",
     ":run_awhile",
-    ":run_integration_test",
     ":shared_provider_app",
     ":shared_provider_integration_tests",
     ":trace_integration_tests",
@@ -496,9 +475,6 @@ test_package("trace_tests") {
       name = "run_awhile"
     },
     {
-      name = "run_integration_test"
-    },
-    {
       name = "shared_provider_app"
     },
     {
@@ -517,10 +493,6 @@ test_package("trace_tests") {
       dest = "basic_integration_test_app.cmx"
     },
     {
-      path = rebase_path("meta/run_integration_test.cmx")
-      dest = "run_integration_test.cmx"
-    },
-    {
       path = rebase_path("meta/nested_environment_test.cmx")
       dest = "nested_environment_test.cmx"
     },
@@ -535,29 +507,6 @@ test_package("trace_tests") {
     {
       path = rebase_path("meta/two_providers_two_engines_test_app.cmx")
       dest = "two_providers_two_engines_test_app.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("oneshot.tspec")
-      dest = "oneshot.tspec"
-    },
-    {
-      path = rebase_path("circular_trigger.tspec")
-      dest = "circular_trigger.tspec"
-    },
-    {
-      path = rebase_path("simple.tspec")
-      dest = "simple.tspec"
-    },
-    {
-      path = rebase_path("nested_environment_test.tspec")
-      dest = "nested_environment_test.tspec"
-    },
-    {
-      path = rebase_path("two_providers_two_engines.tspec")
-      dest = "two_providers_two_engines.tspec"
     },
   ]
 }

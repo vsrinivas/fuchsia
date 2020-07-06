@@ -29,10 +29,6 @@ source_set("trace_app") {
     "commands/record.h",
     "commands/time.cc",
     "commands/time.h",
-    "results_export.cc",
-    "results_export.h",
-    "results_output.cc",
-    "results_output.h",
     "tracer.cc",
     "tracer.h",
     "utils.cc",
@@ -40,7 +36,6 @@ source_set("trace_app") {
   ]
 
   public_deps = [
-    "//garnet/lib/measure",
     "//garnet/lib/trace_converters:chromium",
     "//sdk/fidl/fuchsia.tracing.controller",
     "//sdk/lib/fdio",
@@ -55,19 +50,18 @@ source_set("trace_app") {
   ]
 
   deps = [
-    ":spec",
+    ":options",
     "//third_party/rapidjson",
   ]
 }
 
-source_set("spec") {
+source_set("options") {
   sources = [
-    "spec.cc",
-    "spec.h",
+    "options.cc",
+    "options.h",
   ]
 
   public_deps = [
-    "//garnet/lib/measure",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
@@ -75,19 +69,6 @@ source_set("spec") {
   deps = [
     "//src/lib/json_parser",
     "//third_party/rapidjson",
-  ]
-}
-
-source_set("unittests") {
-  testonly = true
-
-  sources = [ "spec_unittest.cc" ]
-
-  deps = [
-    ":spec",
-    ":trace_app",
-    "//src/lib/fxl",
-    "//third_party/googletest:gtest",
   ]
 }
 

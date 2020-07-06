@@ -24,7 +24,6 @@ test_list = [
   "netstack_iperf_test",
   "rust_inspect_benchmarks_test",
   "rust_inspect_reader_benchmarks_test",
-  "tspec_example_test",
 ]
 foreach(target_name, test_list) {
   dart_test(target_name) {
@@ -110,7 +109,6 @@ if (is_host) {
 group("package_deps") {
   testonly = true
   public_deps = [
-    "//garnet/examples/benchmark",
     "//src/connectivity/network/tests/benchmarks:netstack_benchmarks",
     "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
     "//src/tests/benchmarks:kernel-boot-benchmarks",

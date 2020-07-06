@@ -11,9 +11,10 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
-#include "garnet/bin/trace/spec.h"
+#include "garnet/bin/trace/options.h"
 
 namespace tracing {
 
