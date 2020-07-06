@@ -6,7 +6,6 @@ use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Address, Audience, MessageEvent, MessengerType, Payload, Status};
 use crate::message::message_client::MessageClient;
-use crate::message::message_hub::MessageHub;
 use crate::message::receptor::Receptor;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
@@ -16,13 +15,13 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 #[derive(Clone, PartialEq, Debug, Copy)]
-enum TestMessage {
+pub enum TestMessage {
     Foo,
     Bar,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
-enum TestAddress {
+pub enum TestAddress {
     Foo(u64),
 }
 
@@ -69,10 +68,23 @@ async fn verify_result<P: Payload + PartialEq + 'static, A: Address + PartialEq 
 static ORIGINAL: TestMessage = TestMessage::Foo;
 static REPLY: TestMessage = TestMessage::Bar;
 
+mod test {
+    use super::*;
+    use crate::message_hub_definition;
+
+    message_hub_definition!(TestMessage, TestAddress);
+}
+
+mod num_test {
+    use crate::message_hub_definition;
+
+    message_hub_definition!(u64, u64);
+}
+
 /// Tests message client creation results in unique ids.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_message_client_equality() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
     let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let (_, mut receptor) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
@@ -90,7 +102,7 @@ async fn test_message_client_equality() {
 /// Tests messenger creation and address space collision.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_creation() {
-    let messenger_factory = MessageHub::<u64, u64>::create();
+    let messenger_factory = num_test::message::create_hub();
     let address = 1;
 
     let messenger_1_result = messenger_factory.create(MessengerType::Addressable(address)).await;
@@ -102,7 +114,7 @@ async fn test_messenger_creation() {
 /// Tests messenger creation and address space collision.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_deletion() {
-    let messenger_factory = MessageHub::<u64, u64>::create();
+    let messenger_factory = num_test::message::create_hub();
     let address = 1;
 
     {
@@ -133,7 +145,7 @@ async fn test_messenger_deletion() {
 /// are properly delivered.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_end_to_end_messaging() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -162,7 +174,7 @@ async fn test_end_to_end_messaging() {
 /// the client does nothing with it.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_implicit_forward() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -196,7 +208,7 @@ async fn test_implicit_forward() {
 /// reply.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_observe_addressable() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -248,7 +260,7 @@ async fn test_observe_addressable() {
 /// messengers receive a broadcast message.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broadcast() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -266,7 +278,7 @@ async fn test_broadcast() {
 /// Verifies delivery statuses are properly relayed back to the original sender.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_delivery_status() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
     let known_receiver_address = TestAddress::Foo(2);
     let unknown_address = TestAddress::Foo(3);
     let (messenger_client_1, _) =
@@ -295,7 +307,7 @@ async fn test_delivery_status() {
 /// Verifies beacon returns error when receptor goes out of scope.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_beacon_error() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -323,7 +335,7 @@ async fn test_beacon_error() {
 /// Verifies Acknowledge is fully passed back.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_acknowledge() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (_, mut receptor) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -350,7 +362,7 @@ async fn test_messenger_behavior() {
 }
 
 async fn verify_messenger_behavior(messenger_type: MessengerType<TestAddress>) {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     // Messenger to receive message.
     let (target_client, mut target_receptor) =
@@ -401,7 +413,7 @@ async fn verify_messenger_behavior(messenger_type: MessengerType<TestAddress>) {
 /// Ensures unbound messengers operate properly
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unbound_messenger() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (unbound_messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
@@ -431,7 +443,7 @@ async fn test_unbound_messenger() {
 /// Ensures next_payload returns the correct values.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_next_payload() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
     let (unbound_messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
     let (unbound_messenger_2, mut unbound_receptor_2) =
@@ -503,7 +515,7 @@ async fn test_chained_action_fuse() {
 /// Exercises timestamp value.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_message_timestamp() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
 
     let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let (_, mut receptor) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
@@ -535,7 +547,7 @@ async fn test_message_timestamp() {
 /// Verifies that the proper signal is fired when a receptor disappears.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bind_to_recipient() {
-    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let messenger_factory = test::message::create_hub();
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
 
     let (messenger, mut receptor) = messenger_factory.create(MessengerType::Unbound).await.unwrap();

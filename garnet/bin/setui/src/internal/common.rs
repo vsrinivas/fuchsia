@@ -20,6 +20,7 @@ macro_rules! anonymous_message_hub_definition {
 macro_rules! message_hub_definition {
     ($payload:ty, $address:ty) => {
         pub mod message {
+            #[allow(unused_imports)]
             use super::*;
             use crate::message::base::MessageError as BaseMessageError;
             use crate::message::base::Signature as BaseSignature;
@@ -48,7 +49,7 @@ macro_rules! message_hub_definition {
             pub type Signature = BaseSignature<$address>;
 
             pub fn create_hub() -> Factory {
-                MessageHub::<$payload, $address>::create()
+                MessageHub::<$payload, $address>::create(None)
             }
         }
     };

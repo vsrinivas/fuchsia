@@ -26,7 +26,13 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerFactory<P, A> {
     pub async fn create(&self, messenger_type: MessengerType<A>) -> CreateMessengerResult<P, A> {
         let (tx, rx) = futures::channel::oneshot::channel::<CreateMessengerResult<P, A>>();
 
-        self.messenger_action_tx.unbounded_send(MessengerAction::Create(messenger_type, tx)).ok();
+        self.messenger_action_tx
+            .unbounded_send(MessengerAction::Create(
+                messenger_type,
+                tx,
+                self.messenger_action_tx.clone(),
+            ))
+            .ok();
 
         if let Ok(result) = rx.await {
             return result;

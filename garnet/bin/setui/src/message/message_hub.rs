@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use crate::message::action_fuse::ActionFuseBuilder;
+use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
     ActionSender, Address, Audience, Fingerprint, Message, MessageAction, MessageClientId,
-    MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType,
-    Payload, Signature, Status,
+    MessageError, MessageType, MessengerAction, MessengerId, MessengerType, Payload, Signature,
+    Status,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
@@ -20,13 +21,13 @@ use std::sync::Arc;
 /// of a hub per communication ecosystem and therefore held behind an Arc mutex.
 pub type MessageHubHandle<P, A> = Arc<Mutex<MessageHub<P, A>>>;
 
+/// Type definition for exit message sender.
+type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
+
 /// The MessageHub controls the message flow for a set of messengers. It
 /// processes actions upon messages, incorporates brokers, and signals receipt
 /// of messages.
 pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
-    /// A sender handed to messenger components to signal when the
-    /// messenger is no longer needed. Also used for messenger creation.
-    messenger_tx: MessengerActionSender<P, A>,
     /// A sender given to messengers to signal actions upon the MessageHub.
     action_tx: ActionSender<P, A>,
     /// Address mapping for looking up messengers. Used for sending messages
@@ -37,15 +38,19 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
     beacons: HashMap<MessengerId, Beacon<P, A>>,
     /// An ordered set of messengers who will be forwarded messages.
     brokers: Vec<MessengerId>,
-    // The next id to be given to a messenger.
+    /// The next id to be given to a messenger.
     next_id: MessengerId,
-    // The next id to be given to a `MessageClient`.
+    /// The next id to be given to a `MessageClient`.
     next_message_client_id: MessageClientId,
+    /// Indicates whether the messenger channel has closed.
+    messenger_channel_closed: bool,
+    /// Sender to signal when the hub should exit.
+    exit_tx: ExitSender,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     /// Returns a new MessageHub for the given types.
-    pub fn create() -> MessengerFactory<P, A> {
+    pub fn create(fuse: Option<ActionFuseHandle>) -> MessengerFactory<P, A> {
         let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<(
             Fingerprint<A>,
             MessageAction<P, A>,
@@ -54,22 +59,34 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
         let (messenger_tx, mut messenger_rx) =
             futures::channel::mpsc::unbounded::<MessengerAction<P, A>>();
 
+        let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
+
         let mut hub = MessageHub {
             next_id: 0,
             next_message_client_id: 0,
-            messenger_tx: messenger_tx.clone(),
             action_tx,
             beacons: HashMap::new(),
             addresses: HashMap::new(),
             brokers: Vec::new(),
+            messenger_channel_closed: false,
+            exit_tx,
         };
 
         fasync::spawn(async move {
+            // Released when exiting scope to signal completion.
+            let _scope_fuse = fuse;
+
             loop {
                 futures::select! {
                     messenger_action = messenger_rx.next() => {
-                        if let Some(action) = messenger_action {
-                            hub.process_messenger_request(action).await;
+                        match messenger_action {
+                            Some(action) => {
+                                hub.process_messenger_request(action).await;
+                            }
+                            None => {
+                                hub.messenger_channel_closed = true;
+                                hub.check_exit();
+                            }
                         }
                     }
                     message_action = action_rx.next() => {
@@ -77,11 +94,20 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                             hub.process_request(fingerprint, action, beacon).await;
                         }
                     }
+                    exit_action = exit_rx.next() => {
+                        break;
+                    }
                 }
             }
         });
 
         MessengerFactory::new(messenger_tx)
+    }
+
+    fn check_exit(&self) {
+        if self.messenger_channel_closed && self.beacons.is_empty() {
+            self.exit_tx.unbounded_send(()).ok();
+        }
     }
 
     // Determines whether the beacon belongs to a broker.
@@ -252,7 +278,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
     async fn process_messenger_request(&mut self, action: MessengerAction<P, A>) {
         match action {
-            MessengerAction::Create(messenger_type, responder) => {
+            MessengerAction::Create(messenger_type, responder, messenger_tx) => {
                 let mut optional_address = None;
                 if let MessengerType::Addressable(address) = messenger_type.clone() {
                     optional_address = Some(address.clone());
@@ -278,12 +304,11 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 );
 
                 let messenger_clone = messenger.clone();
-                let messenger_tx_clone = self.messenger_tx.clone();
 
                 // Create fuse to delete Messenger.
                 let fuse = ActionFuseBuilder::new()
                     .add_action(Box::new(move || {
-                        messenger_tx_clone
+                        messenger_tx
                             .unbounded_send(MessengerAction::Delete(messenger_clone.clone()))
                             .ok();
                     }))
@@ -326,6 +351,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                         // no special cleanup needed for Unbounded messengers.
                     }
                 }
+
+                self.check_exit();
             }
         }
     }
