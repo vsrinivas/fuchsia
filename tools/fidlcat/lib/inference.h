@@ -16,11 +16,14 @@
 namespace fidlcat {
 
 class SyscallDecoder;
+class SyscallDecoderDispatcher;
 
 // Object which hold the information we have about handles.
 class Inference : public fidl_codec::semantic::HandleSemantic {
  public:
-  Inference() = default;
+  explicit Inference(SyscallDecoderDispatcher* dispatcher) : dispatcher_(dispatcher) {}
+
+  void CreateHandle(zx_koid_t thread_koid, zx_handle_t handle) override;
 
   // Function called when processargs_extract_handles (from libc) is intercepted.
   void ExtractHandles(SyscallDecoder* decoder);
@@ -42,6 +45,8 @@ class Inference : public fidl_codec::semantic::HandleSemantic {
   void ZxTimerCreate(SyscallDecoder* decoder);
 
  private:
+  // The dispatcher which owns the inference.
+  SyscallDecoderDispatcher* const dispatcher_;
   // Id for the next created channel.
   uint32_t next_channel_ = 0;
   // Id for the next created port.

@@ -160,6 +160,7 @@ void Assignment::Execute(SemanticContext* context) const {
     handle_description =
         context->handle_semantic()->GetHandleDescription(context->pid(), source_value.handle());
   }
+  context->handle_semantic()->CreateHandle(context->tid(), destination_handle);
   context->handle_semantic()->AddHandleDescription(context->pid(), destination_handle,
                                                    handle_description);
 }

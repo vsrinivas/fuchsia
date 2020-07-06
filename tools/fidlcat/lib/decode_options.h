@@ -43,6 +43,8 @@ struct DecodeOptions {
   // If this is not empty, messages and syscalls are only displayed when a message method name
   // satisfies one of these filters.
   std::vector<std::unique_ptr<Regex>> trigger_filters;
+  // File name used to save the session.
+  std::string save;
 
   bool SatisfiesMessageFilters(const std::string& name) const {
     for (const auto& filter : exclude_message_filters) {

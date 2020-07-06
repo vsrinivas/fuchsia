@@ -19,6 +19,9 @@ struct CommandLineOptions {
   std::vector<std::string> remote_pid;
   std::vector<std::string> remote_name;
   std::vector<std::string> extra_name;
+  std::string save;
+  std::string display_proto;
+  std::string replay;
   std::vector<std::string> symbol_paths;
   std::vector<std::string> symbol_repo_paths;
   std::string symbol_cache_path;

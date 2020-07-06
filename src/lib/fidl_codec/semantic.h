@@ -30,10 +30,11 @@ enum class ContextType { kRead, kWrite, kCall };
 // Context used during the execution of semantic rules.
 class SemanticContext {
  public:
-  SemanticContext(HandleSemantic* handle_semantic, zx_koid_t pid, zx_handle_t handle,
+  SemanticContext(HandleSemantic* handle_semantic, zx_koid_t pid, zx_koid_t tid, zx_handle_t handle,
                   ContextType type, const StructValue* request, const StructValue* response)
       : handle_semantic_(handle_semantic),
         pid_(pid),
+        tid_(tid),
         handle_(handle),
         type_(type),
         request_(request),
@@ -41,6 +42,7 @@ class SemanticContext {
 
   HandleSemantic* handle_semantic() const { return handle_semantic_; }
   zx_koid_t pid() const { return pid_; }
+  zx_koid_t tid() const { return tid_; }
   zx_handle_t handle() const { return handle_; }
   ContextType type() const { return type_; }
   const StructValue* request() const { return request_; }
@@ -51,6 +53,8 @@ class SemanticContext {
   HandleSemantic* const handle_semantic_;
   // The process id.
   const zx_koid_t pid_;
+  // The thread id.
+  const zx_koid_t tid_;
   // The handle we are reading/writing on.
   const zx_handle_t handle_;
   // The context type.
@@ -202,6 +206,9 @@ class HandleDescription {
   HandleDescription(std::string_view type, int64_t fd, std::string_view path)
       : type_(type), fd_(fd), path_(path) {}
 
+  HandleDescription(std::string_view type, int64_t fd, std::string_view path, zx_koid_t koid)
+      : type_(type), fd_(fd), path_(path), koid_(koid) {}
+
   const std::string& type() const { return type_; }
   int64_t fd() const { return fd_; }
   const std::string& path() const { return path_; }
@@ -249,12 +256,23 @@ class HandleSemantic {
  public:
   HandleSemantic() = default;
 
+  const std::map<zx_koid_t, ProcessSemantic>& process_handles() const { return process_handles_; }
+  const std::map<zx_koid_t, zx_koid_t>& linked_koids() const { return linked_koids_; }
+
   size_t handle_size(zx_koid_t pid) const {
     const auto& process_semantic = process_handles_.find(pid);
     if (process_semantic == process_handles_.end()) {
       return 0;
     }
     return process_semantic->second.handles.size();
+  }
+
+  const ProcessSemantic* GetProcessSemantic(zx_koid_t pid) const {
+    const auto& process_semantic = process_handles_.find(pid);
+    if (process_semantic == process_handles_.end()) {
+      return nullptr;
+    }
+    return &process_semantic->second;
   }
 
   HandleDescription* GetHandleDescription(zx_koid_t pid, zx_handle_t handle) const {
@@ -269,12 +287,19 @@ class HandleSemantic {
     return result->second.get();
   }
 
+  virtual void CreateHandle(zx_koid_t thread_koid, zx_handle_t handle) {}
+
   void AddHandleDescription(zx_koid_t pid, zx_handle_t handle,
                             const HandleDescription* handle_description) {
     if (handle_description != nullptr) {
       process_handles_[pid].handles[handle] =
           std::make_unique<HandleDescription>(*handle_description);
     }
+  }
+
+  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle,
+                            std::unique_ptr<HandleDescription> handle_description) {
+    process_handles_[pid].handles[handle] = std::move(handle_description);
   }
 
   void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type) {

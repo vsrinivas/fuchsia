@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include <fstream>
 #include <functional>
 #include <map>
 #include <memory>
@@ -35,6 +36,7 @@
 #include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
+#include "tools/fidlcat/proto/session.pb.h"
 
 namespace fidlcat {
 
@@ -1549,8 +1551,11 @@ class Syscall {
 
   // Computes all the fidl codec types for this syscall.
   void ComputeTypes();
+
   const fidl_codec::StructMember* SearchInlineMember(const std::string& name, bool invoked) const;
+  const fidl_codec::StructMember* SearchInlineMember(uint32_t id, bool invoked) const;
   const fidl_codec::StructMember* SearchOutlineMember(const std::string& name, bool invoked) const;
+  const fidl_codec::StructMember* SearchOutlineMember(uint32_t id, bool invoked) const;
 
  private:
   const std::string name_;
@@ -1579,6 +1584,8 @@ class SyscallDecoderDispatcher {
 
   const DecodeOptions& decode_options() const { return decode_options_; }
 
+  int64_t startup_timestamp() const { return startup_timestamp_; }
+
   const std::map<std::string, std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
   const std::map<zx_koid_t, std::unique_ptr<Process>>& processes() const { return processes_; }
@@ -1592,6 +1599,12 @@ class SyscallDecoderDispatcher {
   bool has_filter() const { return has_filter_; }
 
   bool needs_stack_frame() const { return needs_stack_frame_; }
+
+  // True if we need to save the events in memory.
+  bool needs_to_save_events() const { return needs_to_save_events_; }
+
+  // True if, at the end of the session, we must save the events into a protobuf file.
+  bool must_save() const { return !decode_options_.save.empty(); }
 
   Syscall* SearchSyscall(const std::string& name) const {
     auto result = syscalls_.find(name);
@@ -1633,6 +1646,14 @@ class SyscallDecoderDispatcher {
     threads_.emplace(std::make_pair(koid, std::move(thread)));
     return returned_value;
   }
+
+  // Ensures that the handle has been added to the process this thread belongs to.
+  // If this handle has not been added (this is the first time fidlcat monitors it),
+  // the handle is added to the process list of handle using |creation_time| and |startup|.
+  // |startup| is true if the handle has been given to the process during the process
+  // initialization.
+  // When created, the handle is first stored within the dispatcher.
+  Handle* CreateHandle(Thread* thread, uint32_t handle, int64_t creation_time, bool startup);
 
   // Decode an intercepted system call.
   // Called when a thread reached a breakpoint on a system call.
@@ -1685,6 +1706,16 @@ class SyscallDecoderDispatcher {
 
   // Adds an exception event.
   virtual void AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) {}
+
+  // Saves a decoded event.
+  void SaveEvent(std::shared_ptr<Event> event);
+
+  // The session ended (we don't monitor anything more). Do global processing (like saving the
+  // events).
+  virtual void SessionEnded();
+
+  // Writes the serialized protobuf session.
+  void WriteSession();
 
  private:
   // Feeds syscalls_ with all the syscalls we can decode.
@@ -1749,6 +1780,9 @@ class SyscallDecoderDispatcher {
   // Decoding options.
   const DecodeOptions& decode_options_;
 
+  // When fidlcat has started.
+  const int64_t startup_timestamp_;
+
   // The definition of all the syscalls we can decode.
   std::map<std::string, std::unique_ptr<Syscall>> syscalls_;
 
@@ -1758,9 +1792,14 @@ class SyscallDecoderDispatcher {
   // The intercepted exceptions we are currently decoding.
   std::map<uint64_t, std::unique_ptr<ExceptionDecoder>> exception_decoders_;
 
+  // All the processes created by this dispatcher.
   std::map<zx_koid_t, std::unique_ptr<Process>> processes_;
 
+  // All the threads created by this dispatcher.
   std::map<zx_koid_t, std::unique_ptr<Thread>> threads_;
+
+  // All the handles created by this dispatcher.
+  std::vector<std::unique_ptr<Handle>> handles_;
 
   // All the handles for which we have some information.
   Inference inference_;
@@ -1775,6 +1814,12 @@ class SyscallDecoderDispatcher {
 
   // True if we need the stack frame.
   bool needs_stack_frame_ = false;
+
+  // True if we need to save the events.
+  bool needs_to_save_events_ = false;
+
+  // All the events we have decoded (only filled if needs_to_save_events_ is true).
+  std::vector<std::shared_ptr<Event>> decoded_events_;
 };
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
@@ -1803,9 +1848,12 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
     last_displayed_syscall_ = last_displayed_syscall;
   }
 
+  const Event* last_displayed_event() const { return last_displayed_event_; }
   void clear_last_displayed_event() { last_displayed_event_ = nullptr; }
 
   bool dump_messages() const { return dump_messages_; }
+
+  uint32_t GetNextInvokedEventId() { return next_invoked_event_id_++; }
 
   fidl_codec::MessageDecoderDispatcher* MessageDecoderDispatcher() override {
     return &message_decoder_dispatcher_;

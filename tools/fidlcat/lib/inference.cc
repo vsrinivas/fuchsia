@@ -12,8 +12,16 @@
 
 #include "src/lib/fidl_codec/printer.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
+#include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
+
+void Inference::CreateHandle(zx_koid_t thread_koid, zx_handle_t handle) {
+  int64_t timestamp = time(NULL);
+  Thread* thread = dispatcher_->SearchThread(thread_koid);
+  FX_DCHECK(thread != nullptr);
+  dispatcher_->CreateHandle(thread, handle, timestamp, /*startup=*/false);
+}
 
 // This is the first function which is intercepted. This gives us information about
 // all the handles an application have at startup. However, for directory handles,
@@ -28,10 +36,13 @@ void Inference::ExtractHandles(SyscallDecoder* decoder) {
       reinterpret_cast<const zx_handle_t*>(decoder->ArgumentContent(Stage::kEntry, kHandles));
   const uint32_t* handle_info =
       reinterpret_cast<const zx_handle_t*>(decoder->ArgumentContent(Stage::kEntry, kHandleInfo));
+  int64_t timestamp = time(NULL);
   // Get the information about all the handles.
   // The meaning of handle info is described in zircon/system/public/zircon/processargs.h
   for (uint32_t handle = 0; handle < nhandles; ++handle) {
     if (handles[handle] != 0) {
+      dispatcher_->CreateHandle(decoder->fidlcat_thread(), handles[handle], timestamp,
+                                /*startup=*/true);
       uint32_t type = PA_HND_TYPE(handle_info[handle]);
       switch (type) {
         case PA_FD:
@@ -68,10 +79,13 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
   uint32_t name_count = decoder->ArgumentValue(kNameCount);
   const uint64_t* names =
       reinterpret_cast<const uint64_t*>(decoder->ArgumentContent(Stage::kEntry, kNames));
+  int64_t timestamp = time(NULL);
   // Get the information about the remaining handles.
   // The meaning of handle info is described in zircon/system/public/zircon/processargs.h
   for (uint32_t handle = 0; handle < handle_count; ++handle) {
     if (handles[handle] != 0) {
+      dispatcher_->CreateHandle(decoder->fidlcat_thread(), handles[handle], timestamp,
+                                /*startup=*/true);
       uint32_t type = PA_HND_TYPE(handle_info[handle]);
       switch (type) {
         case PA_NS_DIR: {
@@ -108,8 +122,8 @@ void Inference::InferMessage(SyscallDecoder* decoder,
   zx_handle_t handle = decoder->ArgumentValue(kHandle);
   if (handle != ZX_HANDLE_INVALID) {
     fidl_codec::semantic::SemanticContext context(
-        this, decoder->fidlcat_thread()->process()->koid(), handle, context_type,
-        decoder->decoded_request(), decoder->decoded_response());
+        this, decoder->fidlcat_thread()->process()->koid(), decoder->fidlcat_thread()->koid(),
+        handle, context_type, decoder->decoded_request(), decoder->decoded_response());
     decoder->semantic()->ExecuteAssignments(&context);
   }
 }
@@ -121,6 +135,11 @@ void Inference::ZxChannelCreate(SyscallDecoder* decoder) {
   zx_handle_t* out1 = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut1));
   if ((out0 != nullptr) && (*out0 != ZX_HANDLE_INVALID) && (out1 != nullptr) &&
       (*out1 != ZX_HANDLE_INVALID)) {
+    int64_t timestamp = time(NULL);
+    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out0, timestamp,
+                              /*startup=*/false);
+    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out1, timestamp,
+                              /*startup=*/false);
     // Provides the minimal semantic for both handles (that is they are channels).
     AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out0, "channel",
                          next_channel_++);
@@ -135,6 +154,9 @@ void Inference::ZxPortCreate(SyscallDecoder* decoder) {
   constexpr int kOut = 1;
   zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
   if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
+    int64_t timestamp = time(NULL);
+    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out, timestamp,
+                              /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a port).
     AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out, "port", next_port_++);
   }
@@ -144,6 +166,9 @@ void Inference::ZxTimerCreate(SyscallDecoder* decoder) {
   constexpr int kOut = 2;
   zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
   if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
+    int64_t timestamp = time(NULL);
+    dispatcher_->CreateHandle(decoder->fidlcat_thread(), *out, timestamp,
+                              /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a timer).
     AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out, "timer",
                          next_timer_++);

@@ -104,8 +104,10 @@ void ProtoVisitor::VisitFidlMessageValue(const fidl_codec::FidlMessageValue* nod
   fidl_message->set_received(node->received());
   fidl_message->set_is_request(node->is_request());
   fidl_message->set_unknown_direction(node->unknown_direction());
-  fidl_message->set_interface(node->method()->enclosing_interface().name());
-  fidl_message->set_method(node->method()->name());
+  if (node->method() != nullptr) {
+    fidl_message->set_interface(node->method()->enclosing_interface().name());
+    fidl_message->set_method(node->method()->name());
+  }
   fidl_message->set_raw_bytes(node->bytes().data(), node->bytes().size());
   for (const auto& handle : node->handles()) {
     proto::HandleInfo* handle_info = fidl_message->add_handle();
@@ -261,14 +263,15 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
     }
     case proto::Value::kFidlMessageValue: {
       const proto::FidlMessage& proto_message = proto_value.fidl_message_value();
-      const std::vector<const fidl_codec::InterfaceMethod*>* methods =
-          loader->GetByOrdinal(proto_message.ordinal());
-      if (methods == nullptr || methods->empty()) {
-        FX_LOGS_OR_CAPTURE(ERROR) << "Protocol method with ordinal 0x" << std::hex
-                                  << proto_message.ordinal() << std::dec << " not found\n";
-        return nullptr;
+      const fidl_codec::InterfaceMethod* method = nullptr;
+      // We need to check loader because some tests have a null library loader.
+      if (loader != nullptr) {
+        const std::vector<const fidl_codec::InterfaceMethod*>* methods =
+            loader->GetByOrdinal(proto_message.ordinal());
+        if ((methods != nullptr) && !methods->empty()) {
+          method = (*methods)[0];
+        }
       }
-      const fidl_codec::InterfaceMethod* method = (*methods)[0];
       auto message = std::make_unique<fidl_codec::FidlMessageValue>(
           proto_message.txid(), proto_message.ordinal(), proto_message.global_errors(),
           proto_message.epitaph_error(), proto_message.received(), proto_message.is_request(),
@@ -284,29 +287,33 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
         handle_info.rights = proto_handle_info.rights();
         message->add_handle(handle_info);
       }
-      bool ok = true;
-      if (proto_message.has_request()) {
-        if (method->request() == nullptr) {
-          FX_LOGS_OR_CAPTURE(ERROR)
-              << "Request without request defined in " << method->name() << '.';
-          ok = false;
-        } else {
-          message->set_decoded_request(
-              DecodeStruct(loader, proto_message.decoded_request(), *method->request()));
+      if (method != nullptr) {
+        // We can have a null method if we replay a file with a different state (for example, we
+        // don't have all the json we had when the event has been saved).
+        bool ok = true;
+        if (proto_message.has_request()) {
+          if (method->request() == nullptr) {
+            FX_LOGS_OR_CAPTURE(ERROR)
+                << "Request without request defined in " << method->name() << '.';
+            ok = false;
+          } else {
+            message->set_decoded_request(
+                DecodeStruct(loader, proto_message.decoded_request(), *method->request()));
+          }
         }
-      }
-      if (proto_message.has_response()) {
-        if (method->response() == nullptr) {
-          FX_LOGS_OR_CAPTURE(ERROR)
-              << "Response without response defined in " << method->name() << '.';
-          ok = false;
-        } else {
-          message->set_decoded_response(
-              DecodeStruct(loader, proto_message.decoded_response(), *method->response()));
+        if (proto_message.has_response()) {
+          if (method->response() == nullptr) {
+            FX_LOGS_OR_CAPTURE(ERROR)
+                << "Response without response defined in " << method->name() << '.';
+            ok = false;
+          } else {
+            message->set_decoded_response(
+                DecodeStruct(loader, proto_message.decoded_response(), *method->response()));
+          }
         }
-      }
-      if (!ok) {
-        return nullptr;
+        if (!ok) {
+          return nullptr;
+        }
       }
       return message;
     }

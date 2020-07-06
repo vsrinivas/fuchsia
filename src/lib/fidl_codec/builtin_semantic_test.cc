@@ -16,6 +16,7 @@ namespace fidl_codec {
 namespace semantic {
 
 constexpr uint64_t kPid = 0x1234;
+constexpr uint64_t kTid = 0x4321;
 constexpr uint32_t kHandle = 0x1111;
 constexpr uint32_t kChannel0 = 0x1000;
 constexpr uint32_t kChannel1 = 0x2000;
@@ -51,14 +52,14 @@ BuiltinSemanticTest::BuiltinSemanticTest()
 
 void BuiltinSemanticTest::ExecuteWrite(const MethodSemantic* method_semantic,
                                        const StructValue* request, const StructValue* response) {
-  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kHandle,
+  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
                                                 ContextType::kWrite, request, response);
   method_semantic->ExecuteAssignments(&context);
 }
 
 void BuiltinSemanticTest::ExecuteRead(const MethodSemantic* method_semantic,
                                       const StructValue* request, const StructValue* response) {
-  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kHandle,
+  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
                                                 ContextType::kRead, request, response);
   method_semantic->ExecuteAssignments(&context);
 }

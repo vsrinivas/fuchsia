@@ -63,6 +63,18 @@ const char* const kExtraNameHelp = R"(  --extra-name=<regexp>
       monitored). You must specify at least one filter with --remote-name if
       you use this option (without --remote-name, nothing would be displayed).)";
 
+const char* const kSaveHelp = R"(  --save=<path>
+      Save the session using protobuf in the specified file. All events are
+      saved including the messages which have been filtered out by --messages
+      or --exclude-messages.)";
+
+const char* const kDisplayProtoHelp = R"(  --display-proto=<path>
+      Loads a previously saved session and displays the raw protobuf dump of the file.)";
+
+const char* const kReplayHelp = R"(  --replay=<path>
+      Replay a previously saved session. You can filter the messages displayed
+      using --messages and/or --exclude-messages.)";
+
 const char* const kFidlIrPathHelp = R"(  --fidl-ir-path=<path>|@argfile
       Adds the given path as a repository for FIDL IR, in the form of .fidl.json
       files.  Passing a file adds the given file.  Passing a directory adds all
@@ -242,6 +254,9 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("remote-pid", 'p', kRemotePidHelp, &CommandLineOptions::remote_pid);
   parser.AddSwitch("remote-name", 'f', kRemoteNameHelp, &CommandLineOptions::remote_name);
   parser.AddSwitch("extra-name", 0, kExtraNameHelp, &CommandLineOptions::extra_name);
+  parser.AddSwitch("save", 0, kSaveHelp, &CommandLineOptions::save);
+  parser.AddSwitch("display-proto", 0, kDisplayProtoHelp, &CommandLineOptions::display_proto);
+  parser.AddSwitch("replay", 0, kReplayHelp, &CommandLineOptions::replay);
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp, &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
   parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp,
@@ -281,9 +296,12 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     return status.error_message();
   }
 
-  if (requested_help ||
-      (options->remote_name.empty() && options->remote_pid.empty() &&
-       std::find(params->begin(), params->end(), "run") == params->end()) ||
+  bool watch = !options->remote_name.empty() || !options->remote_pid.empty() ||
+               (std::find(params->begin(), params->end(), "run") != params->end());
+  bool display_proto = !options->display_proto.empty();
+  bool replay = !options->replay.empty();
+  int command_count = (watch ? 1 : 0) + (display_proto ? 1 : 0) + (replay ? 1 : 0);
+  if (requested_help || (command_count != 1) ||
       (!options->extra_name.empty() && options->remote_name.empty())) {
     status = cmdline::Status::Error(kHelpIntro + parser.GetHelp());
     if (status.has_error()) {
@@ -339,6 +357,8 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
       return "Bad filter for --trigger: " + filter;
     }
   }
+
+  decode_options->save = options->save;
 
   display_options->pretty_print = options->pretty_print;
   display_options->with_process_info = options->with_process_info;

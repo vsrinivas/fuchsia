@@ -8,13 +8,16 @@
 #include <zircon/system/public/zircon/types.h>
 
 #include <cstdint>
+#include <fstream>
 #include <memory>
 #include <sstream>
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/lib/fidl_codec/semantic.h"
 #include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
+#include "tools/fidlcat/proto/session.pb.h"
 
 namespace fidlcat {
 
@@ -272,6 +275,23 @@ const fidl_codec::StructMember* Syscall::SearchInlineMember(const std::string& n
   return nullptr;
 }
 
+const fidl_codec::StructMember* Syscall::SearchInlineMember(uint32_t id, bool invoked) const {
+  if (invoked) {
+    for (const auto& member : input_inline_members_) {
+      if (member->id() == id) {
+        return member.get();
+      }
+    }
+  } else {
+    for (const auto& member : output_inline_members_) {
+      if (member->id() == id) {
+        return member.get();
+      }
+    }
+  }
+  return nullptr;
+}
+
 const fidl_codec::StructMember* Syscall::SearchOutlineMember(const std::string& name,
                                                              bool invoked) const {
   if (invoked) {
@@ -290,8 +310,25 @@ const fidl_codec::StructMember* Syscall::SearchOutlineMember(const std::string& 
   return nullptr;
 }
 
+const fidl_codec::StructMember* Syscall::SearchOutlineMember(uint32_t id, bool invoked) const {
+  if (invoked) {
+    for (const auto& member : input_outline_members_) {
+      if (member->id() == id) {
+        return member.get();
+      }
+    }
+  } else {
+    for (const auto& member : output_outline_members_) {
+      if (member->id() == id) {
+        return member.get();
+      }
+    }
+  }
+  return nullptr;
+}
+
 SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_options)
-    : decode_options_(decode_options) {
+    : decode_options_(decode_options), startup_timestamp_(time(nullptr)), inference_(this) {
   Populate();
   ComputeTypes();
   if (!decode_options.trigger_filters.empty()) {
@@ -302,9 +339,25 @@ SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_o
   if (!decode_options.message_filters.empty() || !decode_options.exclude_message_filters.empty()) {
     has_filter_ = true;
   }
-  if (decode_options.stack_level != kNoStack) {
+  if ((decode_options.stack_level != kNoStack) || !decode_options_.save.empty()) {
     needs_stack_frame_ = true;
   }
+  if (!decode_options_.save.empty()) {
+    needs_to_save_events_ = true;
+  }
+}
+
+Handle* SyscallDecoderDispatcher::CreateHandle(Thread* thread, uint32_t handle,
+                                               int64_t creation_time, bool startup) {
+  auto old_value = thread->process()->SearchHandle(handle);
+  if (old_value != nullptr) {
+    return old_value;
+  }
+  auto result = std::make_unique<Handle>(thread, handle, creation_time, startup);
+  auto returned_value = result.get();
+  thread->process()->handle_map().emplace(std::make_pair(handle, result.get()));
+  handles_.emplace_back(std::move(result));
+  return returned_value;
 }
 
 void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_observer,
@@ -364,6 +417,74 @@ void SyscallDecoderDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonito
   }
 }
 
+void SyscallDecoderDispatcher::SaveEvent(std::shared_ptr<Event> event) {
+  if (needs_to_save_events()) {
+    decoded_events_.emplace_back(std::move(event));
+  }
+}
+
+void SyscallDecoderDispatcher::SessionEnded() {
+  if (must_save()) {
+    WriteSession();
+  }
+}
+
+void SyscallDecoderDispatcher::WriteSession() {
+  proto::Session session;
+  for (const auto& process : processes_) {
+    proto::Process* proto_process = session.add_process();
+    proto_process->set_koid(process.second->koid());
+    proto_process->set_name(process.second->name());
+    auto process_semantic = inference().GetProcessSemantic(process.second->koid());
+    if (process_semantic != nullptr) {
+      for (const auto& linked_handles : process_semantic->linked_handles) {
+        proto::LinkedHandles* proto_linked_handles = proto_process->add_linked_handles();
+        if (linked_handles.first < linked_handles.second) {
+          proto_linked_handles->set_handle_0(linked_handles.first);
+          proto_linked_handles->set_handle_1(linked_handles.second);
+        }
+      }
+    }
+  }
+  for (const auto& thread : threads_) {
+    proto::Thread* proto_thread = session.add_thread();
+    proto_thread->set_koid(thread.second->koid());
+    proto_thread->set_process_koid(thread.second->process()->koid());
+  }
+  for (const auto& handle : handles_) {
+    fidl_codec::semantic::HandleDescription* handle_description =
+        inference().GetHandleDescription(handle->thread()->process()->koid(), handle->handle());
+    proto::HandleDescription* proto_handle_description = session.add_handle_description();
+    proto_handle_description->set_handle(handle->handle());
+    proto_handle_description->set_thread_koid(handle->thread()->koid());
+    proto_handle_description->set_creation_time(handle->creation_time());
+    proto_handle_description->set_startup(handle->startup());
+    if (handle_description != nullptr) {
+      proto_handle_description->set_type(handle_description->type());
+      proto_handle_description->set_fd(handle_description->fd());
+      proto_handle_description->set_path(handle_description->path());
+      proto_handle_description->set_koid(handle_description->koid());
+      proto_handle_description->set_object_type(handle_description->object_type());
+    }
+  }
+  for (const auto& linked_koids : inference().linked_koids()) {
+    proto::LinkedKoids* proto_linked_koids = session.add_linked_koids();
+    if (linked_koids.first < linked_koids.second) {
+      proto_linked_koids->set_koid_0(linked_koids.first);
+      proto_linked_koids->set_koid_1(linked_koids.second);
+    }
+  }
+  for (const auto& event : decoded_events_) {
+    event->Write(session.add_event());
+  }
+  std::fstream output(decode_options_.save, std::ios::out | std::ios::trunc | std::ios::binary);
+  if (output.fail()) {
+    FX_LOGS(ERROR) << "Can't open <" << decode_options_.save << "> for writing.";
+  } else if (!session.SerializeToOstream(&output)) {
+    FX_LOGS(ERROR) << "Failed to write session to protobuf file <" << decode_options_.save << ">.";
+  }
+}
+
 void SyscallDecoderDispatcher::ComputeTypes() {
   for (const auto& syscall : syscalls_) {
     syscall.second->ComputeTypes();
@@ -392,6 +513,8 @@ void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
     os_ << colors().red << "\nCan't launch " << colors().blue << event->command() << colors().reset
         << " : " << colors().red << event->error_message() << colors().reset << '\n';
   }
+
+  SaveEvent(std::move(event));
 }
 
 void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
@@ -414,6 +537,8 @@ void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
     os_ << " : " << colors().red << event->error_message() << colors().reset;
   }
   os_ << '\n';
+
+  SaveEvent(std::move(event));
 }
 
 void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) {
@@ -426,11 +551,14 @@ void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonito
         << " koid=";
   }
   os_ << colors().red << event->process()->koid() << colors().reset << '\n';
+
+  SaveEvent(event);
+
   SyscallDecoderDispatcher::AddStopMonitoringEvent(std::move(event));
 }
 
 void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {
-  invoked_event->set_id(next_invoked_event_id_++);
+  invoked_event->set_id(GetNextInvokedEventId());
   if (!display_started()) {
     // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
     const fidl_codec::FidlMessageValue* message = invoked_event->GetMessage();
@@ -452,6 +580,8 @@ void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> inv
   }
   invoked_event->set_displayed();
   DisplayInvokedEvent(invoked_event.get());
+
+  SaveEvent(std::move(invoked_event));
 }
 
 void SyscallDisplayDispatcher::DisplayInvokedEvent(const InvokedEvent* invoked_event) {
@@ -519,6 +649,8 @@ void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> outpu
     last_displayed_syscall_ = nullptr;
     last_displayed_event_ = output_event.get();
   }
+
+  SaveEvent(std::move(output_event));
 }
 
 void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) {
@@ -530,6 +662,8 @@ void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent>
       colors().red + std::to_string(exception_event->thread()->koid()) + colors().reset + ' ';
   FidlcatPrinter printer(this, exception_event->thread()->process()->koid(), os_, line_header);
   exception_event->PrettyPrint(printer);
+
+  SaveEvent(std::move(exception_event));
 }
 
 std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(

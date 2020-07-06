@@ -116,13 +116,24 @@ void InvokedEvent::Write(proto::Event* dst) const {
     fidl_codec::proto::Value value;
     fidl_codec::ProtoVisitor visitor(&value);
     field.second->Visit(&visitor, nullptr);
-    event->mutable_inline_fields()->insert(google::protobuf::MapPair(field.first->name(), value));
+    if (field.first->id() != 0) {
+      event->mutable_inline_id_fields()->insert(
+          google::protobuf::MapPair(static_cast<uint32_t>(field.first->id()), value));
+    } else {
+      event->mutable_inline_fields()->insert(google::protobuf::MapPair(field.first->name(), value));
+    }
   }
   for (const auto& field : outline_fields()) {
     fidl_codec::proto::Value value;
     fidl_codec::ProtoVisitor visitor(&value);
     field.second->Visit(&visitor, nullptr);
-    event->mutable_outline_fields()->insert(google::protobuf::MapPair(field.first->name(), value));
+    if (field.first->id() != 0) {
+      event->mutable_outline_id_fields()->insert(
+          google::protobuf::MapPair(static_cast<uint32_t>(field.first->id()), value));
+    } else {
+      event->mutable_outline_fields()->insert(
+          google::protobuf::MapPair(field.first->name(), value));
+    }
   }
 }
 
@@ -147,13 +158,24 @@ void OutputEvent::Write(proto::Event* dst) const {
     fidl_codec::proto::Value value;
     fidl_codec::ProtoVisitor visitor(&value);
     field.second->Visit(&visitor, nullptr);
-    event->mutable_inline_fields()->insert(google::protobuf::MapPair(field.first->name(), value));
+    if (field.first->id() != 0) {
+      event->mutable_inline_id_fields()->insert(
+          google::protobuf::MapPair(static_cast<uint32_t>(field.first->id()), value));
+    } else {
+      event->mutable_inline_fields()->insert(google::protobuf::MapPair(field.first->name(), value));
+    }
   }
   for (const auto& field : outline_fields()) {
     fidl_codec::proto::Value value;
     fidl_codec::ProtoVisitor visitor(&value);
     field.second->Visit(&visitor, nullptr);
-    event->mutable_outline_fields()->insert(google::protobuf::MapPair(field.first->name(), value));
+    if (field.first->id() != 0) {
+      event->mutable_outline_id_fields()->insert(
+          google::protobuf::MapPair(static_cast<uint32_t>(field.first->id()), value));
+    } else {
+      event->mutable_outline_fields()->insert(
+          google::protobuf::MapPair(field.first->name(), value));
+    }
   }
 }
 
@@ -262,7 +284,8 @@ bool EventDecoder::DecodeAndDispatchEvent(const proto::Event& proto_event) {
         return false;
       }
       auto event = std::make_shared<InvokedEvent>(proto_event.timestamp(), thread, syscall);
-      if (!DecodeValues(event.get(), content.inline_fields(), content.outline_fields(),
+      if (!DecodeValues(event.get(), content.inline_fields(), content.inline_id_fields(),
+                        content.outline_fields(), content.outline_id_fields(),
                         /*invoked=*/true)) {
         return false;
       }
@@ -296,7 +319,8 @@ bool EventDecoder::DecodeAndDispatchEvent(const proto::Event& proto_event) {
       }
       auto event = std::make_shared<OutputEvent>(proto_event.timestamp(), thread, syscall,
                                                  content.returned_value(), invoked_event->second);
-      if (!DecodeValues(event.get(), content.inline_fields(), content.outline_fields(),
+      if (!DecodeValues(event.get(), content.inline_fields(), content.inline_id_fields(),
+                        content.outline_fields(), content.outline_id_fields(),
                         /*invoked=*/false)) {
         return false;
       }
@@ -329,7 +353,9 @@ bool EventDecoder::DecodeAndDispatchEvent(const proto::Event& proto_event) {
 bool EventDecoder::DecodeValues(
     SyscallEvent* event,
     const ::google::protobuf::Map<::std::string, ::fidl_codec::proto::Value>& inline_fields,
+    const ::google::protobuf::Map<uint32_t, ::fidl_codec::proto::Value>& inline_id_fields,
     const ::google::protobuf::Map<::std::string, ::fidl_codec::proto::Value>& outline_fields,
+    const ::google::protobuf::Map<uint32_t, ::fidl_codec::proto::Value>& outline_id_fields,
     bool invoked) {
   bool ok = true;
   for (const auto& proto_value : inline_fields) {
@@ -349,7 +375,41 @@ bool EventDecoder::DecodeValues(
       }
     }
   }
+  for (const auto& proto_value : inline_id_fields) {
+    const fidl_codec::StructMember* member =
+        event->syscall()->SearchInlineMember(proto_value.first, invoked);
+    if (member == nullptr) {
+      FX_LOGS(ERROR) << "Member " << proto_value.first << " not found for "
+                     << event->syscall()->name() << '.';
+      ok = false;
+    } else {
+      std::unique_ptr<fidl_codec::Value> value =
+          fidl_codec::DecodeValue(dispatcher_->loader(), proto_value.second, member->type());
+      if (value == nullptr) {
+        ok = false;
+      } else {
+        event->AddInlineField(member, std::move(value));
+      }
+    }
+  }
   for (const auto& proto_value : outline_fields) {
+    const fidl_codec::StructMember* member =
+        event->syscall()->SearchOutlineMember(proto_value.first, invoked);
+    if (member == nullptr) {
+      FX_LOGS(ERROR) << "Member " << proto_value.first << " not found for "
+                     << event->syscall()->name() << '.';
+      ok = false;
+    } else {
+      std::unique_ptr<fidl_codec::Value> value =
+          fidl_codec::DecodeValue(dispatcher_->loader(), proto_value.second, member->type());
+      if (value == nullptr) {
+        ok = false;
+      } else {
+        event->AddOutlineField(member, std::move(value));
+      }
+    }
+  }
+  for (const auto& proto_value : outline_id_fields) {
     const fidl_codec::StructMember* member =
         event->syscall()->SearchOutlineMember(proto_value.first, invoked);
     if (member == nullptr) {

@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io' show Platform, Process, ProcessResult;
+import 'dart:io' show Directory, Platform, Process, ProcessResult;
 
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 
 const _timeout = Timeout(Duration(minutes: 5));
+
+enum RunMode { withAgent, withoutAgent }
 
 /// Formats an IP address so that fidlcat can understand it (removes % part,
 /// adds brackets around it.)
@@ -41,17 +43,19 @@ class RunFidlcat {
   String additionalResult;
 
   Future<void> run(Logger log, sl4f.Sl4f sl4fDriver, String path,
-      List<String> extraArguments) async {
-    port = await sl4fDriver.ssh.pickUnusedPort();
-    log.info('Chose port: $port');
+      RunMode runMode, List<String> extraArguments) async {
+    if (runMode == RunMode.withAgent) {
+      port = await sl4fDriver.ssh.pickUnusedPort();
+      log.info('Chose port: $port');
 
-    /// fuchsia-pkg URL for the debug agent.
-    const String debugAgentUrl =
-        'fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx';
+      /// fuchsia-pkg URL for the debug agent.
+      const String debugAgentUrl =
+          'fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx';
 
-    agentResult = sl4fDriver.ssh.run('run $debugAgentUrl --port=$port');
-    target = formatTarget(log, sl4fDriver.ssh.target);
-    log.info('Target: $target');
+      agentResult = sl4fDriver.ssh.run('run $debugAgentUrl --port=$port');
+      target = formatTarget(log, sl4fDriver.ssh.target);
+      log.info('Target: $target');
+    }
 
     List<String> arguments;
     final String symbolPath = Platform.script
@@ -69,19 +73,16 @@ class RunFidlcat {
         .resolve('runtime_deps/fuchsia.sys.fidl.json')
         .toFilePath();
     arguments = [
-      '--connect=$target:$port',
-      '--quit-agent-on-exit',
       '--fidl-ir-path=$echoIr',
       '--fidl-ir-path=$ioIr',
       '--fidl-ir-path=$sysIr',
       '-s',
       '$symbolPath',
-    ]
-      ..addAll(extraArguments)
-      ..addAll([
-        'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx',
-      ]);
+    ]..addAll(extraArguments);
+    if (runMode == RunMode.withAgent) {
+      arguments =
+          ['--connect=$target:$port', '--quit-agent-on-exit'] + arguments;
+    }
     ProcessResult processResult;
     do {
       processResult = await Process.run(path, arguments);
@@ -118,7 +119,10 @@ void main(List<String> arguments) {
   group('fidlcat', () {
     test('Simple test of echo client output and shutdown', () async {
       var instance = RunFidlcat();
-      await instance.run(log, sl4fDriver, fidlcatPath, []);
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
+        'run',
+        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+      ]);
 
       expect(
           instance.stdout,
@@ -131,8 +135,12 @@ void main(List<String> arguments) {
 
     test('Test --extra-name', () async {
       var instance = RunFidlcat();
-      await instance.run(log, sl4fDriver, fidlcatPath,
-          ['--remote-name=echo_server', '--extra-name=echo_client']);
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
+        '--remote-name=echo_server',
+        '--extra-name=echo_client',
+        'run',
+        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+      ]);
 
       final lines = instance.stdout.split('\n\n');
 
@@ -151,8 +159,11 @@ void main(List<String> arguments) {
 
     test('Test --trigger', () async {
       var instance = RunFidlcat();
-      await instance
-          .run(log, sl4fDriver, fidlcatPath, ['--trigger=.*EchoString']);
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
+        '--trigger=.*EchoString',
+        'run',
+        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+      ]);
 
       final lines = instance.stdout.split('\n\n');
 
@@ -168,21 +179,61 @@ void main(List<String> arguments) {
 
     test('Test --messages', () async {
       var instance = RunFidlcat();
-      await instance.run(log, sl4fDriver, fidlcatPath, [
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
         '--messages=.*EchoString',
-        '--exclude-syscalls=zx_channel_create'
+        '--exclude-syscalls=zx_channel_create',
+        'run',
+        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
       ]);
 
       final lines = instance.stdout.split('\n\n');
 
       /// The first and second displayed messages must be EchoString (everything else has been
       /// filtered out).
-      expect(lines[2], contains('sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+      expect(
+          lines[2],
+          contains(
+              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
           reason: instance.additionalResult);
-      expect(lines[3], contains('received response fidl.examples.echo/Echo.EchoString = {"response":"hello world"}'),
+      expect(
+          lines[3],
+          contains(
+              'received response fidl.examples.echo/Echo.EchoString = {"response":"hello world"}'),
           reason: instance.additionalResult);
 
       await instance.agentResult;
+    });
+
+    test('Test save/replay', () async {
+      var systemTempDir = Directory.systemTemp;
+      var fidlcatTemp = systemTempDir.createTempSync('fidlcat');
+      final String savePath = '${fidlcatTemp.path}/save.proto';
+
+      var instanceSave = RunFidlcat();
+      await instanceSave.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
+        '--save',
+        savePath,
+        'run',
+        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+      ]);
+
+      expect(
+          instanceSave.stdout,
+          contains(
+              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          reason: instanceSave.additionalResult);
+
+      await instanceSave.agentResult;
+
+      var instanceReplay = RunFidlcat();
+      await instanceReplay.run(log, sl4fDriver, fidlcatPath,
+          RunMode.withoutAgent, ['--replay', savePath]);
+
+      expect(
+          instanceReplay.stdout,
+          contains(
+              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          reason: instanceReplay.additionalResult);
     });
   }, timeout: _timeout);
 }

@@ -23,6 +23,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "tools/fidlcat/lib/interception_workflow.h"
+#include "tools/fidlcat/lib/replay.h"
 
 namespace fidlcat {
 
@@ -623,7 +624,10 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
                                ProcessController* controller, bool aborted)
       : SyscallDisplayDispatcher(loader, decode_options, display_options, os),
         controller_(controller),
-        aborted_(aborted) {}
+        aborted_(aborted),
+        replay_dispatcher_(std::make_unique<SyscallDisplayDispatcher>(loader, decode_options,
+                                                                      display_options, os)),
+        replay_(replay_dispatcher_.get()) {}
 
   ProcessController* controller() const { return controller_; }
 
@@ -647,9 +651,65 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
     }
   }
 
+  // For events, instead of dispatching them using this dispatcher, we dispatch them using the
+  // replay dispatcher. This method ensures that the thread/process used by an event which has
+  // been created in this dispatcher is also created in the replay dispatcher.
+  void CreateReplayThread(Thread* thread) {
+    Thread* replay_thread = replay_dispatcher_->SearchThread(thread->koid());
+    if (replay_thread == nullptr) {
+      Process* process = thread->process();
+      Process* replay_process = replay_dispatcher_->SearchProcess(process->koid());
+      if (replay_process == nullptr) {
+        replay_process =
+            replay_dispatcher_->CreateProcess(process->name(), process->koid(), nullptr);
+      }
+      replay_dispatcher_->CreateThread(thread->koid(), replay_process);
+    }
+  }
+
+  void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) override {
+    // Set the invoked event id (this is usually done by SyscallDisplayDispatcher).
+    invoked_event->set_id(GetNextInvokedEventId());
+    // Ensure that the thread/process are created for the replay dispatcher.
+    CreateReplayThread(invoked_event->thread());
+    // Create a proto event.
+    proto::Event proto_event;
+    invoked_event->Write(&proto_event);
+    // Replay the proto event. This will dispatch the event to the replay dispatcher. Because both
+    // this dispatcher and the replay dispatcher have the output stream, the output must be
+    // unchanged.
+    replay_.DecodeAndDispatchEvent(proto_event);
+  }
+
+  void AddOutputEvent(std::shared_ptr<OutputEvent> output_event) override {
+    // Create a proto event.
+    proto::Event proto_event;
+    output_event->Write(&proto_event);
+    // Replay the proto event. This will dispatch the event to the replay dispatcher. Because both
+    // this dispatcher and the replay dispatcher have the output stream, the output must be
+    // unchanged.
+    replay_.DecodeAndDispatchEvent(proto_event);
+  }
+
+  void AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) override {
+    // Ensure that the thread/process are created for the replay dispatcher.
+    CreateReplayThread(exception_event->thread());
+    // Create a proto event.
+    proto::Event proto_event;
+    exception_event->Write(&proto_event);
+    // Replay the proto event. This will dispatch the event to the replay dispatcher. Because both
+    // this dispatcher and the replay dispatcher have the output stream, the output must be
+    // unchanged.
+    replay_.DecodeAndDispatchEvent(proto_event);
+  }
+
  private:
   ProcessController* controller_;
   bool aborted_;
+  // Dispatcher used to test the save/replay of events.
+  std::unique_ptr<SyscallDisplayDispatcher> replay_dispatcher_;
+  // Used to replay saved events.
+  Replay replay_;
 };
 
 }  // namespace fidlcat

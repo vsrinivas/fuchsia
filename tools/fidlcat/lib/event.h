@@ -20,9 +20,29 @@
 
 namespace fidlcat {
 
+class Event;
 class Location;
 class Syscall;
 class SyscallDecoder;
+class SyscallDisplayDispatcher;
+class Thread;
+
+class Handle {
+ public:
+  Handle(Thread* thread, uint32_t handle, int64_t creation_time, bool startup)
+      : thread_(thread), handle_(handle), creation_time_(creation_time), startup_(startup) {}
+
+  Thread* thread() const { return thread_; }
+  uint32_t handle() const { return handle_; }
+  int64_t creation_time() const { return creation_time_; }
+  bool startup() const { return startup_; }
+
+ private:
+  Thread* const thread_;
+  const uint32_t handle_;
+  const int64_t creation_time_;
+  const bool startup_;
+};
 
 class Process {
  public:
@@ -32,8 +52,17 @@ class Process {
   const std::string& name() const { return name_; }
   zx_koid_t koid() const { return koid_; }
   zxdb::Process* zxdb_process() const { return zxdb_process_.get(); }
+  std::map<uint32_t, Handle*>& handle_map() { return handle_map_; }
 
   void LoadHandleInfo(Inference* inference);
+
+  Handle* SearchHandle(uint32_t handle) const {
+    auto result = handle_map_.find(handle);
+    if (result == handle_map_.end()) {
+      return nullptr;
+    }
+    return result->second;
+  }
 
  private:
   // The name of the process.
@@ -46,6 +75,7 @@ class Process {
   bool loading_handle_info_ = false;
   // True if we need to load again the info after the current load will be finished.
   bool needs_to_load_handle_info_ = false;
+  std::map<uint32_t, Handle*> handle_map_;
 };
 
 class Thread {
@@ -270,7 +300,9 @@ class EventDecoder {
   bool DecodeValues(
       SyscallEvent* event,
       const ::google::protobuf::Map<::std::string, ::fidl_codec::proto::Value>& inline_fields,
+      const ::google::protobuf::Map<uint32_t, ::fidl_codec::proto::Value>& inline_id_fields,
       const ::google::protobuf::Map<::std::string, ::fidl_codec::proto::Value>& outline_fields,
+      const ::google::protobuf::Map<uint32_t, ::fidl_codec::proto::Value>& outline_id_fields,
       bool invoked);
 
   // Dispatcher used to decode the events.

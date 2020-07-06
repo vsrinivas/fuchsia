@@ -8,6 +8,51 @@ package fidlcat.proto;
 
 import "src/lib/fidl_codec/proto/value.proto";
 
+// A complete fidlcat session. Used to store a session into a file.
+message Session {
+  repeated Process process = 1;
+  repeated Thread thread = 2;
+  repeated HandleDescription handle_description = 3;
+  repeated LinkedKoids linked_koids = 4;
+  repeated Event event = 5;
+}
+
+// Defines a process monitored by a session.
+message Process {
+  uint64 koid = 1;
+  string name = 2;
+  repeated LinkedHandles linked_handles = 5;
+}
+
+message LinkedHandles {
+  uint32 handle_0 = 1;
+  uint32 handle_1 = 2;
+}
+
+// Defines a thread monitored by a session.
+message Thread {
+  uint64 koid = 1;
+  uint64 process_koid = 2;
+}
+
+// Defines the semantic associated to a handle.
+message HandleDescription {
+  uint32 handle = 1;
+  uint64 thread_koid = 2;
+  sint64 creation_time = 3;
+  bool startup = 4;
+  string type = 5;
+  sint64 fd = 6;
+  string path = 7;
+  uint64 koid = 8;
+  uint32 object_type = 9;
+}
+
+message LinkedKoids {
+  uint64 koid_0 = 1;
+  uint64 koid_1 = 2;
+}
+
 // Defines an event.
 message Event {
   int64 timestamp = 1;
@@ -41,6 +86,8 @@ message InvokedEvent {
   string syscall = 3;
   map<string, fidl_codec.proto.Value> inline_fields = 4;
   map<string, fidl_codec.proto.Value> outline_fields = 5;
+  map<uint32, fidl_codec.proto.Value> inline_id_fields = 6;
+  map<uint32, fidl_codec.proto.Value> outline_id_fields = 7;
 }
 
 message OutputEvent {
@@ -50,6 +97,8 @@ message OutputEvent {
   uint64 invoked_event_id = 4;
   map<string, fidl_codec.proto.Value> inline_fields = 5;
   map<string, fidl_codec.proto.Value> outline_fields = 6;
+  map<uint32, fidl_codec.proto.Value> inline_id_fields = 7;
+  map<uint32, fidl_codec.proto.Value> outline_id_fields = 8;
 }
 
 message ExceptionEvent {
