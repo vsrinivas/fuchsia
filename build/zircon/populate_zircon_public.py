@@ -68,7 +68,7 @@ def main():
         all_dirs[dir] = FORWARD_TEMPLATE_FILE
 
     dirs = {}
-    for dir, template in all_dirs.iteritems():
+    for dir, template in all_dirs.items():
         top_dir = os.path.dirname(dir)
         name = os.path.basename(dir)
         subdirs, templates = dirs.setdefault(top_dir, ([], {}))

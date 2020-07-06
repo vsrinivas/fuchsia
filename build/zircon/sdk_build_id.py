@@ -57,7 +57,7 @@ def main():
     # Write out the manifest collected while rewriting original debug files
     # names to .build-id/... names for publication.
     with open(args.manifest, 'w') as f:
-        for dest, source in manifest.iteritems():
+        for dest, source in manifest.items():
             f.write('%s=%s\n' % (dest, source))
 
     # Write out the modified JSON tree.
